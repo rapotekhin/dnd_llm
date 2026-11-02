@@ -24,8 +24,9 @@ static func trait_of(data: Dictionary, f: Dictionary, id: String) -> Dictionary:
 	return {}
 
 
+## Its template's, its class's or its race's.
 static func has_trait(data: Dictionary, f: Dictionary, id: String) -> bool:
-	return not trait_of(data, f, id).is_empty()
+	return not trait_of(data, f, id).is_empty() or CharacterRules.has_feature(f, id) or CharacterRules.has_trait(f, id)
 
 
 # --- uses of actions ---------------------------------------------------------------------------------
@@ -299,9 +300,9 @@ static func attack_mods(s: GameSession, data: Dictionary, f: Dictionary, t: Dict
 	var it := Sheet.holder(s, t)
 	var adv: Array[String] = []
 	var dis: Array[String] = []
-	if has_trait(data, f, "blood_frenzy") and int(it.get("hp", 0)) < int(it.get("max_hp", 0)) and near:
+	if Sheet.has_trait(s, data, f, "blood_frenzy") and int(it.get("hp", 0)) < int(it.get("max_hp", 0)) and near:
 		adv.append("неистовство крови")
-	if has_trait(data, f, "ambusher") and caught(s, t):
+	if Sheet.has_trait(s, data, f, "ambusher") and caught(s, t):
 		adv.append("засадник")
 	if (has_trait(data, f, "sunlight_sensitivity") or has_trait(data, f, "sunlight_weakness")) and sunlit(s, data):
 		dis.append("солнце")
@@ -363,6 +364,10 @@ static func charge_prone(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 
 ## Relentless (boar) and Undead Fortitude (zombie): a blow that would drop it leaves it at 1 HP. True when so.
 static func survives(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, dtype: String, crit: bool, lines: Array[String]) -> bool:
+	if CharacterRules.has_trait(t, "relentless_endurance") and not bool(t.get("relentless_used", false)):
+		t["relentless_used"] = true
+		lines.append("%s остаётся на ногах с 1 HP" % t["name"])
+		return true
 	var r := trait_of(data, t, "relentless")
 	if not r.is_empty() and not bool(t.get("relentless_used", false)) and dmg <= int(r.get("effect", {}).get("relentless", 0)):
 		t["relentless_used"] = true

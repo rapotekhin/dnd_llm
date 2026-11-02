@@ -39,7 +39,7 @@ static func hero_dice(s: GameSession, adv: bool, dis: bool) -> Array[int]:
 
 ## The dice of anybody's roll.
 static func of(s: GameSession, who: Dictionary, adv: bool, dis: bool) -> Array[int]:
-	return hero_dice(s, adv, dis) if Sheet.is_hero(who) else dice(s.rng, adv, dis)
+	return dice(s.rng, adv, dis, CharacterRules.has_trait(Sheet.holder(s, who), "lucky"))
 
 
 ## House rule (ADR-0008 §2): natural 20 / 1 always succeed / fail, skill checks included.
@@ -67,9 +67,9 @@ static func chance(bonus: int, dc: int, adv: bool = false, dis: bool = false) ->
 
 
 ## Bardic Inspiration on a failed roll (it is spent): {value, label}; value 0 — there is none.
-static func inspire(s: GameSession) -> Dictionary:
-	var die := FeatureRules.inspiration_die(s.character)
-	var n := FeatureRules.use_inspiration(s)
+static func inspire(s: GameSession, who: Dictionary = Sheet.HERO) -> Dictionary:
+	var die := FeatureRules.inspiration_die(Sheet.holder(s, who))
+	var n := FeatureRules.use_inspiration(s, who)
 	return {"value": n, "label": "Вдохновение барда (к%d)" % die}
 
 

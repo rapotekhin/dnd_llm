@@ -30,7 +30,7 @@ static func _speeds(data: Dictionary, m: Dictionary, me: Dictionary) -> Dictiona
 ## Its ways of moving now: {row id: feet}.
 static func speeds(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
 	var me := Sheet.holder(s, who)
-	var body := Guise.body(me) if Sheet.is_hero(who) else {}
+	var body := Guise.body(me)
 	var m: Dictionary = data["monsters"].get(str(body.get("monster", "")), Sheet.template(data, who))
 	return _speeds(data, m, me)
 

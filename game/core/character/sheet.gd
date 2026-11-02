@@ -14,7 +14,9 @@ static func is_hero(who: Dictionary) -> bool:
 
 ## The id of its SRD template; "" for the hero.
 static func template_id(data: Dictionary, who: Dictionary) -> String:
-	return "" if is_hero(who) else str(who.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
+	if is_hero(who):
+		return ""
+	return str(Guise.body(who).get("monster", who.get("monster", CombatRules.cfg(data)["default_npc_monster"])))
 
 
 ## Its SRD template, {} for the hero; a fighter that lost its weapon has only the actions left to it (v0.7.22.8).
@@ -151,21 +153,25 @@ static func saved(s: GameSession, data: Dictionary, who: Dictionary, ab: String,
 
 ## Why it has advantage on this save: names for the line, an empty list when none.
 static func _advantages(s: GameSession, data: Dictionary, who: Dictionary, ab: String, tag: String) -> Array[String]:
-	if is_hero(who):
-		return HeroDefense.save_advantages(s.character, data, ab, tag, CombatRules.active(s) and bool(s.combat.get("raging", false)))
-	var out: Array[String] = []
-	if MonsterRules.save_advantage(data, who, ab, Array(tag.split(",", false))) or SpellEffects.boon_save_adv(who, ab):
+	var me := holder(s, who)
+	var out := HeroDefense.save_advantages(me, data, ab, tag, raging(s, who))
+	if MonsterRules.save_advantage(data, me, ab, Array(tag.split(",", false))) or (not is_hero(who) and SpellEffects.boon_save_adv(who, ab)):
 		out.append("черта")
 	return out
+
+
+## In a Rage now.
+static func raging(s: GameSession, who: Dictionary) -> bool:
+	return CombatRules.active(s) and bool((CombatRules.player(s) if is_hero(who) else who).get("raging", false))
 
 
 ## What of `dtype` it takes: {"immune": why, "resist": why, "vulnerable": why}, a key only when it holds.
 static func defenses(s: GameSession, data: Dictionary, who: Dictionary, dtype: String, magical: bool, silvered: bool) -> Dictionary:
 	var out := {}
+	var res := HeroDefense.resistances(s, data, who)
+	if res.has(dtype):
+		out["resist"] = str(res[dtype])
 	if is_hero(who):
-		var res := HeroDefense.resistances(s, data)
-		if res.has(dtype):
-			out["resist"] = str(res[dtype])
 		return out
 	var m := template(data, who)
 	for list: String in ["immunities", "resistances", "vulnerabilities"]:

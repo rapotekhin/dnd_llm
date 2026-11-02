@@ -761,26 +761,7 @@ func combat_act(id: String, to: String = "", how: Dictionary = {}) -> String:
 ## A feature in a fight costs what rules.resources say (combat_cost): Rage and Second Wind — a bonus action,
 ## Action Surge — free and gives one more action.
 func combat_use_feature(resource_id: String) -> String:
-	if session == null or not CombatRules.active(session):
-		return "COMBAT_NONE"
-	var spec: Dictionary = Stock.table(Catalog.data).get(resource_id, {})
-	var cost := str(spec.get("combat_cost", "action"))
-	var why := Stock.can_use(session.character, Catalog.data, resource_id, 1)
-	if cost == "never":
-		why = "COMBAT_FEATURE_TAB"
-	if resource_id == "rage" and str(CharacterRules.item_def(session.character, Catalog.data, session.items, "armor").get("armor", {}).get("category", "")) == "heavy":
-		why = "COMBAT_RAGE_ARMOR"
-	if why.is_empty() and cost != "free" and int(CombatRules.economy(session).get(cost, 0)) <= 0:
-		why = "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
-	return _combat_do(why, func() -> Array[String]:
-		var e := CombatRules.economy(session)
-		if cost != "free":
-			e[cost] = int(e[cost]) - 1
-		if resource_id == "action_surge":
-			e["action"] = int(e["action"]) + 1
-		if resource_id == "rage":
-			session.combat["raging"] = true
-		return Stock.use(session.character, Catalog.data, resource_id, 1, session.rng))
+	return combat_act("feature", "", {"stock": resource_id})
 
 
 func combat_end_turn() -> String:
@@ -795,8 +776,7 @@ func combat_end_turn() -> String:
 ## A feature action of the fight (v0.7.10, FeatureRules): Reckless Attack, the ki techniques, Channel Divinity, Wild
 ## Shape, Font of Magic, Breath Weapon. "" or a localization key.
 func combat_feature(id: String, target_id: String = "") -> String:
-	return _combat_do(FeatureRules.can_act(session, Catalog.data, id, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return FeatureRules.act(session, Catalog.data, id, target_id))
+	return combat_act("feature", target_id, {"id": id})
 
 
 ## The answer to a prompt of the hero's turn (Divine Smite, the beast of Wild Shape, Font of Magic).
@@ -839,10 +819,11 @@ func font_convert(id: String) -> String:
 func combat_metamagic(id: String) -> void:
 	if session == null or not CombatRules.active(session):
 		return
-	if str(session.combat.get("metamagic", "")) == id or id.is_empty():
-		session.combat.erase("metamagic")
+	var hero := CombatRules.player(session)
+	if str(hero.get("metamagic", "")) == id or id.is_empty():
+		hero.erase("metamagic")
 	else:
-		session.combat["metamagic"] = id
+		hero["metamagic"] = id
 	EventBus.state_changed.emit()
 
 
@@ -1540,7 +1521,7 @@ func finish_combat() -> void:
 	for cond: String in ["unconscious", "prone", "grappled"]:  # the fight is over: up, and nobody holds the hero
 		ConditionRules.remove(s.character, cond)
 	lines.append_array(FeatureRules.end_shape(s, Catalog.data, 0))  # the beast form ends with the fight (v0.7.10)
-	var frenzied := bool(s.combat.get("frenzy", false))
+	var frenzied := bool(CombatRules.player(s).get("frenzy", false))
 	var minutes := ceili(int(s.combat.get("round", 1)) / float(ConditionRules.ROUNDS_PER_MINUTE))
 	CombatRules.close(s)
 	lines.append_array(TimeRules.advance(s, Catalog.data, minutes))  # the rounds of the fight on the clock (v0.7.8)
@@ -3357,7 +3338,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		params["auto_fail_reason"] = ", ".join(([params["auto_fail_reason"]] if not str(params["auto_fail_reason"]).is_empty() else []) + [tool_fx["auto_fail"]])
 	if not str(tool_fx["advantage"]).is_empty() and str(params.get("advantage_reason", "")).is_empty():
 		params["advantage_reason"] = tool_fx["advantage"]
-	if CombatRules.active(session) and bool(session.combat.get("raging", false)) and str(params.get("skill", "")) == "athletics" \
+	if Sheet.raging(session, Sheet.HERO) and str(params.get("skill", "")) == "athletics" \
 			and str(params.get("advantage_reason", "")).is_empty():
 		params["advantage_reason"] = "ярость"
 	var boots := CharacterRules.carried_with(session.character, Catalog.data, session.items, "stealth_advantage")

@@ -268,7 +268,7 @@ func test_race_resistances_and_save_advantages() -> void:
 func test_rage_resists_weapons_in_a_fight() -> void:
 	var s := _session("barbarian_urga")
 	_fight(s, [{"monster": "goblin", "col": 0}])
-	s.combat["raging"] = true
+	CombatRules.player(s)["raging"] = true
 	assert_int(int(Sheet.damage(s, data, Sheet.HERO, "slashing", 8)["damage"])).is_equal(4)
 	assert_int(int(Sheet.damage(s, data, Sheet.HERO, "fire", 8)["damage"])).is_equal(8)
 

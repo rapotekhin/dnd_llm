@@ -32,7 +32,7 @@ static func one(id: String) -> Act:
 
 
 ## `f` answers what happened with its reaction, when it has one left: the best of what any act offers. The hero has its window
-## instead (`FeatureRules.reactions`). True when it did.
+## instead (`FeatureRules.reactions`), the same features and the same `apply_reaction`. True when it did.
 static func react(s: GameSession, data: Dictionary, f: Dictionary, when: String, ctx: Dictionary, lines: Array[String]) -> bool:
 	if Sheet.is_hero(f) or bool(f.get("reacted", false)) or str(f.get("status")) != "active" or CombatRules.incapacitated(f):
 		return false

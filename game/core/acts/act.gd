@@ -96,6 +96,11 @@ func reacts(_s: GameSession, _data: Dictionary, _f: Dictionary, _when: String, _
 	return []
 
 
+## What it would do now for nothing but points when more than one way of it can be wanted, at `moment` («first», «last»): [{to, how}].
+func spare(_s: GameSession, _data: Dictionary, _f: Dictionary, _moment: String) -> Array[Dictionary]:
+	return []
+
+
 ## When the AI does a thing that costs no action: "first" before it walks and strikes, "last" after.
 func when() -> String:
 	return "first"

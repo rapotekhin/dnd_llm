@@ -29,9 +29,9 @@ static func damage_type(data: Dictionary, text: String) -> String:
 	return ""
 
 
-## The hero's damage types resisted now, with where each comes from: {type: source name}.
-static func resistances(s: GameSession, data: Dictionary) -> Dictionary:
-	var c := s.character
+## The damage types `who` resists now by its race, Rage, things and effects, with where each comes from: {type: source name}.
+static func resistances(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> Dictionary:
+	var c := Sheet.holder(s, who)
 	var out := {}
 	var traits: Dictionary = data["races"]["traits"]
 	var by_trait: Dictionary = cfg(data)["trait_resist"]
@@ -47,14 +47,15 @@ static func resistances(s: GameSession, data: Dictionary) -> Dictionary:
 				var dt := str(traits.get(str(id), {}).get("damage_type", ""))
 				if str(id).begins_with("draconic_ancestry_") and not dt.is_empty():
 					out[dt] = name
-	if CombatRules.active(s) and bool(s.combat.get("raging", false)):
+	if Sheet.raging(s, who):
 		for x: Variant in cfg(data)["rage_resist"]:
 			out[str(x)] = "Ярость"
 	var by_item: Dictionary = cfg(data)["item_resist"]
-	for d: Dictionary in _worn(c, data, s.items):
-		for p: Variant in d.get("properties", []):
-			if by_item.has(str(p)):
-				out[str(by_item[str(p)])] = str(d.get("name", ""))
+	if Sheet.is_hero(who):
+		for d: Dictionary in _worn(c, data, s.items):
+			for p: Variant in d.get("properties", []):
+				if by_item.has(str(p)):
+					out[str(by_item[str(p)])] = str(d.get("name", ""))
 	for e: Dictionary in ConditionRules.effects(c):
 		for x: Variant in e.get("resist", []):
 			out[str(x)] = str(e.get("source", {}).get("name", ""))

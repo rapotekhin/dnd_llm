@@ -13,7 +13,7 @@ func tab() -> String:
 
 
 func cost(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary) -> String:
-	if Sheet.is_hero(f) and FeatureRules.active_metamagic(s, data) == "quickened_spell":
+	if FeatureRules.active_metamagic(s, data, f) == "quickened_spell":
 		return "bonus"
 	return CombatRules.spell_cost(data, str(how.get("spell", "")))
 

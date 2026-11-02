@@ -179,7 +179,7 @@ static func cast(s: GameSession, data: Dictionary, f: Dictionary, id: String, sl
 		else:
 			run(s, data, id, slot, to, lines)
 	else:
-		s.combat["meta_now"] = ""
+		s.combat["meta_now"] = FeatureRules.pay_metamagic(s, data, f)
 		lines = _by_other(s, data, f, id, slot, to)
 	s.combat.erase("by")
 	return lines

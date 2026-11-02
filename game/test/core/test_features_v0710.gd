@@ -74,20 +74,20 @@ func test_monk_martial_arts_and_ki() -> void:
 	assert_str(str(bare["dice"])).is_equal("1d4")
 	assert_int(int(bare["bonus"])).is_equal(maxi(FeatureRules.ab_mod(c, "str"), FeatureRules.ab_mod(c, "dex")))
 	var f := _fight(s, "ogre")
-	assert_str(FeatureRules.can_act(s, data, "flurry", str(f["id"]))).is_equal("COMBAT_ATTACK_FIRST")
+	assert_str(Acts.one("feature").can(s, data, CombatRules.player(s), str(f["id"]), {"id": "flurry"})).is_equal("COMBAT_ATTACK_FIRST")
 	Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"]))
 	var ki := Stock.left(c, data, "ki")
-	assert_str(FeatureRules.can_act(s, data, "flurry", str(f["id"]))).is_empty()
-	var lines := FeatureRules.act(s, data, "flurry", str(f["id"]))
+	assert_str(Acts.one("feature").can(s, data, CombatRules.player(s), str(f["id"]), {"id": "flurry"})).is_empty()
+	var lines := Acts.one("feature").go(s, data, CombatRules.player(s), str(f["id"]), {"id": "flurry"})
 	assert_int(Stock.left(c, data, "ki")).is_equal(ki - 1)
 	assert_str(", ".join(lines)).contains("шквал")
-	assert_str(FeatureRules.can_act(s, data, "patient_defense")).is_equal("COMBAT_NO_BONUS")
+	assert_str(Acts.one("feature").can(s, data, CombatRules.player(s), "", {"id": "patient_defense"})).is_equal("COMBAT_NO_BONUS")
 
 
 func test_reckless_attack_cuts_both_ways() -> void:
 	var s := _hero("barbarian_urga", 2)
 	var f := _fight(s, "ogre")
-	FeatureRules.act(s, data, "reckless")
+	Acts.one("feature").go(s, data, CombatRules.player(s), "", {"id": "reckless"})
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"]["main_hand"]))
 	assert_array(Attack.mods(s, data, CombatRules.player(s), f, Attack.of_weapon(w))["adv"]).contains(["безрассудная атака"])
 	CombatRules._begin_turn(s, data, [] as Array[String])  # the hero's next turn: it is over
@@ -97,10 +97,10 @@ func test_reckless_attack_cuts_both_ways() -> void:
 func test_rage_ends_without_a_blow_and_danger_sense_helps_dex_saves() -> void:
 	var s := _hero("barbarian_urga", 2)
 	_fight(s, "ogre", 3)
-	s.combat["raging"] = true
+	CombatRules.player(s)["raging"] = true
 	var lines: Array[String] = []
-	FeatureRules.end_hero_turn(s, data, lines)
-	assert_bool(bool(s.combat["raging"])).is_false()
+	FeatureRules.end_turn(s, CombatRules.player(s), lines)
+	assert_bool(bool(CombatRules.player(s)["raging"])).is_false()
 	assert_array(HeroDefense.save_advantages(s.character, data, "dex", "")).is_not_empty()
 	assert_array(HeroDefense.save_advantages(s.character, data, "str", "", true)).contains(["ярость"])
 
@@ -121,7 +121,7 @@ func test_divine_smite_asks_and_spends_the_slot() -> void:
 	var f := _fight(s, "ogre")
 	var lines: Array[String] = []
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"]["main_hand"]))
-	FeatureRules.after_hit(s, data, w, f, false, {}, lines)
+	FeatureRules.after_hit(s, data, CombatRules.player(s), Attack.of_weapon(w), f, false, {}, lines)
 	var p: Dictionary = s.combat["prompt"]
 	assert_str(str(p["kind"])).is_equal("smite")
 	assert_str(str(p["options"][0]["id"])).is_equal("smite_1")
@@ -157,7 +157,7 @@ func test_cutting_words_can_turn_a_hit_into_a_miss() -> void:
 	(s.character["features"] as Array).append("cutting_words")
 	var f := _fight(s, "goblin")
 	var ctx := {"hit": true, "dmg": 5, "total": int(s.character["ac"]), "ac": int(s.character["ac"]), "nat20": false}
-	FeatureRules.apply_reaction(s, data, f, "cutting_words", ctx, [] as Array[String])
+	FeatureRules.apply_reaction(s, data, CombatRules.player(s), f, "cutting_words", ctx, [] as Array[String])
 	assert_bool(bool(ctx["hit"])).is_false()
 
 
@@ -168,12 +168,12 @@ func test_turn_undead_and_preserve_life() -> void:
 	var s := _hero("cleric_branko", 2)
 	var f := _fight(s, "zombie", 1)
 	f["max_hp"] = 99
-	var lines := FeatureRules.act(s, data, "turn_undead")
+	var lines := Acts.one("feature").go(s, data, CombatRules.player(s), "", {"id": "turn_undead"})
 	assert_str(", ".join(lines)).contains("Зомби")
 	s.character["hp"] = 1
 	CombatRules._begin_turn(s, data, [] as Array[String])
 	s.character["spent"] = {}
-	FeatureRules.act(s, data, "preserve_life")
+	Acts.one("feature").go(s, data, CombatRules.player(s), "", {"id": "preserve_life"})
 	assert_int(int(s.character["hp"])).is_equal(mini(1 + 10, int(s.character["max_hp"]) / 2))
 
 
@@ -183,7 +183,7 @@ func test_wild_shape_takes_the_beasts_body_and_gives_it_back() -> void:
 	var beasts := FeatureRules.beasts(s.character, data)
 	assert_array(beasts).is_not_empty()
 	assert_bool(beasts.all(func(m: String) -> bool: return float(data["monsters"][m]["cr"]) <= 0.25 and int(data["monsters"][m].get("fly", 0)) == 0)).is_true()
-	FeatureRules.act(s, data, "wild_shape")
+	Acts.one("feature").go(s, data, CombatRules.player(s), "", {"id": "wild_shape"})
 	FeatureRules.answer_prompt(s, data, beasts[0])
 	var m: Dictionary = data["monsters"][beasts[0]]
 	assert_int(int(s.character["ac"])).is_equal(int(m["ac"]))
@@ -208,7 +208,7 @@ func test_font_of_magic_and_quickened_spell() -> void:
 	(c["features"] as Array).append("metamagic_quickened_spell")
 	c["spent"] = {}  # the points spent on the slot come back for the test
 	var f := _fight(s, "goblin", 1)
-	s.combat["metamagic"] = "quickened_spell"
+	CombatRules.player(s)["metamagic"] = "quickened_spell"
 	CombatRules.economy(s)["action"] = 0
 	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": "fire_bolt", "slot": 0})).is_empty()  # a bonus action now
 
@@ -268,12 +268,12 @@ func test_dark_ones_blessing_and_temporary_hp() -> void:
 func test_breath_weapon_once_a_rest() -> void:
 	var s := _hero("paladin_gordey")
 	var f := _fight(s, "ogre")
-	assert_str(FeatureRules.can_act(s, data, "breath", str(f["id"]))).is_empty()
+	assert_str(Acts.one("feature").can(s, data, CombatRules.player(s), str(f["id"]), {"id": "breath"})).is_empty()
 	var hp := int(f["hp"])
-	FeatureRules.act(s, data, "breath", str(f["id"]))
+	Acts.one("feature").go(s, data, CombatRules.player(s), str(f["id"]), {"id": "breath"})
 	assert_int(int(f["hp"])).is_less_equal(hp)
 	CombatRules._begin_turn(s, data, [] as Array[String])
-	assert_str(FeatureRules.can_act(s, data, "breath", str(f["id"]))).is_equal("COMBAT_NO_CHARGE")
+	assert_str(Acts.one("feature").can(s, data, CombatRules.player(s), str(f["id"]), {"id": "breath"})).is_equal("COMBAT_NO_CHARGE")
 	s.combat = {}
 	ExplorationRules.short_rest(s, data, 0, s.rng)
 	assert_bool(bool(s.character["breath_used"])).is_false()

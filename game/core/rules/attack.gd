@@ -3,7 +3,7 @@ extends RefCounted
 ## One attack of anybody at anybody (v0.8.4.8, ADR-0016): the hero, a person, a foe, a summoned creature, on either side. A blow is
 ## a plain dictionary made by `of_weapon`, `of_action` or `of_spell`, so a sword in the hero's hands, a wolf's bite and a Fire Bolt
 ## go one road: why it has advantage, what stops it, the roll, what turns it, the damage, what it lays on the target. What a class
-## feature adds stays in CombatRules.strike until the features have one language (v0.8.4.9).
+## adds to a weapon's blow is on this road too (v0.8.4.9): `opts` of a blow — stunning, open_hand, no_horde.
 
 
 ## A weapon of `CombatRules.weapon_profile`, or what a button asks about a weapon.
@@ -96,7 +96,7 @@ static func mods(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 		adv.append("цель безрассудна")
 	if bool(f.get("reckless", false)) and not far and bool(b.get("str_based", true)):
 		adv.append("безрассудная атака")
-	if MonsterRules.has_trait(data, f, "pack_tactics") and CombatRules.friend_beside(s, f, t):
+	if Sheet.has_trait(s, data, f, "pack_tactics") and CombatRules.friend_beside(s, f, t):
 		adv.append("стайная тактика")
 	var dark_me := CombatRules.dark_for(s, data, f)
 	var dark_it := CombatRules.dark_for(s, data, t)
@@ -149,7 +149,8 @@ static func _plan(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 				for i in int(x["count"]):
 					plan.append(a)
 	if plan.is_empty():
-		plan.append(act)
+		for i in 1 + CharacterRules.extra_attacks(Sheet.holder(s, f), data):  # a class on a template with no Multiattack
+			plan.append(act)
 	if ConditionRules.has(Sheet.holder(s, f), "slowed_spell"):  # Slow: one attack (v0.7.13.6)
 		plan = [plan[0]]
 	return plan
@@ -208,6 +209,7 @@ static func swing(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	var me := Sheet.holder(s, f)
 	var m := mods(s, data, f, t, b)
 	(m["adv"] as Array).append_array(b.get("adv", []))
+	var blow := FeatureRules.armed(s, data, f, t, b, m) if bool(b.get("weapon", false)) else b
 	lines.append_array(SpellEffects.end_on_attack(me))
 	var a: Dictionary = b.get("act", {})
 	if not a.is_empty():
@@ -219,16 +221,32 @@ static func swing(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	if not Sheet.is_hero(f) and ConditionRules.has(me, "invisible"):
 		FightGrid.keep_seen(f)  # a strike gives an invisible foe away
 	var out := {"hit": false, "crit": false, "damage": 0}
-	var stop := _stopped(s, data, f, t, b)
+	var stop := _stopped(s, data, f, t, blow)
 	if stop.is_empty():
-		out = _roll(s, data, f, t, b, m, lines)
+		out = _roll(s, data, f, t, blow, m, lines)
 	else:
 		lines.append(stop)
 	lines.append_array(ConditionRules.end_invisibility_on_attack(me, data))  # the attack is made unseen, then it ends
 	ConditionRules.remove(Sheet.holder(s, t), "helped")
 	ConditionRules.remove(me, "mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
 	f["hidden"] = false
+	if bool(b.get("weapon", false)) and not bool(s.combat.get("halt", false)):
+		_horde(s, data, f, t, b, lines)
 	return out
+
+
+## Horde Breaker: once a turn one more blow at another foe beside the target.
+static func _horde(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, b: Dictionary, lines: Array[String]) -> void:
+	var e := CombatRules.points(s, data, f)
+	if bool(b.get("opts", {}).get("no_horde", false)) or bool(e.get("horde", false)) or not FeatureRules.has(Sheet.holder(s, f), "hunters_prey_horde_breaker"):
+		return
+	for id: String in CombatRules.foes_of(s, f):
+		var o := CombatRules.fighter(s, id)
+		if id != str(t["id"]) and FightGrid.touching(o, t) and (not bool(b["melee"]) or CombatRules.blade_reaches(s, data, f, o, int(b["reach"]))):
+			e["horde"] = true
+			lines.append("Разрушитель орд: удар по %s" % Sheet.holder(s, o).get("name", ""))
+			swing(s, data, f, o, b.merged({"opts": {"no_horde": true}}, true), lines)
+			return
 
 
 ## What keeps the blow from being rolled at all: a line, or "".
@@ -270,8 +288,8 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	parts.append_array(die.get("parts", []))
 	if RollParts.sum(parts) != to_hit:
 		parts.append(RollParts.part("прочие бонусы атаки", to_hit - RollParts.sum(parts)))
-	if not hit and nat != 1 and Sheet.is_hero(f):
-		var insp := Roll.inspire(s)
+	if not hit and nat != 1:
+		var insp := Roll.inspire(s, f)
 		if int(insp["value"]) > 0:
 			total += int(insp["value"])
 			hit = total >= ac
@@ -304,7 +322,7 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 		"hit": true, "total": total, "ac": ac, "nat20": nat == 20}
 	if Sheet.is_hero(t):
 		f["last_total"] = total  # for the labels of the reaction spells (v0.7.13.7)
-		var rx := FeatureRules.reactions(s, data, f, b.get("act", {}), shot(f, t, b), int(hurt["dmg"]), ctx)  # v0.7.10
+		var rx := FeatureRules.reactions(s, data, t, f, b.get("act", {}), shot(f, t, b), int(hurt["dmg"]), ctx)  # v0.7.10
 		if not rx.is_empty():
 			var pol := FeatureRules.policy(s)
 			if pol == "ask" and CombatRules.current(s) == str(f["id"]):
@@ -313,7 +331,9 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 				s.combat["halt"] = true
 				return {"hit": true, "crit": crit, "damage": int(hurt["dmg"])}
 			if pol != "never":
-				FeatureRules.apply_reaction(s, data, f, str(rx[0]["id"]), ctx, lines)
+				FeatureRules.apply_reaction(s, data, t, f, str(rx[0]["id"]), ctx, lines)
+	else:
+		Acts.react(s, data, t, "hurt", ctx, lines)
 	land(s, data, f, t, b, ctx, lines)
 	return {"hit": bool(ctx["hit"]), "crit": crit, "damage": int(ctx["dmg"])}
 
@@ -387,6 +407,7 @@ static func land(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 	if bool(ctx["hit"]):
 		if bool(b.get("weapon", false)):
 			_extras(s, data, f, t, b, crit, lines)
+			_by_class(s, data, f, t, b, crit, lines)
 		var a: Dictionary = b.get("act", {})
 		if not a.is_empty():
 			var pounce := MonsterRules.charge_prone(s, data, f, t, ctx["prone"], lines)
@@ -401,10 +422,25 @@ static func land(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 		SpellEffects.rebuke(s, data, f, str(ctx.get("rebuke_spell", "hellish_rebuke")), int(ctx["rebuke"]), lines)
 	if dmg > 0 and str(f.get("status")) == "active":
 		Acts.react(s, data, t, "damage", {"foe": str(f["id"]), "dmg": dmg}, lines)
-	if bool(ctx.get("counter", false)) and str(f.get("status")) == "active" and int(s.character.get("hp", 0)) > 0:
-		lines.append("%s: Убийца великанов — удар в ответ" % s.character.get("name", ""))
-		var c := s.character
-		lines.append_array(CombatRules.strike(s, data, str(f["id"]), CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", ""))), {"no_horde": true}))
+	if bool(ctx.get("counter", false)) and str(f.get("status")) == "active" and up(s, t):
+		lines.append("%s: Убийца великанов — удар в ответ" % Sheet.holder(s, t).get("name", ""))
+		swing(s, data, t, f, blade(s, data, t).merged({"opts": {"no_horde": true}}, true), lines)
+
+
+## What the class of `f` adds to a weapon's hit: Sneak Attack spent, its extra dice, what comes after the hit.
+static func _by_class(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, b: Dictionary, crit: bool, lines: Array[String]) -> void:
+	if not str(b.get("extra", "")).is_empty():
+		CombatRules.points(s, data, f)["sneak"] = true
+	if not up(s, t):
+		return
+	var x := FeatureRules.hit_extras(s, data, f, b, t, crit)
+	var pieces: Array = b.get("pieces", [])
+	if not str(x["dice"]).is_empty():
+		var type := str(pieces[0]["type"])
+		var more := Sheet.taken(s, data, t, type, CombatRules.roll_dice(s.rng, str(x["dice"])), bool(b.get("magical", false)), bool(b.get("silvered", false)))
+		lines.append("%s: ещё %d" % [", ".join(x["notes"]), more])
+		CombatRules.hurt(s, data, t, more, lines, type, false, Sheet.is_hero(f))
+	FeatureRules.after_hit(s, data, f, b, t, crit, b.get("opts", {}), lines)
 
 
 ## What comes with a weapon's hit: the spells on the striker (Divine Favor, Hunter's Mark, Branding Smite), the weapon's own

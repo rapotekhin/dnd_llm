@@ -16,7 +16,7 @@ func order() -> int:
 
 
 func shown(s: GameSession, _data: Dictionary, f: Dictionary) -> bool:
-	return Sheet.is_hero(f) and CharacterRules.has_feature(s.character, "frenzy") and bool(s.combat.get("raging", false)) and not bool(s.combat.get("frenzy", false))
+	return CharacterRules.has_feature(Sheet.holder(s, f), "frenzy") and bool(f.get("raging", false)) and not bool(f.get("frenzy", false))
 
 
 func cost(_s: GameSession, _data: Dictionary, _f: Dictionary, _how: Dictionary) -> String:
@@ -27,6 +27,10 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dic
 	return "" if shown(s, data, f) else "COMBAT_NO_FRENZY"
 
 
+func worth(_s: GameSession, data: Dictionary, _f: Dictionary) -> float:
+	return _weight(data)
+
+
 func run(s: GameSession, _data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
-	s.combat["frenzy"] = true
+	f["frenzy"] = true
 	return ["%s впадает в неистовство: удар бонусным действием каждый ход, после боя — истощение" % _name(s, f)]

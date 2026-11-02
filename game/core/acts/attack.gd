@@ -24,7 +24,7 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	var hand := str(how.get("hand", ""))
 	if hand == "off" and bool(CombatRules.cfg(data).get("offhand_needs_attack", true)) and not bool(CombatRules.points(s, data, f).get("attacked", false)):
 		return "COMBAT_NO_BONUS"  # as in BG3 (v0.7.22.3): no main-hand attack needed first, unless the rules ask for it
-	if hand == "frenzy" and not bool(s.combat.get("frenzy", false)):
+	if hand == "frenzy" and not bool(f.get("frenzy", false)):
 		return "COMBAT_NO_FRENZY"
 	if hand == "stowed":
 		var stop := Acts.one("swap").can(s, data, f)
@@ -64,7 +64,7 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	CombatRules.points(s, data, f)["attacked"] = true
 	if bool(b["melee"]) and Move.air(s, data, f):
 		f["swooped"] = true  # Fly (v0.7.63): down at arm's length, in reach until its next turn
-	if b.has("act"):
+	if b.has("act") and str(how.get("hand", "")) != "frenzy":
 		var a: Dictionary = b["act"]
 		if str(a.get("kind")) == "save":
 			Attack.breath(s, data, f, t, a, lines)
@@ -72,10 +72,19 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 			Attack.full(s, data, f, t, a, lines)
 		return lines
 	s.combat["melee_strike"] = bool(b["melee"]) and CombatRules.blade_reaches(s, data, f, t, int(b.get("reach", 1)))  # nonlethal needs a melee blow (5e)
-	lines = CombatRules.strike(s, data, to, CombatRules.hand_profile(s, data, str(how.get("hand", ""))), {})
+	Attack.swing(s, data, f, t, b, lines)
 	s.combat.erase("melee_strike")
 	CombatRules.spend_ammo(s, str(b.get("ammo", "")))
 	return lines
+
+
+## A frenzied one's blow as its bonus action, at the foe beside it.
+func spare(s: GameSession, _data: Dictionary, f: Dictionary, moment: String) -> Array[Dictionary]:
+	if moment == "last" and bool(f.get("frenzy", false)):
+		for one: String in CombatRules.foes_of(s, f):
+			if FightGrid.touching(f, CombatRules.fighter(s, one)) and Attack.up(s, CombatRules.fighter(s, one)):
+				return [{"to": one, "how": {"hand": "frenzy"}}]
+	return []
 
 
 func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dictionary]) -> Array[Dictionary]:

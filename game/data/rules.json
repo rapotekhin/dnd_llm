@@ -2527,7 +2527,7 @@
 		}
 	},
 	"resources": {
-		"_doc": "Feature uses (v0.6.0): who has them (features), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent). combat_cost: what a use costs in a fight (action by default, bonus, free). v0.7.63: this is the one stock of what a character spends and gets back; without `features` a row is everybody's and is no feature: spell slots (max.slots — a circle of slots_max; short_with may be a list) and hit dice (back half_level — a long rest returns half the level, at least 1). Spent is `spent` {id: n} on the character.",
+		"_doc": "Feature uses (v0.6.0): who has them (features), what a press gives in a fight (in_fight: points, stance; no_armor: refused in this armour), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent). combat_cost: what a use costs in a fight (action by default, bonus, free). v0.7.63: this is the one stock of what a character spends and gets back; without `features` a row is everybody's and is no feature: spell slots (max.slots — a circle of slots_max; short_with may be a list) and hit dice (back half_level — a long rest returns half the level, at least 1). Spent is `spent` {id: n} on the character.",
 		"second_wind": {
 			"features": [
 				"second_wind"
@@ -2554,7 +2554,8 @@
 				"default": 1
 			},
 			"recharge": "short",
-			"combat_cost": "free"
+			"combat_cost": "free",
+			"in_fight": {"points": {"action": 1}}
 		},
 		"rage": {
 			"features": [
@@ -2565,7 +2566,9 @@
 				"default": 2
 			},
 			"recharge": "long",
-			"combat_cost": "bonus"
+			"combat_cost": "bonus",
+			"in_fight": {"stance": "raging"},
+			"no_armor": "heavy"
 		},
 		"bardic_inspiration": {
 			"features": [
@@ -3598,13 +3601,33 @@
 			"pursuit": 6,
 			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "dice": "5", "type": "fire", "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "noise": {"reach": 30, "wall": 6, "beyond": 8}
 		},
+		"classed": {
+			"_doc": "The class of a fighter by its SRD template (v0.8.4.9, FeatureRules.give_class): class, level, subclass. A pack's NPC or an encounter may name its own.",
+			"veteran": {"class": "fighter", "level": 3, "subclass": "champion"},
+			"knight": {"class": "fighter", "level": 3, "subclass": "champion"},
+			"bandit_captain": {"class": "fighter", "level": 3, "subclass": "champion"},
+			"berserker": {"class": "barbarian", "level": 3, "subclass": "berserker"},
+			"scout": {"class": "ranger", "level": 3, "subclass": "hunter"},
+			"spy": {"class": "rogue", "level": 3, "subclass": "thief"},
+			"acolyte": {"class": "cleric", "level": 1, "subclass": "life"},
+			"cult_fanatic": {"class": "cleric", "level": 3, "subclass": "life"},
+			"priest": {"class": "cleric", "level": 5, "subclass": "life"},
+			"druid": {"class": "druid", "level": 4, "subclass": "land"},
+			"mage": {"class": "wizard", "level": 5, "subclass": "evocation"},
+			"archmage": {"class": "wizard", "level": 5, "subclass": "evocation"}
+		},
 		"ai": {
 			"_doc": "The search of a creature's turn (v0.8.4, FightAI): `budget` — lines of sight traced in a turn, `flow` — how far walking distances are counted, `flee_lost` — squares out of sight after which one who runs is gone, `keep_most` — how far `keep` still pays. `roles` — the weights: `focus` — on the wounded, `finish` — a kill, `adjacent` — a foe beside it, `keep` — a square of distance, `hazard` — a square that burns, `leave` — a blow in the back, `step` — a square walked, `pack` — a friend at the target, `control` and `cast` — what a save action and a spell are worth. A role comes from `monsters` by id, a caster's and a shooter's by their record, then `by_trait`, `by_type`.",
 			"budget": 120,
 			"flow": 80,
 			"flee_lost": 12,
 			"keep_most": 8,
-			"acts": {"dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100, "escape": 6, "help": 0.5, "grapple": 2, "shove": 3},
+			"acts": {"frenzy": 4, "dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100, "escape": 6, "help": 0.5, "grapple": 2, "shove": 3},
+			"features": {"_doc": "What a feature is worth to the AI (core/acts/feature.gd): `when` first or last — taken for its bonus or free action before it walks or when all is done; `power` — an act beside its blows; `below` — only under this share of its HP; `foes` — only with a foe of these types within 30 ft.",
+				"rage": {"when": "first"}, "reckless": {"when": "first"}, "action_surge": {"when": "first"}, "second_wind": {"when": "first", "below": 0.5},
+				"flurry_topple": {"when": "last"}, "flurry": {"when": "last"}, "martial_strike": {"when": "last"}, "patient_defense": {"when": "last", "below": 0.5},
+				"stunning": {"power": 8}, "turn_undead": {"power": 10, "foes": ["undead"]}, "turn_unholy": {"power": 10, "foes": ["undead", "fiend"]},
+				"preserve_life": {"power": 10, "below": 0.5}, "sacred_weapon": {"power": 3}, "wild_shape": {"power": 6}, "breath": {"power": 7}},
 			"spells": {"_doc": "What a spell is worth to the AI (core/acts/cast.gd), in the units of a blow's damage, times the role's `cast` / 6: condition, curse, summon, buff, sustained, mark, teleport, dispel — a spell of that way, heal — a friend at `heal_below` of its hit points or less, slot — taken from a damage spell per circle, hit — the chance of a spell by a save; boon_keys — what makes a row of rules.spell_effects worth casting on itself.",
 				"condition": 9, "curse": 6, "summon": 10, "buff": 5, "sustained": 8, "mark": 3, "teleport": 5, "dispel": 4, "heal": 12, "heal_below": 0.5, "slot": 0.5, "hit": 0.6, "counter_from": 1,
 				"boon_keys": ["die", "ac_plus", "ac_min", "ac_base", "attackers_dis", "images", "sanctuary", "resist", "resist_auto", "haste", "flying", "weapon_plus", "weapon_extra", "temp_dice", "temp_hp", "max_hp_plus", "self_status", "speed_plus", "blink", "enlarged", "foe_types_dis"]},
@@ -4281,7 +4304,7 @@
 		}
 	},
 	"feature_actions": {
-		"_doc": "The actions of features in a fight (v0.7.64, FeatureRules): name, cost (action, bonus, free), target (a foe in reach), tip; who has it: features (all of them), stock (a resource owned), trait; pay {id, n}: the resource it needs, spent unless check_only; after_attack — after the Attack action; effects, each by kind: strike {profile, times, opts}, stance {key} on the hero's fighter, dash, turn {types, destroy}, heal_half, for {key, rounds}, line {text}; hook — what stays code (FeatureRules._hook); spend false — the hook spends by itself.",
+		"_doc": "The actions of features in a fight (v0.7.64, FeatureRules): name, cost (action, bonus, free), target (a foe in reach), tip; who has it: features (all of them), stock (a resource owned), trait; pay {id, n}: the resource it needs, spent unless check_only; after_attack — after the Attack action; effects, each by kind: strike {profile, times, opts}, stance {key} on the fighter, dash, turn {types, destroy}, heal_half, for {key, rounds}, line {text}; hook — what stays code (FeatureRules._hook); spend false — the hook spends by itself.",
 		"reckless": {
 			"name": "Безрассудная атака",
 			"cost": "free",

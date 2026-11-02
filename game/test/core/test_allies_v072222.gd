@@ -149,9 +149,9 @@ func test_sneak_attack_beside_an_ally() -> void:
 	_wolf_and(s, [{"monster": "guard", "name": "Влада", "col": 2}])
 	var wolf := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"].get("main_hand", "")))
-	assert_str(CombatRules._sneak_dice(s, data, w, false, false, wolf)).is_not_empty()
+	assert_str(FeatureRules.sneak_dice(s, data, CombatRules.player(s), Attack.of_weapon(w), false, false, wolf)).is_not_empty()
 	TestUtils.to_col(CombatRules.fighter(s, CombatRules.allies(s)[0]), -2)
-	assert_str(CombatRules._sneak_dice(s, data, w, false, false, wolf)).is_empty()
+	assert_str(FeatureRules.sneak_dice(s, data, CombatRules.player(s), Attack.of_weapon(w), false, false, wolf)).is_empty()
 
 
 func test_the_burrow_brings_no_allies_of_its_own() -> void:  # v0.7.50.1: the hero gathers them in town

@@ -312,9 +312,9 @@ static func sees(s: GameSession, data: Dictionary, a: Dictionary, b: Dictionary)
 ## What `f` senses without its eyes, in squares: "blindsight", "truesight", "devils_sight" (v0.8.4.1).
 static func senses(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 	var out := {}
+	if CharacterRules.has_feature(Sheet.holder(s, f), "eldritch_invocation_devils_sight"):
+		out["devils_sight"] = int(SightRules.cfg(data)["devils_sight"])
 	if str(f.get("id")) == "p":
-		if CharacterRules.has_feature(s.character, "eldritch_invocation_devils_sight"):
-			out["devils_sight"] = int(SightRules.cfg(data)["devils_sight"])
 		return out
 	var m := Sheet.template(data, f)
 	for sense: String in ["blindsight", "truesight"]:

@@ -224,7 +224,7 @@ func run() -> void:
 	# v0.7.13.7: the reaction window lists Shield next to the hit (the window itself is the features playtest's).
 	_learn(c, ["shield"])
 	Stock.fill_slots(c)
-	var rx := FeatureRules.reactions(s, data, wolf, data["monsters"]["wolf"]["actions"][0], false, 5)
+	var rx := FeatureRules.reactions(s, data, CombatRules.player(s), wolf, data["monsters"]["wolf"]["actions"][0], false, 5)
 	step("Shield among the reactions", rx.any(func(r: Dictionary) -> bool: return str(r["id"]) == "spell_shield"), str(rx))
 
 

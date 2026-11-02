@@ -174,7 +174,7 @@ static func _place(s: GameSession, data: Dictionary, f: Dictionary, ghost: Dicti
 	v += float(w["keep"]) * mini(nearest, int(cfg(data)["keep_most"]))
 	var p := CombatRules.player(s)
 	if not bool(p.get("reacted", false)) and not bool(f.get("disengaged", false)) and FightGrid.touching(f, p) and not FightGrid.touching(ghost, p) \
-			and not MonsterRules.has_trait(data, f, "flyby"):
+			and not Sheet.has_trait(s, data, f, "flyby"):
 		v -= float(w["leave"])
 	return v
 
@@ -242,6 +242,10 @@ static func _free(s: GameSession, data: Dictionary, f: Dictionary, when: String,
 	for a: Act in Acts.wanted(s, data, f, false, when):
 		if a.can(s, data, f).is_empty():
 			lines.append_array(a.go(s, data, f))
+	for a: Act in Acts.all():
+		for o: Dictionary in a.spare(s, data, f, when):
+			if a.can(s, data, f, str(o["to"]), o["how"]).is_empty():
+				lines.append_array(a.go(s, data, f, str(o["to"]), o["how"]))
 
 
 ## The whole turn, and Haste's action after it (v0.7.50.1).
@@ -298,9 +302,11 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[St
 		return
 	var act_now := Acts.one(str(o["act"]))
 	var by_bonus := act_now.cost(s, data, f, o["how"]) == "bonus"
+	var had := int(CombatRules.points(s, data, f).get("action", 0))
 	lines.append_array(act_now.go(s, data, f, str(o["to"]), o["how"]))
-	if by_bonus and int(CombatRules.points(s, data, f).get("action", 0)) > 0 and str(f.get("status")) == "active" and not CombatRules.stopped(s, f):
-		act(s, data, f, lines)  # its action is still there
+	var left := int(CombatRules.points(s, data, f).get("action", 0))
+	if (by_bonus or left < had) and left > 0 and str(f.get("status")) == "active" and not CombatRules.stopped(s, f):
+		act(s, data, f, lines)  # its action is still there, or Action Surge gave one more
 
 
 ## One who runs: to the nearest way out, away from the hero when there is none. Off the map or out of sight — gone.

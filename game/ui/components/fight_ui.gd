@@ -989,7 +989,7 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 		var title := str(chip.get_meta("title", ""))
 		var about := str(chip.get_meta("about", ""))
 		(chip as Control).mouse_entered.connect(func() -> void: _details.show_text(title, about))
-	if bool(s.combat.get("raging", false)):
+	if bool(CombatRules.player(s).get("raging", false)):
 		_line(_portrait, tr("COMBAT_RAGING")).add_theme_color_override("font_color", UiTheme.BAD)
 	if bool(CombatRules.player(s).get("hidden", false)):
 		_line(_portrait, tr("COMBAT_HIDDEN")).add_theme_color_override("font_color", UiTheme.ACCENT)
@@ -1095,7 +1095,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "off"}),
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "off"}),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true), "", _far(ow))
-	if bool(s.combat.get("frenzy", false)):
+	if bool(CombatRules.player(s).get("frenzy", false)):
 		_action(w, "Attack_frenzy", tr("COMBAT_ATTACK_FRENZY").format({"name": main["name"], "dmg": _dmg_text(main)}), me,
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "frenzy"}),
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "frenzy"}),
@@ -1107,7 +1107,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			var mid := str(mm["id"])
 			var mb := _button(sp, "Meta_" + mid, "✦ %s (%d)" % [mm["name"], int(mm["cost"])], me and Stock.left(c, data, "sorcery_points") >= int(mm["cost"]))
 			mb.toggle_mode = true
-			mb.button_pressed = str(s.combat.get("metamagic", "")) == mid
+			mb.button_pressed = str(CombatRules.player(s).get("metamagic", "")) == mid
 			mb.tooltip_text = tr("META_TIP_" + mid.to_upper())
 			mb.pressed.connect(func() -> void: GameState.combat_metamagic(mid))
 		var circles: Array[int] = []
@@ -1159,10 +1159,10 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			var slabel := "%s%s" % [sa["name"], tr("COMBAT_BONUS_SHORT") if str(sa["cost"]) == "bonus" else ""]
 			if bool(sa["target"]):
 				var stb := _action(sp, "Feat_" + said, slabel, me, func(t: String) -> String: return GameState.combat_feature(said, t),
-					func(t: String) -> String: return FeatureRules.can_act(s, data, said, t), func(_t: String) -> Dictionary: return {})
+					func(t: String) -> String: return Acts.one("feature").can(s, data, CombatRules.player(s), t, {"id": said}), func(_t: String) -> Dictionary: return {})
 				stb.tooltip_text = str(sa["tip"])
 			else:
-				var swhy := FeatureRules.can_act(s, data, said)
+				var swhy := Acts.one("feature").can(s, data, CombatRules.player(s), "", {"id": said})
 				var sub := _button(sp, "Feat_" + said, slabel, me and swhy.is_empty())
 				sub.tooltip_text = str(sa["tip"])
 				sub.pressed.connect(func() -> void: _do(GameState.combat_feature(said)))
@@ -1177,11 +1177,11 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			var label := "%s%s" % [fa["name"], tr("COMBAT_BONUS_SHORT") if str(fa["cost"]) == "bonus" else ""]
 			if bool(fa["target"]):
 				var tb := _action(fb, "Feat_" + fid, label, me, func(t: String) -> String: return GameState.combat_feature(fid, t),
-					func(t: String) -> String: return FeatureRules.can_act(s, data, fid, t), func(_t: String) -> Dictionary: return {})
+					func(t: String) -> String: return Acts.one("feature").can(s, data, CombatRules.player(s), t, {"id": fid}), func(_t: String) -> Dictionary: return {})
 				tb.tooltip_text = str(fa["tip"])
 				_details.hook(tb, str(fa["name"]), str(fa["tip"]))
 			else:
-				var why := FeatureRules.can_act(s, data, fid)
+				var why := Acts.one("feature").can(s, data, CombatRules.player(s), "", {"id": fid})
 				var ub := _button(fb, "Feat_" + fid, label, me and why.is_empty())
 				ub.tooltip_text = str(fa["tip"]) + (("\n" + tr(why)) if not why.is_empty() and why != "COMBAT_NOT_YOUR_TURN" else "")
 				_details.hook(ub, str(fa["name"]), str(fa["tip"]))
