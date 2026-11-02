@@ -8,10 +8,12 @@ extends RefCounted
 ## inventory, gold_cp, equipped, copies — what it has, in the hero's form (Gear, v0.8.4.10); picked, caught — the day its
 ## pockets were tried and the day it caught a thief;
 ## hp — its wounds between fights, full when absent; effects, conditions, next_effect — its statuses as on the hero
-## (ConditionRules, v0.7.63): a spell on it, a poison kept after a fight; sick {id, until} — it passes then, id "" — healed; dead true; body — the room it lies in, body_at — since when (an absolute minute), searched
+## (ConditionRules, v0.7.63): a spell on it, a poison kept after a fight; sick {id} — the pack's disease was laid on it as an effect (DiseaseRules, v0.8.4.11); dead true; body — the room it lies in, body_at — since when (an absolute minute), searched
 ## true; disarmed {item: day} — stolen out of its hands; follows — the turn it joined the hero, fed {at, hungry} — its
 ## last meal; at — the room it was left in, "" on the road; discount {pct, until_day}, favor — the day of the last free
-## service: what it granted by words.
+## service: what it granted by words. spent, exhaustion — the uses it spent and its exhaustion, until it rests; diseases —
+## the diseases it caught, before they show; rested — the day it was first seen tired, it rests the next morning (Rest, v0.8.4.11); xp, level — what a
+## person of a class has grown to beside the hero (GrowthRules).
 ##
 ## v0.7.62: whom the pack does not name is made here (`spawn`) and has an id `c#` for life. id, n — its id and the order it
 ## came in; monster, name, base — the SRD template, its name and the name without a number. encounter, at — a head of an
@@ -33,7 +35,8 @@ const PARTS := {
 	"equipped": TYPE_DICTIONARY, "copies": TYPE_DICTIONARY, "picked": TYPE_INT, "caught": TYPE_INT,
 	"hp": TYPE_INT, "effects": TYPE_ARRAY, "conditions": TYPE_ARRAY, "next_effect": TYPE_INT, "sick": TYPE_DICTIONARY, "dead": TYPE_BOOL, "body": TYPE_STRING,
 	"body_at": TYPE_INT, "searched": TYPE_BOOL, "disarmed": TYPE_DICTIONARY, "follows": TYPE_INT, "fed": TYPE_DICTIONARY, "at": TYPE_STRING,
-	"discount": TYPE_DICTIONARY, "favor": TYPE_INT, "creature": TYPE_DICTIONARY, "summon": TYPE_DICTIONARY, "fight": TYPE_DICTIONARY,
+	"discount": TYPE_DICTIONARY, "favor": TYPE_INT, "spent": TYPE_DICTIONARY, "exhaustion": TYPE_INT, "diseases": TYPE_ARRAY,
+	"rested": TYPE_INT, "xp": TYPE_INT, "level": TYPE_INT, "creature": TYPE_DICTIONARY, "summon": TYPE_DICTIONARY, "fight": TYPE_DICTIONARY,
 	"was": TYPE_DICTIONARY,
 }
 const NESTED := {
@@ -58,7 +61,7 @@ const NESTED := {
 		"gold_cp": TYPE_INT, "equipped": TYPE_DICTIONARY, "copies": TYPE_DICTIONARY, "ammo_spent": TYPE_DICTIONARY,
 		"effects": TYPE_ARRAY, "conditions": TYPE_ARRAY, "next_effect": TYPE_INT, "surprised": TYPE_BOOL, "dodging": TYPE_BOOL, "hidden": TYPE_BOOL,
 		"reckless": TYPE_BOOL, "disengaged": TYPE_BOOL, "swooped": TYPE_BOOL, "no_heal": TYPE_BOOL, "blinked": TYPE_BOOL, "retching": TYPE_BOOL, "reacted": TYPE_BOOL,
-		"lethargy": TYPE_BOOL, "fleeing": TYPE_BOOL, "relentless_used": TYPE_BOOL, "slowed": TYPE_INT,
+		"lethargy": TYPE_BOOL, "fleeing": TYPE_BOOL, "relentless_used": TYPE_BOOL, "slowed": TYPE_INT, "exhaustion": TYPE_INT,
 		"oiled": TYPE_INT, "seen_x": TYPE_INT, "seen_y": TYPE_INT, "cover": TYPE_INT, "points": TYPE_DICTIONARY, "last_total": TYPE_INT, "temp_hp": TYPE_INT, "acid": TYPE_STRING,
 		"burning": TYPE_STRING, "target": TYPE_STRING, "last_spell": TYPE_STRING, "set_by": TYPE_STRING, "called_by": TYPE_STRING, "zoned": TYPE_ARRAY, "used": TYPE_NIL, "once": TYPE_NIL,
 		"recharge": TYPE_NIL, "spent": TYPE_NIL, "class": TYPE_STRING, "subclass": TYPE_STRING, "level": TYPE_INT, "features": TYPE_ARRAY, "traits": TYPE_ARRAY,

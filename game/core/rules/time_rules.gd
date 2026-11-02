@@ -65,6 +65,7 @@ static func registry() -> Array[Dictionary]:
 		_hooks = [
 			{"id": "charms", "run": SpellEffects.npc_expire},  # Charm Person on an NPC ends (v0.7.22.3), before the statuses' time out
 			{"id": "conditions", "run": ConditionRules.expire},
+			{"id": "rest", "run": Rest.tick},  # who is not with the hero rests a night each (v0.8.4.11)
 			{"id": "summoned", "run": AllyRules.expire},  # the summoned go when their time is out (v0.7.22.22)
 			{"id": "creatures", "run": CreatureRules.tick, "rules": "creatures"},  # the beaten foes left alone go (v0.7.22.11)
 			{"id": "awake", "run": _awake},

@@ -186,8 +186,10 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 	if bool(fx.get("drain", false)) and dealt > 0 and Attack.up(s, t):
 		_drain(s, data, f, t, a, dealt)
 		lines.append("%s: максимум хитов −%d до долгого отдыха" % [me.get("name", ""), dealt])
-	if hero and fx.has("disease"):  # it shows after its incubation, out of the fight (v0.7.23.1)
-		lines.append_array(DiseaseRules.contract(s, data, str(fx["disease"])))
+	if fx.has("disease") and (hero or t.has("npc_id") and not str(t["npc_id"]).is_empty()):  # it shows after its incubation, out of the fight (v0.7.23.1); a person's too (v0.8.4.11)
+		var caught := DiseaseRules.contract(s, data, str(fx["disease"]), Being.HERO if hero else str(t["id"]))
+		if hero:
+			lines.append_array(caught)
 	var cond := str(fx.get("condition", ""))
 	if cond.is_empty() or not Attack.up(s, t) and cond != "poisoned":
 		return

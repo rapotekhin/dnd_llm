@@ -1432,6 +1432,7 @@ func _combat_outcome() -> void:
 	if outcome in ["victory", "truce"]:
 		CombatRules.results(s, Catalog.data)
 		var xp_lines := XpRules.award(s.character, Catalog.data, int(s.combat["xp"]), "бой")
+		xp_lines.append_array(GrowthRules.share(s, Catalog.data, GrowthRules.fought(s), int(s.combat["xp"])))  # who fought beside grows too (v0.8.4.11)
 		_combat_log(xp_lines)
 	var log: Array = s.combat.get("log", [])
 	s.combat["log"] = []

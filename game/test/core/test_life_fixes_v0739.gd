@@ -98,12 +98,10 @@ func test_the_master_takes_the_tax_by_words() -> void:
 func test_a_sick_npc_gets_well() -> void:
 	var s := _hero()
 	assert_str(DiseaseRules.npc_disease(s, data, "npc_sick_pilgrim")).is_equal("cackle_fever")
-	DiseaseRules.tick(s, data)
-	var until := int(Being.of(s, "npc_sick_pilgrim")["sick"]["until"])
-	assert_int(until).is_greater(s.clock)
-	s.clock = until
-	DiseaseRules.tick(s, data)
-	assert_str(DiseaseRules.npc_disease(s, data, "npc_sick_pilgrim")).is_empty()
+	TimeRules.advance(s, data, 60)
+	assert_str(DiseaseRules.npc_disease(s, data, "npc_sick_pilgrim")).is_equal("cackle_fever")
+	TimeRules.advance(s, data, int(DiseaseRules.def_of(s, data, "cackle_fever").get("days", 1)) * 24 * 60)
+	assert_str(DiseaseRules.npc_disease(s, data, "npc_sick_pilgrim")).is_empty()  # its course ran out, it does not come back
 	var back := GameSession.from_dict(s.to_dict(10))  # kept in the save
 	assert_str(DiseaseRules.npc_disease(back, data, "npc_sick_pilgrim")).is_empty()
 

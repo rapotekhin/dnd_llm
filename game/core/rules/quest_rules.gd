@@ -376,6 +376,7 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 		lines.append("%s: отношение %s" % [world.npc(npc).get("name", npc), "лучше" if int(att[npc]) > 0 else "хуже"])
 	if class_xp:
 		lines.append_array(XpRules.award(c, data, int(r.get("xp", 0)), "задание"))
+		lines.append_array(GrowthRules.share(s, data, GrowthRules.company(s), int(r.get("xp", 0))))  # and who walked it with the hero (v0.8.4.11)
 
 
 ## Taken quests for the snapshot and the journal: [{id, title, description, done, failed, step}]; failed ones —

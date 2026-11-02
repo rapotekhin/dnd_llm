@@ -1,5 +1,5 @@
 {
-	"game_version": "0.8.4.10",
+	"game_version": "0.8.4.11",
 	"meta": {
 		"character": "Айра",
 		"created_at": "2026-10-18T12:00:00",
@@ -10,7 +10,7 @@
 		"turns": 2,
 		"world_id": "frontier"
 	},
-	"save_version": 65,
+	"save_version": 66,
 	"saved_at": "2026-10-18T12:00:00",
 	"session": {
 		"arrest": "",

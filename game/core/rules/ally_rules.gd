@@ -205,11 +205,6 @@ static func drop_buffs(s: GameSession, spell_id: String) -> void:
 		ConditionRules.tidy(Being.of(s, id))
 
 
-## A long rest heals the wounded NPCs.
-static func rest(s: GameSession) -> void:
-	Being.clear(s, "hp")
-
-
 ## After the fight: the summoned keep their wounds (the fallen are gone); the followers who fell come to. Lines.
 static func after_fight(s: GameSession) -> Array[String]:
 	var lines: Array[String] = []

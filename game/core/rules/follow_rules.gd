@@ -69,9 +69,13 @@ static func meals(s: GameSession, data: Dictionary) -> Array[String]:
 		var rec: Dictionary = Being.of(s, id)["fed"]
 		var name := str(world.npc(id).get("name", JobRules.npc_name(s, data, id)))
 		while now - int(rec["at"]) >= 1440 and Being.follows(s, id):
-			var food := _portion(s, data)
+			var bag := Gear.of(s, data, id)  # its own food first, then the hero's (v0.8.4.11)
+			var food := _portion(s, data, bag)
+			if food.is_empty():
+				bag = s.character
+				food = _portion(s, data, bag)
 			if not food.is_empty():
-				NeedRules._take(s.character, food)
+				NeedRules._take(bag, food)
 				rec["at"] = now
 				rec["hungry"] = 0
 				lines.append("%s поел: %s" % [name, ItemRules.display_name(data["items"], s.items, food)])
@@ -88,8 +92,8 @@ static func meals(s: GameSession, data: Dictionary) -> Array[String]:
 
 
 ## The portion a follower eats: of the hero's food, what spoils first and is cheapest; foul food last.
-static func _portion(s: GameSession, data: Dictionary) -> String:
-	var have := NeedRules.food_items(s.character, data)
+static func _portion(s: GameSession, data: Dictionary, c: Dictionary) -> String:
+	var have := NeedRules.food_items(c, data)
 	if have.is_empty():
 		return ""
 	var foul: Dictionary = data["rules"].get("diseases", {}).get("foul_food", {})

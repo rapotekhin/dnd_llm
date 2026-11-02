@@ -120,7 +120,8 @@ func test_foes_left_behind_keep_their_dead_and_wounds() -> void:
 	assert_int(int(Being.view(s, ids[1])["hp"])).is_equal(2)
 	TestUtils.fight(s, data, left, {"encounter": "t_wolves"})
 	assert_int(int(CombatRules.fighter(s, ids[1])["hp"])).is_equal(2)
-	AllyRules.rest(s)
+	CombatRules.close(s)
+	Rest.long(s, data, ids[1])
 	assert_bool(Being.view(s, ids[1]).has("hp")).is_false()
 
 

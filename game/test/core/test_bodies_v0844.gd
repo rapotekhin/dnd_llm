@@ -142,7 +142,9 @@ func test_a_healer_cures_by_its_art() -> void:
 func test_no_cure_without_an_art_or_past_it() -> void:
 	var s := TestUtils.new_session()
 	s.room_id = "brod-herbalist"
-	Being.of(s, "npc_sick_pilgrim")["sick"] = {"id": "rot_fever", "until": s.clock + 100000}
+	Being.of(s, "npc_sick_pilgrim")["sick"] = {"id": "rot_fever"}  # the pack's own fever is not laid
+	DiseaseRules.contract(s, data, "rot_fever", "npc_sick_pilgrim")
+	TimeRules.advance(s, data, int(DiseaseRules.def_of(s, data, "rot_fever").get("incubation_hours", 0)) * 60 + 1)
 	assert_str(str(DiseaseRules.plan_cure(s, data, {"npc_id": "npc_herbalist", "patient_id": "npc_sick_pilgrim"}).get("reason", ""))).contains("магия")
 	assert_str(str(DiseaseRules.plan_cure(s, data, {"npc_id": "npc_innkeeper", "patient_id": "npc_sick_pilgrim"}).get("reason", ""))).contains("не в сцене")
 

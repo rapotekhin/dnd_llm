@@ -194,8 +194,8 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Diction
 	var c := Sheet.holder(s, who)
 	var cond := str(e.get("condition", ""))
 	var lines: Array[String] = []
-	if cond == "exhaustion" and hero:
-		return add_exhaustion(s, data, 1, str(e.get("source", {}).get("name", "")))
+	if cond == "exhaustion" and (hero or who.has("id")):  # a level of the one scale, whoever takes it (v0.8.4.11)
+		return add_exhaustion(s, data, 1, str(e.get("source", {}).get("name", "")), str(who.get("id", Being.HERO)))
 	add_effect(c, e.merged(MakeRules.fx(s, cond)))
 	if cond == "invisible" and not hero:
 		FightGrid.keep_seen(c)
@@ -409,20 +409,30 @@ static func exhaustion(c: Dictionary) -> int:
 	return int(c.get("exhaustion", 0))
 
 
-## +n levels of exhaustion (clamped 0–6). The sixth is death: the caller ends the game (dead()). Lines.
-static func add_exhaustion(s: GameSession, data: Dictionary, n: int, why: String) -> Array[String]:
-	var c := s.character
+## +n levels of exhaustion (clamped 0–6) of anybody (v0.8.4.11): the hero, a follower, a person, a fighter. The sixth is
+## death: the hero's ends the game (dead()), a fighter falls dead, a record is dead. Lines.
+static func add_exhaustion(s: GameSession, data: Dictionary, n: int, why: String, who: String = Being.HERO) -> Array[String]:
+	var hero := who == Being.HERO
+	var c := Rest.holder(s, who)
 	var before := exhaustion(c)
 	var after := clampi(before + n, 0, 6)
 	if after == before:
 		return []
 	c["exhaustion"] = after
-	CharacterRules.refresh(c, data, s.items)  # speed and max HP depend on it
+	var name := "" if hero else Rest.name_of(s, data, who) + ": "
+	if hero:
+		CharacterRules.refresh(c, data, s.items)  # speed and max HP depend on it
 	if after < before:
-		return ["истощение %d → %d" % [before, after]]
-	if after >= 6 and CombatRules.active(s) and str(s.combat.get("outcome", "")).is_empty():
-		s.combat["outcome"] = "dead"
-	var line := "Истощение %d%s" % [after, (" (%s)" % why) if not why.is_empty() else ""]
+		return [name + "истощение %d → %d" % [before, after]]
+	if after >= 6:
+		if hero and CombatRules.active(s) and str(s.combat.get("outcome", "")).is_empty():
+			s.combat["outcome"] = "dead"
+		elif not hero and c.has("status"):
+			c["hp"] = 0
+			c["status"] = "dead"
+		elif not hero:
+			Being.of(s, who)["dead"] = true
+	var line := name + ("Истощение %d%s" % [after, (" (%s)" % why) if not why.is_empty() else ""])
 	return [line + (" — смерть" if after >= 6 else " — " + exhaustion_text(after))]
 
 
@@ -526,10 +536,10 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 			remove(c, str(cond))
 			lines.append("снято: %s" % name_of(data, str(cond)))
 	if int(spec.get("exhaustion", 0)) > 0 and exhaustion(c) > 0:
-		lines.append_array(add_exhaustion(s, data, -int(spec["exhaustion"]), ""))
+		lines.append_array(add_exhaustion(s, data, -int(spec["exhaustion"]), "", str(who.get("id", Being.HERO))))
 	for tag: Variant in spec.get("cure", []):  # a disease and the like: effects of that tag go (v0.7.12)
-		if str(tag) == "disease" and Sheet.is_hero(who):  # herbs take only some, and the incubating ones go too (v0.7.23.1); an NPC's: v0.8.4.11
-			lines.append_array(DiseaseRules.cure(s, data, str(spec.get("power", "magic"))))
+		if str(tag) == "disease" and who.has("id"):  # herbs take only some, and the incubating ones go too (v0.7.23.1), on anybody (v0.8.4.11)
+			lines.append_array(DiseaseRules.cure(s, data, str(spec.get("power", "magic")), str(who["id"])))
 			continue
 		for e: Dictionary in effects(c):
 			if str(e.get("tag", "")).split(",").has(str(tag)):

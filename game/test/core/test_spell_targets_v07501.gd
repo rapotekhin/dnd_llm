@@ -182,7 +182,7 @@ func test_a_follower_keeps_its_wounds_until_a_long_rest() -> void:
 	assert_int(int(AllyRules.joining(s, data, [{"monster": "goblin"}])[0]["hp"])).is_equal(2)
 	assert_array(AllyRules.cast_on_npc(s, data, "cure_wounds", 1, "npc_ostap")).has_size(1)
 	assert_int(int(AllyRules.npc_health(s, data, "npc_ostap")["hp"])).is_greater(2)
-	AllyRules.rest(s)
+	Rest.company(s, data, "long")
 	assert_int(int(AllyRules.npc_health(s, data, "npc_ostap")["hp"])).is_equal(full)
 
 

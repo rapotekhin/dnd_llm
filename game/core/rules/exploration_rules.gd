@@ -400,7 +400,6 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	var cost := int(rest_place(data["world"], s.room_id, s, data).get("cost_cp", 0)) if supplies.is_empty() else 0
 	var lines: Array[String] = ["Долгий отдых" if supplies.is_empty() else "Долгий отдых в лагере"]
 	c["may_prepare"] = SpellRules.prepares(c, data)
-	AllyRules.rest(s)
 	if cost > 0:
 		Ledger.add(s, -cost, "exploration:long_rest")
 		lines.append("−" + Money.format(cost))
@@ -425,13 +424,13 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 		lines.append("съедено: " + ", ".join(eaten))
 	lines.append_array(NeedRules.rest_meal(s, data, meal_points, meal_points == 0 and supplies.is_empty()))
 	FollowRules.rested(s)  # the followers eat and drink with the hero (v0.7.39.1)
-	c["hp"] = int(c.get("max_hp", c.get("hp", 1)))
+	var gone := Rest.long(s, data, Being.HERO)  # the hero's own, as anybody's (v0.8.4.11)
 	lines.append("HP %d/%d" % [c["hp"], c["max_hp"]])
 	if not s.locks.is_empty():
 		lines.append("можно снова пробовать проваленное")
 	s.locks.clear()
-	Stock.recharge_all(c, data, "long")
-	lines.append_array(_rest_ends(c, data, "long"))
+	lines.append_array(gone)
+	lines.append_array(Rest.company(s, data, "long"))  # who walks with it rests with it; the world rests by its nights
 	lines.append_array(ItemRules.dawn(c, data, s.items, s.rng))  # charges come back at dawn (v0.7.12)
 	if not camp_supplies.is_empty():
 		lines.append_array(WeatherRules.camp(s, data))  # a downpour soaks the camp, the cold and the heat (v0.7.46)
@@ -485,29 +484,10 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 	Stock.recharge_all(c, data, "short")
 	if pact:
 		lines.append("ячейки договора восстановлены")
-	lines.append_array(_rest_ends(c, data, "short"))
+	lines.append_array(Rest.ends(c, data, "short", true))
+	lines.append_array(Rest.company(s, data, "short", maxi(1, n)))
 	lines.append_array(ItemRules.identify(c, data, s.items))  # an hour with the things names them (v0.7.12)
 	s.short_rests += 1
-	return lines
-
-
-## Conditions and concentration a rest ends; a long rest also takes all exhaustion away (decision of the author,
-## v0.7.8, ADR-0010) and gives Relentless Endurance back. Returns the lines.
-static func _rest_ends(c: Dictionary, data: Dictionary, rest: String) -> Array[String]:
-	var lines: Array[String] = []
-	var gone := ConditionRules.clear_on_rest(c, rest)
-	if not gone.is_empty():
-		lines.append("прошло: " + ", ".join(gone.map(func(id: String) -> String: return ConditionRules.name_of(data, id))))
-	if not str(c.get("concentration", "")).is_empty():
-		c["concentration"] = ""
-		c["concentration_ends"] = -1
-	c["breath_used"] = false  # the dragonborn's breath comes back with any rest (v0.7.10)
-	if rest == "long":
-		if ConditionRules.exhaustion(c) > 0:
-			lines.append("истощение снято")
-		c["exhaustion"] = 0
-		c["relentless_used"] = false
-		c["temp_hp"] = 0
 	return lines
 
 

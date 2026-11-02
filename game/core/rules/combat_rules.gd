@@ -352,13 +352,14 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector
 			FightGrid.put(f, FightGrid.free_near(s, data, at, int(f["span"])) if at != FightGrid.NONE else _square_of(s, data, spec, f, ranged, turn, side_name == "ally"))
 			turn += 1
 			FeatureRules.give_class(data, f, spec)
+			GrowthRules.apply(s, data, f)  # a person grown beside the hero (v0.8.4.11)
 			Being.of(s, id)["fight"] = f
 			fighters.append(id)
 			_take_statuses(s, id, f)
 			if spec.has("hp"):  # a creature of the room fought again keeps its wounds (v0.7.22.16, #21)
-				f["hp"] = clampi(int(spec["hp"]), 1, int(m["hp"]))
+				f["hp"] = clampi(int(spec["hp"]), 1, int(f["max_hp"]))
 			elif Being.view(s, id).has("hp"):  # the wounds of the last fight
-				f["hp"] = clampi(int(Being.view(s, id)["hp"]), 1, int(m["hp"]))
+				f["hp"] = clampi(int(Being.view(s, id)["hp"]), 1, int(f["max_hp"]))
 			if spec.has("max_hp"):  # a fighter of the arena, made even with the other side (v0.8.4.5)
 				f["max_hp"] = int(spec["max_hp"])
 				f["hp"] = f["max_hp"]
@@ -379,7 +380,7 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector
 ## A character fights with the statuses of its record: they are the fight's until it ends (v0.7.63).
 static func _take_statuses(s: GameSession, id: String, f: Dictionary) -> void:
 	var b := Being.view(s, id)
-	for k: String in ["effects", "conditions", "next_effect"]:
+	for k: String in ["effects", "conditions", "next_effect"] + Rest.KEPT:
 		if b.has(k):
 			f[k] = b[k]
 			b.erase(k)
@@ -387,6 +388,9 @@ static func _take_statuses(s: GameSession, id: String, f: Dictionary) -> void:
 
 ## The statuses with an end in time or at a rest outlive the fight on the record; those of the moment do not.
 static func _give_statuses(b: Dictionary, f: Dictionary) -> void:
+	for k: String in Rest.KEPT:  # spent uses and exhaustion wait for its rest (v0.8.4.11)
+		if f.has(k) and not (f[k] is Dictionary and (f[k] as Dictionary).is_empty()) and not (f[k] is int and int(f[k]) == 0):
+			b[k] = f[k]
 	var kept: Array = (f.get("effects", []) as Array).filter(func(e: Dictionary) -> bool: return not (e.get("ends", {}) as Dictionary).is_empty() or bool(e.get("keeps", false)))
 	if kept.is_empty():
 		return
