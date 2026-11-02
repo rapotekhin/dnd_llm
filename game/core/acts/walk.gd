@@ -14,11 +14,11 @@ func aim() -> String:
 	return "square"
 
 
-func cost(_s: GameSession, _data: Dictionary, _f: Dictionary) -> String:
+func cost(_s: GameSession, _data: Dictionary, _f: Dictionary, _how: Dictionary) -> String:
 	return "free"  # Move.go pays by the squares of the way
 
 
-func why(s: GameSession, data: Dictionary, f: Dictionary, to: String) -> String:
+func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, _how: Dictionary) -> String:
 	var stop := Move.stuck(s, data, f)
 	if not stop.is_empty():
 		return stop
@@ -32,7 +32,7 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String) -> String:
 	return "COMBAT_BAD_MOVE"
 
 
-func run(s: GameSession, data: Dictionary, f: Dictionary, to: String) -> Array[String]:
+func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, _how: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	Move.go(s, data, f, FightGrid.aim_of(to), lines)
 	return lines

@@ -162,7 +162,12 @@ static func go(s: GameSession, data: Dictionary, f: Dictionary, to: Vector2i, li
 	if not walked.is_empty():
 		e["walked"] = int(e.get("walked", 0)) + walked.size()
 		FightField.note_walk(s, str(f.get("id")), walked)
-		if Sheet.is_hero(f):
-			CombatRules._release_grapples(s, lines)
-			FightField.hero_stands(s, data)
+		arrived(s, data, f, lines)
 	return walked.size()
+
+
+## It stands on a new square: whom it held it holds no more; what stands around the hero is drawn again.
+static func arrived(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	MonsterRules.release(s, data, f, lines, false)
+	if Sheet.is_hero(f):
+		FightField.hero_stands(s, data)

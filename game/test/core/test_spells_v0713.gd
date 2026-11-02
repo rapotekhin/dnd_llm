@@ -153,14 +153,14 @@ func test_guiding_bolt_gives_advantage_to_the_next_attack() -> void:
 	f["max_hp"] = 500
 	for i in 5:
 		CombatRules.economy(s)["action"] = 1
-		CombatRules.player_cast(s, data, "guiding_bolt", 1, str(f["id"]))
+		Acts.one("cast").go(s, data, CombatRules.player(s), str(f["id"]), {"spell": "guiding_bolt", "slot": 1})
 		if CombatRules._has(f, "guided"):
 			break
 	assert_bool(CombatRules._has(f, "guided")).is_true()
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "")
-	assert_array(CombatRules._attack_mods(s, data, w, f)["adv"]).contains(["Направляющий снаряд"])
+	assert_array(Attack.mods(s, data, CombatRules.player(s), f, Attack.of_weapon(w))["adv"]).contains(["Направляющий снаряд"])
 	var lines: Array[String] = []
-	CombatRules._attack(s, data, "x", "y", 5, true, false, f, "1d4", 0, "bludgeoning", lines)
+	Attack.swing(s, data, CombatRules.player(s), f, Attack.of_spell("y", 5, "1d4", 0, "bludgeoning", true, 5).merged({"adv": ["проба"]}), lines)
 	assert_bool(CombatRules._has(f, "guided")).is_false()
 
 
@@ -172,7 +172,7 @@ func test_vicious_mockery_hampers_the_next_attack() -> void:
 	assert_bool(CombatRules._has(f, "mocked")).is_true()
 	TestUtils.to_col(f, 0)
 	var turn: Array[String] = []
-	CombatRules._enemy_turn(s, data, f, turn)
+	TestUtils.enemy_turn(s, data, f, turn)
 	assert_bool(CombatRules._has(f, "mocked")).is_false()
 	assert_bool(turn.any(func(l: String) -> bool: return l.contains("(с помехой)"))).override_failure_message(" · ".join(turn)).is_true()
 
@@ -190,7 +190,7 @@ func test_ray_of_frost_slows_until_the_hero_turn() -> void:
 func test_shocking_grasp_against_metal_and_no_reaction() -> void:
 	var s := _hero("wizard_yalika")
 	var f := _fight(s, [{"monster": "knight", "col": 0}])[0]
-	assert_bool(CombatRules._metal_armor(data, f)).is_true()
+	assert_bool(CombatRules._metal_armor(s, data, f)).is_true()
 	var lines: Array[String] = []
 	ActionRules.riders(s, data, "shocking_grasp", 0, f, true, lines)
 	assert_bool(bool(f["reacted"])).is_true()
@@ -224,7 +224,7 @@ func test_acid_splash_takes_a_second_neighbour() -> void:
 	var s := _hero("wizard_yalika")
 	_learn(s, "acid_splash")
 	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
-	var lines := CombatRules.player_cast(s, data, "acid_splash", 0, str(foes[0]["id"]))
+	var lines := Acts.one("cast").go(s, data, CombatRules.player(s), str(foes[0]["id"]), {"spell": "acid_splash", "slot": 0})
 	lines.append_array(CombatRules.volley_shot(s, data, str(foes[1]["id"])))  # v0.7.50.1: the second is chosen
 	assert_int(lines.filter(func(l: String) -> bool: return l.contains("спасбросок")).size()).override_failure_message(" · ".join(lines)).is_equal(2)
 
@@ -233,7 +233,7 @@ func test_prayer_of_healing_is_not_for_a_fight() -> void:
 	var s := _hero("cleric_branko", 3)
 	_learn(s, "prayer_of_healing")
 	_fight(s, [{"monster": "goblin", "col": 2}])
-	assert_str(CombatRules.can_cast(s, data, "prayer_of_healing", 2, "")).is_equal("COMBAT_SPELL_TOO_LONG")
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), "", {"spell": "prayer_of_healing", "slot": 2})).is_equal("COMBAT_SPELL_TOO_LONG")
 
 
 func test_charm_person_save_has_advantage_in_a_fight() -> void:
@@ -268,7 +268,7 @@ func test_bless_adds_a_d4_to_attacks_and_saves() -> void:
 	assert_str(str(r["text"])).contains("Благословение")
 	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
 	var lines: Array[String] = []
-	CombatRules._attack(s, data, "x", "удар", 3, false, false, f, "1d4", 0, "bludgeoning", lines)
+	Attack.swing(s, data, CombatRules.player(s), f, Attack.of_spell("удар", 3, "1d4", 0, "bludgeoning", true, 5), lines)
 	assert_str(lines[0]).contains("Благословение")
 
 
@@ -287,7 +287,7 @@ func test_bane_takes_a_d4_from_foes() -> void:
 	_learn(s, "bane")
 	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
 	s.character["spell_dc"] = 30  # they fail
-	var lines := CombatRules.player_cast(s, data, "bane", 1, str(foes[0]["id"]))
+	var lines := Acts.one("cast").go(s, data, CombatRules.player(s), str(foes[0]["id"]), {"spell": "bane", "slot": 1})
 	lines.append_array(CombatRules.volley_shot(s, data, str(foes[1]["id"])))  # picked one by one (v0.7.50.1)
 	assert_bool(foes.all(func(f: Dictionary) -> bool: return (SpellEffects.boon(f, "die") != null))).override_failure_message(" · ".join(lines)).is_true()
 	var out := ConditionRules.end_concentration(s, data, "проверка")
@@ -310,7 +310,7 @@ func test_true_strike_gives_advantage_once() -> void:
 	assert_bool(SpellEffects.has_next_attack_adv(s.character)).is_true()
 	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
 	var lines: Array[String] = []
-	CombatRules._attack(s, data, "x", "удар", 3, false, false, f, "1d4", 0, "bludgeoning", lines)
+	Attack.swing(s, data, CombatRules.player(s), f, Attack.of_spell("удар", 3, "1d4", 0, "bludgeoning", true, 5), lines)
 	assert_str(lines[0]).contains("(с преимуществом)")
 	assert_bool(SpellEffects.has_next_attack_adv(s.character)).is_false()
 
@@ -363,11 +363,11 @@ func test_blur_and_protection_from_evil_hamper_attackers() -> void:
 	var s := _hero("wizard_yalika", 3)
 	var f := _fight(s, [{"monster": "skeleton", "col": 0}])[0]
 	_cast_self(s, "blur")
-	assert_array(SpellEffects.attack_dis(s, data, f)).contains(["Размытость"])
+	assert_array(SpellEffects.attack_dis(s, data, f, CombatRules.player(s))).contains(["Размытость"])
 	var c2 := _hero("cleric_branko")
 	var f2 := _fight(c2, [{"monster": "skeleton", "col": 0}])[0]
 	_cast_self(c2, "protection_from_evil_and_good")
-	assert_int(SpellEffects.attack_dis(c2, data, f2).size()).is_equal(1)
+	assert_int(SpellEffects.attack_dis(c2, data, f2, CombatRules.player(c2)).size()).is_equal(1)
 
 
 func test_mirror_image_takes_hits() -> void:
@@ -376,7 +376,7 @@ func test_mirror_image_takes_hits() -> void:
 	_cast_self(s, "mirror_image")
 	var stopped := 0
 	for i in 20:
-		if not str(SpellEffects.against_attack(s, data, f, 30, true)["stop"]).is_empty():
+		if not SpellEffects.against_attack(s, data, f, CombatRules.player(s), 30).is_empty():
 			stopped += 1
 	assert_int(stopped).is_greater(0)
 	assert_bool(SpellEffects.hero_effects(s.character, "images").all(func(e: Dictionary) -> bool: return int(e["images"]) < 3)).is_true()
@@ -387,9 +387,9 @@ func test_sanctuary_holds_and_breaks() -> void:
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
 	_cast_self(s, "sanctuary")
 	s.character["spell_dc"] = 40
-	assert_str(SpellEffects.sanctuary_holds(s, data, f)).contains("Святилище")
+	assert_str(SpellEffects.sanctuary(s, data, f, CombatRules.player(s))).contains("Святилище")
 	CombatRules.economy(s)["action"] = 1
-	CombatRules.player_attack(s, data, str(f["id"]))
+	Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"]))
 	assert_array(SpellEffects.hero_effects(s.character, "sanctuary")).is_empty()
 
 
@@ -433,8 +433,8 @@ func test_haste_gives_an_action_and_then_lethargy() -> void:
 	var e := CombatRules.economy(s)
 	assert_int(int(e["haste"])).is_equal(1)
 	e["action"] = 0
-	assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
-	CombatRules.player_attack(s, data, str(f["id"]))
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()
+	Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"]))
 	assert_int(int(e["haste"])).is_equal(0)
 	ConditionRules.end_concentration(s, data, "проверка")
 	CombatRules._begin_turn(s, data, lines)
@@ -448,11 +448,11 @@ func test_fly_keeps_melee_foes_off() -> void:
 	_cast_self(s, "fly")
 	var lines: Array[String] = []
 	var hp := int(s.character["hp"])
-	CombatRules._enemy_turn(s, data, foes[0], lines)
+	TestUtils.enemy_turn(s, data, foes[0], lines)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("не достаёт летящего"))).override_failure_message(" · ".join(lines)).is_true()
 	assert_int(int(s.character["hp"])).is_equal(hp)
 	var shots: Array[String] = []
-	CombatRules._enemy_turn(s, data, foes[1], shots)
+	TestUtils.enemy_turn(s, data, foes[1], shots)
 	assert_bool(shots.any(func(l: String) -> bool: return l.contains("лук") or l.contains("Лук"))).override_failure_message(" · ".join(shots)).is_true()
 
 
@@ -463,7 +463,7 @@ func test_blink_hides_the_hero_between_turns() -> void:
 	CombatRules.player(s)["blinked"] = true
 	var lines: Array[String] = []
 	var hp := int(s.character["hp"])
-	CombatRules._enemy_turn(s, data, f, lines)
+	TestUtils.enemy_turn(s, data, f, lines)
 	assert_int(int(s.character["hp"])).is_equal(hp)
 	CombatRules._begin_turn(s, data, lines)
 	assert_bool(bool(CombatRules.player(s)["blinked"])).is_false()
@@ -473,7 +473,7 @@ func test_misty_step_moves_away_without_leaving_an_effect() -> void:
 	var s := _hero("wizard_yalika", 3)
 	_learn(s, "misty_step")
 	var f := _fight(s, [{"monster": "ogre", "col": 0}])[0]
-	var lines := CombatRules.player_cast(s, data, "misty_step", 2, "")
+	var lines := Acts.one("cast").go(s, data, CombatRules.player(s), "", {"spell": "misty_step", "slot": 2})
 	assert_int(FightGrid.dist(CombatRules.player(s), f)).is_greater(1)
 	assert_array(SpellEffects.hero_effects(s.character, "teleport")).is_empty()
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("туманом"))).is_true()
@@ -496,10 +496,10 @@ func test_longstrider_darkvision_pass_without_trace() -> void:
 func test_see_invisibility_removes_the_disadvantage() -> void:
 	var s := _hero("wizard_yalika", 3)
 	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
-	CombatRules._add_condition(s, f, "invisible", {"rounds": 10})
-	assert_array(CombatRules.hero_attack_dis(s, data, f)).contains(["цель невидима"])
+	CombatRules._add_condition(s, data, f, "invisible", {"rounds": 10})
+	assert_array(Attack.mods(s, data, CombatRules.player(s), f, {"melee": true})["dis"]).contains(["цель невидима"])
 	_cast_self(s, "see_invisibility")
-	assert_array(CombatRules.hero_attack_dis(s, data, f)).not_contains(["цель невидима"])
+	assert_array(Attack.mods(s, data, CombatRules.player(s), f, {"melee": true})["dis"]).not_contains(["цель невидима"])
 
 
 # --- batch 5 (v0.7.13.4): spells on the weapon -------------------------------------------------------------
@@ -543,7 +543,7 @@ func test_branding_smite_once_and_hunters_mark_on_the_target() -> void:
 	var r := _hero("ranger_velena", 2)
 	var g := _fight(r, [{"monster": "ogre", "col": 1}, {"monster": "goblin", "col": 1}])
 	_learn(r, "hunters_mark")
-	CombatRules.player_cast(r, data, "hunters_mark", 1, str(g[0]["id"]))
+	Acts.one("cast").go(r, data, CombatRules.player(r), str(g[0]["id"]), {"spell": "hunters_mark", "slot": 1})
 	assert_int(SpellEffects.hit_extras(r.character, g[0], "piercing").size()).is_equal(1)
 	assert_int(SpellEffects.hit_extras(r.character, g[1], "piercing").size()).is_equal(0)
 	g[0]["status"] = "dead"
@@ -577,7 +577,7 @@ func _cast_at(s: GameSession, id: String, slot: int, target: String) -> Array[St
 	_learn(s, id)
 	CombatRules.economy(s)["action"] = 1
 	CombatRules.economy(s)["bonus"] = 1
-	return CombatRules.player_cast(s, data, id, slot, target)
+	return Acts.one("cast").go(s, data, CombatRules.player(s), target, {"spell": id, "slot": slot})
 
 
 func test_spiritual_weapon_strikes_now_and_each_turn() -> void:
@@ -671,9 +671,9 @@ func test_fog_and_darkness_blind_the_column() -> void:
 	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
 	_cast_at(s, "fog_cloud", 1, str(f["id"]))
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "")
-	assert_bool((CombatRules._attack_mods(s, data, w, f)["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_true()
+	assert_bool((Attack.mods(s, data, CombatRules.player(s), f, Attack.of_weapon(w))["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_true()
 	FightGrid.put(CombatRules.player(s), FightGrid.cell(f) + Vector2i(1, 0))  # both inside: disadvantage and advantage (v0.8.4.1)
-	assert_bool((CombatRules._attack_mods(s, data, w, f)["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_true()
+	assert_bool((Attack.mods(s, data, CombatRules.player(s), f, Attack.of_weapon(w))["dis"] as Array).any(func(x: String) -> bool: return x.contains("туман"))).is_true()
 
 
 func test_silence_stops_spells_inside() -> void:
@@ -682,7 +682,7 @@ func test_silence_stops_spells_inside() -> void:
 	_cast_at(s, "silence", 2, str(f["id"]))
 	_learn(s, "guiding_bolt")
 	CombatRules.economy(s)["action"] = 1
-	assert_str(CombatRules.can_cast(s, data, "guiding_bolt", 1, str(f["id"]))).is_equal("COMBAT_SILENCED")
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": "guiding_bolt", "slot": 1})).is_equal("COMBAT_SILENCED")
 	assert_bool(SpellEffects.silenced(s, data, f)).is_true()
 
 
@@ -693,7 +693,7 @@ func test_stinking_cloud_takes_the_turn() -> void:
 	_cast_at(s, "stinking_cloud", 3, str(f["id"]))
 	var hp := int(s.character["hp"])
 	var lines: Array[String] = []
-	CombatRules._enemy_turn(s, data, f, lines)
+	TestUtils.enemy_turn(s, data, f, lines)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("пропускает ход"))).override_failure_message(" · ".join(lines)).is_true()
 	assert_int(int(s.character["hp"])).is_equal(hp)
 
@@ -704,7 +704,7 @@ func test_wind_wall_stops_arrows_and_gust_pushes() -> void:
 	var wall := _cast_at(s, "wind_wall", 3, FightGrid.aim_id(FightGrid.cell(CombatRules.player(s)) + Vector2i(6, 0)))
 	assert_str(SpellEffects.wall_between(s, data, foes[0], CombatRules.player(s))).is_not_empty()
 	var lines: Array[String] = []
-	CombatRules._enemy_turn(s, data, foes[0], lines)
+	TestUtils.enemy_turn(s, data, foes[0], lines)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("Стена ветра"))).override_failure_message(" · ".join(lines) + " | " + " · ".join(wall)).is_true()
 	var g := _hero("wizard_yalika", 3)
 	var gf := _fight(g, [{"monster": "goblin", "col": 1}])[0]
@@ -720,7 +720,7 @@ func test_faerie_fire_slow_ray_and_curse() -> void:
 	_cast_at(s, "faerie_fire", 1, str(foes[0]["id"]))
 	assert_bool(foes.all(func(f: Dictionary) -> bool: return CombatRules._has(f, "outlined"))).is_true()
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "")
-	assert_array(CombatRules._attack_mods(s, data, w, foes[0])["adv"]).contains(["Огонь фей"])
+	assert_array(Attack.mods(s, data, CombatRules.player(s), foes[0], Attack.of_weapon(w))["adv"]).contains(["Огонь фей"])
 	ConditionRules.end_concentration(s, data, "проверка")
 	assert_bool(foes.any(func(f: Dictionary) -> bool: return CombatRules._has(f, "outlined"))).is_false()
 	var z := _hero("wizard_yalika", 5)
@@ -761,7 +761,7 @@ func test_shield_turns_a_hit_into_a_miss() -> void:
 	CombatRules._begin_turn(s, data, lines)
 	assert_int(int(c["ac"])).is_equal(ac)
 	_fight(s, [{"monster": "goblin", "col": 0}])
-	assert_str(CombatRules.can_cast(s, data, "shield", 1, "")).is_equal("COMBAT_REACTION_SPELL")
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), "", {"spell": "shield", "slot": 1})).is_equal("COMBAT_REACTION_SPELL")
 
 
 func test_hellish_rebuke_burns_the_attacker() -> void:
@@ -794,7 +794,7 @@ func test_dispel_magic_ends_a_foes_spell_on_the_hero() -> void:
 	var s := _hero("wizard_yalika", 5)
 	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
 	ConditionRules.add_effect(s.character, {"condition": "frightened", "ends": {}, "by": str(f["id"]),
-		"source": {"kind": "monster_spell", "id": "fear", "name": "Гоблин — Страх"}})
+		"source": {"kind": "spell", "id": "fear", "name": "Гоблин — Страх"}})
 	_learn(s, "dispel_magic")
 	var lines := _cast_at(s, "dispel_magic", 3, str(f["id"]))
 	assert_bool(ConditionRules.has(s.character, "frightened")).override_failure_message(" · ".join(lines)).is_false()

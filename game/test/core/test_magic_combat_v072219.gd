@@ -52,13 +52,13 @@ func test_a_thrown_dagger_is_thrown_once() -> void:
 	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	s.character["hp"] = 999
 	s.character["max_hp"] = 999
-	var dagger := MonsterRules.pick(s, data, f, "ranged")
+	var dagger := MonsterRules.pick(s, data, f, CombatRules.player(s), "ranged")
 	assert_str(str(dagger.get("name_en", ""))).is_equal("Dagger")
 	var lines: Array[String] = []
-	CombatRules._enemy_attack_full(s, data, f, dagger, lines)
+	Attack.full(s, data, f, CombatRules.player(s), dagger, lines)
 	assert_int(lines.filter(func(l: String) -> bool: return l.contains("Кинжал")).size()).is_equal(1)  # one throw, not Multiattack
 	assert_array(f.get("thrown", [])).contains(["Dagger"])
-	assert_dict(MonsterRules.pick(s, data, f, "ranged")).is_empty()  # the dagger is gone: it closes in
+	assert_dict(MonsterRules.pick(s, data, f, CombatRules.player(s), "ranged")).is_empty()  # the dagger is gone: it closes in
 
 
 func test_a_caster_heals_its_side_and_varies() -> void:
@@ -70,9 +70,9 @@ func test_a_caster_heals_its_side_and_varies() -> void:
 	TestUtils.same_col(gob, priest)
 	gob["hp"] = 1
 	var lines: Array[String] = []
-	assert_bool(MonsterRules.cast_turn(s, data, priest, lines)).is_true()
+	TestUtils.enemy_turn(s, data, priest, lines)
 	assert_int(int(gob["hp"])).is_greater(1)
-	assert_str(" ".join(lines)).contains("на Гоблин")
+	assert_str(" ".join(lines)).contains("Гоблин: +")
 
 	var t := _hero()
 	TestUtils.fight(t, data, [{"monster": "cult_fanatic", "name": "Жрец Пепла", "col": 0}], {})
@@ -80,7 +80,7 @@ func test_a_caster_heals_its_side_and_varies() -> void:
 	TestUtils.beside(t, fan)
 	fan["last_spell"] = "command"
 	var more: Array[String] = []
-	MonsterRules.cast_turn(t, data, fan, more)
+	TestUtils.enemy_turn(t, data, fan, more)
 	assert_str(str(fan.get("last_spell", ""))).is_not_equal("command")
 
 

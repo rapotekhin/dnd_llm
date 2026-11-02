@@ -48,14 +48,14 @@ func test_a_door_is_closed_and_barred_and_stops_the_walker() -> void:
 	var d := _at_door(s)
 	var door := Vector2i(int(d["x"]), int(d["y"]))
 	s.combat["doors"][FightGrid.tag(door)] = {"open": true}
-	assert_array(FightField.acts(s, data)).contains(["door_close"])
-	CombatRules.field_act(s, data, "door_close")
+	assert_array(FightField.acts(s, data, CombatRules.player(s))).contains(["door_close"])
+	Acts.one("field").go(s, data, CombatRules.player(s), "", {"how": "door_close"})
 	assert_bool(FightGrid.shut(s, FightGrid.grid(s, data), door)).is_true()
 	CombatRules.economy(s)["action"] = 1
-	CombatRules.field_act(s, data, "door_bar")
+	Acts.one("field").go(s, data, CombatRules.player(s), "", {"how": "door_bar"})
 	assert_bool(FightGrid.fast(s, FightGrid.grid(s, data), door)).is_true()
 	assert_bool(Move.routes(s, data, CombatRules.player(s)).has(door)).is_false()
-	assert_array(FightField.acts(s, data)).contains(["door_force", "door_unbar"])
+	assert_array(FightField.acts(s, data, CombatRules.player(s))).contains(["door_force", "door_unbar"])
 
 
 func test_a_foe_breaks_a_barred_door_and_it_stays_broken() -> void:
@@ -67,7 +67,9 @@ func test_a_foe_breaks_a_barred_door_and_it_stays_broken() -> void:
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	FightGrid.put(foe, door + (door - FightGrid.cell(CombatRules.player(s))))
 	var lines: Array[String] = []
+	s.combat["turn"] = (s.combat["order"] as Array).find(str(foe["id"]))
 	for i: int in 200:
+		foe["points"] = CombatRules.fresh_points(s, data, foe)
 		FightField.force_way(s, data, foe, lines)
 		if bool(FightGrid.door_state(s, door).get("gone", false)):
 			break
@@ -81,7 +83,7 @@ func test_acts_cost_the_action() -> void:
 	var d := _at_door(s)
 	s.combat["doors"][FightGrid.tag(Vector2i(int(d["x"]), int(d["y"])))] = {"open": true}
 	CombatRules.economy(s)["action"] = 0
-	assert_str(CombatRules.can_field(s, data, "door_close")).is_equal("COMBAT_NO_ACTION")
+	assert_str(Acts.one("field").can(s, data, CombatRules.player(s), "", {"how": "door_close"})).is_equal("COMBAT_NO_ACTION")
 
 
 # --- things ---------------------------------------------------------------------------------------------------
@@ -94,8 +96,8 @@ func test_a_block_is_pushed_and_smashed() -> void:
 	s.combat["blocks"][FightGrid.tag(at)] = FightField._block(data, "barrel", "бочка")
 	FightGrid.changed(s)
 	assert_bool(FightGrid.walkable(FightGrid.grid(s, data), at)).is_false()
-	assert_str(CombatRules.can_field(s, data, "block_push")).is_empty()
-	CombatRules.field_act(s, data, "block_push")
+	assert_str(Acts.one("field").can(s, data, CombatRules.player(s), "", {"how": "block_push"})).is_empty()
+	Acts.one("field").go(s, data, CombatRules.player(s), "", {"how": "block_push"})
 	assert_bool(s.combat["blocks"].has(FightGrid.tag(at))).is_false()
 	assert_bool(s.combat["blocks"].has(FightGrid.tag(at + Vector2i(1, 0)))).is_true()
 	assert_bool(FightGrid.walkable(FightGrid.grid(s, data), at)).is_true()
@@ -105,7 +107,7 @@ func test_a_block_is_pushed_and_smashed() -> void:
 	FightGrid.changed(s)
 	var lines: Array[String] = []
 	for i: int in 60:
-		FightField._smash_block(s, data, lines)
+		FightField._smash_block(s, data, CombatRules.player(s), lines)
 		if s.combat["blocks"].is_empty():
 			break
 	assert_bool(s.combat["blocks"].is_empty()).is_true()
@@ -116,7 +118,7 @@ func test_a_thing_too_heavy_stays() -> void:
 	_field(s)
 	var at := FightGrid.cell(CombatRules.player(s)) + Vector2i(1, 0)
 	s.combat["blocks"][FightGrid.tag(at)] = FightField._block(data, "boulder", "валун")
-	assert_str(CombatRules.can_field(s, data, "block_push")).is_equal("COMBAT_TOO_HEAVY")
+	assert_str(Acts.one("field").can(s, data, CombatRules.player(s), "", {"how": "block_push"})).is_equal("COMBAT_TOO_HEAVY")
 
 
 func test_a_block_gives_cover() -> void:
@@ -178,7 +180,7 @@ func test_a_fire_bolt_lights_the_oil_under_a_foe() -> void:
 	var id: String = CombatRules.enemies(s)[0]
 	var foe := CombatRules.fighter(s, id)
 	FightField.splash(s, data, FightGrid.cell(foe), {"oiled": 5}, "Масло", [] as Array[String])
-	CombatRules.player_cast(s, data, "fire_bolt", 0, id)
+	Acts.one("cast").go(s, data, CombatRules.player(s), id, {"spell": "fire_bolt", "slot": 0})
 	assert_bool(s.combat["fires"].has(FightGrid.tag(FightGrid.cell(foe)))).is_true()
 
 
@@ -188,8 +190,8 @@ func test_a_flask_goes_on_a_square() -> void:
 	_field(s)
 	var at := FightGrid.cell(CombatRules.player(s)) + Vector2i(2, 0)
 	var aim := FightGrid.aim_id(at)
-	assert_str(CombatRules.can_throw(s, data, "oil_flask", aim)).is_empty()
-	CombatRules.throw_item(s, data, "oil_flask", aim)
+	assert_str(Acts.one("throw").can(s, data, CombatRules.player(s), aim, {"item": "oil_flask"})).is_empty()
+	Acts.one("throw").go(s, data, CombatRules.player(s), aim, {"item": "oil_flask"})
 	assert_bool(s.combat["oil"].has(FightGrid.tag(at))).is_true()
 	assert_int(int(s.character["inventory"].get("oil_flask", 0))).is_equal(0)
 
@@ -245,26 +247,26 @@ func test_help_gives_the_ally_advantage_once() -> void:
 	var id: String = CombatRules.enemies(s)[0]
 	var foe := CombatRules.fighter(s, id)
 	TestUtils.beside(s, foe)
-	assert_str(CombatRules.can_help(s, data, id)).is_empty()
-	CombatRules.help(s, data, id)
-	assert_bool(foe.get("helped", false)).is_true()
-	CombatRules._creature_attack(s, data, CombatRules.fighter(s, CombatRules.allies(s)[0]), data["monsters"]["guard"]["actions"][0], foe, [] as Array[String])
-	assert_bool(foe.has("helped")).is_false()
+	assert_str(Acts.one("help").can(s, data, CombatRules.player(s), id)).is_empty()
+	Acts.one("help").go(s, data, CombatRules.player(s), id)
+	assert_bool(CombatRules._has(foe, "helped")).is_true()
+	Attack.one(s, data, CombatRules.fighter(s, CombatRules.allies(s)[0]), foe, data["monsters"]["guard"]["actions"][0], [] as Array[String])
+	assert_bool(CombatRules._has(foe, "helped")).is_false()
 
 
 func test_no_help_without_an_ally() -> void:
 	var s := _session()
 	_field(s, [{"monster": "goblin", "col": 0}])
-	assert_str(CombatRules.can_help(s, data, CombatRules.enemies(s)[0])).is_equal("COMBAT_NO_ALLY")
+	assert_str(Acts.one("help").can(s, data, CombatRules.player(s), CombatRules.enemies(s)[0])).is_equal("COMBAT_NO_ALLY")
 
 
 func test_a_jump_goes_by_strength_and_a_run_doubles_it() -> void:
 	var s := _session()
 	_field(s)
-	var stand := CombatRules.jump_reach(s, data)
+	var stand: int = Acts.one("jump")._reach(s, data, CombatRules.player(s))
 	assert_int(stand).is_equal(mini(CharacterRules.ability(s.character, "str") / 2 / 5, int(CombatRules.economy(s)["move"])))
 	CombatRules.economy(s)["walked"] = 2
-	assert_int(CombatRules.jump_reach(s, data)).is_greater_equal(stand)
+	assert_int(Acts.one("jump")._reach(s, data, CombatRules.player(s))).is_greater_equal(stand)
 
 
 func test_a_jump_clears_a_pit_a_step_would_fall_in() -> void:
@@ -275,9 +277,9 @@ func test_a_jump_clears_a_pit_a_step_would_fall_in() -> void:
 	CombatRules.economy(s)["walked"] = 2
 	var from := FightGrid.cell(CombatRules.player(s))
 	var to := from + Vector2i(2, 0)
-	assert_str(CombatRules.can_jump(s, data, to)).is_empty()
+	assert_str(Acts.one("jump").can(s, data, CombatRules.player(s), "", {"at": FightGrid.aim_id(to)})).is_empty()
 	var move := int(CombatRules.economy(s)["move"])
-	CombatRules.player_jump(s, data, to)
+	Acts.one("jump").go(s, data, CombatRules.player(s), "", {"at": FightGrid.aim_id(to)})
 	assert_bool(FightGrid.cell(CombatRules.player(s)) == to).is_true()
 	assert_int(int(CombatRules.economy(s)["move"])).is_equal(move - 2)
 
@@ -291,4 +293,4 @@ func test_no_jump_through_a_wall_or_a_foe() -> void:
 	var from := FightGrid.cell(CombatRules.player(s))
 	FightGrid.put(foe, from + Vector2i(1, 0))
 	FightGrid.changed(s)
-	assert_str(CombatRules.can_jump(s, data, from + Vector2i(2, 0))).is_equal("COMBAT_BAD_MOVE")
+	assert_str(Acts.one("jump").can(s, data, CombatRules.player(s), "", {"at": FightGrid.aim_id(from + Vector2i(2, 0))})).is_equal("COMBAT_BAD_MOVE")

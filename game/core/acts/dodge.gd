@@ -6,11 +6,15 @@ func title() -> String:
 	return "Уклонение"
 
 
+func order() -> int:
+	return 12
+
+
 func tip() -> String:
 	return "До следующего хода атаки по вам с помехой, спасброски Ловкости с преимуществом"
 
 
-func run(s: GameSession, _data: Dictionary, f: Dictionary, _to: String) -> Array[String]:
+func run(s: GameSession, _data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
 	f["dodging"] = true
 	return ["%s уходит в оборону" % _name(s, f)]
 

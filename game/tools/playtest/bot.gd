@@ -217,18 +217,18 @@ func _combat_step(s: GameSession) -> String:
 		return "combat_wait"
 	var skill: String = _pick(CombatRules.cfg(data)["parley"]["skills"])
 	if rng.randf() < 0.15 and CombatRules.can_parley(s, data, skill).is_empty() and int(CombatRules.economy(s).get("action", 0)) > 0:
-		gs.combat_parley(skill)
+		gs.combat_act("parley", "", {"skill": skill})
 		return "combat_parley"
 	if rng.randf() < 0.2 and Acts.one("hide").can(s, data, CombatRules.player(s)).is_empty():
 		gs.combat_act("hide")
 		return "combat_hide"
 	for id: String in CombatRules.enemies(s):
-		if CombatRules.can_attack(s, data, id).is_empty():
-			gs.combat_attack(id)
+		if Acts.one("attack").can(s, data, CombatRules.player(s), id).is_empty():
+			gs.combat_act("attack", id)
 			return "combat_attack"
 	var spell: Variant = _pick(SpellRules.ready(s.character))
 	var foe: Variant = _pick(CombatRules.enemies(s))
-	if spell != null and foe != null and CombatRules.can_cast(s, data, spell, 0, foe).is_empty() and rng.randf() < 0.5:
+	if spell != null and foe != null and Acts.one("cast").can(s, data, CombatRules.player(s), foe, {"spell": spell, "slot": 0}).is_empty() and rng.randf() < 0.5:
 		gs.combat_cast(spell, 0, foe)
 		return "combat_cast"
 	if foe != null and Move.why(s, data, CombatRules.player(s)).is_empty():

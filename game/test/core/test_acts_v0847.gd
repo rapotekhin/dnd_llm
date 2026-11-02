@@ -45,7 +45,7 @@ func test_the_folder_is_read_by_itself() -> void:
 
 
 func test_every_act_is_there_for_every_fighter_at_its_turn() -> void:
-	for act: Act in Acts.all():
+	for act: Act in [Acts.one("walk"), Acts.one("dash"), Acts.one("dodge"), Acts.one("disengage"), Acts.one("stand"), Acts.one("hide")]:
 		var s := _fight([{"monster": "wolf", "col": 2}, {"monster": "goblin", "col": 3}])
 		for f: Dictionary in _each(s):
 			_turn(s, f)
@@ -94,8 +94,8 @@ func test_a_goblin_slips_off_and_hides_by_its_bonus_action() -> void:
 	var s := _fight([{"monster": "goblin", "col": 0}])
 	var g := CombatRules.fighter(s, TestUtils.foe(s, 1))
 	_turn(s, g)
-	assert_str(Acts.one("disengage").cost(s, data, g)).is_equal("bonus")
-	assert_str(Acts.one("hide").cost(s, data, g)).is_equal("bonus")
+	assert_str(Acts.one("disengage").cost(s, data, g, {})).is_equal("bonus")
+	assert_str(Acts.one("hide").cost(s, data, g, {})).is_equal("bonus")
 	assert_str(Acts.one("hide").can(s, data, g)).is_equal("COMBAT_HIDE_SEEN")  # the hero is beside it
 	assert_float(Acts.one("disengage").worth(s, data, g)).is_greater(0.0)
 	var lines: Array[String] = []

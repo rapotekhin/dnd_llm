@@ -105,7 +105,7 @@ func run() -> void:
 		await frames(2)
 		await press(find(cs, "Foe_" + str(ogre["id"])))
 		await frames(4)
-	step("the flask was thrown", _seen.any(func(l: String) -> bool: return l.contains("бросает")), _tail(3))
+	step("the flask was thrown", _seen.any(func(l: String) -> bool: return l.contains("Алхимический огонь")), _tail(3))
 	await press(find(screen(), "EndTurnButton"))
 	await wait_until(func() -> bool: return not gs.combat_playing and (CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty()), 120.0)
 	if str(s.combat.get("outcome", "")).is_empty():

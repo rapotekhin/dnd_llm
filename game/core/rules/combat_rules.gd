@@ -104,12 +104,13 @@ static func _no_line(s: GameSession, data: Dictionary, a: Dictionary, t: Diction
 	return FightGrid.cover(s, data, a, t) >= FightGrid.FULL_COVER
 
 
-## A spell that asks for «a creature you can see» at one the hero does not see: blind, a Fog Cloud, invisible. A bolt goes by guess.
-static func _blind_aim(s: GameSession, data: Dictionary, spell_id: String, t: Dictionary) -> bool:
+## A spell that asks for «a creature you can see» at one the caster does not see: blind, a Fog Cloud, invisible. A bolt goes by guess.
+static func _blind_aim(s: GameSession, data: Dictionary, spell_id: String, t: Dictionary, me: Dictionary = {}) -> bool:
 	var sp: Dictionary = data["spells"][spell_id]
-	if sp.has("area") and _hidden_from_hero(s, t):
+	var a := player(s) if me.is_empty() else me
+	if sp.has("area") and _unseen_by(s, a, t):
 		return true  # an area goes on a square, not after its name
-	return bool(sp.get("needs_sight", false)) and (not FightGrid.veiled(s, data, player(s), t).is_empty() or _hidden_from_hero(s, t))
+	return bool(sp.get("needs_sight", false)) and (not FightGrid.veiled(s, data, a, t).is_empty() or _unseen_by(s, a, t))
 
 
 ## Blows by sight, 5e: not seeing `t` is a disadvantage, not being seen by it an advantage, and in a Fog Cloud both cancel out.
@@ -118,19 +119,27 @@ static func sight_mods(s: GameSession, data: Dictionary, a: Dictionary, t: Dicti
 	return {"adv": ("" if FightGrid.blind(s, t) else FightGrid.veiled(s, data, t, a)).to_lower(), "dis": FightGrid.veiled(s, data, a, t).to_lower()}
 
 
-## The hero is out of `t`'s sight: its attack rolls have advantage.
-static func unseen_by(s: GameSession, data: Dictionary, t: Dictionary) -> bool:
-	return not str(sight_mods(s, data, player(s), t)["adv"]).is_empty()
+## It sees nothing here: an unlit place, no light of the hero's and no darkvision of its own.
+static func dark_for(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
+	if Sheet.is_hero(f):
+		return TimeRules.dark(s, data)
+	return not SightRules.in_dark(s, data).is_empty() and WatchRules.dark_of(data, f) <= 0
 
 
-## A shot at the hero's side from the dark: `t` has no light and stands beyond `f`'s darkvision (v0.8.4.1).
+## How far it sees to shoot in an unlit place, in squares (v0.8.4.1); far past the map where it is light.
+static func dark_sight(s: GameSession, data: Dictionary, f: Dictionary) -> int:
+	if Sheet.is_hero(f):
+		return SightRules.reach(s, data) if TimeRules.unlit(s, data) else 1 << 20
+	return WatchRules.dark_of(data, f) if not SightRules.in_dark(s, data).is_empty() else 1 << 20
+
+
+## A shot beyond what it sees by: past its darkvision or the hero's light.
 static func shot_in_dark(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary) -> bool:
-	return not SightRules.in_dark(s, data).is_empty() and FightGrid.dist(f, t) > WatchRules.dark_of(data, f)
+	return FightGrid.dist(f, t) > dark_sight(s, data, f)
 
 
-## How far the hero's spell goes: touch — the next square.
-static func _spell_squares(s: GameSession, data: Dictionary, spell_id: String) -> int:
-	return maxi(1, FightGrid.squares_of(data, spell_range(s, data, spell_id)))
+static func _spell_squares(s: GameSession, data: Dictionary, spell_id: String, f: Dictionary = Sheet.HERO) -> int:
+	return maxi(1, FightGrid.squares_of(data, spell_range(s, data, spell_id, f)))
 
 
 ## A word for an enemy's health (the player never sees numbers): a localization key.
@@ -356,7 +365,7 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector
 				f["no_xp"] = true
 			if bool(spec.get("law", false)):  # the law's guard: its captive is held, not bound (v0.7.22.17)
 				f["law"] = true
-			for k: String in ["ally", "summon_id", "spell", "creature_id"]:  # v0.7.22.22: whose ally and from where
+			for k: String in ["ally", "summon_id", "spell", "creature_id", "called_by"]:  # v0.7.22.22: whose ally and from where
 				if spec.has(k):
 					f[k] = str(spec[k])
 			if bool(spec.get("helper", false)):
@@ -512,6 +521,18 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	f["reacted"] = false  # the reaction comes back at the start of one's own turn (5e)
 	f.erase("swooped")
 	f["points"] = fresh_points(s, data, f)
+	for o: String in s.combat["order"]:  # Help and the riders of a spell last until the start of its one's next turn
+		var other := fighter(s, o)
+		var h := Sheet.holder(s, other)
+		for e: Dictionary in ConditionRules.effects(h).duplicate():
+			if str(e.get("condition", "")) == "helped" and str(e.get("by", "")) == id:
+				ConditionRules.remove_effect(h, int(e["uid"]))
+		if str(other.get("set_by", "")) == id:
+			for k: String in ["slowed", "no_heal", "set_by"]:
+				other.erase(k)
+			ConditionRules.remove(h, "chilled")
+	lines.append_array(SpellEffects.turn_start(s, data, f))  # Heroism (v0.7.13.1)
+	SpellEffects.end_until_turn(s, data, f)  # Shield (v0.7.13.7)
 	if id == PLAYER:
 		if bool(f.get("blinked", false)):  # Blink: back from the Ethereal Plane (v0.7.13.3)
 			f["blinked"] = false
@@ -520,7 +541,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			s.character.erase("lethargy")
 			f["points"].merge({"action": 0, "bonus": 0, "move": 0, "haste": 0}, true)
 			lines.append("%s вялый после Ускорения — ход без действий и движения" % s.character["name"])
-		s.combat.erase("reckless")  # Reckless Attack lasts until the hero's next turn
+		f.erase("reckless")  # Reckless Attack lasts until the hero's next turn
 		var dropped := str(s.character.get("dropped", ""))
 		if not dropped.is_empty() and not ConditionRules.incapacitated(s.character):  # Command «Брось!» (v0.7.22.4)
 			s.character.erase("dropped")
@@ -528,15 +549,12 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 				s.character["equipped"]["main_hand"] = dropped
 				CharacterRules.refresh(s.character, data, s.items)
 				lines.append("%s поднимает %s" % [s.character["name"], ItemRules.display_name(data["items"], s.items, dropped)])
-		lines.append_array(SpellEffects.turn_start(s, data))  # Heroism (v0.7.13.1)
 		lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # v0.8.4: what the hero stands in
 		lines.append_array(SpellEffects.zones_expire(s))  # Grease (v0.7.13.6)
-		SpellEffects.end_until_turn(s, data)  # Shield (v0.7.13.7)
-		for eid: String in enemies(s):  # v0.7.13: riders that last until the start of the hero's next turn
-			var o := fighter(s, eid)
-			for k: String in ["slowed", "no_heal"]:
-				o.erase(k)
-			ConditionRules.remove(o, "chilled")
+		if bool(f.get("retching", false)):  # Stinking Cloud (v0.7.13.6)
+			f.erase("retching")
+			f["points"].merge({"action": 0, "haste": 0}, true)
+			lines.append("%s давится и теряет действие" % s.character["name"])
 
 
 # --- the player's actions ---------------------------------------------------------------------------
@@ -573,6 +591,8 @@ static func short_of(f: Dictionary, cost: String, n: int) -> String:
 	match cost:
 		"action":
 			return "COMBAT_NO_ACTION" if int(e.get("action", 0)) < n and int(e.get("haste", 0)) < n else ""
+		"attack":
+			return "COMBAT_NO_ACTION" if int(e.get("attacks", 0)) <= 0 and int(e.get("action", 0)) <= 0 and int(e.get("haste", 0)) <= 0 else ""
 		"bonus":
 			return "COMBAT_NO_BONUS" if int(e.get("bonus", 0)) < n else ""
 		"move":
@@ -587,6 +607,25 @@ static func pay(f: Dictionary, cost: String, n: int = 1) -> void:
 		cost = "haste"
 	if e.has(cost):
 		e[cost] = maxi(0, int(e[cost]) - n)
+
+
+## One attack of the Attack action: the first takes the action and leaves the extra attacks; Haste's action is one attack.
+static func pay_attack(s: GameSession, data: Dictionary, f: Dictionary) -> void:
+	var e := points(s, data, f)
+	if int(e.get("attacks", 0)) > 0:
+		e["attacks"] = int(e["attacks"]) - 1
+	elif int(e.get("action", 0)) <= 0 and int(e.get("haste", 0)) > 0:
+		e["haste"] = 0
+	else:
+		e["action"] = int(e["action"]) - 1
+		e["attacks"] = CharacterRules.extra_attacks(s.character, data) if Sheet.is_hero(f) else 0
+
+
+## The weapon of the hero's hand: main, off, fists.
+static func hand_profile(s: GameSession, data: Dictionary, hand: String) -> Dictionary:
+	var c := s.character
+	var wid := "" if hand == "fists" else str(c.get("equipped", {}).get("off_hand" if hand == "off" else "main_hand", ""))
+	return weapon_profile(c, data, s.items, wid, hand == "off")
 
 
 ## The weapon attack of the character: {name, to_hit, dice, bonus, type, melee, range [normal, long] ft or [], light}.
@@ -663,68 +702,12 @@ static func _has_style(c: Dictionary, style: String) -> bool:
 	return false
 
 
-## "" when the player can attack `target` with this weapon now, otherwise the reason (a localization key).
-static func can_attack(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, unarmed: bool = false) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	var e := economy(s)
-	if offhand:  # as in BG3 (v0.7.22.3): no main-hand attack needed first, unless rules.combat.offhand_needs_attack
-		if int(e.get("bonus", 0)) <= 0 or (bool(cfg(data).get("offhand_needs_attack", true)) and not bool(e.get("attacked", false))):
-			return "COMBAT_NO_BONUS"
-	elif int(e.get("attacks", 0)) <= 0 and int(e.get("action", 0)) <= 0 and int(e.get("haste", 0)) <= 0:
-		return "COMBAT_NO_ACTION"
-	var t := fighter(s, target_id)
-	if t.is_empty() or str(t.get("status")) != "active":
-		return "COMBAT_BAD_TARGET"
-	if charmed_by(s, t):
-		return "COMBAT_CHARMED"
-	var c := s.character
-	var wid := "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))  # fists (v0.7.22.11)
-	var w := weapon_profile(c, data, s.items, wid, offhand)
-	if not str(w.get("ammo", "")).is_empty() and int(c.get("inventory", {}).get(str(w["ammo"]), 0)) <= 0:
-		return "COMBAT_NO_AMMO"  # v0.7.12: arrows and bolts are spent
-	var seen := _as_seen(t)
-	if FightGrid.cover(s, data, player(s), seen) >= FightGrid.FULL_COVER:
-		return "COMBAT_NO_LINE"
-	if bool(w["melee"]) and _in_blade(s, data, w, seen):
-		return ""
-	if (w["range"] as Array).is_empty():
-		return "COMBAT_OUT_OF_REACH"
-	if FightGrid.shown_dist(player(s), t) * int(FightGrid.cfg(data)["ft"]) > int(w["range"][1]):
-		return "COMBAT_OUT_OF_RANGE"
-	return ""
-
-
-## "" when the other set may come to hand now: no price, but the hero's own turn in a fight.
-static func can_swap(s: GameSession, data: Dictionary) -> String:
-	if active(s) and not player_can_act(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if Guise.has_body(s.character):
-		return "COMBAT_WILD_SHAPE"
-	return CharacterRules.swap_why(s.character, data, s.items)
-
-
-## The other set in the hands, for nothing. Lines of a fight.
-static func swap(s: GameSession, data: Dictionary) -> Array[String]:
-	CharacterRules.swap_hands(s.character)
-	CharacterRules.refresh(s.character, data, s.items)
-	if not active(s):
-		return []
-	var id := str(s.character["equipped"].get("main_hand", ""))
-	return ["%s берёт в руки: %s" % [s.character.get("name", ""), ItemRules.display_name(data["items"], s.items, id) if not id.is_empty() else "щит"]]
-
-
 ## What `fn` says with the other set in the hands: the buttons ask of a weapon put away.
 static func as_stowed(s: GameSession, fn: Callable) -> Variant:
 	CharacterRules.swap_hands(s.character)
 	var out: Variant = fn.call()
 	CharacterRules.swap_hands(s.character)
 	return out
-
-
-static func can_attack_stowed(s: GameSession, data: Dictionary, target_id: String) -> String:
-	var why := can_swap(s, data)
-	return why if not why.is_empty() else str(as_stowed(s, func() -> String: return can_attack(s, data, target_id)))
 
 
 ## An unseen foe where the hero last saw it: the hero swings there.
@@ -737,64 +720,6 @@ static func _as_seen(t: Dictionary) -> Dictionary:
 ## The blade in hand reaches `t`: the next square, two with a reach weapon; a thrown weapon beyond that is a throw.
 static func _in_blade(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary) -> bool:
 	return blade_reaches(s, data, player(s), t, 2 if bool(w.get("reach", false)) else 1)
-
-
-## Frenzy (v0.7.8): a raging berserker may go into a frenzy — free; ends with the fight and a level of
-## exhaustion (GameState.finish_combat).
-static func can_frenzy(s: GameSession) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if not CharacterRules.has_feature(s.character, "frenzy") or not bool(s.combat.get("raging", false)) or bool(s.combat.get("frenzy", false)):
-		return "COMBAT_NO_FRENZY"
-	return ""
-
-
-static func frenzy(s: GameSession) -> Array[String]:
-	s.combat["frenzy"] = true
-	return ["%s впадает в неистовство: удар бонусным действием каждый ход, после боя — истощение" % s.character.get("name", "")]
-
-
-## The frenzied hero's melee attack as a bonus action: the main weapon at a foe beside the hero.
-static func can_frenzy_attack(s: GameSession, data: Dictionary, target_id: String) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if not bool(s.combat.get("frenzy", false)):
-		return "COMBAT_NO_FRENZY"
-	if int(economy(s).get("bonus", 0)) <= 0:
-		return "COMBAT_NO_BONUS"
-	var t := fighter(s, target_id)
-	if t.is_empty() or str(t.get("status")) != "active":
-		return "COMBAT_BAD_TARGET"
-	if not blade_reaches(s, data, player(s), t):
-		return "COMBAT_OUT_OF_REACH"
-	return ""
-
-
-## A weapon attack of the player (can_attack first; a frenzy strike — can_frenzy_attack). Returns the lines.
-static func player_attack(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, frenzied: bool = false, unarmed: bool = false) -> Array[String]:
-	var c := s.character
-	var e := economy(s)
-	if frenzied:
-		e["bonus"] = int(e["bonus"]) - 1
-	elif offhand:
-		e["bonus"] = int(e["bonus"]) - 1
-	elif int(e.get("attacks", 0)) > 0:
-		e["attacks"] = int(e["attacks"]) - 1
-	elif int(e.get("action", 0)) <= 0 and int(e.get("haste", 0)) > 0:
-		e["haste"] = 0  # Haste's action: one weapon attack (v0.7.13.3)
-	else:
-		e["action"] = int(e["action"]) - 1
-		e["attacks"] = CharacterRules.extra_attacks(c, data)
-	e["attacked"] = true
-	var wid := "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", ""))
-	var w := weapon_profile(c, data, s.items, wid, offhand)
-	if bool(w.get("melee", false)) and Move.air(s, data, player(s)):
-		player(s)["swooped"] = true  # Fly (v0.7.63): down at arm's length, in reach until the next turn
-	s.combat["melee_strike"] = bool(w.get("melee", false)) and _in_blade(s, data, w, fighter(s, target_id))  # nonlethal needs a melee blow (5e)
-	var lines := strike(s, data, target_id, w, {})
-	s.combat.erase("melee_strike")
-	spend_ammo(s, str(w.get("ammo", "")))
-	return lines
 
 
 ## One arrow (bolt, bullet) is gone; half the spent come back after the fight (v0.7.12, PHB).
@@ -819,35 +744,25 @@ static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dicti
 	var e := economy(s)
 	s.combat["rage_kept"] = true
 	var t := fighter(s, target_id)
-	var broke := SpellEffects.break_sanctuary(c)  # v0.7.13.2
 	if int(s.combat.get("sacred_weapon", 0)) > 0:
 		w = w.duplicate()
 		w["to_hit"] = int(w["to_hit"]) + maxi(1, FeatureRules.ab_mod(c, "cha"))
-	if _missed_unseen(s, t):
-		player(s)["hidden"] = false
-		var miss: Array[String] = ["%s — %s: удар в пустоту, %s уже не там" % [c.get("name", ""), w["name"], t["name"]]]
-		miss.append_array(ConditionRules.end_invisibility_on_attack(c, data))
-		return miss
-	var mods := _attack_mods(s, data, w, t)
-	var adv := not (mods["adv"] as Array).is_empty()
-	var dis := not (mods["dis"] as Array).is_empty()
-	var lines: Array[String] = broke
-	var bonus_dmg := _rage_bonus(s, data, w, t)
-	var sneak := _sneak_dice(s, data, w, adv, dis, t)
-	var auto_crit := bool(ConditionRules.attack(data, {}, t, FightGrid.touching(player(s), t))["crit"])
-	var res := _attack(s, data, str(c.get("name", "")), w["name"], int(w["to_hit"]), adv, dis, t, str(w["dice"]), int(w["bonus"]) + bonus_dmg, str(w["type"]), lines, sneak, auto_crit, w)
-	lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))  # the attack is made unseen, then it ends
-	ConditionRules.remove(t, "helped")
+	var b := Attack.of_weapon(w)
+	var mods := Attack.mods(s, data, player(s), t, b)
+	var sneak := _sneak_dice(s, data, w, not (mods["adv"] as Array).is_empty(), not (mods["dis"] as Array).is_empty(), t)
+	b["bonus"] = int(w["bonus"]) + _rage_bonus(s, data, w, t)
+	b["extra"] = sneak
+	b["extra_name"] = "Скрытая атака"
+	var lines: Array[String] = []
+	var res := Attack.swing(s, data, player(s), t, b, lines)
 	if bool(res["hit"]) and not sneak.is_empty():
 		e["sneak"] = true
-	player(s)["hidden"] = false
 	if bool(res["hit"]) and str(t.get("status")) == "active":
 		var x := FeatureRules.hit_extras(s, data, w, t, bool(res["crit"]))
 		if not str(x["dice"]).is_empty():
 			var more := Sheet.taken(s, data, t, str(w["type"]), roll_dice(s.rng, str(x["dice"])), bool(w.get("magical", false)), bool(w.get("silvered", false)))
 			lines.append("%s: ещё %d" % [", ".join(x["notes"]), more])
-			_hurt_enemy(s, data, t, more, lines, str(w["type"]))
-		_item_extras(s, data, w, t, bool(res["crit"]), lines)
+			hurt(s, data, t, more, lines, str(w["type"]))
 		FeatureRules.after_hit(s, data, w, t, bool(res["crit"]), opts, lines)
 	if not bool(opts.get("no_horde", false)) and FeatureRules.has(c, "hunters_prey_horde_breaker") and not bool(e.get("horde", false)):
 		for id: String in enemies(s):
@@ -860,99 +775,17 @@ static func strike(s: GameSession, data: Dictionary, target_id: String, w: Dicti
 	return lines
 
 
-## The extra damage of a hit by the weapon's properties (fire_damage — +1d6 fire, v0.7.12) and by a Potion of Growth.
-static func _item_extras(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary, crit: bool, lines: Array[String]) -> void:
-	for x: Dictionary in SpellEffects.hit_extras(s.character, t, str(w["type"])):  # Divine Favor, Hunter's Mark, Branding Smite (v0.7.13.4)
-		if str(t.get("status")) != "active":
-			break
-		var add := Sheet.taken(s, data, t, str(x["type"]), roll_dice(s.rng, str(x["dice"]), crit), true, false)
-		lines.append("%s: ещё %d (%s)" % [x["name"], add, data["misc"]["damage_types"].get(str(x["type"]), x["type"])])
-		_hurt_enemy(s, data, t, add, lines, str(x["type"]))
-		if bool(x.get("reveal", false)) and _has(t, "invisible"):
-			_remove_condition(t, "invisible")
-			lines.append("%s светится — невидимость спадает" % t["name"])
-	var def := ItemRules.def_of(data["items"], s.items, str(w.get("id", "")))
-	var dice := str(ItemRules.cfg(data)["element_dice"])
-	for p: Variant in def.get("properties", []):
-		var dtype := str(p).trim_suffix("_damage")
-		if str(p).ends_with("_damage") and data["misc"]["damage_types"].has(dtype) and str(t.get("status")) == "active":
-			var more := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, dice, crit))
-			lines.append("%s: ещё %d (%s)" % [def.get("name", ""), more, data["misc"]["damage_types"][dtype]])
-			_hurt_enemy(s, data, t, more, lines, dtype)
-	if ConditionRules.effects(s.character).any(func(e: Dictionary) -> bool: return bool(e.get("enlarged", false))) and str(t.get("status")) == "active":
-		var big := Sheet.taken(s, data, t, str(w["type"]), roll_dice(s.rng, "1d4", crit), bool(w.get("magical", false)), bool(w.get("silvered", false)))
-		lines.append("увеличение: ещё %d" % big)
-		_hurt_enemy(s, data, t, big, lines, str(w["type"]))
-
-
-## Why a weapon attack at `t` has advantage or disadvantage now: {"adv": [reasons], "dis": [reasons]}.
-static func _attack_mods(s: GameSession, data: Dictionary, w: Dictionary, t: Dictionary) -> Dictionary:
-	var c := s.character
-	var d := FightGrid.dist(player(s), t)
-	var adv: Array[String] = []
-	var dis: Array[String] = []
-	var by_status := ConditionRules.attack(data, {}, t, d <= 1)
-	adv.append_array(by_status["adv"])
-	dis.append_array(by_status["dis"])
-	if bool(player(s).get("hidden", false)):
-		adv.append("вы спрятаны")
-	if ConditionRules.invisible(c, data):
-		adv.append("вы невидимы")
-	if SpellEffects.has_next_attack_adv(c):
-		adv.append("Верный удар")
-	if unseen_by(s, data, t):
-		adv.append("вас не видно")
-	if bool(t.get("dodging", false)):
-		dis.append("цель уклоняется")
-	if bool(t.get("hidden", false)):
-		dis.append("цель спряталась")
-	if bool(t.get("reckless", false)) and bool(w["melee"]):
-		adv.append("цель безрассудна")
-	if bool(s.combat.get("reckless", false)) and bool(w["melee"]) and bool(w.get("str_based", true)):
-		adv.append("безрассудная атака")
-	if TimeRules.dark(s, data) and not MonsterRules.sees_in_dark(data, t):
-		pass  # both sides are blind: it evens out (5e)
-	elif TimeRules.dark(s, data):
-		dis.append("темнота")
-	elif TimeRules.unlit(s, data) and not bool(w["melee"]) and d > SightRules.reach(s, data):
-		dis.append("темнота")  # a shot past the hero's light or darkvision
-	if d > 1 and not (w["range"] as Array).is_empty() and d * int(FightGrid.cfg(data)["ft"]) > int(w["range"][0]):
-		dis.append("дальше обычной дальности")
-	if not bool(w["melee"]) and _foe_beside(s, data, player(s)):
-		dis.append("враг вплотную")
-	if bool(w.get("heavy", false)) and (ItemRules.cfg(data)["small_races"] as Array).has(hero_size(s, data)):
-		dis.append("тяжёлое оружие не по росту")  # v0.7.12, PHB
-	dis.append_array(hero_attack_dis(s, data, t))
-	return {"adv": adv, "dis": dis}
-
-
-## Why the hero's own attack rolls (weapons and spells) have disadvantage now (v0.7.8).
-static func hero_attack_dis(s: GameSession, data: Dictionary, t: Dictionary) -> Array[String]:
-	var c := s.character
-	var dis: Array[String] = []
-	dis.assign(ConditionRules.attack(data, c, {}, true)["dis"])
-	if _has(t, "invisible") and not SpellEffects.has(c, "see_invisible") and not _has(t, "outlined"):  # See Invisibility, Faerie Fire
-		dis.append("цель невидима")
-	if t.has("x") and not ConditionRules.has(c, "blinded"):  # a Fog Cloud or Darkness: the target is not seen (v0.8.4.1)
-		var blind := str(sight_mods(s, data, player(s), t)["dis"])
-		if not blind.is_empty():
-			dis.append(blind)
-	var wx := WeatherRules.obscure_why(s, data)
-	if not wx.is_empty() and t.has("x") and FightGrid.dist(player(s), t) > 1:  # a ranged attack in fog or a downpour (v0.7.46)
-		dis.append(wx)
-	return dis
-
-
 ## The hero aims where an invisible foe was (FightGrid.shown), and it is not there any more.
 static func _missed_unseen(s: GameSession, t: Dictionary) -> bool:
 	return _has(t, "invisible") and FightGrid.shown(t) != FightGrid.cell(t)
 
 
 ## The hero is charmed by this foe (the master's charm with `by`, or a monster's in v0.7.9): no attack on it (5e).
-static func charmed_by(s: GameSession, t: Dictionary) -> bool:
-	if not ConditionRules.has(s.character, "charmed"):
+static func charmed_by(s: GameSession, f: Dictionary, t: Dictionary) -> bool:
+	var me := Sheet.holder(s, f)
+	if not ConditionRules.has(me, "charmed"):
 		return false
-	var by := ConditionRules.caused_by(s.character, "charmed")
+	var by := ConditionRules.caused_by(me, "charmed")
 	return not by.is_empty() and (by == str(t.get("id", "")) or by == str(t.get("npc_id", "")))
 
 
@@ -960,6 +793,15 @@ static func _rage_bonus(s: GameSession, data: Dictionary, w: Dictionary, t: Dict
 	if bool(w["melee"]) and FightGrid.dist(player(s), t) <= (2 if bool(w.get("reach", false)) else 1) and bool(s.combat.get("raging", false)):
 		return int(CharacterRules.level_row(s.character, data).get("class_specific", {}).get("rage_damage_bonus", 2))
 	return 0
+
+
+## A friend of `f` stands beside `t` and is up to something: Pack Tactics, Martial Advantage, Sneak Attack.
+static func friend_beside(s: GameSession, f: Dictionary, t: Dictionary) -> bool:
+	for id: String in friends_of(s, f):
+		var o := fighter(s, id)
+		if id != str(f.get("id")) and FightGrid.touching(o, t) and not ConditionRules.incapacitated(Sheet.holder(s, o)):
+			return true
+	return false
 
 
 ## Sneak Attack dice once a turn: a finesse or ranged weapon with advantage and without disadvantage; "" otherwise.
@@ -980,72 +822,6 @@ static func _foe_beside(s: GameSession, data: Dictionary, f: Dictionary) -> bool
 		if FightGrid.touching(o, f) and not ConditionRules.does(Sheet.holder(s, o), data, "no_threat"):
 			return true
 	return false
-
-
-## One attack roll against an enemy, through what covers it from the hero.
-static func _attack(s: GameSession, data: Dictionary, who: String, what: String, to_hit: int, adv: bool, dis: bool, t: Dictionary,
-		dice: String, bonus: int, dtype: String, lines: Array[String], extra_dice: String = "", auto_crit: bool = false, w: Dictionary = {}) -> Dictionary:
-	t["cover"] = cover_of(s, data, player(s), t)
-	var out := _roll_attack(s, data, who, what, to_hit, adv, dis, t, dice, bonus, dtype, lines, extra_dice, auto_crit, w)
-	t.erase("cover")
-	return out
-
-
-## The roll and its damage; adds the line. {"hit", "damage"}.
-static func _roll_attack(s: GameSession, data: Dictionary, who: String, what: String, to_hit: int, adv: bool, dis: bool, t: Dictionary,
-		dice: String, bonus: int, dtype: String, lines: Array[String], extra_dice: String = "", auto_crit: bool = false, w: Dictionary = {}) -> Dictionary:
-	if SpellEffects.take_next_attack_adv(s.character):  # True Strike (v0.7.13.1)
-		adv = true
-	var rolls := Roll.hero_dice(s, adv, dis)  # the hero's roll: Lucky (v0.7.10)
-	var nat := Roll.kept(rolls, adv, dis)
-	ConditionRules.remove(t, "guided")  # Guiding Bolt's light goes with the first attack roll (v0.7.13)
-	var die := SpellEffects.die(s, s.character, "attack")  # Bless (v0.7.13.1)
-	to_hit += int(die["bonus"])
-	var total := nat + to_hit
-	var crit_min := int(w.get("crit_min", 20))
-	var hit := nat >= crit_min or (nat != 1 and total >= ac_of(t))
-	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
-	var line := "%s — %s по %s: %d%s%d = %d против КД %d%s%s" % [who, what, t["name"], nat, " + " if to_hit >= 0 else " − ", absi(to_hit), total, ac_of(t), mark,
-		(" [%s]" % die["note"]) if not str(die["note"]).is_empty() else ""]
-	var hit_parts: Array[Dictionary] = []  # the hover of the line (v0.7.49.4, the author's finding)
-	hit_parts.assign(w.get("hit_parts", []))
-	hit_parts.append_array(die.get("parts", []))
-	if RollParts.sum(hit_parts) != to_hit:
-		hit_parts.append(RollParts.part("прочие бонусы атаки", to_hit - RollParts.sum(hit_parts)))
-	if not hit and nat != 1:
-		var insp := Roll.inspire(s)
-		if int(insp["value"]) > 0:
-			total += int(insp["value"])
-			hit = total >= ac_of(t)
-			line += " + вдохновение %d = %d" % [int(insp["value"]), total]
-			hit_parts.append(RollParts.part(str(insp["label"]), int(insp["value"])))
-	var tip := RollParts.text({"what": what, "rolls": rolls, "nat": nat, "parts": hit_parts, "total": total}) + " против КД %d" % ac_of(t)
-	line_tip(s, line, tip)
-	if not hit:
-		lines.append(line + " — промах")
-		fx(s, str(t["id"]), "dodge")
-		return {"hit": false, "damage": 0, "crit": false}
-	var crit := nat >= crit_min or auto_crit
-	if not crit and bool(w.get("melee", false)) and MonsterRules.parry(s, data, t, total, lines):  # v0.7.9
-		lines.append(line + " — отбито")
-		fx(s, str(t["id"]), "dodge")
-		return {"hit": false, "damage": 0, "crit": false}
-	if crit:
-		fx(s, str(t["id"]), "crit")
-	var dmg := maxi(1, (_roll_gwf(s.rng, dice, crit) if bool(w.get("gwf", false)) else roll_dice(s.rng, dice, crit)) + bonus)
-	if not extra_dice.is_empty():
-		dmg += roll_dice(s.rng, extra_dice, crit)
-	var rolled := dmg
-	dmg = Sheet.taken(s, data, t, dtype, dmg, bool(w.get("magical", true)) or w.is_empty(), bool(w.get("silvered", false)))
-	line_tip(s, line, tip + "
-
-Урон: %s%s%s = %d%s" % [str(dice).replace("d", "к"), ("%+d" % bonus) if bonus != 0 else "",
-		(" + " + extra_dice.replace("d", "к") + " Скрытая атака") if not extra_dice.is_empty() else "", rolled,
-		(" (крит: кости дважды)" if crit else "") + ((" → %d у цели (сопротивление или уязвимость)" % dmg) if dmg != rolled else "")])
-	lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, str(data["misc"]["damage_types"].get(dtype, dtype)),
-		", Скрытая атака" if not extra_dice.is_empty() else ""])
-	_hurt_enemy(s, data, t, dmg, lines, dtype, crit)
-	return {"hit": true, "damage": dmg, "crit": crit}
 
 
 ## The hover text of a line of the fight's log (v0.7.49.4): kept with the fight under the line's start, found by
@@ -1094,12 +870,19 @@ static func take_fx(s: GameSession) -> Array:
 	return list
 
 
-static func _hurt_enemy(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, lines: Array[String], dtype: String = "", crit: bool = false, by_hero: bool = true) -> void:
+static func hurt(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, lines: Array[String], dtype: String = "", crit: bool = false, by_hero: bool = true) -> void:
+	if Sheet.is_hero(t):
+		_hurt_player(s, data, dmg, crit, lines)
+		return
 	if dtype == "fire" and t.has("oiled") and dmg > 0:  # oil on the foe catches (v0.7.12)
 		var more := Sheet.taken(s, data, t, "fire", int(t["oiled"]))
 		t.erase("oiled")
 		dmg += more
 		lines.append("%s: масло вспыхивает, ещё %d" % [t["name"], more])
+	var soaked := mini(dmg, int(t.get("temp_hp", 0)))  # Heroism (v0.7.50.1)
+	if soaked > 0:
+		t["temp_hp"] = int(t["temp_hp"]) - soaked
+		dmg -= soaked
 	if dmg >= int(t["hp"]) and int(t["hp"]) > 0 and MonsterRules.survives(s, data, t, dmg, dtype, crit, lines):
 		t["hp"] = 1
 		return
@@ -1110,6 +893,16 @@ static func _hurt_enemy(s: GameSession, data: Dictionary, t: Dictionary, dmg: in
 			var cond := str(e.get("condition", ""))
 			ConditionRules.remove(t, cond)
 			lines.append("%s приходит в себя от удара" % t["name"] if cond == "unconscious" else "%s: %s проходит от удара" % [t["name"], cond_name(data, cond)])
+	if int(t["hp"]) == 0 and t.has("called_by") and str(t.get("side")) == "enemy":
+		t["status"] = "gone"
+		lines.append("%s развеивается" % t["name"])
+		MonsterRules.release(s, data, t, lines)
+		return
+	if int(t["hp"]) == 0 and str(t.get("side")) == "ally":
+		t["status"] = "gone" if str(t.get("ally", "")) == "summon" else "down"
+		lines.append(("%s развеивается" if str(t.get("ally", "")) == "summon" else "%s падает без сознания") % t["name"])
+		MonsterRules.release(s, data, t, lines)
+		return
 	if int(t["hp"]) == 0 and by_hero and (ArenaRules.yield_bout(s) or bool(s.combat.get("nonlethal", false)) and bool(s.combat.get("melee_strike", false))):
 		t["status"] = "unconscious"  # v0.7.45: in a bout to surrender any blow only knocks out  # 5e: a melee blow at 0 HP may knock out instead of killing (v0.7.22.11, big test #44)
 		lines.append("%s оглушён и падает без сознания" % t["name"])
@@ -1177,33 +970,40 @@ static func _yet_to_act(s: GameSession, f: Dictionary) -> bool:
 	return (s.combat.get("order", []) as Array).find(str(f.get("id", ""))) >= int(s.combat.get("turn", 0))
 
 
-## A status on a fighter by a timer of its turns: `rounds` (none — until something ends it), `spell`, `save` and `dc`
-## of a repeat save at the end of its turn, `wake` — ends on damage, `item`. One condition is held once.
-static func _add_condition(s: GameSession, f: Dictionary, cond: String, timer: Dictionary) -> void:
-	ConditionRules.remove(f, cond)
-	if cond == "invisible":
-		FightGrid.keep_seen(f)
-	var e := {"condition": cond, "source": {"kind": "spell" if timer.has("spell") else "engine", "id": str(timer.get("spell", "")), "name": ""}}
-	if timer.has("rounds"):
-		e["ends"] = {"at": ConditionRules.now(s) + int(timer["rounds"]) - (1 if _yet_to_act(s, f) else 0)}
+## A status on anyone by a timer of its turns: `rounds` (none — until something ends it), `spell`, `save`, `tag` and `dc` of a
+## repeat save at the end of its turn, `wake` — ends on damage, `item`, `name`, `by` — who laid it, the one casting by default.
+## One condition is held once. Lines.
+static func _add_condition(s: GameSession, data: Dictionary, f: Dictionary, cond: String, timer: Dictionary) -> Array[String]:
+	var hero := Sheet.is_hero(f)
+	var me := Sheet.holder(s, f)
+	ConditionRules.remove(me, cond)
+	var e := {"condition": cond, "by": str(timer.get("by", caster(s)["id"])), "source": {"kind": "spell" if timer.has("spell") else "engine", "id": str(timer.get("spell", "")), "name": str(timer.get("name", ""))}}
+	if timer.has("rounds") and cond != "prone":
+		e["ends"] = {"at": ConditionRules.now(s) + int(timer["rounds"]) - (1 if _yet_to_act(s, f) and not hero else 0)}
+	elif hero and cond != "prone":
+		e["ends"] = {"rest": "short"}
 	if not str(timer.get("save", "")).is_empty():
-		e["save"] = {"ability": str(timer["save"]), "dc": int(timer.get("dc", 10)), "repeat": true}
+		e["save"] = {"ability": str(timer["save"]), "dc": int(timer.get("dc", 10)), "tag": str(timer.get("tag", "magic")), "repeat": true}
 	if bool(timer.get("wake", false)):
 		e["wake"] = true
 	if timer.has("item"):
 		e["item"] = str(timer["item"])
-	ConditionRules.add_effect(f, e.merged(MakeRules.fx(s, cond)))
+	if bool(data["spells"].get(str(timer.get("spell", "")), {}).get("concentration", false)):
+		e["conc"] = true
+	var lines := ConditionRules.impose(s, data, e, f)
+	if hero:
+		CharacterRules.refresh(me, data, s.items)
+	return lines
 
 
 static func _remove_condition(f: Dictionary, cond: String) -> void:
 	ConditionRules.remove(f, cond)
 
 
-## Condition spells of the engine (rules.combat.condition_spells, v0.6.5): a save against the spell DC (or a pool of
-## hit points — Sleep, Color Spray), conditions for rounds, a repeat save at the end of the foe's turn, waking on
-## damage; a concentration spell ends when the player's concentration moves on.
+## Condition spells (rules.combat.condition_spells, v0.6.5), on anyone: a save against the caster's DC (or a pool of hit
+## points — Sleep, Color Spray), conditions for rounds, a repeat save at the end of the target's turn, waking on damage; a
+## concentration spell ends when the caster's concentration moves on.
 static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, slot: int, target: Dictionary, lines: Array[String]) -> void:
-	var c := s.character
 	var sp: Dictionary = data["spells"][spell_id]
 	var spec: Dictionary = cfg(data)["condition_spells"][spell_id]
 	var name := str(sp["name"])
@@ -1212,54 +1012,81 @@ static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, 
 		targets = area_targets(s, data, sp, target)
 	else:
 		targets.append(target)
-	var dc_on_hero := spell_dc(s)
-	if targets.any(func(t: Dictionary) -> bool: return str(t["id"]) == PLAYER):  # friendly fire (v0.7.50.1)
-		targets = targets.filter(func(t: Dictionary) -> bool: return str(t["id"]) != PLAYER)
-		if not spec.has("pool") or int(c.get("hp", 0)) <= 10:
-			MonsterRules._cast_condition_on_hero(s, data, player(s), spell_id, slot, spec, dc_on_hero, lines)
-	var conds: Array = spec["conditions"]
 	var timer := {"rounds": int(spec.get("rounds", 10)) * (2 if str(s.combat.get("meta_now", "")) == "extended_spell" else 1), "spell": spell_id, "wake": bool(spec.get("ends_on_damage", false)),
 		"save": str(sp["save"]["ability"]) if bool(spec.get("repeat_save", false)) and sp.has("save") else "", "dc": spell_dc(s)}
 	if spec.has("pool"):  # Sleep, Color Spray: the weakest first while the pool lasts
+		var conds: Array = spec["conditions"]
 		var extra := maxi(0, slot - maxi(1, int(sp["level"])))
 		var pool := roll_dice(s.rng, str(spec["pool"]))
 		for i in extra:
 			pool += roll_dice(s.rng, str(spec["pool_per_slot"]))
 		lines.append("%s: пул %d хитов" % [name, pool])
-		targets.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["hp"]) < int(b["hp"]))
+		targets.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(Sheet.holder(s, a)["hp"]) < int(Sheet.holder(s, b)["hp"]))
 		for t: Dictionary in targets:
-			if str(t["status"]) != "active" or conds.all(func(x: String) -> bool: return _has(t, x)) or not _can_be(data, t, spec):
+			var it := Sheet.holder(s, t)
+			if str(t["status"]) != "active" or conds.all(func(x: String) -> bool: return ConditionRules.has(it, x)) or not _resists(s, data, t, spec, conds, "magic").is_empty():
 				continue
-			if int(t["hp"]) > pool:
+			if int(it["hp"]) > pool:
 				lines.append("%s: %s устоял — хитов больше, чем осталось в пуле" % [name, t["name"]])
 				break
-			pool -= int(t["hp"])
+			pool -= int(it["hp"])
 			for cond: String in conds:
-				_add_condition(s, t, cond, timer)
+				lines.append_array(_add_condition(s, data, t, cond, timer))
 			lines.append("%s: %s — %s" % [name, t["name"], ", ".join(conds.map(func(x: String) -> String: return cond_name(data, x)))])
 		return
 	for t: Dictionary in targets:
-		if str(t["status"]) != "active":
-			continue
-		if not _can_be(data, t, spec):
-			lines.append("%s: на %s не действует" % [name, t["name"]])
-			continue
-		var ab := str(sp["save"]["ability"])
-		var tags: Array = ["magic"]
-		if spell_id == "charm_person":
-			tags.append("fighting")  # 5e: advantage when you or your companions are fighting it (v0.7.13)
-		if conds.has("charmed"):
-			tags.append("charm")
-		if conds.has("frightened"):
-			tags.append("fear")
-		if conds.has("paralyzed"):
-			tags.append("paralysis")
-		var ok := Sheet.saved(s, data, t, ab, spell_dc(s), ",".join(PackedStringArray(tags)), str(s.combat.get("meta_now", "")) == "heightened_spell")
-		lines.append("%s: %s — спасбросок %s против Сл %d %s" % [name, t["name"], ab_name(ab), spell_dc(s),
-			"успех" if ok else "провал — " + ", ".join(conds.map(func(x: String) -> String: return cond_name(data, x)))])
-		if not ok:
-			for cond: String in conds:
-				_add_condition(s, t, cond, timer)
+		if str(t["status"]) == "active":
+			_condition_on(s, data, spell_id, spec, t, timer, lines)
+
+
+## The spell's conditions try one target: a word of Command, what keeps them off, the save. Lines into `lines`.
+static func _condition_on(s: GameSession, data: Dictionary, spell_id: String, spec: Dictionary, t: Dictionary, timer: Dictionary, lines: Array[String]) -> void:
+	var sp: Dictionary = data["spells"][spell_id]
+	var name := str(sp["name"])
+	var word := MonsterRules._command_word(s, spec, t)
+	var conds: Array = word.get("conditions", spec["conditions"])
+	var said := " — «%s»" % word["word"] if not word.is_empty() else ""
+	var tags: Array[String] = ["magic"]
+	if spell_id == "charm_person":
+		tags.append("fighting")  # 5e: advantage when you or your companions are fighting it (v0.7.13)
+	for pair: Array in [["charmed", "charm"], ["frightened", "fear"], ["unconscious", "sleep"], ["paralyzed", "paralysis"]]:
+		if conds.has(pair[0]):
+			tags.push_front(str(pair[1]))
+	var tag := ",".join(PackedStringArray(tags))
+	var no := _resists(s, data, t, spec, conds, tag)
+	if not no.is_empty():
+		lines.append("%s: на %s не действует%s" % [name, t["name"], "" if no == "-" else " — " + no])
+		return
+	var ab := str(sp.get("save", {}).get("ability", spec.get("save", "dex")))  # Web asks of who is caught
+	var r := Sheet.save(s, data, t, ab, spell_dc(s), tag, str(s.combat.get("meta_now", "")) == "heightened_spell")
+	var ok := bool(r["ok"])
+	lines.append("%s%s: %s — спасбросок %s против Сл %d %s" % [name, said, t["name"], ab_name(ab), spell_dc(s),
+		"успех" if ok else "провал — " + ", ".join(conds.map(func(x: String) -> String: return cond_name(data, x)))])
+	if ok:
+		return
+	for cond: String in conds:
+		lines.append_array(_add_condition(s, data, t, cond, timer.merged({"tag": tag}, true)))
+	if bool(word.get("drop", false)):
+		var it := Sheet.holder(s, t)
+		var held := str(it["equipped"]["main_hand"])
+		it["equipped"]["main_hand"] = ""
+		it["dropped"] = held  # picked up at the start of its next turn it can act (a free interaction, 5e)
+		CharacterRules.refresh(it, data, s.items)
+		lines.append("%s роняет %s" % [t["name"], ItemRules.display_name(data["items"], s.items, held)])
+	if int(word.get("flee", 0)) > 0:
+		FightField.thrust(s, data, t, FightGrid.cell(t) - FightGrid.cell(caster(s)), FightGrid.squares_of(data, int(word["flee"])), lines)
+		lines.append("%s бежит прочь" % t["name"])
+
+
+## What keeps the conditions off `t`: "" none, «-» — it cannot get them, or what protects it.
+static func _resists(s: GameSession, data: Dictionary, t: Dictionary, spec: Dictionary, conds: Array, tag: String) -> String:
+	if not Sheet.is_hero(t):
+		return "" if _can_be(data, t, spec) else "-"
+	for cond: String in conds:
+		var why := HeroDefense.immune(s.character, data, cond, tag)
+		if not why.is_empty():
+			return why
+	return "" if int(s.character["abilities"].get("int", 10)) >= int(spec.get("min_int", 0)) else "-"
 
 
 ## Whether a foe can get the spell's conditions: creature types (`types`, `immune_types`), condition immunities,
@@ -1293,26 +1120,27 @@ static func _tick_conditions(s: GameSession, data: Dictionary, f: Dictionary, li
 			lines.append("%s стряхивает: %s" % [f["name"], cond_name(data, cond)])
 		elif e.get("ends", {}).has("at") and int(e["ends"]["at"]) <= now:
 			ConditionRules.remove_effect(f, int(e["uid"]))
-			lines.append("%s: %s проходит" % [f["name"], cond_name(data, cond)])
+			lines.append("%s: %s проходит" % [f["name"], cond_name(data, cond) if not cond.is_empty() else str(e.get("source", {}).get("name", ""))])
 
 
-## The player's concentration spell ended: its conditions leave every foe.
-static func end_spell(s: GameSession, data: Dictionary, spell_id: String) -> Array[String]:
+## A concentration ended: what the spell of `by` left on anyone goes, its zones and its creatures.
+static func end_spell(s: GameSession, data: Dictionary, spell_id: String, by: String = PLAYER) -> Array[String]:
 	var lines: Array[String] = []
 	if spell_id.is_empty() or not active(s):
 		return lines
-	lines.append_array(SpellEffects.end_on_fighters(s, data, spell_id))
-	lines.append_array(SpellEffects.end_zones(s, spell_id))  # v0.7.13.5
+	lines.append_array(SpellEffects.end_on_fighters(s, data, spell_id, by))
+	lines.append_array(SpellEffects.end_zones(s, spell_id, by))  # v0.7.13.5
+	var hero := by == PLAYER
 	var fall := str(SpellEffects.spec(data, spell_id).get("fall", ""))
-	if not fall.is_empty() and int(s.character.get("hp", 0)) > 0:  # Fly ends in the air (v0.7.63): the hero comes down
-		lines.append("%s падает с высоты" % s.character["name"])
-		_hurt_player(s, data, roll_dice(s.rng, fall), false, lines)
-		lines.append_array(ConditionRules.impose(s, data, {"condition": "prone", "ends": {"rest": "short"}, "source": {"kind": "spell", "id": spell_id, "name": "падение"}}))
-	for id: String in allies(s):  # v0.7.22.22: the creatures of a concentration spell go with it
+	if hero and not fall.is_empty() and int(s.character.get("hp", 0)) > 0:  # Fly ends in the air (v0.7.63): the hero comes down
+		_fall(s, data, player(s), spell_id, fall, lines)
+	for id: String in enemies(s) + allies(s):  # v0.7.22.22: the creatures of a concentration spell go with it
 		var a := fighter(s, id)
-		if str(a.get("spell", "")) == spell_id and bool(data["spells"].get(spell_id, {}).get("concentration", false)):
+		if str(a.get("spell", "")) == spell_id and str(a.get("called_by", PLAYER)) == by and bool(data["spells"].get(spell_id, {}).get("concentration", false)):
 			a["status"] = "gone"
 			lines.append("%s исчезает — концентрация прервана" % a["name"])
+	if not hero:
+		return lines
 	var on_others := allies(s, false).any(func(id: String) -> bool: return fighter(s, id).has("lethargy")) \
 		or Being.with(s, "effects").any(func(id: String) -> bool: return (Being.view(s, id)["effects"] as Array).any(func(x: Dictionary) -> bool: return str(x.get("source", {}).get("id", "")) == spell_id))  # v0.7.50.1
 	AllyRules.drop_buffs(s, spell_id)
@@ -1322,72 +1150,40 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String) -> Arr
 	return lines
 
 
+## Anyone comes down from a height a spell held it at.
+static func _fall(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String, dice: String, lines: Array[String]) -> void:
+	lines.append("%s падает с высоты" % f["name"])
+	hurt(s, data, f, roll_dice(s.rng, dice), lines)
+	lines.append_array(ConditionRules.impose(s, data, {"condition": "prone", "ends": {"rest": "short"}, "source": {"kind": "spell", "id": spell_id, "name": "падение"}}, f))
+
+
 static func spell_cost(data: Dictionary, spell_id: String) -> String:
 	return "bonus" if str(data["spells"].get(spell_id, {}).get("casting_time", "")).contains("бонус") else "action"
 
 
-static func can_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if Guise.has_body(s.character):
-		return "COMBAT_WILD_SHAPE"
-	var cost := spell_cost(data, spell_id)
-	if FeatureRules.active_metamagic(s, data) == "quickened_spell":
-		cost = "bonus"
-	if int(economy(s).get(cost, 0)) <= 0:
-		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
-	var chk := SpellRules.check(s.character, data, spell_id, slot)
-	if chk.has("reason"):
-		return str(chk["reason"])
-	var sp: Dictionary = data["spells"][spell_id]
-	if SpellRules.long_cast(sp):
-		return "COMBAT_SPELL_TOO_LONG"  # v0.7.13: minutes to cast — not in a fight (Prayer of Healing)
-	if SpellEffects.spec(data, spell_id).has("reaction"):
-		return "COMBAT_REACTION_SPELL"  # Shield, Counterspell: cast in the window of a foe's turn (v0.7.13.7)
-	if (sp.get("components", []) as Array).has("V") and SpellEffects.silenced(s, data, player(s)):
-		return "COMBAT_SILENCED"  # v0.7.13.6
-	if FightGrid.is_aim(target_id):  # a square, for what covers an area
-		return _can_aim(s, data, spell_id, FightGrid.aim_of(target_id))
-	if not target_id.is_empty() and (SpellEffects.picks_side(data, spell_id) == "friend"
-			or (SpellEffects.picks_side(data, spell_id) == "any" and str(fighter(s, target_id).get("side")) != "enemy")):
-		return _can_friend(s, data, spell_id, target_id)
-	if sp.has("heal_at_slot") or target_id.is_empty():
-		return ""
-	var t := fighter(s, target_id)
-	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
-		return "COMBAT_BAD_TARGET"
-	if charmed_by(s, t) and (sp.has("attack") or sp.has("save") or is_engine_spell(data, spell_id)):
-		return "COMBAT_CHARMED"
-	var touch := _spell_squares(s, data, spell_id) <= 1 and FightGrid.dist(player(s), t) <= 1 and FightGrid.cover(s, data, player(s), t) < FightGrid.FULL_COVER
-	if (_no_line(s, data, player(s), t) or _blind_aim(s, data, spell_id, t)) and not touch:
-		return "COMBAT_NO_LINE"  # an area on a square reaches it all the same (_can_aim)
-	if FightGrid.shown_dist(player(s), t) > _spell_squares(s, data, spell_id):
-		return "COMBAT_OUT_OF_RANGE"
-	return ""
+## One invisible that `me` has no means to see.
+static func _unseen_by(s: GameSession, me: Dictionary, t: Dictionary) -> bool:
+	var it := Sheet.holder(s, t)
+	return ConditionRules.has(it, "invisible") and not SpellEffects.has(Sheet.holder(s, me), "see_invisible") and not ConditionRules.has(it, "outlined")
 
 
-## An invisible foe the hero has no means to see.
-static func _hidden_from_hero(s: GameSession, t: Dictionary) -> bool:
-	return _has(t, "invisible") and not SpellEffects.has(s.character, "see_invisible") and not _has(t, "outlined")
-
-
-## "" when the area of a spell can be laid on a square: in range and in sight of the hero.
-static func _can_aim(s: GameSession, data: Dictionary, spell_id: String, at: Vector2i) -> String:
+## "" when the area of a spell can be laid on a square: in range and in sight of the caster.
+static func _can_aim(s: GameSession, data: Dictionary, spell_id: String, at: Vector2i, f: Dictionary) -> String:
 	var jump := int(SpellEffects.spec(data, spell_id).get("teleport", 0))
-	if jump > 0:  # Misty Step: a free square the hero sees
+	if jump > 0:  # Misty Step: a free square it sees
 		var g := FightGrid.grid(s, data)
-		if FightGrid.dist_to(player(s), at) > FightGrid.squares_of(data, jump):
+		if FightGrid.dist_to(f, at) > FightGrid.squares_of(data, jump):
 			return "COMBAT_OUT_OF_RANGE"
 		if FightGrid.bodies(s).has(at) or not FightGrid.walkable(g, at):
 			return "COMBAT_BAD_TARGET"
-		return "" if FightGrid.clear(g, FightGrid.cell(player(s)), at) else "COMBAT_NO_LINE"
+		return "" if FightGrid.clear(g, FightGrid.cell(f), at) else "COMBAT_NO_LINE"
 	if area_of(data, spell_id).is_empty() or data["spells"].get(spell_id, {}).has("attack"):
 		return "COMBAT_BAD_TARGET"
 	if from_self(data, spell_id):
 		return ""
-	if FightGrid.dist_to(player(s), at) > _spell_squares(s, data, spell_id):
+	if FightGrid.dist_to(f, at) > _spell_squares(s, data, spell_id, f):
 		return "COMBAT_OUT_OF_RANGE"
-	return "" if FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(player(s)), at) else "COMBAT_NO_LINE"
+	return "" if FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(f), at) else "COMBAT_NO_LINE"
 
 
 ## The shape of a spell {type, size}, {} when it has none.
@@ -1400,22 +1196,25 @@ static func from_self(data: Dictionary, spell_id: String) -> bool:
 	return int(data["spells"].get(spell_id, {}).get("range_ft", 0)) <= 0
 
 
-## "" when a spell of the hero's side may land on `target_id`: the hero, or an ally in range; a fallen one only for a heal.
-static func _can_friend(s: GameSession, data: Dictionary, spell_id: String, target_id: String) -> String:
-	if target_id == PLAYER:
+## "" when a spell of `f`'s side may land on `target_id`: itself, or one of its side in range; a fallen one only for a heal.
+static func _can_friend(s: GameSession, data: Dictionary, spell_id: String, target_id: String, f: Dictionary) -> String:
+	if target_id == str(f["id"]):
 		return ""
 	var t := fighter(s, target_id)
 	var fallen_ok := str(t.get("status")) == "down" and SpellEffects.spec(data, spell_id).is_empty()
-	if t.is_empty() or str(t.get("side")) != "ally" or not (str(t.get("status")) == "active" or fallen_ok):
+	var same := (str(t.get("side")) == "enemy") == (str(f.get("side")) == "enemy")
+	if t.is_empty() or not same or not (str(t.get("status")) == "active" or fallen_ok):
 		return "COMBAT_BAD_TARGET"
-	if FightGrid.dist(player(s), t) > _spell_squares(s, data, spell_id):
+	if FightGrid.dist(f, t) > _spell_squares(s, data, spell_id, f):
 		return "COMBAT_OUT_OF_RANGE"
-	return "COMBAT_NO_LINE" if (_no_line(s, data, player(s), t) or _blind_aim(s, data, spell_id, t)) and FightGrid.dist(player(s), t) > 1 else ""
+	return "COMBAT_NO_LINE" if (_no_line(s, data, f, t) or _blind_aim(s, data, spell_id, t, f)) and FightGrid.dist(f, t) > 1 else ""
 
 
-## A spell's range for the hero: Eldritch Spear (300 ft for Eldritch Blast), Distant Spell (double).
-static func spell_range(s: GameSession, data: Dictionary, spell_id: String) -> int:
+## A spell's range: the hero's Eldritch Spear (300 ft for Eldritch Blast), Distant Spell (double).
+static func spell_range(s: GameSession, data: Dictionary, spell_id: String, f: Dictionary = Sheet.HERO) -> int:
 	var ft := int(data["spells"].get(spell_id, {}).get("range_ft", 0))
+	if not Sheet.is_hero(f):
+		return ft
 	if spell_id == "eldritch_blast" and FeatureRules.has(s.character, "eldritch_invocation_eldritch_spear"):
 		ft = 300
 	if FeatureRules.active_metamagic(s, data) == "distant_spell":
@@ -1426,44 +1225,11 @@ static func spell_range(s: GameSession, data: Dictionary, spell_id: String) -> i
 # --- items in a fight (v0.7.12) --------------------------------------------------------------------
 
 
-## A flask or a net thrown at a foe (rules.consumables `throw`): "" or a localization key.
-static func can_throw(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	var fx: Dictionary = ItemRules.consumable(data, item_id, s.items).get("throw", {})
-	if fx.is_empty() or int(s.character.get("inventory", {}).get(item_id, 0)) <= 0:
-		return "COMBAT_ITEM_CANT"
-	if int(economy(s).get("action", 0)) <= 0 and int(economy(s).get("attacks", 0)) <= 0:
-		return "COMBAT_NO_ACTION"
-	var far := 60 if bool(fx.get("improvised", false)) else int(fx.get("range", 15))
-	if FightGrid.is_aim(target_id):  # a flask on a square
-		if not fx.has("oiled") and not fx.has("burning"):
-			return "COMBAT_BAD_TARGET"
-		var at := FightGrid.aim_of(target_id)
-		if FightGrid.dist_to(player(s), at) * int(FightGrid.cfg(data)["ft"]) > far:
-			return "COMBAT_OUT_OF_RANGE"
-		return "" if FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(player(s)), at) else "COMBAT_NO_LINE"
-	var t := fighter(s, target_id)
-	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
-		return "COMBAT_BAD_TARGET"
-	if _no_line(s, data, player(s), t):
-		return "COMBAT_NO_LINE"
-	if FightGrid.shown_dist(player(s), t) * int(FightGrid.cfg(data)["ft"]) > far:
-		return "COMBAT_OUT_OF_RANGE"
-	return ""
-
-
-## Throws the thing (can_throw first): a ranged attack — improvised (DEX, no proficiency, 20/60 ft) or the net's;
+## Throws the thing: a ranged attack — improvised (DEX, no proficiency, 20/60 ft) or the net's;
 ## on a hit its damage (only to `types` when given), burning, oil or the net's hold. Lines.
 static func throw_item(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> Array[String]:
 	var c := s.character
-	var e := economy(s)
-	if int(e.get("attacks", 0)) > 0:
-		e["attacks"] = int(e["attacks"]) - 1
-	else:
-		e["action"] = int(e["action"]) - 1
-		e["attacks"] = CharacterRules.extra_attacks(c, data)
-	e["attacked"] = true
+	economy(s)["attacked"] = true
 	var fx: Dictionary = ItemRules.consumable(data, item_id, s.items)["throw"]
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
 	ItemRules._remove_one(c, item_id)
@@ -1476,20 +1242,9 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 	var proficient := bool(fx.get("weapon", false)) and ((c.get("weapon_profs", []) as Array).has("martial") or (c.get("weapon_profs", []) as Array).has(item_id))
 	var to_hit := dex + (int(c.get("prof_bonus", 2)) if proficient else 0)
 	var near := int(fx.get("range", 20))
-	var w := {"melee": false, "range": [near, 60 if bool(fx.get("improvised", false)) else near], "id": "", "name": name, "str_based": false}
-	var mods := _attack_mods(s, data, w, t)
-	var adv := not (mods["adv"] as Array).is_empty()
-	var dis := not (mods["dis"] as Array).is_empty()
+	var blow := {"name": name, "to_hit": to_hit, "pieces": [], "melee": false, "range": [near, 60 if bool(fx.get("improvised", false)) else near], "str_based": false}
 	var lines: Array[String] = []
-	var rolls := Roll.hero_dice(s, adv, dis)
-	var nat := Roll.kept(rolls, adv, dis)
-	var total := nat + to_hit
-	var hit := nat == 20 or (nat != 1 and total >= ac_of(t))
-	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
-	lines.append("%s бросает %s в %s: %d%s%d = %d против КД %d%s — %s" % [c["name"], name, t["name"], nat, " + " if to_hit >= 0 else " − ",
-		absi(to_hit), total, ac_of(t), mark, "попадание" if hit else "промах"])
-	player(s)["hidden"] = false
-	lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))
+	var hit := bool(Attack.swing(s, data, player(s), t, blow, lines)["hit"])
 	if not hit:
 		return lines
 	if fx.has("damage"):
@@ -1498,9 +1253,9 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 			lines.append("%s: на %s не действует" % [name, t["name"]])
 		else:
 			var dtype := str(fx["damage"][1])
-			var dmg := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, str(fx["damage"][0]), nat == 20))
+			var dmg := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, str(fx["damage"][0])))
 			lines.append("%s: %d (%s)" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype)])
-			_hurt_enemy(s, data, t, dmg, lines, dtype)
+			hurt(s, data, t, dmg, lines, dtype)
 	if fx.has("burning"):
 		FightField.kindle(s, data, FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
 	if fx.has("burning") and str(t.get("status")) == "active":
@@ -1513,95 +1268,23 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 		if SIZES.find(str(Sheet.template(data, t).get("size", "medium"))) > SIZES.find(str(fx.get("max_size", "large"))):
 			lines.append("%s слишком велик для сети" % t["name"])
 		else:
-			_add_condition(s, t, str(fx["condition"]), {"rounds": 10, "save": "str", "dc": int(fx.get("escape_dc", 10)), "item": item_id})
+			_add_condition(s, data, t, str(fx["condition"]), {"rounds": 10, "save": "str", "dc": int(fx.get("escape_dc", 10)), "item": item_id})
 			lines.append("%s: %s, вырваться — Сил Сл %d" % [t["name"], cond_name(data, str(fx["condition"])), int(fx.get("escape_dc", 10))])
 	return lines
 
 
-## The spell of an item (a scroll, a wand) in a fight: "" or a localization key. `target_id` as for a spell.
-static func can_item_spell(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	var fx := ItemRules.consumable(data, item_id, s.items)
-	if not fx.has("spell") or not ItemRules.can_use(s.character, data, s.items, item_id).is_empty():
-		return "COMBAT_ITEM_CANT"
-	if int(economy(s).get("action", 0)) <= 0:
-		return "COMBAT_NO_ACTION"
-	var sp_id := str(fx["spell"])
-	var sp: Dictionary = data["spells"].get(sp_id, {})
-	if sp.has("heal_at_slot") or target_id.is_empty() or not is_engine_spell(data, sp_id):
-		return ""
-	var t := fighter(s, target_id)
-	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
-		return "COMBAT_BAD_TARGET"
-	if _no_line(s, data, player(s), t) or _blind_aim(s, data, sp_id, t):
-		return "COMBAT_NO_LINE"
-	if FightGrid.shown_dist(player(s), t) > maxi(1, FightGrid.squares_of(data, int(sp.get("range_ft", 0)))):
-		return "COMBAT_OUT_OF_RANGE"
-	return ""
+## Who casts now: the one `ActionRules.cast` named, the hero outside of it.
+static func caster(s: GameSession) -> Dictionary:
+	var me := fighter(s, str(s.combat.get("by", {}).get("caster", PLAYER)))
+	return Sheet.HERO if me.is_empty() else me
 
 
-## Casts the item's spell (can_item_spell first): the item gives the spell, its DC and attack (a scroll — by the
-## circle, DMG; a wand — its own); no slot of the hero's is spent. A scroll beyond the hero asks for Arcana. Lines.
-static func item_spell(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> Array[String]:
-	var c := s.character
-	var fx := ItemRules.consumable(data, item_id, s.items)
-	var sp_id := str(fx["spell"])
-	var level := int(fx.get("level", 1))
-	var name := ItemRules.display_name(data["items"], s.items, item_id)
-	var lines: Array[String] = ["%s: %s" % [c["name"], name]]
-	lines.append_array(ItemRules.consume(c, data, s.items, item_id, s.rng))
-	if bool(fx.get("scroll", false)):
-		var read := ItemRules.read_scroll(s, data, sp_id, level)
-		lines.append(str(read["line"]))
-		if not bool(read["ok"]):
-			economy(s)["action"] = int(economy(s)["action"]) - 1
-			return lines
-	if sp_id == "identify":
-		economy(s)["action"] = int(economy(s)["action"]) - 1
-		lines.append_array(ItemRules.identify(c, data, s.items))
-		return lines
-	var nums := ItemRules.scroll_numbers(data, level)
-	var by := {"dc": int(fx.get("dc", nums[0])), "attack": int(fx.get("attack", nums[1]))}
-	var ab := str(c.get("spell_ability", ""))
-	by["ability"] = "int" if ab.is_empty() else ab
-	lines.append_array(_player_cast(s, data, sp_id, level, target_id, by))
-	player(s)["hidden"] = false
-	return lines
+## The level its cantrips grow by.
+static func caster_level(s: GameSession) -> int:
+	return int(s.combat.get("by", {}).get("level", s.character.get("level", 1)))
 
 
-## Casts a spell in combat (can_cast first): the slot, then attack rolls or saves, damage or healing. Lines.
-static func player_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> Array[String]:
-	fx(s, target_id if not target_id.is_empty() else PLAYER, "spell")  # v0.7.22.14
-	var lines := _player_cast(s, data, spell_id, slot, target_id)
-	player(s)["hidden"] = false  # casting gives the player away
-	return lines
-
-
-static func _player_cast(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String, by: Dictionary = {}) -> Array[String]:
-	var c := s.character
-	var e := economy(s)
-	var cost := spell_cost(data, spell_id)
-	var meta := FeatureRules.pay_metamagic(s, data)
-	if meta == "quickened_spell":
-		cost = "bonus"
-	e[cost] = int(e[cost]) - 1
-	s.combat["meta_now"] = meta
-	var numbers := by if not by.is_empty() else ActionRules.numbers(s, data, spell_id)
-	if not numbers.is_empty():
-		s.combat["by"] = numbers
-	var chk := {"spell_id": spell_id, "slot": slot} if not by.is_empty() else SpellRules.check(c, data, spell_id, slot)
-	var held := str(c.get("concentration", ""))
-	var lines: Array[String] = SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]), s, target_id in ["", PLAYER], not by.is_empty())
-	slot = int(chk["slot"])
-	if held != str(c.get("concentration", "")):
-		lines.append_array(end_spell(s, data, held))
-	ActionRules.run(s, data, spell_id, slot, target_id, lines)
-	s.combat.erase("by")
-	return lines
-
-
-## The DC and the attack of the spell now: the item's or the built ability's while it lands, the hero's otherwise.
+## The DC and the attack of the spell now: the caster's, the item's or the built ability's while it lands, the hero's otherwise.
 static func spell_dc(s: GameSession) -> int:
 	return int(s.combat.get("by", {}).get("dc", s.character.get("spell_dc", 10)))
 
@@ -1615,12 +1298,13 @@ static func spell_ability(s: GameSession) -> String:
 	return str(s.combat.get("by", {}).get("ability", s.character.get("spell_ability", "int")))
 
 
-## A spell of damage at a foe: an attack, a save, an area, a volley.
+## A spell of damage at a foe of the caster: an attack, a save, an area, a volley.
 static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String, lines: Array[String]) -> void:
-	var c := s.character
+	var me := caster(s)
+	var by_hero := Sheet.is_hero(me)
 	var sp: Dictionary = data["spells"][spell_id]
-	var level := int(c.get("level", 1))
-	lines.append_array(SpellEffects.break_sanctuary(c))  # a spell at a foe ends Sanctuary (v0.7.13.2)
+	var level := caster_level(s)
+	lines.append_array(SpellEffects.end_on_attack(Sheet.holder(s, me)))  # a spell at a foe ends Sanctuary (v0.7.13.2)
 	var dice := _spell_dice(sp, slot, level)
 	var t := aimed(s, target_id)
 	if str(sp.get("damage_type", "")) == "fire" and not t.is_empty():
@@ -1641,12 +1325,12 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 				count = int(multi["by_level"][k])
 	var dtype := str(sp.get("damage_type", ""))
 	var name := str(sp["name"])
-	if count > 1 and not sp.has("area") and bool(cfg(data).get("volley_one_by_one", false)):
+	if by_hero and count > 1 and not sp.has("area") and bool(cfg(data).get("volley_one_by_one", false)):
 		# As in BG3 (v0.7.22.4, big test #33): one dart or ray now, a target for each of the rest by the button.
 		s.combat["volley"] = {"spell": spell_id, "slot": slot, "left": count - 1, "last": target_id}
 		count = 1
 	for i in count:
-		if not sp.has("area") and str(t.get("status")) != "active":
+		if bool(s.combat.get("halt", false)) or (not sp.has("area") and str(t.get("status")) != "active"):
 			break
 		if bool(multi.get("auto_hit", false)) or sp.has("attack"):
 			_bolt(s, data, spell_id, slot, t, dice, lines)
@@ -1655,26 +1339,26 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 			for tg: Dictionary in targets:
 				if str(tg.get("status")) != "active":
 					continue
-				var hero := str(tg["id"]) == PLAYER  # friendly fire (v0.7.50.1)
 				var save_ab := str(sp["save"]["ability"])
 				var dc := spell_dc(s)
 				if save_ab == "dex" and sp.has("area"):
-					(player(s) if hero else tg)["cover"] = mini(int(FightGrid.cfg(data)["cover"]["three_quarters"]), FightGrid.cover_at(s, data, _area_origin(s, data, sp, t), FightGrid.cell(tg)))
-				var ok := bool(Sheet.save(s, data, Sheet.HERO, save_ab, dc, "magic")["ok"]) if hero else Sheet.saved(s, data, tg, save_ab, dc, "magic", str(s.combat.get("meta_now", "")) == "heightened_spell")
-				(player(s) if hero else tg).erase("cover")
-				var dmg := dmg_full / 2 if ok and str(sp["save"]["success"]) == "half" else (0 if ok else dmg_full)
-				dmg = int(Sheet.damage(s, data, Sheet.HERO, dtype, dmg)["damage"]) if hero else Sheet.taken(s, data, tg, dtype, dmg)
-				lines.append("%s: %s — спасбросок %s против Сл %d %s, %d (%s)" % [name, str(c.get("name", "")) if hero else tg["name"], ab_name(save_ab),
+					tg["cover"] = mini(int(FightGrid.cfg(data)["cover"]["three_quarters"]), FightGrid.cover_at(s, data, _area_origin(s, data, sp, t), FightGrid.cell(tg)))
+				var ok := Sheet.saved(s, data, tg, save_ab, dc, "magic", str(s.combat.get("meta_now", "")) == "heightened_spell")
+				tg.erase("cover")
+				var dmg := Sheet.taken(s, data, tg, dtype, dmg_full / 2 if ok and str(sp["save"]["success"]) == "half" else (0 if ok else dmg_full))
+				lines.append("%s: %s — спасбросок %s против Сл %d %s, %d (%s)" % [name, tg["name"], ab_name(save_ab),
 					dc, "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
-				_caught_friend(s, data, tg)
+				if by_hero:
+					_caught_friend(s, data, tg)
 				if dmg > 0:
-					_hurt_any(s, data, tg, dmg, lines)
-				if not hero:
-					ActionRules.riders(s, data, spell_id, slot, tg, not ok, lines)
+					hurt(s, data, tg, dmg, lines, dtype, false, by_hero)
+				ActionRules.riders(s, data, spell_id, slot, tg, not ok, lines)
 
 
 ## One dart or ray of a spell (an auto hit or a spell attack) at `t`. Lines.
 static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int, t: Dictionary, dice: String, lines: Array[String]) -> void:
+	var me := caster(s)
+	var by_hero := Sheet.is_hero(me)
 	var c := s.character
 	var sp: Dictionary = data["spells"][spell_id]
 	var dtype := str(sp.get("damage_type", ""))
@@ -1682,42 +1366,47 @@ static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int,
 	if bool(cfg(data)["multi"].get(spell_id, {}).get("auto_hit", false)):
 		var dmg := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, _empowered(s, dice)))
 		lines.append("%s: %d (%s) по %s" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype), t["name"]])
-		_hurt_enemy(s, data, t, dmg, lines)
+		hurt(s, data, t, dmg, lines, dtype, false, by_hero)
 		return
 	# v0.7.13: a spell attack has the advantages and disadvantages of any attack (prone, hidden, guided, dark…)
-	var probe := {"melee": str(sp["attack"]) == "melee", "range": [int(sp.get("range_ft", 5)), int(sp.get("range_ft", 5))], "id": "",
-		"name": name, "str_based": false}
-	var mods := _attack_mods(s, data, probe, t)
-	if spell_id == "shocking_grasp" and _metal_armor(data, t):
-		(mods["adv"] as Array).append("металлический доспех")
-	var dis := not (mods["dis"] as Array).is_empty()
-	var adv := not (mods["adv"] as Array).is_empty()
-	var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
-	var sres := _attack(s, data, str(c["name"]), name, spell_attack(s), adv, dis, t,
-		_empowered(s, dice), agonizing, dtype, lines)
+	var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if by_hero and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
+	var blow := Attack.of_spell(name, spell_attack(s), _empowered(s, dice), agonizing, dtype, str(sp["attack"]) == "melee", int(sp.get("range_ft", 5)))
+	if spell_id == "shocking_grasp" and _metal_armor(s, data, t):
+		blow["adv"] = ["металлический доспех"]
+	var sres := Attack.swing(s, data, me, t, blow, lines)
 	ActionRules.riders(s, data, spell_id, slot, t, bool(sres["hit"]), lines)
-	var repel := bool(sres["hit"]) and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_repelling_blast")
-	if repel and str(t.get("status")) == "active" and SIZES.find(str(Sheet.template(data, t).get("size", "medium"))) <= 3:
+	var repel := by_hero and bool(sres["hit"]) and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_repelling_blast")
+	if repel and str(t.get("status")) == "active" and SIZES.find(Sheet.size(s, data, t)) <= 3:
 		push_away(s, data, t, 10)
 		lines.append("Отталкивающий заряд: %s отброшен на 10 фт" % t["name"])
 
 
-## What a healing spell gives at this slot.
+## What a healing spell gives at this slot, by the caster's numbers.
 static func heal_roll(s: GameSession, data: Dictionary, spell_id: String, slot: int) -> int:
-	var c := s.character
-	var ab := CharacterRules.mod(CharacterRules.ability(c, spell_ability(s)))
+	var me := caster(s)
+	var c := Sheet.holder(s, me)
+	var ab := Sheet.ability_mod(s, data, me, spell_ability(s))
 	var heal_expr := str(data["spells"][spell_id]["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
-	var heal := max_dice(heal_expr, ab) if SpellEffects.max_heal(c) else roll_dice(s.rng, heal_expr, false, ab)
-	if FeatureRules.has(c, "disciple_of_life") and slot > 0:
-		heal += 2 + slot  # Disciple of Life
-	return heal
+	var points := max_dice(heal_expr, ab) if SpellEffects.max_heal(c) else roll_dice(s.rng, heal_expr, false, ab)
+	if Sheet.is_hero(me) and FeatureRules.has(c, "disciple_of_life") and slot > 0:
+		points += 2 + slot  # Disciple of Life
+	return points
 
 
-static func _heal_hero(s: GameSession, data: Dictionary, spell_id: String, slot: int, lines: Array[String]) -> void:
-	var c := s.character
-	var before := int(c["hp"])
-	c["hp"] = mini(int(c["max_hp"]), before + heal_roll(s, data, spell_id, slot))
-	lines.append("+%d HP" % (int(c["hp"]) - before))
+## A healing spell lands on anyone in the fight: one who lay at 0 HP is back in it.
+static func heal(s: GameSession, data: Dictionary, spell_id: String, slot: int, t: Dictionary, lines: Array[String]) -> void:
+	var it := Sheet.holder(s, t)
+	if bool(t.get("no_heal", false)):  # Chill Touch
+		lines.append("%s: раны не затягиваются" % t["name"])
+		return
+	var before := int(it["hp"])
+	it["hp"] = mini(int(it["max_hp"]), before + heal_roll(s, data, spell_id, slot))
+	if not Sheet.is_hero(t):
+		t["status"] = "active"
+	elif before <= 0 and int(it["hp"]) > 0:
+		ConditionRules.remove(it, "unconscious")
+		s.combat["death_saves"] = {"ok": 0, "fail": 0}
+	lines.append("+%d HP" % (int(it["hp"]) - before) if Sheet.is_hero(t) and Sheet.is_hero(caster(s)) else "%s: +%d HP" % [t["name"], int(it["hp"]) - before])
 
 
 ## The targets left to pick after the first (v0.7.50.1): a volley with `picks`, none when nobody is left to pick.
@@ -1745,14 +1434,14 @@ static func _pick_shot(s: GameSession, data: Dictionary, v: Dictionary, target_i
 	var slot := int(v["slot"])
 	(v["picks"] as Array).append(target_id)
 	if SpellEffects.picks_side(data, spell_id) == "friend":
-		if target_id != PLAYER:
+		if target_id != PLAYER or not Sheet.is_hero(caster(s)):
 			SpellEffects.on_friend(s, data, spell_id, slot, fighter(s, target_id), lines)
 		elif SpellEffects.self_spell(data, spell_id):
 			lines.append_array(SpellEffects.apply_self(s, data, spell_id, slot))
 		elif (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell_id):
 			s.character.erase("invisible_others")
 		else:
-			_heal_hero(s, data, spell_id, slot, lines)
+			heal(s, data, spell_id, slot, player(s), lines)
 	elif cfg(data)["condition_spells"].has(spell_id):
 		_cast_condition(s, data, spell_id, slot, fighter(s, target_id), lines)
 	elif not SpellEffects.curse(data, spell_id).is_empty():
@@ -1764,10 +1453,10 @@ static func _pick_shot(s: GameSession, data: Dictionary, v: Dictionary, target_i
 		var t := fighter(s, target_id)
 		var dtype := str(sp.get("damage_type", ""))
 		var ok := Sheet.saved(s, data, t, str(sp["save"]["ability"]), spell_dc(s), "magic")
-		var dmg := 0 if ok else Sheet.taken(s, data, t, dtype, roll_dice(s.rng, _empowered(s, _spell_dice(sp, slot, int(s.character.get("level", 1))))))
+		var dmg := 0 if ok else Sheet.taken(s, data, t, dtype, roll_dice(s.rng, _empowered(s, _spell_dice(sp, slot, caster_level(s)))))
 		lines.append("%s: %s — спасбросок %s %s, %d (%s)" % [sp["name"], t["name"], ab_name(str(sp["save"]["ability"])), "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 		if dmg > 0:
-			_hurt_enemy(s, data, t, dmg, lines)
+			hurt(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(caster(s)))
 
 
 ## The darts or rays left of the spell just cast (v0.7.22.4): {spell, slot, left, last} or {}; with `picks` (v0.7.50.1)
@@ -1785,14 +1474,14 @@ static func can_volley(s: GameSession, data: Dictionary, target_id: String) -> S
 		if (v["picks"] as Array).has(target_id):
 			return "COMBAT_PICKED"
 		if SpellEffects.picks_side(data, str(v["spell"])) == "friend":
-			return _can_friend(s, data, str(v["spell"]), target_id)
+			return _can_friend(s, data, str(v["spell"]), target_id, player(s))
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
 		return "COMBAT_BAD_TARGET"
 	if bool(SpellEffects.picks(data, str(v["spell"])).get("near", false)) and v.has("picks") and not FightGrid.touching(t, fighter(s, str(v["picks"][0]))):
 		return "COMBAT_OUT_OF_RANGE"
 	var sp: Dictionary = data["spells"][str(v["spell"])]
-	if _no_line(s, data, player(s), t) or _blind_aim(s, data, str(v["spell"]), t):
+	if _no_line(s, data, player(s), t) or _blind_aim(s, data, str(v["spell"]), t, player(s)):
 		return "COMBAT_NO_LINE"
 	if FightGrid.dist(player(s), t) > maxi(1, FightGrid.squares_of(data, int(sp.get("range_ft", 0)))):
 		return "COMBAT_OUT_OF_RANGE"
@@ -1848,29 +1537,30 @@ static func aimed(s: GameSession, target_id: String) -> Dictionary:
 
 ## The squares of a spell's area laid at a target or a square.
 static func area_cells(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary) -> Array[Vector2i]:
-	var from_hero := int(sp.get("range_ft", 0)) == 0
-	return FightGrid.area(s, data, sp.get("area", {}), FightGrid.cell(player(s)), _aim_square(s, t), from_hero)
+	var from_me := int(sp.get("range_ft", 0)) == 0
+	return FightGrid.area(s, data, sp.get("area", {}), FightGrid.cell(caster(s)), _aim_square(s, t), from_me)
 
 
-## The square of the body of `t` that the hero aims at.
+## The square of the body of `t` that the caster aims at.
 static func _aim_square(s: GameSession, t: Dictionary) -> Vector2i:
-	return FightGrid.cell(t) if bool(t.get("aim", false)) else FightGrid._facing(player(s), t)[1]
+	return FightGrid.cell(t) if bool(t.get("aim", false)) else FightGrid._facing(caster(s), t)[1]
 
 
 ## The point an area spreads from: its cover goes by it.
 static func _area_origin(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary) -> Vector2i:
-	return FightGrid.cell(player(s)) if int(sp.get("range_ft", 0)) == 0 else _aim_square(s, t)
+	return FightGrid.cell(caster(s)) if int(sp.get("range_ft", 0)) == 0 else _aim_square(s, t)
 
 
 ## Who an area spell covers (v0.8.4): those standing on its squares. v0.7.50.1 (friendly fire, rules.combat.friendly_fire):
-## an area does not pick sides — allies in it are caught, and the hero too, unless the area starts at the hero.
+## an area does not pick sides — the caster's friends in it are caught, itself too, unless the area starts at it.
 static func area_targets(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	var field: Array[String] = enemies(s)
+	var me := caster(s)
+	var field: Array[String] = foes_of(s, me)
 	if bool(cfg(data)["friendly_fire"]["on"]):
-		field.append_array(allies(s))
-		if int(sp.get("range_ft", 0)) != 0:
-			field.append(PLAYER)
+		field.append_array(friends_of(s, me))
+		if int(sp.get("range_ft", 0)) == 0:
+			field.erase(str(me["id"]))
 	var cells := area_cells(s, data, sp, t)
 	for id: String in field:
 		if FightGrid.in_cells(fighter(s, id), cells):
@@ -1882,37 +1572,6 @@ static func area_targets(s: GameSession, data: Dictionary, sp: Dictionary, t: Di
 static func monster_area(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, aim: Vector2i) -> Array[Vector2i]:
 	var area: Dictionary = a.get("effect", {}).get("area", {})
 	return FightGrid.area(s, data, {"type": str(area.get("type", "cone")), "size": int(area.get("ft", 5))}, FightGrid.cell(f), aim, true)
-
-
-## A monster's breath or burst also catches the hero's allies within its area (friendly fire, v0.7.50.1).
-static func _area_on_allies(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, lines: Array[String]) -> void:
-	var area: Dictionary = a.get("effect", {}).get("area", {})
-	if area.is_empty() or (a["damage"] as Array).is_empty() or not bool(cfg(data)["friendly_fire"]["on"]):
-		return
-	var sv: Dictionary = a["save"]
-	var cells := monster_area(s, data, f, a, FightGrid.cell(player(s)))
-	for id: String in allies(s):
-		var t := fighter(s, id)
-		if not FightGrid.in_cells(t, cells):
-			continue
-		var ok := Sheet.saved(s, data, t, str(sv["ability"]), int(sv["dc"]))
-		var dmg := 0
-		for d: Dictionary in a["damage"]:
-			var part := roll_dice(s.rng, str(d["dice"]))
-			dmg += Sheet.taken(s, data, t, str(d.get("type", "")), part / 2 if ok and str(sv["success"]) == "half" else (0 if ok else part))
-		lines.append("%s — %s: %s, спасбросок %s, %d урона" % [f["name"], a["name"], t["name"], "успех" if ok else "провал", dmg])
-		if dmg > 0:
-			_hurt_ally(s, t, dmg, lines)
-
-
-## Damage to anyone on the field, by its side.
-static func _hurt_any(s: GameSession, data: Dictionary, t: Dictionary, dmg: int, lines: Array[String], dtype: String = "") -> void:
-	if str(t["id"]) == PLAYER:
-		_hurt_player(s, data, dmg, false, lines)
-	elif str(t.get("side")) == "ally":
-		_hurt_ally(s, t, dmg, lines)
-	else:
-		_hurt_enemy(s, data, t, dmg, lines, dtype)
 
 
 ## A follower caught in the hero's area thinks worse of the hero.
@@ -1930,17 +1589,19 @@ static func _acid_rider(s: GameSession, data: Dictionary, slot: int, t: Dictiona
 		return
 	var half := Sheet.taken(s, data, t, "acid", roll_dice(s.rng, "%dd4" % (4 + maxi(0, slot - 2))) / 2)
 	lines.append("Кислотная стрела: брызги — %d (кислота)" % half)
-	_hurt_enemy(s, data, t, half, lines, "acid")
+	hurt(s, data, t, half, lines, "acid", false, Sheet.is_hero(caster(s)))
 
 
-## A fighter thrown `feet` straight away from the hero, until a wall or a body stops it.
+## A fighter thrown `feet` straight away from the caster, until a wall or a body stops it.
 static func push_away(s: GameSession, data: Dictionary, t: Dictionary, feet: int) -> void:
-	FightField.thrust(s, data, t, (FightGrid.cell(t) - FightGrid.cell(player(s))).sign(), FightGrid.squares_of(data, feet), [])
+	FightField.thrust(s, data, t, (FightGrid.cell(t) - FightGrid.cell(caster(s))).sign(), FightGrid.squares_of(data, feet), [])
 
 
-## A foe in metal armor (Shocking Grasp): its armor line names mail, plate, scale, a breastplate or splint.
-static func _metal_armor(data: Dictionary, t: Dictionary) -> bool:
+## One in metal armor (Shocking Grasp): what it wears, or its armor line, names mail, plate, scale, a breastplate or splint.
+static func _metal_armor(s: GameSession, data: Dictionary, t: Dictionary) -> bool:
 	var text := " ".join(Sheet.template(data, t).get("equipment", [])).to_lower()
+	if Sheet.is_hero(t):
+		text = str(CharacterRules.item_def(s.character, data, s.items, "armor").get("id", "")).to_lower()
 	return ["mail", "plate", "chain", "splint", "breastplate"].any(func(x: String) -> bool: return text.contains(x))
 
 
@@ -1980,76 +1641,6 @@ static func fear_source(s: GameSession, f: Dictionary) -> Dictionary:
 	return {} if Sheet.is_hero(f) else player(s)
 
 
-## Where a shove can send the foe: the free squares beside it, on the far side from the hero and to the hero's sides. A pit
-## or a fire counts as free: that is why one shoves.
-static func shove_squares(s: GameSession, data: Dictionary, target_id: String) -> Array[Vector2i]:
-	var t := fighter(s, target_id)
-	var out: Array[Vector2i] = []
-	var g := FightGrid.grid(s, data)
-	var taken := FightGrid.bodies(s, target_id)
-	for d: Vector2i in FightGrid.CIRCLE:
-		var to := FightGrid.cell(t) + d
-		if FightGrid.dist_to(player(s), to) < FightGrid.dist(player(s), t):
-			continue  # never towards the hero
-		var free := true
-		for c: Vector2i in FightGrid.body_at(to, int(t.get("span", 1))):
-			if FightGrid.flags_at(g, c) & FightGrid.SOLID != 0 and FightGrid.flags_at(g, c) & FightGrid.PIT == 0 or taken.has(c) or FightGrid.shut(s, g, c):
-				free = false
-		if free:
-			out.append(to)
-	return out
-
-
-## «Вырваться» (v0.7.8): grappled, or restrained by something with a DC to break (a net, a web) — an action.
-static func can_escape(s: GameSession) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if _hold_on_hero(s).is_empty():
-		return "COMBAT_NOT_HELD"
-	if int(economy(s).get("action", 0)) <= 0:
-		return "COMBAT_NO_ACTION"
-	return ""
-
-
-## The effect that holds the hero and can be broken: grappled (by a fighter or a DC), restrained with escape_dc.
-static func _hold_on_hero(s: GameSession) -> Dictionary:
-	for cond: String in ["grappled", "restrained"]:
-		for e: Dictionary in ConditionRules.effects_of(s.character, cond):
-			if cond == "grappled" or e.has("escape_dc"):
-				return e
-	return {}
-
-
-## Athletics or Acrobatics (the better) against the hold's DC or the grappler's Athletics (5e). Lines.
-static func escape(s: GameSession, data: Dictionary) -> Array[String]:
-	var c := s.character
-	var e := economy(s)
-	e["action"] = int(e["action"]) - 1
-	var hold := _hold_on_hero(s)
-	var skill := "athletics" if int(c["skills"].get("athletics", 0)) >= int(c["skills"].get("acrobatics", 0)) else "acrobatics"
-	var mods := ConditionRules.check_mods(c, data, {"skill": skill})
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var mine := Roll.kept(Roll.hero_dice(s, false, dis), false, dis) + int(c["skills"].get(skill, 0))
-	var dc := int(hold.get("escape_dc", 0))
-	var against := "Сл %d" % dc
-	if dc <= 0:
-		var g := fighter(s, str(hold.get("by", "")))
-		if g.is_empty():
-			g = fighter(s, fighter_of_npc(s, str(hold.get("by", ""))))
-		var m: Dictionary = Sheet.template(data, g) if not g.is_empty() else {}
-		var bonus := int(m.get("skills", {}).get("athletics", CharacterRules.mod(int(m.get("abilities", {}).get("str", 10))))) if not m.is_empty() else 0
-		dc = Roll.d20(s.rng) + bonus
-		against = "%d (%s)" % [dc, g.get("name", "хватка")]
-	var ok := (mods["auto_fail"] as Array).is_empty() and mine >= dc
-	var what := ConditionRules.name_of(data, str(hold.get("condition", ""))).to_lower()
-	if ok:
-		ConditionRules.remove_effect(c, int(hold["uid"]))
-		CharacterRules.refresh(c, data, s.items)
-		e["move"] = FightGrid.steps_of(data, int(c.get("speed", 30)))
-	return ["%s вырывается: %s %d против %s — %s" % [c.get("name", ""), "Атлетика" if skill == "athletics" else "Акробатика", mine, against,
-		("больше не " + what) if ok else "не выходит"]]
-
-
 ## The reach of a foe's blade in squares: its longest melee action.
 static func reach_of(data: Dictionary, f: Dictionary) -> int:
 	var feet := 5
@@ -2057,118 +1648,6 @@ static func reach_of(data: Dictionary, f: Dictionary) -> int:
 		if str(a.get("kind")) == "melee":
 			feet = maxi(feet, int(a.get("reach", 5)))
 	return FightGrid.squares_of(data, feet)
-
-
-## An act with a door or a thing beside the hero: FightField.acts. "" or a key.
-static func can_field(s: GameSession, data: Dictionary, how: String) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if int(economy(s).get("action", 0)) <= 0 and int(economy(s).get("haste", 0)) <= 0:
-		return "COMBAT_NO_ACTION"
-	return FightField.why_not(s, data, how)
-
-
-static func field_act(s: GameSession, data: Dictionary, how: String) -> Array[String]:
-	pay(player(s), "action")
-	var lines: Array[String] = []
-	FightField.act(s, data, how, lines)
-	return lines
-
-
-## Help: a foe beside the hero is hemmed in, the ally's next blow at it has advantage. "" or a key.
-static func can_help(s: GameSession, data: Dictionary, target_id: String) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if int(economy(s).get("action", 0)) <= 0 and int(economy(s).get("haste", 0)) <= 0:
-		return "COMBAT_NO_ACTION"
-	if allies(s).is_empty():
-		return "COMBAT_NO_ALLY"
-	var t := fighter(s, target_id)
-	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
-		return "COMBAT_BAD_TARGET"
-	return "" if blade_reaches(s, data, player(s), t) else "COMBAT_OUT_OF_REACH"
-
-
-static func help(s: GameSession, data: Dictionary, target_id: String) -> Array[String]:
-	pay(player(s), "action")
-	var t := fighter(s, target_id)
-	t["helped"] = true
-	return ["%s отвлекает: %s, союзник ударит с преимуществом" % [s.character["name"], t["name"]]]
-
-
-## How far the hero jumps by the SRD: its Strength in feet after a run of 10 feet, half from a stand; no further than the
-## move left. In squares.
-static func jump_reach(s: GameSession, data: Dictionary) -> int:
-	if not Move.why(s, data, player(s)).is_empty():
-		return 0
-	var ft := CharacterRules.ability(s.character, "str")
-	if int(economy(s).get("walked", 0)) < 2:
-		ft /= 2
-	return mini(int(ft / int(FightGrid.cfg(data)["ft"])), int(economy(s).get("move", 0)))
-
-
-## The squares of a jump: over a pit, water, the ground that hurts, not through a wall or a body. {square: true}.
-static func jump_squares(s: GameSession, data: Dictionary) -> Dictionary:
-	var out := {}
-	var n := jump_reach(s, data)
-	var g := FightGrid.grid(s, data)
-	var from := FightGrid.cell(player(s))
-	var bodies := FightGrid.bodies(s, PLAYER)
-	for y: int in range(-n, n + 1):
-		for x: int in range(-n, n + 1):
-			var to := from + Vector2i(x, y)
-			if maxi(absi(x), absi(y)) < 2 or bodies.has(to) or not FightGrid.walkable(g, to) or FightGrid.shut(s, g, to):
-				continue
-			if FightGrid.line_of(from, to).all(func(at: Vector2i) -> bool: return FightGrid.flags_at(g, at) & FightGrid.SOLID == 0 and not bodies.has(at) and not FightGrid.shut(s, g, at)):
-				out[to] = true
-	return out
-
-
-static func can_jump(s: GameSession, data: Dictionary, to: Vector2i) -> String:
-	var why := Move.why(s, data, player(s))
-	if not why.is_empty():
-		return why
-	return "" if jump_squares(s, data).has(to) else "COMBAT_BAD_MOVE"
-
-
-static func player_jump(s: GameSession, data: Dictionary, to: Vector2i) -> Array[String]:
-	var e := economy(s)
-	var p := player(s)
-	var lines: Array[String] = []
-	leaving(s, data, player(s), to, lines)
-	if int(s.character["hp"]) <= 0:
-		return lines
-	e["move"] = int(e["move"]) - FightGrid.dist_to(p, to)
-	e["walked"] = int(e.get("walked", 0)) + FightGrid.dist_to(p, to)
-	FightGrid.put(p, to)
-	lines.append("%s прыгает" % s.character["name"])
-	FightField.note_walk(s, PLAYER, [FightGrid.tag(to)])
-	FightField.stepped(s, data, p, lines)
-	_release_grapples(s, lines)
-	FightField.hero_stands(s, data)
-	return lines
-
-
-## «Уйти»: the hero on the square before a way out leaves the place. "" or a key.
-static func can_flee(s: GameSession, data: Dictionary) -> String:
-	var why := Move.why(s, data, player(s))
-	if not why.is_empty():
-		return why
-	if s.combat.has("arena"):
-		return "COMBAT_ARENA_RING"
-	return FightField.way_out_shut(s, data, FightGrid.cell(player(s)))
-
-
-## The foes beside the hero strike as it goes; it goes unless it fell or a reaction waits. Lines.
-static func player_flee(s: GameSession, data: Dictionary) -> Array[String]:
-	var lines: Array[String] = []
-	var e := economy(s)
-	e["move"] = maxi(0, int(e["move"]) - 1)
-	leaving(s, data, player(s), FightGrid.NONE, lines)
-	if str(s.combat.get("outcome", "")) == "dead" or int(s.character["hp"]) <= 0 or bool(s.combat.get("halt", false)):
-		return lines
-	FightField.leave(s, data, lines)
-	return lines
 
 
 ## The square of the hero's walk nearest to a foe, NONE when no step brings the hero closer.
@@ -2193,6 +1672,16 @@ static func foes_of(s: GameSession, f: Dictionary) -> Array[String]:
 		return enemies(s)
 	var out := allies(s)
 	if int(s.character.get("hp", 0)) > 0 and not ArenaRules.watching(s):
+		out.push_front(PLAYER)
+	return out
+
+
+## Those on its side in the fight, itself among them.
+static func friends_of(s: GameSession, f: Dictionary) -> Array[String]:
+	if str(f.get("side")) == "enemy":
+		return enemies(s)
+	var out := allies(s)
+	if int(s.character.get("hp", 0)) > 0:
 		out.push_front(PLAYER)
 	return out
 
@@ -2231,14 +1720,7 @@ static func leaving(s: GameSession, data: Dictionary, f: Dictionary, next: Vecto
 
 
 static func _opportunity(s: GameSession, data: Dictionary, o: Dictionary, t: Dictionary, lines: Array[String]) -> void:
-	if Sheet.is_hero(o):
-		var c := s.character
-		var w := weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
-		_attack(s, data, str(c["name"]), w["name"], int(w["to_hit"]), false, false, t, str(w["dice"]), int(w["bonus"]), str(w["type"]), lines, "", false, w)
-	elif Sheet.is_hero(t):
-		_enemy_attack(s, data, o, _best_action(data, o, "melee"), lines)
-	else:
-		_creature_attack(s, data, o, _best_action(data, o, "melee"), t, lines)
+	Attack.swing(s, data, o, t, Attack.blade(s, data, o), lines)
 
 
 # --- grapple and shove (v0.7.7) ---------------------------------------------------------------------------
@@ -2246,22 +1728,57 @@ static func _opportunity(s: GameSession, data: Dictionary, o: Dictionary, t: Dic
 const SIZES: Array[String] = ["tiny", "small", "medium", "large", "huge", "gargantuan"]
 
 
-## "" when the hero can grapple or shove `target_id` now (instead of one attack of the Attack action, 5e), else a
-## localization key: the hero's turn, an attack left, the foe beside the hero and at most one size larger.
-static func can_grapple(s: GameSession, data: Dictionary, target_id: String) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	var e := economy(s)
-	if int(e.get("attacks", 0)) <= 0 and int(e.get("action", 0)) <= 0:
-		return "COMBAT_NO_ACTION"
-	var t := fighter(s, target_id)
-	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
+## "" when `f` may grapple or shove `to`: a foe at arm's length, at most one size larger. Else a key.
+static func why_tussle(s: GameSession, data: Dictionary, f: Dictionary, to: String) -> String:
+	if not foes_of(s, f).has(to):
 		return "COMBAT_BAD_TARGET"
-	if not blade_reaches(s, data, player(s), t):
+	var t := fighter(s, to)
+	if not blade_reaches(s, data, f, t):
 		return "COMBAT_OUT_OF_REACH"
-	if SIZES.find(str(Sheet.template(data, t).get("size", "medium"))) > SIZES.find(hero_size(s, data)) + 1:
-		return "COMBAT_TOO_BIG"
-	return ""
+	return "COMBAT_TOO_BIG" if _outsized(s, data, f, t) else ""
+
+
+static func _outsized(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary) -> bool:
+	return SIZES.find(Sheet.size(s, data, t)) > SIZES.find(Sheet.size(s, data, f)) + 1
+
+
+## The better of its Athletics and Acrobatics.
+static func _tussle_bonus(s: GameSession, data: Dictionary, t: Dictionary) -> int:
+	return maxi(Sheet.skill(s, data, t, "athletics"), Sheet.skill(s, data, t, "acrobatics"))
+
+
+## The contest of a grapple or a shove: Athletics of `f` against the better of `t`, who does not resist when it cannot act (5e:
+## it fails Str / Dex). `what` says the attempt, `cond` is what it lays; "" — nothing to be immune to. True when it won.
+static func tussle(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, what: String, cond: String, lines: Array[String]) -> bool:
+	var me := Sheet.holder(s, f)
+	var it := Sheet.holder(s, t)
+	points(s, data, f)["attacked"] = true
+	if Sheet.is_hero(f):
+		s.combat["rage_kept"] = true
+	var mods := ConditionRules.check_mods(me, data, {"skill": "athletics"})
+	lines.append_array(ConditionRules.end_invisibility_on_attack(me, data))
+	var dis := not (mods["disadvantage"] as Array).is_empty()
+	var mine := Roll.kept(Roll.of(s, f, false, dis), false, dis) + Sheet.skill(s, data, f, "athletics")
+	var theirs := 0 if ConditionRules.incapacitated(it) or not Attack.up(s, t) else Roll.d20(s.rng) + _tussle_bonus(s, data, t)
+	var won := (mods["auto_fail"] as Array).is_empty() and mine >= theirs
+	lines.append("%s %s %s: Атлетика %d против %d — %s" % [me.get("name", ""), what, it.get("name", ""), mine, theirs, "успех" if won else "не выходит"])
+	if won and not cond.is_empty() and immune_to(data, t, cond):
+		lines.append("%s: на него это не действует" % it.get("name", ""))
+		return false
+	return won
+
+
+## The AI's grapple or shove: one who thinks and is stronger than the target, and only one that is not down already.
+static func tussle_offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dictionary], act: String, weight: float) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var cond := "grappled" if act == "grapple" else "prone"
+	if Sheet.is_hero(f) or not _intelligent(data, f):
+		return out
+	var mine := Sheet.skill(s, data, f, "athletics")
+	for t: Dictionary in targets:
+		if not _outsized(s, data, f, t) and not ConditionRules.has(Sheet.holder(s, t), cond) and not immune_to(data, t, cond) and mine > _tussle_bonus(s, data, t):
+			out.append({"act": act, "to": str(t["id"]), "how": {}, "t": t, "kind": "tussle", "touch": true, "far": 1, "power": weight})
+	return out
 
 
 ## The foe cannot get this condition (its condition immunities, v0.7.9).
@@ -2273,66 +1790,16 @@ static func hero_size(s: GameSession, data: Dictionary) -> String:
 	return str(data["races"]["races"].get(str(s.character.get("race", "")), {}).get("size", "medium"))
 
 
-## Grapple (`shove` false: the foe is «схвачен», its speed 0, until the hero walks off) or shove (the foe falls
-## «лежит ничком», or with `to` is pushed 5 ft to that square, a dangerous one too): the hero's Athletics against the
-## foe's better of Athletics and Acrobatics (can_grapple first). Takes one attack of the Attack action. Returns the lines.
-static func grapple(s: GameSession, data: Dictionary, target_id: String, shove: bool, to: Vector2i = FightGrid.NONE) -> Array[String]:
-	var c := s.character
-	var e := economy(s)
-	if int(e.get("attacks", 0)) > 0:
-		e["attacks"] = int(e["attacks"]) - 1
-	else:
-		e["action"] = int(e["action"]) - 1
-		e["attacks"] = CharacterRules.extra_attacks(c, data)
-	e["attacked"] = true
-	s.combat["rage_kept"] = true
-	var t := fighter(s, target_id)
-	var mods := ConditionRules.check_mods(c, data, {"skill": "athletics"})
-	var lines: Array[String] = []
-	lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var rolls := Roll.hero_dice(s, false, dis)
-	var mine := Roll.kept(rolls, false, dis) + int(c.get("skills", {}).get("athletics", 0))
-	var m := Sheet.template(data, t)
-	var sk: Dictionary = m.get("skills", {})
-	var ab: Dictionary = m.get("abilities", {})
-	var theirs_bonus := maxi(int(sk.get("athletics", CharacterRules.mod(int(ab.get("str", 10))))), int(sk.get("acrobatics", CharacterRules.mod(int(ab.get("dex", 10))))))
-	var auto_lose := incapacitated(t)  # a foe that cannot act does not resist (5e: it fails Str / Dex)
-	var theirs := 0 if auto_lose else Roll.d20(s.rng) + theirs_bonus
-	var won := not (mods["auto_fail"] as Array).size() > 0 and mine >= theirs
-	var what := "толкает, чтобы сбить с ног" if shove else "пытается схватить"
-	lines.append("%s %s %s: Атлетика %d против %d — %s" % [c.get("name", ""), what, t["name"], mine, theirs, "успех" if won else "не выходит"])
-	if won and to == FightGrid.NONE and immune_to(data, t, "prone" if shove else "grappled"):
-		lines.append("%s: на него это не действует" % t["name"])
-	elif won:
-		if shove and to != FightGrid.NONE:
-			FightField.thrust(s, data, t, to - FightGrid.cell(t), 1, lines)
-		elif shove:
-			_hold(t, "prone")
-			lines.append("%s падает" % t["name"])
-		else:
-			_hold(t, "grappled")
-			t["grappled_by_player"] = true
-			lines.append("%s схвачен: не может отойти" % t["name"])
-	return lines
-
-
 ## A condition with no timer: it lasts until something ends it (standing up, the hero walking off).
-static func _hold(f: Dictionary, cond: String) -> void:
+static func _hold(f: Dictionary, cond: String, by: String = "") -> void:
 	if not _has(f, cond):
-		ConditionRules.add_effect(f, {"condition": cond, "source": {"kind": "engine", "name": ""}})
+		var e := {"condition": cond, "source": {"kind": "engine", "name": ""}}
+		if not by.is_empty():
+			e["by"] = by
+			e["hold"] = true  # ends with the one who holds
+		ConditionRules.add_effect(f, e)
 	if cond == "invisible":
 		FightGrid.keep_seen(f)
-
-
-## The hero walked off: the foes the hero held are free (Lines).
-static func _release_grapples(s: GameSession, lines: Array[String]) -> void:
-	for id: String in enemies(s):
-		var f := fighter(s, id)
-		if bool(f.get("grappled_by_player", false)):
-			f.erase("grappled_by_player")
-			_remove_condition(f, "grappled")
-			lines.append("%s больше не схвачен" % f["name"])
 
 
 ## `r` can strike one who leaves it (5e, v0.7.7): its reaction is unspent this round, it can act (not incapacitated, paralysed,
@@ -2360,6 +1827,8 @@ static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
 		else:
 			lines.append("Мерцание: %d — остаётся здесь" % r)
 	FeatureRules.end_hero_turn(s, data, lines)
+	ConditionRules.remove(s.character, "mocked")
+	_burn(s, data, player(s), lines)
 	s.combat.erase("prompt")
 	_advance(s, data, lines)
 	return lines
@@ -2375,7 +1844,6 @@ static func _advance(s: GameSession, data: Dictionary, lines: Array[String]) -> 
 		s.combat.erase("raging_rounds")
 		for id: String in order:
 			fighter(s, id).erase("surprised")  # surprise lasts the first round only
-			fighter(s, id).erase("helped")
 		s.combat["turn"] = 0
 		_arrivals(s, data, lines)
 	s.combat["turn"] = t
@@ -2502,14 +1970,19 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 	return lines
 
 
-## The rest of a foe's turn after its attacks (also after a reaction prompt). Lines.
-static func _end_actor(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	ConditionRules.remove(f, "mocked")
-	if str(f.get("status")) == "active" and f.has("acid"):  # Acid Arrow burns at the end of the foe's next turn (v0.7.13)
+## Acid Arrow burns at the end of its next turn (v0.7.13).
+static func _burn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	if str(f.get("status")) == "active" and f.has("acid"):
 		var acid := Sheet.taken(s, data, f, "acid", roll_dice(s.rng, str(f["acid"])))
 		f.erase("acid")
 		lines.append("%s: кислота жжёт — %d" % [f["name"], acid])
-		_hurt_enemy(s, data, f, acid, lines, "acid")
+		hurt(s, data, f, acid, lines, "acid")
+
+
+## The rest of a foe's turn after its attacks (also after a reaction prompt). Lines.
+static func _end_actor(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	ConditionRules.remove(f, "mocked")
+	_burn(s, data, f, lines)
 	if str(f.get("status")) == "active":
 		lines.append_array(SpellEffects.zone_tick(s, data, f, "end"))  # Flaming Sphere (v0.7.13.5)
 	if str(f.get("status")) == "active":
@@ -2552,7 +2025,7 @@ static func _death_save(s: GameSession, data: Dictionary, lines: Array[String]) 
 
 
 static func _intelligent(data: Dictionary, f: Dictionary) -> bool:
-	return int(Sheet.template(data, f)["abilities"].get("int", 1)) >= int(cfg(data)["intelligent_int"])
+	return Sheet.is_hero(f) or int(Sheet.template(data, f)["abilities"].get("int", 1)) >= int(cfg(data)["intelligent_int"])
 
 
 static func _best_action(data: Dictionary, f: Dictionary, kind: String) -> Dictionary:
@@ -2565,10 +2038,9 @@ static func _best_action(data: Dictionary, f: Dictionary, kind: String) -> Dicti
 
 
 static func _gives_up(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> bool:
-	if not ArenaRules.yield_bout(s) or int(f["hp"]) * 100 > int(f["max_hp"]) * int(ArenaRules.cfg(data)["yield_hp_pct"]):
+	if Acts.one("surrender").worth(s, data, f) <= 0.0:
 		return false
-	f["status"] = "surrendered"
-	lines.append("%s поднимает руку — сдаётся" % f["name"])
+	lines.append_array(Acts.one("surrender").go(s, data, f))
 	return true
 
 
@@ -2590,7 +2062,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	if f.has("burning"):  # alchemist's fire (v0.7.12): burns until a DEX save DC 10 puts it out
 		var burn := Sheet.taken(s, data, f, "fire", roll_dice(s.rng, str(f["burning"])))
 		lines.append("%s горит: %d (огонь)" % [f["name"], burn])
-		_hurt_enemy(s, data, f, burn, lines, "fire")
+		hurt(s, data, f, burn, lines, "fire")
 		if str(f["status"]) != "active":
 			return
 		if Sheet.saved(s, data, f, "dex", 10):
@@ -2606,8 +2078,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 		var wis := int(m["saves"].get("wis", CharacterRules.mod(int(m["abilities"].get("wis", 10)))))
 		if Roll.d20(s.rng) + wis < int(cfg(data)["morale_dc"]):
 			if _intelligent(data, f) and FightGrid.touching(f, p):
-				f["status"] = "surrendered"
-				lines.append("%s бросает оружие и сдаётся" % f["name"])
+				lines.append_array(Acts.one("surrender").go(s, data, f))
 				return
 			f["fleeing"] = true
 			lines.append("%s дрогнул и пытается бежать" % f["name"])
@@ -2623,13 +2094,13 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 			str(help.get("side", "right")))
 		lines.append("%s зовёт на помощь!" % f["name"])
 		return
-	FightAI.act(s, data, f, lines)
+	FightAI.turn(s, data, f, lines)
 
 
-## Misty Step: the free square in sight within `feet`, farthest from the foes, no opportunity attacks (v0.7.13.3). Lines.
+## The caster steps through the air: to `to`, or as far from its foes as it can (Misty Step).
 static func _teleport(s: GameSession, data: Dictionary, feet: int, to := FightGrid.NONE) -> Array[String]:
-	var p := player(s)
-	var from := FightGrid.cell(p)
+	var me := caster(s)
+	var from := FightGrid.cell(me)
 	var g := FightGrid.grid(s, data)
 	var n := FightGrid.squares_of(data, feet)
 	var occupied := FightGrid.bodies(s)
@@ -2641,15 +2112,16 @@ static func _teleport(s: GameSession, data: Dictionary, feet: int, to := FightGr
 			if occupied.has(at) or not FightGrid.walkable(g, at) or not FightGrid.clear(g, from, at):
 				continue
 			var near := 1 << 20
-			for id: String in enemies(s):
+			for id: String in foes_of(s, me):
 				near = mini(near, FightGrid.dist_to(fighter(s, id), at))
 			if near > score:
 				score = near
 				best = at
-	FightGrid.put(p, best)
-	FightField.note_walk(s, PLAYER, [FightGrid.tag(best)])
-	FightField.hero_stands(s, data)
-	return ["%s переносится серебристым туманом на %d фт" % [s.character["name"], WalkRules.distance(from, best) * int(FightGrid.cfg(data)["ft"])]]
+	FightGrid.put(me, best)
+	if Sheet.is_hero(me):
+		FightField.note_walk(s, PLAYER, [FightGrid.tag(best)])
+		FightField.hero_stands(s, data)
+	return ["%s переносится серебристым туманом на %d фт" % [me["name"], WalkRules.distance(from, best) * int(FightGrid.cfg(data)["ft"])]]
 
 
 ## A reach weapon meets a foe on its way in (v0.7.12): the hero's reaction, one attack before the foe strikes.
@@ -2663,7 +2135,7 @@ static func _reach_strike(s: GameSession, data: Dictionary, f: Dictionary, lines
 		return
 	player(s)["reacted"] = true
 	lines.append("%s встречает %s на подходе — %s бьёт дальше (досягаемость)" % [c["name"], f["name"], w["name"]])
-	_attack(s, data, str(c["name"]), w["name"], int(w["to_hit"]), false, false, f, str(w["dice"]), int(w["bonus"]), str(w["type"]), lines, "", false, w)
+	Attack.swing(s, data, player(s), f, Attack.of_weapon(w), lines)
 
 
 ## A foe that comes beside the hidden player finds them.
@@ -2672,207 +2144,6 @@ static func _find_hidden(s: GameSession, f: Dictionary, lines: Array[String]) ->
 	if bool(p.get("hidden", false)) and FightGrid.touching(f, p):
 		p["hidden"] = false
 		lines.append("%s находит, где прячется %s" % [f["name"], s.character["name"]])
-
-
-## A melee weapon used beyond its reach: a throw.
-static func _thrown_now(data: Dictionary, f: Dictionary, t: Dictionary, a: Dictionary) -> bool:
-	return str(a.get("kind")) == "melee" and FightGrid.dist(f, t) > maxi(1, FightGrid.squares_of(data, int(a.get("reach", 5))))
-
-
-## The full attack of a monster: Multiattack when it has one for this kind of action.
-static func _enemy_attack_full(s: GameSession, data: Dictionary, f: Dictionary, act: Dictionary, lines: Array[String]) -> void:
-	var m := Sheet.template(data, f)
-	var seq: Array = m.get("multiattack", [])
-	var by_en := {}
-	for a: Dictionary in m["actions"]:
-		by_en[str(a["name_en"])] = a
-	var plan: Array[Dictionary] = []
-	if _thrown_now(data, f, player(s), act):
-		seq = []  # a throw of a melee weapon is one attack: Multiattack counts melee strikes (v0.7.22.19, #13)
-	for x: Dictionary in seq:
-		var a: Dictionary = by_en.get(str(x["action"]), {})
-		if not a.is_empty() and (str(a.get("kind")) == str(act.get("kind")) or (str(act.get("kind")) == "ranged" and a.has("range"))):
-			for i in int(x["count"]):
-				plan.append(a)
-	if plan.is_empty():
-		plan.append(act)
-	if _has(f, "slowed_spell"):  # Slow: one attack (v0.7.13.6)
-		plan = [plan[0]]
-	for i in plan.size():
-		if int(s.character["hp"]) <= 0:
-			return  # nobody finishes the downed hero (v0.7.9)
-		if str(s.combat.get("outcome", "")) == "dead":
-			return
-		_enemy_attack(s, data, f, plan[i], lines)
-		if bool(s.combat.get("halt", false)):  # the hero is asked about a reaction: the rest of the attacks wait
-			var rest: Array = []
-			for b: Dictionary in plan.slice(i + 1):
-				rest.append(str(b["name_en"]))
-			s.combat["resume_plan"] = rest
-			return
-
-
-static func _enemy_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, lines: Array[String]) -> void:
-	var c := s.character
-	var p := player(s)
-	var dtypes: Dictionary = data["misc"]["damage_types"]
-	MonsterRules.spend(f, a)
-	if str(a.get("kind")) == "save":
-		var sv: Dictionary = a["save"]
-		var ab := str(sv["ability"])
-		var tag := MonsterRules.tag_of(a.get("effect", {}), a)
-		if tag.is_empty() and (a["damage"] as Array).any(func(d: Dictionary) -> bool: return str(d.get("type", "")) == "poison"):
-			tag = "poison"
-		var r := Sheet.save(s, data, Sheet.HERO, ab, int(sv["dc"]), tag)
-		var ok := bool(r["ok"])
-		var dmg := 0
-		var notes: Array[String] = []
-		for d: Dictionary in a["damage"]:
-			var part := roll_dice(s.rng, str(d["dice"]))
-			part = part / 2 if ok and str(sv["success"]) == "half" else (0 if ok else part)
-			var adj := Sheet.damage(s, data, Sheet.HERO, str(d.get("type", "")), part)
-			dmg += int(adj["damage"])
-			if not str(adj["note"]).is_empty() and not notes.has(str(adj["note"])):
-				notes.append(str(adj["note"]))
-		if (a["damage"] as Array).is_empty():
-			lines.append("%s — %s: спасбросок %s" % [f["name"], a["name"], r["text"]])
-		else:
-			lines.append("%s — %s: спасбросок %s, %d урона%s" % [f["name"], a["name"], r["text"], dmg, (" (%s)" % ", ".join(notes)) if not notes.is_empty() else ""])
-			_hurt_player(s, data, dmg, false, lines)
-		if not bool(r["ok"]) and a.has("effect"):
-			MonsterRules.apply_effect(s, data, f, a, dmg, lines, {"ok": false, "dc": int(sv["dc"]), "total": int(r["total"])})
-		_area_on_allies(s, data, f, a, lines)
-		return
-	var d := FightGrid.dist(f, p)
-	var ranged_use := _thrown_now(data, f, p, a) or (str(a.get("kind")) != "melee" and d > 1)
-	if ranged_use and str(a.get("kind")) == "melee" and a.has("range"):  # thrown: out of the hand for the fight (v0.7.22.19)
-		var gone: Array = f.get("thrown", [])
-		gone.append(str(a.get("name_en", "")))
-		f["thrown"] = gone
-	if _has(f, "invisible"):
-		FightGrid.keep_seen(f)  # a strike gives an invisible foe away
-	var by_status := ConditionRules.attack(data, f, c, not ranged_use)
-	var tm := MonsterRules.attack_mods(s, data, f, a)
-	f["hidden"] = false  # an attack gives a hidden foe away
-	var eyes := sight_mods(s, data, f, p)
-	var adv := (int(c.get("hp", 1)) <= 0 and not ranged_use) or not (by_status["adv"] as Array).is_empty() or not str(eyes["adv"]).is_empty() or (_has_trait(data, f, "pack_tactics") and _ally_near_player(s, f)) \
-		or (_has(f, "invisible") and not SpellEffects.has(c, "see_invisible")) or not (tm["adv"] as Array).is_empty() or bool(s.combat.get("reckless", false)) \
-		or (TimeRules.dark(s, data) and MonsterRules.sees_in_dark(data, f))
-	var dis := bool(p.get("dodging", false)) and int(c["hp"]) > 0 and not ConditionRules.incapacitated(c) \
-		or (ranged_use and a.has("range") and d * int(FightGrid.cfg(data)["ft"]) > int(a["range"][0])) \
-		or (str(a.get("kind")) == "ranged" and d <= 1) or bool(p.get("hidden", false)) \
-		or (ConditionRules.invisible(c, data) and not _has(f, "invisible")) or not (by_status["dis"] as Array).is_empty() or not (tm["dis"] as Array).is_empty() \
-		or _has(f, "chilled") or not SpellEffects.attack_dis(s, data, f).is_empty() \
-		or _has(f, "cursed_dis") or not str(eyes["dis"]).is_empty() \
-		or (ranged_use and (not WeatherRules.obscure_why(s, data).is_empty() or shot_in_dark(s, data, f, p)))
-	ConditionRules.remove(f, "mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
-	if bool(p.get("blinked", false)):  # Blink (v0.7.13.3)
-		lines.append("%s бьёт в пустоту — героя нет на этом плане" % f["name"])
-		return
-	if ranged_use and a.has("range") and not SpellEffects.wall_between(s, data, f, p).is_empty():
-		lines.append("%s — %s: снаряд сносит Стена ветра" % [f["name"], a["name"]])  # v0.7.13.6
-		return
-	var held := SpellEffects.sanctuary_holds(s, data, f)  # Sanctuary (v0.7.13.2)
-	if not held.is_empty():
-		lines.append(held)
-		return
-	var rolls := Roll.dice(s.rng, adv, dis)
-	var nat := Roll.kept(rolls, adv, dis)
-	var bane := SpellEffects.die(s, f, "attack")  # Bane (v0.7.13.1)
-	var total := nat + int(a.get("to_hit", 0)) + int(bane["bonus"])
-	var cover := cover_of(s, data, f, p) if ranged_use else 0
-	var ac := int(c.get("ac", 10)) + cover
-	var hit := nat == 20 or (nat != 1 and total >= ac)
-	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
-	var line := "%s — %s: %d + %d%s = %d против КД %d%s" % [f["name"], a["name"], nat, int(a.get("to_hit", 0)), " " + str(bane["note"]) if not str(bane["note"]).is_empty() else "", total, ac, mark]
-	if not hit:
-		lines.append(line + " — промах")
-		fx(s, PLAYER, "dodge")
-		return
-	var guard := SpellEffects.against_attack(s, data, f, total, hit)  # Mirror Image (v0.7.13.2)
-	if not str(guard["stop"]).is_empty():
-		lines.append(line + " — " + str(guard["stop"]))
-		return
-	if Guise.has_body(c):
-		ac = int(c.get("ac", 10)) + cover  # the beast's AC is the sheet's while in the form
-	var crit := nat == 20 or bool(by_status["crit"]) or (not ranged_use and int(c["hp"]) <= 0)
-	if crit and CharacterRules.item_prop(c, "no_crit"):
-		crit = false  # adamantine armor: a critical hit is a normal one (v0.7.12)
-		line += " (адамантин: не крит)"
-	var dmg := 0
-	var types: Array[String] = []
-	var notes: Array[String] = []
-	var first := true
-	var extra := MonsterRules.extra_on_hit(s, data, f, a, adv and not dis, dis and not adv, crit)
-	if int(extra["damage"]) > 0:
-		var adj_x := Sheet.damage(s, data, Sheet.HERO, str((a["damage"] as Array)[0].get("type", "")) if not (a["damage"] as Array).is_empty() else "", int(extra["damage"]))
-		dmg += int(adj_x["damage"])
-		notes.append_array(extra["notes"])
-	for dd: Dictionary in a["damage"]:
-		var part := roll_dice(s.rng, str(dd["dice"]), crit)
-		if first:
-			part = maxi(1, part)
-			first = false
-		var adj := Sheet.damage(s, data, Sheet.HERO, str(dd["type"]), part)
-		dmg += int(adj["damage"])
-		types.append(str(dtypes.get(str(dd["type"]), dd["type"])))
-		if not str(adj["note"]).is_empty() and not notes.has(str(adj["note"])):
-			notes.append(str(adj["note"]))
-	if _has(f, "enfeebled") and str(a.get("kind")) in ["melee", "ranged"]:  # Ray of Enfeeblement (v0.7.13.6)
-		dmg /= 2
-		notes.append("ослаблен")
-	if SpellEffects.boon(f, "reduced") != null:  # Reduce on the foe (v0.7.50.1)
-		dmg = maxi(1, dmg - roll_dice(s.rng, "1d4"))
-	var ctx := {"foe": str(f["id"]), "action": str(a.get("name_en", "")), "line": line, "crit": crit, "dmg": dmg, "types": types, "notes": notes,
-		"prone": extra["prone"], "hit": true, "total": total, "ac": ac, "nat20": nat == 20}
-	f["last_total"] = total  # for the labels of the reaction spells (v0.7.13.7)
-	var rx := FeatureRules.reactions(s, data, f, a, ranged_use, dmg, ctx)  # v0.7.10: the hero's reaction
-	if not rx.is_empty():
-		var pol := FeatureRules.policy(s)
-		if pol == "ask" and current(s) == str(f["id"]):
-			ctx["options"] = rx
-			s.combat["pending"] = ctx
-			s.combat["halt"] = true
-			return
-		if pol != "never":
-			FeatureRules.apply_reaction(s, data, f, str(rx[0]["id"]), ctx, lines)
-	_land_hit(s, data, f, a, ctx, lines)
-
-
-## A foe's hit lands (after the hero's reaction, if any): damage, a charge's fall, the effect of the attack, a pounce,
-## Giant Killer's strike back. Lines.
-static func _land_hit(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, ctx: Dictionary, lines: Array[String]) -> void:
-	var dmg := int(ctx["dmg"])
-	var crit := bool(ctx["crit"])
-	var line := str(ctx["line"])
-	if not bool(ctx["hit"]):
-		lines.append(line + " — промах")
-		fx(s, PLAYER, "dodge")
-	elif (a["damage"] as Array).is_empty():
-		lines.append(line + " — попадание")
-	else:
-		var notes: Array = ctx["notes"]
-		lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, ", ".join(ctx["types"]), (", " + ", ".join(notes)) if not notes.is_empty() else ""])
-		if crit:
-			fx(s, PLAYER, "crit")
-		_hurt_player(s, data, dmg, crit, lines)
-	if str(s.combat.get("outcome", "")) == "dead":
-		return
-	if bool(ctx["hit"]):
-		var pounce := MonsterRules.charge_prone(s, data, f, ctx["prone"], lines)
-		MonsterRules.apply_effect(s, data, f, a, dmg, lines)
-		if pounce:  # a pounce: one bite at the prone hero as a bonus action
-			for b: Dictionary in Sheet.template(data, f)["actions"]:
-				if str(b.get("name_en", "")) == "Bite" and str(b.get("kind")) == "melee":
-					lines.append("%s кусает упавшего" % f["name"])
-					_enemy_attack(s, data, f, b, lines)
-					break
-	if int(ctx.get("rebuke", 0)) > 0 and str(f.get("status")) == "active":  # Hellish Rebuke (v0.7.13.7)
-		SpellEffects.rebuke(s, data, f, str(ctx.get("rebuke_spell", "hellish_rebuke")), int(ctx["rebuke"]), lines)
-	if bool(ctx.get("counter", false)) and str(f.get("status")) == "active" and int(s.character.get("hp", 0)) > 0:
-		var w := weapon_profile(s.character, data, s.items, str(s.character.get("equipped", {}).get("main_hand", "")))
-		lines.append("%s: Убийца великанов — удар в ответ" % s.character.get("name", ""))
-		lines.append_array(strike(s, data, str(f["id"]), w, {"no_horde": true}))
 
 
 ## The player answered the reaction prompt: `choice` — a reaction id or "none". The foe's turn goes on. Lines.
@@ -2885,24 +2156,21 @@ static func answer_reaction(s: GameSession, data: Dictionary, choice: String) ->
 		return lines
 	var f := fighter(s, str(ctx["foe"]))
 	if str(ctx.get("kind", "")) == "counter":  # a foe's spell waits for Counterspell (v0.7.13.7)
-		if choice == "none" or not SpellEffects.counter(s, data, f, str(ctx["option"]["id"]), int(ctx["circle"]), lines):
-			MonsterRules._cast(s, data, f, ctx["option"], lines, true)
+		if choice == "none" or not SpellEffects.counter(s, data, f, str(ctx["how"]["spell"]), int(ctx["circle"]), lines):
+			lines.append_array(Acts.one("cast").run(s, data, f, str(ctx["to"]), (ctx["how"] as Dictionary).merged({"asked": true}, true)))
 		_end_actor(s, data, f, lines)
 		return lines
-	var a := {}
-	for x: Dictionary in Sheet.template(data, f)["actions"]:
-		if str(x["name_en"]) == str(ctx["action"]):
-			a = x
 	if choice != "none":
 		FeatureRules.apply_reaction(s, data, f, choice, ctx, lines)
-	_land_hit(s, data, f, a, ctx, lines)
+	var p := player(s)
+	Attack.land(s, data, f, p, ctx["blow"], ctx, lines)
 	var plan: Array = s.combat.get("resume_plan", [])
 	s.combat.erase("resume_plan")
 	while not plan.is_empty() and str(s.combat.get("outcome", "")).is_empty() and int(s.character.get("hp", 0)) > 0:
 		var name := str(plan.pop_front())
 		for x: Dictionary in Sheet.template(data, f)["actions"]:
 			if str(x["name_en"]) == name:
-				_enemy_attack(s, data, f, x, lines)
+				Attack.one(s, data, f, p, x, lines)
 				break
 		if bool(s.combat.get("halt", false)):
 			s.combat["resume_plan"] = plan
@@ -2919,17 +2187,6 @@ static func _held_for_good(s: GameSession) -> bool:
 				return false
 			if not e.get("ends", {}).has("at"):
 				return true
-	return false
-
-
-static func _has_trait(data: Dictionary, f: Dictionary, trait_id: String) -> bool:
-	return (Sheet.template(data, f)["traits"] as Array).any(func(t: Dictionary) -> bool: return str(t["id"]) == trait_id)
-
-
-static func _ally_near_player(s: GameSession, f: Dictionary) -> bool:
-	for id: String in enemies(s):
-		if id != str(f["id"]) and FightGrid.touching(fighter(s, id), player(s)):
-			return true
 	return false
 
 
@@ -2979,14 +2236,31 @@ static func _hurt_player(s: GameSession, data: Dictionary, dmg: int, crit: bool,
 
 
 ## Adds allies to the fight; `mid_fight` — summoned on a turn: each takes its initiative at once. Ids.
-static func add_allies(s: GameSession, data: Dictionary, specs: Array, mid_fight: bool = false) -> Array[String]:
-	var ids := _add_foes(s, data, specs, FightGrid.NONE, "ally")
+static func add_allies(s: GameSession, data: Dictionary, specs: Array, mid_fight: bool = false, side: String = "ally", at: Vector2i = FightGrid.NONE) -> Array[String]:
+	var ids := _add_foes(s, data, specs, at, side)
 	if mid_fight:
 		for id: String in ids:
 			_insert_initiative(s, data, id)
 			if (s.combat["order"] as Array).find(id) <= int(s.combat["turn"]):
 				s.combat["turn"] = int(s.combat["turn"]) + 1  # it came in before the one acting now: the turn stays
 	return ids
+
+
+## A spell calls its creatures to the side of `f`, not to the hero's: they live as long as this fight.
+static func summon_for(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String) -> Array[String]:
+	var sp := AllyRules.summon_spec(data, spell_id)
+	var m: Dictionary = data["monsters"].get(str(sp.get("monster", "")), {})
+	if m.is_empty() or bool(sp.get("carrier", false)):
+		return []
+	var foe := str(f.get("side")) == "enemy"
+	var specs: Array = []
+	for i in int(sp.get("count", 1)):
+		var spec := {"monster": str(sp["monster"]), "spell": spell_id, "called_by": str(f["id"]), "no_xp": true}
+		if not foe:
+			spec["ally"] = "summon"
+		specs.append(spec)
+	var ids := add_allies(s, data, specs, true, "enemy" if foe else "ally", FightGrid.cell(f))
+	return ["%s: %s" % [data["spells"][spell_id]["name"], ", ".join(Array(ids).map(func(x: String) -> String: return str(fighter(s, x)["name"])))]]
 
 
 ## An ally's turn: a helper (a familiar) distracts the foe nearest the hero — the hero's next attack at it has
@@ -3010,119 +2284,9 @@ static func _ally_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 		if target.is_empty():
 			lines.append("%s не видит врага" % f["name"])
 		elif FightAI.go_to(s, data, f, target, lines):
-			_hold(target, "helped")
-			lines.append("%s кружит у %s и отвлекает — следующая атака героя по нему с преимуществом" % [f["name"], target["name"]])
+			lines.append_array(Acts.one("help").go(s, data, f, str(target["id"])))
 		return
-	FightAI.act(s, data, f, lines)
-	if SpellEffects.boon(f, "haste") != null and str(f.get("status")) == "active":  # Haste's action (v0.7.50.1)
-		FightAI.act(s, data, f, lines)
-
-
-## A plain attack of a creature of the kind (the best to-hit with damage; a thrown weapon not thrown yet). {} when none.
-static func _pick_plain(data: Dictionary, f: Dictionary, kind: String) -> Dictionary:
-	var best := {}
-	for a: Dictionary in Sheet.template(data, f)["actions"]:
-		var ok := str(a.get("kind")) == kind or (kind == "ranged" and a.has("range"))
-		if not ok or (a.get("damage", []) as Array).is_empty() or not MonsterRules.available(f, a):
-			continue
-		if kind == "ranged" and str(a.get("kind")) == "melee" and (f.get("thrown", []) as Array).has(str(a.get("name_en", ""))):
-			continue
-		if best.is_empty() or int(a.get("to_hit", 0)) > int(best.get("to_hit", 0)):
-			best = a
-	return best
-
-
-## The full attack of a creature at another (Multiattack of the same kind).
-static func _creature_full(s: GameSession, data: Dictionary, f: Dictionary, act: Dictionary, t: Dictionary, lines: Array[String]) -> void:
-	var m := Sheet.template(data, f)
-	var by_en := {}
-	for a: Dictionary in m["actions"]:
-		by_en[str(a["name_en"])] = a
-	var kind := "ranged" if str(act.get("kind")) != "melee" or _thrown_now(data, f, t, act) else "melee"
-	var plan: Array[Dictionary] = []
-	for x: Dictionary in m.get("multiattack", []):
-		var a: Dictionary = by_en.get(str(x["action"]), {})
-		if not a.is_empty() and str(a.get("kind")) == kind and not (a.get("damage", []) as Array).is_empty():
-			for i in int(x["count"]):
-				plan.append(a)
-	if plan.is_empty():
-		plan.append(act)
-	for a: Dictionary in plan:
-		if str(t.get("status")) != "active":
-			return
-		t["cover"] = cover_of(s, data, f, t)
-		_creature_attack(s, data, f, a, t, lines)
-		t.erase("cover")
-
-
-## One attack roll of a creature against another creature of the field, and its damage.
-static func _creature_attack(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, t: Dictionary, lines: Array[String]) -> void:
-	var d := FightGrid.dist(f, t)
-	var ranged_use := _thrown_now(data, f, t, a) or (str(a.get("kind")) != "melee" and d > 1)
-	if ranged_use and str(a.get("kind")) == "melee" and a.has("range"):  # a thrown weapon is out of the hand
-		var gone: Array = f.get("thrown", [])
-		gone.append(str(a.get("name_en", "")))
-		f["thrown"] = gone
-	f["hidden"] = false
-	if SpellEffects.ally_sanctuary(s, data, f, t, lines):
-		return
-	var by_status := ConditionRules.attack(data, f, t, not ranged_use)
-	var eyes := sight_mods(s, data, f, t)
-	var adv := not (by_status["adv"] as Array).is_empty() or _has(f, "invisible") or bool(t.get("helped", false)) or not str(eyes["adv"]).is_empty()
-	t.erase("helped")
-	SpellEffects.end_on_attack(f)
-	var dis := SpellEffects.warded(data, f, t) or (ranged_use and a.has("range") and d * int(FightGrid.cfg(data)["ft"]) > int(a["range"][0])) or (str(a.get("kind")) == "ranged" and d <= 1) \
-		or not (by_status["dis"] as Array).is_empty() or bool(t.get("dodging", false)) or not str(eyes["dis"]).is_empty() \
-		or (ranged_use and (not WeatherRules.obscure_why(s, data).is_empty() or shot_in_dark(s, data, f, t)))
-	var rolls := Roll.dice(s.rng, adv, dis)
-	var nat := Roll.kept(rolls, adv, dis)
-	var blessed := SpellEffects.die(s, f, "attack")  # Bless on an ally (v0.7.50.1)
-	var plus := int(SpellEffects.boon(f, "weapon_plus", 0))  # Magic Weapon on an ally
-	var total := nat + int(a.get("to_hit", 0)) + int(blessed["bonus"]) + plus
-	var hit := nat == 20 or (nat != 1 and total >= ac_of(t))
-	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
-	var line := "%s — %s по %s: %d + %d%s = %d против КД %d%s" % [f["name"], a["name"], t["name"], nat, int(a.get("to_hit", 0)), " " + str(blessed["note"]) if not str(blessed["note"]).is_empty() else "", total, ac_of(t), mark]
-	if not hit:
-		lines.append(line + " — промах")
-		fx(s, str(t["id"]), "dodge")
-		return
-	var crit := nat == 20 or bool(by_status["crit"])
-	var dmg := 0
-	var dtype := ""
-	var dtypes: Dictionary = data["misc"]["damage_types"]
-	var types: Array[String] = []
-	for dd: Dictionary in a["damage"]:
-		dmg += Sheet.taken(s, data, t, str(dd["type"]), maxi(1, roll_dice(s.rng, str(dd["dice"]), crit)), false)
-		if dtype.is_empty():
-			dtype = str(dd["type"])
-		types.append(str(dtypes.get(str(dd["type"]), dd["type"])))
-	dmg += plus + (roll_dice(s.rng, "1d4", crit) if SpellEffects.boon(f, "enlarged") != null else 0)
-	ConditionRules.remove(t, "helped")
-	ConditionRules.remove(f, "mocked")
-	if SpellEffects.boon(f, "reduced") != null:
-		dmg = maxi(1, dmg - roll_dice(s.rng, "1d4"))
-	lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)" % [dmg, ", ".join(types)])
-	if crit:
-		fx(s, str(t["id"]), "crit")
-	if str(t.get("side")) == "ally":
-		_hurt_ally(s, t, dmg, lines)
-	else:
-		_hurt_enemy(s, data, t, dmg, lines, dtype, crit, false)
-
-
-## Damage to an ally: 0 HP — a follower or a pack ally falls unconscious («down»), a summoned creature vanishes.
-static func _hurt_ally(s: GameSession, t: Dictionary, dmg: int, lines: Array[String]) -> void:
-	var soaked := mini(dmg, int(t.get("temp_hp", 0)))  # Heroism on an ally (v0.7.50.1)
-	t["temp_hp"] = int(t.get("temp_hp", 0)) - soaked
-	t["hp"] = maxi(0, int(t["hp"]) - (dmg - soaked))
-	if int(t["hp"]) > 0:
-		return
-	if str(t.get("ally", "")) == "summon":
-		t["status"] = "gone"
-		lines.append("%s развеивается" % t["name"])
-	else:
-		t["status"] = "down"
-		lines.append("%s падает без сознания" % t["name"])
+	FightAI.turn(s, data, f, lines)
 
 
 # --- the end --------------------------------------------------------------------------------------
@@ -3154,27 +2318,6 @@ static func _check_end(s: GameSession, data: Dictionary, lines: Array[String]) -
 		else:  # v0.7.9: beasts leave a still body
 			s.combat["outcome"] = "left"
 			lines.append("%s остаётся лежать — звери теряют к нему интерес и уходят" % s.character["name"])
-
-
-## «Сдаться» (v0.7.22.17, #12): on the hero's turn, while a thinking foe still fights. "" or a key.
-static func can_surrender(s: GameSession, data: Dictionary) -> String:
-	if not is_player_turn(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if s.combat.has("arena"):  # v0.7.45: a bout to surrender may be given up, the blood pit may not
-		return "" if ArenaRules.yield_bout(s) else "COMBAT_NO_SURRENDER_PIT"
-	if not enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
-		return "COMBAT_NO_SURRENDER"
-	return ""
-
-
-## The hero throws down the weapon: the fight ends at once — the captive of the foes (or held by the law). Lines.
-static func surrender(s: GameSession) -> Array[String]:
-	if s.combat.has("arena"):  # v0.7.45: the bout is lost, nobody takes the hero
-		s.combat["outcome"] = "arena_lost"
-		return ["%s поднимает руку — сдаётся" % s.character.get("name", "")]
-	s.combat["outcome"] = "captured"
-	s.combat["surrendered"] = true
-	return ["%s бросает оружие и сдаётся" % s.character.get("name", "")]
 
 
 ## The captors are the law's guard: the hero is held, as at an arrest, not bound in their place.
@@ -3379,7 +2522,7 @@ static func attack_preview(s: GameSession, data: Dictionary, target_id: String, 
 	if t.is_empty():
 		return {}
 	var w := weapon_profile(c, data, s.items, "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", "")), offhand)
-	var mods := _attack_mods(s, data, w, t)
+	var mods := Attack.mods(s, data, player(s), t, Attack.of_weapon(w))
 	var adv := not (mods["adv"] as Array).is_empty()
 	var dis := not (mods["dis"] as Array).is_empty()
 	var r := dice_range(str(w["dice"]))
@@ -3466,37 +2609,6 @@ static func lore_dc(data: Dictionary, f: Dictionary) -> int:
 
 static func known(s: GameSession, f: Dictionary) -> bool:
 	return Knows.has(s, Knows.MONSTER, str(f.get("monster", ""))) or str(f.get("side")) == "ally"  # one's own side is known
-
-
-## "" when the player can inspect `target_id` now: a bonus action on an active foe of an unknown kind.
-static func can_inspect(s: GameSession, data: Dictionary, target_id: String) -> String:
-	if not player_can_act(s):
-		return "COMBAT_NOT_YOUR_TURN"
-	if int(economy(s).get("bonus", 0)) <= 0:
-		return "COMBAT_NO_BONUS"
-	var t := fighter(s, target_id)
-	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
-		return "COMBAT_BAD_TARGET"
-	if known(s, t):
-		return "COMBAT_ALREADY_KNOWN"
-	return ""
-
-
-## Inspect a foe (can_inspect first): the knowledge check; success — the kind is known for good. Lines.
-static func player_inspect(s: GameSession, data: Dictionary, target_id: String) -> Array[String]:
-	var e := economy(s)
-	e["bonus"] = int(e["bonus"]) - 1
-	var t := fighter(s, target_id)
-	var skill := lore_skill(data, t)
-	var dc := lore_dc(data, t)
-	var favored := FeatureRules.has(s.character, "favored_enemy_" + str(Sheet.template(data, t).get("type", "")))  # Favored Enemy (v0.7.10)
-	var r := Roll.hero(s, data, {"what": "Присмотреться", "skill": skill, "dc": dc, "adv": favored})
-	var total := int(r["total"])
-	var ok := bool(r["ok"])
-	if ok:
-		Knows.add(s, Knows.MONSTER, str(t["monster"]))
-	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], t["name"], TranslationServer.translate("SKILL_" + skill.to_upper()),
-		total, dc, "теперь ясно, на что способны такие враги" if ok else "ничего толкового"]]
 
 
 ## The card of a known kind: HP (this one's), AC, speed, attacks, resistances. "" for an unknown one.

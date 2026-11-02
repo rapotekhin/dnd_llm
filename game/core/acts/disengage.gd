@@ -6,11 +6,15 @@ func title() -> String:
 	return "Отход"
 
 
+func order() -> int:
+	return 11
+
+
 func tip() -> String:
 	return "В этот ход ваше движение не провоцирует атаки вдогонку"
 
 
-func run(s: GameSession, _data: Dictionary, f: Dictionary, _to: String) -> Array[String]:
+func run(s: GameSession, _data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
 	f["disengaged"] = true
 	return ["%s отходит осторожно" % _name(s, f)]
 

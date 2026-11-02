@@ -545,7 +545,7 @@ func _stowed_cards(parent: Control, details: DetailsPanel, c: Dictionary, busy: 
 		b.disabled = busy
 		b.pressed.connect(GameState.unequip_stowed.bind(slot))
 		row.add_child(b)
-	var why := CombatRules.can_swap(s, Catalog.data)
+	var why := Acts.one("swap").can(s, Catalog.data, Sheet.HERO)
 	var swap := Button.new()
 	swap.name = "SwapWeapons"
 	swap.text = "SWAP_WEAPONS"

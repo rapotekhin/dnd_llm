@@ -88,7 +88,7 @@ func _hero(gs: Node, data: Dictionary, preset_id: String) -> void:
 	for id: String in ready:
 		for target: String in [foe, ""]:
 			var slot := 0 if SpellRules.level_of(data, id) == 0 else SpellRules.lowest_slot(c, data, id)
-			if cast.is_empty() and CombatRules.can_cast(s, data, id, slot, target).is_empty() and CombatRules.is_engine_spell(data, id):
+			if cast.is_empty() and Acts.one("cast").can(s, data, CombatRules.player(s), target, {"spell": id, "slot": slot}).is_empty() and CombatRules.is_engine_spell(data, id):
 				cast = {"id": id, "slot": slot, "target": target}
 	if step(preset_id + ": a spell for the fight", not cast.is_empty(), ", ".join(ready)):
 		var seen := _seen.size()

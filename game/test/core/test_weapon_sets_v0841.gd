@@ -75,13 +75,13 @@ func test_a_swap_changes_the_hands_and_the_armour_class() -> void:
 	var s := _hero()
 	_armed(s)
 	var ac := int(s.character["ac"])
-	assert_str(CombatRules.can_swap(s, data)).is_empty()
-	CombatRules.swap(s, data)
+	assert_str(Acts.one("swap").can(s, data, CombatRules.player(s))).is_empty()
+	Acts.one("swap").go(s, data, CombatRules.player(s))
 	assert_str(str(s.character["equipped"]["main_hand"])).is_equal("longbow")
 	assert_str(str(s.character["equipped"]["shield"])).is_empty()
 	assert_str(str(CharacterRules.stowed(s.character)["shield"])).is_equal("shield")
 	assert_int(int(s.character["ac"])).is_equal(ac - 2)  # the shield went with the set
-	CombatRules.swap(s, data)
+	Acts.one("swap").go(s, data, CombatRules.player(s))
 	assert_str(str(s.character["equipped"]["main_hand"])).is_equal("longsword")
 	assert_int(int(s.character["ac"])).is_equal(ac)
 
@@ -92,8 +92,8 @@ func test_a_swap_in_a_fight_is_free_as_often_as_wanted() -> void:
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	var before_it: Dictionary = CombatRules.economy(s).duplicate()
 	for i: int in 3:
-		assert_str(CombatRules.can_swap(s, data)).is_empty()
-		CombatRules.swap(s, data)
+		assert_str(Acts.one("swap").can(s, data, CombatRules.player(s))).is_empty()
+		Acts.one("swap").go(s, data, CombatRules.player(s))
 	assert_dict(CombatRules.economy(s)).is_equal(before_it)
 
 
@@ -102,15 +102,15 @@ func test_a_swap_only_on_the_heros_turn() -> void:
 	_armed(s)
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	CombatRules.end_player_turn(s, data)
-	assert_str(CombatRules.can_swap(s, data)).is_equal("COMBAT_NOT_YOUR_TURN")
+	assert_str(Acts.one("swap").can(s, data, CombatRules.player(s))).is_equal("COMBAT_NOT_YOUR_TURN")
 
 
 func test_the_weapon_put_away_is_one_click_away() -> void:
 	var s := _hero()
 	_armed(s)
 	var f := _fight(s, [{"monster": "goblin", "col": 2}])
-	assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_equal("COMBAT_OUT_OF_REACH")
-	assert_str(CombatRules.can_attack_stowed(s, data, str(f["id"]))).is_empty()
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_equal("COMBAT_OUT_OF_REACH")
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]), {"hand": "stowed"})).is_empty()
 	assert_str(str(s.character["equipped"]["main_hand"])).is_equal("longsword")  # asking changes nothing
 	var preview: Dictionary = CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.attack_preview(s, data, str(f["id"]), false))
 	assert_dict(preview).is_not_empty()
@@ -121,7 +121,7 @@ func test_nothing_to_swap_to() -> void:
 	var s := _hero()
 	_armed(s)
 	s.character["stowed"] = {}
-	assert_str(CombatRules.can_swap(s, data)).is_equal("SWAP_EMPTY")
+	assert_str(Acts.one("swap").can(s, data, CombatRules.player(s))).is_equal("SWAP_EMPTY")
 
 
 func test_a_cursed_weapon_holds_the_hand() -> void:
@@ -131,14 +131,14 @@ func test_a_cursed_weapon_holds_the_hand() -> void:
 	s.items[cursed] = {"name": "Меч", "item_type": "weapon", "properties": ["cursed"], "weapon": {"range": "melee", "damage": "1d8", "damage_type": "slashing"}}
 	s.character["inventory"][cursed] = 1
 	s.character["equipped"]["main_hand"] = cursed
-	assert_str(CombatRules.can_swap(s, data)).is_equal("ITEM_CURSED")
+	assert_str(Acts.one("swap").can(s, data, CombatRules.player(s))).is_equal("ITEM_CURSED")
 
 
 func test_wild_shape_has_no_hands() -> void:
 	var s := _hero()
 	_armed(s)
 	s.character["effects"] = [{"guise": {"monster": "wolf", "hp": 10, "max_hp": 10}}]
-	assert_str(CombatRules.can_swap(s, data)).is_equal("COMBAT_WILD_SHAPE")
+	assert_str(Acts.one("swap").can(s, data, CombatRules.player(s))).is_equal("COMBAT_WILD_SHAPE")
 
 
 func test_what_is_no_longer_carried_leaves_the_set() -> void:

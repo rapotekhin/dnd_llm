@@ -136,7 +136,7 @@ func _player_turn(gs: Node, s: GameSession) -> void:
 			return
 		var target := ""
 		for id: String in CombatRules.enemies(s):
-			if CombatRules.can_attack(s, node("Catalog").data, id).is_empty():
+			if Acts.one("attack").can(s, node("Catalog").data, CombatRules.player(s), id).is_empty():
 				target = id
 		if target.is_empty():
 			break

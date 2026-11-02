@@ -12,7 +12,7 @@ func _init() -> void:
 func _ready() -> void:
 	var s := GameState.session
 	var c := s.character
-	var why := CombatRules.can_swap(s, Catalog.data)
+	var why := Acts.one("swap").can(s, Catalog.data, Sheet.HERO)
 	var kind := CharacterRules.active_kind(c, Catalog.data, s.items)
 	var held := _button("WeaponSetHeld", _label(c, c.get("equipped", {})), kind)
 	held.theme_type_variation = UiTheme.ACCENT_BUTTON

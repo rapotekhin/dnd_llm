@@ -57,7 +57,7 @@ func test_a_bout_to_surrender_knocks_out_and_nobody_dies() -> void:
 	assert_array(CombatRules.allies(s)).is_empty()
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var lines: Array[String] = []
-	CombatRules._hurt_enemy(s, data, foe, 999, lines)  # not a melee blow: still only knocked out
+	CombatRules.hurt(s, data, foe, 999, lines)  # not a melee blow: still only knocked out
 	assert_str(str(foe["status"])).is_equal("unconscious")
 	var s2 := _session()
 	_bout(s2)
@@ -71,9 +71,9 @@ func test_the_hero_gives_up_but_cannot_leave_the_ring() -> void:
 	_bout(s)
 	while not CombatRules.is_player_turn(s):
 		CombatRules.next_actor(s, data)
-	assert_str(CombatRules.can_flee(s, data)).is_equal("COMBAT_ARENA_RING")
-	assert_str(CombatRules.can_surrender(s, data)).is_empty()
-	CombatRules.surrender(s)
+	assert_str(Acts.one("flee").can(s, data, CombatRules.player(s))).is_equal("COMBAT_ARENA_RING")
+	assert_str(Acts.one("surrender").can(s, data, CombatRules.player(s))).is_empty()
+	Acts.one("surrender").go(s, Catalog.data, CombatRules.player(s))
 	assert_str(str(s.combat["outcome"])).is_equal("arena_lost")
 
 
@@ -84,7 +84,7 @@ func test_a_foe_gives_up_at_a_quarter_of_its_hp() -> void:
 	var foe := CombatRules.fighter(s, id)
 	foe["hp"] = maxi(1, int(foe["max_hp"]) / 5)
 	var lines: Array[String] = []
-	CombatRules._enemy_turn(s, data, foe, lines)
+	TestUtils.enemy_turn(s, data, foe, lines)
 	assert_str(str(foe["status"])).is_equal("surrendered")
 	CombatRules._check_end(s, data, lines)
 	assert_str(str(s.combat["outcome"])).is_equal("victory")
@@ -162,10 +162,10 @@ func test_the_blood_pit_is_to_the_death() -> void:
 	assert_bool(bool(s.combat["nonlethal"])).is_false()
 	while not CombatRules.is_player_turn(s):
 		CombatRules.next_actor(s, data)
-	assert_str(CombatRules.can_surrender(s, data)).is_equal("COMBAT_NO_SURRENDER_PIT")
+	assert_str(Acts.one("surrender").can(s, data, CombatRules.player(s))).is_equal("COMBAT_NO_SURRENDER_PIT")
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var lines: Array[String] = []
-	CombatRules._hurt_enemy(s, data, foe, 999, lines)
+	CombatRules.hurt(s, data, foe, 999, lines)
 	assert_str(str(foe["status"])).is_equal("dead")
 	var prize := ArenaRules.after_bout(s, data, s.combat["arena"], true)
 	assert_str(" ".join(prize)).contains(Money.format(int(ArenaRules.ranks(data)[0]["prize_cp"]) * 2))

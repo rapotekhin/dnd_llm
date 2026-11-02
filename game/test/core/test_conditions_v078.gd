@@ -308,12 +308,12 @@ func test_a_grappled_hero_breaks_free_with_an_action() -> void:
 	ConditionRules.add_effect(s.character, {"condition": "grappled", "ends": {}, "by": gob})
 	CharacterRules.refresh(s.character, data, s.items)
 	assert_str(Move.why(s, data, CombatRules.player(s))).is_equal("COMBAT_NO_SPEED")
-	assert_str(CombatRules.can_escape(s)).is_empty()
+	assert_str(Acts.one("escape").can(s, Catalog.data, CombatRules.player(s))).is_empty()
 	s.character["skills"]["athletics"] = 40
-	var lines := CombatRules.escape(s, data)
+	var lines := Acts.one("escape").go(s, data, CombatRules.player(s))
 	assert_str(", ".join(lines)).contains("больше не")
 	assert_bool(ConditionRules.has(s.character, "grappled")).is_false()
-	assert_str(CombatRules.can_escape(s)).is_equal("COMBAT_NOT_HELD")
+	assert_str(Acts.one("escape").can(s, Catalog.data, CombatRules.player(s))).is_equal("COMBAT_NOT_HELD")
 
 
 func test_fear_keeps_the_hero_from_its_source_and_charm_from_the_charmer() -> void:
@@ -324,7 +324,7 @@ func test_fear_keeps_the_hero_from_its_source_and_charm_from_the_charmer() -> vo
 	assert_str(Acts.one("walk").can(s, data, CombatRules.player(s), FightGrid.aim_id(at + Vector2i(1, 0)))).is_equal("COMBAT_FRIGHTENED")
 	assert_str(Acts.one("walk").can(s, data, CombatRules.player(s), FightGrid.aim_id(at - Vector2i(1, 0)))).is_empty()
 	ConditionRules.add_effect(s.character, {"condition": "charmed", "ends": {}, "by": gob})
-	assert_str(CombatRules.can_attack(s, data, gob)).is_equal("COMBAT_CHARMED")
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), gob)).is_equal("COMBAT_CHARMED")
 
 
 func test_a_paralysed_hero_loses_the_turn_and_shakes_it_off_with_a_save() -> void:
@@ -356,7 +356,7 @@ func test_blinded_and_prone_hero_attacks_with_disadvantage() -> void:
 	var gob := _fight(s, [{"monster": "goblin", "col": 0}])
 	ConditionRules.add_effect(s.character, {"condition": "blinded", "ends": {}})
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"]["main_hand"]))
-	var mods := CombatRules._attack_mods(s, data, w, CombatRules.fighter(s, gob))
+	var mods := Attack.mods(s, data, CombatRules.player(s), CombatRules.fighter(s, gob), Attack.of_weapon(w))
 	assert_array(mods["dis"]).contains(["вы ослеплены"])
 
 
@@ -369,8 +369,8 @@ func test_an_invisible_foe_that_moved_is_missed() -> void:
 	FightGrid.keep_seen(f)
 	TestUtils.to_col(f, 2)  # it slipped away unseen
 	assert_bool(FightGrid.shown(f) == was).is_true()
-	assert_str(CombatRules.can_attack(s, data, gob)).is_empty()  # the hero swings where it was
-	var lines := CombatRules.player_attack(s, data, gob)
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), gob)).is_empty()  # the hero swings where it was
+	var lines := Acts.one("attack").go(s, data, CombatRules.player(s), gob)
 	assert_str(", ".join(lines)).contains("в пустоту")
 	assert_int(int(f["hp"])).is_equal(int(f["max_hp"]))
 

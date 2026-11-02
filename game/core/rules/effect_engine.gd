@@ -1087,7 +1087,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		var f := CombatRules.fighter(s, str(plan["foe"]))
 		if kind == "damage":
 			var tmp: Array[String] = []
-			CombatRules._hurt_enemy(s, _data, f, int(plan["amount"]), tmp)
+			CombatRules.hurt(s, _data, f, int(plan["amount"]), tmp)
 		elif bool(plan.get("on", true)):
 			CombatRules._hold(f, str(plan["condition"]))
 		else:

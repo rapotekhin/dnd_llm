@@ -37,6 +37,11 @@ static func hero_dice(s: GameSession, adv: bool, dis: bool) -> Array[int]:
 	return dice(s.rng, adv, dis, CharacterRules.has_trait(s.character, "lucky"))
 
 
+## The dice of anybody's roll.
+static func of(s: GameSession, who: Dictionary, adv: bool, dis: bool) -> Array[int]:
+	return hero_dice(s, adv, dis) if Sheet.is_hero(who) else dice(s.rng, adv, dis)
+
+
 ## House rule (ADR-0008 §2): natural 20 / 1 always succeed / fail, skill checks included.
 static func succeeds(nat: int, total: int, dc: int) -> bool:
 	return nat == 20 or (nat != 1 and total >= dc)
@@ -101,6 +106,17 @@ static func hero(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	var crit := int(spec.get("crit", CRIT_MARGIN))
 	return {"rolls": rolls, "nat": nat, "bonus": bonus, "total": total, "dc": dc, "ok": ok, "parts": parts,
 		"margin": -crit if failed else margin(nat, total, dc, crit)}
+
+
+## A check of anybody: the hero's own, or a die and its sheet's skill. The same `spec`; what it gives: ok, total, nat.
+static func check(s: GameSession, data: Dictionary, who: Dictionary, spec: Dictionary) -> Dictionary:
+	if Sheet.is_hero(who):
+		return hero(s, data, spec)
+	var adv := bool(spec.get("adv", false))
+	var dis := bool(spec.get("dis", false))
+	var nat := kept(of(s, who, adv, dis), adv, dis)
+	var total := nat + (int(spec["bonus"]) if spec.has("bonus") else Sheet.skill(s, data, who, str(spec.get("skill", ""))))
+	return {"nat": nat, "total": total, "dc": int(spec.get("dc", 0)), "ok": succeeds(nat, total, int(spec.get("dc", 0)))}
 
 
 static func _keys(spec: Dictionary) -> Dictionary:

@@ -86,7 +86,7 @@ func run() -> void:
 	e["action"] = 1
 	node("EventBus").state_changed.emit()
 	await frames(4)
-	step("a shot into the fog goes, neither side sees", CombatRules.can_attack(s, data, str(foe["id"])).is_empty() and CombatRules.unseen_by(s, data, foe))
+	step("a shot into the fog goes, neither side sees", Acts.one("attack").can(s, data, CombatRules.player(s), str(foe["id"])).is_empty() and not str(CombatRules.sight_mods(s, data, CombatRules.player(s), foe)["adv"]).is_empty())
 	step("the fog hides the square, the foe is heard", not SightRules.look(s, data, FightGrid.map(s, data), hero).has(at) and FightGrid.heard(s, data, foe))
 	step("a spell of sight does not reach it", bool(data["spells"]["magic_missile"]["needs_sight"]) and CombatRules._blind_aim(s, data, "magic_missile", foe))
 	await shot("fog")
@@ -94,5 +94,5 @@ func run() -> void:
 	ConditionRules.add_effect(c, {"condition": "blinded", "ends": {}})
 	node("EventBus").state_changed.emit()
 	await frames(4)
-	step("a blind hero shoots with disadvantage", CombatRules.can_attack(s, data, str(foe["id"])).is_empty() and not CombatRules.hero_attack_dis(s, data, foe).is_empty())
+	step("a blind hero shoots with disadvantage", Acts.one("attack").can(s, data, CombatRules.player(s), str(foe["id"])).is_empty() and not Attack.mods(s, data, CombatRules.player(s), foe, {"melee": true})["dis"].is_empty())
 	await shot("blind")

@@ -37,8 +37,8 @@ func test_fists_with_a_sword_in_hand() -> void:
 	var s := _hero()
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
 	TestUtils.beside(s, f)
-	assert_str(CombatRules.can_attack(s, data, str(f["id"]), false, true)).is_empty()
-	var lines := CombatRules.player_attack(s, data, str(f["id"]), false, false, true)
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]), {"hand": "fists"})).is_empty()
+	var lines := Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"]), {"hand": "fists"})
 	assert_str(" · ".join(lines)).contains("Безоружный удар")
 
 
@@ -49,7 +49,7 @@ func test_a_nonlethal_blow_knocks_out() -> void:
 	s.combat["nonlethal"] = true
 	s.combat["melee_strike"] = true
 	var lines: Array[String] = []
-	CombatRules._hurt_enemy(s, data, f, 999, lines)
+	CombatRules.hurt(s, data, f, 999, lines)
 	assert_str(str(f["status"])).is_equal("unconscious")
 	s.combat.erase("melee_strike")
 	assert_bool(CombatRules.enemies(s).is_empty()).is_true()

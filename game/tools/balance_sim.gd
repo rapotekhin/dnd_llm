@@ -131,8 +131,8 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 			return lines
 	if Acts.one("stand").can(s, data, CombatRules.player(s)).is_empty():  # v0.7.9: get up, break out of a web or a coil
 		lines.append_array(Acts.one("stand").go(s, data, CombatRules.player(s)))
-	if ConditionRules.has(c, "restrained") and CombatRules.can_escape(s).is_empty():
-		lines.append_array(CombatRules.escape(s, data))
+	if ConditionRules.has(c, "restrained") and Acts.one("escape").can(s, data, CombatRules.player(s)).is_empty():
+		lines.append_array(Acts.one("escape").go(s, data, CombatRules.player(s)))
 		return lines
 	for guard in 3:
 		var near := ""
@@ -146,23 +146,23 @@ func _turn(s: GameSession, data: Dictionary) -> Array[String]:
 			return lines
 		var cast := ""
 		for sp: String in SpellRules.ready(c):
-			if CombatRules.is_engine_spell(data, sp) and CombatRules.can_cast(s, data, sp, 0, near).is_empty() and not data["spells"][sp].has("heal_at_slot"):
+			if CombatRules.is_engine_spell(data, sp) and Acts.one("cast").can(s, data, CombatRules.player(s), near, {"spell": sp, "slot": 0}).is_empty() and not data["spells"][sp].has("heal_at_slot"):
 				cast = sp
 		var caster := str(c.get("class", "")) in ["wizard", "sorcerer", "warlock", "bard"]
 		if caster and not cast.is_empty():
-			lines.append_array(CombatRules.player_cast(s, data, cast, 0, near))
+			lines.append_array(Acts.one("cast").go(s, data, CombatRules.player(s), near, {"spell": cast, "slot": 0}))
 			continue
-		if CombatRules.can_attack(s, data, near).is_empty():
-			lines.append_array(CombatRules.player_attack(s, data, near))
+		if Acts.one("attack").can(s, data, CombatRules.player(s), near).is_empty():
+			lines.append_array(Acts.one("attack").go(s, data, CombatRules.player(s), near))
 			continue
 		if not cast.is_empty():
-			lines.append_array(CombatRules.player_cast(s, data, cast, 0, near))
+			lines.append_array(Acts.one("cast").go(s, data, CombatRules.player(s), near, {"spell": cast, "slot": 0}))
 			continue
 		if caster and not SpellRules.ready(c).is_empty():
 			return lines  # a caster waits for the foe to come, it does not walk into its teeth
-		if CombatRules.can_attack_stowed(s, data, near).is_empty():
-			lines.append_array(CombatRules.swap(s, data))
-			lines.append_array(CombatRules.player_attack(s, data, near))
+		if Acts.one("attack").can(s, data, CombatRules.player(s), near, {"hand": "stowed"}).is_empty():
+			lines.append_array(Acts.one("swap").go(s, data, CombatRules.player(s)))
+			lines.append_array(Acts.one("attack").go(s, data, CombatRules.player(s), near))
 			continue
 		var to := CombatRules.closest_stop(s, data, near)
 		if to != FightGrid.NONE and best > 1:

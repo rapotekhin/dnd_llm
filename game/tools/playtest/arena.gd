@@ -203,7 +203,7 @@ func _fight(gs: Node, s: GameSession) -> String:
 		if FightGrid.dist(CombatRules.player(s), CombatRules.fighter(s, near)) > 1:
 			await walk_up(s, data, near)
 		for i in 2:
-			if not str(s.combat.get("outcome", "")).is_empty() or not CombatRules.can_attack(s, data, near).is_empty():
+			if not str(s.combat.get("outcome", "")).is_empty() or not Acts.one("attack").can(s, data, CombatRules.player(s), near).is_empty():
 				break
 			var atk: Button = find(screen(), "Attack_main")
 			if atk == null or atk.disabled:

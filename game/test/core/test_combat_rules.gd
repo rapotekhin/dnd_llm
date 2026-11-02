@@ -70,20 +70,20 @@ func test_weapon_numbers_of_the_sheet() -> void:
 func test_reach_range_and_the_attack_economy() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "goblin", "col": 2}])
-	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_OUT_OF_REACH")
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), TestUtils.foe(s, 1))).is_equal("COMBAT_OUT_OF_REACH")
 	TestUtils.walk(s, data, 1)
 	assert_str(Move.why(s, data, CombatRules.player(s))).is_equal("COMBAT_NO_MOVE")
 	Acts.one("dash").go(s, data, CombatRules.player(s))
 	Acts.one("walk").go(s, data, CombatRules.player(s), FightGrid.aim_id(FightGrid.cell(CombatRules.fighter(s, TestUtils.foe(s, 1))) - Vector2i(1, 0)))
-	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_NO_ACTION")  # Dash took the action
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), TestUtils.foe(s, 1))).is_equal("COMBAT_NO_ACTION")  # Dash took the action
 	CombatRules.end_player_turn(s, data)
 	CombatRules.next_actor(s, data)  # the goblin
 	if CombatRules.is_player_turn(s) and int(s.character["hp"]) > 0:
 		TestUtils.beside(s, CombatRules.fighter(s, TestUtils.foe(s, 1)))
-		assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_empty()
-		var lines := CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
+		assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), TestUtils.foe(s, 1))).is_empty()
+		var lines := Acts.one("attack").go(s, data, CombatRules.player(s), TestUtils.foe(s, 1))
 		assert_str(lines[0]).contains("против КД 15")
-		assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_equal("COMBAT_NO_ACTION")
+		assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), TestUtils.foe(s, 1))).is_equal("COMBAT_NO_ACTION")
 
 
 func test_extra_attack_at_level_five() -> void:
@@ -91,11 +91,11 @@ func test_extra_attack_at_level_five() -> void:
 	s.character["level"] = 5
 	CharacterRules.refresh(s.character, data)
 	_fight(s, [{"monster": "ogre", "col": 0}] if data["monsters"].has("ogre") else [{"monster": "bandit", "col": 0}])
-	CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
+	Acts.one("attack").go(s, data, CombatRules.player(s), TestUtils.foe(s, 1))
 	if str(CombatRules.fighter(s, TestUtils.foe(s, 1))["status"]) == "active":
-		assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_empty()
-		CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
-	assert_str(CombatRules.can_attack(s, data, TestUtils.foe(s, 1))).is_not_empty()
+		assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), TestUtils.foe(s, 1))).is_empty()
+		Acts.one("attack").go(s, data, CombatRules.player(s), TestUtils.foe(s, 1))
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), TestUtils.foe(s, 1))).is_not_empty()
 
 
 func test_leaving_melee_provokes_and_disengage_does_not() -> void:
@@ -114,10 +114,10 @@ func test_the_rim_of_the_field_is_a_way_out() -> void:
 	_fight(s, [{"monster": "goblin", "col": -3}])
 	while not CombatRules.is_player_turn(s):
 		CombatRules.next_actor(s, data)
-	assert_str(CombatRules.can_flee(s, data)).is_equal("COMBAT_NOT_AT_EXIT")
+	assert_str(Acts.one("flee").can(s, data, CombatRules.player(s))).is_equal("COMBAT_NOT_AT_EXIT")
 	FightGrid.put(CombatRules.player(s), Vector2i(0, 30))
-	assert_str(CombatRules.can_flee(s, data)).is_empty()
-	CombatRules.player_flee(s, data)
+	assert_str(Acts.one("flee").can(s, data, CombatRules.player(s))).is_empty()
+	Acts.one("flee").go(s, data, CombatRules.player(s))
 	assert_str(s.combat["outcome"]).is_equal("player_fled")
 
 
@@ -181,22 +181,22 @@ func test_engine_spells_attack_save_darts_and_heal() -> void:
 	c["spells"]["prepared"].append_array(["burning_hands", "magic_missile"])
 	c["spells"]["cantrips"].append("fire_bolt")
 	_fight(s, [{"monster": "goblin", "count": 2, "col": 0}])
-	assert_str(CombatRules.can_cast(s, data, "fire_bolt", 0, TestUtils.foe(s, 1))).is_empty()
-	var lines := CombatRules.player_cast(s, data, "fire_bolt", 0, TestUtils.foe(s, 1))
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), TestUtils.foe(s, 1), {"spell": "fire_bolt", "slot": 0})).is_empty()
+	var lines := Acts.one("cast").go(s, data, CombatRules.player(s), TestUtils.foe(s, 1), {"spell": "fire_bolt", "slot": 0})
 	assert_str(" ".join(lines)).contains("Огненный снаряд")
 	CombatRules.economy(s)["action"] = 1
-	lines = CombatRules.player_cast(s, data, "burning_hands", 1, CombatRules.enemies(s)[0])
+	lines = Acts.one("cast").go(s, data, CombatRules.player(s), CombatRules.enemies(s)[0], {"spell": "burning_hands", "slot": 1})
 	assert_int(lines.filter(func(l: String) -> bool: return l.contains("спасбросок Лов")).size()).override_failure_message(str(lines)).is_greater_equal(1)
 	assert_int(SpellRules.slots_left(c, 1)).is_equal(1)
 	CombatRules.economy(s)["action"] = 1
 	var alive := CombatRules.enemies(s)
 	if not alive.is_empty():
-		lines = CombatRules.player_cast(s, data, "magic_missile", 1, alive[0])
+		lines = Acts.one("cast").go(s, data, CombatRules.player(s), alive[0], {"spell": "magic_missile", "slot": 1})
 		assert_int(lines.filter(func(l: String) -> bool: return l.begins_with("Волшебная стрела:")).size()).is_greater_equal(1)
 	var cl := _session("cleric_branko")
 	_fight(cl, [{"monster": "goblin", "col": 2}])
 	cl.character["hp"] = 1
-	CombatRules.player_cast(cl, data, "cure_wounds", 1, "")
+	Acts.one("cast").go(cl, data, CombatRules.player(cl), "", {"spell": "cure_wounds", "slot": 1})
 	assert_int(cl.character["hp"]).is_greater(1)
 
 

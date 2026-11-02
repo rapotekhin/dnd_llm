@@ -189,17 +189,22 @@ static func _sync(c: Dictionary) -> void:
 
 ## The hero lays down a condition with everything it brings (v0.7.8): an incapacitating one breaks concentration,
 ## unconscious also lays the hero prone. Returns the lines.
-static func impose(s: GameSession, data: Dictionary, e: Dictionary) -> Array[String]:
-	var c := s.character
+static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Dictionary = Sheet.HERO) -> Array[String]:
+	var hero := Sheet.is_hero(who)
+	var c := Sheet.holder(s, who)
 	var cond := str(e.get("condition", ""))
 	var lines: Array[String] = []
-	if cond == "exhaustion":
+	if cond == "exhaustion" and hero:
 		return add_exhaustion(s, data, 1, str(e.get("source", {}).get("name", "")))
 	add_effect(c, e.merged(MakeRules.fx(s, cond)))
+	if cond == "invisible" and not hero:
+		FightGrid.keep_seen(c)
 	if cond == "unconscious" and not has(c, "prone"):
 		add_effect(c, {"condition": "prone", "ends": {}, "source": e.get("source", {})})
-	if INCAPACITATING.has(cond) and not str(c.get("concentration", "")).is_empty():
+	if INCAPACITATING.has(cond) and hero and not str(c.get("concentration", "")).is_empty():
 		lines.append_array(end_concentration(s, data, "недееспособность"))
+	elif INCAPACITATING.has(cond) and not hero and not str(c.get("concentration", "")).is_empty():
+		MonsterRules.release(s, data, c, lines)
 	return lines
 
 

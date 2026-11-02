@@ -132,7 +132,7 @@ static func after_hit(s: GameSession, data: Dictionary, w: Dictionary, t: Dictio
 		var ok := Sheet.saved(s, data, t, "con", dc)
 		lines.append("Оглушающий удар: %s — спасбросок Тел против Сл %d — %s" % [t["name"], dc, "устоял" if ok else "ошеломлён"])
 		if not ok and not CombatRules.immune_to(data, t, "stunned"):
-			CombatRules._add_condition(s, t, "stunned", {"rounds": 1})
+			CombatRules._add_condition(s, data, t, "stunned", {"rounds": 1})
 	var oh := str(opts.get("open_hand", ""))
 	if not oh.is_empty():
 		_open_hand(s, data, t, oh, lines)
@@ -173,7 +173,7 @@ static func _smite(s: GameSession, data: Dictionary, t: Dictionary, slot: int, c
 	Stock.spend(c, "slot_%d" % slot)
 	var dmg := Sheet.taken(s, data, t, "radiant", CombatRules.roll_dice(s.rng, smite_dice(data, t, slot, crit)))
 	var lines: Array[String] = ["Божественная кара (ячейка %d круга): %d (излучение) по %s" % [slot, dmg, t["name"]]]
-	CombatRules._hurt_enemy(s, data, t, dmg, lines, "radiant", crit)
+	CombatRules.hurt(s, data, t, dmg, lines, "radiant", crit)
 	return lines
 
 
@@ -340,7 +340,7 @@ static func can_act(s: GameSession, data: Dictionary, id: String, target_id: Str
 	if cost != "free" and int(e.get(cost, 0)) <= 0:
 		return "COMBAT_NO_ACTION" if cost == "action" else "COMBAT_NO_BONUS"
 	if id.begins_with("spell_"):
-		return SpellEffects.can_act(s, data, id, target_id)
+		return Acts.one("sustain").can(s, data, CombatRules.player(s), target_id, {"spell": id.trim_prefix("spell_")})
 	var row: Dictionary = rows(data).get(id, {})
 	var pay: Dictionary = row.get("pay", {})
 	if not pay.is_empty() and Stock.left(c, data, str(pay["id"])) < int(pay["n"]):
@@ -367,7 +367,7 @@ static func act(s: GameSession, data: Dictionary, id: String, target_id: String 
 	var e := CombatRules.economy(s)
 	var lines: Array[String] = []
 	if id.begins_with("spell_"):
-		return SpellEffects.act(s, data, id, target_id)
+		return Acts.one("sustain").go(s, data, CombatRules.player(s), target_id, {"spell": id.trim_prefix("spell_")})
 	var row: Dictionary = rows(data).get(id, {})
 	var cost := str(row.get("cost", {"flame_blade": "action"}.get(id, "bonus")))
 	if cost != "free" and bool(row.get("spend", true)):
@@ -474,7 +474,7 @@ static func _turn(s: GameSession, data: Dictionary, types: Array, destroy: bool)
 			lines.append("%s рассыпается прахом" % f["name"])
 			continue
 		f["fleeing"] = true
-		CombatRules._add_condition(s, f, "frightened", {"rounds": 10})
+		CombatRules._add_condition(s, data, f, "frightened", {"rounds": 10})
 		lines.append("%s изгнан и бежит" % f["name"])
 	if not any:
 		lines.append("Рядом нет тех, на кого это действует")
@@ -672,7 +672,7 @@ static func _breath(s: GameSession, data: Dictionary, target_id: String) -> Arra
 		var ok := Sheet.saved(s, data, f, ab, dc)
 		var dmg := Sheet.taken(s, data, f, dtype, full / 2 if ok else full)
 		lines.append("%s: %s против Сл %d — %s, %d" % [f["name"], CombatRules.ab_name(ab), dc, "успех" if ok else "провал", dmg])
-		CombatRules._hurt_enemy(s, data, f, dmg, lines, dtype)
+		CombatRules.hurt(s, data, f, dmg, lines, dtype)
 	return lines
 
 

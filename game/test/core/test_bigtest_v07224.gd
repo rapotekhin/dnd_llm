@@ -60,10 +60,12 @@ func test_command_speaks_a_word() -> void:
 		lines.clear()
 		ConditionRules.remove(s.character, "incapacitated")
 		ConditionRules.remove(s.character, "prone")
-		MonsterRules._cast_condition_on_hero(s, data, f, "command", 1, spec, 30, lines)
+		s.combat["by"] = {"dc": 30, "attack": 0, "ability": "wis", "caster": str(f["id"])}
+		CombatRules._cast_condition(s, data, "command", 1, CombatRules.player(s), lines)
+		s.combat.erase("by")
 		if ConditionRules.has(s.character, "incapacitated"):
 			break
-	assert_str(" · ".join(lines)).contains("«Приказ» — «")
+	assert_str(" · ".join(lines)).contains("Приказ — «")
 	assert_bool(ConditionRules.has(s.character, "incapacitated")).is_true()
 
 
@@ -132,7 +134,7 @@ func test_darts_fly_one_by_one() -> void:
 	var foes := _fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}])
 	var a := str(foes[0]["id"])
 	var b := str(foes[1]["id"])
-	var lines := CombatRules.player_cast(s, data, "magic_missile", 1, a)
+	var lines := Acts.one("cast").go(s, data, CombatRules.player(s), a, {"spell": "magic_missile", "slot": 1})
 	assert_int(lines.filter(func(l: String) -> bool: return l.contains("Волшебная стрела:")).size()).is_equal(1)
 	assert_int(int(CombatRules.volley(s)["left"])).is_equal(2)
 	assert_str(CombatRules.can_volley(s, data, b)).is_empty()

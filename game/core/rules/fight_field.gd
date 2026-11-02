@@ -125,7 +125,7 @@ static func stepped(s: GameSession, data: Dictionary, f: Dictionary, lines: Arra
 static func _fall(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	var dmg := CombatRules.roll_dice(s.rng, str(cfg(data)["pit"]["dice"]))
 	lines.append("%s падает в яму: %d" % [f["name"], dmg])
-	CombatRules._hurt_any(s, data, f, dmg, lines, "bludgeoning")
+	CombatRules.hurt(s, data, f, dmg, lines, "bludgeoning")
 	if str(f.get("id")) == CombatRules.PLAYER:
 		if int(s.character.get("hp", 0)) > 0:
 			lines.append_array(ConditionRules.impose(s, data, {"condition": "prone", "ends": {"rest": "short"}, "source": {"kind": "engine", "name": "яма"}}))
@@ -179,10 +179,10 @@ static func opens_on_way(s: GameSession, data: Dictionary, f: Dictionary, at: Ve
 		lines.append("%s открывает дверь" % f["name"])
 
 
-## The acts the hero has with what stands beside it, by name; `COMBAT_ACT_<NAME>` is the button.
-static func acts(s: GameSession, data: Dictionary) -> Array[String]:
+## The acts `f` has with what stands beside it, by name.
+static func acts(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
 	var out: Array[String] = []
-	var d := door_near(s, data)
+	var d := door_near(s, data, f)
 	if not d.is_empty():
 		var g := FightGrid.grid(s, data)
 		var at := Vector2i(int(d["x"]), int(d["y"]))
@@ -194,21 +194,20 @@ static func acts(s: GameSession, data: Dictionary) -> Array[String]:
 				out.append("door_unbar")
 		else:
 			out.append("door_bar")
-			if _has_key(s, data, d):
+			if Sheet.is_hero(f) and _has_key(s, data, d):
 				out.append("door_lock")
-	if block_near(s) != FightGrid.NONE:
+	if block_near(s, f) != FightGrid.NONE:
 		out.append("block_push")
 		out.append("block_smash")
 	return out
 
 
-## The door beside the hero, a row of the map's `doors`, {} — none or gone. A door someone stands in cannot be shut.
-static func door_near(s: GameSession, data: Dictionary) -> Dictionary:
-	var p := CombatRules.player(s)
+## The door beside `f`, a row of the map's `doors`, {} — none or gone. A door someone stands in cannot be shut.
+static func door_near(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 	var taken := FightGrid.bodies(s)
 	for d: Dictionary in FightGrid.map(s, data).get("doors", []):
 		var at := Vector2i(int(d["x"]), int(d["y"]))
-		if FightGrid.dist_to(p, at) <= 1 and not taken.has(at) and not bool(FightGrid.door_state(s, at).get("gone", false)):
+		if FightGrid.dist_to(f, at) <= 1 and not taken.has(at) and not bool(FightGrid.door_state(s, at).get("gone", false)):
 			return d
 	return {}
 
@@ -220,29 +219,30 @@ static func _has_key(s: GameSession, data: Dictionary, d: Dictionary) -> bool:
 
 
 ## "" — the act can be done now; a key otherwise.
-static func why_not(s: GameSession, data: Dictionary, how: String) -> String:
-	if not acts(s, data).has(how):
+static func why_not(s: GameSession, data: Dictionary, f: Dictionary, how: String) -> String:
+	if not acts(s, data, f).has(how):
 		return "COMBAT_BAD_TARGET"
 	if how == "block_push":
-		var at := block_near(s)
+		var at := block_near(s, f)
 		var b: Dictionary = s.combat["blocks"][FightGrid.tag(at)]
-		if int(b["weight"]) > CharacterRules.ability(s.character, "str") * int(cfg(data)["blocks"]["per_str"]):
+		var strength := CharacterRules.ability(s.character, "str") if Sheet.is_hero(f) else int(Sheet.of(s, data, f)["abilities"].get("str", 10))
+		if int(b["weight"]) > strength * int(cfg(data)["blocks"]["per_str"]):
 			return "COMBAT_TOO_HEAVY"
-		if not _block_can_go(s, data, at + (at - FightGrid.cell(CombatRules.player(s))).sign()):
+		if not _block_can_go(s, data, at + (at - FightGrid.cell(f)).sign()):
 			return "COMBAT_BLOCK_STUCK"
 	return ""
 
 
-## The hero's act with a door or a thing. Lines.
-static func act(s: GameSession, data: Dictionary, how: String, lines: Array[String]) -> void:
-	var c := s.character
+## An act of `f` with a door or a thing. Lines.
+static func act(s: GameSession, data: Dictionary, f: Dictionary, how: String, lines: Array[String]) -> void:
+	var c := Sheet.holder(s, f)
 	if how.begins_with("block"):
 		if how == "block_push":
-			_push_block(s, data, lines)
+			_push_block(s, data, f, lines)
 		else:
-			_smash_block(s, data, lines)
+			_smash_block(s, data, f, lines)
 		return
-	var d := door_near(s, data)
+	var d := door_near(s, data, f)
 	var at := Vector2i(int(d["x"]), int(d["y"]))
 	var doors: Dictionary = s.combat["doors"]
 	var key := FightGrid.tag(at)
@@ -262,7 +262,7 @@ static func act(s: GameSession, data: Dictionary, how: String, lines: Array[Stri
 			WayRules.lock(s, ends[0], ends[1])
 			lines.append("%s запирает дверь на ключ" % c["name"])
 		"door_force":
-			var r := Roll.hero(s, data, {"what": "Выломать дверь", "skill": "athletics", "dc": _door_dc(s, data, at, d)})
+			var r := Roll.check(s, data, f, {"what": "Выломать дверь", "skill": "athletics", "dc": _door_dc(s, data, at, d)})
 			if bool(r["ok"]):
 				_break_door(s, data, at, d)
 				lines.append("%s выбивает дверь" % c["name"])
@@ -287,9 +287,9 @@ static func _break_door(s: GameSession, data: Dictionary, at: Vector2i, d: Dicti
 # --- things --------------------------------------------------------------------------------------------------
 
 
-## The thing beside the hero, NONE — none.
-static func block_near(s: GameSession) -> Vector2i:
-	var at := FightGrid.cell(CombatRules.player(s))
+## The thing beside `f`, NONE — none.
+static func block_near(s: GameSession, f: Dictionary) -> Vector2i:
+	var at := FightGrid.cell(f)
 	for d: Vector2i in WalkRules.DIRS:
 		if (s.combat.get("blocks", {}) as Dictionary).has(FightGrid.tag(at + d)):
 			return at + d
@@ -301,18 +301,19 @@ static func _block_can_go(s: GameSession, data: Dictionary, to: Vector2i) -> boo
 	return FightGrid.flags_at(g, to) & FightGrid.SOLID == 0 and not FightGrid.bodies(s).has(to) and not FightGrid.shut(s, g, to)
 
 
-static func _push_block(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
-	var at := block_near(s)
-	var to := at + (at - FightGrid.cell(CombatRules.player(s))).sign()
+static func _push_block(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	var who := str(Sheet.holder(s, f)["name"])
+	var at := block_near(s, f)
+	var to := at + (at - FightGrid.cell(f)).sign()
 	var b: Dictionary = s.combat["blocks"][FightGrid.tag(at)]
 	_lift(s, data, at)
 	var g := FightGrid.grid(s, data)
 	if FightGrid.flags_at(g, to) & FightGrid.PIT != 0:
-		lines.append("%s: %s падает в яму" % [s.character["name"], b["name"]])
+		lines.append("%s: %s падает в яму" % [who, b["name"]])
 	else:
 		s.combat["blocks"][FightGrid.tag(to)] = b
 		(s.combat.get("cleared", {}) as Dictionary).erase(FightGrid.tag(to))
-		lines.append("%s толкает: %s" % [s.character["name"], b["name"]])
+		lines.append("%s толкает: %s" % [who, b["name"]])
 	FightGrid.changed(s)
 	if (s.combat["fires"] as Dictionary).has(FightGrid.tag(to)):
 		kindle(s, data, [to] as Array[Vector2i], lines)
@@ -330,17 +331,19 @@ static func _lift(s: GameSession, data: Dictionary, at: Vector2i) -> void:
 	FightGrid.changed(s)
 
 
-static func _smash_block(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
-	var c := s.character
-	var at := block_near(s)
+static func _smash_block(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	var at := block_near(s, f)
 	var b: Dictionary = s.combat["blocks"][FightGrid.tag(at)]
-	var w := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
+	var w := Attack.blade(s, data, f)
 	var ac := int(ThingRules.material(data, {"material": b["made_of"]}).get("ac", 15))
-	var r := Roll.hero(s, data, {"what": "Удар по вещи", "parts": WayRules._hit_parts(w), "bonus": w["to_hit"], "dc": ac})
+	var r := Roll.check(s, data, f, {"what": "Удар по вещи", "parts": WayRules._hit_parts(w), "bonus": w["to_hit"], "dc": ac})
 	if not bool(r["ok"]):
 		lines.append("%s: удар по вещи — %d против КД %d, без толку" % [w["name"], int(r["total"]), ac])
 		return
-	var dmg := maxi(1, CombatRules.roll_dice(s.rng, str(w["dice"]), int(r["nat"]) == 20) + int(w["bonus"]))
+	var dmg := int(w.get("bonus", 0))
+	for piece: Dictionary in w["pieces"]:
+		dmg += CombatRules.roll_dice(s.rng, str(piece["dice"]), int(r["nat"]) == 20)
+	dmg = maxi(1, dmg)
 	b["hp"] = int(b["hp"]) - dmg
 	if int(b["hp"]) > 0:
 		lines.append("%s: %d урона по вещи — %s ещё цел(а)" % [w["name"], dmg, b["name"]])
@@ -623,17 +626,7 @@ static func chasers_arrive(s: GameSession, data: Dictionary, lines: Array[String
 
 ## It stands at a door barred or locked with no other way: it throws itself at it, by the SRD's Strength against the door.
 static func force_way(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	var g := FightGrid.grid(s, data)
-	for d: Dictionary in FightGrid.map(s, data).get("doors", []):
-		var at := Vector2i(int(d["x"]), int(d["y"]))
-		if FightGrid.dist_to(f, at) > 1 or not FightGrid.shut(s, g, at):
-			continue
-		var dc := _door_dc(s, data, at, d)
-		var total := Roll.d20(s.rng) + CharacterRules.mod(int(Sheet.template(data, f)["abilities"].get("str", 10)))
-		if total >= dc:
-			_break_door(s, data, at, d)
-			lines.append("%s выбивает дверь" % f["name"])
-		else:
-			lines.append("%s бьётся в дверь: %d против Сл %d" % [f["name"], total, dc])
+	if acts(s, data, f).has("door_force") and Acts.one("field").can(s, data, f, "", {"how": "door_force"}).is_empty():
+		lines.append_array(Acts.one("field").go(s, data, f, "", {"how": "door_force"}))
 		return
 	lines.append("%s стоит на месте" % f["name"])

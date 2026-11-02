@@ -645,11 +645,12 @@ func _opening_strike(opening: Dictionary) -> Array[String]:
 		return lines
 	if slot > 0:
 		Stock.give(session.character, "slot_%d" % slot)
-	var why := CombatRules.can_cast(session, data, spell, slot, target)
+	var how := {"spell": spell, "slot": slot}
+	var why := Acts.one("cast").can(session, data, CombatRules.player(session), target, how)
 	if not why.is_empty():
 		lines.append("%s не удаётся: %s — ячейка не потрачена" % [data["spells"][spell]["name"], tr(why)])
 		return lines
-	lines.append_array(CombatRules.player_cast(session, data, spell, slot, target))
+	lines.append_array(Acts.one("cast").go(session, data, CombatRules.player(session), target, how))
 	return lines
 
 
@@ -714,11 +715,6 @@ func _combat_do(why: String, act: Callable) -> String:
 	return ""
 
 
-func combat_attack(target_id: String, offhand: bool = false, unarmed: bool = false) -> String:
-	return _combat_do(CombatRules.can_attack(session, Catalog.data, target_id, offhand, unarmed) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.player_attack(session, Catalog.data, target_id, offhand, false, unarmed))
-
-
 ## «Оглушать, а не убивать» (v0.7.22.11, big test #44): a melee blow that brings a foe to 0 HP knocks it out.
 func combat_nonlethal(on: bool) -> void:
 	if session != null and CombatRules.active(session):
@@ -726,66 +722,40 @@ func combat_nonlethal(on: bool) -> void:
 		EventBus.state_changed.emit()
 
 
-## «Схватить» / «Сбить с ног» (v0.7.7): instead of one attack, Athletics against the foe (CombatRules.grapple).
-func combat_grapple(target_id: String, shove: bool) -> String:
-	return _combat_do(CombatRules.can_grapple(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.grapple(session, Catalog.data, target_id, shove))
-
-
-## The shove with a side picked: the foe goes to that square, 5 ft away (v0.8.4).
-func combat_shove_to(target_id: String, to: Vector2i) -> String:
-	return _combat_do(CombatRules.can_grapple(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.grapple(session, Catalog.data, target_id, true, to))
-
-
 ## A spell in a fight: engine spells resolve at once; others spend the slot and go to the master (it costs the action).
 func combat_cast(spell_id: String, slot: int, target_id: String) -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
-	var why := CombatRules.can_cast(session, Catalog.data, spell_id, slot, target_id)
+	var act := Acts.one("cast")
+	var hero := CombatRules.player(session)
+	var how := {"spell": spell_id, "slot": slot}
+	var why := act.can(session, Catalog.data, hero, target_id, how)
 	var sp: Dictionary = Catalog.data["spells"].get(spell_id, {})
 	if why.is_empty() and not CombatRules.is_engine_spell(Catalog.data, spell_id) and not sp.has("heal_at_slot"):
 		if not _combat_ready():
 			return "COMBAT_NOT_YOUR_TURN"
-		var lines := CombatRules.player_cast(session, Catalog.data, spell_id, slot, "")
+		var lines := act.go(session, Catalog.data, hero, "", how)
 		_combat_log(lines)
 		var target := str(CombatRules.fighter(session, target_id).get("name", "")) if not target_id.is_empty() else ""
 		_request("action", "Игрок колдует %s%s. Ячейка уже потрачена движком — `cast` не нужен; реши исход проверками и эффектами с target_id врага." %
 			[SpellRules.describe(Catalog.data, spell_id, slot if slot > 0 else SpellRules.lowest_slot(session.character, Catalog.data, spell_id)),
 			(" на " + target) if not target.is_empty() else ""])
 		return ""
-	return _combat_do(why, func() -> Array[String]: return CombatRules.player_cast(session, Catalog.data, spell_id, slot, target_id))
+	return _combat_do(why, func() -> Array[String]: return act.go(session, Catalog.data, hero, target_id, how))
 
 
-## An act of `Acts` by the hero: the same the AI picks from.
-func combat_act(id: String, to: String = "") -> String:
+## An act of `Acts` by the hero: the same the AI picks from. A check it asks for is the game's, with its card.
+func combat_act(id: String, to: String = "", how: Dictionary = {}) -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
 	var hero := CombatRules.player(session)
 	var act := Acts.one(id)
-	return _combat_do(act.can(session, Catalog.data, hero, to), func() -> Array[String]: return act.go(session, Catalog.data, hero, to))
-
-
-## The hero leaves by the way out it stands at; those near run after it (FightField.leave).
-func combat_flee() -> String:
-	return _combat_do(CombatRules.can_flee(session, Catalog.data) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.player_flee(session, Catalog.data))
-
-
-## An act with a door or a thing beside the hero: FightField.acts.
-func combat_field(how: String) -> String:
-	return _combat_do(CombatRules.can_field(session, Catalog.data, how) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.field_act(session, Catalog.data, how))
-
-
-func combat_help(target_id: String) -> String:
-	return _combat_do(CombatRules.can_help(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.help(session, Catalog.data, target_id))
-
-
-func combat_jump(to: Vector2i) -> String:
-	return _combat_do(CombatRules.can_jump(session, Catalog.data, to) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.player_jump(session, Catalog.data, to))
+	return _combat_do(act.can(session, Catalog.data, hero, to, how), func() -> Array[String]:
+		var lines := act.go(session, Catalog.data, hero, to, how)
+		var chk := act.check(how)
+		if not chk.is_empty():
+			lines.append_array(_parley_check(chk)["lines"])
+		return lines)
 
 
 ## A feature in a fight costs what rules.resources say (combat_cost): Rage and Second Wind — a bonus action,
@@ -811,63 +781,6 @@ func combat_use_feature(resource_id: String) -> String:
 		if resource_id == "rage":
 			session.combat["raging"] = true
 		return Stock.use(session.character, Catalog.data, resource_id, 1, session.rng))
-
-
-## «Вырваться» (v0.7.8): an action, Athletics or Acrobatics against the hold.
-## «Сдаться» (v0.7.22.17, #12): the fight ends at once — the captive of thinking foes, or held by the law's guard.
-func combat_surrender() -> String:
-	return _combat_do(CombatRules.can_surrender(session, Catalog.data) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.surrender(session))
-
-
-func combat_escape() -> String:
-	return _combat_do(CombatRules.can_escape(session) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.escape(session, Catalog.data))
-
-
-## «Неистовство» of a berserker (v0.7.8): while raging, a melee attack as a bonus action every turn; when the fight
-## ends, a level of exhaustion.
-func combat_frenzy() -> String:
-	return _combat_do(CombatRules.can_frenzy(session) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.frenzy(session))
-
-
-func combat_frenzy_attack(target_id: String) -> String:
-	return _combat_do(CombatRules.can_frenzy_attack(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.player_attack(session, Catalog.data, target_id, false, true))
-
-
-func combat_use_item(item_id: String) -> String:
-	if session == null or not CombatRules.active(session):
-		return "COMBAT_NONE"
-	var why := ItemRules.can_use(session.character, Catalog.data, session.items, item_id)
-	# Fast Hands (thief, v0.7.10): an item is a bonus action; a potion — for everyone, as in BG3 (v0.7.22.3)
-	var by_bonus := FeatureRules.has(session.character, "fast_hands") or (ItemRules.is_potion(Catalog.data, session.items, item_id)
-		and str(CombatRules.cfg(Catalog.data).get("potion_cost", "action")) == "bonus")
-	var cost := "bonus" if by_bonus and int(CombatRules.economy(session).get("bonus", 0)) > 0 else "action"
-	if why.is_empty() and int(CombatRules.economy(session).get(cost, 0)) <= 0:
-		why = "COMBAT_NO_ACTION"
-	return _combat_do(why, func() -> Array[String]:
-		CombatRules.economy(session)[cost] = int(CombatRules.economy(session)[cost]) - 1
-		return ItemRules.use(session.character, Catalog.data, session.items, item_id, session.rng, session))
-
-
-## A flask or a net thrown at a foe (v0.7.12). "" or a localization key.
-func combat_throw(item_id: String, target_id: String) -> String:
-	return _combat_do(CombatRules.can_throw(session, Catalog.data, item_id, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.throw_item(session, Catalog.data, item_id, target_id))
-
-
-## The spell of a scroll or a wand in a fight (v0.7.12). "" or a localization key.
-func combat_item_spell(item_id: String, target_id: String) -> String:
-	return _combat_do(CombatRules.can_item_spell(session, Catalog.data, item_id, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.item_spell(session, Catalog.data, item_id, target_id))
-
-
-## The next dart or ray of the spell just cast at a target of its own (v0.7.22.4, as in BG3). "" or a key.
-func combat_volley(target_id: String) -> String:
-	return _combat_do(CombatRules.can_volley(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.volley_shot(session, Catalog.data, target_id))
 
 
 func combat_end_turn() -> String:
@@ -931,25 +844,6 @@ func combat_metamagic(id: String) -> void:
 	else:
 		session.combat["metamagic"] = id
 	EventBus.state_changed.emit()
-
-
-## Inspect a foe (v0.6.6): a bonus action, a knowledge check by the creature type; success opens the kind's numbers.
-func combat_inspect(target_id: String) -> String:
-	return _combat_do(CombatRules.can_inspect(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]: return CombatRules.player_inspect(session, Catalog.data, target_id))
-
-
-## Parley in a fight (v0.6.2): the action, an engine check of Intimidation or Persuasion against the parley DC; the
-## outcome (surrender, flight, truce) is the engine's, the master narrates it with the round.
-func combat_parley(skill: String) -> String:
-	if session == null or not CombatRules.active(session):
-		return "COMBAT_NONE"
-	var why := CombatRules.can_parley(session, Catalog.data, skill)
-	if why.is_empty() and int(CombatRules.economy(session).get("action", 0)) <= 0:
-		why = "COMBAT_NO_ACTION"
-	return _combat_do(why, func() -> Array[String]:
-		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
-		return _parley_check({"skill": skill, "dc_tier": "medium"})["lines"])
 
 
 ## A parley check (the button or the master's request_check of Intimidation / Persuasion in a fight): the DC is the
@@ -2955,17 +2849,8 @@ func swap_weapons() -> String:
 		return "EQUIP_BUSY"
 	if not _idle() and not CombatRules.active(session):
 		return "EQUIP_BUSY"
-	return _act("swap", {"swap": [func() -> String: return CombatRules.can_swap(session, Catalog.data),
-		func() -> Array[String]: return CombatRules.swap(session, Catalog.data)]})
-
-
-## The sets change places and the blow lands: the attack with the weapon put away, one click as in BG3.
-func combat_attack_stowed(target_id: String) -> String:
-	return _combat_do(CombatRules.can_attack_stowed(session, Catalog.data, target_id) if session != null and CombatRules.active(session) else "COMBAT_NONE",
-		func() -> Array[String]:
-			var lines := CombatRules.swap(session, Catalog.data)
-			lines.append_array(CombatRules.player_attack(session, Catalog.data, target_id))
-			return lines)
+	return _act("swap", {"swap": [func() -> String: return Acts.one("swap").can(session, Catalog.data, Sheet.HERO),
+		func() -> Array[String]: return Acts.one("swap").go(session, Catalog.data, Sheet.HERO)]})
 
 
 func unequip_stowed(slot: String) -> void:

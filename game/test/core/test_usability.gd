@@ -89,10 +89,10 @@ func test_inspecting_a_foe_opens_its_kind_for_good() -> void:
 	assert_int(CombatRules.lore_dc(data, CombatRules.fighter(s, TestUtils.foe(s, 1)))).is_equal(11)
 	assert_str(CombatRules.monster_card(s, data, CombatRules.fighter(s, TestUtils.foe(s, 1)))).is_empty()
 	s.character["skills"]["nature"] = 40
-	var lines := CombatRules.player_inspect(s, data, TestUtils.foe(s, 1))
+	var lines := Acts.one("inspect").go(s, data, CombatRules.player(s), TestUtils.foe(s, 1))
 	assert_str(lines[0]).contains("теперь ясно")
 	assert_int(int(CombatRules.economy(s)["bonus"])).is_equal(0)
-	assert_str(CombatRules.can_inspect(s, data, TestUtils.foe(s, 2))).is_equal("COMBAT_NO_BONUS")
+	assert_str(Acts.one("inspect").can(s, data, CombatRules.player(s), TestUtils.foe(s, 2))).is_equal("COMBAT_ALREADY_KNOWN")
 	var card := CombatRules.monster_card(s, data, CombatRules.fighter(s, TestUtils.foe(s, 2)))  # the same kind: known too
 	assert_str(card).contains("КД 13").contains("Укус")
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))

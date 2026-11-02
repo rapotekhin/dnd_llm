@@ -199,7 +199,7 @@ func test_a_ground_foe_does_not_reach_the_air_and_a_flier_does() -> void:
 	assert_bool(Move.air(s, data, f)).is_false()
 	var lines: Array[String] = []
 	var hp := int(s.character["hp"])
-	CombatRules._enemy_turn(s, data, f, lines)
+	TestUtils.enemy_turn(s, data, f, lines)
 	assert_str("\n".join(lines)).contains("не достаёт летящего героя")
 	assert_int(int(s.character["hp"])).is_equal(hp)
 
@@ -207,7 +207,7 @@ func test_a_ground_foe_does_not_reach_the_air_and_a_flier_does() -> void:
 func test_a_melee_blow_brings_the_hero_in_reach_until_the_next_turn() -> void:
 	var s := _hero()
 	var f := _in_the_air(s, "wolf")
-	CombatRules.player_attack(s, data, str(f["id"]))
+	Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"]))
 	assert_bool(CombatRules.airborne(s, data, CombatRules.player(s))).override_failure_message("in reach after a melee blow").is_false()
 	s.combat["order"] = [CombatRules.PLAYER, str(f["id"])]
 	s.combat["turn"] = 0
@@ -220,7 +220,7 @@ func test_an_archer_shoots_the_flier() -> void:
 	var s := _hero()
 	var f := _in_the_air(s, "bandit")
 	var lines: Array[String] = []
-	CombatRules._enemy_turn(s, data, f, lines)
+	TestUtils.enemy_turn(s, data, f, lines)
 	assert_str("\n".join(lines)).not_contains("не достаёт летящего героя")
 
 
@@ -273,7 +273,7 @@ func test_in_a_fight_the_hero_strikes_with_advantage_and_is_struck_with_disadvan
 	TestUtils.fight(s, data, [{"monster": "wolf", "col": 0}], {})
 	_unseen(s)
 	var t := CombatRules.fighter(s, CombatRules.enemies(s)[0])
-	assert_array(CombatRules._attack_mods(s, data, CombatRules.unarmed_profile(s.character, data), t)["adv"]).is_not_empty()
+	assert_array(Attack.mods(s, data, CombatRules.player(s), t, Attack.of_weapon(CombatRules.unarmed_profile(s.character, data)))["adv"]).is_not_empty()
 	assert_bool(ConditionRules.invisible(s.character, data)).is_true()
 
 

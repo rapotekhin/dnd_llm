@@ -93,7 +93,7 @@ func _jump(s: GameSession, data: Dictionary) -> void:
 		return
 	await press(jump)
 	await frames(2)
-	var squares := CombatRules.jump_squares(s, data)
+	var squares := Acts.one("jump").squares(s, data, CombatRules.player(s), "")
 	await shot("jump_squares")
 	var to: Vector2i = squares.keys()[0]
 	await click_cell(to)

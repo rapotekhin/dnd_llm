@@ -81,7 +81,7 @@ func _says(list: Variant, word: String) -> bool:
 
 func _dis(s: GameSession, f: Dictionary) -> Array:
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"].get("main_hand", "")))
-	return CombatRules._attack_mods(s, data, w, f)["dis"]
+	return Attack.mods(s, data, CombatRules.player(s), f, Attack.of_weapon(w))["dis"]
 
 
 # --- Fog Cloud and Darkness -----------------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ func _dis(s: GameSession, f: Dictionary) -> Array:
 
 func _adv(s: GameSession, f: Dictionary) -> Array:
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"].get("main_hand", "")))
-	return CombatRules._attack_mods(s, data, w, f)["adv"]
+	return Attack.mods(s, data, CombatRules.player(s), f, Attack.of_weapon(w))["adv"]
 
 
 func test_a_shot_through_a_veil_is_rolled_as_plain() -> void:  # neither side sees: disadvantage and advantage cancel out
@@ -99,7 +99,7 @@ func test_a_shot_through_a_veil_is_rolled_as_plain() -> void:  # neither side se
 		var f := _fight(s, [{"monster": "goblin", "col": 3}])[0]
 		assert_array(_dis(s, f)).is_empty()
 		var z := _zone(s, spell, FightGrid.cell(CombatRules.player(s)) + Vector2i(9, 0))  # between them, neither inside
-		assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
+		assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()
 		assert_bool(_says(_dis(s, f), str(z["name"]))).is_true()
 		assert_bool(_says(_adv(s, f), "не видно")).is_true()
 
@@ -110,9 +110,9 @@ func test_a_shot_out_of_a_veil_and_into_it_goes_too() -> void:
 		_bow(s)
 		var f := _fight(s, [{"monster": "goblin", "col": 3}])[0]
 		_zone(s, spell, FightGrid.cell(CombatRules.player(s)))
-		assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
+		assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()
 		_zone(s, spell, FightGrid.cell(f))
-		assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
+		assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()
 
 
 func test_a_seeing_shooter_at_one_it_cannot_be_seen_by_has_advantage_only() -> void:
@@ -141,11 +141,11 @@ func test_a_bolt_goes_by_guess_a_spell_of_sight_does_not() -> void:
 	_learn(s, "magic_missile")
 	_learn(s, "sacred_flame")
 	_learn(s, "hold_person")
-	assert_str(CombatRules.can_cast(s, data, "magic_missile", 1, str(f["id"]))).is_empty()
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": "magic_missile", "slot": 1})).is_empty()
 	_zone(s, "fog_cloud", FightGrid.cell(f))
-	assert_str(CombatRules.can_cast(s, data, "fire_bolt", 0, str(f["id"]))).is_empty()  # the spell's text does not ask to see
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": "fire_bolt", "slot": 0})).is_empty()  # the spell's text does not ask to see
 	for id: Array in [["magic_missile", 1], ["sacred_flame", 0], ["hold_person", 2]]:
-		assert_str(CombatRules.can_cast(s, data, str(id[0]), int(id[1]), str(f["id"]))).is_equal("COMBAT_NO_LINE")
+		assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": str(id[0]), "slot": int(id[1])})).is_equal("COMBAT_NO_LINE")
 
 
 func test_a_flask_is_thrown_into_a_veil() -> void:
@@ -154,7 +154,7 @@ func test_a_flask_is_thrown_into_a_veil() -> void:
 	s.character["inventory"]["oil_flask"] = 1
 	_zone(s, "fog_cloud", FightGrid.cell(f))
 	FightGrid.put(CombatRules.player(s), FightGrid.cell(f) + Vector2i(-2, 0))
-	assert_str(CombatRules.can_throw(s, data, "oil_flask", str(f["id"]))).is_empty()
+	assert_str(Acts.one("throw").can(s, data, CombatRules.player(s), str(f["id"]), {"item": "oil_flask"})).is_empty()
 
 
 func test_a_blade_inside_a_veil_is_rolled_as_plain() -> void:  # both blind: the rule's cancelling, the blow is no worse
@@ -162,7 +162,7 @@ func test_a_blade_inside_a_veil_is_rolled_as_plain() -> void:  # both blind: the
 		var s := _hero("fighter_aira")
 		var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
 		var z := _zone(s, spell, FightGrid.cell(f))
-		assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
+		assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()
 		assert_bool(_says(_dis(s, f), str(z["name"]))).is_true()
 		assert_bool(_says(_adv(s, f), "не видно")).is_true()
 		var eyes := CombatRules.sight_mods(s, data, f, CombatRules.player(s))  # the foe the same
@@ -184,7 +184,7 @@ func test_fog_cloud_grows_with_the_slot() -> void:
 	var s := _hero("wizard_yalika", 3)
 	var f := _fight(s, [{"monster": "goblin", "col": 2}])[0]
 	_learn(s, "fog_cloud")
-	CombatRules.player_cast(s, data, "fog_cloud", 2, FightGrid.aim_id(FightGrid.cell(f)))
+	Acts.one("cast").go(s, data, CombatRules.player(s), FightGrid.aim_id(FightGrid.cell(f)), {"spell": "fog_cloud", "slot": 2})
 	assert_int(int(SpellEffects.zones(s)[0]["shape"]["size"])).is_equal(40)
 
 
@@ -201,7 +201,7 @@ func test_darkness_puts_out_a_light_of_a_low_circle() -> void:
 	ConditionRules.add_effect(c, {"condition": "", "source": {"kind": "spell", "id": "daylight", "name": "Дневной свет"}, "ends": {}})
 	_learn(s, "darkness")
 	assert_int(ConditionRules.effects(c).filter(func(e: Dictionary) -> bool: return str(e.get("source", {}).get("id", "")) in ["light", "daylight"]).size()).is_equal(2)
-	var lines := CombatRules.player_cast(s, data, "darkness", 2, FightGrid.aim_id(FightGrid.cell(f)))
+	var lines := Acts.one("cast").go(s, data, CombatRules.player(s), FightGrid.aim_id(FightGrid.cell(f)), {"spell": "darkness", "slot": 2})
 	assert_str(" ".join(lines)).contains("Свет гаснет")
 	var left: Array = ConditionRules.effects(c).map(func(e: Dictionary) -> String: return str(e.get("source", {}).get("id", "")))
 	assert_bool(left.has("light")).is_false()
@@ -228,7 +228,7 @@ func test_the_cast_itself_lays_a_veil() -> void:
 	var s := _hero("wizard_yalika", 3)
 	var f := _fight(s, [{"monster": "goblin", "col": 2}])[0]
 	_learn(s, "fog_cloud")
-	CombatRules.player_cast(s, data, "fog_cloud", 1, FightGrid.aim_id(FightGrid.cell(f)))
+	Acts.one("cast").go(s, data, CombatRules.player(s), FightGrid.aim_id(FightGrid.cell(f)), {"spell": "fog_cloud", "slot": 1})
 	CombatRules.economy(s)["action"] = 1
 	assert_str(str(FightGrid.veiled(s, data, CombatRules.player(s), f))).is_not_empty()
 	assert_str(str(SpellEffects.zones(s)[0]["veil"])).is_equal("fog")
@@ -240,10 +240,10 @@ func test_devils_sight_sees_through_darkness_only() -> void:
 	(s.character["features"] as Array).append("eldritch_invocation_devils_sight")
 	var f := _fight(s, [{"monster": "goblin", "col": 2}])[0]
 	_zone(s, "darkness", FightGrid.cell(f))
-	assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()
 	assert_bool(_says(_dis(s, f), "тьма")).is_false()
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "longbow")
-	assert_bool(_says(CombatRules._attack_mods(s, data, w, f)["adv"], "не видно")).is_true()  # it sees, it is not seen
+	assert_bool(_says(Attack.mods(s, data, CombatRules.player(s), f, Attack.of_weapon(w))["adv"], "не видно")).is_true()  # it sees, it is not seen
 	var z := _zone(s, "fog_cloud", FightGrid.cell(f))
 	assert_bool(_says(_dis(s, f), str(z["name"]))).is_true()
 
@@ -318,12 +318,12 @@ func test_a_blind_shot_goes_with_disadvantage() -> void:
 	_bow(s)
 	var f := _fight(s, [{"monster": "goblin", "col": 1}])[0]
 	ConditionRules.add_effect(s.character, {"condition": "blinded", "ends": {}})
-	assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()
 	assert_bool(_says(_dis(s, f), "ослеплены")).is_true()
 	assert_array(_adv(s, f)).is_empty()  # the foe sees the hero
-	assert_str(CombatRules.can_cast(s, data, "fire_bolt", 0, str(f["id"]))).is_empty()
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": "fire_bolt", "slot": 0})).is_empty()
 	_learn(s, "magic_missile")
-	assert_str(CombatRules.can_cast(s, data, "magic_missile", 1, str(f["id"]))).is_equal("COMBAT_NO_LINE")
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": "magic_missile", "slot": 1})).is_equal("COMBAT_NO_LINE")
 
 
 func test_the_text_of_blindness_is_that_of_the_rules() -> void:
@@ -334,7 +334,7 @@ func test_a_blind_hero_strikes_beside_it_with_disadvantage_and_is_struck_with_ad
 	var s := _hero("fighter_aira")
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
 	ConditionRules.add_effect(s.character, {"condition": "blinded", "ends": {}})
-	assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()
 	assert_bool(_says(_dis(s, f), "ослеплены")).is_true()
 	assert_array(ConditionRules.attack(data, f, s.character, true)["adv"]).is_not_empty()
 
@@ -356,7 +356,7 @@ func test_a_touch_goes_blind_too() -> void:
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
 	_learn(s, "inflict_wounds")
 	ConditionRules.add_effect(s.character, {"condition": "blinded", "ends": {}})
-	assert_str(CombatRules.can_cast(s, data, "inflict_wounds", 1, str(f["id"]))).is_empty()
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": "inflict_wounds", "slot": 1})).is_empty()
 
 
 func test_a_blind_foe_shoots_but_does_not_catch_the_hero() -> void:
@@ -457,12 +457,12 @@ func test_a_foes_shot_in_the_dark_is_rolled_with_disadvantage() -> void:
 	var s := _dark()
 	var f := _fight(s, [{"monster": "bandit", "col": 2}])[0]
 	var lines: Array[String] = []
-	var bow: Dictionary = MonsterRules.pick(s, data, f, "ranged")
-	CombatRules._enemy_attack(s, data, f, bow, lines)
+	var bow: Dictionary = MonsterRules.pick(s, data, f, CombatRules.player(s), "ranged")
+	Attack.one(s, data, f, CombatRules.player(s), bow, lines)
 	assert_str(" ".join(lines)).contains("с помехой")
 	s.character["inventory"]["torch"] = 1
 	lines.clear()
-	CombatRules._enemy_attack(s, data, f, bow, lines)
+	Attack.one(s, data, f, CombatRules.player(s), bow, lines)
 	assert_str(" ".join(lines)).not_contains("с помехой")
 
 
@@ -531,12 +531,12 @@ func test_an_area_reaches_a_foe_behind_a_wall() -> void:
 	FightGrid.put(f, spots[1])
 	FightGrid.changed(s)
 	var id := str(f["id"])
-	assert_str(CombatRules.can_cast(s, data, "fireball", 3, id)).is_equal("COMBAT_NO_LINE")
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), id, {"spell": "fireball", "slot": 3})).is_equal("COMBAT_NO_LINE")
 	var aim := FightGrid.aim_id(spots[2])
-	assert_str(CombatRules.can_cast(s, data, "fireball", 3, aim)).is_empty()
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), aim, {"spell": "fireball", "slot": 3})).is_empty()
 	assert_array(CombatRules.area_targets(s, data, data["spells"]["fireball"], CombatRules.aimed(s, aim)).map(func(t: Dictionary) -> String: return str(t["id"]))).contains([id])
 	var hp := int(f["hp"])
-	CombatRules.player_cast(s, data, "fireball", 3, aim)
+	Acts.one("cast").go(s, data, CombatRules.player(s), aim, {"spell": "fireball", "slot": 3})
 	assert_int(int(f["hp"])).is_less(hp)
 
 
@@ -548,12 +548,12 @@ func test_an_area_reaches_an_invisible_foe() -> void:
 	(f["conditions"] as Array).append("invisible")
 	var id := str(f["id"])
 	var at := FightGrid.cell(f)
-	assert_str(CombatRules.can_cast(s, data, "fire_bolt", 0, id)).is_empty()  # by guess, where it was seen
-	assert_str(CombatRules.can_cast(s, data, "fireball", 3, id)).is_equal("COMBAT_NO_LINE")  # not at it by name
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), id, {"spell": "fire_bolt", "slot": 0})).is_empty()  # by guess, where it was seen
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), id, {"spell": "fireball", "slot": 3})).is_equal("COMBAT_NO_LINE")  # not at it by name
 	var aim := FightGrid.aim_id(at)
-	assert_str(CombatRules.can_cast(s, data, "fireball", 3, aim)).is_empty()
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), aim, {"spell": "fireball", "slot": 3})).is_empty()
 	var hp := int(f["hp"])
-	CombatRules.player_cast(s, data, "fireball", 3, aim)
+	Acts.one("cast").go(s, data, CombatRules.player(s), aim, {"spell": "fireball", "slot": 3})
 	assert_int(int(f["hp"])).is_less(hp)
 
 
@@ -562,7 +562,7 @@ func test_see_invisibility_gives_the_foe_back_to_a_spell() -> void:
 	var f := _fight(s, [{"monster": "goblin", "col": 2}])[0]
 	(f["conditions"] as Array).append("invisible")
 	(f["conditions"] as Array).append("outlined")  # Faerie Fire
-	assert_str(CombatRules.can_cast(s, data, "fire_bolt", 0, str(f["id"]))).is_empty()
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": "fire_bolt", "slot": 0})).is_empty()
 
 
 func test_an_area_reaches_a_foe_under_a_veil() -> void:
@@ -572,9 +572,9 @@ func test_an_area_reaches_a_foe_under_a_veil() -> void:
 	CombatRules.economy(s)["action"] = 1
 	_zone(s, "darkness", FightGrid.cell(f))
 	var aim := FightGrid.aim_id(FightGrid.cell(f))
-	assert_str(CombatRules.can_cast(s, data, "fireball", 3, aim)).is_empty()
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), aim, {"spell": "fireball", "slot": 3})).is_empty()
 	var hp := int(f["hp"])
-	CombatRules.player_cast(s, data, "fireball", 3, aim)
+	Acts.one("cast").go(s, data, CombatRules.player(s), aim, {"spell": "fireball", "slot": 3})
 	assert_int(int(f["hp"])).is_less(hp)
 
 
@@ -584,7 +584,7 @@ func test_a_blind_caster_can_lay_an_area_on_a_square() -> void:
 	_learn(s, "fireball")
 	CombatRules.economy(s)["action"] = 1
 	ConditionRules.add_effect(s.character, {"condition": "blinded", "ends": {}})
-	assert_str(CombatRules.can_cast(s, data, "fireball", 3, FightGrid.aim_id(FightGrid.cell(f)))).is_empty()
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), FightGrid.aim_id(FightGrid.cell(f)), {"spell": "fireball", "slot": 3})).is_empty()
 
 
 func test_an_area_still_stops_at_a_wall() -> void:
@@ -595,5 +595,5 @@ func test_an_area_still_stops_at_a_wall() -> void:
 		for x: int in int(g["w"]):
 			var at := Vector2i(x, y)
 			if WalkRules.distance(hero, at) < 20 and not FightGrid.clear(g, hero, at):
-				assert_str(CombatRules.can_cast(s, data, "fireball", 3, FightGrid.aim_id(at))).is_equal("COMBAT_NO_LINE")
+				assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), FightGrid.aim_id(at), {"spell": "fireball", "slot": 3})).is_equal("COMBAT_NO_LINE")
 				return

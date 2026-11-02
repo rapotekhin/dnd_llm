@@ -140,14 +140,14 @@ func test_an_unconscious_foe_loses_its_turn_and_a_hit_wakes_it_with_a_crit() -> 
 	var w := CombatRules.fighter(s, TestUtils.foe(s, 1))
 	w["hp"] = 100
 	w["max_hp"] = 100
-	CombatRules._add_condition(s, w, "unconscious", {"rounds": 10, "spell": "sleep", "wake": true, "save": "", "dc": 10})
+	CombatRules._add_condition(s, data, w, "unconscious", {"rounds": 10, "spell": "sleep", "wake": true, "save": "", "dc": 10})
 	var hp := int(s.character["hp"])
 	CombatRules.end_player_turn(s, data)
 	var lines := CombatRules.next_actor(s, data)
 	assert_str("\n".join(lines)).contains("не может действовать")
 	assert_int(int(s.character["hp"])).is_equal(hp)
 	assert_int(FightGrid.dist(w, CombatRules.player(s))).is_equal(1)
-	var hit := CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
+	var hit := Acts.one("attack").go(s, data, CombatRules.player(s), TestUtils.foe(s, 1))
 	if "\n".join(hit).contains("попадание") or "\n".join(hit).contains("КРИТ"):
 		assert_str("\n".join(hit)).contains("КРИТ")
 		assert_bool(CombatRules._has(w, "unconscious")).is_false()
@@ -189,7 +189,7 @@ func test_conditions_run_out_at_the_end_of_the_foe_turn() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "bandit", "col": 3}])
 	var b := CombatRules.fighter(s, TestUtils.foe(s, 1))
-	CombatRules._add_condition(s, b, "incapacitated", {"rounds": 1, "spell": "command", "wake": false, "save": "", "dc": 10})
+	CombatRules._add_condition(s, data, b, "incapacitated", {"rounds": 1, "spell": "command", "wake": false, "save": "", "dc": 10})
 	CombatRules.end_player_turn(s, data)
 	var lines := CombatRules.next_actor(s, data)
 	assert_str("\n".join(lines)).contains("проходит")

@@ -47,7 +47,7 @@ func _hit(s: GameSession, f: Dictionary, a: Dictionary, tries: int = 30) -> Arra
 	for i in tries:  # until it hits (the dice are the session's)
 		lines.clear()
 		s.character["hp"] = int(s.character["max_hp"])
-		CombatRules._enemy_attack(s, data, f, a, lines)
+		Attack.one(s, data, f, CombatRules.player(s), a, lines)
 		if not ", ".join(lines).contains("промах"):
 			break
 	return lines
@@ -107,7 +107,7 @@ func test_a_constrictor_holds_until_it_dies() -> void:
 	assert_array(s.character["conditions"]).contains(["grappled", "restrained"])
 	assert_int(int(s.character["speed"])).is_equal(0)
 	var lines: Array[String] = []
-	CombatRules._hurt_enemy(s, data, f, 999, lines)
+	CombatRules.hurt(s, data, f, 999, lines)
 	assert_array(s.character["conditions"]).not_contains(["grappled", "restrained"])
 
 
@@ -115,14 +115,14 @@ func test_a_web_breaks_with_its_dc_and_recharges() -> void:
 	var s := _session()
 	var f := _fight(s, "giant_spider", 1)
 	var web := _action("giant_spider", "Web")
-	assert_dict(MonsterRules.pick(s, data, f, "ranged")).is_equal(web)  # control first
+	assert_dict(MonsterRules.pick(s, data, f, CombatRules.player(s), "ranged")).is_equal(web)  # control first
 	_hit(s, f, web)
 	assert_bool(ConditionRules.has(s.character, "restrained")).is_true()
 	assert_bool(MonsterRules.available(f, web)).is_false()
-	assert_str(str(MonsterRules.pick(s, data, f, "melee")["name_en"])).is_equal("Bite")
+	assert_str(str(MonsterRules.pick(s, data, f, CombatRules.player(s), "melee")["name_en"])).is_equal("Bite")
 	assert_int(int(ConditionRules.effects_of(s.character, "restrained")[0]["escape_dc"])).is_equal(12)
 	s.character["skills"]["athletics"] = 40
-	CombatRules.escape(s, data)
+	Acts.one("escape").go(s, data, CombatRules.player(s))
 	assert_bool(ConditionRules.has(s.character, "restrained")).is_false()
 	var lines: Array[String] = []
 	for i in 40:
@@ -138,7 +138,7 @@ func test_spider_poison_that_drops_the_hero_leaves_them_paralysed_and_stable() -
 	_weak(s)
 	s.character["hp"] = 1
 	var lines: Array[String] = []
-	MonsterRules.apply_effect(s, data, f, _action("giant_spider", "Bite"), 5, lines)
+	MonsterRules.apply_effect(s, data, f, CombatRules.player(s), _action("giant_spider", "Bite"), 5, lines)
 	if int(s.character["hp"]) > 0:
 		return  # a natural 20 on the save
 	assert_bool(ConditionRules.has(s.character, "paralyzed")).is_true()
@@ -150,7 +150,7 @@ func test_life_drain_lowers_the_maximum_until_a_long_rest() -> void:
 	var f := _fight(s, "specter")
 	_weak(s)
 	var before := int(s.character["max_hp"])
-	MonsterRules.apply_effect(s, data, f, _action("specter", "Life Drain"), 6, [] as Array[String])
+	MonsterRules.apply_effect(s, data, f, CombatRules.player(s), _action("specter", "Life Drain"), 6, [] as Array[String])
 	assert_int(int(s.character["max_hp"])).is_equal(before - 6)
 	s.combat = {}
 	s.room_id = "brod-temple"
@@ -163,7 +163,7 @@ func test_a_cockatrice_turns_the_hero_to_stone_on_a_second_failure() -> void:
 	var s := _session()
 	var f := _fight(s, "cockatrice")
 	_weak(s)
-	MonsterRules.apply_effect(s, data, f, _action("cockatrice", "Bite"), 2, [] as Array[String])
+	MonsterRules.apply_effect(s, data, f, CombatRules.player(s), _action("cockatrice", "Bite"), 2, [] as Array[String])
 	assert_bool(ConditionRules.has(s.character, "restrained")).is_true()
 	_weak(s)  # the sheet was refreshed by the new condition
 	ConditionRules.end_of_turn(s, data)
@@ -174,8 +174,8 @@ func test_a_cockatrice_turns_the_hero_to_stone_on_a_second_failure() -> void:
 func test_a_breath_in_reach_comes_first() -> void:
 	var s := _session()
 	var f := _fight(s, "dust_mephit")
-	assert_str(str(MonsterRules.save_action(s, data, f, 0).get("name_en", ""))).is_equal("Blinding Breath")
-	assert_dict(MonsterRules.save_action(s, data, f, 12)).is_empty()  # 15 ft does not reach 60
+	assert_str(str(MonsterRules.save_action(s, data, f, CombatRules.player(s), 0).get("name_en", ""))).is_equal("Blinding Breath")
+	assert_dict(MonsterRules.save_action(s, data, f, CombatRules.player(s), 12)).is_empty()  # 15 ft does not reach 60
 
 
 func test_traits_of_monsters() -> void:
@@ -190,9 +190,9 @@ func test_traits_of_monsters() -> void:
 	assert_bool(MonsterRules.survives(s, data, boar, 6, "slashing", false, [] as Array[String])).is_false()  # once
 	s.minute = 12 * 60
 	s.room_id = "pushcha-edge"
-	assert_array(MonsterRules.attack_mods(s, data, {"monster": "kobold"}, {"kind": "melee"})["dis"]).contains(["солнце"])
+	assert_array(MonsterRules.attack_mods(s, data, {"monster": "kobold"}, Sheet.HERO, true)["dis"]).contains(["солнце"])
 	s.room_id = "mine-gallery"
-	assert_array(MonsterRules.attack_mods(s, data, {"monster": "kobold"}, {"kind": "melee"})["dis"]).is_empty()
+	assert_array(MonsterRules.attack_mods(s, data, {"monster": "kobold"}, Sheet.HERO, true)["dis"]).is_empty()
 
 
 func test_a_charge_hits_harder_after_a_run() -> void:
@@ -200,12 +200,12 @@ func test_a_charge_hits_harder_after_a_run() -> void:
 	var f := _fight(s, "boar")
 	f["points"] = {"walked": 4}
 	f["once"] = []
-	var out := MonsterRules.extra_on_hit(s, data, f, _action("boar", "Tusk"), false, false, false)
+	var out := MonsterRules.extra_on_hit(s, data, f, CombatRules.player(s), _action("boar", "Tusk"), false, false, false)
 	assert_int(int(out["damage"])).is_greater(0)
 	assert_dict(out["prone"]).contains_keys(["save"])
 	f["points"] = {"walked": 0}
 	f["once"] = []
-	assert_int(int(MonsterRules.extra_on_hit(s, data, f, _action("boar", "Tusk"), false, false, false)["damage"])).is_equal(0)
+	assert_int(int(MonsterRules.extra_on_hit(s, data, f, CombatRules.player(s), _action("boar", "Tusk"), false, false, false)["damage"])).is_equal(0)
 
 
 func test_a_fanatic_holds_the_hero_until_it_loses_concentration() -> void:
@@ -213,7 +213,10 @@ func test_a_fanatic_holds_the_hero_until_it_loses_concentration() -> void:
 	var f := _fight(s, "cult_fanatic", 1)
 	_weak(s)
 	var lines: Array[String] = []
-	MonsterRules._cast(s, data, f, {"id": "hold_person", "slot": 2}, lines)
+	var how := {"spell": "hold_person", "slot": 2}
+	s.combat["turn"] = (s.combat["order"] as Array).find(str(f["id"]))
+	assert_str(Acts.one("cast").can(s, data, f, CombatRules.PLAYER, how)).is_empty()
+	lines.append_array(Acts.one("cast").go(s, data, f, CombatRules.PLAYER, how))
 	assert_bool(ConditionRules.has(s.character, "paralyzed")).is_true()
 	assert_str(str(f["concentration"])).is_equal("hold_person")
 	assert_int(int(f["slots"]["2"])).is_equal(int(data["monsters"]["cult_fanatic"]["spellcasting"]["slots"]["2"]) - 1)
@@ -225,8 +228,9 @@ func test_a_hurt_acolyte_heals_itself() -> void:
 	var s := _session()
 	var f := _fight(s, "acolyte", 2)
 	f["hp"] = 1
+	f["morale"] = true  # its nerve held: the roll is another rule
 	var lines: Array[String] = []
-	assert_bool(MonsterRules.cast_turn(s, data, f, lines)).is_true()
+	TestUtils.enemy_turn(s, data, f, lines)
 	assert_int(int(f["hp"])).is_greater(1)
 
 
@@ -234,10 +238,12 @@ func test_a_captain_parries_a_close_hit() -> void:
 	var s := _session()
 	var f := _fight(s, "bandit_captain")
 	var lines: Array[String] = []
-	assert_bool(MonsterRules.parry(s, data, f, int(f["ac"]), lines)).is_true()
-	assert_bool(MonsterRules.parry(s, data, f, int(f["ac"]), lines)).is_false()  # one reaction a round
+	var hit := {"foe": CombatRules.PLAYER, "total": int(f["ac"]), "melee": true}
+	assert_bool(Acts.react(s, data, f, "hit", hit, lines)).is_true()
+	assert_bool(Acts.react(s, data, f, "hit", hit, lines)).is_false()  # one reaction a round
 	f["reacted"] = false
-	assert_bool(MonsterRules.parry(s, data, f, int(f["ac"]) + 2, lines)).is_false()  # too strong to turn
+	hit["total"] = int(f["ac"]) + 2
+	assert_bool(Acts.react(s, data, f, "hit", hit, lines)).is_false()  # too strong to turn
 
 
 func test_magic_weapons_pierce_resistance_to_nonmagical_attacks() -> void:
@@ -252,7 +258,7 @@ func test_immune_foes_cannot_be_shoved_down() -> void:
 	var f := _fight(s, "ochre_jelly")
 	assert_bool(CombatRules.immune_to(data, f, "prone")).is_true()
 	s.character["skills"]["athletics"] = 40
-	CombatRules.grapple(s, data, str(f["id"]), true)
+	Acts.one("shove").go(s, data, CombatRules.player(s), str(f["id"]))
 	assert_bool(CombatRules._has(f, "prone")).is_false()
 
 
@@ -262,7 +268,7 @@ func test_beasts_leave_a_downed_hero() -> void:
 	s.character["hp"] = 0
 	s.combat["death_saves"] = {"ok": 3, "fail": 0, "stable": true}
 	var lines: Array[String] = []
-	CombatRules._enemy_turn(s, data, f, lines)
+	TestUtils.enemy_turn(s, data, f, lines)
 	assert_str(", ".join(lines)).contains("теряет интерес")
 	CombatRules._check_end(s, data, lines)
 	assert_str(str(s.combat["outcome"])).is_equal("left")

@@ -6,6 +6,10 @@ func title() -> String:
 	return "Спрятаться"
 
 
+func order() -> int:
+	return 13
+
+
 func tip() -> String:
 	return "Скрытность против Внимательности врагов. Спрятанный атакует с преимуществом, по нему бьют с помехой; атака или заклинание выдают"
 
@@ -14,7 +18,7 @@ func when() -> String:
 	return "last"
 
 
-func why(s: GameSession, data: Dictionary, f: Dictionary, _to: String) -> String:
+func why(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> String:
 	if bool(f.get("hidden", false)):
 		return "COMBAT_ALREADY_HIDDEN"
 	return "COMBAT_HIDE_SEEN" if CombatRules._foe_beside(s, data, f) and not _behind(s, data, f) else ""
@@ -31,7 +35,7 @@ func _behind(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 	return false
 
 
-func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String) -> Array[String]:
+func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
 	var roll := CombatRules.stealth_roll(s, data, f)
 	var best := 0
 	for id: String in CombatRules.foes_of(s, f):
@@ -45,4 +49,4 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String) -> Array[
 
 ## The AI hides only when it costs no action: its action is for the fight.
 func worth(s: GameSession, data: Dictionary, f: Dictionary) -> float:
-	return _weight(data) if cost(s, data, f) == "bonus" else 0.0
+	return _weight(data) if cost(s, data, f, {}) == "bonus" else 0.0

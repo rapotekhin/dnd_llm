@@ -123,7 +123,7 @@ func test_hiding_needs_distance_and_gives_advantage_until_the_attack() -> void:
 	# Foes attack a hidden player with disadvantage.
 	var bow := CombatRules._best_action(data, CombatRules.fighter(s, TestUtils.foe(s, 1)), "ranged")
 	var hits: Array[String] = []
-	CombatRules._enemy_attack(s, data, CombatRules.fighter(s, TestUtils.foe(s, 1)), bow, hits)
+	Attack.one(s, data, CombatRules.fighter(s, TestUtils.foe(s, 1)), CombatRules.player(s), bow, hits)
 	assert_str(hits[0]).contains("с помехой")
 
 
@@ -136,7 +136,7 @@ func test_the_rogue_hides_as_a_bonus_action_and_an_attack_reveals() -> void:
 	assert_int(int(CombatRules.economy(s)["bonus"])).is_equal(0)
 	assert_int(int(CombatRules.economy(s)["action"])).is_equal(1)
 	s.character["equipped"]["main_hand"] = "shortbow"
-	CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
+	Acts.one("attack").go(s, data, CombatRules.player(s), TestUtils.foe(s, 1))
 	assert_bool(bool(CombatRules.player(s)["hidden"])).is_false()
 
 
@@ -371,8 +371,8 @@ func test_concentration_on_invisibility_makes_the_hero_invisible_until_an_attack
 	assert_int(ConditionRules.unseen_penalty(s.character, data)).is_equal(5)
 	_fight(s, [{"monster": "bandit", "col": 0}])
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"]["main_hand"]), false)
-	assert_array(CombatRules._attack_mods(s, data, w, CombatRules.fighter(s, TestUtils.foe(s, 1)))["adv"]).contains(["вы невидимы"])
-	var lines := CombatRules.player_attack(s, data, TestUtils.foe(s, 1))
+	assert_array(Attack.mods(s, data, CombatRules.player(s), CombatRules.fighter(s, TestUtils.foe(s, 1)), Attack.of_weapon(w))["adv"]).contains(["вы невидимы"])
+	var lines := Acts.one("attack").go(s, data, CombatRules.player(s), TestUtils.foe(s, 1))
 	assert_str("\n".join(lines)).contains("Невидимость спадает")
 	assert_bool(ConditionRules.invisible(s.character, data)).is_false()
 

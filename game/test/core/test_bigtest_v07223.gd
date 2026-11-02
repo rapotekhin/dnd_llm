@@ -116,8 +116,8 @@ func test_the_off_hand_strikes_without_the_main_attack() -> void:
 	CharacterRules.refresh(c, data, s.items)
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
 	TestUtils.beside(s, f)
-	assert_str(CombatRules.can_attack(s, data, str(f["id"]), true)).is_empty()  # as in BG3 (v0.7.22.3)
-	CombatRules.player_attack(s, data, str(f["id"]), true)
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]), {"hand": "off"})).is_empty()  # as in BG3 (v0.7.22.3)
+	Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"]), {"hand": "off"})
 	assert_int(int(CombatRules.economy(s)["bonus"])).is_equal(0)
 	assert_int(int(CombatRules.economy(s)["action"])).is_equal(1)
 

@@ -41,7 +41,7 @@ func run() -> void:
 	await shot("bless")
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var lines: Array[String] = []
-	CombatRules._attack(s, data, str(c["name"]), "проба", 3, false, false, foe, "1d4", 0, "bludgeoning", lines)
+	Attack.swing(s, data, CombatRules.player(s), foe, Attack.of_spell("проба", 3, "1d4", 0, "bludgeoning", true, 5), lines)
 	step("the d4 of Bless in an attack roll", lines[0].contains("(Благословение)"), lines[0])
 	await press(find(screen(), "EndTurnButton"))
 	await _my_turn(gs, s)
@@ -158,9 +158,8 @@ func run() -> void:
 	var probe: Array[String] = []
 	for i in 4:
 		probe.clear()
-		CombatRules._attack(s, data, str(c["name"]), "проба", 10, false, false, wolf, "1d6", 0, "bludgeoning", probe)
+		Attack.swing(s, data, CombatRules.player(s), wolf, Attack.of_weapon(CombatRules.weapon_profile(s.character, data, s.items, "")), probe)
 		if probe[0].contains("попадание"):
-			CombatRules._item_extras(s, data, {"type": "bludgeoning", "id": ""}, wolf, false, probe)
 			break
 	step("the mark's d6 on a hit", probe.any(func(l: String) -> bool: return l.contains("Метка охотника: ещё")), " · ".join(probe))
 	await shot("hunters_mark")

@@ -73,12 +73,12 @@ func test_surrender_ends_the_fight_at_once() -> void:
 	var s := _hero("pushcha-hollow")
 	TestUtils.fight(s, data, [{"monster": "wolf", "col": 0}], {})
 	s.combat["turn"] = s.combat["order"].find(CombatRules.PLAYER)
-	assert_str(CombatRules.can_surrender(s, data)).is_equal("COMBAT_NO_SURRENDER")  # beasts take nobody alive
+	assert_str(Acts.one("surrender").can(s, data, CombatRules.player(s))).is_equal("COMBAT_NO_SURRENDER")  # beasts take nobody alive
 	var t := _hero("pushcha-hollow")
 	TestUtils.fight(t, data, [{"monster": "goblin", "col": 0}], {})
 	t.combat["turn"] = t.combat["order"].find(CombatRules.PLAYER)
-	assert_str(CombatRules.can_surrender(t, data)).is_empty()
-	CombatRules.surrender(t)
+	assert_str(Acts.one("surrender").can(t, data, CombatRules.player(t))).is_empty()
+	Acts.one("surrender").go(t, Catalog.data, CombatRules.player(t))
 	assert_str(str(t.combat["outcome"])).is_equal("captured")
 	assert_bool(CombatRules.law_captors(t)).is_false()
 

@@ -53,6 +53,8 @@ static func skill(s: GameSession, data: Dictionary, who: Dictionary, id: String)
 
 
 static func ability_mod(s: GameSession, data: Dictionary, who: Dictionary, id: String) -> int:
+	if is_hero(who):
+		return CharacterRules.mod(CharacterRules.ability(s.character, id))
 	return CharacterRules.mod(int(of(s, data, who)["abilities"].get(id, 10)))
 
 
@@ -86,10 +88,12 @@ static func size(s: GameSession, data: Dictionary, who: Dictionary) -> String:
 
 ## Its way in a turn in feet now, by the fastest of `Move`; a Slow halves it.
 static func speed(s: GameSession, data: Dictionary, who: Dictionary) -> int:
+	var ft := int(s.character.get("speed", 30))
 	if is_hero(who):
-		return int(s.character.get("speed", 30))
-	var ft := Move.feet(s, data, who) - int(who.get("slowed", 0)) + ConditionRules.sum(who, "speed")
-	return ft / 2 if CombatRules._has(who, "slowed_spell") else ft
+		ft -= int(CombatRules.player(s).get("slowed", 0)) if CombatRules.active(s) else 0
+	else:
+		ft = Move.feet(s, data, who) - int(who.get("slowed", 0)) + ConditionRules.sum(who, "speed")
+	return ft / 2 if ConditionRules.has(holder(s, who), "slowed_spell") else ft
 
 
 ## A saving throw of anyone: its bonus, the statuses, the advantages of its race, traits and spells against `tag` (the
@@ -102,7 +106,7 @@ static func save(s: GameSession, data: Dictionary, who: Dictionary, ab: String, 
 	var why := _advantages(s, data, who, ab, tag)
 	var adv := not why.is_empty()
 	var dis := not (mods["disadvantage"] as Array).is_empty() or dis_extra
-	var rolls := Roll.hero_dice(s, adv, dis) if hero else Roll.dice(s.rng, adv, dis)  # Lucky (v0.7.10)
+	var rolls := Roll.of(s, who, adv, dis)
 	var nat := Roll.kept(rolls, adv, dis)
 	var die := SpellEffects.die(s, me, "save")  # Bless, Bane, Resistance (v0.7.13.1)
 	var fighter := CombatRules.player(s) if hero and CombatRules.active(s) else who

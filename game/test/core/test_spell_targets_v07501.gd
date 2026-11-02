@@ -45,8 +45,8 @@ func test_bless_is_picked_one_by_one_and_each_once() -> void:
 	var s := _cleric()
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	var ally: Array[String] = CombatRules.allies(s)
-	assert_str(CombatRules.can_cast(s, data, "bless", 1, ally[0])).is_empty()
-	CombatRules.player_cast(s, data, "bless", 1, ally[0])
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), ally[0], {"spell": "bless", "slot": 1})).is_empty()
+	Acts.one("cast").go(s, data, CombatRules.player(s), ally[0], {"spell": "bless", "slot": 1})
 	assert_bool((SpellEffects.boon(CombatRules.fighter(s, ally[0]), "die") != null)).is_true()
 	assert_int(int(SpellEffects.die(s, s.character, "attack")["bonus"])).is_equal(0)  # not on the hero yet
 	assert_int(int(CombatRules.volley(s)["left"])).is_equal(2)
@@ -63,14 +63,14 @@ func test_bless_is_picked_one_by_one_and_each_once() -> void:
 func test_a_higher_slot_blesses_one_more() -> void:
 	var s := _cleric()
 	_fight(s, [{"monster": "goblin", "col": 2}])
-	CombatRules.player_cast(s, data, "bless", 2, CombatRules.allies(s)[0])
+	Acts.one("cast").go(s, data, CombatRules.player(s), CombatRules.allies(s)[0], {"spell": "bless", "slot": 2})
 	assert_int(int(CombatRules.volley(s)["left"])).is_equal(3)
 
 
 func test_alone_the_hero_is_blessed_at_once() -> void:
 	var s := _cleric()
 	_fight(s, [{"monster": "goblin", "col": 2}], [])
-	CombatRules.player_cast(s, data, "bless", 1, "")
+	Acts.one("cast").go(s, data, CombatRules.player(s), "", {"spell": "bless", "slot": 1})
 	assert_dict(CombatRules.volley(s)).is_empty()
 	assert_bool(ConditionRules.effects(s.character).any(func(e: Dictionary) -> bool: return str(e.get("source", {}).get("id", "")) == "bless")).is_true()
 
@@ -81,15 +81,15 @@ func test_an_ally_is_healed_even_fallen_and_buffed_with_ac_until_the_end() -> vo
 	var a := CombatRules.fighter(s, CombatRules.allies(s)[0])
 	a["hp"] = 0
 	a["status"] = "down"
-	assert_str(CombatRules.can_cast(s, data, "bless", 1, str(a["id"]))).is_equal("COMBAT_BAD_TARGET")
-	assert_str(CombatRules.can_cast(s, data, "cure_wounds", 1, str(a["id"]))).is_empty()
-	CombatRules.player_cast(s, data, "cure_wounds", 1, str(a["id"]))
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(a["id"]), {"spell": "bless", "slot": 1})).is_equal("COMBAT_BAD_TARGET")
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(a["id"]), {"spell": "cure_wounds", "slot": 1})).is_empty()
+	Acts.one("cast").go(s, data, CombatRules.player(s), str(a["id"]), {"spell": "cure_wounds", "slot": 1})
 	assert_int(int(a["hp"])).is_greater(0)
 	assert_str(str(a["status"])).is_equal("active")
 	var ac := CombatRules.ac_of(a)
 	CombatRules.economy(s)["action"] = 1
 	CombatRules.economy(s)["bonus"] = 1
-	CombatRules.player_cast(s, data, "shield_of_faith", 1, str(a["id"]))
+	Acts.one("cast").go(s, data, CombatRules.player(s), str(a["id"]), {"spell": "shield_of_faith", "slot": 1})
 	assert_int(CombatRules.ac_of(a)).is_equal(ac + 2)
 	ConditionRules.end_concentration(s, data, "проверка")
 	assert_int(CombatRules.ac_of(a)).is_equal(ac)
@@ -100,7 +100,7 @@ func test_bane_takes_the_chosen_foes_not_the_nearest() -> void:
 	_fight(s, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 2}], [])
 	s.character["spell_dc"] = 30
 	var foes: Array[String] = CombatRules.enemies(s)
-	CombatRules.player_cast(s, data, "bane", 1, foes[2])
+	Acts.one("cast").go(s, data, CombatRules.player(s), foes[2], {"spell": "bane", "slot": 1})
 	assert_bool((SpellEffects.boon(CombatRules.fighter(s, foes[2]), "die") != null)).is_true()
 	assert_bool((SpellEffects.boon(CombatRules.fighter(s, foes[0]), "die") != null)).is_false()
 	CombatRules.volley_shot(s, data, foes[0])
@@ -140,7 +140,7 @@ func test_invisibility_on_an_ally_leaves_the_hero_seen() -> void:
 	_prep(s, ["invisibility"])
 	_fight(s, [{"monster": "goblin", "col": 2}])
 	var a := CombatRules.allies(s)[0]
-	CombatRules.player_cast(s, data, "invisibility", 2, a)
+	Acts.one("cast").go(s, data, CombatRules.player(s), a, {"spell": "invisibility", "slot": 2})
 	assert_bool(CombatRules._has(CombatRules.fighter(s, a), "invisible")).is_true()
 	assert_bool(ConditionRules.invisible(s.character, data)).is_false()
 
@@ -156,7 +156,7 @@ func test_acid_takes_only_a_near_second_target() -> void:
 			near.append(id)
 		else:
 			far = id
-	CombatRules.player_cast(s, data, "acid_splash", 0, near[0])
+	Acts.one("cast").go(s, data, CombatRules.player(s), near[0], {"spell": "acid_splash", "slot": 0})
 	assert_str(CombatRules.can_volley(s, data, far)).is_equal("COMBAT_OUT_OF_RANGE")
 	assert_str(CombatRules.can_volley(s, data, near[1])).is_empty()
 
@@ -167,8 +167,8 @@ func test_reduce_on_a_foe_weakens_its_blows_until_the_end() -> void:
 	s.character["spell_dc"] = 40
 	_fight(s, [{"monster": "goblin", "col": 1}], [])
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
-	assert_str(CombatRules.can_cast(s, data, "enlarge_reduce", 2, str(foe["id"]))).is_empty()
-	CombatRules.player_cast(s, data, "enlarge_reduce", 2, str(foe["id"]))
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(foe["id"]), {"spell": "enlarge_reduce", "slot": 2})).is_empty()
+	Acts.one("cast").go(s, data, CombatRules.player(s), str(foe["id"]), {"spell": "enlarge_reduce", "slot": 2})
 	assert_bool((SpellEffects.boon(foe, "reduced") != null)).is_true()
 	ConditionRules.end_concentration(s, data, "проверка")
 	assert_bool((SpellEffects.boon(foe, "reduced") != null)).is_false()
@@ -268,7 +268,7 @@ func test_a_fireball_burns_the_ally_beside_the_foe() -> void:
 	var near := CombatRules.fighter(s, CombatRules.allies(s)[0])
 	var far := CombatRules.fighter(s, CombatRules.allies(s)[1])
 	var hp := [int(near["hp"]), int(far["hp"])]
-	CombatRules.player_cast(s, data, "fireball", 3, str(foe["id"]))
+	Acts.one("cast").go(s, data, CombatRules.player(s), str(foe["id"]), {"spell": "fireball", "slot": 3})
 	assert_int(int(near["hp"])).is_less(hp[0])
 	assert_int(int(far["hp"])).is_equal(hp[1])
 
@@ -278,13 +278,13 @@ func test_a_fireball_at_ones_own_column_burns_the_hero_a_cone_from_the_hero_does
 	s.character["hp"] = 200
 	s.character["max_hp"] = 200
 	var foe := _fireball(s, 0, [])
-	CombatRules.player_cast(s, data, "fireball", 3, str(foe["id"]))
+	Acts.one("cast").go(s, data, CombatRules.player(s), str(foe["id"]), {"spell": "fireball", "slot": 3})
 	assert_int(int(s.character["hp"])).is_less(200)
 	var t := _cleric()
 	t.character["hp"] = 200
 	t.character["max_hp"] = 200
 	var f2 := _fireball(t, 0, [])
-	CombatRules.player_cast(t, data, "burning_hands", 1, str(f2["id"]))
+	Acts.one("cast").go(t, data, CombatRules.player(t), str(f2["id"]), {"spell": "burning_hands", "slot": 1})
 	assert_int(int(t.character["hp"])).is_equal(200)
 
 
@@ -295,7 +295,7 @@ func test_the_toggle_turns_friendly_fire_off() -> void:
 	data["rules"]["combat"]["friendly_fire"] = {"on": false, "attitude": 0}
 	var ally := CombatRules.fighter(s, CombatRules.allies(s)[0])
 	var hp := int(ally["hp"])
-	CombatRules.player_cast(s, data, "fireball", 3, str(foe["id"]))
+	Acts.one("cast").go(s, data, CombatRules.player(s), str(foe["id"]), {"spell": "fireball", "slot": 3})
 	assert_int(int(ally["hp"])).is_equal(hp)
 	data["rules"]["combat"]["friendly_fire"] = saved
 

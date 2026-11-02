@@ -116,6 +116,15 @@ static func walk(s: GameSession, d: Dictionary, dir: int) -> Array[String]:
 	return Acts.one("walk").go(s, d, CombatRules.player(s), FightGrid.aim_id(FightGrid.cell(CombatRules.player(s)) + Vector2i(6 * dir, 0)))
 
 
+## A foe's whole turn out of the order of the fight: its turn is made current, its points fresh.
+static func enemy_turn(s: GameSession, d: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	var turn: int = s.combat["turn"]
+	s.combat["turn"] = (s.combat["order"] as Array).find(str(f["id"]))
+	f["points"] = CombatRules.fresh_points(s, d, f)
+	CombatRules._enemy_turn(s, d, f, lines)
+	s.combat["turn"] = turn
+
+
 static func beside(s: GameSession, f: Dictionary) -> void:
 	FightGrid.put(f, FightGrid.free_near(s, data(), FightGrid.cell(CombatRules.player(s)) + Vector2i(1, 0), int(f.get("span", 1))))
 	if FightGrid.dist(f, CombatRules.player(s)) > 1:

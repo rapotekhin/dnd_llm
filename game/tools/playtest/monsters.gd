@@ -36,7 +36,7 @@ func run() -> void:
 		if str(a["name_en"]) == "Web":
 			web = a
 	var lines: Array[String] = []
-	MonsterRules.apply_effect(s, data, spider, web, 0, lines)
+	MonsterRules.apply_effect(s, data, spider, CombatRules.player(s), web, 0, lines)
 	node("EventBus").state_changed.emit()
 	await frames(4)
 	var cs := screen()
@@ -76,7 +76,7 @@ func run() -> void:
 	for ab: String in c["saves"]:
 		c["saves"][ab] = -40
 	lines.clear()
-	MonsterRules.apply_effect(s, data, ghoul, claws, 0, lines)
+	MonsterRules.apply_effect(s, data, ghoul, CombatRules.player(s), claws, 0, lines)
 	step("the claws paralyse", ConditionRules.has(c, "paralyzed"), ", ".join(lines))
 	CharacterRules.refresh(c, data, s.items)
 	node("EventBus").state_changed.emit()

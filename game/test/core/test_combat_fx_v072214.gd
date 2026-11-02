@@ -24,14 +24,14 @@ func test_a_miss_is_a_dodge_and_a_crit_is_noted() -> void:
 	var f := _fight(s)
 	f["ac"] = 99
 	var lines: Array[String] = []
-	CombatRules._attack(s, data, "Герой", "Меч", 0, false, false, f, "1d8", 0, "slashing", lines)
+	Attack.swing(s, data, CombatRules.player(s), f, Attack.of_spell("Меч", 0, "1d8", 0, "slashing", true, 5), lines)
 	var fx := CombatRules.take_fx(s)
 	assert_bool(fx.any(func(e: Dictionary) -> bool: return e["who"] == str(f["id"]) and e["kind"] == "dodge")).is_true()
 	assert_array(CombatRules.take_fx(s)).is_empty()  # taken once
 	f["ac"] = 0
 	f["hp"] = 999
 	f["max_hp"] = 999
-	CombatRules._attack(s, data, "Герой", "Меч", 0, false, false, f, "1d8", 0, "slashing", lines, "", true)
+	Attack.swing(s, data, CombatRules.player(s), f, Attack.of_spell("Меч", 0, "1d8", 0, "slashing", true, 5).merged({"crit_min": 1}), lines)
 	assert_bool(CombatRules.take_fx(s).any(func(e: Dictionary) -> bool: return e["kind"] == "crit")).is_true()
 
 

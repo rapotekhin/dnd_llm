@@ -55,9 +55,9 @@ const NESTED := {
 		"ally": TYPE_STRING, "summon_id": TYPE_STRING, "spell": TYPE_STRING, "creature_id": TYPE_STRING, "actions": TYPE_ARRAY, "gear": TYPE_DICTIONARY,
 		"effects": TYPE_ARRAY, "conditions": TYPE_ARRAY, "next_effect": TYPE_INT, "surprised": TYPE_BOOL, "dodging": TYPE_BOOL, "hidden": TYPE_BOOL,
 		"reckless": TYPE_BOOL, "disengaged": TYPE_BOOL, "swooped": TYPE_BOOL, "no_heal": TYPE_BOOL, "blinked": TYPE_BOOL, "retching": TYPE_BOOL, "reacted": TYPE_BOOL,
-		"lethargy": TYPE_BOOL, "fleeing": TYPE_BOOL, "grappled_by_player": TYPE_BOOL, "relentless_used": TYPE_BOOL, "slowed": TYPE_INT,
+		"lethargy": TYPE_BOOL, "fleeing": TYPE_BOOL, "relentless_used": TYPE_BOOL, "slowed": TYPE_INT,
 		"oiled": TYPE_INT, "seen_x": TYPE_INT, "seen_y": TYPE_INT, "cover": TYPE_INT, "points": TYPE_DICTIONARY, "last_total": TYPE_INT, "temp_hp": TYPE_INT, "acid": TYPE_STRING,
-		"burning": TYPE_STRING, "target": TYPE_STRING, "last_spell": TYPE_STRING, "zoned": TYPE_ARRAY, "used": TYPE_NIL, "once": TYPE_NIL,
+		"burning": TYPE_STRING, "target": TYPE_STRING, "last_spell": TYPE_STRING, "set_by": TYPE_STRING, "called_by": TYPE_STRING, "zoned": TYPE_ARRAY, "used": TYPE_NIL, "once": TYPE_NIL,
 		"recharge": TYPE_NIL, "spent": TYPE_NIL,
 	},
 }

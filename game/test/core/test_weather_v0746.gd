@@ -71,12 +71,12 @@ func test_fog_gives_disadvantage_to_ranged_attacks_not_to_melee() -> void:
 	_weather(s, "pushcha", "fog")
 	TestUtils.fight(s, data, [{"monster": "wolf", "name": "Волк", "desc": "", "col": 4}], {})
 	var wolf: Dictionary = CombatRules.fighter(s, CombatRules.enemies(s)[0])
-	assert_array(CombatRules.hero_attack_dis(s, data, wolf)).contains(["туман"])
+	assert_array(Attack.mods(s, data, CombatRules.player(s), wolf, {"melee": true})["dis"]).contains(["туман"])
 	TestUtils.beside(s, wolf)
-	assert_array(CombatRules.hero_attack_dis(s, data, wolf)).not_contains(["туман"])
+	assert_array(Attack.mods(s, data, CombatRules.player(s), wolf, {"melee": true})["dis"]).not_contains(["туман"])
 	_weather(s, "pushcha", "clear")
 	TestUtils.to_col(wolf, 4)
-	assert_array(CombatRules.hero_attack_dis(s, data, wolf)).not_contains(["туман"])
+	assert_array(Attack.mods(s, data, CombatRules.player(s), wolf, {"melee": true})["dis"]).not_contains(["туман"])
 
 
 func test_fog_and_downpour_blind_the_watchers_and_the_hero() -> void:

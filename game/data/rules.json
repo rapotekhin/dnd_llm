@@ -2893,7 +2893,9 @@
 			"name": "Ослаблен"
 		},
 		"cursed_dis": {
-			"name": "Проклят"
+			"name": "Проклят",
+			"attack": "disadvantage",
+			"attack_why": "проклятие"
 		},
 		"slowed_spell": {
 			"name": "Замедлен"
@@ -2909,7 +2911,9 @@
 			"attack_why": "насмешка"
 		},
 		"chilled": {
-			"name": "Скован могильным холодом"
+			"name": "Скован могильным холодом",
+			"attack": "disadvantage",
+			"attack_why": "могильный холод"
 		},
 		"helped": {
 			"name": "Отвлечён",
@@ -3600,7 +3604,10 @@
 			"flow": 80,
 			"flee_lost": 12,
 			"keep_most": 8,
-			"acts": {"dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100},
+			"acts": {"dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100, "escape": 6, "help": 0.5, "grapple": 2, "shove": 3},
+			"spells": {"_doc": "What a spell is worth to the AI (core/acts/cast.gd), in the units of a blow's damage, times the role's `cast` / 6: condition, curse, summon, buff, sustained, mark, teleport, dispel — a spell of that way, heal — a friend at `heal_below` of its hit points or less, slot — taken from a damage spell per circle, hit — the chance of a spell by a save; boon_keys — what makes a row of rules.spell_effects worth casting on itself.",
+				"condition": 9, "curse": 6, "summon": 10, "buff": 5, "sustained": 8, "mark": 3, "teleport": 5, "dispel": 4, "heal": 12, "heal_below": 0.5, "slot": 0.5, "hit": 0.6, "counter_from": 1,
+				"boon_keys": ["die", "ac_plus", "ac_min", "ac_base", "attackers_dis", "images", "sanctuary", "resist", "resist_auto", "haste", "flying", "weapon_plus", "weapon_extra", "temp_dice", "temp_hp", "max_hp_plus", "self_status", "speed_plus", "blink", "enlarged", "foe_types_dis"]},
 			"roles": {
 				"brute": {"focus": 0.3, "finish": 2, "adjacent": 0, "keep": 0, "hazard": 3, "leave": 1, "step": 0.02, "pack": 0, "control": 3, "cast": 6},
 				"skirmisher": {"focus": 0.6, "finish": 3, "adjacent": 0.5, "keep": 0.05, "hazard": 4, "leave": 0.5, "step": 0.02, "pack": 1, "control": 3, "cast": 6},
@@ -4285,9 +4292,8 @@
 			"before_attack": true,
 			"effects": [
 				{
-					"kind": "for",
-					"key": "reckless",
-					"value": true
+					"kind": "stance",
+					"key": "reckless"
 				},
 				{
 					"kind": "line",

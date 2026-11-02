@@ -59,12 +59,12 @@ func test_arrows_are_spent_and_half_come_back() -> void:
 	c["inventory"]["arrows"] = 2
 	var f := _fight(s, "goblin", 2)
 	var arrows := int(c["inventory"]["arrows"])
-	assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_empty()
-	CombatRules.player_attack(s, data, str(f["id"]))
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()
+	Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"]))
 	assert_int(int(c["inventory"].get("arrows", 0))).is_equal(arrows - 1)
 	c["inventory"].erase("arrows")
 	CombatRules.economy(s)["action"] = 1
-	assert_str(CombatRules.can_attack(s, data, str(f["id"]))).is_equal("COMBAT_NO_AMMO")
+	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_equal("COMBAT_NO_AMMO")
 	assert_int(int(s.combat["ammo_spent"]["arrows"])).is_equal(1)
 
 
@@ -74,7 +74,7 @@ func test_heavy_weapon_for_a_halfling_has_disadvantage() -> void:
 	s.character["equipped"]["main_hand"] = "greataxe"
 	var f := _fight(s, "goblin")
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "greataxe")
-	assert_array(CombatRules._attack_mods(s, data, w, f)["dis"]).contains(["тяжёлое оружие не по росту"])
+	assert_array(Attack.mods(s, data, CombatRules.player(s), f, Attack.of_weapon(w))["dis"]).contains(["тяжёлое оружие не по росту"])
 
 
 func test_common_weapons_are_not_magical_any_more() -> void:
@@ -95,7 +95,7 @@ func test_a_flaming_sword_adds_fire() -> void:
 	var lines: Array[String] = []
 	for i in 6:
 		CombatRules.economy(s)["action"] = 1
-		lines.append_array(CombatRules.player_attack(s, data, str(f["id"])))
+		lines.append_array(Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"])))
 		if lines.any(func(l: String) -> bool: return l.contains("(огонь)")):
 			break
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("Огненный меч: ещё"))).is_true()
@@ -108,7 +108,7 @@ func test_reach_meets_a_foe_coming_in() -> void:
 	s.character["equipped"]["shield"] = ""
 	var f := _fight(s, "wolf", 1)
 	var lines: Array[String] = []
-	CombatRules._enemy_turn(s, data, f, lines)
+	TestUtils.enemy_turn(s, data, f, lines)
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("досягаемость"))).override_failure_message(" · ".join(lines)).is_true()
 	assert_bool(bool(CombatRules.player(s).get("reacted", false))).is_true()
 
@@ -138,14 +138,14 @@ func test_alchemists_fire_burns_until_put_out() -> void:
 	var lines: Array[String] = []
 	for i in 3:
 		CombatRules.economy(s)["action"] = 1
-		assert_str(CombatRules.can_throw(s, data, "alchemists_fire_flask", str(f["id"]))).is_empty()
-		lines.append_array(CombatRules.throw_item(s, data, "alchemists_fire_flask", str(f["id"])))
+		assert_str(Acts.one("throw").can(s, data, CombatRules.player(s), str(f["id"]), {"item": "alchemists_fire_flask"})).is_empty()
+		lines.append_array(Acts.one("throw").go(s, data, CombatRules.player(s), str(f["id"]), {"item": "alchemists_fire_flask"}))
 		if f.has("burning"):
 			break
 	assert_bool(f.has("burning")).override_failure_message(" · ".join(lines)).is_true()
 	var hp := int(f["hp"])
 	var turn: Array[String] = []
-	CombatRules._enemy_turn(s, data, f, turn)
+	TestUtils.enemy_turn(s, data, f, turn)
 	assert_bool(turn[0].contains("горит") or turn.any(func(l: String) -> bool: return l.contains("горит"))).is_true()
 	assert_int(int(f["hp"])).is_less(hp)
 
@@ -158,7 +158,7 @@ func test_holy_water_hurts_only_undead_and_fiends() -> void:
 	var lines: Array[String] = []
 	for i in 4:
 		CombatRules.economy(s)["action"] = 1
-		lines.append_array(CombatRules.throw_item(s, data, "holy_water", str(f["id"])))
+		lines.append_array(Acts.one("throw").go(s, data, CombatRules.player(s), str(f["id"]), {"item": "holy_water"}))
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("не действует"))).is_true()
 
 
@@ -169,7 +169,7 @@ func test_a_net_holds_a_foe() -> void:
 	f["ac"] = 1
 	for i in 3:
 		CombatRules.economy(s)["action"] = 1
-		CombatRules.throw_item(s, data, "net", str(f["id"]))
+		Acts.one("throw").go(s, data, CombatRules.player(s), str(f["id"]), {"item": "net"})
 		if CombatRules._has(f, "restrained"):
 			break
 	assert_bool(CombatRules._has(f, "restrained")).is_true()
@@ -204,9 +204,9 @@ func test_a_wand_of_magic_missiles_spends_charges_and_no_slot() -> void:
 	var c := s.character
 	c["inventory"]["wand_of_magic_missiles"] = 1
 	var f := _fight(s, "ogre", 2)
-	assert_str(CombatRules.can_item_spell(s, data, "wand_of_magic_missiles", str(f["id"]))).is_empty()
+	assert_str(Acts.one("item_spell").can(s, data, CombatRules.player(s), str(f["id"]), {"item": "wand_of_magic_missiles"})).is_empty()
 	var hp := int(f["hp"])
-	var lines := CombatRules.item_spell(s, data, "wand_of_magic_missiles", str(f["id"]))
+	var lines := Acts.one("item_spell").go(s, data, CombatRules.player(s), str(f["id"]), {"item": "wand_of_magic_missiles"})
 	assert_int(int(f["hp"])).override_failure_message(" · ".join(lines)).is_less(hp)
 	var d := ItemRules.def_of(data["items"], s.items, "wand_of_magic_missiles")
 	assert_int(ItemRules.charges_left(c, d, "wand_of_magic_missiles")).is_equal(6)
@@ -331,7 +331,7 @@ func test_an_attack_line_of_the_fight_has_its_breakdown() -> void:  # the author
 	var f := _fight(s, "goblin")
 	var w := CombatRules.weapon_profile(s.character, data, s.items, "rapier")
 	var lines: Array[String] = []
-	CombatRules._attack(s, data, "Ясь", "Рапира", int(w["to_hit"]), false, false, f, "1d8", 2, "piercing", lines, "", false, w)
+	Attack.swing(s, data, CombatRules.player(s), f, Attack.of_weapon(w), lines)
 	var tip := CombatRules.tip_for(s, lines[0])
 	assert_str(tip).contains("к20")
 	assert_str(tip).contains("против КД")

@@ -3,7 +3,7 @@ extends RefCounted
 ## The turn of a creature in a fight (v0.8.4): a search over the squares it can walk to and the acts it has from each, by a
 ## value. What it weighs comes from its role in `rules.combat.ai.roles`; the role from its SRD record: a caster, a shooter,
 ## a pack hunter, a beast, one who strikes and runs, a brute. `budget` in rules.json limits the lines traced in a turn.
-## Nothing here changes the world but walking: the blows and spells are CombatRules and MonsterRules.
+## Nothing here changes the world but walking: what it does is an `Act`, the same the player has.
 
 const FAR := 1 << 20
 
@@ -50,7 +50,7 @@ static func _targets(s: GameSession, f: Dictionary) -> Array[Dictionary]:
 	return out
 
 
-static func _avg(a: Dictionary) -> float:
+static func avg(a: Dictionary) -> float:
 	var total := 0.0
 	for d: Dictionary in a.get("damage", []):
 		var r := CombatRules.dice_range(str(d["dice"]))
@@ -59,7 +59,7 @@ static func _avg(a: Dictionary) -> float:
 
 
 ## How many blows of this kind its Multiattack gives.
-static func _blows(data: Dictionary, f: Dictionary, a: Dictionary) -> int:
+static func blows(data: Dictionary, f: Dictionary, a: Dictionary) -> int:
 	var m := Sheet.template(data, f)
 	var n := 0
 	for x: Dictionary in m.get("multiattack", []):
@@ -69,26 +69,11 @@ static func _blows(data: Dictionary, f: Dictionary, a: Dictionary) -> int:
 	return maxi(1, n)
 
 
-## What it can do at each target: [{t, kind, act, near, far, power}]. `near` and `far` are squares of its body to the target.
+## What it can do at each target: what every act offers (`Act.offers`).
 static func _options(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dictionary]) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for t: Dictionary in targets:
-		var hero := str(t.get("id")) == CombatRules.PLAYER
-		var melee := MonsterRules.pick(s, data, f, "melee") if hero else CombatRules._pick_plain(data, f, "melee")
-		var ranged := MonsterRules.pick(s, data, f, "ranged") if hero else CombatRules._pick_plain(data, f, "ranged")
-		if not melee.is_empty():
-			out.append({"t": t, "kind": "melee", "act": melee, "far": CombatRules.reach_of(data, f), "power": _avg(melee) * _blows(data, f, melee)})
-		if not ranged.is_empty():
-			var far := FightGrid.squares_of(data, int(ranged["range"][1]))
-			out.append({"t": t, "kind": "ranged", "act": ranged, "far": far, "short": FightGrid.squares_of(data, int(ranged["range"][0])), "power": _avg(ranged) * _blows(data, f, ranged)})
-		if hero:
-			var special := MonsterRules.save_action(s, data, f, 0)
-			if not special.is_empty():
-				out.append({"t": t, "kind": "save", "act": special, "far": FightGrid.squares_of(data, int(special.get("effect", {}).get("area", {}).get("ft", 5))),
-					"power": _avg(special) + float(role(data, f)["control"])})
-			var reach := MonsterRules.cast_reach(s, data, f)
-			if reach > 0:
-				out.append({"t": t, "kind": "cast", "act": {}, "far": reach, "power": float(role(data, f)["cast"])})
+	for a: Act in Acts.all():
+		out.append_array(a.offers(s, data, f, targets))
 	return out
 
 
@@ -115,22 +100,27 @@ static func plan(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 		FightGrid.put(ghost, cell)
 		var place := _place(s, data, f, ghost, cell, routes, targets, w, stay_near)
 		for o: Dictionary in options:
+			if bool(o.get("self", false)):  # on itself: no aim to reach, from any square
+				if place + float(o["power"]) > top:
+					top = place + float(o["power"])
+					best = o
+					at_best = cell
+				continue
 			var t: Dictionary = o["t"]
 			var d := FightGrid.dist(ghost, t)
 			if d > int(o["far"]):
 				continue
 			var cover := 0
-			match str(o["kind"]):
-				"melee":
-					if not CombatRules.blade_reaches(s, data, ghost, t, int(o["far"])):
-						continue
-				_:
-					if budget <= 0:
-						continue
-					budget -= 1
-					cover = FightGrid.cover(s, data, ghost, t)
-					if cover >= FightGrid.FULL_COVER or (str(o["kind"]) == "cast" and not FightGrid.veiled(s, data, ghost, t).is_empty()):
-						continue
+			if bool(o.get("touch", false)):
+				if not CombatRules.blade_reaches(s, data, ghost, t, int(o["far"])):
+					continue
+			else:
+				if budget <= 0:
+					continue
+				budget -= 1
+				cover = FightGrid.cover(s, data, ghost, t)
+				if cover >= FightGrid.FULL_COVER or (bool(o.get("sight", false)) and not FightGrid.veiled(s, data, ghost, t).is_empty()):
+					continue
 			var v := place + _worth(s, data, f, o, t, d, cover, w)
 			if v > top:
 				top = v
@@ -141,6 +131,8 @@ static func plan(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 
 ## What an act is worth from there: the chance times the damage, more on the wounded, the kill counted.
 static func _worth(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionary, t: Dictionary, d: int, cover: int, w: Dictionary) -> float:
+	if bool(o.get("kindly", false)):
+		return float(o["power"])
 	var hero := str(t.get("id")) == CombatRules.PLAYER
 	var hp := float(s.character.get("hp", 1)) if hero else float(t.get("hp", 1))
 	var most := maxf(1.0, float(s.character.get("max_hp", 1)) if hero else float(t.get("max_hp", 1)))
@@ -148,7 +140,7 @@ static func _worth(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionar
 	var power := float(o["power"])
 	var v := power
 	if str(o["kind"]) in ["melee", "ranged"]:
-		var chance := clampf((21.0 + int(o["act"].get("to_hit", 0)) - ac - cover) / 20.0, 0.05, 0.95)
+		var chance := clampf((21.0 + int(o["blow"].get("to_hit", 0)) - ac - cover) / 20.0, 0.05, 0.95)
 		v = power * chance
 		if str(o["kind"]) == "ranged" and (d <= 1 or d > int(o.get("short", 999))):
 			v *= 0.6
@@ -163,7 +155,7 @@ static func _worth(s: GameSession, data: Dictionary, f: Dictionary, o: Dictionar
 
 
 static func _friend_beside(s: GameSession, f: Dictionary, t: Dictionary) -> bool:
-	for id: String in CombatRules.enemies(s) if str(f.get("side")) == "enemy" else CombatRules.allies(s):
+	for id: String in CombatRules.friends_of(s, f):
 		if id != str(f.get("id")) and FightGrid.touching(CombatRules.fighter(s, id), t):
 			return true
 	return false
@@ -252,6 +244,13 @@ static func _free(s: GameSession, data: Dictionary, f: Dictionary, when: String,
 			lines.append_array(a.go(s, data, f))
 
 
+## The whole turn, and Haste's action after it (v0.7.50.1).
+static func turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	act(s, data, f, lines)
+	if int(CombatRules.points(s, data, f).get("haste", 0)) > 0 and str(f.get("status")) == "active":
+		act(s, data, f, lines)
+
+
 ## The whole turn of a foe or of an ally of the hero.
 static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	var foe := str(f.get("side")) == "enemy"
@@ -285,36 +284,23 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[St
 		return
 	var t: Dictionary = o["t"]
 	var hero := str(t.get("id")) == CombatRules.PLAYER
-	if foe and int(s.character.get("hp", 0)) > 0 and MonsterRules.cast_turn(s, data, f, lines):
+	if str(o["kind"]) == "cast" and not Acts.one(str(o["act"])).can(s, data, f, str(o["to"]), o["how"]).is_empty():  # the spell does not go after all: its weapon, if it gets there
+		var blow := {} if not CombatRules.foes_of(s, f).has(str(t["id"])) else MonsterRules.pick(s, data, f, t, "melee" if CombatRules.blade_reaches(s, data, f, t, CombatRules.reach_of(data, f)) else "ranged")
+		o = {} if blow.is_empty() else {"act": "attack", "to": str(t["id"]), "how": {"action": str(blow["name_en"])}, "kind": "melee"}
+	elif str(o["kind"]) == "melee" and moved > 0:
+		lines.append("%s сближается вплотную" % f["name"] if hero else "%s сближается с %s" % [f["name"], t["name"]])
+		if hero:
+			CombatRules._reach_strike(s, data, f, lines)
+			if str(f.get("status")) != "active":
+				return
+	if o.is_empty() or not Acts.one(str(o["act"])).can(s, data, f, str(o["to"]), o["how"]).is_empty():
+		lines.append("%s выжидает" % f["name"])
 		return
-	match str(o["kind"]):
-		"save":
-			CombatRules._enemy_attack(s, data, f, o["act"], lines)
-		"cast":  # nothing worth casting after all: its weapon, if it gets there
-			var blow := MonsterRules.pick(s, data, f, "melee" if CombatRules.blade_reaches(s, data, f, t, CombatRules.reach_of(data, f)) else "ranged")
-			if blow.is_empty():
-				lines.append("%s выжидает" % f["name"])
-			else:
-				_strike(s, data, f, blow, t, hero, lines)
-		"melee":
-			if moved > 0:
-				lines.append("%s сближается вплотную" % f["name"] if hero else "%s сближается с %s" % [f["name"], t["name"]])
-				if hero:
-					CombatRules._reach_strike(s, data, f, lines)
-					if str(f.get("status")) != "active":
-						return
-			_strike(s, data, f, o["act"], t, hero, lines)
-		_:
-			_strike(s, data, f, o["act"], t, hero, lines)
-
-
-static func _strike(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, t: Dictionary, hero: bool, lines: Array[String]) -> void:
-	if hero:
-		CombatRules._enemy_attack_full(s, data, f, a, lines)
-	else:
-		CombatRules._creature_full(s, data, f, a, t, lines)
-	if str(a.get("kind")) == "melee" and FightGrid.dist(f, t) <= CombatRules.reach_of(data, f) and Move.air(s, data, f):
-		f["swooped"] = true  # came down to strike: in reach until its own next turn
+	var act_now := Acts.one(str(o["act"]))
+	var by_bonus := act_now.cost(s, data, f, o["how"]) == "bonus"
+	lines.append_array(act_now.go(s, data, f, str(o["to"]), o["how"]))
+	if by_bonus and int(CombatRules.points(s, data, f).get("action", 0)) > 0 and str(f.get("status")) == "active" and not CombatRules.stopped(s, f):
+		act(s, data, f, lines)  # its action is still there
 
 
 ## One who runs: to the nearest way out, away from the hero when there is none. Off the map or out of sight — gone.
@@ -340,8 +326,7 @@ static func flee(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[S
 		return
 	var lost := FightGrid.dist_to(f, hero) >= int(cfg(data)["flee_lost"]) and not FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(f), hero)
 	if lost or FightField.at_way_out(s, data, FightGrid.cell(f)):
-		f["status"] = "fled"
-		lines.append("%s сбежал" % f["name"])
+		lines.append_array(Acts.one("flee").go(s, data, f, "", {"lost": true}))
 
 
 ## Walks up to `t` and no more: a helper's turn. True when it stands beside.

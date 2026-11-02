@@ -151,8 +151,8 @@ func test_grapple_holds_until_the_hero_walks_off_and_shove_knocks_down() -> void
 	var id: String = CombatRules.enemies(s)[0]
 	var f := CombatRules.fighter(s, id)
 	CombatRules._hold(f, "incapacitated")  # it does not resist: the contest is won
-	assert_str(CombatRules.can_grapple(s, data, id)).is_empty()
-	CombatRules.grapple(s, data, id, false)
+	assert_str(Acts.one("grapple").can(s, data, CombatRules.player(s), id)).is_empty()
+	Acts.one("grapple").go(s, data, CombatRules.player(s), id)
 	assert_array(f["conditions"]).contains(["grappled"])
 	ConditionRules.remove(f, "incapacitated")
 	f["reacted"] = true
@@ -162,18 +162,18 @@ func test_grapple_holds_until_the_hero_walks_off_and_shove_knocks_down() -> void
 	_fight(t, [{"monster": "goblin", "col": 0}])
 	var g := CombatRules.fighter(t, CombatRules.enemies(t)[0])
 	CombatRules._hold(g, "stunned")
-	CombatRules.grapple(t, data, str(g["id"]), true)
+	Acts.one("shove").go(t, data, CombatRules.player(t), str(g["id"]))
 	assert_array(g["conditions"]).contains(["prone"])
 
 
 func test_a_foe_two_sizes_larger_cannot_be_grappled() -> void:
 	var s := _session()
 	_fight(s, [{"monster": "ogre", "col": 0}])
-	assert_str(CombatRules.can_grapple(s, data, CombatRules.enemies(s)[0])).is_empty()  # large: one size up
+	assert_str(Acts.one("grapple").can(s, data, CombatRules.player(s), CombatRules.enemies(s)[0])).is_empty()  # large: one size up
 	var halfling := _session("rogue_damir")
 	if CombatRules.hero_size(halfling, data) == "small":
 		_fight(halfling, [{"monster": "ogre", "col": 0}])
-		assert_str(CombatRules.can_grapple(halfling, data, CombatRules.enemies(halfling)[0])).is_equal("COMBAT_TOO_BIG")
+		assert_str(Acts.one("grapple").can(halfling, data, CombatRules.player(halfling), CombatRules.enemies(halfling)[0])).is_equal("COMBAT_TOO_BIG")
 
 
 # --- attitude range -----------------------------------------------------------------------------------------

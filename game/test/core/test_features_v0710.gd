@@ -75,7 +75,7 @@ func test_monk_martial_arts_and_ki() -> void:
 	assert_int(int(bare["bonus"])).is_equal(maxi(FeatureRules.ab_mod(c, "str"), FeatureRules.ab_mod(c, "dex")))
 	var f := _fight(s, "ogre")
 	assert_str(FeatureRules.can_act(s, data, "flurry", str(f["id"]))).is_equal("COMBAT_ATTACK_FIRST")
-	CombatRules.player_attack(s, data, str(f["id"]))
+	Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"]))
 	var ki := Stock.left(c, data, "ki")
 	assert_str(FeatureRules.can_act(s, data, "flurry", str(f["id"]))).is_empty()
 	var lines := FeatureRules.act(s, data, "flurry", str(f["id"]))
@@ -89,9 +89,9 @@ func test_reckless_attack_cuts_both_ways() -> void:
 	var f := _fight(s, "ogre")
 	FeatureRules.act(s, data, "reckless")
 	var w := CombatRules.weapon_profile(s.character, data, s.items, str(s.character["equipped"]["main_hand"]))
-	assert_array(CombatRules._attack_mods(s, data, w, f)["adv"]).contains(["безрассудная атака"])
+	assert_array(Attack.mods(s, data, CombatRules.player(s), f, Attack.of_weapon(w))["adv"]).contains(["безрассудная атака"])
 	CombatRules._begin_turn(s, data, [] as Array[String])  # the hero's next turn: it is over
-	assert_bool(bool(s.combat.get("reckless", false))).is_false()
+	assert_bool(bool(CombatRules.player(s).get("reckless", false))).is_false()
 
 
 func test_rage_ends_without_a_blow_and_danger_sense_helps_dex_saves() -> void:
@@ -140,7 +140,7 @@ func test_a_reaction_stops_the_foes_turn_until_answered() -> void:
 	s.character["ac"] = 1  # it hits
 	var lines: Array[String] = []
 	for i in 10:  # a natural 1 misses even AC 1
-		CombatRules._enemy_attack(s, data, f, _action("ogre", "Greatclub"), lines)
+		Attack.one(s, data, f, CombatRules.player(s), _action("ogre", "Greatclub"), lines)
 		if s.combat.has("pending"):
 			break
 	assert_bool(s.combat.has("pending")).override_failure_message(", ".join(lines)).is_true()
@@ -210,7 +210,7 @@ func test_font_of_magic_and_quickened_spell() -> void:
 	var f := _fight(s, "goblin", 1)
 	s.combat["metamagic"] = "quickened_spell"
 	CombatRules.economy(s)["action"] = 0
-	assert_str(CombatRules.can_cast(s, data, "fire_bolt", 0, str(f["id"]))).is_empty()  # a bonus action now
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(f["id"]), {"spell": "fire_bolt", "slot": 0})).is_empty()  # a bonus action now
 
 
 func test_arcane_recovery_brings_slots_back() -> void:
@@ -254,7 +254,7 @@ func test_dark_ones_blessing_and_temporary_hp() -> void:
 	var s := _hero("warlock_fiber")
 	var f := _fight(s, "goblin")
 	var lines: Array[String] = []
-	CombatRules._hurt_enemy(s, data, f, 999, lines)
+	CombatRules.hurt(s, data, f, 999, lines)
 	assert_int(int(s.character.get("temp_hp", 0))).is_greater(0)
 	var thp := int(s.character["temp_hp"])
 	var hp := int(s.character["hp"])

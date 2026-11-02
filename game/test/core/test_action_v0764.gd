@@ -143,8 +143,8 @@ func test_a_spell_by_a_teacher_is_cast_with_a_slot_and_hurts_a_foe() -> void:
 	var t := foes[0]
 	t["hp"] = 200
 	t["max_hp"] = 200
-	assert_str(CombatRules.can_cast(s, data, id, 1, str(t["id"]))).is_empty()
-	var lines := CombatRules.player_cast(s, data, id, 1, str(t["id"]))
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(t["id"]), {"spell": id, "slot": 1})).is_empty()
+	var lines := Acts.one("cast").go(s, data, CombatRules.player(s), str(t["id"]), {"spell": id, "slot": 1})
 	assert_str(" ".join(lines)).contains("Иней Гнилой Топи")
 	assert_int(int(t["hp"])).is_less(200)
 	assert_int(SpellRules.slots_left(s.character, 1)).is_equal(3)
@@ -180,13 +180,13 @@ func test_a_scroll_casts_it_without_a_slot_and_by_its_own_numbers() -> void:
 	var t := foes[0]
 	t["hp"] = 200
 	t["max_hp"] = 200
-	assert_str(CombatRules.can_item_spell(s, data, scroll, str(t["id"]))).is_empty()
+	assert_str(Acts.one("item_spell").can(s, data, CombatRules.player(s), str(t["id"]), {"item": scroll})).is_empty()
 	var dc_before := int(s.character["spell_dc"])
 	var lines: Array[String] = []
 	for i in 30:  # no class has it: Arcana by the rule of scrolls, a failure burns the scroll
 		s.character["inventory"][scroll] = 1
 		CombatRules.economy(s)["action"] = 1
-		lines = CombatRules.item_spell(s, data, scroll, str(t["id"]))
+		lines = Acts.one("item_spell").go(s, data, CombatRules.player(s), str(t["id"]), {"item": scroll})
 		if " ".join(lines).contains("Заклинание"):
 			break
 	assert_str(" ".join(lines)).contains("Иней Гнилой Топи")
@@ -287,7 +287,7 @@ func test_a_reaction_answers_a_hit() -> void:
 	_knows(s, id)
 	assert_int(int(data["spells"][id]["level"])).is_equal(1)
 	var foes := _fight(s, [{"monster": "goblin", "col": 1}])
-	assert_str(CombatRules.can_cast(s, data, id, 1, str(foes[0]["id"]))).is_equal("COMBAT_REACTION_SPELL")
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(foes[0]["id"]), {"spell": id, "slot": 1})).is_equal("COMBAT_REACTION_SPELL")
 	var options := SpellEffects.hit_reactions(s, data, {"dmg": 5, "total": 15, "ac": 12})
 	assert_bool(options.any(func(o: Dictionary) -> bool: return str(o["id"]) == "spell_" + id)).is_true()
 	var ctx := {"dmg": 5}
@@ -329,12 +329,12 @@ func test_an_ability_by_a_course_works_for_a_fighter_with_its_charges_and_comes_
 	t["max_hp"] = 100
 	var dc := 8 + CharacterRules.prof_bonus(s.character, data) + CharacterRules.mod(CharacterRules.ability(s.character, "con"))
 	assert_int(int(ActionRules.numbers(s, data, id)["dc"])).is_equal(dc)
-	assert_str(CombatRules.can_cast(s, data, id, 0, str(t["id"]))).is_empty()
-	var lines := CombatRules.player_cast(s, data, id, 0, str(t["id"]))
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(t["id"]), {"spell": id, "slot": 0})).is_empty()
+	var lines := Acts.one("cast").go(s, data, CombatRules.player(s), str(t["id"]), {"spell": id, "slot": 0})
 	assert_str(" ".join(lines)).contains("Рёв кабана")
 	assert_int(Stock.left(s.character, data, id)).is_equal(0)
 	CombatRules.economy(s)["action"] = 1
-	assert_str(CombatRules.can_cast(s, data, id, 0, str(t["id"]))).contains("заряды кончились")
+	assert_str(Acts.one("cast").can(s, data, CombatRules.player(s), str(t["id"]), {"spell": id, "slot": 0})).contains("заряды кончились")
 	Stock.recharge_all(s.character, data, "short")
 	assert_int(Stock.left(s.character, data, id)).is_equal(1)
 
