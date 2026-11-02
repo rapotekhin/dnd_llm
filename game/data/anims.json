@@ -1,0 +1,1029 @@
+{
+	"_doc": "Stub animations of a fight (v0.8.4.23, docs/design/systems/combat-animations.md). A kind is played phase by phase: windup at the doer, travel from the doer to the target (looped while it flies), hit at the target, the area or the path, fade. Each phase is a stub of game/ui/anims/stub_anim.gd until a real one replaces it: `frames` — a SpriteFrames .tres whose animation named after a phase plays instead of that phase stub (the others stay stubs); `scene` — a .tscn whose root extends FightAnim plays the whole kind. A state is drawn on the token on every redraw: `texture` is its overlay. `time` is seconds at the normal speed of a fight.",
+	"kinds": {
+		"bolt": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.14
+				},
+				{
+					"phase": "travel",
+					"stub": "ball",
+					"at": "path",
+					"time": 0.28,
+					"loop": true
+				},
+				{
+					"phase": "hit",
+					"stub": "flash",
+					"at": "to",
+					"time": 0.16
+				},
+				{
+					"phase": "fade",
+					"stub": "fade",
+					"at": "to",
+					"time": 0.12
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"beam": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.14
+				},
+				{
+					"phase": "hit",
+					"stub": "ray",
+					"at": "path",
+					"time": 0.3
+				},
+				{
+					"phase": "fade",
+					"stub": "ray_fade",
+					"at": "path",
+					"time": 0.14
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"burst": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.14
+				},
+				{
+					"phase": "travel",
+					"stub": "ball",
+					"at": "path",
+					"time": 0.28,
+					"loop": true
+				},
+				{
+					"phase": "hit",
+					"stub": "cells_flash",
+					"at": "cells",
+					"time": 0.3
+				},
+				{
+					"phase": "fade",
+					"stub": "cells_fade",
+					"at": "cells",
+					"time": 0.2
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"cone": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.14
+				},
+				{
+					"phase": "hit",
+					"stub": "wave",
+					"at": "cells",
+					"time": 0.34
+				},
+				{
+					"phase": "fade",
+					"stub": "cells_fade",
+					"at": "cells",
+					"time": 0.18
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"line": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.14
+				},
+				{
+					"phase": "hit",
+					"stub": "wave",
+					"at": "cells",
+					"time": 0.3
+				},
+				{
+					"phase": "fade",
+					"stub": "cells_fade",
+					"at": "cells",
+					"time": 0.16
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"nova": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.14
+				},
+				{
+					"phase": "hit",
+					"stub": "ring_out",
+					"at": "by",
+					"time": 0.4
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"zone": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.14
+				},
+				{
+					"phase": "travel",
+					"stub": "ball",
+					"at": "path",
+					"time": 0.24,
+					"loop": true
+				},
+				{
+					"phase": "hit",
+					"stub": "cells_flash",
+					"at": "cells",
+					"time": 0.3
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"touch": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.1
+				},
+				{
+					"phase": "hit",
+					"stub": "lunge",
+					"at": "path",
+					"time": 0.24
+				},
+				{
+					"phase": "fade",
+					"stub": "flash",
+					"at": "to",
+					"time": 0.12
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"sigil": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.14
+				},
+				{
+					"phase": "hit",
+					"stub": "sigil",
+					"at": "to",
+					"time": 0.4
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"aura": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "ring_pulse",
+					"at": "by",
+					"time": 0.45
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"summon": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "glow",
+					"at": "by",
+					"time": 0.14
+				},
+				{
+					"phase": "hit",
+					"stub": "puff",
+					"at": "to",
+					"time": 0.4
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"teleport": {
+			"group": "spell",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "puff",
+					"at": "by",
+					"time": 0.22
+				},
+				{
+					"phase": "hit",
+					"stub": "puff",
+					"at": "to",
+					"time": 0.25
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"impact": {
+			"group": "outcome",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "flash",
+					"at": "to",
+					"time": 0.2
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"crit": {
+			"group": "outcome",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "star",
+					"at": "to",
+					"time": 0.36
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"heal": {
+			"group": "outcome",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "sparks_up",
+					"at": "to",
+					"time": 0.45
+				}
+			],
+			"frames": "",
+			"scene": "",
+			"colour": "heal"
+		},
+		"buff": {
+			"group": "outcome",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "ring_in",
+					"at": "to",
+					"time": 0.34
+				}
+			],
+			"frames": "",
+			"scene": "",
+			"colour": "buff"
+		},
+		"debuff": {
+			"group": "outcome",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "ring_in",
+					"at": "to",
+					"time": 0.34
+				}
+			],
+			"frames": "",
+			"scene": "",
+			"colour": "debuff"
+		},
+		"resist": {
+			"group": "outcome",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "bubble",
+					"at": "to",
+					"time": 0.3
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"swing": {
+			"group": "strike",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "arc",
+					"at": "path",
+					"time": 0.26
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"thrust": {
+			"group": "strike",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "thrust",
+					"at": "path",
+					"time": 0.22
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"smash": {
+			"group": "strike",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "raise",
+					"at": "path",
+					"time": 0.12
+				},
+				{
+					"phase": "hit",
+					"stub": "smash",
+					"at": "path",
+					"time": 0.16
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"shot": {
+			"group": "strike",
+			"phases": [
+				{
+					"phase": "windup",
+					"stub": "draw",
+					"at": "by",
+					"time": 0.1
+				},
+				{
+					"phase": "travel",
+					"stub": "stick",
+					"at": "path",
+					"time": 0.24,
+					"loop": true
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"throw": {
+			"group": "strike",
+			"phases": [
+				{
+					"phase": "travel",
+					"stub": "spin",
+					"at": "path",
+					"time": 0.3,
+					"loop": true
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"punch": {
+			"group": "strike",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "lunge",
+					"at": "path",
+					"time": 0.2
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"bite": {
+			"group": "strike",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "jaws",
+					"at": "to",
+					"time": 0.26
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"claw": {
+			"group": "strike",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "claws",
+					"at": "to",
+					"time": 0.26
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"dodge": {
+			"group": "defence",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "sidestep",
+					"at": "to",
+					"time": 0.26
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"block_shield": {
+			"group": "defence",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "shield_turn",
+					"at": "to",
+					"time": 0.22
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"parry": {
+			"group": "defence",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "parry",
+					"at": "to",
+					"time": 0.22
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"overshoot": {
+			"group": "defence",
+			"phases": [
+				{
+					"phase": "travel",
+					"stub": "stray",
+					"at": "path",
+					"time": 0.3,
+					"loop": true
+				},
+				{
+					"phase": "fade",
+					"stub": "fade",
+					"at": "beside",
+					"time": 0.14
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"undershoot": {
+			"group": "defence",
+			"phases": [
+				{
+					"phase": "travel",
+					"stub": "stray",
+					"at": "path",
+					"time": 0.26,
+					"loop": true
+				},
+				{
+					"phase": "fade",
+					"stub": "fade",
+					"at": "beside",
+					"time": 0.14
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"step": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "travel",
+					"stub": "slide",
+					"at": "path",
+					"time": 0.22
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"jump": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "travel",
+					"stub": "hop",
+					"at": "path",
+					"time": 0.34
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"push": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "travel",
+					"stub": "slide",
+					"at": "path",
+					"time": 0.22
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"pull": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "tether",
+					"at": "path",
+					"time": 0.3
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"fall": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "tip",
+					"at": "to",
+					"time": 0.3
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"rise": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "untip",
+					"at": "to",
+					"time": 0.24
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"vanish": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "fade_out",
+					"at": "by",
+					"time": 0.34
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"drink": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "bottle",
+					"at": "by",
+					"time": 0.3
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"talk": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "speech",
+					"at": "by",
+					"time": 0.6
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"swap": {
+			"group": "move",
+			"phases": [
+				{
+					"phase": "hit",
+					"stub": "flip",
+					"at": "by",
+					"time": 0.24
+				}
+			],
+			"frames": "",
+			"scene": ""
+		},
+		"hidden": {
+			"group": "state",
+			"texture": ""
+		},
+		"invisible": {
+			"group": "state",
+			"texture": ""
+		},
+		"prone": {
+			"group": "state",
+			"texture": ""
+		},
+		"grappled": {
+			"group": "state",
+			"texture": ""
+		},
+		"flying": {
+			"group": "state",
+			"texture": ""
+		},
+		"concentrating": {
+			"group": "state",
+			"texture": ""
+		},
+		"dodging": {
+			"group": "state",
+			"texture": ""
+		},
+		"raging": {
+			"group": "state",
+			"texture": ""
+		},
+		"down": {
+			"group": "state",
+			"texture": ""
+		},
+		"dead": {
+			"group": "state",
+			"texture": ""
+		}
+	},
+	"rule": {
+		"instant": "Мгновенн",
+		"touch_ft": 5
+	},
+	"spells": {
+		"eldritch_blast": "beam",
+		"ray_of_frost": "beam",
+		"scorching_ray": "beam",
+		"ray_of_enfeeblement": "beam",
+		"counterspell": "beam",
+		"find_familiar": "summon",
+		"spiritual_weapon": "summon",
+		"unseen_servant": "summon",
+		"conjure_animals": "summon",
+		"animate_dead": "summon",
+		"find_steed": "summon",
+		"phantom_steed": "summon",
+		"floating_disk": "summon",
+		"flaming_sphere": "summon",
+		"mage_hand": "summon",
+		"dancing_lights": "summon",
+		"misty_step": "teleport",
+		"blink": "teleport",
+		"magic_missile": "bolt",
+		"acid_splash": "bolt",
+		"produce_flame": "bolt",
+		"vampiric_touch": "touch",
+		"spirit_guardians": "nova",
+		"hunters_mark": "sigil",
+		"levitate": "sigil",
+		"dispel_magic": "sigil",
+		"slow": "burst",
+		"faerie_fire": "burst",
+		"hypnotic_pattern": "burst",
+		"calm_emotions": "burst",
+		"poison_spray": "cone"
+	},
+	"weapons": {
+		"dagger": "knife",
+		"sickle": "knife",
+		"shortsword": "sword",
+		"longsword": "sword",
+		"scimitar": "sword",
+		"rapier": "sword",
+		"greatsword": "sword",
+		"handaxe": "axe",
+		"battleaxe": "axe",
+		"greataxe": "axe",
+		"club": "blunt",
+		"mace": "blunt",
+		"morningstar": "blunt",
+		"flail": "blunt",
+		"warhammer": "blunt",
+		"light_hammer": "blunt",
+		"maul": "blunt",
+		"greatclub": "blunt",
+		"war_pick": "blunt",
+		"quarterstaff": "staff",
+		"spear": "polearm",
+		"javelin": "polearm",
+		"pike": "polearm",
+		"glaive": "polearm",
+		"halberd": "polearm",
+		"lance": "polearm",
+		"trident": "polearm",
+		"whip": "whip",
+		"shortbow": "bow",
+		"longbow": "bow",
+		"crossbow_light": "crossbow",
+		"crossbow_heavy": "crossbow",
+		"crossbow_hand": "crossbow",
+		"sling": "sling",
+		"blowgun": "sling"
+	},
+	"sprites": {
+		"knife": {
+			"len": 0.3,
+			"texture": ""
+		},
+		"sword": {
+			"len": 0.5,
+			"texture": ""
+		},
+		"axe": {
+			"len": 0.45,
+			"head": "axe",
+			"texture": ""
+		},
+		"blunt": {
+			"len": 0.42,
+			"head": "knob",
+			"texture": ""
+		},
+		"staff": {
+			"len": 0.7,
+			"texture": ""
+		},
+		"polearm": {
+			"len": 0.75,
+			"head": "tip",
+			"texture": ""
+		},
+		"whip": {
+			"len": 0.5,
+			"head": "curl",
+			"texture": ""
+		},
+		"bow": {
+			"len": 0.6,
+			"head": "bow",
+			"texture": ""
+		},
+		"crossbow": {
+			"len": 0.45,
+			"head": "cross",
+			"texture": ""
+		},
+		"sling": {
+			"len": 0.3,
+			"head": "pouch",
+			"texture": ""
+		},
+		"shield": {
+			"len": 0.55,
+			"texture": ""
+		}
+	},
+	"shots": {
+		"shortbow": "arrow",
+		"longbow": "arrow",
+		"crossbow_light": "bolt",
+		"crossbow_heavy": "bolt",
+		"crossbow_hand": "bolt",
+		"sling": "stone",
+		"blowgun": "needle",
+		"dart": "dart"
+	},
+	"projectiles": {
+		"arrow": {
+			"len": 0.45,
+			"texture": ""
+		},
+		"bolt": {
+			"len": 0.32,
+			"texture": ""
+		},
+		"stone": {
+			"len": 0.0,
+			"texture": ""
+		},
+		"needle": {
+			"len": 0.2,
+			"texture": ""
+		},
+		"dart": {
+			"len": 0.26,
+			"texture": ""
+		}
+	},
+	"natural": {
+		"Bite": "bite",
+		"Bites": "bite",
+		"Beak": "bite",
+		"Beaks": "bite",
+		"Blood Drain": "bite",
+		"Claws": "claw",
+		"Claw": "claw",
+		"Talons": "claw",
+		"Rake": "claw",
+		"Fist": "punch",
+		"Slam": "punch",
+		"Hooves": "punch",
+		"Ram": "punch",
+		"Gore": "punch",
+		"Tusk": "punch",
+		"Crush": "punch",
+		"Pseudopod": "punch",
+		"Rotting Fist": "punch",
+		"Smother": "punch",
+		"Beard": "punch",
+		"Tentacles": "punch",
+		"Constrict": "punch",
+		"Engulf": "punch",
+		"Touch": "touch",
+		"Rotting Touch": "touch",
+		"Life Drain": "touch",
+		"Strength Drain": "touch",
+		"Shock": "touch",
+		"Sting": "thrust",
+		"Tail Spike": "shot",
+		"Web": "throw",
+		"Rock": "throw",
+		"Harpoon": "thrust"
+	},
+	"by_dtype": {
+		"slashing": "claw",
+		"piercing": "bite",
+		"bludgeoning": "punch"
+	},
+	"weapon_by_dtype": {
+		"slashing": "swing",
+		"piercing": "thrust",
+		"bludgeoning": "smash"
+	},
+	"save_by_area": {
+		"cone": "cone",
+		"line": "line",
+		"sphere": "burst",
+		"cube": "burst",
+		"cylinder": "burst",
+		"": "sigil"
+	},
+	"misses": {
+		"melee": [
+			"dodge",
+			"block_shield",
+			"parry"
+		],
+		"shot": [
+			"dodge",
+			"block_shield",
+			"overshoot",
+			"undershoot"
+		],
+		"spell": [
+			"dodge",
+			"overshoot"
+		],
+		"near": [
+			"dodge"
+		]
+	},
+	"needs": {
+		"block_shield": "shield",
+		"parry": "blade"
+	},
+	"acts": {
+		"jump": "jump",
+		"shove": "push",
+		"grapple": "pull",
+		"escape": "push",
+		"stand": "rise",
+		"hide": "vanish",
+		"flee": "vanish",
+		"use_item": "drink",
+		"parley": "talk",
+		"surrender": "talk",
+		"swap": "swap",
+		"help": "sigil",
+		"dodge": "aura",
+		"dash": "aura",
+		"disengage": "aura",
+		"frenzy": "aura",
+		"throw": "throw"
+	},
+	"features": {
+		"_stock": "aura",
+		"reckless": "aura",
+		"patient_defense": "aura",
+		"step_disengage": "aura",
+		"step_dash": "aura",
+		"turn_undead": "nova",
+		"preserve_life": "nova",
+		"sacred_weapon": "aura",
+		"turn_unholy": "nova",
+		"wild_shape": "summon",
+		"font": "aura",
+		"breath": "cone",
+		"martial_strike": "",
+		"flurry": "",
+		"flurry_topple": "",
+		"flurry_push": "",
+		"flurry_stagger": "",
+		"stunning": ""
+	},
+	"palette": {
+		"fire": "#ff8a2a",
+		"cold": "#7fd4ff",
+		"lightning": "#ffe14a",
+		"acid": "#7dff4a",
+		"poison": "#a3b13a",
+		"radiant": "#fff2b0",
+		"necrotic": "#6a3a8f",
+		"force": "#d04ae0",
+		"psychic": "#ff7fc8",
+		"thunder": "#8ea4c8",
+		"slashing": "#f2f2f2",
+		"piercing": "#f2f2f2",
+		"bludgeoning": "#f2f2f2",
+		"heal": "#5fe07a",
+		"buff": "#ffd25a",
+		"debuff": "#a066ff",
+		"magic": "#b8a6ff",
+		"shield": "#9a7448",
+		"wood": "#8a6a42",
+		"steel": "#cfd6de"
+	}
+}

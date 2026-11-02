@@ -62,6 +62,8 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 		ConditionRules.effects_of(Sheet.holder(s, f), "invisible")[0]["ends_on_attack"] = bool(data["rules"]["invisibility"]["spells"][spell_id].get("ends_on_attack", true))
 		lines.append("%s: %s" % [f["name"], spell["name"]])
 		return
+	if not data["spells"][spell_id].has("heal_at_slot") or not sp.is_empty():
+		AnimRules.outcome(s, f, "buff")  # v0.8.4.23; a heal shows its own
 	if sp.is_empty():
 		CombatRules.heal(s, data, spell_id, slot, f, lines)
 		return
@@ -768,7 +770,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 		"attack":
 			var ab := Sheet.ability_mod(s, data, me, CombatRules.spell_ability(s))
 			var res := Attack.swing(s, data, me, t, Attack.of_spell(name, CombatRules.spell_attack(s), str(e["dice"]).replace("+MOD", ""),
-				ab if str(e["dice"]).contains("MOD") else 0, str(sus["type"]), false, 5), lines)
+				ab if str(e["dice"]).contains("MOD") else 0, str(sus["type"]), false, 5).merged({"spell": spell_id}), lines)
 			if bool(res["hit"]) and bool(sus.get("drain", false)):
 				var it := Sheet.holder(s, me)
 				var back := int(res["damage"]) / 2
@@ -892,12 +894,13 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 		var it := Sheet.holder(s, f)
 		var landed := false
 		if bool(cu.get("attack", false)):
-			var res := Attack.swing(s, data, me, f, Attack.of_spell(name, CombatRules.spell_attack(s), "0", 0, "force", false, int(spell.get("range_ft", 5))), lines)
+			var res := Attack.swing(s, data, me, f, Attack.of_spell(name, CombatRules.spell_attack(s), "0", 0, "force", false, int(spell.get("range_ft", 5))).merged({"spell": spell_id}), lines)
 			landed = bool(res["hit"])
 		else:
 			var ok := Sheet.saved(s, data, f, str(cu["save"]), dc, "magic")
 			lines.append("%s: %s — спасбросок %s %s" % [name, f["name"], CombatRules.ab_name(str(cu["save"])), "успех" if ok else "провал"])
 			landed = not ok
+			AnimRules.outcome(s, f, "debuff" if landed else "resist")
 		if not landed:
 			continue
 		var flag := str(cu["flag"])

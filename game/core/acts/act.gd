@@ -128,6 +128,7 @@ func go(s: GameSession, data: Dictionary, f: Dictionary, to: String = "", how: D
 		CombatRules.pay_attack(s, data, f)
 	else:
 		CombatRules.pay(f, price, amount(s, data, f, how))
+	AnimRules.act(s, data, f, id, to, how)  # v0.8.4.23: a row of anims.json `acts`, nothing for an act that shows itself
 	return run(s, data, f, to, how)
 
 

@@ -163,6 +163,7 @@ static func scope(s: GameSession, data: Dictionary, f: Dictionary, id: String, b
 ## `f` casts (the points are paid): the slot or the thing's numbers, its concentration, the spell lands. Lines.
 static func cast(s: GameSession, data: Dictionary, f: Dictionary, id: String, slot: int, to: String, by: Dictionary = {}) -> Array[String]:
 	s.combat["by"] = scope(s, data, f, id, by)
+	AnimRules.cast(s, data, f, id, to)  # v0.8.4.23: the delivery, before what it does
 	var lines: Array[String] = []
 	if Sheet.is_hero(f):
 		var c := s.character

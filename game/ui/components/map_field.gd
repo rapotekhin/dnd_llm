@@ -33,7 +33,9 @@ var instant := false  ## a walk ends at once: the playtests' game time does not 
 var dim := false  ## what is out of view is dimmed (the author's preview has none)
 var now: Dictionary = {}  ## the squares seen right now: SightRules (v0.8.3)
 var cones: Dictionary = {}  ## the squares under watch while sneaking
-var fighters: Array[Dictionary] = []  ## the bodies of a fight: {"id", "mark", "name", "colour", "span", "x", "y", "hp", "most", "out", "now", "dim"}
+var fighters: Array[Dictionary] = []  ## the bodies of a fight: {"id", "mark", "name", "colour", "span", "x", "y", "hp", "most", "out", "now", "dim", "gear", "states"}
+var anim_lib: Dictionary = {}  ## data/anims.json: the art of a weapon, a shield and a state over a token (v0.8.4.23)
+var _art := {}  ## loaded textures by path
 var routes: Dictionary = {}  ## where the hero can walk this turn: FightGrid.reach
 var way: Array[Vector2i] = []  ## the path under the mouse
 var blast: Dictionary = {}  ## the squares of the area under the mouse
@@ -434,15 +436,30 @@ func _fighter(f: Dictionary) -> void:
 	var t := _tile
 	var mid := _corner + (pos + Vector2(span, span) / 2.0) * t
 	var r := t * span * 0.42
+	var states: Array = f.get("states", [])
 	var colour: Color = UiTheme.MUTED if bool(f["out"]) else f["colour"]
 	if bool(f["dim"]):
 		colour = Color(colour, 0.5)
+	if states.has("invisible"):
+		colour = Color(colour, 0.35)
+	if states.has("flying"):  # a shadow on the ground, the body above it
+		draw_set_transform(mid + Vector2(0, r * 0.55), 0.0, Vector2(1.0, 0.4))
+		draw_circle(Vector2.ZERO, r * 0.8, Color(0, 0, 0, 0.3))
+		draw_set_transform(Vector2.ZERO)
+		mid.y -= r * 0.35
 	if bool(f["now"]):
 		draw_arc(mid, r + maxf(3.0, t * 0.1), 0.0, TAU, 40, UiTheme.ACCENT_BRIGHT, maxf(1.5, t * 0.05), true)
-	draw_circle(mid, r, UiTheme.PANEL)
-	draw_arc(mid, r, 0.0, TAU, 40, colour, maxf(1.5, t * 0.08), true)
+	var flat := states.has("prone") or states.has("down") or states.has("dead")
+	draw_set_transform(mid, 0.0, Vector2(1.0, 0.6 if flat else 1.0))  # one who lies is a flattened token
+	draw_circle(Vector2.ZERO, r, Color(UiTheme.PANEL, colour.a))
+	draw_arc(Vector2.ZERO, r, 0.0, TAU, 40, colour, maxf(1.5, t * 0.08), true)
+	draw_set_transform(Vector2.ZERO)
+	_gear(f, mid, r)
+	_states(states, mid, r)
 	if bool(f["out"]):
 		draw_line(mid - Vector2(r, r) * 0.7, mid + Vector2(r, r) * 0.7, UiTheme.MUTED, maxf(1.5, t * 0.06))
+		if states.has("dead"):
+			draw_line(mid + Vector2(-r, r) * 0.7, mid + Vector2(r, -r) * 0.7, UiTheme.MUTED, maxf(1.5, t * 0.06))
 	elif int(f["most"]) > 0:
 		var w := r * 1.8
 		var share := clampf(float(f["hp"]) / float(f["most"]), 0.0, 1.0)
@@ -457,6 +474,95 @@ func _fighter(f: Dictionary) -> void:
 		draw_string(font, mid + Vector2(-w2 / 2.0, r * 0.38), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, colour)
 		if labels or Vector2i(cell) == _hover:
 			_name(mid + Vector2(0.0, r + 22.0), str(f["name"]))
+
+
+## What is in the hands (v0.8.4.23): a shield as a stick on the left, the weapon's sprite on the right — the row's texture, else
+## a stub of its length and head. Empty hands and a beast's jaws show nothing: they are seen only while they strike.
+func _gear(f: Dictionary, mid: Vector2, r: float) -> void:
+	var g: Dictionary = f.get("gear", {})
+	if g.is_empty() or bool(f["out"]):
+		return
+	var rows: Dictionary = anim_lib.get("sprites", {})
+	var pal: Dictionary = anim_lib.get("palette", {})
+	var w := maxf(2.0, _tile * 0.07)
+	if bool(g.get("shield", false)):
+		var box := Rect2(mid + Vector2(-r * 1.25, -r * 0.6), Vector2(r * 0.32, r * 1.2))
+		if not _texture(str(rows.get("shield", {}).get("texture", "")), box):
+			draw_rect(box, Color(str(pal.get("shield", "#9a7448"))))
+			draw_rect(box, Color(0, 0, 0, 0.6), false, 1.0)
+	var sprite := str(g.get("sprite", ""))
+	if sprite.is_empty():
+		return
+	var row: Dictionary = rows.get(sprite, {})
+	var length := float(row.get("len", 0.4)) * _tile
+	var base := mid + Vector2(r * 0.85, r * 0.45)
+	var tip := base + Vector2(0.45, -1.0).normalized() * length
+	if _texture(str(row.get("texture", "")), Rect2(base - Vector2(0, length), Vector2(length * 0.4, length))):
+		return
+	var steel := Color(str(pal.get("steel", "#cfd6de")))
+	var wood := Color(str(pal.get("wood", "#8a6a42")))
+	match str(row.get("head", "")):
+		"bow":
+			draw_arc(base + (tip - base) / 2.0, length / 2.0, -PI * 0.15, PI * 0.85, 12, wood, w, true)
+		"cross":
+			draw_line(base, tip, wood, w)
+			var across := (tip - base).normalized().orthogonal() * length * 0.3
+			draw_line(tip - across, tip + across, wood, w)
+		"axe":
+			draw_line(base, tip, wood, w)
+			draw_rect(Rect2(tip - Vector2(0, length * 0.1), Vector2(length * 0.25, length * 0.25)), steel)
+		"knob":
+			draw_line(base, tip, wood, w)
+			draw_circle(tip, length * 0.14, steel)
+		"tip":
+			draw_line(base, tip, wood, w)
+			draw_line(tip, tip + (tip - base).normalized() * length * 0.18, steel, w * 1.6)
+		"curl":
+			draw_line(base, base + (tip - base) * 0.3, wood, w)
+			draw_arc(tip, length * 0.3, 0.0, PI * 1.5, 12, wood, w * 0.6, true)
+		"pouch":
+			draw_line(base, tip, wood, w * 0.5)
+			draw_circle(tip, length * 0.15, wood)
+		_:
+			draw_line(base, tip, steel, w)
+			var guard := (tip - base).normalized().orthogonal() * length * 0.18
+			draw_line(base + (tip - base) * 0.2 - guard, base + (tip - base) * 0.2 + guard, wood, w)
+
+
+## The lasting states over a token: a row's texture, else a stub (the dim of one hidden is the token's own colour).
+func _states(states: Array, mid: Vector2, r: float) -> void:
+	var kinds: Dictionary = anim_lib.get("kinds", {})
+	var w := maxf(1.5, _tile * 0.05)
+	for st: Variant in states:
+		if _texture(str(kinds.get(str(st), {}).get("texture", "")), Rect2(mid - Vector2(r, r), Vector2(r, r) * 2.0)):
+			continue
+		match str(st):
+			"invisible":
+				for i in 8:
+					draw_arc(mid, r * 1.12, i * TAU / 8.0, i * TAU / 8.0 + TAU / 16.0, 4, Color(UiTheme.TEXT, 0.7), w, true)
+			"grappled":
+				for i in 3:
+					var x := (i - 1) * r * 0.55
+					draw_line(mid + Vector2(x - r * 0.3, -r * 0.7), mid + Vector2(x + r * 0.3, r * 0.7), Color(UiTheme.WARN, 0.85), w)
+			"concentrating":
+				draw_arc(mid + Vector2(0, -r * 1.25), r * 0.22, 0.0, TAU, 16, UiTheme.ACCENT_BRIGHT, w, true)
+			"dodging":
+				for i in 12:
+					draw_arc(mid, r * 1.2, i * TAU / 12.0, i * TAU / 12.0 + TAU / 30.0, 3, UiTheme.OK, w, true)
+			"raging":
+				draw_arc(mid, r * 1.12, 0.0, TAU, 40, Color(UiTheme.BAD, 0.9), w * 1.6, true)
+
+
+## Draws an author's texture into `box`; false when the row has none (the stub is drawn).
+func _texture(path: String, box: Rect2) -> bool:
+	if path.is_empty():
+		return false
+	if not _art.has(path):
+		_art[path] = load(path) if ResourceLoader.exists(path) else null
+	if _art[path] == null:
+		return false
+	draw_texture_rect(_art[path], box, false)
+	return true
 
 
 ## A person is a round token, a beast a smaller one, a thing a square. The name shows under the cursor or while the key is held.

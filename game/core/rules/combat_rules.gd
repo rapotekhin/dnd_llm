@@ -936,6 +936,7 @@ static func _condition_on(s: GameSession, data: Dictionary, spell_id: String, sp
 	var ab := str(sp.get("save", {}).get("ability", spec.get("save", "dex")))  # Web asks of who is caught
 	var r := Sheet.save(s, data, t, ab, spell_dc(s), tag, str(s.combat.get("meta_now", "")) == "heightened_spell")
 	var ok := bool(r["ok"])
+	AnimRules.outcome(s, t, "resist" if ok else "debuff")
 	lines.append("%s%s: %s — спасбросок %s против Сл %d %s" % [name, said, t["name"], ab_name(ab), spell_dc(s),
 		"успех" if ok else "провал — " + ", ".join(conds.map(func(x: String) -> String: return cond_name(data, x)))])
 	if ok:
@@ -1206,6 +1207,7 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 				var ok := Sheet.saved(s, data, tg, save_ab, dc, "magic", str(s.combat.get("meta_now", "")) == "heightened_spell")
 				tg.erase("cover")
 				var dmg := Sheet.taken(s, data, tg, dtype, dmg_full / 2 if ok and str(sp["save"]["success"]) == "half" else (0 if ok else dmg_full))
+				AnimRules.outcome(s, tg, "impact" if dmg > 0 else "resist", dtype)
 				lines.append("%s: %s — спасбросок %s против Сл %d %s, %d (%s)" % [name, tg["name"], ab_name(save_ab),
 					dc, "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 				if by_hero:
@@ -1224,6 +1226,7 @@ static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int,
 	var dtype := str(sp.get("damage_type", ""))
 	var name := str(sp["name"])
 	if bool(cfg(data)["multi"].get(spell_id, {}).get("auto_hit", false)):
+		AnimRules.result(s, data, AnimRules.spell_at(s, data, spell_id, me, t), t, "hit")  # a dart of its own (v0.8.4.23)
 		var dmg := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, _empowered(s, dice)))
 		lines.append("%s: %d (%s) по %s" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype), t["name"]])
 		Harm.take(s, data, t, dmg, lines, dtype, false, by_hero)
@@ -1231,6 +1234,7 @@ static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int,
 	# v0.7.13: a spell attack has the advantages and disadvantages of any attack (prone, hidden, guided, dark…)
 	var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
 	var blow := Attack.of_spell(name, spell_attack(s), _empowered(s, dice), agonizing, dtype, str(sp["attack"]) == "melee", int(sp.get("range_ft", 5)))
+	blow["spell"] = spell_id  # its look is the spell's delivery (v0.8.4.23)
 	if spell_id == "shocking_grasp" and _metal_armor(s, data, t):
 		blow["adv"] = ["металлический доспех"]
 	var sres := Attack.swing(s, data, me, t, blow, lines)
@@ -1261,6 +1265,7 @@ static func heal(s: GameSession, data: Dictionary, spell_id: String, slot: int, 
 		return
 	var before := int(it["hp"])
 	it["hp"] = mini(int(it["max_hp"]), before + heal_roll(s, data, spell_id, slot))
+	AnimRules.outcome(s, t, "heal")
 	if not Sheet.is_hero(t):
 		t["status"] = "active"
 	elif before <= 0 and int(it["hp"]) > 0:

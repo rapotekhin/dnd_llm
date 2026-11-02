@@ -15,6 +15,7 @@ var _portrait: VBoxContainer
 var _economy: VBoxContainer
 var _tabs: TabContainer
 var _fx_layer: Control  # floating numbers over the field
+var _anims: FightAnims  # the strikes, spells and moves on the map (v0.8.4.23)
 var _block: VBoxContainer  # the round's engine lines (Б6)
 var _block_round := -1
 var _hint: Label
@@ -78,6 +79,11 @@ func _ready() -> void:
 func setup(screen: Control) -> void:
 	_screen = screen
 	_field = UiScenes.need(screen, "%Field")
+	_anims = FightAnims.new()
+	_anims.name = "FightAnims"
+	_field.add_child(_anims)
+	_anims.setup(_field, Catalog.data.get("anims", {}))
+	_field.anim_lib = Catalog.data.get("anims", {})
 	_queue = UiScenes.need(screen, "%Queue")
 	_foes = UiScenes.need(screen, "%FoeList")
 	_portrait = UiScenes.need(screen, "%Portrait")
@@ -420,7 +426,7 @@ func _bodies(s: GameSession, now: Dictionary, open: bool) -> Array[Dictionary]:
 			"colour": UiTheme.ACCENT_BRIGHT if hero else UiTheme.OK if side == "ally" else UiTheme.BAD,
 			"span": int(f.get("span", 1)), "x": at.x, "y": at.y, "hp": int(s.character["hp"]) if hero else int(f.get("hp", 0)),
 			"most": int(s.character["max_hp"]) if hero else int(f.get("max_hp", 1)), "out": status != "active" or (hero and int(s.character["hp"]) <= 0),
-			"now": id == cur, "dim": bool(f.get("hidden", false)) or heard})
+			"now": id == cur, "dim": bool(f.get("hidden", false)) or heard, "gear": AnimRules.gear(s, Catalog.data, f), "states": AnimRules.states(s, Catalog.data, f)})
 	return out
 
 
@@ -607,6 +613,8 @@ func _play_fx(s: GameSession) -> void:
 	for id: String in CombatRules.enemies(s, false):
 		var f := CombatRules.fighter(s, id)
 		snap[id] = {"hp": int(f.get("hp", 0)), "down": str(f.get("status")) != "active"}
+	_anims.speed = SaveManager.combat_delay() / FightAnims.NORMAL_DELAY if not GameState.instant_walk else 0.0
+	_anims.play(AnimRules.take(s))
 	var kinds := {}
 	for e: Dictionary in CombatRules.take_fx(s):
 		var list: Array = kinds.get(str(e["who"]), [])

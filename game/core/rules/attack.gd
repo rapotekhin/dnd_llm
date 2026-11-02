@@ -168,6 +168,7 @@ static func one(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, 
 ## A save action: a breath, a gaze, a song, at `t` and at every foe of it in its area.
 static func breath(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, a: Dictionary, lines: Array[String]) -> void:
 	MonsterRules.spend(f, a)
+	AnimRules.breath(s, data, f, t, a)
 	var caught: Array[Dictionary] = [t]
 	if not a.get("effect", {}).get("area", {}).is_empty() and not (a["damage"] as Array).is_empty() and bool(CombatRules.cfg(data)["friendly_fire"]["on"]):
 		var cells := CombatRules.monster_area(s, data, f, a, FightGrid.cell(t))
@@ -186,6 +187,8 @@ static func _saves(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 		tag = "poison"
 	var r := Sheet.save(s, data, t, str(sv["ability"]), int(sv["dc"]), tag)
 	var ok := bool(r["ok"])
+	AnimRules.outcome(s, t, "resist" if ok else "debuff" if (a["damage"] as Array).is_empty() else "impact",
+		str(a["damage"][0].get("type", "")) if not (a["damage"] as Array).is_empty() else "debuff")
 	var dmg := 0
 	var notes: Array[String] = []
 	for d: Dictionary in a["damage"]:
@@ -223,11 +226,13 @@ static func swing(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	if not Sheet.is_hero(f) and ConditionRules.has(me, "invisible"):
 		FightGrid.keep_seen(f)  # a strike gives an invisible foe away
 	var out := {"hit": false, "crit": false, "damage": 0}
+	var anim := AnimRules.blow(s, data, f, t, b)  # v0.8.4.23: the strike is seen before what comes of it
 	var stop := _stopped(s, data, f, t, blow)
 	if stop.is_empty():
 		out = _roll(s, data, f, t, blow, m, lines)
 	else:
 		lines.append(stop)
+	AnimRules.result(s, data, anim, t, "crit" if bool(out["crit"]) else "hit" if bool(out["hit"]) else "miss")
 	lines.append_array(ConditionRules.end_invisibility_on_attack(me, data))  # the attack is made unseen, then it ends
 	ConditionRules.remove(Sheet.holder(s, t), "helped")
 	ConditionRules.remove(me, "mocked")  # Vicious Mockery: only the next attack roll (v0.7.13)
