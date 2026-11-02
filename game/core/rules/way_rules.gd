@@ -393,29 +393,42 @@ static func ignite(s: GameSession, data: Dictionary, a: String, b: String, cause
 	return ["Дверь загорается (%s): через %d мин прогорит насквозь" % [cause, int(ThingRules.cfg(data)["burn_minutes"])]]
 
 
-## Whose door it is: who does not want the hero on either side, else the owner of either side (a door broken from inside
+## Whose door it is: who does not want `doer` on either side, else the owner of either side (a door broken from inside
 ## or in open hours is damage all the same, v0.8.4.4). "" — nobody's.
-static func victim(s: GameSession, data: Dictionary, a: String, b: String) -> String:
+static func victim(s: GameSession, data: Dictionary, a: String, b: String, doer: String = Being.HERO) -> String:
 	var w := WorldView.new(data["world"])
-	for room: String in [b if s.room_id == a else a, s.room_id]:
-		if not SiteRules.unwelcome(s, data, room).is_empty():
-			return SiteRules.unwelcome(s, data, room)
+	var at := Life.room(s, data, doer)
+	for room: String in [b if at == a else a, at]:
+		if not SiteRules.unwelcome(s, data, room, doer).is_empty():
+			return SiteRules.unwelcome(s, data, room, doer)
 	for room: String in [a, b]:
 		var owner := str(w.inherit(room, "owner", ""))
-		if not owner.is_empty() and owner != OwnerRules.HERO and not Being.dead(s, owner):
+		if not owner.is_empty() and owner != Life.owner(doer) and not Being.dead(s, owner):
 			return owner
 	return ""
 
 
-## A door of someone else forced before eyes: who saw it ([] — nobody).
-static func witnesses(s: GameSession, data: Dictionary, a: String, b: String) -> Array[String]:
+## A door of someone else forced by `doer` before eyes: who saw it ([] — nobody).
+static func witnesses(s: GameSession, data: Dictionary, a: String, b: String, doer: String = Being.HERO) -> Array[String]:
 	var w := WorldView.new(data["world"])
-	var into := b if s.room_id == a else a
-	if victim(s, data, a, b).is_empty():
+	var at := Life.room(s, data, doer)
+	var into := b if at == a else a
+	if victim(s, data, a, b, doer).is_empty():
 		return []
 	var seen: Array[String] = []  # those behind the door are off this map: WatchRules.eyes counts them, unless invisible
-	seen.assign(WatchRules.eyes(s, data, s.npcs_here(w.world, s.room_id) + s.npcs_here(w.world, into)))
+	seen.assign(WatchRules.eyes(s, data, s.npcs_here(w.world, at) + s.npcs_here(w.world, into), doer))
 	return seen
+
+
+## A door between `a` and `b` forced, picked, cut or burnt by `doer` (v0.8.4.21, the one place): who saw it and the crime
+## of walking in where there is law. Lines.
+static func forced(s: GameSession, data: Dictionary, a: String, b: String, doer: String = Being.HERO) -> Array[String]:
+	var seen := witnesses(s, data, a, b, doer)
+	if seen.is_empty():
+		return []
+	var lines: Array[String] = ["Видели: " + ", ".join(seen.map(func(id: String) -> String: return WorldView.name_of(data, id)))]  # v0.7.39.2
+	lines.append_array(CrimeRules.on_trespass(s, data, victim(s, data, a, b, doer), b, seen, doer))
+	return lines
 
 
 static func _hit_parts(w: Dictionary) -> Array[Dictionary]:

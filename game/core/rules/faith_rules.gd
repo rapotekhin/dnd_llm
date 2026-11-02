@@ -197,9 +197,9 @@ static func deed_name(data: Dictionary, kind: String) -> String:
 ## A fact of the engine the faith may forbid (a crime kind, `check:<skill>`, `rob_dead`) done by the hero in
 ## `room_id`: the vows that forbid it break, the hero's god's commandment breaks, a deed of desecration in a shrine's
 ## room. Lines.
-static func deed(s: GameSession, data: Dictionary, kind: String, room_id: String = "") -> Array[String]:
+static func deed(s: GameSession, data: Dictionary, kind: String, room_id: String = "", who: String = Being.HERO) -> Array[String]:
 	var lines: Array[String] = []
-	if not on(data):
+	if not on(data) or who != Being.HERO:  # v0.8.4.21: a person keeps no vows of its own — its deed breaks none of the hero's
 		return lines
 	var c := s.character
 	var f := _rw(c)

@@ -16,14 +16,22 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["sites"]
 
 
-## "" — the hero may be here; otherwise why not: the owner of this private room is alive and did not ask the hero in.
-static func unwelcome(s: GameSession, data: Dictionary, room_id: String) -> String:
+## "" — `doer` may be here; otherwise why not: the owner of this private room is alive and did not ask it in. The leave
+## of the owner (attitude, a permit, a dorm, a hideout, a faction) is given to the hero; a person is welcome at its own.
+static func unwelcome(s: GameSession, data: Dictionary, room_id: String, doer: String = Being.HERO) -> String:
 	var world := WorldView.new(data["world"])
 	var h := WayRules.hours(s, data, world.site_id(room_id))  # v0.7.22.25: a closed site is nobody's to walk in
 	if world.is_public(room_id) and (h.is_empty() or bool(h["open"])):
 		return ""
 	var owner := str(world.inherit(room_id, "owner", ""))
-	if owner.is_empty() or owner == OwnerRules.HERO or Being.dead(s, owner) or Being.follows(s, owner):  # v0.7.27: own place
+	if owner.is_empty() or owner == Life.owner(doer) or Being.dead(s, owner):  # v0.7.27: own place
+		return ""
+	if doer != Being.HERO:  # a person is welcome where it lives or works
+		for r: String in world.site_rooms(world.site_id(room_id)):
+			if (world.room(r).get("npcs", []) as Array).has(doer):
+				return ""
+		return owner
+	if owner == OwnerRules.HERO or Being.follows(s, owner):
 		return ""
 	if s.attitude(owner) >= int(cfg(data)["welcome_attitude"]) or permitted(s, data, world.site_id(room_id)) or StudyRules.student_room(s, data, room_id) \
 			or not OrgRules.hideout_of(s, data, room_id).is_empty() or FactionRules.welcome(s, data, owner):  # v0.7.30: own dorm; v0.7.33: own hideout; v0.7.50: its friends
@@ -31,14 +39,18 @@ static func unwelcome(s: GameSession, data: Dictionary, room_id: String) -> Stri
 	return owner
 
 
-## On entering `room_id` (GameState._step, the hero stands there): who sees a trespass and what follows. Lines.
-static func on_enter(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
-	var owner := unwelcome(s, data, room_id)
+## On entering `room_id` (GameState._step, the hero stands there; or a person, v0.8.4.21): who sees a trespass and what
+## follows. A person seen is at once the crime: the warning, the owner's word and the organization's answer are the hero's.
+## Lines.
+static func on_enter(s: GameSession, data: Dictionary, room_id: String, doer: String = Being.HERO) -> Array[String]:
+	var owner := unwelcome(s, data, room_id, doer)
 	if owner.is_empty():
 		return []  # welcome
 	var world := WorldView.new(data["world"])
 	var site_id := world.site_id(room_id)
-	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, room_id))  # sneaking or invisible — decided there
+	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, room_id), doer)  # sneaking or invisible — decided there
+	if doer != Being.HERO:
+		return CrimeRules.on_trespass(s, data, owner, room_id, seen, doer) if not seen.is_empty() else [] as Array[String]
 	for r: String in world.site_rooms(site_id):  # the owner anywhere in the site hears the door, unless the hero goes softly
 		if r != room_id and s.npcs_here(world.world, r).has(owner) and not WatchRules.sneaky(s, data):
 			seen.append(owner)

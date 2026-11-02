@@ -43,6 +43,7 @@ const PARTS := {
 	"shop": TYPE_DICTIONARY, "offices": TYPE_DICTIONARY, "towns": TYPE_DICTIONARY, "debts": TYPE_DICTIONARY, "development": TYPE_DICTIONARY,
 	"skill_profs": TYPE_ARRAY, "tools": TYPE_ARRAY, "languages": TYPE_ARRAY, "spells": TYPE_DICTIONARY, "recipes": TYPE_ARRAY,
 	"stolen_animals": TYPE_ARRAY,
+	"wanted": TYPE_DICTIONARY,  # where a person is wanted for its crimes (v0.8.4.21, CrimeRules.wanted_of)
 }
 const NESTED := {
 	"creature": {

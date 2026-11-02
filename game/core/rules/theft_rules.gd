@@ -69,19 +69,20 @@ static func chance(s: GameSession, data: Dictionary, npc_id: String, e: Dictiona
 	return int(CheckEngine.preview(s, data, check_params(s, data, npc_id, e)).get("chance", 0))
 
 
-## "" when the player can pick this NPC's pockets now: the NPC is here, the player is not caught by it today.
-static func can_steal(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	if not s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(npc_id):
+## "" when `doer` can pick this NPC's pockets now: the NPC is beside it, the hero is not caught by it today.
+static func can_steal(s: GameSession, data: Dictionary, npc_id: String, doer: String = Being.HERO) -> String:
+	if npc_id == doer or not s.npcs_here(WorldView.new(data["world"]).world, Life.room(s, data, doer)).has(npc_id):
 		return "THEFT_NOBODY"
-	if int(Being.view(s, npc_id).get("caught", 0)) == s.day:
+	if doer == Being.HERO and int(Being.view(s, npc_id).get("caught", 0)) == s.day:
 		return "THEFT_CAUGHT"
 	if CombatRules.active(s):
 		return "THEFT_NOBODY"
 	return ""
 
 
-## The outcome of a Sleight of Hand at one entry: success — it goes to the player; failure — the NPC reacts. Lines.
-static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: String, success: bool) -> Array[String]:
+## The outcome of a Sleight of Hand at one entry: success — it goes to `doer`; failure — the NPC reacts (v0.8.4.21: a
+## person caught is the crime `pickpocket` where there is law). Lines.
+static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: String, success: bool, doer: String = Being.HERO) -> Array[String]:
 	var list: Array = pockets(s, data, npc_id)
 	var who := str(WorldView.new(data["world"]).npc_name(npc_id))
 	var lines: Array[String] = []
@@ -89,25 +90,32 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 		if str(e["id"]) != entry_id:
 			continue
 		if not success:
-			Being.of(s, npc_id)["caught"] = s.day
 			lines.append("%s замечает руку в кармане" % who)
+			if doer != Being.HERO:
+				var room := Life.room(s, data, doer)
+				lines.append_array(CrimeRules.on_job(s, data, "pickpocket", npc_id, room, WorldView.new(data["world"]).location_id(room), doer))
+				return lines
+			Being.of(s, npc_id)["caught"] = s.day
 			lines.append_array(react(s, data, npc_id))
 			lines.append_array(WorldEvent.deed(s, data, "pickpocket"))  # v0.7.49
 			return lines
 		if int(e.get("cp", 0)) > 0:
 			Gear.pay(s, data, npc_id, -int(e["cp"]))
-			Ledger.add(s, int(e["cp"]), "theft:steal")
+			Ledger.add(s, int(e["cp"]), "theft:steal", doer)
 			lines.append("%s — украдено: %s" % [who, Money.format(int(e["cp"]))])
 		else:
 			var id := str(e["item_id"])
 			var n := Gear.take(s, data, npc_id, id, int(e.get("qty", 1)))
-			OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, id, n), n, npc_id)
+			if doer == Being.HERO:
+				OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, id, n), n, npc_id)
+			else:
+				Gear.give(s, data, doer, id, n)
 			lines.append("%s — украдено: %s" % [who, e["name"]])
 			if bool(e.get("worn", false)) and ItemRules.def_of(data["items"], s.items, id).has("weapon"):
 				var gone: Dictionary = Being.view(s, npc_id).get("disarmed", {})  # big test #3 (v0.7.22.8): not in its hands in a fight
 				gone[id] = s.day
 				Being.of(s, npc_id)["disarmed"] = gone
-		lines.append_array(WorldEvent.deed(s, data, "pickpocket"))  # v0.7.49: unseen, still a theft
+		lines.append_array(WorldEvent.deed(s, data, "pickpocket", "", doer))  # v0.7.49: unseen, still a theft
 		return lines
 	return lines
 

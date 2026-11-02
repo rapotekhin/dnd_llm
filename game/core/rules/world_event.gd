@@ -42,8 +42,8 @@ static func emit(s: GameSession, data: Dictionary, kind: String, fact: Dictionar
 
 
 ## The hero did a thing a vow may forbid: `what` — a crime's kind, or `check:<skill>`.
-static func deed(s: GameSession, data: Dictionary, what: String, room_id: String = "") -> Array[String]:
-	return emit(s, data, "deed", {"deed": what, "room": room_id})
+static func deed(s: GameSession, data: Dictionary, what: String, room_id: String = "", by: String = Being.HERO) -> Array[String]:
+	return emit(s, data, "deed", {"deed": what, "room": room_id, "by": by})
 
 
 ## A deed a faction counts by `rules.factions.sources`.
@@ -64,15 +64,17 @@ static func _quests(s: GameSession, data: Dictionary, f: Dictionary) -> Array[St
 
 
 static func _faith(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
-	return FaithRules.deed(s, data, str(f["deed"]), str(f.get("room", "")))
+	return FaithRules.deed(s, data, str(f["deed"]), str(f.get("room", "")), str(f.get("by", Being.HERO)))
 
 
 static func _faction_crime(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
+	if CrimeRules.doer_of(f.get("record", {})) != Being.HERO:  # a standing with a faction is the hero's (v0.8.4.21)
+		return []
 	return FactionRules.on_crime(s, data, str(f["victim"]), str(f["crime"]))
 
 
 static func _assault_bond(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
-	if str(f["crime"]) != "assault":
+	if str(f["crime"]) != "assault" or CrimeRules.doer_of(f.get("record", {})) != Being.HERO:
 		return []
 	return BondRules.on_deed(s, data, str(f["victim"]), "assault", "нападение")  # v0.7.31
 

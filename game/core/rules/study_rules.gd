@@ -655,7 +655,7 @@ static func tick_of(s: GameSession, data: Dictionary, who: String) -> Array[Stri
 	for sid: String in (school_state(c) as Dictionary).keys():
 		var loc := _loc_of_school(data, sid)
 		var room := str(school(data, sid).get("dorm", ""))
-		if not loc.is_empty() and not room.is_empty() and who == Being.HERO and CrimeRules.wanted_at(s, data, room):
+		if not loc.is_empty() and not room.is_empty() and CrimeRules.wanted_at(s, data, room, who):
 			lines.append_array(expel(s, data, sid, "за проступок: вас ищет стража", who))
 	for id: String in out:
 		if not enrolled(c, id):

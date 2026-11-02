@@ -1376,9 +1376,7 @@ func _do_door(s: GameSession, plan: Dictionary) -> void:
 		"break":
 			WayRules.break_down(s, a, b)
 	if str(plan["how"]) != "owner":
-		var seen := WayRules.witnesses(s, _data, a, b)
-		if not seen.is_empty():
-			_extra_lines.append_array(CrimeRules.on_trespass(s, _data, WayRules.victim(s, _data, a, b), b, seen))
+		_extra_lines.append_array(WayRules.forced(s, _data, a, b))
 
 
 func _do_unlock(s: GameSession, plan: Dictionary) -> void:

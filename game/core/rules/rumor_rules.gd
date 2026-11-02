@@ -244,9 +244,11 @@ static func _land(s: GameSession, data: Dictionary, r: Dictionary, loc: String) 
 	if not crime.is_empty():
 		var law := CrimeRules.law(data, loc)
 		var reach: Array = law.get("reach", [str(r["origin"])])  # a law's `reach` limits whose crimes it hunts; none — all
-		if not law.is_empty() and reach.has(str(r["origin"])) and not s.wanted.has(loc):
-			s.wanted[loc] = TimeRules.abs_minute(s)
-			lines.append("Вы в розыске: %s" % law.get("name", "стража"))
+		var wanted := CrimeRules.wanted_of(s, CrimeRules.doer_of(crime))  # v0.8.4.21: the doer's
+		if not law.is_empty() and reach.has(str(r["origin"])) and not wanted.has(loc):
+			wanted[loc] = TimeRules.abs_minute(s)
+			if CrimeRules.doer_of(crime) == Being.HERO:
+				lines.append("Вы в розыске: %s" % law.get("name", "стража"))
 	return lines
 
 
@@ -268,8 +270,9 @@ static func on_crime(s: GameSession, data: Dictionary, crime: Dictionary, delta:
 	var weights: Dictionary = cfg(data)["crime_weight"]
 	var w := int(weights.get(str(crime["kind"]), weights["_default"]))
 	var victim := str(data["world"]["npcs"].get(str(crime["victim"]), {}).get("name", ""))
-	add(s, data, {"text": "%s%s — винят чужака по имени %s" % [kind.get("name", crime["kind"]), (": " + victim) if not victim.is_empty() else "",
-		s.character.get("name", "")], "weight": w, "origin": str(crime["location"]), "fame": delta, "crime": str(crime["id"]),
+	var doer := CrimeRules.doer_of(crime)
+	var blamed := ("чужака по имени " + str(s.character.get("name", ""))) if doer == Being.HERO else "того, кого зовут " + WorldView.name_of(data, doer)
+	add(s, data, {"text": "%s%s — винят %s" % [kind.get("name", crime["kind"]), (": " + victim) if not victim.is_empty() else "", blamed], "weight": w, "origin": str(crime["location"]), "fame": delta, "crime": str(crime["id"]),
 		"source": "crime", "about": str(crime["victim"])})
 
 

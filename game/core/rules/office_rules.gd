@@ -533,8 +533,7 @@ static func _inquiry(s: GameSession, data: Dictionary, id: String, st: Dictionar
 	var d := def(data, id)
 	_remove(s, id, who)
 	lines.append("Вас сняли с должности")
-	if who == Being.HERO:
-		lines.append_array(CrimeRules.on_job(s, data, str(cfg(data)["crime"]), str(d.get("chief", "")), str(d["room"]), str(d["location"])))
+	lines.append_array(CrimeRules.on_job(s, data, str(cfg(data)["crime"]), str(d.get("chief", "")), str(d["room"]), str(d["location"]), who))
 	return lines
 
 

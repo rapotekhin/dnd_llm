@@ -261,10 +261,10 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int, wh
 			lines.append_array(DevelopmentRules.add_xp(c, data, "work", int(dev.get("promoted", 0))))
 	lines.append_array(_org_points(s, data, id, bool(o.get("good", false)), who))
 	var caught: Dictionary = j.get("caught", {})
-	if not caught.is_empty() and str(o["id"]) == "bad" and who == Being.HERO:
+	if not caught.is_empty() and str(o["id"]) == "bad":
 		var room := str(caught.get("room", Life.room(s, data, who)))
 		lines.append("Попался — крик «держи вора!»")
-		lines.append_array(CrimeRules.on_job(s, data, str(caught["crime"]), "", room, WorldView.new(data["world"]).location_id(room)))
+		lines.append_array(CrimeRules.on_job(s, data, str(caught["crime"]), "", room, WorldView.new(data["world"]).location_id(room), who))
 	var fight: Array = []
 	var f: Dictionary = j.get("fight", {})
 	if not f.is_empty() and s.rng.randf() < float(f.get("chance", 0.0)):

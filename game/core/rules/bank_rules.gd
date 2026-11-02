@@ -241,7 +241,7 @@ static func repay(s: GameSession, data: Dictionary, cid: String, who: String = B
 	Ledger.add(s, -int(k["balance"]), "bank:repay", who)
 	var lines: Array[String] = ["%s: долг погашен — %s" % [WorldView.name_of(data, str(k["bank"])), Money.format(int(k["balance"]))]]
 	lines.append_array(_release(s, data, k, who))
-	if str(k["state"]) == WANTED and who == Being.HERO:
+	if str(k["state"]) == WANTED:
 		lines.append_array(CrimeRules.settle_one(s, data, str(k.get("crime", ""))))
 	k["state"] = "closed"
 	return lines
@@ -412,11 +412,8 @@ static func _default(s: GameSession, data: Dictionary, k: Dictionary, who: Strin
 	if PropertyRules.owned(Life.of(s, who, data), id) and str(PropertyRules.state(Life.of(s, who, data))[id].get("pledged", "")) == str(k["id"]):
 		k["state"] = "seized"
 		return PropertyRules._lose(s, data, id, "взыскано за долг (%s)" % bank_name, who)
-	if who != Being.HERO:  # a person's unpaid debt is the bank's loss: a crime of anybody is v0.8.4.21
-		k["state"] = "seized"
-		return []
 	k["state"] = WANTED
-	var r := CrimeRules.on_debt(s, data, str(k["bank"]), str(k["loc"]), int(k["balance"]))
+	var r := CrimeRules.on_debt(s, data, str(k["bank"]), str(k["loc"]), int(k["balance"]), who)
 	k["crime"] = r[0]
 	var lines: Array[String] = ["%s: долг не обеспечен залогом — %s, дело передано страже" % [bank_name, Money.format(int(k["balance"]))]]
 	lines.append_array(r.slice(1))

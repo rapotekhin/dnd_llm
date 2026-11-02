@@ -1078,10 +1078,7 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 	if minutes > 0:
 		lines.append_array(TimeRules.advance(session, data, minutes))
 	if how in ["pick", "force", "hit", "torch"] or (how == "spell" and str(data["rules"]["spell_effects"].get(spell_id, {}).get("door", "")) != "lock"):
-		var seen := WayRules.witnesses(session, data, from, to)
-		if not seen.is_empty():
-			lines.append("Видели: " + ", ".join(seen.map(func(id: String) -> String: return str(world().npc(id).get("name", id)))))  # v0.7.39.2
-			lines.append_array(CrimeRules.on_trespass(session, data, WayRules.victim(session, data, from, to), to, seen))
+		lines.append_array(WayRules.forced(session, data, from, to))
 	_effect_lines(lines)
 	var verb: String = {"key": "Отпираю ключом", "latch": "Отодвигаю засов", "pick": "Вскрываю отмычками", "force": "Выбиваю", "hit": "Рублю",
 		"spell": "Колдую на", "torch": "Поджигаю", "wait": "Жду, пока откроют"}[how]
