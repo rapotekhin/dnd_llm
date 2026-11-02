@@ -741,7 +741,7 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		if private and not CrimeRules.held(s) and not owner.is_empty():
 			b.tooltip_text = "%s
 %s" % [room_name, tr("EXIT_PRIVATE_WELCOME" if SiteRules.unwelcome(s, Catalog.data, e).is_empty() else
-				"EXIT_PRIVATE_TIP").format({"owner": world.npc(owner).get("name", owner)})]
+				"EXIT_PRIVATE_TIP").format({"owner": world.npc_name(owner)})]
 	for w: Dictionary in WayRules.shut_exits(s, Catalog.data["world"], s.room_id):  # a flooded ford, greyed with why (v0.7.46)
 		var b := _exit_button(_exit_list, "→ %s (%s)" % [world.room(str(w["to"])).get("name", w["to"]), tr("EXIT_SHUT")], func() -> void: pass, false)
 		b.name = "Exit_" + str(w["to"])

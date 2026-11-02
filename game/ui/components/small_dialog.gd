@@ -176,7 +176,7 @@ func _wilds(s: GameSession, data: Dictionary) -> void:
 		_text(tr("WILDS_DIS"), UiTheme.MUTED_LABEL)
 	_text(tr("WILDS_STOCK").format({"n": WildsRules.stock(s, data, ground), "max": int(d["stock"])}))
 	if WildsRules.poaching(s, data):
-		_text(tr("WILDS_POACH").format({"owner": BondRules.npc_name(s, data, WildsRules.owner(s, data))}), UiTheme.MUTED_LABEL)
+		_text(tr("WILDS_POACH").format({"owner": WorldView.name_of(data, WildsRules.owner(s, data))}), UiTheme.MUTED_LABEL)
 	_text(tr("WILDS_UNTIL").format({"clock": TimeRules.clock_after(s, hours * 60)}))
 	var why := WildsRules.why_not(s, data, ground)
 	set_note(why)

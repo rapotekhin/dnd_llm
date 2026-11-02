@@ -93,7 +93,7 @@ func run() -> void:
 	edit.text = "Светозар"
 	await press(find(fam, "Rename_" + kid))
 	await frames(3)
-	step("the child named", BondRules.npc_name(s, data, kid) == "Светозар")
+	step("the child named", WorldView.name_of(data, kid) == "Светозар")
 	await shot("family")
 
 	s.day += 160

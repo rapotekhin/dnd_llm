@@ -310,7 +310,7 @@ static func today(s: GameSession, data: Dictionary, id: String) -> Array:
 		var who := people[s.rng.randi_range(0, people.size() - 1)] if not people.is_empty() else ""
 		people.erase(who)  # one petitioner a day
 		var titles: Array = kd["titles"]
-		var title := str(titles[s.rng.randi_range(0, titles.size() - 1)]).format({"who": BondRules.npc_name(s, data, who) if not who.is_empty() else "проситель"})
+		var title := str(titles[s.rng.randi_range(0, titles.size() - 1)]).format({"who": WorldView.name_of(data, who) if not who.is_empty() else "проситель"})
 		list.append({"kind": k, "title": title, "who": who, "done": false})
 	st["cases"] = list
 	st["cases_day"] = s.day
@@ -570,10 +570,10 @@ static func text(s: GameSession, data: Dictionary) -> String:
 			p += ", казна %s, народ %s, подать %s" % [Money.format(int(t["treasury"])), _word(cfg(data)["discontent_words"], int(t["discontent"])),
 				cfg(data)["town"]["taxes"][str(t["tax"])]["name"]]
 		parts.append(p)
-	for npc: String in SceneRules.npcs(s, data["world"], s.room_id):
+	for npc: String in s.npcs_here(data["world"], s.room_id):
 		for id: String in of_chief(data, npc):
 			if not holds(c, id):
-				parts.append("%s даёт место: %s" % [BondRules.npc_name(s, data, npc), name_of(data, id)])
+				parts.append("%s даёт место: %s" % [WorldView.name_of(data, npc), name_of(data, id)])
 	for id: String in of_room(data, s.room_id):
 		if not holds(c, id):
 			parts.append("здесь выбирают: %s" % name_of(data, id))

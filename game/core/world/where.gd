@@ -52,6 +52,17 @@ static func of_npc(s: GameSession, data: Dictionary, npc_id: String) -> Dictiona
 	return room(str(at) if at != null else ReputationRules.home_room(data, npc_id))
 
 
+## The room an NPC stands in now (v0.8.4.16: the one answer, not a search of the pack's rooms); "" — on the road.
+static func npc_room(s: GameSession, data: Dictionary, npc_id: String) -> String:
+	return room_of(s, data, of_npc(s, data, npc_id))
+
+
+## The location an NPC stands in now; "" — on the road.
+static func npc_location(s: GameSession, data: Dictionary, npc_id: String) -> String:
+	var r := npc_room(s, data, npc_id)
+	return WorldView.new(data["world"]).location_id(r) if not r.is_empty() else ""
+
+
 ## The room to look for an NPC in, whatever the hour: moved or at home. "" — on the road.
 static func base_room(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	return str(Being.view(s, npc_id).get("at", ReputationRules.home_room(data, npc_id)))

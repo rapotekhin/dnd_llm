@@ -220,14 +220,14 @@ static func on_bond(s: GameSession, data: Dictionary, npc_id: String, delta: int
 	var share := float(cfg(data)["bond_share"])
 	if str(def(s, data, id).get("head", "")) == npc_id:
 		share *= float(cfg(data)["head_factor"])
-	return add(s, data, id, int(delta * share), BondRules.npc_name(s, data, npc_id))
+	return add(s, data, id, int(delta * share), WorldView.name_of(data, npc_id))
 
 
 ## A crime became known, or a theft was caught: its victim's faction learns of it. Lines.
 static func on_crime(s: GameSession, data: Dictionary, victim: String, kind: String) -> Array[String]:
 	if victim.is_empty() or not data["world"]["npcs"].has(victim):
 		return []
-	return on_source(s, data, of_npc(s, data, victim), kind, BondRules.npc_name(s, data, victim))
+	return on_source(s, data, of_npc(s, data, victim), kind, WorldView.name_of(data, victim))
 
 
 ## A fight won: the factions of the foes think worse of the hero, wild beasts do not mind a fair fight. Foes who
@@ -332,7 +332,7 @@ static func card(s: GameSession, data: Dictionary, id: String, known: Array = []
 	var people: Array[String] = []
 	for npc: String in data["world"]["npcs"]:
 		if str(data["world"]["npcs"][npc].get("faction", "")) == id and known.has(npc):
-			people.append(BondRules.npc_name(s, data, npc))
+			people.append(WorldView.name_of(data, npc))
 	var st := step(s, data, id)
 	return {"id": id, "name": str(d.get("name", id)), "kind": str(d.get("kind", "")), "step": str(st["name"]), "step_id": str(st["id"]), "pts": points(s, data, id),
 		"description": str(d.get("description", "")), "why": s.factions.get(id, {}).get("why", []), "members": people}

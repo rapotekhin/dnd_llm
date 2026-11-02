@@ -108,7 +108,7 @@ static func _purse_add(s: GameSession, data: Dictionary, npc_id: String, delta: 
 
 ## Why `npc_id` will not play now ("" — it will).
 static func why_not(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	var who := BondRules.npc_name(s, data, npc_id)
+	var who := WorldView.name_of(data, npc_id)
 	if not s.npcs_here(data["world"], s.room_id).has(npc_id):
 		return "%s здесь нет" % who
 	if CombatRules.active(s):
@@ -175,7 +175,7 @@ static func start(s: GameSession, data: Dictionary, npc_id: String, kind_id: Str
 	rec["n"] = int(rec.get("n", 0)) + 1
 	s.character["contest"] = {"npc": npc_id, "kind": kind_id, "stake": stake, "cp": cp, "hero": 0, "npc_wins": 0, "round": 0}
 	var on := Money.format(cp) if str(stake["kind"]) == "coins" else "%s против %s" % [stake["name"], Money.format(cp)]
-	return {"lines": ["%s с %s, до %d побед — на кону %s" % [k["name"], BondRules.npc_name(s, data, npc_id), int(k.get("wins", 1)), on]]}
+	return {"lines": ["%s с %s, до %d побед — на кону %s" % [k["name"], WorldView.name_of(data, npc_id), int(k.get("wins", 1)), on]]}
 
 
 ## The NPC's roll of the round: {total, nat, bonus} — its check of the kind or, against cheating, `cheat_against`.
@@ -196,7 +196,7 @@ static func round(s: GameSession, data: Dictionary, hero_total: int, npc_total: 
 	if st.is_empty():
 		return []
 	var k := kind(data, str(st["kind"]))
-	var who := BondRules.npc_name(s, data, str(st["npc"]))
+	var who := WorldView.name_of(data, str(st["npc"]))
 	st["round"] = int(st["round"]) + 1
 	var lines: Array[String] = []
 	if cheat and hero_total <= npc_total:
@@ -237,7 +237,7 @@ static func duel(s: GameSession, data: Dictionary) -> Dictionary:
 	var st := state(s)
 	var npc := str(st["npc"])
 	var n: Dictionary = data["world"]["npcs"].get(npc, {})
-	var who := BondRules.npc_name(s, data, npc)
+	var who := WorldView.name_of(data, npc)
 	var mon := str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
 	return {"foes": [{"monster": mon, "name": who}], "source": {"arena": {"kind": "duel", "rule": "yield", "npc": npc, "foe": who}, "room_from": s.room_id},
 		"lines": ["Поединок до сдачи с %s" % who]}
@@ -254,7 +254,7 @@ static func _finish(s: GameSession, data: Dictionary, won: bool) -> Array[String
 	var st := state(s)
 	var npc := str(st["npc"])
 	var k := kind(data, str(st["kind"]))
-	var who := BondRules.npc_name(s, data, npc)
+	var who := WorldView.name_of(data, npc)
 	var stake: Dictionary = st["stake"]
 	var cp := int(st["cp"])
 	var game := str(k.get("name", "игра")).to_lower()
@@ -305,7 +305,7 @@ static func _finish(s: GameSession, data: Dictionary, won: bool) -> Array[String
 static func _caught(s: GameSession, data: Dictionary) -> Array[String]:
 	var st := state(s)
 	var npc := str(st["npc"])
-	var who := BondRules.npc_name(s, data, npc)
+	var who := WorldView.name_of(data, npc)
 	var cp := int(st["cp"])
 	_purse_add(s, data, npc, cp * 2 if str(st["stake"]["kind"]) == "coins" else cp)
 	s.character.erase("contest")
@@ -336,7 +336,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	elif kind(data, kid).is_empty():
 		return {"reason": "нет такой игры: %s — game одна из %s или new_kind" % [kid, ", ".join(kinds(data).keys())]}
 	var name := str((made.get("def", {}) as Dictionary).get("name", kind(data, kid).get("name", kid)))
-	return {"plan": {"npc_id": npc, "kind": kid, "made": made}, "summary": "%s зовёт сыграть: %s (окно «Состязание»)" % [BondRules.npc_name(s, data, npc), name]}
+	return {"plan": {"npc_id": npc, "kind": kid, "made": made}, "summary": "%s зовёт сыграть: %s (окно «Состязание»)" % [WorldView.name_of(data, npc), name]}
 
 
 static func _plan_kind(data: Dictionary, spec: Dictionary) -> Dictionary:
@@ -390,4 +390,4 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 			data["world"]["contest_kinds"] = {}
 		data["world"]["contest_kinds"][str(made["id"])] = (made["def"] as Dictionary).duplicate(true)
 	s.character["contest_offer"] = {"npc": str(p["npc_id"]), "kind": str(p["kind"])}
-	return ["%s зовёт сыграть: %s" % [BondRules.npc_name(s, data, str(p["npc_id"])), kind(data, str(p["kind"])).get("name", p["kind"])]]
+	return ["%s зовёт сыграть: %s" % [WorldView.name_of(data, str(p["npc_id"])), kind(data, str(p["kind"])).get("name", p["kind"])]]

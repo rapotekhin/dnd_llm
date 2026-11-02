@@ -80,12 +80,8 @@ static func offers(s: GameSession, data: Dictionary, npc_id: String, service: St
 	return (terms(s, data, npc_id)["services"] as Array).has(service)
 
 
-static func npc_name(data: Dictionary, npc_id: String) -> String:
-	return str(WorldView.new(data["world"]).npc(npc_id).get("name", npc_id))
-
-
 static func _present(s: GameSession, data: Dictionary, npc_id: String) -> bool:
-	return SceneRules.npcs(s, data["world"], s.room_id).has(npc_id)
+	return s.npcs_here(data["world"], s.room_id).has(npc_id)
 
 
 static func _pct(v: float) -> String:
@@ -137,7 +133,7 @@ static func deposit(s: GameSession, data: Dictionary, npc_id: String, term: Stri
 	Ledger.add(s, -amount, "bank:deposit")
 	var k := _new(s, data, DEPOSIT, npc_id, amount, rate, int(t["days"]))
 	k["term"] = term
-	return ["%s: вклад %s %s, %s%s" % [npc_name(data, npc_id), Money.format(amount), t["name"], rate_text(rate),
+	return ["%s: вклад %s %s, %s%s" % [WorldView.name_of(data, npc_id), Money.format(amount), t["name"], rate_text(rate),
 		" — до дня %d" % int(k["due"]) if int(k["due"]) > 0 else ""]]
 
 
@@ -163,7 +159,7 @@ static func withdraw(s: GameSession, data: Dictionary, cid: String) -> Array[Str
 	var was_early := early(s, k)
 	Ledger.add(s, sum, "bank:withdraw")
 	k["state"] = "closed"
-	return ["%s: вклад забран — %s%s" % [npc_name(data, str(k["bank"])), Money.format(sum), " — досрочно, без процентов" if was_early else ""]]
+	return ["%s: вклад забран — %s%s" % [WorldView.name_of(data, str(k["bank"])), Money.format(sum), " — досрочно, без процентов" if was_early else ""]]
 
 
 # --- loans ----------------------------------------------------------------------------------------------------------
@@ -227,7 +223,7 @@ static func loan(s: GameSession, data: Dictionary, npc_id: String, ckind: String
 		if int(inv[cid]) <= 0:
 			inv.erase(cid)
 	Ledger.add(s, amount, "bank:loan")
-	return ["%s: кредит %s под залог — %s, %s, вернуть до дня %d" % [npc_name(data, npc_id), Money.format(amount), o["name"],
+	return ["%s: кредит %s под залог — %s, %s, вернуть до дня %d" % [WorldView.name_of(data, npc_id), Money.format(amount), o["name"],
 		rate_text(float(k["rate"])), int(k["due"])]]
 
 
@@ -243,7 +239,7 @@ static func repay_why(s: GameSession, data: Dictionary, cid: String) -> String:
 static func repay(s: GameSession, data: Dictionary, cid: String) -> Array[String]:
 	var k := contract(s.character, cid)
 	Ledger.add(s, -int(k["balance"]), "bank:repay")
-	var lines: Array[String] = ["%s: долг погашен — %s" % [npc_name(data, str(k["bank"])), Money.format(int(k["balance"]))]]
+	var lines: Array[String] = ["%s: долг погашен — %s" % [WorldView.name_of(data, str(k["bank"])), Money.format(int(k["balance"]))]]
 	lines.append_array(_release(s, data, k))
 	if str(k["state"]) == WANTED:
 		lines.append_array(CrimeRules.settle_one(s, data, str(k.get("crime", ""))))
@@ -357,7 +353,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 				v["coins"] = int(v["coins"]) - fee
 			else:
 				if Ledger.owed(s, "vault:" + npc_id) == 0:
-					lines.append("%s: плата за ячейку не внесена — долг возьмут, когда придёте" % npc_name(data, npc_id))
+					lines.append("%s: плата за ячейку не внесена — долг возьмут, когда придёте" % WorldView.name_of(data, npc_id))
 				Ledger.owe(s, "vault:" + npc_id, "vault", fee, npc_id)
 	return lines
 
@@ -370,7 +366,7 @@ static func _grow(k: Dictionary, pct: float) -> void:
 
 
 static func _day(s: GameSession, data: Dictionary, k: Dictionary, day: int) -> Array[String]:
-	var who := npc_name(data, str(k["bank"]))
+	var who := WorldView.name_of(data, str(k["bank"]))
 	if str(k["kind"]) == DEPOSIT:
 		var rate := float(k["rate"])
 		if int(k["due"]) > 0 and day > int(k["due"]):
@@ -401,7 +397,7 @@ static func _day(s: GameSession, data: Dictionary, k: Dictionary, day: int) -> A
 ## The grace is over: the collateral goes to the bank; a property lost meanwhile — the debt becomes a crime. Lines.
 static func _default(s: GameSession, data: Dictionary, k: Dictionary) -> Array[String]:
 	var col: Dictionary = k.get("collateral", {})
-	var who := npc_name(data, str(k["bank"]))
+	var who := WorldView.name_of(data, str(k["bank"]))
 	(state(s.character)["refused"] as Array).append(str(k["bank"]))
 	if str(col.get("kind", "")) == "item":
 		k["state"] = "seized"
@@ -427,7 +423,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 		return ""
 	var parts: Array[String] = []
 	for k: Dictionary in open_of(s.character):
-		var who := npc_name(data, str(k["bank"]))
+		var who := WorldView.name_of(data, str(k["bank"]))
 		if str(k["kind"]) == DEPOSIT:
 			parts.append("вклад (%s): %s, %s" % [who, Money.format(int(k["balance"])), rate_text(float(k["rate"]))])
 		else:
@@ -442,8 +438,8 @@ static func text(s: GameSession, data: Dictionary) -> String:
 				bits.append(Money.format(int(v["coins"])))
 			if not (v["contents"] as Dictionary).is_empty():
 				bits.append(ContainerRules.contents_text(data, s.items, v["contents"]))
-			parts.append("ячейка (%s): %s" % [npc_name(data, npc_id), ", ".join(bits)])
-	for npc_id: String in SceneRules.npcs(s, data["world"], s.room_id):
+			parts.append("ячейка (%s): %s" % [WorldView.name_of(data, npc_id), ", ".join(bits)])
+	for npc_id: String in s.npcs_here(data["world"], s.room_id):
 		if is_bank(s, data, npc_id):
 			var t := terms(s, data, npc_id)
 			var sv: Array[String] = []
@@ -454,7 +450,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 				sv.append("кредит под залог %s, до %d%% оценки" % [rate_text(float(t["loan_rate"])), int(t["ltv"]["property"])])
 			if offers(s, data, npc_id, "vault"):
 				sv.append("ячейка %s в неделю" % Money.format(int(cfg(data)["vault"]["fee_cp_week"])))
-			parts.append("здесь банк — %s%s: %s" % [npc_name(data, npc_id), " («%s»)" % t["name"] if not str(t["name"]).is_empty() else "", "; ".join(sv)])
+			parts.append("здесь банк — %s%s: %s" % [WorldView.name_of(data, npc_id), " («%s»)" % t["name"] if not str(t["name"]).is_empty() else "", "; ".join(sv)])
 	if parts.is_empty():
 		return ""
 	return "Банк (окно «Банк» у менялы — вклады, кредит, ячейка — кнопки): " + "; ".join(parts)
@@ -468,7 +464,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	if who != "new" and not _present(s, data, who):
 		return {"reason": "%s не в сцене — банком становится только тот, кто здесь (или «new» — человек create:npc этого хода)" % who}
 	if who != "new" and is_bank(s, data, who):
-		return {"reason": "%s уже банк — окно «Банк» в его действиях" % npc_name(data, who)}
+		return {"reason": "%s уже банк — окно «Банк» в его действиях" % WorldView.name_of(data, who)}
 	var services: Array = []
 	for x: Variant in spec.get("services", []):
 		if (cfg(data)["services"] as Array).has(str(x)) and not services.has(str(x)):
@@ -486,7 +482,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	if not str(spec.get("name", "")).strip_edges().is_empty():
 		def["name"] = str(spec["name"]).strip_edges().left(60)
 	var names := {"deposit": "вклады", "loan": "кредит под залог", "vault": "ячейка"}
-	return {"plan": {"npc": who, "def": def}, "summary": "Банк — %s: %s" % ["нового человека" if who == "new" else npc_name(data, who),
+	return {"plan": {"npc": who, "def": def}, "summary": "Банк — %s: %s" % ["нового человека" if who == "new" else WorldView.name_of(data, who),
 		", ".join(services.map(func(x: Variant) -> String: return str(names[str(x)])))]}
 
 
@@ -500,4 +496,4 @@ static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary, made_
 	var banks: Dictionary = gen.get("banks", {})
 	banks[who] = (plan["def"] as Dictionary).duplicate(true)
 	gen["banks"] = banks
-	return ["%s теперь ведёт денежные дела — кнопка «Банк» в его действиях" % npc_name(data, who)]
+	return ["%s теперь ведёт денежные дела — кнопка «Банк» в его действиях" % WorldView.name_of(data, who)]

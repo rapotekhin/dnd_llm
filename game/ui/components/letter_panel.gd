@@ -115,7 +115,7 @@ func _rebuild() -> void:
 	if not to_list.has(_to):
 		_to = to_list[0]
 	_pick("LetterTo", tr("LETTER_TO"), to_list, _strs(to_list.map(func(id: String) -> String:
-		return "%s — %s" % [w.npc(id).get("name", id), LetterRules._loc_name(data, LetterRules.npc_loc(s, data, id))])), _to,
+		return "%s — %s" % [w.npc_name(id), LetterRules._loc_name(data, LetterRules.npc_loc(s, data, id))])), _to,
 		func(id: String) -> void: _to = id)
 	match str(p.get("does", "")):
 		"ally":
@@ -134,7 +134,7 @@ func _rebuild() -> void:
 					about.append(id)
 			if not about.has(_about):
 				_about = about[0] if not about.is_empty() else ""
-			_pick("LetterAbout", tr("LETTER_ABOUT"), about, _strs(about.map(func(id: String) -> String: return str(w.npc(id).get("name", id)))), _about,
+			_pick("LetterAbout", tr("LETTER_ABOUT"), about, _strs(about.map(func(id: String) -> String: return str(w.npc_name(id)))), _about,
 				func(id: String) -> void: _about = id)
 			var proof := LetterRules.evidence(s, data, _about, LetterRules._evidence_item(s, data, _about))
 			_label(_box, tr("LETTER_EVIDENCE").format({"what": proof}) if not proof.is_empty() else tr("LETTER_NO_EVIDENCE"), UiTheme.MUTED_LABEL).name = "LetterEvidence"

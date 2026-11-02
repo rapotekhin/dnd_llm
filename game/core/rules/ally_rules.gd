@@ -26,11 +26,12 @@ static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 	for f: Variant in foes:
 		if f is Dictionary and not str(f.get("npc_id", "")).is_empty():
 			foe_npcs.append(str(f["npc_id"]))
-			foe_homes.append(home_location(world, str(f["npc_id"])))
+			foe_homes.append(ReputationRules.home_of(data, str(f["npc_id"])))
 	for id: String in Being.followers(s):
 		if Being.dead(s, id) or s.held_as_creature(id):
 			continue  # the dead do not fight, nor one lying knocked out
-		if foe_npcs.has(id) or (foe_homes.has(home_location(world, id)) and not home_location(world, id).is_empty()):
+		var home := ReputationRules.home_of(data, id)
+		if foe_npcs.has(id) or (foe_homes.has(home) and not home.is_empty()):
 			continue  # not against the hero's own victim, nor against its own people
 		var own := FactionRules.of_npc(s, data, id)
 		if foes.any(func(f: Variant) -> bool: return f is Dictionary and not own.is_empty() and FactionRules.of_foe(data, {}, f) == own):
@@ -54,13 +55,6 @@ static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 
 
 ## The location of the room an NPC of the pack lives in ("" for one the master made without a room).
-static func home_location(world: WorldView, npc_id: String) -> String:
-	for rid: String in world.world["rooms"]:
-		if (world.room(rid).get("npcs", []) as Array).has(npc_id):
-			return world.location_id(rid)
-	return ""
-
-
 ## The creatures a spell called, still with the hero.
 static func called(s: GameSession) -> Array[Dictionary]:
 	return Being.parts(s, "summon")
@@ -167,7 +161,7 @@ static func npc_health(s: GameSession, data: Dictionary, npc_id: String) -> Dict
 
 ## A spell cast at an NPC out of a fight (v0.7.50.1): a heal now, or a boon that it carries into a fight until it ends.
 static func cast_on_npc(s: GameSession, data: Dictionary, spell_id: String, slot: int, npc_id: String) -> Array[String]:
-	var who := str(WorldView.new(data["world"]).npc(npc_id).get("name", npc_id))
+	var who := str(WorldView.new(data["world"]).npc_name(npc_id))
 	var spell: Dictionary = data["spells"][spell_id]
 	var invisible := (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell_id)
 	if SpellEffects.spec(data, spell_id).is_empty() and not invisible:

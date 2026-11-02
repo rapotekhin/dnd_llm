@@ -166,6 +166,23 @@ static func has_effect(s: GameSession, a: String, b: String, kind: String) -> bo
 	return ThingRules.has(s, s.ways.get(key(a, b), {}), kind)
 
 
+## Whether the hero may step from `a` to `b` (v0.8.4.16: one place for the exit button, the fast travel and the
+## master's move): "" or why not as a localization key. The guard's hold and a captivity keep the hero, an overload stops
+## the walk, a shut way or a trap the hero found stops the step.
+static func leave_why(s: GameSession, data: Dictionary, a: String, b: String) -> String:
+	if CrimeRules.held(s):
+		return "CRIME_HELD"
+	if EncounterRules.captive(s):
+		return "CAPTIVE_HELD"
+	if CharacterRules.overloaded(s.character, data, s.items):
+		return "TOO_HEAVY"
+	var shut := blocked(s, data, a, b)
+	if not shut.is_empty():
+		return shut
+	var trap := ExplorationRules.trap_on_exit(s, data["world"], a, b)
+	return "TRAP_ON_WAY" if not trap.is_empty() and ExplorationRules.is_found(s, a, trap) else ""
+
+
 ## "" — the hero passes from `a` to `b`; else why not (a localization key): DOOR_BURNING, DOOR_ARCANE, DOOR_LOCKED,
 ## DOOR_CLOSED_HOURS (only from outside the site), DOOR_PRIVATE (into a stranger's private room), DOOR_SOLID (a wall),
 ## DOOR_TOO_SMALL.
@@ -402,11 +419,10 @@ static func victim(s: GameSession, data: Dictionary, a: String, b: String) -> St
 static func witnesses(s: GameSession, data: Dictionary, a: String, b: String) -> Array[String]:
 	var w := WorldView.new(data["world"])
 	var into := b if s.room_id == a else a
-	if victim(s, data, a, b).is_empty() or ConditionRules.invisible(s.character, data):
+	if victim(s, data, a, b).is_empty():
 		return []
-	var seen: Array[String] = []
-	seen.assign(WatchRules.eyes(s, data, s.npcs_here(w.world, s.room_id)))
-	seen.append_array(s.npcs_here(w.world, into))
+	var seen: Array[String] = []  # those behind the door are off this map: WatchRules.eyes counts them, unless invisible
+	seen.assign(WatchRules.eyes(s, data, s.npcs_here(w.world, s.room_id) + s.npcs_here(w.world, into)))
 	return seen
 
 

@@ -83,7 +83,7 @@ static func can_steal(s: GameSession, data: Dictionary, npc_id: String) -> Strin
 ## The outcome of a Sleight of Hand at one entry: success — it goes to the player; failure — the NPC reacts. Lines.
 static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: String, success: bool) -> Array[String]:
 	var list: Array = pockets(s, data, npc_id)
-	var who := str(WorldView.new(data["world"]).npc(npc_id).get("name", npc_id))
+	var who := str(WorldView.new(data["world"]).npc_name(npc_id))
 	var lines: Array[String] = []
 	for e: Dictionary in list:
 		if str(e["id"]) != entry_id:
@@ -161,7 +161,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String, memory: Stri
 	var npc := world.npc(npc_id)
 	var who := str(npc.get("name", npc_id))
 	var lines: Array[String] = []
-	if ConditionRules.invisible(s.character, data):  # v0.7.5: felt, not seen — nobody to blame
+	if not WatchRules.pierces(s, data, Sheet.who(s, data, npc_id), Sheet.HERO, -1):  # v0.7.5: felt, not seen — nobody to blame
 		Being.drop(s, npc_id, "caught")
 		lines.append("%s хватается за кошель и озирается — вора не видно" % who)
 		return lines

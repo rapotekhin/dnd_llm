@@ -132,12 +132,8 @@ static func of_seller(s: GameSession, data: Dictionary, npc_id: String) -> Array
 	return out
 
 
-static func npc_name(data: Dictionary, npc_id: String) -> String:
-	return str(WorldView.new(data["world"]).npc(npc_id).get("name", npc_id))
-
-
 static func _present(s: GameSession, data: Dictionary, npc_id: String) -> bool:
-	return SceneRules.npcs(s, data["world"], s.room_id).has(npc_id)
+	return s.npcs_here(data["world"], s.room_id).has(npc_id)
 
 
 static func has_upgrade(c: Dictionary, id: String, up: String) -> bool:
@@ -177,7 +173,7 @@ static func tax(s: GameSession, data: Dictionary, id: String) -> int:
 ## The registry NPC of the scene ("" — none here).
 static func registry_here(s: GameSession, data: Dictionary) -> String:
 	var tag := str(cfg(data)["registry"]["tag"])
-	for npc: String in SceneRules.npcs(s, data["world"], s.room_id):
+	for npc: String in s.npcs_here(data["world"], s.room_id):
 		if (WorldView.new(data["world"]).npc(npc).get("tags", []) as Array).has(tag):
 			return npc
 	return ""
@@ -225,10 +221,10 @@ static func buy(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	Ledger.add(s, -price(s, data, id), "property:buy")
 	state(c)[id] = _fresh(s, float(p.get("condition", 100)))
 	Overlay.put(s, data, EntityRef.site(str(p["site"])), "owner", OwnerRules.HERO)
-	ObjectRules.note(s, str(p["site"]), "куплен героем у %s" % npc_name(data, seller(s, data, id)))
+	ObjectRules.note(s, str(p["site"]), "куплен героем у %s" % WorldView.name_of(data, seller(s, data, id)))
 	var who := seller(s, data, id)
 	s.remember(who, "продал герою %s" % name_of(s, data, id))
-	var lines: Array[String] = ["Куплено: %s за %s — продавец %s" % [name_of(s, data, id), Money.format(price(s, data, id)), npc_name(data, who)]]
+	var lines: Array[String] = ["Куплено: %s за %s — продавец %s" % [name_of(s, data, id), Money.format(price(s, data, id)), WorldView.name_of(data, who)]]
 	lines.append("Без купчей место ваше лишь на словах — оформите бумагу в ратуше (пошлина %s)" % Money.format(deed_fee(s, data, id)))
 	return lines
 
@@ -261,7 +257,7 @@ static func deed(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var item := {"name": "Купчая: %s" % name_of(s, data, id), "item_type": "gear", "value_cp": 0, "weight": 0, "properties": [], "generated": true,
 		"description": "Заверенная бумага ратуши: место — ваше по закону.",
 		"text": "Сим удостоверяется, что %s отныне принадлежит %s. Писано в ратуше, день %d. %s" % [name_of(s, data, id),
-			str(c.get("name", "")), s.day, npc_name(data, clerk)]}
+			str(c.get("name", "")), s.day, WorldView.name_of(data, clerk)]}
 	var iid := ItemRules.generated_id(item)
 	s.items[iid] = item
 	ItemRules.found(c, data, s.items, iid)
@@ -576,7 +572,7 @@ static func hand_name(s: GameSession, data: Dictionary, h: Dictionary) -> String
 	if bool(h.get("serf", false)):
 		var cr := _creature(s, str(h.get("cid", "")))
 		return str(cr.get("name", "подневольный"))
-	return npc_name(data, str(h.get("npc", "")))
+	return WorldView.name_of(data, str(h.get("npc", "")))
 
 
 ## A rented object (a stall) past its term on `day` (default today).
@@ -1082,7 +1078,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 	for id: String in props:
 		if owned(s.character, id) or WorldView.new(data["world"]).location_id(main_room(s, data, id)) != loc:
 			continue
-		sale.append("%s — %s, продаёт %s" % [name_of(s, data, id), Money.format(price(s, data, id)), npc_name(data, seller(s, data, id))])
+		sale.append("%s — %s, продаёт %s" % [name_of(s, data, id), Money.format(price(s, data, id)), WorldView.name_of(data, seller(s, data, id))])
 	var beasts: Array[String] = []
 	for cr: Dictionary in animals(s):
 		var where := "с героем" if bool(cr.get("led", false)) else ("ждёт у входа: " if bool(cr.get("waiting", false)) else "") + WorldView.new(data["world"]).room_short(room_of(s, str(cr["id"])))
@@ -1149,7 +1145,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 			return {"reason": "продают объект этой локации"}
 		var owner := str(w.site(site).get("owner", ""))
 		if not owner.is_empty() and owner != who:
-			return {"reason": "у объекта уже хозяин %s — продать его может только он" % npc_name(data, owner)}
+			return {"reason": "у объекта уже хозяин %s — продать его может только он" % WorldView.name_of(data, owner)}
 		if w.site_rooms(site).size() > int(m["max_rooms"]):
 			return {"reason": "слишком большой объект — до %d комнат" % int(m["max_rooms"])}
 		if not at(s, data, w.site_entry(site)).is_empty():

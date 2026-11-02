@@ -62,7 +62,9 @@ static func sees(s: GameSession, data: Dictionary, map: Dictionary, id: String, 
 
 ## Those of `ids`, people of the room here, who see `doer` now: the hero, or anybody who stands on this map (v0.8.4.12).
 ## One who does not stand on the map here walks with the hero or is behind a door being forced: it counts; a doer off the
-## map is seen by them all.
+## map is seen by them all. v0.8.4.16, the one place for «nobody saw»: an invisible doer is made out only by `pierces`, a
+## sneaking, hidden or invisible one in a watcher's cone still has its Stealth against the watcher's passive Perception
+## (one roll for the deed). No caller decides it again.
 static func eyes(s: GameSession, data: Dictionary, ids: Array, doer: String = Being.HERO) -> Array:
 	if ids.is_empty():
 		return []
@@ -72,11 +74,35 @@ static func eyes(s: GameSession, data: Dictionary, ids: Array, doer: String = Be
 		if str(t["kind"]) in ["npc", "foe"]:
 			at[str(t["id"])] = _cell(t)
 	var cell: Vector2i = WalkRules.settle(s, data, map) if doer == Being.HERO else at.get(doer, Vector2i(-1, -1))
-	if cell == Vector2i(-1, -1):
-		return ids.filter(func(id: String) -> bool: return id != doer)
 	var who := Sheet.who(s, data, doer)
+	var roll := {}  # the doer's one Stealth roll for this deed, made when a watcher's cone takes it in
 	return ids.filter(func(id: String) -> bool:
-		return id != doer and (not at.has(id) or sees(s, data, map, id, at[id], cell, range_of(s, data, Sheet.who(s, data, id), true, who), who)))
+		if id == doer:
+			return false
+		var w := Sheet.who(s, data, id)
+		if cell == Vector2i(-1, -1) or not at.has(id):
+			return pierces(s, data, w, who, -1)
+		if not sees(s, data, map, id, at[id], cell, range_of(s, data, w, true, who), who) or not pierces(s, data, w, who, WalkRules.distance(at[id], cell)):
+			return false
+		if not sneaky(s, data, who):
+			return true
+		if not roll.has("total"):
+			roll.merge(CombatRules.stealth_roll(s, data, who))
+		return int(roll["total"]) < Sheet.passive(s, data, w))
+
+
+## `watcher` makes out `doer` for all its invisibility (v0.8.4.16): the doer is not invisible or is outlined, the watcher
+## sees the invisible, or its truesight or blindsight reaches `far` squares (-1 — no square: only the first two).
+static func pierces(s: GameSession, data: Dictionary, watcher: Dictionary, doer: Dictionary, far: int) -> bool:
+	var it := Sheet.holder(s, doer)
+	if not ConditionRules.invisible(it, data) or ConditionRules.has(it, "outlined"):
+		return true
+	if SpellEffects.has(Sheet.holder(s, watcher), "see_invisible"):
+		return true
+	if far < 0:
+		return false
+	var sense := FightGrid.senses(s, data, watcher)
+	return int(sense.get("truesight", -1)) >= far or int(sense.get("blindsight", -1)) >= far
 
 
 ## A person of the room here sees the hero.

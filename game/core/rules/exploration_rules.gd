@@ -285,7 +285,7 @@ static func again_line(s: GameSession, data: Dictionary, room_id: String) -> Str
 		return ""
 	var place := str(world.room(room_id).get("name", room_id))
 	var line := str(lines[absi(hash(room_id + str(s.minute))) % lines.size()]).format({"place": place})
-	var who: Array = s.npcs_here(world.world, room_id).map(func(id: String) -> String: return str(world.npc(id).get("name", id)))
+	var who: Array = s.npcs_here(world.world, room_id).map(func(id: String) -> String: return str(world.npc_name(id)))
 	for c: Dictionary in CreatureRules.here(s, room_id):
 		who.append(str(c["name"]))
 	return line + (" Здесь: %s." % ", ".join(who) if not who.is_empty() else "")
@@ -331,8 +331,7 @@ static func can_rest(s: GameSession, world: Dictionary, data: Dictionary = {}) -
 static func can_camp(s: GameSession, data: Dictionary) -> String:
 	if s.in_conversation() or CombatRules.active(s):
 		return "REST_IN_CONVERSATION"
-	var enc: Dictionary = SceneRules.room(s, data["world"], s.room_id).get("encounter", {})
-	if not enc.is_empty() and not s.encounters_done.has(str(enc.get("id", ""))):
+	if not EncounterRules.live(s, data, s.room_id).is_empty():
 		return "REST_DANGER"
 	if camp_points(data, camp_food(s.character, data)) < camp_need(data) and not BackgroundRules.can_forage(s, data):
 		return "REST_NO_FOOD"

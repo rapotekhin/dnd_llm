@@ -79,7 +79,7 @@ func _rebuild() -> void:
 
 
 func _teacher(s: GameSession, data: Dictionary) -> void:
-	title.text = tr("STUDY_TITLE_AT").format({"name": StudyRules.npc_name(s, data, _npc)})
+	title.text = tr("STUDY_TITLE_AT").format({"name": WorldView.name_of(data, _npc)})
 	for sid: String in StudyRules.headed_by(data, _npc):
 		var sc := StudyRules.school(data, sid)
 		_heading(str(sc["name"]))
@@ -122,7 +122,7 @@ func _course(s: GameSession, data: Dictionary, id: String, _at_teacher: bool) ->
 		if str(co.get("book", "")).is_empty():
 			bits.append(tr("STUDY_FEE").format({"money": Money.format(f)}) if f > 0 else tr("STUDY_FREE"))
 	if str(co.get("teacher", "")) != _npc and not str(co.get("teacher", "")).is_empty():
-		bits.append(tr("STUDY_TEACHER").format({"name": StudyRules.npc_name(s, data, str(co["teacher"]))}))
+		bits.append(tr("STUDY_TEACHER").format({"name": WorldView.name_of(data, str(co["teacher"]))}))
 		var at := StudyRules.where(s, data, id)
 		if st.is_empty() and not at.is_empty() and not StudyRules.here(s, data, str(co["teacher"])):
 			bits.append(tr("STUDY_WHERE").format({"place": at}))

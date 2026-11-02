@@ -42,10 +42,6 @@ static func purpose(data: Dictionary, id: String) -> Dictionary:
 	return cfg(data).get("purposes", {}).get(id, {})
 
 
-static func _name(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	return BondRules.npc_name(s, data, npc_id)
-
-
 static func _loc(data: Dictionary, room_id: String) -> String:
 	return WorldView.new(data["world"]).location_id(room_id)
 
@@ -176,7 +172,7 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 	if not ways_of(data, poster).has(way):
 		return "здесь так письма не отправляют"
 	if not s.npcs_here(data["world"], s.room_id).has(poster):
-		return "отправить письмо можно только у %s" % _name(s, data, poster)
+		return "отправить письмо можно только у %s" % WorldView.name_of(data, poster)
 	var p := purpose(data, pid)
 	if p.is_empty():
 		return "нет такой цели письма"
@@ -186,7 +182,7 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 	if words.length() < int(cfg(data)["text_min"]) or words.length() > int(cfg(data)["text_max"]):
 		return "письмо — от %d до %d знаков" % [int(cfg(data)["text_min"]), int(cfg(data)["text_max"])]
 	if bool(p.get("law", false)) and not law_people(data).has(to):
-		return "донос пишут страже: %s" % ", ".join(law_people(data).map(func(n: String) -> String: return _name(s, data, n)))
+		return "донос пишут страже: %s" % ", ".join(law_people(data).map(func(n: String) -> String: return WorldView.name_of(data, n)))
 	if str(p.get("does", "")) == "arrest":
 		var about := str(extra.get("about", ""))
 		if about.is_empty() or about == to or data["world"]["npcs"].get(about, {}).is_empty() or Being.dead(s, about):
@@ -197,7 +193,7 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 			return "куда прийти — выберите место, где герой бывал"
 	var q := quote(s, data, way, to)
 	if q.is_empty():
-		return "до %s не дойти: нет дороги" % _name(s, data, to)
+		return "до %s не дойти: нет дороги" % WorldView.name_of(data, to)
 	if int(s.character.get("gold_cp", 0)) < int(q["cost"]):
 		return "не хватает денег: %s" % Money.format(int(q["cost"]))
 	return ""
@@ -225,7 +221,7 @@ static func send(s: GameSession, data: Dictionary, poster: String, to: String, p
 				s.character["inventory"].erase(item)
 			lines.append("К письму приложено: %s" % ItemRules.display_name(data["items"], s.items, item))
 	st["list"][str(l["id"])] = l
-	lines.push_front("Письмо → %s (%s) отправлено %s за %s — дойдёт к %d-му дню, ответ — не раньше %d-го" % [_name(s, data, to),
+	lines.push_front("Письмо → %s (%s) отправлено %s за %s — дойдёт к %d-му дню, ответ — не раньше %d-го" % [WorldView.name_of(data, to),
 		purpose(data, pid)["name"], cfg(data)["ways"][way]["name"], Money.format(int(q["cost"])), int(l["deliver_day"]), int(l["reply_day"])])
 	lines.append_array(TimeRules.advance(s, data, int(cfg(data)["write_minutes"])))
 	return lines
@@ -273,7 +269,7 @@ static func _lose(s: GameSession, data: Dictionary, l: Dictionary) -> void:
 	rooms.sort()
 	var room := rooms[s.rng.randi_range(0, rooms.size() - 1)]
 	var lost: Dictionary = cfg(data)["lost_item"]
-	var def := {"name": str(lost["name"]).format({"to": _name(s, data, str(l["to"]))}), "item_type": "quest", "weight": 0, "value_cp": 0,
+	var def := {"name": str(lost["name"]).format({"to": WorldView.name_of(data, str(l["to"]))}), "item_type": "quest", "weight": 0, "value_cp": 0,
 		"description": str(lost["description"]), "text": str(l["text"]), "generated": true, "letter": str(l["id"])}
 	var id := ItemRules.generated_id(def)
 	s.items[id] = def
@@ -314,7 +310,7 @@ static func verdict(s: GameSession, data: Dictionary, l: Dictionary) -> Dictiona
 	var to := str(l["to"])
 	var p := purpose(data, str(l["purpose"]))
 	var c := s.character
-	var who := _name(s, data, to)
+	var who := WorldView.name_of(data, to)
 	if SocialRules.refuses(s, data, to):
 		return {"can": false, "text": "%s враждебен герою — ничего не сделает" % who}
 	var family := FamilyRules.spouse(s) == to or FamilyRules.children(s).has(to)
@@ -334,10 +330,10 @@ static func verdict(s: GameSession, data: Dictionary, l: Dictionary) -> Dictiona
 			var about := str(l["about"])
 			var proof := evidence(s, data, about, str(l.get("evidence", "")))
 			if not proof.is_empty():
-				return {"can": true, "text": "дело заведено: улика — %s; под стражу возьмут: %s" % [proof, _name(s, data, about)]}
+				return {"can": true, "text": "дело заведено: улика — %s; под стражу возьмут: %s" % [proof, WorldView.name_of(data, about)]}
 			if guilty(s, data, about):
 				return {"can": false, "text": "улик нет — дела не будет; на слово стража не верит"}
-			return {"can": false, "false": "yes", "text": "донос ложный: %s ни в чём таком не замечен — это преступление героя (ложный донос)" % _name(s, data, about)}
+			return {"can": false, "false": "yes", "text": "донос ложный: %s ни в чём таком не замечен — это преступление героя (ложный донос)" % WorldView.name_of(data, about)}
 		"recommendation":
 			if not notable(s, data, to):
 				return {"can": false, "text": "%s — не того положения, чтобы её рекомендация что-то значила" % who}
@@ -378,7 +374,7 @@ static func frame(s: GameSession, data: Dictionary, id: String) -> String:
 		"Отношение к герою: %+d; связь: %s (%d)." % [s.attitude(to), BondRules.word(c, data, to) if not BondRules.word(c, data, to).is_empty() else "нет", BondRules.points(c, to)],
 	]
 	if not str(l["about"]).is_empty():
-		parts.append("Донос на: %s." % _name(s, data, str(l["about"])))
+		parts.append("Донос на: %s." % WorldView.name_of(data, str(l["about"])))
 	if not str(l["room"]).is_empty():
 		parts.append("Куда герой зовёт: «%s»." % _room_name(data, str(l["room"])))
 	if not mem.is_empty():
@@ -409,7 +405,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary, pending: Array
 		return {"reason": "answer — yes или no"}
 	if answer == "yes" and not bool(l["can"]):
 		return {"reason": "движок: %s — только отказ (no)" % l["verdict"]}
-	return {"plan": {"letter": id, "answer": answer}, "summary": "%s: %s" % [_name(s, data, str(l["to"])), "согласие" if answer == "yes" else "отказ"]}
+	return {"plan": {"letter": id, "answer": answer}, "summary": "%s: %s" % [WorldView.name_of(data, str(l["to"])), "согласие" if answer == "yes" else "отказ"]}
 
 
 static func apply(s: GameSession, _data: Dictionary, p: Dictionary) -> Array[String]:
@@ -425,7 +421,7 @@ static func answered(s: GameSession, data: Dictionary, id: String, text: String)
 	l["status"] = "answered"
 	l["reply"] = text.strip_edges()
 	l["answer_day"] = s.day
-	var who := _name(s, data, str(l["to"]))
+	var who := WorldView.name_of(data, str(l["to"]))
 	var lines: Array[String] = ["Пришёл ответ: %s (%s)" % [who, purpose(data, str(l["purpose"]))["name"]]]
 	lines.append_array(l["outcome"])
 	if not choice(data, l):
@@ -469,7 +465,7 @@ static func _ally_day(s: GameSession, data: Dictionary, l: Dictionary) -> Array[
 		a["state"] = "gone"
 		Being.drop(s, npc, "at")
 		if s.room_id == str(a["room"]):
-			lines.append("%s не дождался(лась) и ушёл(ушла) домой" % _name(s, data, npc))
+			lines.append("%s не дождался(лась) и ушёл(ушла) домой" % WorldView.name_of(data, npc))
 	return lines
 
 
@@ -479,9 +475,9 @@ static func _join(s: GameSession, data: Dictionary, l: Dictionary) -> Array[Stri
 	a["state"] = "joined"
 	if Being.followers(s).size() >= int(FollowRules.cfg(data)["max"]):
 		Being.drop(s, npc, "at")
-		return ["%s пришёл(пришла) на зов, но с героем уже идут %d — и уходит домой" % [_name(s, data, npc), Being.followers(s).size()]]
+		return ["%s пришёл(пришла) на зов, но с героем уже идут %d — и уходит домой" % [WorldView.name_of(data, npc), Being.followers(s).size()]]
 	FollowRules.apply(s, {"follow_npc": npc, "on": true, "room": ""})
-	return ["%s пришёл(пришла) на зов письма и идёт с героем" % _name(s, data, npc)]
+	return ["%s пришёл(пришла) на зов письма и идёт с героем" % WorldView.name_of(data, npc)]
 
 
 ## The hero walked into a room: a helper waiting there joins. Lines.
@@ -506,7 +502,7 @@ static func _arrest(s: GameSession, data: Dictionary, l: Dictionary, here: Strin
 	a["until"] = TimeRules.day_start(s.day + int(purpose(data, str(l["purpose"]))["jail_days"]) + 1)
 	s.remember(npc, "знает: герой донёс на него страже")
 	Being.of(s, npc)["attitude"] = mini(s.attitude(npc), int(SocialRules.cfg(data)["thresholds"]["refuse_at"]))
-	var what := "%s взят(а) под стражу по доносу" % _name(s, data, npc)
+	var what := "%s взят(а) под стражу по доносу" % WorldView.name_of(data, npc)
 	RumorRules.add(s, data, {"text": what, "weight": int(cfg(data)["arrest_rumor_weight"]), "origin": str(a["loc"]), "source": "letter", "about": npc})
 	return [what] if _loc(data, s.room_id) == str(a["loc"]) or here == str(a["loc"]) else []
 
@@ -527,7 +523,7 @@ static func _jail_days(s: GameSession, data: Dictionary) -> Array[String]:
 			a["freed"] = true
 			Being.drop(s, str(a["npc"]), "at")
 			if _loc(data, s.room_id) == str(a["loc"]):
-				lines.append("%s отпущен(а) из-под стражи" % _name(s, data, str(a["npc"])))
+				lines.append("%s отпущен(а) из-под стражи" % WorldView.name_of(data, str(a["npc"])))
 	return lines
 
 
@@ -544,7 +540,7 @@ static func _family(s: GameSession, data: Dictionary) -> Array[String]:
 	if silent < 0 or int(st.get("worried_day", -1)) == s.day or silent % int(f["every_days"]) != 0:
 		return []
 	st["worried_day"] = s.day
-	var lines: Array[String] = ["%s тревожится: от вас %d дн. ни вести" % [_name(s, data, sp), s.day - int(st["home_day"])]]
+	var lines: Array[String] = ["%s тревожится: от вас %d дн. ни вести" % [WorldView.name_of(data, sp), s.day - int(st["home_day"])]]
 	lines.append_array(BondRules.add(s, data, sp, int(f["bond"]), "долгое молчание"))
 	return lines
 
@@ -567,7 +563,7 @@ static func evidence(s: GameSession, data: Dictionary, npc_id: String, item: Str
 	for who: String in data["world"]["npcs"]:
 		for sec: Dictionary in SocialRules.secrets(data, who):
 			if str(sec.get("crime_of", "")) == npc_id and SocialRules.told(s, who, str(sec["id"])):
-				return "свидетель — %s: %s" % [_name(s, data, who), sec["text"]]
+				return "свидетель — %s: %s" % [WorldView.name_of(data, who), sec["text"]]
 	return ""
 
 
@@ -611,7 +607,7 @@ static func recommender(s: GameSession, data: Dictionary, from: Array, any_notab
 	for id: String in s.character.get("inventory", {}):
 		var by := str(ItemRules.def_of(data["items"], s.items, id).get("recommends", ""))
 		if not by.is_empty() and (from.has(by) or (any_notable and notable(s, data, by))):
-			return _name(s, data, by)
+			return WorldView.name_of(data, by)
 	return ""
 
 
@@ -625,7 +621,7 @@ static func groups(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	var silent: Array[String] = []
 	var allies: Array[String] = []
 	for l: Dictionary in letters(s):
-		var head := "%s — %s (%d-й день)" % [_name(s, data, str(l["to"])), purpose(data, str(l["purpose"]))["name"], int(l["sent_day"])]
+		var head := "%s — %s (%d-й день)" % [WorldView.name_of(data, str(l["to"])), purpose(data, str(l["purpose"]))["name"], int(l["sent_day"])]
 		var st := str(l["status"])
 		if st == "answered":
 			answers.append("%s: «%s»" % [head, str(l["reply"]).left(300)])
@@ -636,7 +632,7 @@ static func groups(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 			waiting.append("%s — %s, ответ к %d-му дню" % [head, "в пути" if road else "доставлено", int(l["reply_day"])])
 		if l.has("ally") and str(l["ally"]["state"]) in ["road", "waits"]:
 			var a: Dictionary = l["ally"]
-			allies.append("%s %s «%s» %s" % [_name(s, data, str(a["npc"])), "ждёт у" if str(a["state"]) == "waits" else "идёт к",
+			allies.append("%s %s «%s» %s" % [WorldView.name_of(data, str(a["npc"])), "ждёт у" if str(a["state"]) == "waits" else "идёт к",
 				_room_name(data, str(a["room"])), "до %d-го дня" % (TimeRules.day_of(int(a["until"])) - 1) if str(a["state"]) == "waits" else "к %d-му дню" % int(a["arrive"])])
 	var out: Array[Dictionary] = []
 	if not allies.is_empty():

@@ -133,7 +133,7 @@ static func add_points(s: GameSession, data: Dictionary, id: String, pts: int) -
 
 static func head_name(s: GameSession, data: Dictionary, id: String) -> String:
 	var h := str(def(s, data, id).get("head", ""))
-	return "вы" if h == OwnerRules.HERO else BondRules.npc_name(s, data, h)
+	return "вы" if h == OwnerRules.HERO else WorldView.name_of(data, h)
 
 
 # --- the hideout and the fence ------------------------------------------------------------------------------------
@@ -436,7 +436,7 @@ static func recruit(s: GameSession, data: Dictionary, npc_id: String) -> Array[S
 	var d: Dictionary = WorldGen.generated(s)["orgs"][id]
 	(d["members"] as Array).append(npc_id)
 	s.remember(npc_id, "вступил в братство героя «%s»" % d["name"])
-	return ["%s — в братстве «%s»: доход %s в день в кассу логова" % [BondRules.npc_name(s, data, npc_id), d["name"], Money.format(int(cfg(data)["member_income_cp"]))]]
+	return ["%s — в братстве «%s»: доход %s в день в кассу логова" % [WorldView.name_of(data, npc_id), d["name"], Money.format(int(cfg(data)["member_income_cp"]))]]
 
 
 # --- days ---------------------------------------------------------------------------------------------------------
@@ -471,7 +471,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		for m: String in members(s, data, own_id):
 			if s.rng.randf() < float(cfg(data)["member_caught_chance"]):
 				(d["members"] as Array).erase(m)
-				lines.append("%s схвачен стражей на деле и уходит из братства «%s»" % [BondRules.npc_name(s, data, m), d["name"]])
+				lines.append("%s схвачен стражей на деле и уходит из братства «%s»" % [WorldView.name_of(data, m), d["name"]])
 				continue
 			owned[place]["cash"] = int(owned[place].get("cash", 0)) + int(cfg(data)["member_income_cp"])
 	return lines
@@ -486,7 +486,7 @@ static func make(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	if not BondRules.here(s, data, head):
 		return {"reason": "%s не в сцене — главой делают NPC сцены" % head}
 	if not of_head(s, data, head).is_empty():
-		return {"reason": "%s уже глава %s" % [BondRules.npc_name(s, data, head), org_name(s, data, of_head(s, data, head)[0])]}
+		return {"reason": "%s уже глава %s" % [WorldView.name_of(data, head), org_name(s, data, of_head(s, data, head)[0])]}
 	var name := str(e.get("name", "")).strip_edges().left(40)
 	if name.is_empty():
 		return {"reason": "нужно name — как зовётся организация"}
@@ -500,7 +500,7 @@ static func make(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var site := WorldView.new(data["world"]).site_id(s.room_id)
 	var id := "gen_o_" + ("%s|%s" % [head, name]).md5_text().left(8)
 	return {"plan": {"id": id, "def": {"name": name, "kind": k, "head": head, "hideout": site if not WorldView.new(data["world"]).is_public(s.room_id) else "",
-		"cut_pct": cut, "heists": [], "generated": true}}, "summary": "Организация: %s — глава %s" % [name, BondRules.npc_name(s, data, head)]}
+		"cut_pct": cut, "heists": [], "generated": true}}, "summary": "Организация: %s — глава %s" % [name, WorldView.name_of(data, head)]}
 
 
 static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
@@ -508,7 +508,7 @@ static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	var orgs: Dictionary = gen.get("orgs", {})
 	orgs[str(plan["id"])] = (plan["def"] as Dictionary).duplicate(true)
 	gen["orgs"] = orgs
-	return ["%s — глава %s: «Братство» в его действиях" % [plan["def"]["name"], BondRules.npc_name(s, data, str(plan["def"]["head"]))]]
+	return ["%s — глава %s: «Братство» в его действиях" % [plan["def"]["name"], WorldView.name_of(data, str(plan["def"]["head"]))]]
 
 
 # --- for the master -----------------------------------------------------------------------------------------------
@@ -519,16 +519,16 @@ static func text(s: GameSession, data: Dictionary) -> String:
 	for id: String in mine(s, data):
 		var st: Dictionary = view(s.character).get(id, {})
 		if str(def(s, data, id).get("head", "")) == OwnerRules.HERO:
-			parts.append("своё братство «%s»: %s" % [org_name(s, data, id), ", ".join(members(s, data, id).map(func(m: String) -> String: return BondRules.npc_name(s, data, m))) if not members(s, data, id).is_empty() else "без людей"])
+			parts.append("своё братство «%s»: %s" % [org_name(s, data, id), ", ".join(members(s, data, id).map(func(m: String) -> String: return WorldView.name_of(data, m))) if not members(s, data, id).is_empty() else "без людей"])
 		elif candidate(s.character, id):
 			parts.append("«%s» — испытание у %s" % [org_name(s, data, id), head_name(s, data, id)])
 		else:
 			parts.append("«%s» — %s (%d очков)%s" % [org_name(s, data, id), rank_name(s, data, id), int(st.get("points", 0)),
 				", должен долю %s" % Money.format(Ledger.owed(s, "cut:" + id)) if Ledger.owed(s, "cut:" + id) > 0 else ""])
-	for npc: String in SceneRules.npcs(s, data["world"], s.room_id):
+	for npc: String in s.npcs_here(data["world"], s.room_id):
 		for id: String in of_head(s, data, npc):
 			if not mine(s, data).has(id):
-				parts.append("%s — глава братства «%s» (вступить — кнопка «Братство»)" % [BondRules.npc_name(s, data, npc), org_name(s, data, id)])
+				parts.append("%s — глава братства «%s» (вступить — кнопка «Братство»)" % [WorldView.name_of(data, npc), org_name(s, data, id)])
 	if parts.is_empty():
 		return ""
 	return "Братства (стража о них не знает; окно «Братство» — кнопки): " + "; ".join(parts)

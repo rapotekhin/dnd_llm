@@ -324,7 +324,7 @@ static func rent(s: GameSession, data: Dictionary, station: String) -> Dictionar
 	var cp := Price.share(int(stations(data).get(station, {}).get("rent_cp_hour", 0)), float(DevelopmentRules.effect(s.character, data, "craft", "rent_pct", 100.0)))
 	if station.is_empty() or cp <= 0:
 		return {}
-	for npc_id: String in SceneRules.npcs(s, data["world"], s.room_id):
+	for npc_id: String in s.npcs_here(data["world"], s.room_id):
 		if bool(data["world"]["npcs"].get(npc_id, {}).get("trader", false)):
 			return {"npc": npc_id, "cp": cp}
 	return {}

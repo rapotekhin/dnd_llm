@@ -89,14 +89,14 @@ static func minutes(data: Dictionary, from: String, path: Array[String], mult: f
 
 ## Active quests by the visited room where their current step is done or their giver waits for it:
 ## {room id: [quest titles]}. Places the hero has not seen are never marked.
-static func quest_marks(s: GameSession, world: Dictionary) -> Dictionary:
+static func quest_marks(s: GameSession, data: Dictionary) -> Dictionary:
 	var out := {}
-	var w := WorldView.new(world)
+	var world: Dictionary = data["world"]
 	for qid: Variant in s.quests_active:
 		var q := QuestRules.quest(world, str(qid))
 		var step := QuestRules.current(s, world, str(qid))
 		var rooms: Array[String] = []
-		_step_rooms(w, world, step.get("when", {}), rooms)
+		_step_rooms(s, data, step.get("when", {}), rooms)
 		for r: String in rooms:
 			if s.visited.has(r):
 				var list: Array = out.get(r, [])
@@ -107,17 +107,19 @@ static func quest_marks(s: GameSession, world: Dictionary) -> Dictionary:
 
 
 ## The known rooms (visited or behind a known exit) of a quest's current step: where the followed quest opens the map.
-static func step_rooms(s: GameSession, world: Dictionary, quest_id: String) -> Array[String]:
+static func step_rooms(s: GameSession, data: Dictionary, quest_id: String) -> Array[String]:
+	var world: Dictionary = data["world"]
 	var rooms: Array[String] = []
-	_step_rooms(WorldView.new(world), world, QuestRules.current(s, world, quest_id).get("when", {}), rooms)
+	_step_rooms(s, data, QuestRules.current(s, world, quest_id).get("when", {}), rooms)
 	var frontier: Array = known(s, world)["frontier"]  # a room behind a known exit is shown on the map too
 	return rooms.filter(func(r: String) -> bool: return s.visited.has(r) or frontier.has(r))
 
 
-static func _step_rooms(w: WorldView, world: Dictionary, when: Dictionary, out: Array[String]) -> void:
+static func _step_rooms(s: GameSession, data: Dictionary, when: Dictionary, out: Array[String]) -> void:
+	var world: Dictionary = data["world"]
 	for key: String in ["all", "any"]:
 		for sub: Variant in when.get(key, []):
-			_step_rooms(w, world, sub, out)
+			_step_rooms(s, data, sub, out)
 	var room := ""
 	if when.has("room") or when.has("arrive"):
 		room = str(when.get("room", when.get("arrive", "")))
@@ -126,20 +128,13 @@ static func _step_rooms(w: WorldView, world: Dictionary, when: Dictionary, out: 
 	elif when.has("secret"):
 		room = str(when["secret"]).get_slice(":", 0)
 	elif when.has("talk"):
-		room = npc_room(world, str(when["talk"]))
+		room = Where.npc_room(s, data, str(when["talk"]))  # where the person stands now (v0.8.4.16)
 	elif when.has("encounter"):
 		for r: String in world["rooms"]:
 			if str(world["rooms"][r].get("encounter", {}).get("id", "")) == str(when["encounter"]):
 				room = r
 	if not room.is_empty() and not out.has(room):
 		out.append(room)
-
-
-static func npc_room(world: Dictionary, npc_id: String) -> String:
-	for r: String in world["rooms"]:
-		if (world["rooms"][r].get("npcs", []) as Array).has(npc_id):
-			return r
-	return ""
 
 
 ## Where every room of the pack stands, 0..1 on both axes — the rooms of boxes() (v0.7.22.24).

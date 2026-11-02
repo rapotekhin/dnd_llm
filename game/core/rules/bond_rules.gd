@@ -45,10 +45,6 @@ static func npc_def(s: GameSession, data: Dictionary, npc_id: String) -> Diction
 	return n if not n.is_empty() else WorldGen.generated(s).get("npcs", {}).get(npc_id, {})
 
 
-static func npc_name(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	return JobRules.npc_name(s, data, npc_id)
-
-
 static func here(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 	return s.npcs_here(data["world"], s.room_id).has(npc_id)
 
@@ -95,7 +91,7 @@ static func add(s: GameSession, data: Dictionary, npc_id: String, delta: int, wh
 	var e := _rw(c, npc_id)
 	var r: Array = cfg(data)["range"]
 	e["points"] = clampi(int(e["points"]) + delta, int(r[0]), int(r[1]))
-	var who := npc_name(s, data, npc_id)
+	var who := WorldView.name_of(data, npc_id)
 	var lines: Array[String] = ["%s: близость %s%d%s" % [who, "+" if delta > 0 else "−", absi(delta), (" (%s)" % why) if not why.is_empty() else ""]]
 	if str(e["kind"]) == "romance" and int(e["points"]) < 0:
 		e["kind"] = "friend"
@@ -204,7 +200,7 @@ static func gift_why(s: GameSession, data: Dictionary, npc_id: String, item_id: 
 ## The gift goes into the NPC's pockets. Lines.
 static func gift(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> Array[String]:
 	var c := s.character
-	var who := npc_name(s, data, npc_id)
+	var who := WorldView.name_of(data, npc_id)
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
 	var pts := gift_points(s, data, npc_id, item_id)
 	var t := taste_of(s, data, npc_id, item_id)
@@ -293,7 +289,7 @@ static func confess_chance(s: GameSession, data: Dictionary, npc_id: String) -> 
 static func confess(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	var c := s.character
 	var k: Dictionary = cfg(data)["confess"]
-	var who := npc_name(s, data, npc_id)
+	var who := WorldView.name_of(data, npc_id)
 	var dc := confess_dc(s, data, npc_id)
 	var r := Roll.hero(s, data, {"what": "Признание", "skill": str(k["skill"]), "dc": dc, "target_id": npc_id})
 	var nat := int(r["nat"])
@@ -328,7 +324,7 @@ static func break_off(s: GameSession, data: Dictionary, npc_id: String) -> Array
 	var e := _rw(s.character, npc_id)
 	e["kind"] = "friend"
 	s.remember(npc_id, "герой расстался с ним" if str(npc_def(s, data, npc_id).get("gender", "")) == "male" else "герой расстался с ней")
-	var lines: Array[String] = ["%s: роман окончен" % npc_name(s, data, npc_id)]
+	var lines: Array[String] = ["%s: роман окончен" % WorldView.name_of(data, npc_id)]
 	lines.append_array(add(s, data, npc_id, int(cfg(data)["break"]["points"]), "расставание"))
 	return lines
 
@@ -403,7 +399,7 @@ static func hide(s: GameSession, data: Dictionary, npc_id: String) -> Array[Stri
 	var loc := WorldView.new(data["world"]).location_id(s.room_id)
 	s.let_go[loc] = TimeRules.abs_minute(s) + int(h["minutes"])
 	_rw(s.character, npc_id)["hide_day"] = s.day
-	return ["%s прячет героя: стража не найдёт его здесь %d ч" % [npc_name(s, data, npc_id), int(h["minutes"]) / 60]]
+	return ["%s прячет героя: стража не найдёт его здесь %d ч" % [WorldView.name_of(data, npc_id), int(h["minutes"]) / 60]]
 
 
 ## The NPC of the law of the location who speaks for the hero to the guard; "" — none.
@@ -468,7 +464,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	if absi(delta) > mx:
 		return {"reason": "delta — от −%d до +%d за сцену" % [mx, mx]}
 	if delta != 0 and int(entry(s.character, who).get("scene_day", -1)) == s.day:
-		return {"reason": "сцена с %s сегодня уже сдвинула близость — завтра или подарок, дело" % npc_name(s, data, who)}
+		return {"reason": "сцена с %s сегодня уже сдвинула близость — завтра или подарок, дело" % WorldView.name_of(data, who)}
 	var why := str(spec.get("reason", "")).strip_edges().left(80) if spec.get("reason") != null else ""
 	if delta != 0 and why.is_empty():
 		return {"reason": "нужно reason — чем сцена сблизила или оттолкнула"}
@@ -476,7 +472,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	if not k.is_empty() and not (m["kinds"] as Array).has(k):
 		return {"reason": "bond_kind — из %s (романтика — только признанием игрока, кнопкой)" % ", ".join(m["kinds"])}
 	if k == "friend" and kind(s.character, who) == "romance":
-		return {"reason": "роман с %s кончает только игрок (кнопка «Расстаться»)" % npc_name(s, data, who)}
+		return {"reason": "роман с %s кончает только игрок (кнопка «Расстаться»)" % WorldView.name_of(data, who)}
 	var made := not WorldView.new(data["world"]).npc(who).has("name")
 	var npc_patch := {}
 	if spec.get("romance") is Dictionary:
@@ -505,7 +501,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	if npc_patch.has("romance"):
 		parts.append("роман %s" % ("возможен" if npc_patch["romance"]["open"] else "невозможен"))
 	return {"plan": {"npc_id": who, "delta": delta, "why": why, "kind": k, "npc": npc_patch},
-		"summary": "Связь — %s: %s" % [npc_name(s, data, who), ", ".join(parts)]}
+		"summary": "Связь — %s: %s" % [WorldView.name_of(data, who), ", ".join(parts)]}
 
 
 static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
@@ -519,7 +515,7 @@ static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 	var lines: Array[String] = []
 	if not str(plan.get("kind", "")).is_empty() and str(plan["kind"]) != str(e["kind"]):
 		e["kind"] = str(plan["kind"])
-		lines.append("%s: %s" % [npc_name(s, data, who), cfg(data)["kinds"][e["kind"]]["name"]])
+		lines.append("%s: %s" % [WorldView.name_of(data, who), cfg(data)["kinds"][e["kind"]]["name"]])
 	if int(plan["delta"]) != 0:
 		e["scene_day"] = s.day
 		lines.append_array(add(s, data, who, int(plan["delta"]), str(plan["why"])))
@@ -538,7 +534,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 		if Being.dead(s, id) or (points(c, id) == 0 and kind(c, id) == "friend"):
 			continue
 		var w := word(c, data, id)
-		var line := "%s — %s, %s %d" % [npc_name(s, data, id), cfg(data)["kinds"][kind(c, id)]["name"], w if not w.is_empty() else "без ступени", points(c, id)]
+		var line := "%s — %s, %s %d" % [WorldView.name_of(data, id), cfg(data)["kinds"][kind(c, id)]["name"], w if not w.is_empty() else "без ступени", points(c, id)]
 		var perks := perks_text(s, data, id)
 		if not perks.is_empty():
 			line += " (%s)" % ", ".join(perks)
@@ -546,7 +542,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 	var scene: Array[String] = []
 	for id: String in s.npcs_here(data["world"], s.room_id):
 		var why := romance_closed(s, data, id)
-		scene.append("%s: роман %s; сегодня %s" % [npc_name(s, data, id), "возможен" if why.is_empty() else "невозможен — " + why,
+		scene.append("%s: роман %s; сегодня %s" % [WorldView.name_of(data, id), "возможен" if why.is_empty() else "невозможен — " + why,
 			"сцена уже была" if int(entry(c, id).get("scene_day", -1)) == s.day else "сцена свободна"])
 	var out := "; ".join(parts) if not parts.is_empty() else "связей нет"
 	if not scene.is_empty():

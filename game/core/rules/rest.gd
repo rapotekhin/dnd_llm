@@ -141,4 +141,4 @@ static func name_of(s: GameSession, data: Dictionary, id: String) -> String:
 	if id == Being.HERO:
 		return str(s.character.get("name", ""))
 	var b := Being.view(s, id)
-	return str(b.get("name", JobRules.npc_name(s, data, id)))
+	return str(b.get("name", WorldView.name_of(data, id)))

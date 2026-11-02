@@ -63,17 +63,17 @@ func _rebuild() -> void:
 	var data := Catalog.data
 	var f := FamilyRules.view(s.character)
 	if not FamilyRules.engaged(s).is_empty():
-		_label(_box, tr("FAMILY_ENGAGED_TO").format({"name": BondRules.npc_name(s, data, FamilyRules.engaged(s))})).name = "FamilyEngaged"
+		_label(_box, tr("FAMILY_ENGAGED_TO").format({"name": WorldView.name_of(data, FamilyRules.engaged(s))})).name = "FamilyEngaged"
 		_label(_box, tr("FAMILY_WEDDING_HINT"), UiTheme.MUTED_LABEL)
 	var sp := FamilyRules.spouse(s)
 	if not sp.is_empty():
 		_heading(tr("FAMILY_SPOUSE_F" if str(BondRules.npc_def(s, data, sp).get("gender", "")) == "female" else "FAMILY_SPOUSE"))
-		_label(_box, tr("FAMILY_SPOUSE_LINE").format({"name": BondRules.npc_name(s, data, sp), "day": int(f.get("married_day", 0)),
+		_label(_box, tr("FAMILY_SPOUSE_LINE").format({"name": WorldView.name_of(data, sp), "day": int(f.get("married_day", 0)),
 			"home": PropertyRules.name_of(s, data, str(f.get("home", ""))) if not str(f.get("home", "")).is_empty() else "—"})).name = "FamilySpouse"
 		var h: Array = f.get("hours", [20, 7])
 		_label(_box, tr("FAMILY_HOME_HOURS").format({"from": int(h[0]), "to": int(h[1])}), UiTheme.MUTED_LABEL)
 	for k: Variant in f.get("kin", []):
-		_label(_box, "%s — %s" % [BondRules.npc_name(s, data, str(k["npc"])), k["rel"]])
+		_label(_box, "%s — %s" % [WorldView.name_of(data, str(k["npc"])), k["rel"]])
 	if f.has("pregnant"):
 		var p: Dictionary = f["pregnant"]
 		_label(_box, tr("FAMILY_EXPECTING_LINE").format({"days": maxi(0, int(p["due"]) - s.day)})).name = "FamilyExpecting"
@@ -93,7 +93,7 @@ func _rebuild() -> void:
 		row.add_theme_constant_override("separation", 10)
 		_box.add_child(row)
 		var heir := " · " + tr("FAMILY_HEIR") if FamilyRules.heir(s, data) == id else ""
-		_label(row, "%s — %s, %s%s" % [BondRules.npc_name(s, data, id), BondRules.npc_def(s, data, id).get("role", ""),
+		_label(row, "%s — %s, %s%s" % [WorldView.name_of(data, id), BondRules.npc_def(s, data, id).get("role", ""),
 			tr("FAMILY_YEARS").format({"n": FamilyRules.years(s, data, id)}), heir]).name = "Child_" + id
 		var edit := LineEdit.new()
 		edit.name = "ChildName_" + id

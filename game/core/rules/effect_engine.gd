@@ -279,7 +279,6 @@ func _plan(s: GameSession, data: Dictionary, turn_id: String, raw: Dictionary, p
 
 func _plan_move(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var world := WorldView.new(data["world"])
-	var c := s.character
 	var to := str(e.get("room_id", ""))
 	if pending.any(func(p: Dictionary) -> bool: return p["kind"] == "move"):
 		return {"reason": "переход уже предложен в этом ходе"}
@@ -298,13 +297,13 @@ func _plan_move(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 		return {"plan": {"room_id": to, "with": []}, "summary": "Переход: %s" % place["rooms"][0]["name"]}
 	if not WayRules.open_exits(s, data["world"], s.room_id).has(to):
 		return {"reason": "из этой комнаты нет выхода в %s" % to}
-	# v0.7.22.16: the master's move is checked as the exit button — the overload, a trap the hero found
-	if CharacterRules.overloaded(c, data, s.items):
+	# v0.7.22.16, v0.8.4.16: the master's move is checked as the exit button — by WayRules.leave_why
+	var why := WayRules.leave_why(s, data, s.room_id, to)
+	if why == "TOO_HEAVY":
 		return {"reason": "герой перегружен и не может идти — сначала оставить лишнее (move_item:hero>room)"}
-	var trap := ExplorationRules.trap_on_exit(s, data["world"], s.room_id, to)
-	if not trap.is_empty() and ExplorationRules.is_found(s, s.room_id, trap):
+	if why == "TRAP_ON_WAY":
 		return {"reason": "путь стережёт найденная ловушка — её обезвреживают или обходят (кнопки игрока), просто пройти нельзя"}
-	if not WayRules.blocked(s, data, s.room_id, to).is_empty():  # v0.7.22.25
+	if not why.is_empty():  # v0.7.22.25
 		return {"reason": "%s — пройти нельзя: открыть её — кнопки игрока (ключ, отмычки, сила, заклинание) или эффект door, если её отпирает хозяин" % WayRules.describe(s, data, s.room_id, to)}
 	var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as grant:follow
 	for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
@@ -315,7 +314,7 @@ func _plan_move(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 		if f.has("reason"):
 			return {"reason": "%s; без него — move без npcs" % f["reason"]}
 		with.append(nid)
-	var names := ", ".join(with.map(func(n: String) -> String: return str(world.npc(n).get("name", n))))
+	var names := ", ".join(with.map(func(n: String) -> String: return str(world.npc_name(n))))
 	return {"plan": {"room_id": to, "with": with},
 		"summary": "Переход: %s%s" % [world.room(to).get("name", to), (" (с героем: %s)" % names) if not with.is_empty() else ""]}
 
@@ -423,7 +422,7 @@ func _plan_npc_attitude(s: GameSession, data: Dictionary, turn_id: String, e: Di
 	if delta == 0:
 		return {"reason": "пустое изменение отношения"}
 	return {"plan": {"npc_id": npc_id, "delta": delta},
-		"summary": "%s: отношение %+d" % [world.npc(npc_id).get("name", npc_id), delta]}
+		"summary": "%s: отношение %+d" % [world.npc_name(npc_id), delta]}
 
 
 func _plan_cast(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
@@ -464,7 +463,7 @@ func _plan_job(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary,
 	if made.has("reason"):
 		return {"reason": made["reason"]}
 	return {"plan": made, "summary": "Работа: %s у %s — %d ч, Сл %d, %s за смену" % [made["def"]["name"],
-		JobRules.npc_name(s, data, str(made["def"]["employer"])),
+		WorldView.name_of(data, str(made["def"]["employer"])),
 		int(made["def"]["hours"]), int(made["def"]["dc"]), Money.format(int(made["def"]["pay_cp"]))]}
 
 
@@ -665,7 +664,7 @@ func _plan_accept_quest(s: GameSession, data: Dictionary, turn_id: String, e: Di
 		return {"reason": "у героя уже %d созданных заданий в работе — больше не взять" % QuestGen.open_made(s).size()}
 	var giver := QuestRules.stand_in(s, world.world, str(QuestRules.quest(world.world, qid).get("giver", "")))
 	if s.in_conversation() and s.npc_id != giver:
-		return {"reason": "задание %s даёт не собеседник, а %s" % [qid, world.npc(giver).get("name", giver)]}
+		return {"reason": "задание %s даёт не собеседник, а %s" % [qid, world.npc_name(giver)]}
 	return {"plan": {"quest_accept": qid}, "summary": "Новое задание: %s" % QuestRules.quest(world.world, qid)["title"]}
 
 
@@ -691,7 +690,7 @@ func _plan_note(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 		if not s.npcs_here(world.world, s.room_id).has(about):
 			return {"reason": "NPC %s нет в этой комнате: память — о тех, кто здесь" % about}
 		return {"plan": {"text": text.left(200), "npc_id": about},
-			"summary": "%s запомнит: %s" % [world.npc(about).get("name", about), text.left(200)]}
+			"summary": "%s запомнит: %s" % [world.npc_name(about), text.left(200)]}
 	return {"plan": {"text": text.left(200)}, "summary": "Запомнено: %s" % text.left(200)}
 
 
@@ -1047,7 +1046,7 @@ func _plan_quest_take(s: GameSession, data: Dictionary, id: String) -> Dictionar
 		if not npc.is_empty() and QuestRules.can_talk(s, world, qid).is_empty():
 			return {"plan": {"quest_talk": qid}, "summary": "Отдано: %s" % ItemRules.display_name(data["items"], s.items, id)}
 		return {"reason": "это вещь задания «%s»: её отдают только %s — не забирай её эффектом" % [q["title"],
-			WorldView.new(world).npc(npc).get("name", npc) if not npc.is_empty() else "по заданию"]}
+			WorldView.new(world).npc_name(npc) if not npc.is_empty() else "по заданию"]}
 	return {}
 
 

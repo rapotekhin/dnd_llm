@@ -269,12 +269,12 @@ static func scout(s: GameSession, data: Dictionary, cid: String, room: String) -
 	Knows.add(s, Knows.SCOUTED, room)
 	var world := WorldView.new(data["world"])
 	var seen: Array[String] = []
-	var enc: Dictionary = world.room(room).get("encounter", {})
-	if not enc.is_empty() and not s.encounters_done.has(str(enc.get("id", ""))):
+	var enc := EncounterRules.live(s, data, room)
+	if not enc.is_empty():
 		seen.append("опасность — " + ", ".join((enc.get("enemies", []) as Array).map(func(e: Variant) -> String:
 			var en: Dictionary = e
 			return "%s%s" % [en.get("name", data["monsters"].get(str(en.get("monster", "")), {}).get("name", "?")), " ×%d" % int(en["count"]) if int(en.get("count", 1)) > 1 else ""])))
-	var people: Array = s.npcs_here(data["world"], room).map(func(n: String) -> String: return str(world.npc(n).get("name", n)))
+	var people: Array = s.npcs_here(data["world"], room).map(func(n: String) -> String: return str(world.npc_name(n)))
 	if not people.is_empty():
 		seen.append("люди: " + ", ".join(people))
 	var beasts: Array = CreatureRules.here(s, room).filter(func(c: Dictionary) -> bool: return str(c["state"]) != CreatureRules.DEAD).map(func(c: Variant) -> String: return str((c as Dictionary)["name"]))

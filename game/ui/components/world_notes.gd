@@ -113,7 +113,7 @@ func _draw_map() -> void:
 	canvas.unit = float(bx["unit"])
 	canvas.known = WorldMap.known(s, world)
 	canvas.focus = bx["locations"].get(w.location_id(s.room_id), Rect2())  # the view opens on the hero's location
-	canvas.marks = WorldMap.quest_marks(s, world)
+	canvas.marks = WorldMap.quest_marks(s, Catalog.data)
 	for r: String in RumorRules.marks(s, Catalog.data):  # v0.7.47: a heard tip marks its room too
 		if not canvas.marks.has(r):
 			canvas.marks[r] = []
@@ -360,7 +360,7 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 		"people":  # everyone met (v0.7.22.7, big test #2): attitude, looks, what they gave, their quests, what they remember
 			var by_loc := {}
 			for npc: String in _met(s, w):
-				var loc := w.location_id(_npc_room(w, npc))
+				var loc := Where.npc_location(s, Catalog.data, npc)
 				if not by_loc.has(loc):
 					by_loc[loc] = []
 				(by_loc[loc] as Array).append_array(_person(s, w, npc))
@@ -438,7 +438,7 @@ func _draw_people(s: GameSession, w: WorldView) -> void:
 	split.add_child(card)
 	var by_loc := {}
 	for npc: String in met:
-		var loc := w.location_id(_npc_room(w, npc))
+		var loc := Where.npc_location(s, Catalog.data, npc)
 		if not by_loc.has(loc):
 			by_loc[loc] = []
 		(by_loc[loc] as Array).append(npc)
@@ -465,8 +465,8 @@ func _draw_people(s: GameSession, w: WorldView) -> void:
 			who.flat = true
 			who.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			who.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			who.text = "   " + str(w.npc(npc).get("name", npc)) + ("  ✝" if Being.dead(s, npc) else "")
-			var title := str(w.npc(npc).get("name", npc))
+			who.text = "   " + str(w.npc_name(npc)) + ("  ✝" if Being.dead(s, npc) else "")
+			var title := str(w.npc_name(npc))
 			var body := "\n".join(lines.map(func(l: String) -> String: return l.strip_edges()))
 			card.hook(who, title, body)
 			who.pressed.connect(func() -> void:
@@ -530,8 +530,4 @@ func _person(s: GameSession, w: WorldView, npc: String) -> Array[String]:
 	return out
 
 
-func _npc_room(w: WorldView, npc_id: String) -> String:
-	for room_id: String in Catalog.data["world"]["rooms"]:
-		if w.npcs_in(room_id).has(npc_id):
-			return room_id
-	return ""
+

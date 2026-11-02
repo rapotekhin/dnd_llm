@@ -53,7 +53,7 @@ static func rows(s: GameSession, data: Dictionary, req: Dictionary, ctx: Diction
 			"ok": OfficeRules.served(c, data, loc) >= int(req["served"])})
 	if req.has("bond"):
 		var b: Dictionary = req["bond"]
-		out.append(_waived("близость с %s от %d" % [BondRules.npc_name(s, data, str(b["npc"])), int(b["at"])],
+		out.append(_waived("близость с %s от %d" % [WorldView.name_of(data, str(b["npc"])), int(b["at"])],
 			BondRules.points(c, str(b["npc"])) >= int(b["at"]), str(waive.get("bond", ""))))
 	return out
 

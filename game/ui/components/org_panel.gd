@@ -90,7 +90,7 @@ func _org_block(s: GameSession, data: Dictionary, id: String) -> void:
 		_label(_box, tr("ORG_OWN_LINE").format({"place": PropertyRules.name_of(s, data, str(d.get("place", "")))})).name = "OrgOwn"
 		var names: Array[String] = []
 		for m: String in OrgRules.members(s, data, id):
-			names.append(BondRules.npc_name(s, data, m))
+			names.append(WorldView.name_of(data, m))
 		_label(_box, tr("ORG_MEMBERS").format({"names": ", ".join(names) if not names.is_empty() else "—",
 			"income": Money.format(names.size() * int(OrgRules.cfg(data)["member_income_cp"]))})).name = "OrgMembers"
 		_label(_box, tr("ORG_RECRUIT_HINT").format({"at": int(OrgRules.cfg(data)["recruit_bond"])}), UiTheme.MUTED_LABEL)

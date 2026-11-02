@@ -486,10 +486,9 @@ static func _wakes(s: GameSession, data: Dictionary, room: String, spot: Vector2
 		s.combat["heard"] = []
 	var heard: Array = s.combat["heard"]
 	var world := WorldView.new(data["world"])
-	var enc: Dictionary = SceneRules.room(s, data["world"], room).get("encounter", {})
+	var enc := EncounterRules.live(s, data, room)
 	var side := str(s.combat.get("faction", ""))
-	if not enc.is_empty() and not side.is_empty() and str(enc.get("faction", "")) == side and not heard.has(str(enc["id"])) and str(enc["id"]) != str(s.combat.get("encounter", "")) \
-			and not s.encounters_done.has(str(enc["id"])) and not s.encounters_peace.has(str(enc["id"])):
+	if not enc.is_empty() and not side.is_empty() and str(enc.get("faction", "")) == side and not heard.has(str(enc["id"])) and str(enc["id"]) != str(s.combat.get("encounter", "")):
 		heard.append(str(enc["id"]))
 		var joined: Array = s.combat.get("joined", [])
 		joined.append(str(enc["id"]))

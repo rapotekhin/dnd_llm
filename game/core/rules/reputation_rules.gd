@@ -40,11 +40,8 @@ static func home_room(data: Dictionary, npc_id: String) -> String:
 
 ## The pack location of an NPC ("" — none).
 static func home_of(data: Dictionary, npc_id: String) -> String:
-	var rooms: Dictionary = data["world"]["rooms"]
-	for rid: String in rooms:
-		if (rooms[rid].get("npcs", []) as Array).has(npc_id):
-			return str(rooms[rid].get("location_id", ""))
-	return ""
+	var r := home_room(data, npc_id)
+	return WorldView.new(data["world"]).location_id(r) if not r.is_empty() else ""
 
 
 ## Adds points in `loc` (a settlement; elsewhere nothing). Lines: «Ольховый Брод: о вас говорят хорошо — свой».

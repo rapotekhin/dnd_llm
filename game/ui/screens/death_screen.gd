@@ -41,7 +41,7 @@ func _ready() -> void:
 	var heir: Button = UiScenes.need(self, "%HeirButton")
 	heir.visible = not heir_id.is_empty()  # v0.7.32: the family goes on
 	if heir.visible:
-		heir.text = tr("BTN_PLAY_HEIR").format({"name": BondRules.npc_name(s, Catalog.data, heir_id)})
+		heir.text = tr("BTN_PLAY_HEIR").format({"name": WorldView.name_of(Catalog.data, heir_id)})
 		heir.pressed.connect(func() -> void:
 			EventBus.navigate.emit("creation", {"settings": s.settings, "heir": FamilyRules.heir_choices(s, Catalog.data)}))
 	(UiScenes.need(self, "%ToMenu") as Button).pressed.connect(GameState.close_session)

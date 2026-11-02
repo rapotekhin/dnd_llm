@@ -62,7 +62,7 @@ static func target_name(s: GameSession, data: Dictionary, id: String) -> String:
 
 static func victim_name(s: GameSession, data: Dictionary, id: String) -> String:
 	var d := def(s, data, id)
-	return BondRules.npc_name(s, data, str(d["victim"])) if not str(d.get("victim", "")).is_empty() else str(d.get("victim_name", ""))
+	return WorldView.name_of(data, str(d["victim"])) if not str(d.get("victim", "")).is_empty() else str(d.get("victim_name", ""))
 
 
 ## The jobs the hero still follows (v0.7.39.3): active ones and done ones whose loot is not sold or cut not paid.
@@ -115,7 +115,7 @@ static func path(s: GameSession, data: Dictionary, id: String) -> Array[Dictiona
 		"state": "done" if st == "done" else "failed" if st == "failed" else "todo"})
 	if not (d.get("items", {}) as Dictionary).is_empty():
 		var fence := str(OrgRules.def(s, data, str(d.get("org", ""))).get("fence", ""))
-		var to := "скупщику %s (%s)" % [BondRules.npc_name(s, data, fence), FenceRules.where(s, data, fence)] if not fence.is_empty() else "скупщику краденого"
+		var to := "скупщику %s (%s)" % [WorldView.name_of(data, fence), FenceRules.where(s, data, fence)] if not fence.is_empty() else "скупщику краденого"
 		out.append({"title": "Сбыть добычу %s" % to, "text": "честный торговец краденое узнает и не возьмёт",
 			"state": "done" if st == "done" and not _unsold(s, data, id) else "todo"})
 	if not str(d.get("org", "")).is_empty() and int(OrgRules.def(s, data, str(d["org"])).get("cut_pct", 0)) > 0:
@@ -150,7 +150,7 @@ static func take(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	if not fence.is_empty() and FenceRules.is_fence(s, data, fence):  # v0.7.39.2: the giver names its fence — picks and the loot
 		FenceRules.reveal(s, fence)
 		lines.append("%s: «Отмычки и сбыт — у %s, %s. Скажи, что от меня»" % [OrgRules.head_name(s, data, str(d["org"])),
-			BondRules.npc_name(s, data, fence), FenceRules.where(s, data, fence)])
+			WorldView.name_of(data, fence), FenceRules.where(s, data, fence)])
 	var cargo: Dictionary = d.get("cargo", {})
 	for item: String in cargo:
 		ItemRules.found(s.character, data, s.items, item, int(cargo[item]))
@@ -367,7 +367,7 @@ static func _eyes(s: GameSession, data: Dictionary, id: String) -> Array[String]
 	var world := WorldView.new(data["world"])
 	var out: Array[String] = []
 	for n: String in s.npcs_here(world.world, str(d["target"])):
-		out.append(str(world.npc(n).get("name", n)))
+		out.append(str(world.npc_name(n)))
 	var l := CrimeRules.law(data, world.location_id(str(d["target"])))
 	if not l.is_empty() and s.rng.randf() < float(CrimeRules.cfg(data)["patrol_chance"]):
 		out.append(str(l.get("patrol", "Патруль стражи")))

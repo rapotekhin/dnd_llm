@@ -34,17 +34,17 @@ static func unwelcome(s: GameSession, data: Dictionary, room_id: String) -> Stri
 ## On entering `room_id` (GameState._step, the hero stands there): who sees a trespass and what follows. Lines.
 static func on_enter(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
 	var owner := unwelcome(s, data, room_id)
-	if owner.is_empty() or s.sneaking or ConditionRules.invisible(s.character, data):
-		return []  # welcome, or nobody saw the hero come in
+	if owner.is_empty():
+		return []  # welcome
 	var world := WorldView.new(data["world"])
 	var site_id := world.site_id(room_id)
-	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, room_id))
-	for r: String in world.site_rooms(site_id):  # the owner anywhere in the site hears the door
-		if r != room_id and s.npcs_here(world.world, r).has(owner):
+	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, room_id))  # sneaking or invisible — decided there
+	for r: String in world.site_rooms(site_id):  # the owner anywhere in the site hears the door, unless the hero goes softly
+		if r != room_id and s.npcs_here(world.world, r).has(owner) and not WatchRules.sneaky(s, data):
 			seen.append(owner)
 	if seen.is_empty():
 		return []
-	var who := ", ".join(seen.map(func(id: String) -> String: return str(world.npc(id).get("name", id))))
+	var who := ", ".join(seen.map(func(id: String) -> String: return str(world.npc_name(id))))
 	var org := OrgRules.hideout_org(s, data, site_id)
 	if not org.is_empty():  # v0.7.39.2: the organization's own ground — its answer, not the law's
 		return OrgRules.on_trespass(s, data, org, site_id, who)
@@ -114,7 +114,7 @@ static func ask(s: GameSession, data: Dictionary, npc_id: String) -> Array[Strin
 	var nat := int(r["nat"])
 	var b := int(r["bonus"])
 	var ok := bool(r["ok"])
-	var who := BondRules.npc_name(s, data, npc_id)
+	var who := WorldView.name_of(data, npc_id)
 	var lines: Array[String] = ["Просьба впустить — %s: %s %d %s %d = %d против Сл %d — %s" % [who, CraftRules.tr_skill(data, skill), nat,
 		"−" if b < 0 else "+", absi(b), nat + b, dc, "согласие" if ok else "отказ"]]
 	if ok:
@@ -141,7 +141,7 @@ static func grant(s: GameSession, data: Dictionary, npc_id: String, site_id: Str
 		s.permits[sid] = npc_id
 	s.permit_asked.erase(npc_id)
 	s.remember(npc_id, "пустил героя к себе: %s" % names)
-	return ["%s разрешает входить: %s — пока вы не поссоритесь" % [BondRules.npc_name(s, data, npc_id), names]]
+	return ["%s разрешает входить: %s — пока вы не поссоритесь" % [WorldView.name_of(data, npc_id), names]]
 
 
 ## The master's `permit` (v0.7.39.2, protocol 0.78.0): the owner of the scene agreed by words to let the hero in.
@@ -153,8 +153,8 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	var closed := closed_to_hero(s, data, who)
 	closed.append_array(WildsRules.closed_grounds(s, data, who))  # v0.7.41: leave to hunt in its grounds
 	if closed.is_empty():
-		return {"reason": "у %s нет мест, закрытых для героя: впускать некуда" % BondRules.npc_name(s, data, who)}
+		return {"reason": "у %s нет мест, закрытых для героя: впускать некуда" % WorldView.name_of(data, who)}
 	var site := str(spec.get("site_id", "")) if spec.get("site_id") != null else ""
 	if not site.is_empty() and not closed.has(site):
-		return {"reason": "site_id — одно из мест %s, закрытых для героя: %s" % [BondRules.npc_name(s, data, who), ", ".join(closed)]}
-	return {"plan": {"npc_id": who, "site_id": site}, "summary": "%s впускает героя" % BondRules.npc_name(s, data, who)}
+		return {"reason": "site_id — одно из мест %s, закрытых для героя: %s" % [WorldView.name_of(data, who), ", ".join(closed)]}
+	return {"plan": {"npc_id": who, "site_id": site}, "summary": "%s впускает героя" % WorldView.name_of(data, who)}

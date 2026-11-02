@@ -53,26 +53,18 @@ static func stolen_qty(s: GameSession, item_id: String) -> int:
 static func recognized(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> int:
 	if known(s, data, npc_id):
 		return 0
-	var loc := home_location(data, npc_id)
+	var loc := ReputationRules.home_of(data, npc_id)
 	if loc.is_empty():
 		return 0
 	var n := 0
 	var by: Dictionary = OwnerRules.foreign(s).get(item_id, {})
 	for owner: String in by:
-		if home_location(data, owner) == loc:
+		if ReputationRules.home_of(data, owner) == loc:
 			n += int(by[owner])
 	return n
 
 
 ## The location of the room an NPC belongs to ("" — none).
-static func home_location(data: Dictionary, npc_id: String) -> String:
-	var rooms: Dictionary = data["world"]["rooms"]
-	for r: String in rooms:
-		if (rooms[r].get("npcs", []) as Array).has(npc_id):
-			return str(rooms[r].get("location_id", ""))
-	return ""
-
-
 ## What a known fence pays for one stolen unit.
 static func unit_price(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> int:
 	return Price.floored(Price.mod(Price.start(int(ItemRules.def_of(data["items"], s.items, item_id).get("value_cp", 0))), "скупщик", buy_pct(s, data, npc_id)))
@@ -102,14 +94,14 @@ static func make(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	if not BondRules.here(s, data, who):
 		return {"reason": "%s не в сцене — скупщиком делают торговца сцены" % who}
 	if not WorldView.new(data["world"]).is_trader(who):
-		return {"reason": "%s не торгует — скупщик только из торговцев (create:npc с trader)" % BondRules.npc_name(s, data, who)}
+		return {"reason": "%s не торгует — скупщик только из торговцев (create:npc с trader)" % WorldView.name_of(data, who)}
 	var r: Array = cfg(data)["make_fence"]["buy_pct"]
 	var pct := int(e.get("buy_pct", 0)) if e.get("buy_pct") != null else 0
 	if is_fence(s, data, who):
 		pct = 0
 	elif pct < int(r[0]) or pct > int(r[1]):
 		return {"reason": "buy_pct — от %d до %d%% цены" % [int(r[0]), int(r[1])]}
-	return {"plan": {"npc": who, "buy_pct": pct}, "summary": "Скупщик: %s%s" % [BondRules.npc_name(s, data, who),
+	return {"plan": {"npc": who, "buy_pct": pct}, "summary": "Скупщик: %s%s" % [WorldView.name_of(data, who),
 		" — берёт краденое за %d%%" % pct if pct > 0 else " открылся герою"]}
 
 
@@ -121,14 +113,14 @@ static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 		all[who] = {"buy_pct": int(plan["buy_pct"])}
 		gen["fences"] = all
 	reveal(s, who)
-	return ["%s скупает краденое: %d%% цены — в торговле с ним" % [BondRules.npc_name(s, data, who), buy_pct(s, data, who)]]
+	return ["%s скупает краденое: %d%% цены — в торговле с ним" % [WorldView.name_of(data, who), buy_pct(s, data, who)]]
 
 
 static func text(s: GameSession, data: Dictionary) -> String:
 	var parts: Array[String] = []
-	for npc: String in SceneRules.npcs(s, data["world"], s.room_id):
+	for npc: String in s.npcs_here(data["world"], s.room_id):
 		if known(s, data, npc):
-			parts.append("%s — скупщик: краденое за %d%%" % [BondRules.npc_name(s, data, npc), buy_pct(s, data, npc)])
+			parts.append("%s — скупщик: краденое за %d%%" % [WorldView.name_of(data, npc), buy_pct(s, data, npc)])
 	var stolen: Array[String] = []
 	for id: String in OwnerRules.foreign(s):
 		stolen.append(ItemRules.display_name(data["items"], s.items, id))
@@ -151,7 +143,7 @@ static func tool_hint(s: GameSession, data: Dictionary, item_id: String) -> Stri
 	if (cfg(data)["fence"]["stock"] as Dictionary).has(item_id):
 		for id: String in data["world"]["npcs"]:
 			if known(s, data, id):
-				ways.append("у скупщика %s (%s)" % [BondRules.npc_name(s, data, id), where(s, data, id)])
+				ways.append("у скупщика %s (%s)" % [WorldView.name_of(data, id), where(s, data, id)])
 	var r: Dictionary = data["rules"].get("craft", {}).get("recipes", {}).get(item_id, {})
 	if not r.is_empty():
 		var at := CraftRules.station_name(data, str(r["station"])).to_lower() if not str(r.get("station", "")).is_empty() else ""

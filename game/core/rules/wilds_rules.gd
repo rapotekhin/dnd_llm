@@ -63,7 +63,7 @@ static func lines(s: GameSession, data: Dictionary) -> Array[String]:
 		var d := kind(data, k)
 		var line := "%s (кнопка «%s»): запас %d из %d" % [d["name"], d["act"], stock(s, data, k), int(d["stock"])]
 		if poaching(s, data):
-			line += "; угодья %s — без позволения браконьерство" % BondRules.npc_name(s, data, owner(s, data))
+			line += "; угодья %s — без позволения браконьерство" % WorldView.name_of(data, owner(s, data))
 		out.append(line)
 	return out
 
@@ -248,7 +248,7 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 		var npcs := s.npcs_here(data["world"], s.room_id).filter(func(n: String) -> bool: return not Being.follows(s, n))
 		if not npcs.is_empty() or s.rng.randi_range(1, 100) <= int(c["poach"]["seen_pct"]):
 			out["crime"] = true
-			lines.append("Браконьерство в угодьях %s замечено" % BondRules.npc_name(s, data, o))
+			lines.append("Браконьерство в угодьях %s замечено" % WorldView.name_of(data, o))
 			lines.append_array(CrimeRules.on_job(s, data, str(c["poach"]["crime"]), o, s.room_id, WorldView.new(data["world"]).location_id(s.room_id)))
 	return out
 

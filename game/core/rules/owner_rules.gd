@@ -79,7 +79,7 @@ static func price_cap(data: Dictionary, c: Dictionary) -> int:
 static func owner_word(data: Dictionary, owner: String) -> String:
 	if owner == HERO:
 		return "ваш пленник"
-	return "принадлежит: %s" % WorldView.new(data["world"]).npc(owner).get("name", owner)
+	return "принадлежит: %s" % WorldView.new(data["world"]).npc_name(owner)
 
 
 # --- the master's `owner` effect ---------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	if from.is_empty():
 		return {"reason": "у героя нет чужой вещи %s, чей хозяин здесь" % item}
 	return {"plan": {"item": item, "from": from},
-		"summary": "%s отдаёт герою: %s" % [world.npc(from).get("name", from), ItemRules.display_name(data["items"], s.items, item)]}
+		"summary": "%s отдаёт герою: %s" % [world.npc_name(from), ItemRules.display_name(data["items"], s.items, item)]}
 
 
 static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[String]:
@@ -155,5 +155,5 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 	var home := ReputationRules.home_room(data, to)
 	if not home.is_empty() and home != s.room_id:  # it goes with its new owner
 		c["at"] = home
-		lines.append("%s уводят к %s" % [c["name"], WorldView.new(data["world"]).npc(to).get("name", to)])
+		lines.append("%s уводят к %s" % [c["name"], WorldView.new(data["world"]).npc_name(to)])
 	return lines

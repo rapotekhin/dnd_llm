@@ -167,5 +167,14 @@ func npc(id: String) -> Dictionary:
 	return world["npcs"].get(id, {})
 
 
+## The one name of an NPC, a pack's or a made one (v0.8.4.16); its id when the world does not know it.
+func npc_name(id: String) -> String:
+	return str(npc(id).get("name", id))
+
+
+static func name_of(data: Dictionary, id: String) -> String:
+	return WorldView.new(data["world"]).npc_name(id)
+
+
 func is_trader(id: String) -> bool:
 	return bool(npc(id).get("trader", false))

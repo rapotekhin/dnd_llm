@@ -108,7 +108,7 @@ static func others(s: GameSession, data: Dictionary, map: Dictionary) -> Array[D
 				continue
 			var at := _npc_cell(s, data, map, room, cells, taken, id, part)
 			taken[at] = true
-			var t := _token("far:" + id, "npc", id, str(world.npc(id).get("name", id)), at)
+			var t := _token("far:" + id, "npc", id, str(world.npc_name(id)), at)
 			t["attitude"] = s.attitude(id)
 			out.append(t)
 	return out
@@ -340,7 +340,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var from := cell_of(s, data, map, who)
 	var steps := WalkRules.near(map, data["layouts"], from, target, int(cfg(data)["reach"]["touch"]), s.room_id)
 	var at := steps[-1] if not steps.is_empty() else from
-	var name := "Герой" if who == "hero" else str(world.npc(who).get("name", who))
+	var name := "Герой" if who == "hero" else str(world.npc_name(who))
 	var aim := "герою" if to == "hero" else str(world.npc(to).get("name", _name_of(s, data, map, to)))
 	return {"plan": {"who": who, "x": at.x, "y": at.y}, "summary": "%s: к %s" % [name, aim]}
 

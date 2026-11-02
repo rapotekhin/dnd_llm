@@ -339,8 +339,6 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 ## A bound prisoner killed before NPCs of the room (v0.7.22.17): each who sees it thinks worse of the hero and
 ## remembers. Lines.
 static func _executed(s: GameSession, data: Dictionary, c: Dictionary) -> Array[String]:
-	if ConditionRules.invisible(s.character, data):
-		return []
 	var world := WorldView.new(data["world"])
 	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, s.room_id))
 	for npc: String in seen:
@@ -348,7 +346,7 @@ static func _executed(s: GameSession, data: Dictionary, c: Dictionary) -> Array[
 		s.remember(npc, "герой убил связанного пленника: %s" % c["name"])
 	if seen.is_empty():
 		return []
-	return ["%s видят казнь связанного пленника: отношение хуже" % ", ".join(seen.map(func(n: String) -> String: return str(world.npc(n).get("name", n))))]
+	return ["%s видят казнь связанного пленника: отношение хуже" % ", ".join(seen.map(func(n: String) -> String: return str(world.npc_name(n))))]
 
 
 ## Someone else's creature led away or let go (v0.7.22.17, #7): it is now the hero's; its owner here sees a theft.
@@ -357,7 +355,7 @@ static func _taken_from_owner(s: GameSession, data: Dictionary, c: Dictionary) -
 		return []
 	var owner := str(c["owner"])
 	c["owner"] = OwnerRules.HERO
-	if WatchRules.sees_hero(s, data, owner) and not ConditionRules.invisible(s.character, data):
+	if WatchRules.sees_hero(s, data, owner):
 		return TheftRules.react(s, data, owner)
 	return []
 
@@ -376,9 +374,9 @@ static func _search(s: GameSession, data: Dictionary, npc_id: String, name: Stri
 	var lines: Array[String] = ["Обыскан(а) %s: %s" % [name, ", ".join(got) if not got.is_empty() else "ничего"]]
 	var world := WorldView.new(data["world"])
 	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, s.room_id))
-	if not seen.is_empty() and not ConditionRules.invisible(s.character, data):
+	if not seen.is_empty():
 		s.shift_attitude(seen[0], int(data["rules"]["theft"]["caught_attitude"]), data)
-		lines.append("%s видит, как вы обираете беспомощного: отношение хуже" % world.npc(seen[0]).get("name", seen[0]))
+		lines.append("%s видит, как вы обираете беспомощного: отношение хуже" % world.npc_name(seen[0]))
 	return lines
 
 

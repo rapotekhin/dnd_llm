@@ -167,7 +167,7 @@ static func day(s: GameSession, data: Dictionary) -> Array[String]:
 		if cr.has("rent_day") and s.day > int(cr["rent_day"]):
 			if bool(cr.get("led", false)) and room == s.room_id:
 				_unload(s, data, cr)
-			lines.append("%s — срок аренды вышел, животное ушло к хозяину (%s)" % [cr["name"], PropertyRules.npc_name(data, str(cr.get("rent_from", "")))])
+			lines.append("%s — срок аренды вышел, животное ушло к хозяину (%s)" % [cr["name"], WorldView.name_of(data, str(cr.get("rent_from", "")))])
 			PropertyRules._remove_creature(s, str(cr["id"]))
 			continue
 		if unattended(s, data, cr) and s.rng.randi_range(1, 100) <= int(cfg(data)["steal_pct_day"]):
@@ -269,7 +269,7 @@ static func sell(s: GameSession, data: Dictionary, npc_id: String, cid: String) 
 	Ledger.add(s, price, "mount:sell")
 	PropertyRules._remove_creature(s, cid)
 	s.remember(npc_id, "купил у героя: %s" % cr["name"])
-	return ["Продано %s: %s за %s" % [PropertyRules.npc_name(data, npc_id), cr["name"], Money.format(price)]]
+	return ["Продано %s: %s за %s" % [WorldView.name_of(data, npc_id), cr["name"], Money.format(price)]]
 
 
 static func vehicles_of(data: Dictionary, npc_id: String) -> Array[String]:
@@ -340,7 +340,7 @@ static func plan_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Di
 	if not s.npcs_here(data["world"], s.room_id).has(who):
 		return {"reason": "%s не в сцене — животное ставят тому, кто здесь" % who}
 	if PropertyRules.animals_of(data, who).has(monster):
-		return {"reason": "%s уже продаёт %s — кнопка «Животные»" % [PropertyRules.npc_name(data, who), data["monsters"].get(monster, {}).get("name", monster)]}
+		return {"reason": "%s уже продаёт %s — кнопка «Животные»" % [WorldView.name_of(data, who), data["monsters"].get(monster, {}).get("name", monster)]}
 	var known := not PropertyRules.animal_cfg(data, monster).is_empty()
 	var kind := {} if known else derive(data, monster)
 	if not known and kind.is_empty():
@@ -350,7 +350,7 @@ static func plan_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Di
 	if int(gen.get("animal_day", -1)) == s.day and int(gen.get("animal_today", 0)) >= int(cfg(data)["make"]["per_day"]):
 		return {"reason": "сегодня уже хватит новых животных — завтра"}
 	var name := str(data["monsters"][monster].get("name", monster))
-	return {"plan": {"npc_id": who, "animal": monster, "kind": kind}, "summary": "%s продаёт: %s (%s)" % [PropertyRules.npc_name(data, who), name,
+	return {"plan": {"npc_id": who, "animal": monster, "kind": kind}, "summary": "%s продаёт: %s (%s)" % [WorldView.name_of(data, who), name,
 		Money.format(int((kind if not known else PropertyRules.animal_cfg(data, monster))["price_cp"]))]}
 
 
@@ -372,4 +372,4 @@ static func apply_stock(s: GameSession, data: Dictionary, plan: Dictionary) -> A
 		gen["animal_day"] = s.day
 		gen["animal_today"] = 0
 	gen["animal_today"] = int(gen["animal_today"]) + 1
-	return ["%s теперь продаёт: %s" % [PropertyRules.npc_name(data, who), data["monsters"][monster].get("name", monster)]]
+	return ["%s теперь продаёт: %s" % [WorldView.name_of(data, who), data["monsters"][monster].get("name", monster)]]

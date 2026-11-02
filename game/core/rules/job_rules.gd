@@ -50,7 +50,7 @@ static func rank(c: Dictionary, id: String) -> int:
 
 
 static func employer_name(s: GameSession, data: Dictionary, id: String) -> String:
-	return npc_name(s, data, str(job(s, data, id).get("employer", "")))
+	return WorldView.name_of(data, str(job(s, data, id).get("employer", "")))
 
 
 ## The object the job is a place of (v0.7.39.5): its `site`, else the site of the employer's home room.
@@ -59,14 +59,6 @@ static func site_of(s: GameSession, data: Dictionary, id: String) -> String:
 	if not str(j.get("site", "")).is_empty():
 		return str(j["site"])
 	return WorldView.new(data["world"]).site_id(ReputationRules.home_room(data, str(j.get("employer", ""))))
-
-
-## A pack's or a made NPC's name.
-static func npc_name(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	var n := WorldView.new(data["world"]).npc(npc_id)
-	if n.is_empty():
-		n = WorldGen.generated(s).get("npcs", {}).get(npc_id, {})
-	return str(n.get("name", npc_id))
 
 
 static func rank_name(s: GameSession, data: Dictionary, id: String, r: int) -> String:
@@ -111,7 +103,7 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 
 
 static func employer_here(s: GameSession, data: Dictionary, id: String) -> bool:
-	return SceneRules.npcs(s, data["world"], s.room_id).has(str(job(s, data, id).get("employer", "")))
+	return s.npcs_here(data["world"], s.room_id).has(str(job(s, data, id).get("employer", "")))
 
 
 ## "" when the hero may ask for the job now, else a localization key.
@@ -310,7 +302,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
 	var m: Dictionary = cfg(data)["make"]
 	var employer := str(spec.get("employer_id", ""))
-	if not SceneRules.npcs(s, data["world"], s.room_id).has(employer):
+	if not s.npcs_here(data["world"], s.room_id).has(employer):
 		return {"reason": "наниматель %s не в сцене — работу даёт только тот, кто здесь" % employer}
 	var skill := str(spec.get("skill", "")) if spec.get("skill") != null else ""
 	var tool := str(spec.get("tool", "")) if spec.get("tool") != null else ""

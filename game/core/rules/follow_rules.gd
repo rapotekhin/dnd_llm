@@ -19,7 +19,7 @@ static func placed(s: GameSession, npc_id: String) -> bool:
 ## Checks an `grant:follow`: {plan, summary} or {reason}. `won` — the hero won it over by a check this turn.
 static func plan(s: GameSession, data: Dictionary, npc_id: String, follow: bool, home: bool, won: bool) -> Dictionary:
 	var world := WorldView.new(data["world"])
-	var name := str(world.npc(npc_id).get("name", npc_id))
+	var name := str(world.npc_name(npc_id))
 	if not s.npcs_here(data["world"], s.room_id).has(npc_id):
 		return {"reason": "NPC %s нет в этой комнате" % npc_id}
 	if not follow:
@@ -67,7 +67,7 @@ static func meals(s: GameSession, data: Dictionary) -> Array[String]:
 		if not Being.view(s, id).has("fed"):
 			Being.of(s, id)["fed"] = {"at": now, "hungry": 0}
 		var rec: Dictionary = Being.of(s, id)["fed"]
-		var name := str(world.npc(id).get("name", JobRules.npc_name(s, data, id)))
+		var name := str(world.npc(id).get("name", WorldView.name_of(data, id)))
 		while now - int(rec["at"]) >= 1440 and Being.follows(s, id):
 			var bag := Gear.of(s, data, id)  # its own food first, then the hero's (v0.8.4.11)
 			var food := _portion(s, data, bag)

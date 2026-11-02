@@ -27,6 +27,15 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["encounters"]
 
 
+## The room's encounter by its flags while it still waits (v0.8.4.16, one place): not fought, not at peace with the
+## hero; {} — none.
+static func live(s: GameSession, data: Dictionary, room_id: String) -> Dictionary:
+	var enc: Dictionary = SceneRules.room(s, data["world"], room_id).get("encounter", {})
+	if enc.is_empty() or s.encounters_done.has(str(enc.get("id", ""))) or s.encounters_peace.has(str(enc.get("id", ""))):
+		return {}
+	return enc
+
+
 ## The best passive Perception among the foes of an encounter.
 static func best_passive(s: GameSession, data: Dictionary, enemies: Array) -> int:
 	var best := 0

@@ -2086,18 +2086,9 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 func go(room_id: String) -> bool:
 	if session == null or is_busy() or not Backend.is_ready() or not WayRules.open_exits(session, Catalog.data["world"], session.room_id).has(room_id):
 		return false
-	if CrimeRules.held(session):
-		EventBus.message.emit(tr("CRIME_HELD"))
-		return false
-	if EncounterRules.captive(session):
-		EventBus.message.emit(tr("CAPTIVE_HELD"))
-		return false
-	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
-		EventBus.message.emit(tr("TOO_HEAVY"))
-		return false
-	var shut := WayRules.blocked(session, Catalog.data, session.room_id, room_id)
-	if not shut.is_empty():
-		EventBus.message.emit(tr(shut))
+	var why := WayRules.leave_why(session, Catalog.data, session.room_id, room_id)
+	if not why.is_empty():
+		EventBus.message.emit(tr(why))
 		return false
 	_end_conversation()
 	var from := session.room_id
@@ -2131,8 +2122,8 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 	if not session.pending_fight.is_empty():  # v0.7.39.2: an organization's guards on a stranger in its hideout
 		_start_pending_fight()
 		return
-	if _live_encounter(room_id):
-		var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id)["encounter"]
+	var enc := EncounterRules.live(session, Catalog.data, room_id)  # by the flags (v0.7.14.1)
+	if not enc.is_empty():
 		var meet := EncounterRules.meet(session, Catalog.data, room_id, from, enc)  # who sees whom (v0.7.22.12, v0.8.3)
 		if meet.has("line"):
 			_add(GameSession.effect_entry([str(meet["line"])]))
@@ -2228,11 +2219,6 @@ func sneak_round() -> void:
 	EventBus.state_changed.emit()
 
 
-func _live_encounter(room_id: String) -> bool:
-	var enc: Dictionary = SceneRules.room(session, Catalog.data["world"], room_id).get("encounter", {})  # by the flags (v0.7.14.1)
-	return not enc.is_empty() and not session.encounters_done.has(str(enc["id"])) and not session.encounters_peace.has(str(enc["id"]))
-
-
 ## «Идти сюда» on the map (roadmap v0.7.6, decisions of the author): a fast travel to a visited room along known
 ## paths. The engine walks the route step by step without the master: time, sneaking, passive Perception, caches,
 ## quest steps; the line «Путь: … · N мин» goes to the chat and the history. It stops on a live encounter (that
@@ -2244,12 +2230,9 @@ func travel(to: String) -> String:
 	var path := WorldMap.route(session, Catalog.data["world"], session.room_id, to, Catalog.data)  # a locked door stops the way (v0.7.22.25)
 	if path.is_empty():
 		return "TRAVEL_NO_ROUTE"
-	if CrimeRules.held(session):
-		return "CRIME_HELD"
-	if EncounterRules.captive(session):
-		return "CAPTIVE_HELD"
-	if CharacterRules.overloaded(session.character, Catalog.data, session.items):
-		return "TOO_HEAVY"
+	var why := WayRules.leave_why(session, Catalog.data, session.room_id, path[0])
+	if not why.is_empty():
+		return why
 	_end_conversation()
 	var names: Array[String] = [str(world().room(session.room_id).get("name", session.room_id))]
 	var lines: Array[String] = []
@@ -2262,7 +2245,7 @@ func travel(to: String) -> String:
 		if not trap.is_empty() and ExplorationRules.is_found(session, from, trap):
 			lines.append("Дальше путь стережёт найденная ловушка — переход остановлен")
 			break
-		if not trap.is_empty() or _live_encounter(to_room):
+		if not trap.is_empty() or not EncounterRules.live(session, Catalog.data, to_room).is_empty():
 			_travel_line(names, minute0, lines)
 			var step_lines: Array[String] = []
 			if not trap.is_empty():

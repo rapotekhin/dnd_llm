@@ -122,7 +122,7 @@ func _ready() -> void:
 	_track.add_theme_color_override("font_color", UiTheme.ACCENT)
 	_track.pressed.connect(func() -> void:
 		var qid := QuestRules.tracked(GameState.session, Catalog.data["world"])
-		var rooms := WorldMap.step_rooms(GameState.session, Catalog.data["world"], qid)
+		var rooms := WorldMap.step_rooms(GameState.session, Catalog.data, qid)
 		_map.open_at(rooms[0] if not rooms.is_empty() else ""))
 	chat = UiScenes.need(self, "%Chat")
 	_thinking = UiScenes.need(self, "%Thinking")

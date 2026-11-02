@@ -136,7 +136,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 	var inventory: Array[Dictionary] = []
 	var foreign := OwnerRules.foreign(s)  # v0.7.22.17: someone else's, taken without asking
 	for id: String in c.get("inventory", {}):
-		var whose: Array = (foreign.get(id, {}) as Dictionary).keys().map(func(o: String) -> String: return str(WorldView.new(data["world"]).npc(o).get("name", o)))
+		var whose: Array = (foreign.get(id, {}) as Dictionary).keys().map(func(o: String) -> String: return str(WorldView.new(data["world"]).npc_name(o)))
 		var water := VesselRules.summary(c, data, id)  # v0.7.34.6: the master sees an empty skin
 		inventory.append({"item_id": id, "name": ItemRules.display_name(items, s.items, id) + (" (%s)" % water if not water.is_empty() else "")
 			+ (" (чужое: %s — взято без спроса)" % ", ".join(whose) if not whose.is_empty() else ""),

@@ -136,7 +136,7 @@ static func cure_npc(s: GameSession, data: Dictionary, npc_id: String, power: St
 	var id := npc_disease(s, data, npc_id)
 	if id.is_empty():
 		return []
-	var who := str(WorldView.new(data["world"]).npc(npc_id).get("name", npc_id))
+	var who := str(WorldView.new(data["world"]).npc_name(npc_id))
 	if not npc_curable(s, data, npc_id, power):
 		return ["%s: травы не берут — %s" % [who, def_of(s, data, id).get("name", id)]]
 	cure(s, data, power, npc_id)
@@ -163,14 +163,14 @@ static func plan_cure(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		return {"reason": "%s не в сцене: лечит тот, кто здесь" % who}
 	var power := art(data, who)
 	if power.is_empty():
-		return {"reason": "%s не лечит болезни: среди услуг нет лечения" % BondRules.npc_name(s, data, who)}
+		return {"reason": "%s не лечит болезни: среди услуг нет лечения" % WorldView.name_of(data, who)}
 	if npc_disease(s, data, patient).is_empty():
-		return {"reason": "%s не болен" % BondRules.npc_name(s, data, patient)}
-	if not s.npcs_here(world.world, s.room_id).has(patient) and AllyRules.home_location(world, patient) != world.location_id(s.room_id):
-		return {"reason": "%s далеко: лечат того, кто здесь или в этом поселении" % BondRules.npc_name(s, data, patient)}
+		return {"reason": "%s не болен" % WorldView.name_of(data, patient)}
+	if not s.npcs_here(world.world, s.room_id).has(patient) and Where.npc_location(s, data, patient) != world.location_id(s.room_id):
+		return {"reason": "%s далеко: лечат того, кто здесь или в этом поселении" % WorldView.name_of(data, patient)}
 	if not npc_curable(s, data, patient, power):
 		return {"reason": "травы эту болезнь не берут, нужна магия"}
-	return {"plan": {"npc_id": who, "patient_id": patient, "power": power}, "summary": "%s лечит: %s" % [BondRules.npc_name(s, data, who), BondRules.npc_name(s, data, patient)]}
+	return {"plan": {"npc_id": who, "patient_id": patient, "power": power}, "summary": "%s лечит: %s" % [WorldView.name_of(data, who), WorldView.name_of(data, patient)]}
 
 
 static func apply_cure(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
@@ -260,7 +260,7 @@ static func contagion(s: GameSession, data: Dictionary) -> Array[String]:
 	for id: String in active(s.character):
 		if bool(def_of(s, data, id).get("contagious", false)):
 			mine.append(id)
-	for npc_id: String in SceneRules.npcs(s, data["world"], s.room_id):
+	for npc_id: String in s.npcs_here(data["world"], s.room_id):
 		var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
 		var id := npc_disease(s, data, npc_id)
 		if not id.is_empty() and bool(def_of(s, data, id).get("contagious", false)) and int(met.get(npc_id, 0)) != s.day:

@@ -122,7 +122,7 @@ func test_a_child_is_born_and_grows() -> void:
 	assert_str(str(FamilyRules.stage(s, data, kid)["id"])).is_equal("child")
 	assert_str(str(BondRules.npc_def(s, data, kid)["role"])).contains("ребёнок")
 	FamilyRules.rename(s, data, kid, "  Велимир ")
-	assert_str(BondRules.npc_name(s, data, kid)).is_equal("Велимир")
+	assert_str(WorldView.name_of(data, kid)).is_equal("Велимир")
 	assert_str(FamilyRules.text(s, data)).contains("Велимир")
 
 
@@ -174,7 +174,7 @@ func test_the_adult_heir_takes_the_place() -> void:
 	s.day += 160
 	assert_str(FamilyRules.heir(s, data)).is_equal(kid)
 	var ch := FamilyRules.heir_choices(s, data)
-	assert_str(str(ch["name"])).is_equal(BondRules.npc_name(s, data, kid))
+	assert_str(str(ch["name"])).is_equal(WorldView.name_of(data, kid))
 	var heir_c := CharacterBuilder.build_preset(data["presets"][1], data)
 	heir_c["gold_cp"] = 100
 	var gold := int(s.character["gold_cp"])

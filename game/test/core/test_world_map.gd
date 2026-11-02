@@ -61,12 +61,12 @@ func test_route_minutes_by_the_time_rules() -> void:
 func test_a_quest_mark_only_on_a_seen_place() -> void:
 	var s := _session(["brod-tavern-hall", "brod-square", "brod-gate", "mine-entrance", "mine-gallery"])
 	s.quests_active["drogin_amulet"] = 0  # find the amulet in the flooded gallery
-	assert_dict(WorldMap.quest_marks(s, data["world"])).is_empty()
+	assert_dict(WorldMap.quest_marks(s, data)).is_empty()
 	s.visited.append("mine-flooded")
-	var marks := WorldMap.quest_marks(s, data["world"])
+	var marks := WorldMap.quest_marks(s, data)
 	assert_array(marks.keys()).contains_exactly(["mine-flooded"])
 	s.quests_active["drogin_amulet"] = 1  # bring it to the prospector
-	marks = WorldMap.quest_marks(s, data["world"])
+	marks = WorldMap.quest_marks(s, data)
 	assert_array(marks.keys()).not_contains(["mine-flooded"])
 
 

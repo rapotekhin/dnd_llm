@@ -164,6 +164,15 @@ game/
 - **Числа:** `Sheet.max_hp`, `Sheet.speed` с истощением, `Sheet.ability`, `Sheet.prof`; `Sheet.own` — запись для изменений. Хиты за уровень — `CharacterRules.hp_step`.
 - **Реакции:** `SpellEffects.guard` и `SpellEffects.countered` — для героя и NPC.
 
+Кто здесь и где (v0.8.4.16):
+
+- **Кто в сцене** — `GameSession.npcs_here`, без мёртвых и лежащих существом.
+- **Где NPC сейчас** — `Where.npc_room`, `Where.npc_location`. Дом из пакета — `ReputationRules.home_of`.
+- **Живая встреча** — `EncounterRules.live(s, data, room)`: не пройдена и не в мире.
+- **Можно ли уйти** — `WayRules.leave_why`: стража, плен, перегруз, закрытый проход, найденная ловушка.
+- **Имя NPC** — `WorldView.npc_name`, `WorldView.name_of`.
+- **Кто видел** — `WatchRules.eyes`: внутри и невидимость (`pierces`), и Скрытность против пассивной Внимательности. Вызов не проверяет это сам.
+
 ## Фундамент правил (v0.7.60)
 
 Пять записей, через которые идут все системы ([ADR-0012](adr/0012-unified-models.md)). Копий рядом не заводим: страж в `test_foundation_v0760.gd` не пускает `randi_range(1, 20)` и прямую запись `gold_cp` мимо них.

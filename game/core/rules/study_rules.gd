@@ -51,10 +51,6 @@ static func name_of(s: GameSession, data: Dictionary, id: String) -> String:
 	return str(course(s, data, id).get("name", id))
 
 
-static func npc_name(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	return JobRules.npc_name(s, data, npc_id)
-
-
 ## The courses an NPC teaches.
 static func of_teacher(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	var out: Array[String] = []
@@ -235,7 +231,7 @@ static func _ok(s: GameSession, data: Dictionary, id: String) -> bool:
 
 
 static func here(s: GameSession, data: Dictionary, npc_id: String) -> bool:
-	return SceneRules.npcs(s, data["world"], s.room_id).has(npc_id)
+	return s.npcs_here(data["world"], s.room_id).has(npc_id)
 
 
 static func _loc_of_school(data: Dictionary, sid: String) -> String:
@@ -366,7 +362,7 @@ static func enroll(s: GameSession, data: Dictionary, id: String) -> Array[String
 	var c := s.character
 	var f := fee(s, data, id)
 	Ledger.add(s, -f, "study:enroll")
-	var lines: Array[String] = ["Записаны на курс «%s» (%s) — %s, занятий %d%s" % [name_of(s, data, id), npc_name(s, data, str(course(s, data, id)["teacher"])),
+	var lines: Array[String] = ["Записаны на курс «%s» (%s) — %s, занятий %d%s" % [name_of(s, data, id), WorldView.name_of(data, str(course(s, data, id)["teacher"])),
 		teaches_text(s, data, id), lessons_needed(s, data, id), (", плата " + Money.format(f)) if f > 0 else ""]]
 	lines.append_array(_dorm_open(s, data, str(course(s, data, id).get("school", ""))))
 	state(c)["courses"][id] = _new_course(s, data, id)
@@ -682,14 +678,14 @@ static func text(s: GameSession, data: Dictionary) -> String:
 		for id: Variant in view(c)["done"]:
 			parts.append("окончен «%s»" % name_of(s, data, str(id)))
 	var teach: Array[String] = []
-	for npc: String in SceneRules.npcs(s, data["world"], s.room_id):
+	for npc: String in s.npcs_here(data["world"], s.room_id):
 		for id: String in of_teacher(s, data, npc):
-			teach.append("%s учит «%s» (%s)" % [npc_name(s, data, npc), name_of(s, data, id), teaches_text(s, data, id)])
+			teach.append("%s учит «%s» (%s)" % [WorldView.name_of(data, npc), name_of(s, data, id), teaches_text(s, data, id)])
 	if not teach.is_empty():
 		parts.append("здесь: " + "; ".join(teach))
 	var away: Array[String] = []
 	for id: String in waiting(s, data):
-		away.append("«%s» у %s (%s)" % [name_of(s, data, id), npc_name(s, data, str(course(s, data, id)["teacher"])), where(s, data, id)])
+		away.append("«%s» у %s (%s)" % [name_of(s, data, id), WorldView.name_of(data, str(course(s, data, id)["teacher"])), where(s, data, id)])
 	if not away.is_empty():
 		parts.append("ждут героя: " + "; ".join(away))
 	return ("Учёба (окно «Учёба» у учителя, занятия — кнопкой): " + "; ".join(parts)) if not parts.is_empty() else ""
@@ -768,13 +764,13 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary, teacher_def
 		return {"reason": "нужно name — как называется курс"}
 	var id := "gen_c_" + ("%s|%s|%s" % [who, kind, what]).md5_text().left(8)
 	if courses(s, data).has(id):
-		return {"reason": "%s уже учит этому — кнопка «Учёба» в его действиях" % npc_name(s, data, who)}
+		return {"reason": "%s уже учит этому — кнопка «Учёба» в его действиях" % WorldView.name_of(data, who)}
 	var def := {"name": name, "teacher": who, "teaches": {"kind": kind, "id": what}, "lessons": n, "skill": skill,
 		"dc": int(data["rules"]["dc_tiers"][tier]), "fee_cp": f, "generated": true}
 	if not (req["requires"] as Dictionary).is_empty():
 		def["requires"] = req["requires"]
 	var where := (", ждёт у учителя: " + WorldView.new(data["world"]).place_path(Where.base_room(s, data, who))) if away else ""
-	return {"plan": {"id": id, "def": def, "recipe": recipe}, "summary": "Курс — %s: «%s», %d занятий, %s%s" % [npc_name(s, data, who), name, n,
+	return {"plan": {"id": id, "def": def, "recipe": recipe}, "summary": "Курс — %s: «%s», %d занятий, %s%s" % [WorldView.name_of(data, who), name, n,
 		Money.format(f) if f > 0 else "бесплатно", where]}
 
 
@@ -849,4 +845,4 @@ static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Ar
 		gen["recipes"][str(r["id"])] = r["def"]
 		if not (r.get("item", {}) as Dictionary).is_empty():
 			s.items[str(r["def"]["output"])] = r["item"]
-	return ["%s берёт учеников: «%s» — кнопка «Учёба» в его действиях" % [npc_name(s, data, str(plan["def"]["teacher"])), plan["def"]["name"]]]
+	return ["%s берёт учеников: «%s» — кнопка «Учёба» в его действиях" % [WorldView.name_of(data, str(plan["def"]["teacher"])), plan["def"]["name"]]]

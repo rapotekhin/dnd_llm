@@ -58,7 +58,7 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 	var lines: Array[String] = []
 	var all := stepped(world)
 	var heir := stand_in(s, world, npc_id)
-	var who := str(WorldView.new(world).npc(npc_id).get("name", npc_id))
+	var who := str(WorldView.new(world).npc_name(npc_id))
 	for id: String in all:
 		if s.quests_done.has(id) or s.quests_failed.has(id):
 			continue
@@ -69,7 +69,7 @@ static func on_death(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 		if str(all[id].get("giver", "")) != npc_id and not talks:
 			continue
 		if not heir.is_empty():
-			lines.append("«%s»: дело %s продолжит %s" % [all[id]["title"], who, WorldView.new(world).npc(heir).get("name", heir)])
+			lines.append("«%s»: дело %s продолжит %s" % [all[id]["title"], who, WorldView.new(world).npc_name(heir)])
 			continue
 		lines.append("Задание провалено: %s — %s мёртв(а)" % [all[id]["title"], who])
 		s.quests_active.erase(id)
@@ -373,7 +373,7 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 	var world := WorldView.new(data["world"])
 	for npc: String in att:
 		s.shift_attitude(npc, int(att[npc]), data)
-		lines.append("%s: отношение %s" % [world.npc(npc).get("name", npc), "лучше" if int(att[npc]) > 0 else "хуже"])
+		lines.append("%s: отношение %s" % [world.npc_name(npc), "лучше" if int(att[npc]) > 0 else "хуже"])
 	if class_xp:
 		lines.append_array(XpRules.award(c, data, int(r.get("xp", 0)), "задание"))
 		lines.append_array(GrowthRules.share(s, data, GrowthRules.company(s), int(r.get("xp", 0))))  # and who walked it with the hero (v0.8.4.11)

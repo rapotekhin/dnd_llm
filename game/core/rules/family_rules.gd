@@ -26,10 +26,6 @@ static func _rw(c: Dictionary) -> Dictionary:
 	return f
 
 
-static func _name(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	return JobRules.npc_name(s, data, npc_id)
-
-
 ## The living spouse, "" — none.
 static func spouse(s: GameSession) -> String:
 	var id := str(view(s.character).get("spouse", ""))
@@ -94,7 +90,7 @@ static func propose_why(s: GameSession, data: Dictionary, npc_id: String) -> Str
 static func propose(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	_rw(s.character)["engaged"] = npc_id
 	s.remember(npc_id, "герой сделал предложение — и получил согласие")
-	return ["%s: «Да!» — помолвка. Свадьба — у жреца или писаря" % _name(s, data, npc_id)]
+	return ["%s: «Да!» — помолвка. Свадьба — у жреца или писаря" % WorldView.name_of(data, npc_id)]
 
 
 ## The officiant's kind of this NPC (a key of `officiants`), "" — not one.
@@ -140,9 +136,9 @@ static func wedding(s: GameSession, data: Dictionary, npc_id: String) -> Array[S
 	f["hours"] = (cfg(data)["home_hours"] as Array).duplicate()
 	f.erase("engaged")
 	s.remember(who, "стал(а) супругом героя")
-	s.remember(npc_id, "провёл свадьбу героя и %s" % _name(s, data, who))
-	var lines: Array[String] = ["Свадьба: %s — %s, %s" % [_name(s, data, who), str(cfg(data)["officiants"][k]["name"]), Money.format(fee(data, k))],
-		"%s живёт в вашем доме: %s" % [_name(s, data, who), PropertyRules.name_of(s, data, h)]]
+	s.remember(npc_id, "провёл свадьбу героя и %s" % WorldView.name_of(data, who))
+	var lines: Array[String] = ["Свадьба: %s — %s, %s" % [WorldView.name_of(data, who), str(cfg(data)["officiants"][k]["name"]), Money.format(fee(data, k))],
+		"%s живёт в вашем доме: %s" % [WorldView.name_of(data, who), PropertyRules.name_of(s, data, h)]]
 	lines.append_array(BondRules.add(s, data, who, 10, "свадьба"))
 	return lines
 
@@ -192,7 +188,7 @@ static func try_child(s: GameSession, data: Dictionary) -> Array[String]:
 		return ["Ночь вдвоём — ребёнка пока нет"]
 	var b := bearer(s, data)
 	f["pregnant"] = {"bearer": b, "due": s.day + int(k["days"])}
-	return ["Вы ждёте ребёнка: %s, роды — через %d дней" % ["носит героиня" if b == "hero" else "носит " + _name(s, data, b), int(k["days"])]]
+	return ["Вы ждёте ребёнка: %s, роды — через %d дней" % ["носит героиня" if b == "hero" else "носит " + WorldView.name_of(data, b), int(k["days"])]]
 
 
 static func years(s: GameSession, data: Dictionary, npc_id: String) -> int:
@@ -221,7 +217,7 @@ static func _birth(s: GameSession, data: Dictionary, day: int) -> Array[String]:
 	var name := str(pool[s.rng.randi_range(0, pool.size() - 1)])
 	var st: Dictionary = cfg(data)["stages"][0]
 	var def := {"name": name, "role": _role(data, gender, st), "gender": gender, "race": str(c.get("race_name", "")),
-		"monster": "commoner", "tags": ["commoner"], "description": "Ребёнок героя и %s." % _name(s, data, spouse(s)),
+		"monster": "commoner", "tags": ["commoner"], "description": "Ребёнок героя и %s." % WorldView.name_of(data, spouse(s)),
 		"child": {"born": day, "parents": ["hero", spouse(s)]}}
 	var gen := WorldGen.generated(s)
 	var n := 1
@@ -344,7 +340,7 @@ static func _day(s: GameSession, data: Dictionary, day: int) -> Array[String]:
 		f["home_room"] = ""
 		f["hungry"] = 0
 		s.remember(sp, "ушёл(ушла) от героя: семья голодала")
-		lines.append("%s уходит из дома: семья голодала" % _name(s, data, sp))
+		lines.append("%s уходит из дома: семья голодала" % WorldView.name_of(data, sp))
 	return lines
 
 
@@ -425,15 +421,15 @@ static func text(s: GameSession, data: Dictionary) -> String:
 		return ""
 	var parts: Array[String] = []
 	if not engaged(s).is_empty():
-		parts.append("помолвка с %s — свадьба кнопкой у жреца или писаря" % _name(s, data, engaged(s)))
+		parts.append("помолвка с %s — свадьба кнопкой у жреца или писаря" % WorldView.name_of(data, engaged(s)))
 	if not spouse(s).is_empty():
-		parts.append("супруг(а) %s с дня %d, дом: %s; дома с %d:00 до %d:00" % [_name(s, data, spouse(s)), int(f.get("married_day", 0)),
+		parts.append("супруг(а) %s с дня %d, дом: %s; дома с %d:00 до %d:00" % [WorldView.name_of(data, spouse(s)), int(f.get("married_day", 0)),
 			PropertyRules.name_of(s, data, str(f.get("home", ""))) if not str(f.get("home", "")).is_empty() else "нет",
 			int(f.get("hours", [20, 7])[0]), int(f.get("hours", [20, 7])[1])])
 	for id: String in children(s):
-		parts.append("%s — %s, %d лет" % [_name(s, data, id), BondRules.npc_def(s, data, id).get("role", ""), years(s, data, id)])
+		parts.append("%s — %s, %d лет" % [WorldView.name_of(data, id), BondRules.npc_def(s, data, id).get("role", ""), years(s, data, id)])
 	for k: Variant in f.get("kin", []):
-		parts.append("%s — %s героя" % [_name(s, data, str(k["npc"])), k["rel"]])
+		parts.append("%s — %s героя" % [WorldView.name_of(data, str(k["npc"])), k["rel"]])
 	if f.has("pregnant"):
 		parts.append("ждут ребёнка — роды через %d дн." % maxi(0, int(f["pregnant"]["due"]) - s.day))
 	if not household(s, data).is_empty():
@@ -441,7 +437,7 @@ static func text(s: GameSession, data: Dictionary) -> String:
 	if int(f.get("hungry", 0)) > 0:
 		parts.append("семья голодает %d дн." % int(f["hungry"]))
 	if not heir(s, data).is_empty():
-		parts.append("наследник: %s" % _name(s, data, heir(s, data)))
+		parts.append("наследник: %s" % WorldView.name_of(data, heir(s, data)))
 	if parts.is_empty():
 		return ""
 	return "Семья (окно «Семья», свадьба, дети и имена — кнопки): " + "; ".join(parts)

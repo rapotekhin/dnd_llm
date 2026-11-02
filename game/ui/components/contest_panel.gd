@@ -63,7 +63,7 @@ func _rebuild() -> void:
 	_clear_footer()
 	var s := GameState.session
 	var data := Catalog.data
-	title.text = tr("CONTEST_TITLE_AT").format({"name": BondRules.npc_name(s, data, _npc)})
+	title.text = tr("CONTEST_TITLE_AT").format({"name": WorldView.name_of(data, _npc)})
 	var st := ContestRules.state(s)
 	if not st.is_empty():
 		_game(s, data, st)
@@ -153,7 +153,7 @@ func _game(s: GameSession, data: Dictionary, st: Dictionary) -> void:
 	var stake: Dictionary = st["stake"]
 	_label(_box, "%s · %s" % [k.get("name", ""), Money.format(int(st["cp"])) if str(stake["kind"]) == "coins" else "%s / %s" % [stake["name"], Money.format(int(st["cp"]))]])
 	var score := _label(_box, tr("CONTEST_SCORE").format({"hero": int(st["hero"]), "npc": int(st["npc_wins"]), "wins": int(k.get("wins", 1)),
-		"name": BondRules.npc_name(s, data, str(st["npc"]))}))
+		"name": WorldView.name_of(data, str(st["npc"]))}))
 	score.name = "ContestScore"
 	score.add_theme_color_override("font_color", UiTheme.ACCENT)
 	var o := ContestRules.odds(s, data, str(st["npc"]), str(st["kind"]))

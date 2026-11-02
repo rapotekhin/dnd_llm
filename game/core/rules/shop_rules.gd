@@ -426,7 +426,7 @@ static func _days_text(n: int) -> String:
 static func _registry_here(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	if not data["rules"].has("shop") or not PropertyRules.is_registry(data, npc_id):
 		return "SHOP_NO_SERVICE"
-	return "" if SceneRules.npcs(s, data["world"], s.room_id).has(npc_id) else "SHOP_NOT_HERE"
+	return "" if s.npcs_here(data["world"], s.room_id).has(npc_id) else "SHOP_NOT_HERE"
 
 
 static func charter_why(s: GameSession, data: Dictionary, npc_id: String) -> String:
@@ -487,7 +487,7 @@ static func lot(data: Dictionary) -> int:
 static func wholesale_why(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> String:
 	if not is_supplier(s, data, npc_id) or not goods(s, data, npc_id).has(item_id):
 		return "SHOP_NO_SERVICE"
-	if not SceneRules.npcs(s, data["world"], s.room_id).has(npc_id):
+	if not s.npcs_here(data["world"], s.room_id).has(npc_id):
 		return "SHOP_NOT_HERE"
 	if not has_charter(s, WorldView.new(data["world"]).location_id(s.room_id)):
 		return "SHOP_NEED_CHARTER"
@@ -498,7 +498,7 @@ static func wholesale(s: GameSession, data: Dictionary, npc_id: String, item_id:
 	var cost := wholesale_price(s, data, npc_id, item_id) * lot(data)
 	Ledger.add(s, -cost, "shop:wholesale")
 	ItemRules.found(s.character, data, s.items, item_id, lot(data))
-	return ["Опт: %s ×%d — %s (%s)" % [ItemRules.display_name(data["items"], s.items, item_id), lot(data), Money.format(cost), WorldView.new(data["world"]).npc(npc_id).get("name", npc_id)]]
+	return ["Опт: %s ×%d — %s (%s)" % [ItemRules.display_name(data["items"], s.items, item_id), lot(data), Money.format(cost), WorldView.new(data["world"]).npc_name(npc_id)]]
 
 
 # --- the master -----------------------------------------------------------------------------------------------------
@@ -519,9 +519,9 @@ static func text(s: GameSession, data: Dictionary) -> String:
 			n += int(v["stock"][id])
 		parts.append("%s — на полках %d шт.%s%s" % [name_of(s, data, vid), n, ", в кассе %s" % Money.format(int(v["cash"])) if int(v.get("cash", 0)) > 0 else "",
 			", торгует работник" if staffed(s, vid) else ""])
-	for npc_id: String in SceneRules.npcs(s, data["world"], s.room_id):
+	for npc_id: String in s.npcs_here(data["world"], s.room_id):
 		if is_supplier(s, data, npc_id):
-			parts.append("здесь оптом продаёт %s (%d%% цены, нужна грамота)" % [WorldView.new(data["world"]).npc(npc_id).get("name", npc_id), int(_supply(s, data, npc_id).get("pct", cfg(data)["wholesale"]["pct"]))])
+			parts.append("здесь оптом продаёт %s (%d%% цены, нужна грамота)" % [WorldView.new(data["world"]).npc_name(npc_id), int(_supply(s, data, npc_id).get("pct", cfg(data)["wholesale"]["pct"]))])
 	if parts.is_empty():
 		return ""
 	return "Своя торговля (окно «Лавка», грамота и прилавок у писаря, «Опт» у поставщика — кнопки): " + "; ".join(parts)
@@ -531,10 +531,10 @@ static func text(s: GameSession, data: Dictionary) -> String:
 static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
 	var m: Dictionary = cfg(data)["make"]
 	var who := str(spec.get("npc_id", ""))
-	if not SceneRules.npcs(s, data["world"], s.room_id).has(who):
+	if not s.npcs_here(data["world"], s.room_id).has(who):
 		return {"reason": "%s не в сцене — поставщиком становится только тот, кто здесь" % who}
 	if is_supplier(s, data, who):
-		return {"reason": "%s уже продаёт оптом — кнопка «Опт» в его действиях" % WorldView.new(data["world"]).npc(who).get("name", who)}
+		return {"reason": "%s уже продаёт оптом — кнопка «Опт» в его действиях" % WorldView.new(data["world"]).npc_name(who)}
 	var list: Array = []
 	for id: Variant in spec.get("goods", []):
 		if not data["items"]["catalog"].has(str(id)) and not s.items.has(str(id)):
@@ -551,7 +551,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	var def := {"pct": pct}
 	if not list.is_empty():
 		def["goods"] = list
-	return {"plan": {"npc": who, "def": def}, "summary": "Опт — %s: %d%% цены" % [WorldView.new(data["world"]).npc(who).get("name", who), pct]}
+	return {"plan": {"npc": who, "def": def}, "summary": "Опт — %s: %d%% цены" % [WorldView.new(data["world"]).npc_name(who), pct]}
 
 
 static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:

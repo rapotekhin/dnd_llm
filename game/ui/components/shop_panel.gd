@@ -150,7 +150,7 @@ func _venue(s: GameSession, data: Dictionary) -> void:
 
 
 func _registry(s: GameSession, data: Dictionary) -> void:
-	title.text = tr("SHOP_TITLE_REGISTRY").format({"name": PropertyRules.npc_name(data, _id)})
+	title.text = tr("SHOP_TITLE_REGISTRY").format({"name": WorldView.name_of(data, _id)})
 	var sc: Dictionary = ShopRules.cfg(data)
 	var held := ShopRules.has_charter(s, GameState.world().location_id(s.room_id))
 	var ch := _row("CharterRow", tr("SHOP_CHARTER_HINT").format({"fee": Money.format(int(sc["charter"]["fee_cp"])), "tax": int(sc["charter"]["tax_pct"])})
@@ -178,7 +178,7 @@ func _registry(s: GameSession, data: Dictionary) -> void:
 
 
 func _supplier(s: GameSession, data: Dictionary) -> void:
-	title.text = tr("SHOP_TITLE_SUPPLIER").format({"name": PropertyRules.npc_name(data, _id)})
+	title.text = tr("SHOP_TITLE_SUPPLIER").format({"name": WorldView.name_of(data, _id)})
 	if not ShopRules.has_charter(s, GameState.world().location_id(s.room_id)):
 		_label(_box, tr("SHOP_NEED_CHARTER")).theme_type_variation = UiTheme.WARN_LABEL
 	var lot := ShopRules.lot(data)

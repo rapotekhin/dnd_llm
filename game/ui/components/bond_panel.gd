@@ -64,7 +64,7 @@ func _rebuild() -> void:
 	var s := GameState.session
 	var data := Catalog.data
 	var c := s.character
-	var who := BondRules.npc_name(s, data, _npc)
+	var who := WorldView.name_of(data, _npc)
 	title.text = tr("BOND_TITLE_AT").format({"name": who})
 	var cfg := BondRules.cfg(data)
 	var p := BondRules.points(c, _npc)

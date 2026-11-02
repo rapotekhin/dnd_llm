@@ -209,16 +209,16 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		if not s.npcs_here(data["world"], s.room_id).has(giver):
 			return {"reason": "заказчик %s — только NPC этой сцены (или заказ на доске — board_prop_id, или своё дело — own)" % giver}
 		if offered_by(s, giver).size() >= int(c["max_offered"]):
-			return {"reason": "%s уже предлагает %d дела — сначала их" % [world.npc(giver).get("name", giver), int(c["max_offered"])]}
+			return {"reason": "%s уже предлагает %d дела — сначала их" % [world.npc_name(giver), int(c["max_offered"])]}
 	if not people.is_empty() and not giver.begins_with("new:"):
 		return {"reason": "new_npcs — только новый заказчик заказа на доске; люди дела появятся в его актах"}
 	if not giver.is_empty() and not giver.begins_with("new:") and SocialRules.refuses(s, data, giver):
-		return {"reason": "%s враждебен герою и работы не даст" % world.npc(giver).get("name", giver)}
+		return {"reason": "%s враждебен герою и работы не даст" % world.npc_name(giver)}
 	if not own and s.wanted.has(world.location_id(s.room_id)):
 		return {"reason": "герой в розыске: здесь ему работы не дают"}
 	var depth := int(world.npc(giver).get("quest_depth", 0)) if not giver.is_empty() and not giver.begins_with("new:") else 0
 	if depth >= int(c["quest_depth"]):
-		return {"reason": "%s сам(а) появился(лась) из задания — своих заданий не даёт (глубина %d)" % [world.npc(giver).get("name", giver), depth]}
+		return {"reason": "%s сам(а) появился(лась) из задания — своих заданий не даёт (глубина %d)" % [world.npc_name(giver), depth]}
 	var diff := _str(spec, "difficulty")
 	var d := difficulty(data, diff)
 	if d.is_empty():
@@ -273,7 +273,7 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		q["follows"] = follows
 	if not board.is_empty():
 		q["board"] = {"room": s.room_id, "prop": board}
-	var who := str(giver_npc["npc"]["name"]) if not giver_npc.is_empty() else str(world.npc(giver).get("name", giver))
+	var who := str(giver_npc["npc"]["name"]) if not giver_npc.is_empty() else str(world.npc_name(giver))
 	var from := "своё дело" if own else ("заказ на доске, заказчик %s" % who) if not board.is_empty() else "от %s" % who
 	return {"plan": {"quest": q, "giver_npc": giver_npc}, "summary": "Новое задание: «%s» — %s (%s, актов %d: %s). Подробности акта соберёт мастер, когда герой его откроет" % [
 		q["title"], from, d["name"], acts.size(), "; ".join(acts.map(func(a: Dictionary) -> String: return a["title"]))],
@@ -326,7 +326,7 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String) -> Str
 	var out: Array[String] = ["[quest %s | act %d | giver %s | here %s | near %s]" % [quest_id, n + 1, giver, s.room_id, near]]
 	out.append("Задание «%s» — %s. %s" % [q["title"], d["name"], q.get("description", "")])
 	if not giver.is_empty():
-		out.append("Заказчик: %s [%s], %s." % [world.npc(giver).get("name", giver), giver, world.room(ReputationRules.home_room(data, giver)).get("name", "")])
+		out.append("Заказчик: %s [%s], %s." % [world.npc_name(giver), giver, world.room(ReputationRules.home_room(data, giver)).get("name", "")])
 	else:
 		out.append("Своё дело героя, без заказчика.")
 	if not str(q.get("villain", "")).is_empty():
@@ -370,8 +370,8 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String) -> Str
 		var r := SceneRules.room(s, data["world"], rid)
 		if r.is_empty():
 			continue
-		var enc: Dictionary = r.get("encounter", {})
-		var busy := " — ждёт встреча %s" % enc.get("id", "") if not enc.is_empty() and not s.encounters_done.has(str(enc.get("id", ""))) else ""
+		var enc := EncounterRules.live(s, data, rid)
+		var busy := " — ждёт встреча %s" % enc.get("id", "") if not enc.is_empty() else ""
 		places.append("[%s] %s (%s)%s%s" % [rid, r.get("name", rid), world.location(world.location_id(rid)).get("name", ""), " — люди" if not s.npcs_here(data["world"], rid).is_empty() else "", busy])
 		if places.size() >= 24:
 			break
@@ -486,7 +486,7 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	var giver := str(q.get("giver", ""))
 	var own := bool(q.get("own", false))
 	if last and not own and str(steps[-1]["when"].get("talk", "")) != giver:  # the quest ends where it began
-		var who := str(WorldView.new(data["world"]).npc(giver).get("name", giver))
+		var who := str(WorldView.new(data["world"]).npc_name(giver))
 		steps.append({"text": "Вернуться к %s" % who, "when": {"talk": giver}, "action": "Рассказать %s" % who})
 	var tail: Dictionary = steps[-1]
 	var share := int(q["xp"]) - int(q.get("xp_paid", 0)) if last else floori(float(q["xp"]) / (q["acts"] as Array).size())
@@ -673,8 +673,7 @@ static func _encounter_room_why(s: GameSession, data: Dictionary, room: String, 
 	var r := SceneRules.room(s, data["world"], room)
 	if r.is_empty():
 		return "бой %s: нет места %s (find_places)" % [key, room]
-	var enc: Dictionary = r.get("encounter", {})
-	if not enc.is_empty() and not s.encounters_done.has(str(enc.get("id", ""))):
+	if not EncounterRules.live(s, data, room).is_empty():
 		return "бой %s: в %s уже ждёт встреча — выбери другое место" % [key, r.get("name", room)]
 	if r.get("safe") != null:
 		return "бой %s: %s — место отдыха, там не нападают" % [key, r.get("name", room)]
