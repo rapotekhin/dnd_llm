@@ -347,7 +347,7 @@ static func plan_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Di
 		var mk: Dictionary = cfg(data)["make"]
 		return {"reason": "animal — зверь SRD (type beast) размера %s и CR до %s" % [", ".join(mk["sizes"]), mk["max_cr"]]}
 	var gen := WorldGen.generated(s)
-	if int(gen.get("animal_day", -1)) == s.day and int(gen.get("animal_today", 0)) >= int(cfg(data)["make"]["per_day"]):
+	if TimeRules.today(s, gen, "animals_made") >= int(cfg(data)["make"]["per_day"]):
 		return {"reason": "сегодня уже хватит новых животных — завтра"}
 	var name := str(data["monsters"][monster].get("name", monster))
 	return {"plan": {"npc_id": who, "animal": monster, "kind": kind}, "summary": "%s продаёт: %s (%s)" % [WorldView.name_of(data, who), name,
@@ -368,8 +368,5 @@ static func apply_stock(s: GameSession, data: Dictionary, plan: Dictionary) -> A
 	var list: Array = (WorldView.new(data["world"]).npc(who).get("animals", []) as Array).duplicate()
 	list.append(monster)
 	Overlay.put(s, data, EntityRef.npc(who), "animals", list)
-	if int(gen.get("animal_day", -1)) != s.day:
-		gen["animal_day"] = s.day
-		gen["animal_today"] = 0
-	gen["animal_today"] = int(gen["animal_today"]) + 1
+	TimeRules.count(s, gen, "animals_made")
 	return ["%s теперь продаёт: %s" % [WorldView.name_of(data, who), data["monsters"][monster].get("name", monster)]]

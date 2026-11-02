@@ -398,7 +398,7 @@ static func found(s: GameSession, data: Dictionary, name: String, place: String)
 	var gen := WorldGen.generated(s)
 	var orgs: Dictionary = gen.get("orgs", {})
 	var nm := name.strip_edges().left(40)
-	orgs["own"] = {"name": nm, "kind": "criminal", "head": OwnerRules.HERO, "place": place, "members": [], "cut_pct": 0, "generated": true}
+	orgs["own"] = {"name": nm, "kind": "criminal", "head": OwnerRules.HERO, "place": place, "members": [], "cut_pct": 0, "generated": true, "last_day": s.day}
 	gen["orgs"] = orgs
 	Ledger.add(s, -int(cfg(data)["found_fee_cp"]), "org:found")
 	return ["Основано братство «%s» — логово в «%s», %s на обзаведение" % [nm, PropertyRules.name_of(s, data, place), Money.format(int(cfg(data)["found_fee_cp"]))],
@@ -465,9 +465,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var owned: Dictionary = c.get("property", {})
 	if not owned.has(place):
 		return lines
-	var last := int(d.get("last_day", s.day - 1))
-	d["last_day"] = s.day
-	for day in range(last + 1, s.day + 1):
+	for day: int in TimeRules.missed(s, d):
 		for m: String in members(s, data, own_id):
 			if s.rng.randf() < float(cfg(data)["member_caught_chance"]):
 				(d["members"] as Array).erase(m)

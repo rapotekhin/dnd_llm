@@ -393,6 +393,7 @@ static func camp_error(s: GameSession, data: Dictionary, supplies: Dictionary) -
 ## (`supplies`, camp_error first) eats the food. `data` = Catalog.data.
 static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {}) -> Array[String]:
 	var c := s.character
+	var began := TimeRules.abs_minute(s)
 	var cost := int(rest_place(data["world"], s.room_id, s, data).get("cost_cp", 0)) if supplies.is_empty() else 0
 	var lines: Array[String] = ["Долгий отдых" if supplies.is_empty() else "Долгий отдых в лагере"]
 	c["may_prepare"] = SpellRules.prepares(c, data)
@@ -415,7 +416,6 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	if not eaten.is_empty():
 		lines.append("съедено: " + ", ".join(eaten))
 	lines.append_array(NeedRules.rest_meal(s, data, meal_points, meal_points == 0 and supplies.is_empty()))
-	FollowRules.rested(s)  # the followers eat and drink with the hero (v0.7.39.1)
 	var gone := Rest.long(s, data, Being.HERO)  # the hero's own, as anybody's (v0.8.4.11)
 	lines.append("HP %d/%d" % [c["hp"], c["max_hp"]])
 	if not s.locks.is_empty():
@@ -429,7 +429,7 @@ static func long_rest(s: GameSession, data: Dictionary, supplies: Dictionary = {
 	s.short_rests = 0
 	s.reward_spent = 0  # a new budget of the master's rewards (v0.7.14.3)
 	s.magic_given = 0  # and of its magic things (v0.7.22.2)
-	s.day += 1
+	lines.append_array(TimeRules.sleep(s, data, began))  # the night passes for the world too (v0.8.4.17)
 	return lines
 
 

@@ -173,6 +173,15 @@ game/
 - **Имя NPC** — `WorldView.npc_name`, `WorldView.name_of`.
 - **Кто видел** — `WatchRules.eyes`: внутри и невидимость (`pierces`), и Скрытность против пассивной Внимательности. Вызов не проверяет это сам.
 
+Время (v0.8.4.17):
+
+- **Часы двигает только `TimeRules.advance`.** На каждой полуночи он запускает хуки реестра с `each_day`, в конце — все. `jump(s, data, days)` проводит срок, `sleep(s, data, began)` — ночь долгого отдыха, `settle` — запуск и загрузку.
+- **Календарь и погода** — первые строки `registry()`.
+- **Пропущенные дни записи** — `TimeRules.missed(s, rec, key, from)`. Запись без дня начинается сегодня.
+- **«N раз в день»** — `TimeRules.today` (только чтение), `count`, `day_rec`.
+- **Минуты шага** — `TimeRules.step_minutes(s, data, from, to)`: «Странник», езда и погода только между локациями. Его берут и `on_move`, и `WorldMap.minutes`.
+- **Прерванная смена** — `JobRules.broken_off(full_pay, minutes, full)`.
+
 ## Фундамент правил (v0.7.60)
 
 Пять записей, через которые идут все системы ([ADR-0012](adr/0012-unified-models.md)). Копий рядом не заводим: страж в `test_foundation_v0760.gd` не пускает `randi_range(1, 20)` и прямую запись `gold_cp` мимо них.

@@ -443,6 +443,14 @@ static func project(data: Dictionary, id: String, pid: String) -> Dictionary:
 	return {}
 
 
+## The record of a town's project: {ready, office, done?} (Progress by day); an old save's day stands for its `ready`.
+static func build_rec(t: Dictionary, pid: String) -> Dictionary:
+	var v: Variant = (t["builds"] as Dictionary).get(pid)
+	if v == null:
+		return {}
+	return v if v is Dictionary else Progress.by_day(int(v))
+
+
 static func build_why(s: GameSession, data: Dictionary, id: String, pid: String) -> String:
 	if not holds(s.character, id) or not bool(def(data, id).get("town", false)):
 		return "OFFICE_NOT_HELD"
@@ -463,7 +471,7 @@ static func build(s: GameSession, data: Dictionary, id: String, pid: String) -> 
 	var p := project(data, id, pid)
 	var t := town(s, data, str(def(data, id)["location"]))
 	t["treasury"] = int(t["treasury"]) - int(p["cost_cp"])
-	t["builds"][pid] = s.day + int(p["days"])
+	t["builds"][pid] = Progress.by_day(s.day + int(p["days"])).merged({"office": id})
 	return ["Стройка: %s — из казны %s, готово через %d дн." % [p["name"], Money.format(int(p["cost_cp"])), int(p["days"])]]
 
 
@@ -478,18 +486,14 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
 	for id: String in held(c):
 		var st := _st(c, id)
-		var last := int(st.get("tick_day", st["since"]))
-		st["tick_day"] = s.day
-		for day in range(last + 1, s.day + 1):
+		for day: int in TimeRules.missed(s, st, "tick_day", int(st["since"])):
 			if not holds(c, id):
 				break
 			lines.append_array(_day(s, data, id, st, day))
 	if c.get("towns") is Dictionary:
 		for loc: String in c["towns"]:
 			var t: Dictionary = c["towns"][loc]
-			var last := int(t.get("last_day", s.day))
-			t["last_day"] = s.day
-			for day in range(last + 1, s.day + 1):
+			for day: int in TimeRules.missed(s, t):
 				lines.append_array(_town_day(s, data, loc, t, day))
 	return lines
 
@@ -540,10 +544,13 @@ static func _town_day(s: GameSession, data: Dictionary, loc: String, t: Dictiona
 	t["discontent"] = clampi(int(t["discontent"]) + drift, 0, 100)
 	var head := headman_of(s.character, data, loc)
 	for pid: String in (t["builds"] as Dictionary).keys():
-		var done := int(t["builds"][pid])
-		if done == day and not head.is_empty():
-			var p := project(data, head, pid)
-			if not p.is_empty():
+		var b := build_rec(t, pid)
+		if bool(b.get("done", false)) or not Progress.due(b, day):
+			continue
+		b["done"] = true
+		t["builds"][pid] = b
+		var p := project(data, str(b.get("office", head)), pid)  # finished whoever heads the town now (v0.8.4.17)
+		if not p.is_empty():
 				if not s.flags.has(str(p["flag"])):
 					s.flags.append(str(p["flag"]))
 				t["discontent"] = clampi(int(t["discontent"]) + int(p.get("discontent", 0)), 0, 100)

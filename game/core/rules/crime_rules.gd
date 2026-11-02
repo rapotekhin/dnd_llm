@@ -579,19 +579,16 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 		"stocks":  # the sentence by severity (v0.7.22.10): prison or hard labour, the hero wakes in the law's prison
 			var sn := sentence(s, data, loc)
 			var days := int(sn["days"])
-			s.day += days
-			s.minute = int(TimeRules.cfg(data)["wake_minute"])
-			s.rested_at = TimeRules.abs_minute(s)
-			s.awake_saves = 0
-			s.character["hp"] = int(s.character["max_hp"])  # the wounds healed in the days
 			var prison := str(l.get("prison", "")) if str(sn.get("kind", "")) != "stocks" else ""  # the stocks — where the hero stands
 			if not prison.is_empty() and data["world"]["rooms"].has(prison):
 				s.room_id = prison
 				if not s.visited.has(prison):
 					s.visited.append(prison)
+			var passed := TimeRules.jump(s, data, days)  # the world's days pass too (v0.8.4.17)
+			s.character["hp"] = int(s.character["max_hp"])  # the wounds healed in the days
 			lines.append("%d дн. — %s; день %d, утро, %s; вещи вернули" % [days, sn["name"], s.day,
 				world.room(s.room_id).get("name", s.room_id)])
-			lines.append_array(ConditionRules.expire(s, data))
+			lines.append_array(passed)
 			if int(sn.get("exhaustion", 0)) > 0:
 				lines.append_array(ConditionRules.add_exhaustion(s, data, int(sn["exhaustion"]), str(sn["name"])))
 			lines.append_array(_settle(s, data, loc))

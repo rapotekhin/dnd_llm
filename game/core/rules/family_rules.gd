@@ -293,9 +293,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	if f.is_empty() or not data["rules"].has("family"):
 		return []
 	var lines: Array[String] = []
-	var last := int(f.get("last_day", s.day - 1))
-	f["last_day"] = s.day
-	for d in range(last + 1, s.day + 1):
+	for d: int in TimeRules.missed(s, f):
 		lines.append_array(_day(s, data, d))
 	return lines
 

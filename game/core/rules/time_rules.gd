@@ -39,23 +39,57 @@ static func is_night(s: GameSession, data: Dictionary) -> bool:
 	return part(s, data) == "night"
 
 
-## Moves time on; a new part of the day or a new day gives a line. Effects on the hero run out, and a day awake
-## without a long rest calls for a CON save against exhaustion (v0.7.8).
-static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[String]:
+## Moves time on; a new part of the day or a new day gives a line. The one way the clock moves (v0.8.4.17): a step, a
+## wait, a rest and a sentence alike. Each midnight crossed runs the rows of `each_day` (a festival begins and ends on
+## its own day), then `arrived` (what the mover sets at the new moment, before the world reacts), then the hooks.
+static func advance(s: GameSession, data: Dictionary, minutes: int, arrived: Callable = Callable()) -> Array[String]:
 	var lines: Array[String] = []
 	var before := part(s, data)
 	var left := maxi(0, minutes)
-	while left >= 1440 - s.minute:  # a day at a time: a festival begins and ends on its own day
+	while left >= 1440 - s.minute:
 		left -= 1440 - s.minute
 		s.clock += 1440 - s.minute
 		lines.append("Наступил день %d%s" % [s.day, (" — " + CalendarRules.text(data["world"], s.day)) if CalendarRules.on(data["world"]) else ""])
-		lines.append_array(CalendarRules.sync(s, data["world"]))  # festivals begin and end (v0.7.44)
+		lines.append_array(_run(s, data, true))
 	s.clock += left
-	lines.append_array(WeatherRules.sync(s, data))  # a new day's weather, the master's magic runs out (v0.7.46)
+	if arrived.is_valid():
+		arrived.call()
 	if part(s, data) != before:
 		lines.append("Время суток: %s" % part_name(s, data))
 	lines.append_array(hooks(s, data))
 	return lines
+
+
+## The days of a sentence, to their morning: the clock goes on by `advance`, the hero wakes rested and fed (v0.8.4.17:
+## the world's days pass with it — rent, interest, letters, rumours).
+static func jump(s: GameSession, data: Dictionary, days: int) -> Array[String]:
+	var wake := day_start(s.day + days) + int(cfg(data)["wake_minute"])
+	s.rested_at = wake
+	s.awake_saves = 0
+	return advance(s, data, wake - abs_minute(s), func() -> void:
+		NeedRules.set_value(s, data, "food", 100.0)
+		NeedRules.set_value(s, data, "water", 100.0))
+
+
+## A long rest to its morning (v0.8.4.17, one sequence): the clock goes to the wake minute (an elf's trance — three hours
+## sooner) by `advance`; begun after midnight and before the wake, it ends the same day. The day awake starts at waking,
+## the rest's meal counts as the breakfast of the hero and the followers.
+static func sleep(s: GameSession, data: Dictionary, began: int) -> Array[String]:
+	var wake_at := int(cfg(data)["wake_minute"]) - (180 if CharacterRules.has_trait(s.character, "trance") else 0)
+	var wake := day_start(day_of(began)) + maxi(0, wake_at)
+	if wake <= began:
+		wake += 1440
+	s.rested_at = wake
+	s.awake_saves = 0
+	return advance(s, data, wake - abs_minute(s), func() -> void:
+		NeedRules.woke(s, data, began)
+		FollowRules.rested(s))
+
+
+## The date's own state at a start or a load, with no time passing: the festivals' flags and the weather.
+static func settle(s: GameSession, data: Dictionary) -> void:
+	_run(s, data, true)
+	WeatherRules.sync(s, data)
 
 
 ## What passing time does to the world, in its order: the one list of what happens as the clock runs (v0.7.60). `rules` —
@@ -63,6 +97,8 @@ static func advance(s: GameSession, data: Dictionary, minutes: int) -> Array[Str
 static func registry() -> Array[Dictionary]:
 	if _hooks.is_empty():
 		_hooks = [
+			{"id": "calendar", "run": func(s: GameSession, data: Dictionary) -> Array[String]: return CalendarRules.sync(s, data["world"]), "each_day": true},  # festivals begin and end (v0.7.44)
+			{"id": "weather", "run": WeatherRules.sync},  # a new day's weather, the master's magic runs out (v0.7.46)
 			{"id": "charms", "run": SpellEffects.npc_expire},  # Charm Person on an NPC ends (v0.7.22.3), before the statuses' time out
 			{"id": "conditions", "run": ConditionRules.expire},
 			{"id": "rest", "run": Rest.tick},  # who is not with the hero rests a night each (v0.8.4.11)
@@ -89,13 +125,55 @@ static func registry() -> Array[Dictionary]:
 	return _hooks
 
 
-## A long rest moves the clock itself and calls this in the morning.
+## What passing time does now: the rows of the registry but those of each midnight.
 static func hooks(s: GameSession, data: Dictionary) -> Array[String]:
+	return _run(s, data, false)
+
+
+static func _run(s: GameSession, data: Dictionary, each_day: bool) -> Array[String]:
 	var lines: Array[String] = []
 	for h: Dictionary in registry():
-		if not h.has("rules") or data["rules"].has(str(h["rules"])):
+		if bool(h.get("each_day", false)) == each_day and (not h.has("rules") or data["rules"].has(str(h["rules"]))):
 			lines.append_array((h["run"] as Callable).call(s, data))
 	return lines
+
+
+## The days a record missed since its `key` (v0.8.4.17: the one catch-up of every daily hook): each day after its own up
+## to today, oldest first; the record now stands on today. A record without the key (or with 0) starts today, unless
+## `from` names its first day.
+static func missed(s: GameSession, rec: Dictionary, key: String = "last_day", from: int = -1) -> Array[int]:
+	var last := int(rec.get(key, from if from >= 0 else s.day))
+	if last <= 0:
+		last = s.day
+	rec[key] = s.day
+	var out: Array[int] = []
+	for d in range(last + 1, s.day + 1):
+		out.append(d)
+	return out
+
+
+## Today's record under `key` of `holder` (v0.8.4.17: one «N times a day»): {day, n, …} of today, else {}; reading
+## writes nothing. `make` starts today's record in the holder.
+static func day_rec(s: GameSession, holder: Dictionary, key: String, make: bool = false) -> Dictionary:
+	var r: Variant = holder.get(key)
+	if r is Dictionary and int((r as Dictionary).get("day", -1)) == s.day:
+		return r
+	if not make:
+		return {}
+	holder[key] = {"day": s.day, "n": 0}
+	return holder[key]
+
+
+## How many times today, by `day_rec`.
+static func today(s: GameSession, holder: Dictionary, key: String) -> int:
+	return int(day_rec(s, holder, key).get("n", 0))
+
+
+## One more time today; the count now.
+static func count(s: GameSession, holder: Dictionary, key: String) -> int:
+	var r := day_rec(s, holder, key, true)
+	r["n"] = int(r["n"]) + 1
+	return int(r["n"])
 
 
 ## The absolute minute of the game clock (since the first day's midnight).
@@ -132,22 +210,31 @@ static func _awake(s: GameSession, data: Dictionary) -> Array[String]:
 ## A step from room to room: rules.time.move_minutes, into another location — travel_minutes. The way counts towards
 ## the day's march (v0.7.8).
 static func on_move(s: GameSession, data: Dictionary, from: String, to: String) -> Array[String]:
-	var w := WorldView.new(data["world"])
-	var same := w.location_id(from) == w.location_id(to)
-	var minutes := WayRules.minutes(data, from, to)
-	if not same:
-		minutes = BackgroundRules.travel_minutes(s, data, minutes, to)  # an outlander's Wanderer (v0.7.11)
-		minutes = roundi(minutes * minf(PropertyRules.travel_mult(s, data, from), PropertyRules.travel_mult(s, data, to)))  # riding (v0.7.27)
-	var wm := 1.0 if same else WeatherRules.travel_mult(s, data, from, to)
+	var same := WorldView.new(data["world"]).location_id(from) == WorldView.new(data["world"]).location_id(to)
+	var step := step_minutes(s, data, from, to)
+	var minutes := int(step["minutes"])
+	var wm := float(step["weather"])
 	var lines: Array[String] = []
 	if wm > 1.0:  # mud and snow (v0.7.46)
-		minutes = roundi(minutes * wm)
 		lines.append("Дорога тяжела — %s: путь ×%s" % [WeatherRules.way_why(s, data, from, to), str(wm).trim_suffix(".0")])
 	lines.append_array(advance(s, data, minutes))
 	lines.append_array(march(s, data, minutes))
 	if not same:
 		lines.append_array(WeatherRules.on_way(s, data))  # the heat by day
 	return lines
+
+
+## The minutes of one step (v0.8.4.17: the one count for the step and the map's button): the way's own; into another
+## location — an outlander's Wanderer (v0.7.11), riding (v0.7.27), mud and snow (v0.7.46). {minutes, weather}.
+static func step_minutes(s: GameSession, data: Dictionary, from: String, to: String) -> Dictionary:
+	var w := WorldView.new(data["world"])
+	var minutes := WayRules.minutes(data, from, to)
+	if w.location_id(from) == w.location_id(to):
+		return {"minutes": minutes, "weather": 1.0}
+	minutes = BackgroundRules.travel_minutes(s, data, minutes, to)
+	minutes = roundi(minutes * minf(PropertyRules.travel_mult(s, data, from), PropertyRules.travel_mult(s, data, to)))
+	var wm := WeatherRules.travel_mult(s, data, from, to)
+	return {"minutes": roundi(minutes * wm) if wm > 1.0 else minutes, "weather": wm}
 
 
 ## A forced march (5e): every hour on the way past rules.hero_effects.exhaustion.march_hours a day — a CON save,
@@ -167,18 +254,6 @@ static func march(s: GameSession, data: Dictionary, minutes: int) -> Array[Strin
 		if not bool(r["ok"]):
 			lines.append_array(ConditionRules.add_exhaustion(s, data, 1, "марш"))
 	return lines
-
-
-## A long rest ends in the morning (wake_minute). ExplorationRules.long_rest already counted the new day; a rest
-## begun after midnight is already in it.
-static func after_long_rest(s: GameSession, data: Dictionary, began_minute: int) -> void:
-	if began_minute < int(cfg(data)["wake_minute"]):
-		s.day = maxi(1, s.day - 1)
-	s.minute = int(cfg(data)["wake_minute"])
-	if CharacterRules.has_trait(s.character, "trance"):  # an elf rests four hours, not eight (v0.7.10)
-		s.minute = maxi(0, s.minute - 180)
-	s.rested_at = abs_minute(s)
-	s.awake_saves = 0
 
 
 static func shops_closed(s: GameSession, data: Dictionary) -> bool:

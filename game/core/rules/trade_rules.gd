@@ -651,7 +651,7 @@ static func make_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Di
 	if not world.is_trader(who):
 		return {"reason": "%s не торговец — продаёт только торговец (create:npc с trader)" % who}
 	var shelf := merchant(s, data, who)
-	if int(shelf.get("master_day", -1)) == s.day and int(shelf.get("master_today", 0)) >= int(m["per_day"]):
+	if TimeRules.today(s, shelf, "master_made") >= int(m["per_day"]):
 		return {"reason": "сегодня у %s уже %d новых товаров — завтра" % [world.npc_name(who), int(m["per_day"])]}
 	var qty := clampi(int(spec.get("qty", 1)), 1, int(m["qty_max"]))
 	var id := str(spec.get("item_id", "")) if spec.get("item_id") != null else ""
@@ -686,9 +686,6 @@ static func apply_stock(s: GameSession, data: Dictionary, plan: Dictionary) -> A
 		s.items[id] = plan["item"]
 	var shelf := merchant(s, data, who)
 	shelf["stock"][id] = int(shelf["stock"].get(id, 0)) + int(plan["qty"])
-	if int(shelf.get("master_day", -1)) != s.day:
-		shelf["master_day"] = s.day
-		shelf["master_today"] = 0
-	shelf["master_today"] = int(shelf["master_today"]) + 1
+	TimeRules.count(s, shelf, "master_made")
 	return ["У %s в продаже: %s × %d" % [WorldView.new(data["world"]).npc_name(who),
 		ItemRules.display_name(data["items"], s.items, id), int(plan["qty"])]]

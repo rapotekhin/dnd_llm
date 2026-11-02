@@ -76,7 +76,7 @@ func test_a_road_of_its_own_hours_counts_on_the_map() -> void:
 	_way("brod-square", "brod-tavern-hall", {"kind": "bridge", "minutes": 90})
 	assert_int(WayRules.minutes(data, "brod-square", "brod-tavern-hall")).is_equal(90)
 	var path: Array[String] = ["brod-tavern-hall"]
-	assert_int(WorldMap.minutes(data, "brod-square", path)).is_equal(90)
+	assert_int(WorldMap.minutes(TestUtils.new_session(), data, "brod-square", path)).is_equal(90)
 
 
 func test_what_goes_through_a_shut_leaf() -> void:

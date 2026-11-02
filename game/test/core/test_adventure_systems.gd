@@ -46,14 +46,13 @@ func test_a_long_rest_ends_in_the_morning_and_counts_the_day_once() -> void:
 	var s := _session()
 	s.minute = 23 * 60
 	s.day = 1
-	ExplorationRules.long_rest(s, data)
-	TimeRules.after_long_rest(s, data, 23 * 60)
+	ExplorationRules.long_rest(s, data)  # the night passes in it (v0.8.4.17)
 	assert_int(s.day).is_equal(2)
 	assert_int(s.minute).is_equal(420)
 	s.minute = 120  # after midnight: the day already turned
 	ExplorationRules.long_rest(s, data)
-	TimeRules.after_long_rest(s, data, 120)
 	assert_int(s.day).is_equal(2)
+	assert_int(s.minute).is_equal(420)
 
 
 func test_night_closes_the_shops_and_the_wild_is_dark_without_light() -> void:

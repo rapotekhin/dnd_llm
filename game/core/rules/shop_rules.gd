@@ -335,7 +335,7 @@ static func shift(s: GameSession, data: Dictionary, vid: String, minutes: int) -
 	var base := visitors(s, data, vid, int(sc["visitors"]))
 	var lines: Array[String] = []
 	if minutes < shift_hours(data) * 60:
-		base = roundi(base * float(minutes) / float(shift_hours(data) * 60) * 0.5)
+		base = JobRules.broken_off(base, minutes, shift_hours(data) * 60)
 		lines.append("Торговля прервана")
 	else:
 		var skill := str(sc["skill"])
@@ -376,14 +376,11 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		return lines
 	for vid: String in venues(s, data):
 		var v := venue(s.character, vid)
-		if int(v["last_day"]) == 0:
-			v["last_day"] = s.day
 		var sold := {}
 		var kept := 0
 		var days := 0
-		while int(v["last_day"]) < s.day:
-			v["last_day"] = int(v["last_day"]) + 1
-			if not PropertyRules.owned(s.character, vid) or not staffed(s, vid, int(v["last_day"])):
+		for day: int in TimeRules.missed(s, v):
+			if not PropertyRules.owned(s.character, vid) or not staffed(s, vid, day):
 				continue
 			days += 1
 			var k := kind_cfg(s, data, vid)

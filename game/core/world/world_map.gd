@@ -76,13 +76,12 @@ static func blocked(s: GameSession, world: Dictionary, room_id: String, to: Stri
 	return not trap.is_empty() and ExplorationRules.is_found(s, room_id, trap)
 
 
-## Minutes of a route by the time rules: a step inside a location, a step into another one.
-static func minutes(data: Dictionary, from: String, path: Array[String], mult: float = 1.0) -> int:
-	var w := WorldView.new(data["world"])
+## Minutes of a route: each step by TimeRules.step_minutes, as the walk will spend them.
+static func minutes(s: GameSession, data: Dictionary, from: String, path: Array[String]) -> int:
 	var total := 0
 	var at := from
 	for r: String in path:
-		total += WayRules.minutes(data, at, r) if w.location_id(at) == w.location_id(r) else roundi(WayRules.minutes(data, at, r) * mult)
+		total += int(TimeRules.step_minutes(s, data, at, r)["minutes"])
 		at = r
 	return total
 

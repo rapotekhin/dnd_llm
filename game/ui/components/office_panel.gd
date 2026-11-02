@@ -151,7 +151,8 @@ func _town(s: GameSession, data: Dictionary, id: String) -> void:
 		var pid := str(p["id"])
 		var state := ""
 		if builds.has(pid):
-			state = tr("OFFICE_BUILT_ON").format({"day": int(builds[pid])}) if int(builds[pid]) > s.day else tr("OFFICE_BUILT_DONE")
+			var b := OfficeRules.build_rec(t, pid)
+			state = tr("OFFICE_BUILT_ON").format({"day": int(b["ready"])}) if not Progress.due(b, s.day) else tr("OFFICE_BUILT_DONE")
 		_label(prow, "%s — %s, %d дн.%s" % [p["name"], Money.format(int(p["cost_cp"])), int(p["days"]), " · " + state if not state.is_empty() else ""])
 		if not builds.has(pid):
 			_act(prow, "Build_%s_%s" % [id, pid], tr("BTN_OFFICE_BUILD"), OfficeRules.build_why(s, data, id, pid), "build", id, pid)

@@ -55,7 +55,7 @@ func test_a_found_trap_blocks_the_route_until_it_is_gone() -> void:
 
 func test_route_minutes_by_the_time_rules() -> void:
 	var path: Array[String] = ["brod-square", "brod-gate", "pushcha-edge"]
-	assert_int(WorldMap.minutes(data, "brod-tavern-hall", path)).is_equal(10 + 10 + 60)
+	assert_int(WorldMap.minutes(TestUtils.new_session(), data, "brod-tavern-hall", path)).is_equal(10 + 10 + 60)
 
 
 func test_a_quest_mark_only_on_a_seen_place() -> void:

@@ -87,14 +87,16 @@ static func state(s: GameSession) -> Dictionary:
 	return s.character.get("contest", {})
 
 
+## Today's record of games with the NPC, read only (TimeRules.day_rec): {} — none today.
+static func _today(s: GameSession, npc_id: String) -> Dictionary:
+	return TimeRules.day_rec(s, s.character.get("contests_day", {}), npc_id)
+
+
+## Today's record of games with the NPC, started when there is none.
 static func _day(s: GameSession, npc_id: String) -> Dictionary:
-	var all: Dictionary = s.character.get("contests_day", {})
-	var rec: Dictionary = all.get(npc_id, {})
-	if int(rec.get("day", 0)) != s.day:
-		rec = {"day": s.day, "n": 0}
-		all[npc_id] = rec
-		s.character["contests_day"] = all
-	return rec
+	if not s.character.has("contests_day"):
+		s.character["contests_day"] = {}
+	return TimeRules.day_rec(s, s.character["contests_day"], npc_id, true)
 
 
 ## The coins of the NPC, cp: its one purse (Gear).
@@ -115,7 +117,7 @@ static func why_not(s: GameSession, data: Dictionary, npc_id: String) -> String:
 		return "в бою не до игр"
 	if not state(s).is_empty():
 		return "игра уже идёт"
-	var rec := _day(s, npc_id)
+	var rec := _today(s, npc_id)  # asking writes nothing (v0.8.4.17)
 	if bool(rec.get("caught", false)):
 		return "%s не сядет играть с шулером до завтра" % who
 	if s.attitude(npc_id) < int(cfg(data)["min_attitude"]):

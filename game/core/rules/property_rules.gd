@@ -289,10 +289,11 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		var got := 0
 		var paid := 0
 		var days := 0
-		while owned(s.character, id) and int(st["last_day"]) < s.day:
-			st["last_day"] = int(st["last_day"]) + 1
+		for day: int in TimeRules.missed(s, st):
+			if not owned(s.character, id):
+				break
 			days += 1
-			var r := _day(s, data, id, int(st["last_day"]))
+			var r := _day(s, data, id, day)
 			got += int(r["income"])
 			paid += int(r["wages"])
 			lines.append_array(r["lines"])
@@ -486,7 +487,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 	var full := shift_hours(s, data, id) * 60
 	var day := income_day(s, data, id)
 	if minutes < full:
-		var part := roundi(day * float(minutes) / float(full) * 0.5)
+		var part := JobRules.broken_off(day, minutes, full)
 		Ledger.add(s, part, "property:shift")
 		return ["Работа прервана: %s" % Money.format(part)]
 	var skill := str(kind(s, data, id).get("skill", "athletics"))

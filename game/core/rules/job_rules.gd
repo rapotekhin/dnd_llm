@@ -219,6 +219,12 @@ static func shift_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	return Roll.chance_of(s, data, Sheet.HERO, shift_spec(s, data, id))
 
 
+## What a shift broken off pays (v0.8.4.17: a job, a place and a counter alike): its share by the minutes worked, with no
+## check.
+static func broken_off(full_pay: int, minutes: int, full: int) -> int:
+	return roundi(full_pay * float(minutes) / float(maxi(1, full)))
+
+
 ## A shift worked for `minutes` (the time already passed). A shift broken off pays its share without a check.
 ## {lines, event, fight} — `event` for the master or "", `fight` — the foes of a shift that ends in a fight.
 static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) -> Dictionary:
@@ -228,7 +234,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 	var full := hours(s, data, id) * 60
 	var lines: Array[String] = []
 	if minutes < full:
-		var part := roundi(pay(s, data, id) * float(minutes) / float(full))
+		var part := broken_off(pay(s, data, id), minutes, full)
 		Ledger.add(s, part, "job:shift")
 		lines.append("Смена прервана: %s" % Money.format(part))
 		return {"lines": lines, "event": "", "fight": []}

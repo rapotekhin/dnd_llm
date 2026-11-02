@@ -88,8 +88,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	BackgroundRules.apply_ties(s, Catalog.data)  # the people of the hero's past (v0.7.11)
 	PetRules.seed(s, Catalog.data, s.room_id)  # the start room's wild beasts (v0.7.43)
 	start(s)
-	CalendarRules.sync(s, Catalog.data["world"])  # a festival on the first day (v0.7.44)
-	WeatherRules.sync(s, Catalog.data)  # the first day's weather (v0.7.46)
+	TimeRules.settle(s, Catalog.data)  # a festival and the weather of the first day (v0.7.44, v0.7.46)
 	RumorRules.seed(s, Catalog.data)  # the pack's talk (v0.7.47)
 	_request("enter", "")
 
@@ -105,16 +104,8 @@ func long_rest(supplies: Dictionary = {}, prepared: Array = []) -> String:
 		else ExplorationRules.camp_error(session, Catalog.data, supplies)
 	if not why.is_empty():
 		return why
-	var began := session.minute
-	var began_abs := TimeRules.abs_minute(session)
-	var lines := ExplorationRules.long_rest(session, Catalog.data, supplies)
-	lines.append_array(SpellRules.rested(session.character, Catalog.data, prepared))
-	TimeRules.after_long_rest(session, Catalog.data, began)
-	lines.append_array(CalendarRules.sync(session, Catalog.data["world"]))
-	lines.append_array(WeatherRules.sync(session, Catalog.data))  # the morning's weather (v0.7.46)
-	NeedRules.woke(session, Catalog.data, began_abs)
-	FollowRules.rested(session)  # their meal counts as the breakfast too
-	lines.append_array(TimeRules.hooks(session, Catalog.data))  # the night went on for the world too
+	var lines := ExplorationRules.long_rest(session, Catalog.data, supplies)  # the night, the morning and the world's hooks in it
+	lines.append_array(SpellRules.rested(session.character, Catalog.data, prepared))  # the rest gave the right to prepare
 	_refresh()
 	_effect_lines(lines)
 	_request("rest", "")
@@ -1934,8 +1925,7 @@ func start(s: GameSession) -> void:
 	MakeRules.install(Catalog.data, s.generated)  # v0.7.63: and the rules with its own statuses and skills
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
 	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
-	CalendarRules.sync(s, Catalog.data["world"])  # v0.7.44: the festivals' flags by the date of a save
-	WeatherRules.sync(s, Catalog.data)  # v0.7.46: and the weather's
+	TimeRules.settle(s, Catalog.data)  # the festivals' flags and the weather by the date of a save (v0.7.44, v0.7.46)
 	session = s
 	busy_turn = ""
 	_last_kind = ""

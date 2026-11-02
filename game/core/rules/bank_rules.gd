@@ -338,9 +338,10 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	if not data["rules"].has("bank") or not s.character.has("bank"):
 		return lines
 	for k: Dictionary in open_of(s.character):
-		while str(k["state"]) in [OPEN, WANTED] and int(k["last_day"]) < s.day:
-			k["last_day"] = int(k["last_day"]) + 1
-			lines.append_array(_day(s, data, k, int(k["last_day"])))
+		for day: int in TimeRules.missed(s, k):
+			if not str(k["state"]) in [OPEN, WANTED]:
+				break
+			lines.append_array(_day(s, data, k, day))
 	var fee := int(cfg(data)["vault"]["fee_cp_week"])
 	for npc_id: String in state(s.character)["vaults"]:
 		var v: Dictionary = state(s.character)["vaults"][npc_id]

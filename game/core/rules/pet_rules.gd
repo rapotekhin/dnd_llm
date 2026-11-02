@@ -252,7 +252,7 @@ static func scout_why(s: GameSession, data: Dictionary, cid: String, room: Strin
 	var cr := _here(s, cid)
 	if not bool(kind(data, str(cr["monster"])).get("scout", false)):
 		return "PET_NO_SCOUT"
-	if int(cr.get("scout_day", -1)) == s.day and int(cr.get("scouts", 0)) >= int(cfg(data)["scout"]["per_day"]):
+	if TimeRules.today(s, cr, "scouted") >= int(cfg(data)["scout"]["per_day"]):
 		return "PET_SCOUT_TIRED"
 	if not scout_targets(s, data).has(room):
 		return "PET_SCOUT_NO_WAY"
@@ -262,10 +262,7 @@ static func scout_why(s: GameSession, data: Dictionary, cid: String, room: Strin
 ## The flier over `room`: the room known on the map (Knows), who is there and the danger. Lines.
 static func scout(s: GameSession, data: Dictionary, cid: String, room: String) -> Array[String]:
 	var cr := _here(s, cid)
-	if int(cr.get("scout_day", -1)) != s.day:
-		cr["scout_day"] = s.day
-		cr["scouts"] = 0
-	cr["scouts"] = int(cr["scouts"]) + 1
+	TimeRules.count(s, cr, "scouted")
 	Knows.add(s, Knows.SCOUTED, room)
 	var world := WorldView.new(data["world"])
 	var seen: Array[String] = []
@@ -325,7 +322,7 @@ static func plan_beast(s: GameSession, data: Dictionary, e: Dictionary) -> Dicti
 	if room != s.room_id:
 		return {"reason": "зверь появляется только в сцене героя"}
 	var gen := WorldGen.generated(s)
-	if int(gen.get("beast_day", -1)) == s.day and int(gen.get("beasts_today", 0)) >= int(cfg(data)["make"]["per_day"]):
+	if TimeRules.today(s, gen, "beasts_made") >= int(cfg(data)["make"]["per_day"]):
 		return {"reason": "сегодня зверей для приручения уже хватит — завтра"}
 	if WorldView.new(data["world"]).flag(room, "indoor") and SIZES.find(str(data["monsters"][monster].get("size", ""))) > SIZES.find("small"):
 		return {"reason": "крупный зверь под крышей — только снаружи"}
@@ -334,10 +331,7 @@ static func plan_beast(s: GameSession, data: Dictionary, e: Dictionary) -> Dicti
 
 static func apply_beast(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
 	var gen := WorldGen.generated(s)
-	if int(gen.get("beast_day", -1)) != s.day:
-		gen["beast_day"] = s.day
-		gen["beasts_today"] = 0
-	gen["beasts_today"] = int(gen["beasts_today"]) + 1
+	TimeRules.count(s, gen, "beasts_made")
 	var cr := _wild(s, data, str(plan["room"]), str(plan["monster"]), str(plan["cause"]))
 	return ["Здесь %s — дикий, но не нападает (кнопка «Приручить»)" % cr["name"]]
 
