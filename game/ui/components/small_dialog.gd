@@ -114,7 +114,7 @@ func _short_rest(s: GameSession, c: Dictionary, data: Dictionary) -> void:
 	title.text = tr("SHORT_REST_TITLE")
 	_text(tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}))
 	var left := ExplorationRules.hit_dice_left(c)
-	var die := int(CharacterRules.class_def(c, data).get("hit_die", 8))
+	var die := int(ExplorationRules.hit_die(c, data)["die"])
 	if int(c["hp"]) >= int(c["max_hp"]):
 		dice = 0
 		_text(tr("SHORT_REST_FULL"), UiTheme.MUTED_LABEL)
@@ -133,9 +133,7 @@ func _short_rest(s: GameSession, c: Dictionary, data: Dictionary) -> void:
 		count.text = str(dice)
 		row.add_child(count)
 		row.add_child(_step_button("DicePlus", "+", dice >= left, func() -> void: dice = mini(left, dice + 1)))
-		var con := CharacterRules.mod(CharacterRules.ability(c, "con"))
-		var mult := 2 if CharacterRules.item_prop(c, "wound_closure") else 1
-		var expect := mini(int(c["max_hp"]) - int(c["hp"]), roundi(dice * maxf(0.0, die / 2.0 + 0.5 + con) * mult))
+		var expect := ExplorationRules.short_rest_expect(c, data, dice)
 		var heal := Label.new()
 		heal.name = "DiceHeal"
 		heal.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -170,7 +168,7 @@ func _wilds(s: GameSession, data: Dictionary) -> void:
 	row.add_child(count)
 	row.add_child(_step_button("HoursPlus", "+", hours >= int(span[1]), func() -> void: hours = mini(int(span[1]), hours + 1)))
 	_text(tr("WILDS_CHECK").format({"skill": CraftRules.tr_skill(data, str(d["skill"])), "dc": int(d["dc"]),
-		"bonus": "%+d" % (int(s.character.get("skills", {}).get(str(d["skill"]), 0)) + DifficultyRules.bonus(s, data))}))
+		"bonus": "%+d" % int(Roll.odds(s, data, Sheet.HERO, WildsRules.spec(s, data, ground))["bonus"])}))
 	var g := WildsRules.gear(s, data, ground)
 	if not str(g["adv"]).is_empty():
 		_text(tr("WILDS_ADV").format({"item": g["adv"]}), UiTheme.MUTED_LABEL)

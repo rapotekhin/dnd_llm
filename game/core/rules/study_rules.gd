@@ -284,8 +284,7 @@ static func exam_chance(s: GameSession, data: Dictionary, sid: String) -> int:
 	var ex: Dictionary = school(data, sid).get("exam", {})
 	if ex.is_empty():
 		return 100
-	var b := CheckEngine.bonus_for(s.character, {"skill": str(ex["skill"])}) + DifficultyRules.bonus(s, data)
-	return Roll.chance(b, int(ex["dc"]), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(ex["skill"]), "dc": int(ex["dc"])})
 
 
 ## The entrance exam (exam_why first). Lines.
@@ -446,9 +445,16 @@ static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	return {"bonus": RollParts.sum(parts), "parts": parts, "adv": adv, "label": label}
 
 
-static func lesson_chance(s: GameSession, data: Dictionary, id: String) -> int:
+## The lesson's check for Activity.attempt and the window's chance.
+static func lesson_spec(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+	var co := course(s, data, id)
 	var ch := _check(s, data, id)
-	return Roll.chance(int(ch["bonus"]), int(course(s, data, id).get("dc", 10)), bool(ch["adv"]))
+	return {"what": name_of(s, data, id), "label": ch["label"], "skill": str(co.get("skill", "history")), "parts": ch["parts"], "bonus": ch["bonus"],
+		"dc": int(co.get("dc", 10)), "adv": ch["adv"], "ladder": ladder(s, data)}
+
+
+static func lesson_chance(s: GameSession, data: Dictionary, id: String) -> int:
+	return Roll.chance_of(s, data, Sheet.HERO, lesson_spec(s, data, id))
 
 
 static func ladder(s: GameSession, data: Dictionary) -> Array:
@@ -472,10 +478,7 @@ static func lesson(s: GameSession, data: Dictionary, id: String, minutes: int) -
 		return ["Занятие прервано — не засчитано"]
 	st["lesson_day"] = s.day
 	st["last"] = s.day
-	var ch := _check(s, data, id)
-	var dc := int(co.get("dc", 10))
-	var a := Activity.attempt(s, data, {"what": name_of(s, data, id), "label": ch["label"], "skill": str(co.get("skill", "history")), "parts": ch["parts"], "bonus": ch["bonus"],
-		"dc": dc, "adv": ch["adv"], "ladder": ladder(s, data)})
+	var a := Activity.attempt(s, data, lesson_spec(s, data, id))
 	var o: Dictionary = a["step"]
 	var need := lessons_needed(s, data, id)
 	var finished := Progress.add(st, int(o.get("progress", 0)), need)

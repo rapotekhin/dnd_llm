@@ -174,29 +174,30 @@ static func _foe(data: Dictionary, monster: String, desc: String) -> Dictionary:
 	return {"monster": monster, "name": str(data["monsters"].get(monster, {}).get("name", monster)), "desc": desc}
 
 
+## The check of a hunt or a fishing for Roll.hero and the window: Survival against the ground's DC with what the gear gives
+## (a dog on the trail is CheckEngine's).
+static func spec(s: GameSession, data: Dictionary, k: String) -> Dictionary:
+	var d := kind(data, k)
+	var g := gear(s, data, k)
+	return {"what": str(d["name"]), "skill": str(d["skill"]), "dc": int(d["dc"]), "adv_why": str(g["adv"]), "dis_why": str(g["dis"])}
+
+
 ## A hunt or a fishing of `hours` (the caller passes the time): the Survival check rolled here, the catch by its margin
 ## and the tries of the hours within the stock. {lines, fight: [foes], crime: bool}.
 static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dictionary:
 	var d := kind(data, k)
 	var c := cfg(data)
 	var skill := str(d["skill"])
-	var g := gear(s, data, k)
-	var pet := PetRules.helper(s, data, skill)  # v0.7.43: a dog on the trail
-	if str(g["adv"]).is_empty() and not pet.is_empty():
-		g["adv"] = pet
-	var adv := not str(g["adv"]).is_empty()
 	var dc := int(d["dc"])
-	var r := Roll.hero(s, data, {"what": str(d["name"]), "skill": skill, "dc": dc, "adv": adv, "dis": not str(g["dis"]).is_empty()})
+	var r := Roll.hero(s, data, spec(s, data, k))
 	var nat := int(r["nat"])
 	var b := int(r["bonus"])
 	var ok := bool(r["ok"])
 	var out := {"lines": [] as Array[String], "fight": [], "crime": false}
 	var lines: Array[String] = out["lines"]
 	var how: Array[String] = []
-	if adv:
-		how.append(str(g["adv"]))
-	if not str(g["dis"]).is_empty():
-		how.append(str(g["dis"]))
+	how.append_array(r["adv"])
+	how.append_array(r["dis"])
 	lines.append("%s, %d ч: %s %d + %d = %d против Сл %d%s — %s" % [d["name"], hours, CraftRules.tr_skill(data, skill), nat, b, nat + b, dc,
 		" (%s)" % ", ".join(how) if not how.is_empty() else "", "успех" if ok else "провал"])
 	var left := stock(s, data, k)

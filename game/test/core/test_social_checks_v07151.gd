@@ -44,8 +44,9 @@ func test_the_dc_stays_within_bounds_and_only_for_social_skills() -> void:
 
 
 func test_the_check_carries_the_reason_of_its_dc() -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7
-	var r := CheckEngine.roll(data["rules"], rng, {"skill": "deception", "dc_tier": "medium", "dc": 12, "dc_reason": "Проницательность Сестры Илвы +2"}, 3, "c-1")
-	assert_int(int(r["dc"])).is_equal(12)
-	assert_str(str(r["dc_reason"])).contains("Сестры Илвы")
+	var s := TestUtils.new_session()
+	var npc: String = SocialRules.dc(s, data, "npc_innkeeper", "deception", "medium").get("reason", "")
+	var r := CheckEngine.card(s, data, {"skill": "deception", "dc_tier": "medium", "target_id": "npc_innkeeper"})
+	assert_int(int(r["dc"])).is_equal(int(SocialRules.dc(s, data, "npc_innkeeper", "deception", "medium")["dc"]))
+	assert_str(str(r["dc_reason"])).is_equal(npc)
+	assert_str(npc).is_not_empty()

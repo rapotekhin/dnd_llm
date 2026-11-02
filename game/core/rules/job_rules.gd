@@ -146,8 +146,7 @@ static func hire_auto(s: GameSession, data: Dictionary) -> bool:
 static func hire_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	if hire_auto(s, data):
 		return 100
-	var b := CheckEngine.bonus_for(s.character, {"skill": str(cfg(data)["hire"]["skill"])}) + DifficultyRules.bonus(s, data)
-	return Roll.chance(b, hire_dc(s, data, id), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(cfg(data)["hire"]["skill"]), "dc": hire_dc(s, data, id)})
 
 
 ## The interview (hire_why first). Lines.
@@ -217,9 +216,15 @@ static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	return {"bonus": RollParts.sum(parts), "parts": parts, "adv": adv, "label": label}
 
 
-static func shift_chance(s: GameSession, data: Dictionary, id: String) -> int:
+## The shift's check for Activity.attempt and the window's chance.
+static func shift_spec(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	var ch := _check(s, data, id)
-	return Roll.chance(int(ch["bonus"]), dc(s, data, id), bool(ch["adv"]))
+	return {"what": str(job(s, data, id).get("name", id)), "label": ch["label"], "skill": str(job(s, data, id).get("skill", "craft")), "parts": ch["parts"],
+		"bonus": ch["bonus"], "dc": dc(s, data, id), "adv": ch["adv"], "ladder": cfg(data)["outcomes"]}
+
+
+static func shift_chance(s: GameSession, data: Dictionary, id: String) -> int:
+	return Roll.chance_of(s, data, Sheet.HERO, shift_spec(s, data, id))
 
 
 ## A shift worked for `minutes` (the time already passed). A shift broken off pays its share without a check.
@@ -235,10 +240,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 		Ledger.add(s, part, "job:shift")
 		lines.append("Смена прервана: %s" % Money.format(part))
 		return {"lines": lines, "event": "", "fight": []}
-	var ch := _check(s, data, id)
-	var d := dc(s, data, id)
-	var a := Activity.attempt(s, data, {"what": str(j.get("name", id)), "label": ch["label"], "skill": str(j.get("skill", "craft")), "parts": ch["parts"], "bonus": ch["bonus"],
-		"dc": d, "adv": ch["adv"], "ladder": cfg(data)["outcomes"]})
+	var a := Activity.attempt(s, data, shift_spec(s, data, id))
 	var o: Dictionary = a["step"]
 	var got := roundi(pay(s, data, id) * float(o.get("pay", 1.0)))
 	var tips := roundi(pay(s, data, id) * float(o.get("tips", 0.0)) * float(DevelopmentRules.effect(c, data, "work", "tips_mult", 1.0)))

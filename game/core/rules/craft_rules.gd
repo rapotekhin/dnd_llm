@@ -463,11 +463,18 @@ static func check_label(data: Dictionary, r: Dictionary) -> String:
 	return BackgroundRules.tool_name(data, tool_of(r))
 
 
+## The check of a finished work (Activity.attempt and the window's chance): the recipe's skill or tool, its quality ladder.
+static func check_spec(s: GameSession, data: Dictionary, r: Dictionary) -> Dictionary:
+	return {"what": check_label(data, r), "skill": "craft", "parts": recipe_parts(s, data, r), "dc": int(r.get("dc", 10)),
+		"adv": bool(_fx(s.character, data, r, "quality_adv", false)), "crit": 10, "ladder": cfg(data)["quality"]}
+
+
 ## The chance in % of at least the normal quality (a margin of the normal tier).
 static func chance(s: GameSession, data: Dictionary, id: String) -> int:
 	var r := recipe(s, data, id)
-	var need := int(r.get("dc", 10)) + int(tier_by_id(data, "normal").get("from", 0))
-	return Roll.chance(recipe_bonus(s, data, r), need, bool(_fx(s.character, data, r, "quality_adv", false)))
+	var spec := check_spec(s, data, r)
+	spec["dc"] = int(spec["dc"]) + int(tier_by_id(data, "normal").get("from", 0))
+	return Roll.chance_of(s, data, Sheet.HERO, spec)
 
 
 static func tier_by_id(data: Dictionary, id: String) -> Dictionary:
@@ -488,9 +495,7 @@ static func finish(s: GameSession, data: Dictionary) -> Array[String]:
 	var p := project(c)
 	var id := str(p["recipe"])
 	var r := recipe(s, data, id)
-	var dc := int(r.get("dc", 10))
-	var a := Activity.attempt(s, data, {"what": check_label(data, r), "skill": "craft", "parts": recipe_parts(s, data, r), "dc": dc,
-		"adv": bool(_fx(c, data, r, "quality_adv", false)), "crit": 10, "ladder": cfg(data)["quality"]})
+	var a := Activity.attempt(s, data, check_spec(s, data, r))
 	var tier: Dictionary = a["step"]
 	c.erase("craft")
 	if r.has("output_def") and not s.items.has(str(r["output"])):

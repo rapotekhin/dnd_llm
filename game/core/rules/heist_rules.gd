@@ -199,14 +199,14 @@ static func step_why(s: GameSession, data: Dictionary, id: String, step_id: Stri
 
 
 static func _bonus(s: GameSession, data: Dictionary, skill: String) -> int:
-	return CheckEngine.bonus_for(s.character, {"skill": skill}) + DifficultyRules.bonus(s, data)
+	return int(Roll.odds(s, data, Sheet.HERO, {"skill": skill})["bonus"])
 
 
 static func step_chance(s: GameSession, data: Dictionary, id: String, step_id: String) -> int:
 	var st := step_def(s, data, id, step_id)
 	if st.has("item"):
 		return 100
-	return Roll.chance(_bonus(s, data, str(st["skill"])), dc(s, data, id), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(st["skill"]), "dc": dc(s, data, id)})
 
 
 static func step_minutes(s: GameSession, data: Dictionary, id: String, step_id: String) -> int:
@@ -284,8 +284,15 @@ static func act_check(s: GameSession, data: Dictionary, id: String) -> Dictionar
 	return best
 
 
+## The act's check for Activity.attempt and the window's chance.
+static func act_spec(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+	var ch := act_check(s, data, id)
+	return {"what": "«%s»" % def(s, data, id)["name"], "label": ch["label"], "skill": ch.get("skill", ""), "parts": ch["parts"], "bonus": ch["bonus"],
+		"dc": dc(s, data, id), "ladder": cfg(data)["outcomes"]}
+
+
 static func act_chance(s: GameSession, data: Dictionary, id: String) -> int:
-	return Roll.chance(int(act_check(s, data, id)["bonus"]), dc(s, data, id), false)
+	return Roll.chance_of(s, data, Sheet.HERO, act_spec(s, data, id))
 
 
 static func act_minutes(s: GameSession, data: Dictionary, id: String) -> int:
@@ -297,9 +304,7 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 	var d := def(s, data, id)
 	var k := kind(data, str(d["kind"]))
 	var c := s.character
-	var ch := act_check(s, data, id)
-	var a := Activity.attempt(s, data, {"what": "«%s»" % d["name"], "label": ch["label"], "skill": ch.get("skill", ""), "parts": ch["parts"], "bonus": ch["bonus"],
-		"dc": dc(s, data, id), "ladder": cfg(data)["outcomes"]})
+	var a := Activity.attempt(s, data, act_spec(s, data, id))
 	var o: Dictionary = a["step"]
 	var lines: Array[String] = [str(a["line"])]
 	var fight: Array = []

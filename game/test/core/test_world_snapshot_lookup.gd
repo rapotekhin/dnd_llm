@@ -101,9 +101,10 @@ func test_generated_id_is_stable() -> void:
 
 
 func test_check_bonus_from_the_sheet() -> void:
-	assert_int(CheckEngine.bonus_for(s.character, {"skill": "perception"})).is_equal(3)
-	assert_int(CheckEngine.bonus_for(s.character, {"save": "con"})).is_equal(4)
-	assert_int(CheckEngine.bonus_for(s.character, {"skill": "flying"})).is_equal(0)
+	var data := TestUtils.data()
+	assert_int(Sheet.skill(s, data, Sheet.HERO, "perception")).is_equal(3)
+	assert_int(Sheet.save_bonus(s, data, Sheet.HERO, "con")).is_equal(4)
+	assert_int(Sheet.skill(s, data, Sheet.HERO, "flying")).is_equal(0)
 
 
 func test_money_format() -> void:

@@ -173,7 +173,7 @@ static func appoint_chance(s: GameSession, data: Dictionary, id: String) -> int:
 	var iv := interview(data, id)
 	if iv.is_empty():
 		return 100
-	return Roll.chance(CheckEngine.bonus_for(s.character, {"skill": iv["skill"]}) + DifficultyRules.bonus(s, data), int(iv["dc"]), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(iv["skill"]), "dc": int(iv["dc"])})
 
 
 ## Asked for the office at its chief (appoint_why first). Lines.
@@ -231,8 +231,7 @@ static func elect_why(s: GameSession, data: Dictionary, id: String) -> String:
 
 
 static func elect_chance(s: GameSession, data: Dictionary, id: String) -> int:
-	var b := CheckEngine.bonus_for(s.character, {"skill": str(cfg(data)["election"]["skill"])}) + DifficultyRules.bonus(s, data)
-	return Roll.chance(b, election_dc(s, data, id), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(cfg(data)["election"]["skill"]), "dc": election_dc(s, data, id)})
 
 
 ## The election: the fee for the feast and the speech, a check against the reputation. Lines.
@@ -349,8 +348,7 @@ static func option_chance(s: GameSession, data: Dictionary, o: Dictionary) -> in
 	if not o.has("check"):
 		return 100
 	var ch: Dictionary = o["check"]
-	var b := CheckEngine.bonus_for(s.character, {"skill": str(ch["skill"])}) + DifficultyRules.bonus(s, data)
-	return Roll.chance(b, int(data["rules"]["dc_tiers"][str(ch.get("tier", "medium"))]), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(ch["skill"]), "dc": int(data["rules"]["dc_tiers"][str(ch.get("tier", "medium"))])})
 
 
 ## One decision (decide_why first; its time already passed). Lines.

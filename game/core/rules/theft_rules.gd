@@ -58,6 +58,17 @@ static func dc(s: GameSession, data: Dictionary, npc_id: String, e: Dictionary) 
 	return d
 
 
+## The check of picking one entry (engine.check params): Sleight of Hand against its DC, with advantage while sneaking.
+static func check_params(s: GameSession, _data: Dictionary, npc_id: String, e: Dictionary) -> Dictionary:
+	return {"skill": "sleight_of_hand", "dc_tier": "medium", "dc": int(e["dc"]), "target_id": npc_id,
+		"advantage_reason": TranslationServer.translate("THEFT_HIDDEN") if s.sneaking else ""}
+
+
+## The chance in percent the window shows: the roll's own spec (CheckEngine.preview).
+static func chance(s: GameSession, data: Dictionary, npc_id: String, e: Dictionary) -> int:
+	return int(CheckEngine.preview(s, data, check_params(s, data, npc_id, e)).get("chance", 0))
+
+
 ## "" when the player can pick this NPC's pockets now: the NPC is here, the player is not caught by it today.
 static func can_steal(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	if not s.npcs_here(WorldView.new(data["world"]).world, s.room_id).has(npc_id):

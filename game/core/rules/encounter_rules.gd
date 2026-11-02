@@ -56,7 +56,7 @@ static func _hide(s: GameSession, data: Dictionary, foes: Array) -> Array:
 	var passive := Sheet.passive(s, data, Sheet.HERO)
 	var out: Array = []
 	for e: Dictionary in foes:
-		if Roll.d20(s.rng) + Sheet.skill(s, data, e, "stealth") >= passive:
+		if int(CombatRules.stealth_roll(s, data, e)["total"]) >= passive:
 			out.append(foe_id(e))
 	return out
 

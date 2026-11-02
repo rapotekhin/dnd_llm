@@ -91,10 +91,11 @@ func test_b11_loading_a_save_restores_the_world_and_mode() -> void:
 
 
 func test_b14_natural_20_and_advantage() -> void:
-	var rng := RandomNumberGenerator.new()
+	var s := TestUtils.new_session()
+	s.character["equipped"]["armor"] = ""  # no armour's disadvantage
 	for seed_value in 300:
-		rng.seed = seed_value
-		var r := CheckEngine.roll(TestUtils.rules(), rng, {"skill": "stealth", "dc_tier": "nearly_impossible", "advantage_reason": "туман"}, 0, "c")
+		s.rng.seed = seed_value
+		var r := CheckEngine.card(s, TestUtils.data(), {"skill": "stealth", "dc_tier": "nearly_impossible", "advantage_reason": "туман"})
 		assert_int(r["nat"]).is_equal(maxi(r["rolls"][0], r["rolls"][1]))
 		if r["nat"] == 20:
 			assert_bool(r["success"]).is_true()

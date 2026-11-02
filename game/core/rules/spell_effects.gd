@@ -386,8 +386,8 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 
 
 ## The bonus dice of the hero's effects for a roll of `kind` (attack, save, check): {"bonus", "note"}; the `once` ones
-## are spent (and their concentration ends).
-static func die(s: GameSession, h: Dictionary, kind: String) -> Dictionary:
+## are spent (and their concentration ends). `peek` — a chance shown before the roll: the mean of each die, nothing spent.
+static func die(s: GameSession, h: Dictionary, kind: String, peek := false) -> Dictionary:
 	var total := 0
 	var notes: Array[String] = []
 	var parts: Array[Dictionary] = []  # for the roll's breakdown (v0.7.39.5)
@@ -397,12 +397,13 @@ static func die(s: GameSession, h: Dictionary, kind: String) -> Dictionary:
 		var same := str(e.get("same_as", ""))  # v0.7.49: the temple's blessing is Bless — not twice
 		if not same.is_empty() and ConditionRules.effects(h).any(func(o: Dictionary) -> bool: return str(o.get("source", {}).get("id", "")) == same):
 			continue
-		var n := CombatRules.roll_dice(s.rng, str(e["die"])) * (-1 if bool(e.get("minus", false)) else 1)
+		var span := CombatRules.dice_range(str(e["die"]))
+		var n := (roundi((span[0] + span[1]) / 2.0) if peek else CombatRules.roll_dice(s.rng, str(e["die"]))) * (-1 if bool(e.get("minus", false)) else 1)
 		var name := str(e.get("source", {}).get("name", ""))
 		total += n
 		notes.append("%s%d (%s)" % ["−" if n < 0 else "+", absi(n), name])
 		parts.append(RollParts.part("%s (%s)" % [name, str(e["die"]).replace("d", "к")], n))
-		if bool(e.get("once", false)):
+		if bool(e.get("once", false)) and not peek:
 			ConditionRules.remove_effect(h, int(e.get("uid", 0)))
 			if str(h.get("concentration", "")) == str(e.get("source", {}).get("id", "")):
 				h["concentration"] = ""
@@ -1077,26 +1078,23 @@ static func dispellable(s: GameSession, f: Dictionary) -> Array[Dictionary]:
 	return out
 
 
-## Out of a fight: the NPC's save against the hero's spell (Suggestion, Charm Person…). {"ok": the spell holds,
-## "line"} or {} when the spell is not of this kind.
-static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc: Dictionary) -> Dictionary:
+## Out of a fight: the NPC's save against the hero's charm (Suggestion, Charm Person…), its own Sheet.save: the natural
+## 20 / 1, Fey Ancestry and Magic Resistance, its statuses. {"ok": the spell holds, "line"} or {} when the spell is not
+## of this kind.
+static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc_id: String) -> Dictionary:
 	var sp := spec(data, spell_id)
-	if not bool(sp.get("npc_save", false)) or npc.is_empty():
+	if not bool(sp.get("npc_save", false)) or not (data["world"].get("npcs", {}) as Dictionary).has(npc_id):
 		return {}
 	var spell: Dictionary = data["spells"][spell_id]
-	var tmpl: Dictionary = data["monsters"].get(str(npc.get("monster", data["rules"]["combat"]["default_npc_monster"])), {})
-	var name := str(npc.get("name", ""))
-	if sp.has("types") and not (sp["types"] as Array).has(str(tmpl.get("type", "humanoid"))):
+	var who := Sheet.who(s, data, npc_id)
+	var name := str(data["world"]["npcs"][npc_id].get("name", ""))
+	if sp.has("types") and not (sp["types"] as Array).has(str(Sheet.template(data, who).get("type", "humanoid"))):
 		return {"ok": false, "line": "%s: на %s не действует" % [spell["name"], name]}
 	var ab := str(spell.get("save", {}).get("ability", "wis"))
-	var bonus := int(tmpl.get("saves", {}).get(ab, CharacterRules.mod(int(tmpl.get("abilities", {}).get(ab, 10)))))
-	var roll := Roll.d20(s.rng)
 	var dc := CombatRules.spell_dc(s)
-	var saved := roll + bonus >= dc
-	var save_parts: Array[Dictionary] = [RollParts.part("спасбросок %s (%s)" % [CombatRules.ab_name(ab), name], bonus)]
-	RollParts.note(s, "%s: %s" % [spell["name"], name], [roll], roll, save_parts, bonus, dc)
-	return {"ok": not saved, "line": "%s: %s — спасбросок %s %d против Сл %d — %s" % [spell["name"], name, CombatRules.ab_name(ab), roll + bonus, dc,
-		"устоял" if saved else "поддался"]}
+	var r := Sheet.save(s, data, who, ab, dc, "charm,magic")
+	RollParts.note(s, "%s: %s" % [spell["name"], name], r["rolls"], int(r["nat"]), r["parts"], int(r["bonus"]), dc)
+	return {"ok": not bool(r["ok"]), "line": "%s: %s — спасбросок %s — %s" % [spell["name"], name, r["text"], "устоял" if bool(r["ok"]) else "поддался"]}
 
 
 ## The hero's charms on an NPC (v0.7.22.3, the author's request: Charm Person must end).

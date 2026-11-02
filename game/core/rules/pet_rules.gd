@@ -130,7 +130,7 @@ static func tame(s: GameSession, data: Dictionary, cid: String, food: String) ->
 	if given:
 		ItemRules._remove_one(s.character, food)
 	var d := dc(data, cr)
-	var r := Roll.hero(s, data, {"what": "Приручение", "skill": skill, "dc": d, "adv": given})
+	var r := Roll.hero(s, data, {"what": "Приручение", "skill": skill, "dc": d, "adv_why": "угощение" if given else ""})
 	var nat := int(r["nat"])
 	var b := int(r["bonus"])
 	var ok := bool(r["ok"])

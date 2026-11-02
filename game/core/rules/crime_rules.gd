@@ -251,7 +251,7 @@ static func spread(s: GameSession, data: Dictionary) -> Array[String]:
 		while int(crime.get("searched_days", 0)) < days and not bool(crime["known"]):
 			crime["searched_days"] = int(crime.get("searched_days", 0)) + 1
 			var dc := int(crime["hide_dc"]) + int(h["day_step"]) * int(crime["searched_days"])
-			if Roll.d20(s.rng) + int(h["search_bonus"]) >= dc:
+			if Roll.check(s, data, {"monster": str(h.get("searcher", "guard"))}, {"skill": "investigation", "bonus": int(h["search_bonus"]), "dc": dc})["ok"]:
 				lines.append("Нашли спрятанное тело: %s" % _name(data, str(crime["victim"])))
 				lines.append_array(_known(s, data, crime))
 	lines.append_array(bury(s, data))

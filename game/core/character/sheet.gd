@@ -116,52 +116,87 @@ static func speed(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 
 
 ## A saving throw of anyone: its bonus, the statuses, the advantages of its race, traits and spells against `tag` (the
-## tags joined by a comma: «charm,magic»), cover on DEX, a spell's die. Natural 20 / 1 succeed / fail.
-## {"ok", "total", "nat", "text"}: «Тел 14 против Сл 13, с преимуществом (Стойкость дварфа) — успех».
-static func save(s: GameSession, data: Dictionary, who: Dictionary, ab: String, dc: int, tag: String = "", dis_extra := false) -> Dictionary:
+## tags joined by a comma: «charm,magic»), cover on DEX, a spell's die. Natural 20 / 1 succeed / fail. `opts` — the
+## caller's reasons `adv_why`, `dis_why`, `fail_why` (the master's save, Roll.check) and `quiet` (a card is its own breakdown).
+## {"ok", "total", "nat", "rolls", "bonus", "parts", "adv", "dis", "fail": [why], "text"}:
+## «Тел 14 против Сл 13, с преимуществом (Стойкость дварфа) — успех».
+static func save(s: GameSession, data: Dictionary, who: Dictionary, ab: String, dc: int, tag: String = "", dis_extra := false, opts: Dictionary = {}) -> Dictionary:
 	var hero := is_hero(who)
 	var me := holder(s, who)
-	var mods := ConditionRules.check_mods(me, data, {"save": ab})
-	var why := _advantages(s, data, who, ab, tag)
-	var adv := not why.is_empty()
-	var dis := not (mods["disadvantage"] as Array).is_empty() or dis_extra
+	var at := _save_situation(s, data, who, ab, tag, dis_extra, opts)
+	var adv := not (at["adv"] as Array).is_empty()
+	var dis := not (at["dis"] as Array).is_empty()
+	var failed := not (at["fail"] as Array).is_empty()
 	var rolls := Roll.of(s, who, adv, dis)
 	var nat := Roll.kept(rolls, adv, dis)
 	var die := SpellEffects.die(s, me, "save")  # Bless, Bane, Resistance (v0.7.13.1)
-	var fighter := CombatRules.player(s) if hero and CombatRules.active(s) else who
-	var total := nat + save_bonus(s, data, who, ab) + int(die["bonus"])
-	if ab == "dex":
-		total += int(fighter.get("cover", 0))  # v0.8.4
-	var parts: Array[Dictionary] = []
-	if hero:
-		parts = RollParts.cached(me, data, "save", ab, s.items)
+	var parts := _save_parts(s, data, who, ab)
 	parts.append_array(die["parts"])
-	if hero:
-		total += DifficultyRules.bonus(s, data)  # the game's difficulty (v0.7.20.4)
-		RollParts.difficulty(s, data, parts)
+	var total := nat + RollParts.sum(parts)
 	var ok := Roll.succeeds(nat, total, dc)
 	var note := (" " + str(die["note"])) if not str(die["note"]).is_empty() else ""
 	if hero and DifficultyRules.bonus(s, data) != 0:
 		note += ", " + DifficultyRules.note(s, data)
-	if hero and not ok and nat != 1 and (mods["auto_fail"] as Array).is_empty():
-		var insp := Roll.inspire(s)  # Bardic Inspiration on a failed save
+	if not ok and nat != 1 and not failed:
+		var insp := Roll.inspire(s, who)  # Bardic Inspiration on a failed save
 		if int(insp["value"]) > 0:
 			total += int(insp["value"])
 			ok = total >= dc
 			note += ", вдохновение +%d" % int(insp["value"])
 			RollParts.add(parts, str(insp["label"]), int(insp["value"]))
-	if not (mods["auto_fail"] as Array).is_empty():
+	if failed:
 		ok = false
-		note += ", автопровал: " + ", ".join((mods["auto_fail"] as Array).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower()))
+		note += ", автопровал: " + ", ".join(at["fail"])
 	elif adv and not dis:
-		note += ", с преимуществом (%s)" % ", ".join(why)
+		note += ", с преимуществом (%s)" % ", ".join(at["adv"])
 	elif dis and not adv:
-		note += ", с помехой (%s)" % ", ".join((mods["disadvantage"] as Array).map(func(x: Variant) -> String:
-			return "истощение" if str(x) == "exhaustion" else ConditionRules.name_of(data, str(x)).to_lower()))
-	if hero:
+		note += ", с помехой (%s)" % ", ".join(at["dis"])
+	if hero and not bool(opts.get("quiet", false)):
 		RollParts.note(s, "Спасбросок: " + CombatRules.ab_name(ab), rolls, nat, parts, total - nat, dc)
-	return {"ok": ok, "total": total, "nat": nat,
+	return {"ok": ok, "total": total, "nat": nat, "rolls": rolls, "bonus": total - nat, "parts": parts,
+		"adv": at["adv"], "dis": at["dis"], "fail": at["fail"],
 		"text": "%s %d против Сл %d%s — %s" % [CombatRules.ab_name(ab), total, dc, note, "успех" if ok else "провал"]}
+
+
+## A save's bonus and what it rolls with, nothing rolled or spent (Roll.odds): {bonus, adv, dis, failed}.
+static func save_odds(s: GameSession, data: Dictionary, who: Dictionary, ab: String, tag: String = "", opts: Dictionary = {}) -> Dictionary:
+	var at := _save_situation(s, data, who, ab, tag, bool(opts.get("dis", false)), opts)
+	var parts := _save_parts(s, data, who, ab)
+	parts.append_array(SpellEffects.die(s, holder(s, who), "save", true)["parts"])
+	return {"bonus": RollParts.sum(parts), "adv": not (at["adv"] as Array).is_empty(), "dis": not (at["dis"] as Array).is_empty(),
+		"failed": not (at["fail"] as Array).is_empty()}
+
+
+## What a save of `who` rolls with: {adv, dis, fail: [why]} of its statuses, traits and the caller's reasons.
+static func _save_situation(s: GameSession, data: Dictionary, who: Dictionary, ab: String, tag: String, dis_extra: bool, opts: Dictionary) -> Dictionary:
+	var mods := ConditionRules.check_mods(holder(s, who), data, {"save": ab})
+	var adv := _advantages(s, data, who, ab, tag)
+	var dis: Array[String] = []
+	var fail: Array[String] = []
+	for id: Variant in mods["disadvantage"]:
+		dis.append(ConditionRules.why(data, str(id)))
+	for id: Variant in mods["auto_fail"]:
+		fail.append(ConditionRules.why(data, str(id)))
+	if dis_extra:
+		dis.append("обстоятельства")
+	for k: String in ["adv_why", "dis_why", "fail_why"]:
+		for x: String in CheckEngine.whys(opts.get(k)):  # a text or a list
+			({"adv_why": adv, "dis_why": dis, "fail_why": fail}[k] as Array).append(x)
+	return {"adv": adv, "dis": dis, "fail": fail}
+
+
+## The labelled bonus of a save: the hero's sheet with the game's difficulty and the cover on DEX; another's number.
+static func _save_parts(s: GameSession, data: Dictionary, who: Dictionary, ab: String) -> Array[Dictionary]:
+	var parts: Array[Dictionary] = []
+	if is_hero(who):
+		parts = RollParts.cached(s.character, data, "save", ab, s.items)
+		RollParts.difficulty(s, data, parts)  # the game's difficulty (v0.7.20.4)
+	else:
+		parts.append(RollParts.part(CombatRules.ab_name(ab), save_bonus(s, data, who, ab)))
+	var fighter := CombatRules.player(s) if is_hero(who) and CombatRules.active(s) else who
+	if ab == "dex":
+		RollParts.add(parts, "укрытие", int(fighter.get("cover", 0)))  # v0.8.4
+	return parts
 
 
 static func saved(s: GameSession, data: Dictionary, who: Dictionary, ab: String, dc: int, tag: String = "", dis_extra := false) -> bool:

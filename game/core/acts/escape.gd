@@ -37,19 +37,23 @@ func _hold(s: GameSession, f: Dictionary) -> Dictionary:
 func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
 	var me := Sheet.holder(s, f)
 	var hold := _hold(s, f)
-	var skill := "athletics" if Sheet.skill(s, data, f, "athletics") >= Sheet.skill(s, data, f, "acrobatics") else "acrobatics"
-	var mods := ConditionRules.check_mods(me, data, {"skill": skill})
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var mine := Roll.kept(Roll.of(s, f, false, dis), false, dis) + Sheet.skill(s, data, f, skill)
+	var skill := CombatRules.better(s, data, f, ["athletics", "acrobatics"])
 	var dc := int(hold.get("escape_dc", 0))
+	var mine := 0
 	var against := "Сл %d" % dc
-	if dc <= 0:
+	var ok := false
+	if dc > 0:
+		var r := Roll.check(s, data, f, {"skill": skill, "dc": dc, "quiet": true})
+		mine = int(r["total"])
+		ok = bool(r["ok"])
+	else:  # the grappler's Athletics: the same contest as the grapple (CombatRules.contest)
 		var g := CombatRules.fighter(s, str(hold.get("by", "")))
 		if g.is_empty():
 			g = CombatRules.fighter(s, CombatRules.fighter_of_npc(s, str(hold.get("by", ""))))
-		dc = Roll.d20(s.rng) + (Sheet.skill(s, data, g, "athletics") if not g.is_empty() else 0)
-		against = "%d (%s)" % [dc, Sheet.holder(s, g).get("name", "хватка") if not g.is_empty() else "хватка"]
-	var ok := (mods["auto_fail"] as Array).is_empty() and mine >= dc
+		var c := CombatRules.contest(s, data, f, skill, g, ["athletics"])
+		mine = int(c["mine"])
+		ok = bool(c["won"])
+		against = "%d (%s)" % [int(c["theirs"]), Sheet.holder(s, g).get("name", "хватка") if not g.is_empty() else "хватка"]
 	var what := ConditionRules.name_of(data, str(hold.get("condition", ""))).to_lower()
 	if ok:
 		ConditionRules.remove_effect(me, int(hold["uid"]))

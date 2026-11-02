@@ -35,6 +35,11 @@ static func name_of(data: Dictionary, id: String) -> String:
 	return str(own["name"]) if own.has("name") else str(data["rules"]["conditions"].get(id, id)).get_slice(":", 0)
 
 
+## Why a roll has a disadvantage or fails, by an id of `check_mods`: a condition's name, or the need or disease behind it.
+static func why(data: Dictionary, id: String) -> String:
+	return {"need": "голод или жажда", "disease": "болезнь"}.get(id, name_of(data, id).to_lower())
+
+
 # --- the clock ------------------------------------------------------------------------------------
 
 

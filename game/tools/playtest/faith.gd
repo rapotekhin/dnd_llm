@@ -64,7 +64,7 @@ func run() -> void:
 	view.visible = false
 	await frames(2)
 
-	gs.call("_hero_roll", {"skill": "deception", "dc_tier": "easy"}, int(s.character["skills"]["deception"]))  # a lie to the guard
+	CheckEngine.card(s, data, {"skill": "deception", "dc_tier": "easy"})  # a lie to the guard
 	gs.call("_quiet_lines", ["Вы уверяете стражника, что просто проходили мимо"] as Array[String])
 	var chat := " ".join(s.chat.map(func(e: Dictionary) -> String: return " ".join(e.get("lines", []))))
 	step("a Deception check breaks the vow", chat.contains("Слово правды") and chat.contains("нарушен"), chat.right(300))

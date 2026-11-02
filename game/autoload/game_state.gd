@@ -283,7 +283,7 @@ func _spend(what: Dictionary) -> Dictionary:
 				lines.append_array(healed)
 				if not healed.is_empty():
 					facts += " Движок: %s — опиши это." % ", ".join(healed)
-			var npc_try := SpellEffects.npc_save(session, Catalog.data, str(chk["spell_id"]), world().npc(target))
+			var npc_try := SpellEffects.npc_save(session, Catalog.data, str(chk["spell_id"]), target)
 			if not npc_try.is_empty():  # Suggestion, Charm Person… (v0.7.13.7): the engine rolls the NPC's save
 				lines.append(str(npc_try["line"]))
 				if bool(npc_try["ok"]):
@@ -834,14 +834,9 @@ func _parley_check(params: Dictionary) -> Dictionary:
 	var p := params.duplicate()
 	p["dc"] = CombatRules.parley_dc(session, Catalog.data)
 	p["dc_tier"] = "medium"
-	var mods := ConditionRules.check_mods(session.character, Catalog.data, p)
-	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
-	var dis_why: Array = (mods["disadvantage"] as Array).map(cond_name)
 	if skill == "intimidation" and not CombatRules.parley_understood(session, Catalog.data):
-		dis_why.append("без общего языка — жесты и оружие")  # v0.7.11
-	p["disadvantage_reason"] = ", ".join(dis_why)
-	p["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
-	var result := _hero_roll(p, CheckEngine.bonus_for(session.character, p))
+		p["disadvantage_reason"] = "без общего языка — жесты и оружие"  # v0.7.11
+	var result := CheckEngine.card(session, Catalog.data, p)
 	var lines: Array[String] = ["%s — %s: %d против Сл %d — %s" % [session.character["name"], tr("SKILL_" + skill.to_upper()),
 		int(result["total"]), int(result["dc"]), "успех" if bool(result["success"]) else "провал"]]
 	var outcome := CombatRules.parley_apply(session, Catalog.data, skill, bool(result["success"]))
@@ -1027,16 +1022,7 @@ func container_unlock(prop_id: String, how: String) -> String:
 	var lines: Array[String] = []
 	if how != "key":
 		var need := ContainerRules.lock_check(Catalog.data, p, how)
-		var params := {"skill": need["skill"], "dc_tier": "medium", "dc": int(need["dc"]), "target_id": prop_id}
-		var bonus := CheckEngine.bonus_for(session.character, params)
-		var parts: Array[Dictionary] = []
-		if how == "pick":
-			var db := ExplorationRules.disarm_bonus(session.character, Catalog.data)
-			bonus = int(db["bonus"])
-			parts = db["parts"]
-			params["disadvantage_reason"] = str(db["disadvantage_reason"])
-		var result := _hero_roll(params, bonus, parts)
-		_add(GameSession.check_entry(params, result))
+		var result := _lock_roll(how, int(need["dc"]), prop_id)
 		TimeRules.advance(session, Catalog.data, int(ContainerRules.cfg(Catalog.data).get("minutes", 1)))
 		if not bool(result["success"]):
 			lines.append("%s не поддался" % p["name"])
@@ -1073,17 +1059,7 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 			WayRules.unlock(session, data, from, to)
 			lines.append("Засов отодвинут")
 		"pick", "force":
-			var dc := int(WayRules.dcs(session, data, from, to)[how])
-			var params := {"skill": "sleight_of_hand" if how == "pick" else "athletics", "dc_tier": "medium", "dc": dc, "target_id": to}
-			var bonus := CheckEngine.bonus_for(session.character, params)
-			var parts: Array[Dictionary] = []
-			if how == "pick":
-				var db := ExplorationRules.disarm_bonus(session.character, Catalog.data)
-				bonus = int(db["bonus"])
-				parts = db["parts"]
-				params["disadvantage_reason"] = str(db["disadvantage_reason"])
-			var result := _hero_roll(params, bonus, parts)
-			_add(GameSession.check_entry(params, result))
+			var result := _lock_roll(how, int(WayRules.dcs(session, data, from, to)[how]), to)
 			if not bool(result["success"]):
 				lines.append("Замок не поддался" if how == "pick" else "Дверь выдержала")
 			elif how == "pick":
@@ -1135,12 +1111,8 @@ func steal(npc_id: String, entry_id: String) -> String:
 			entry = e
 	if entry.is_empty():
 		return "THEFT_NOBODY"
-	var params := {"skill": "sleight_of_hand", "dc_tier": "medium", "dc": int(entry["dc"]), "target_id": npc_id}
-	var mods := ConditionRules.check_mods(session.character, Catalog.data, params)
-	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
-	params["disadvantage_reason"] = ", ".join((mods["disadvantage"] as Array).map(cond_name))
-	params["advantage_reason"] = tr("THEFT_HIDDEN") if session.sneaking else ""
-	var result := _hero_roll(params, CheckEngine.bonus_for(session.character, params))
+	var params := TheftRules.check_params(session, Catalog.data, npc_id, entry)
+	var result := CheckEngine.card(session, Catalog.data, params)
 	_add(GameSession.check_entry(params, result))
 	var lines := TheftRules.steal(session, Catalog.data, npc_id, entry_id, bool(result["success"]))
 	_effect_lines(lines)
@@ -1207,7 +1179,7 @@ func arena_insight(sid: String) -> String:
 	if not why.is_empty():
 		return why
 	var params := ArenaRules.insight_params(Catalog.data)
-	var result := _hero_roll(params, CheckEngine.bonus_for(session.character, params, Catalog.data))
+	var result := CheckEngine.card(session, Catalog.data, params)
 	if result.has("error"):
 		return str(result["error"])
 	_add(GameSession.check_entry(params, result))
@@ -1296,23 +1268,13 @@ func contest_round(cheat: bool) -> String:
 	var params := ContestRules.hero_params(Catalog.data, k, cheat)
 	params["dc"] = int(foe["total"])
 	params["target_id"] = npc
-	var mods := ConditionRules.check_mods(session.character, Catalog.data, params)
-	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
-	params["disadvantage_reason"] = ", ".join((mods["disadvantage"] as Array).map(cond_name))
-	params["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
-	var skill_id := str(params.get("skill", ""))
-	var tool_fx := BackgroundRules.tool_check(session.character, Catalog.data, str(params.get("tool", "")), skill_id)
-	if not str(tool_fx["advantage"]).is_empty():
-		params["advantage_reason"] = tool_fx["advantage"]
-	var parts := RollParts.of_params(session.character, Catalog.data, params, session.items)
-	RollParts.add(parts, str(tool_fx["note"]), int(tool_fx["bonus"]))
-	var result := _hero_roll(params, CheckEngine.bonus_for(session.character, params, Catalog.data) + int(tool_fx["bonus"]), parts)
+	var result := CheckEngine.card(session, Catalog.data, params)
 	if result.has("error"):
 		return str(result["error"])
 	var total := int(result["total"])
 	if int(result["nat"]) == 20:
 		total = maxi(total, int(foe["total"]) + 1)  # house rule (ADR-0008 §2): a natural 20 wins, a natural 1 loses
-	elif int(result["nat"]) == 1 or not str(params["auto_fail_reason"]).is_empty():
+	elif int(result["nat"]) == 1 or result.has("auto_fail_reason"):
 		total = mini(total, int(foe["total"]) - 1)
 	result["success"] = total > int(foe["total"])
 	_add(GameSession.check_entry(params, result))
@@ -1537,20 +1499,17 @@ func finish_combat() -> void:
 		_move_to(flee_to, [])
 
 
-## Changes the master style of the running game (settings screen); kept in the save.
-## A check of the hero by the engine with the game's difficulty (v0.7.20.4): its bonus is in the total and on the card.
-## `parts` — the bonus's labelled parts (v0.7.39.5), the sheet's by the params when empty; the card shows them on hover.
-func _hero_roll(params: Dictionary, bonus: int, parts: Array[Dictionary] = []) -> Dictionary:
-	var extra := DifficultyRules.bonus(session, Catalog.data)
-	var result := CheckEngine.roll(Catalog.rules(), session.rng, params, bonus + extra, session.next_check_id())
-	if not result.has("error"):
-		if extra != 0:
-			result["difficulty_note"] = DifficultyRules.note(session, Catalog.data)
-		var all := parts.duplicate() if not parts.is_empty() else RollParts.of_params(session.character, Catalog.data, params, session.items)
-		RollParts.difficulty(session, Catalog.data, all)
-		result["parts"] = RollParts.fit(all, bonus + extra)
-		if params.get("skill") != null and not str(params.get("skill", "")).is_empty():  # v0.7.49: a lie breaks a vow
-			session.faith_lines.append_array(WorldEvent.deed(session, Catalog.data, "check:" + str(params["skill"])))
+## A lock, a door or a trap by the hero's hands (one road for the three): `how` "pick" — thieves' tools (Sleight of
+## Hand), "force" — Athletics, "dodge" — Acrobatics past a trap; against `dc`. Adds the check card; the result.
+func _lock_roll(how: String, dc: int, target: String) -> Dictionary:
+	var params := {"skill": {"pick": "sleight_of_hand", "force": "athletics", "dodge": "acrobatics"}[how], "dc_tier": "medium", "dc": dc, "target_id": target}
+	var parts: Array[Dictionary] = []
+	if how == "pick":
+		var db := ExplorationRules.disarm_bonus(session.character, Catalog.data)
+		parts = db["parts"]
+		params["disadvantage_reason"] = str(db["disadvantage_reason"])
+	var result := CheckEngine.card(session, Catalog.data, params, parts)
+	_add(GameSession.check_entry(params, result))
 	return result
 
 
@@ -2020,23 +1979,17 @@ func option_check(index: int) -> Dictionary:
 	return session.option_checks[index]
 
 
-## What the engine would roll for an option: {skill, dc, bonus, chance (%), dc_reason}; {} — no check. The DC is the
-## engine's (the tier, or the listener's SRD template), the chance counts natural 1 and 20.
+## What the engine would roll for an option: {skill, dc, bonus, chance (%), dc_reason}; {} — no check. The same spec as the
+## roll (CheckEngine.preview): the DC by the tier or the listener's template, every advantage and disadvantage of the moment.
 func option_preview(index: int) -> Dictionary:
 	var check := option_check(index)
 	if check.is_empty():
 		return {}
-	var params := check.duplicate()
-	var dc := int(Catalog.rules()["dc_tiers"][str(check["dc_tier"])])
-	var by_npc := SocialRules.dc(session, Catalog.data, _listener_id(params), str(check["skill"]), str(check["dc_tier"]))
-	if not by_npc.is_empty():
-		dc = int(by_npc["dc"])
-	var bonus := CheckEngine.bonus_for(session.character, params) + DifficultyRules.bonus(session, Catalog.data)
-	var wins := 0
-	for nat in range(1, 21):
-		if nat == 20 or (nat != 1 and nat + bonus >= dc):
-			wins += 1
-	return {"skill": str(check["skill"]), "dc": dc, "bonus": bonus, "chance": wins * 5, "dc_reason": str(by_npc.get("reason", ""))}
+	var r := CheckEngine.preview(session, Catalog.data, check)
+	if r.has("error"):
+		return {}
+	r["skill"] = str(check["skill"])
+	return r
 
 
 ## «Ждать» (v0.6.5): an hour or until a part of the day; not in a conversation or a fight. The master tells how the
@@ -2367,17 +2320,7 @@ func trap_action(to: String, disarm: bool, trap_id: String = "") -> String:
 	if trap.is_empty() or not ExplorationRules.is_found(session, from, trap):
 		return "TRAP_NONE"
 	var t: Dictionary = trap["trap"]
-	var params := {"skill": "sleight_of_hand" if disarm else "acrobatics", "dc_tier": "medium", "dc": int(t["disarm_dc"]),
-		"target_id": str(trap["id"])}
-	var bonus := CheckEngine.bonus_for(session.character, params)
-	var parts: Array[Dictionary] = []
-	if disarm:
-		var db := ExplorationRules.disarm_bonus(session.character, Catalog.data)
-		bonus = int(db["bonus"])
-		parts = db["parts"]
-		params["disadvantage_reason"] = str(db["disadvantage_reason"])
-	var result := _hero_roll(params, bonus, parts)
-	_add(GameSession.check_entry(params, result))
+	var result := _lock_roll("pick" if disarm else "dodge", int(t["disarm_dc"]), str(trap["id"]))
 	var lines: Array[String] = []
 	if bool(result["success"]):
 		if disarm:
@@ -3284,7 +3227,7 @@ func handle_engine_check(params: Dictionary) -> Dictionary:
 	var result := _engine_check(params)
 	if not forced.is_empty() and not result.has("error"):
 		result["rolled_as"] = forced
-	var won_over := _listener_id(params) if ["persuasion", "deception", "intimidation"].has(str(params.get("skill", ""))) and not bool(result.get("blocked", false)) else ""
+	var won_over := CheckEngine.listener(session, Catalog.data, params) if ["persuasion", "deception", "intimidation"].has(str(params.get("skill", ""))) and not bool(result.get("blocked", false)) else ""
 	effects.note_check(str(params.get("turn_id", "")), str(params.get("dc_tier", "")), bool(result.get("success", false)), won_over)
 	effects.note_roll(str(params.get("turn_id", "")), str(params.get("skill", "")), int(result.get("total", 0)), bool(result.get("success", false)))
 	return result
@@ -3302,72 +3245,24 @@ func _forced_skill(params: Dictionary) -> String:
 	return tr("ABILITY_" + str(_forced["ability"]).to_upper())
 
 
-## An engine check (the master's request_check or a button of the client): DC by tier, conditions and darkness,
-## the lock of a repeat, theft, hidden things and caches found. Adds the check card.
+## An engine check (the master's request_check or a button of the client): the card of CheckEngine (the DC by the tier or
+## the listener, every advantage and disadvantage of the moment), the lock of a repeat, theft, hidden things and caches
+## found. Adds the check card.
 func _engine_check(params: Dictionary) -> Dictionary:
-	params.erase("dc")  # the DC number and condition effects are the engine's
-	var mods := ConditionRules.check_mods(session.character, Catalog.data, params)
-	var cond_name := func(id: Variant) -> String: return tr("COND_" + str(id).to_upper())
-	var dis: Array = (mods["disadvantage"] as Array).map(cond_name)
-	if str(params.get("skill", "")) == "perception" and TimeRules.dark(session, Catalog.data):
-		dis.append("темнота")
-	elif str(params.get("skill", "")) == "perception" and not WeatherRules.obscure_why(session, Catalog.data).is_empty():
-		dis.append(WeatherRules.obscure_why(session, Catalog.data))  # fog, a downpour (v0.7.46)
-	params["disadvantage_reason"] = ", ".join(dis)
-	params["auto_fail_reason"] = ", ".join((mods["auto_fail"] as Array).map(cond_name))
-	params["reroll_ones"] = CharacterRules.has_trait(session.character, "lucky")  # v0.7.10
-	# v0.7.11: the words reach only who understands them; a tool of the check.
+	for k: String in ["dc", "dc_reason", "disadvantage_reason", "auto_fail_reason"]:
+		params.erase(k)  # the DC number and the reasons are the engine's
+	var sp := CheckEngine.spec(session, Catalog.data, params)
+	if sp.has("error"):
+		return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(sp["error"]))
+	var adv: Array = CheckEngine.situation(session, Catalog.data, Sheet.HERO, sp["spec"], true)["adv"]
+	if not adv.is_empty():
+		params["advantage_reason"] = ", ".join(adv)  # a new source of advantage unlocks a repeat
 	var skill_id := str(params.get("skill", "")) if params.get("skill") != null else ""
-	var listener := _listener(params)
-	var by_npc := SocialRules.dc(session, Catalog.data, _listener_id(params), skill_id, str(params.get("dc_tier", "")))  # v0.7.15.1
-	if not by_npc.is_empty():
-		params["dc"] = by_npc["dc"]
-		params["dc_reason"] = by_npc["reason"]
-	if not listener.is_empty():
-		var gate := LanguageRules.check_gate(session.character, Catalog.data, skill_id, LanguageRules.npc_understands(session.character, Catalog.data, listener))
-		if gate.has("auto_fail"):
-			params["auto_fail_reason"] = ", ".join(([params["auto_fail_reason"]] if not str(params["auto_fail_reason"]).is_empty() else []) + [gate["auto_fail"]])
-		if gate.has("disadvantage"):
-			params["disadvantage_reason"] = ", ".join(([params["disadvantage_reason"]] if not str(params["disadvantage_reason"]).is_empty() else []) + [gate["disadvantage"]])
-	var tool := str(params.get("tool", "")) if params.get("tool") != null else ""
-	var tool_fx := BackgroundRules.tool_check(session.character, Catalog.data, tool, skill_id)
-	if not str(tool_fx["auto_fail"]).is_empty():
-		params["auto_fail_reason"] = ", ".join(([params["auto_fail_reason"]] if not str(params["auto_fail_reason"]).is_empty() else []) + [tool_fx["auto_fail"]])
-	if not str(tool_fx["advantage"]).is_empty() and str(params.get("advantage_reason", "")).is_empty():
-		params["advantage_reason"] = tool_fx["advantage"]
-	if Sheet.raging(session, Sheet.HERO) and str(params.get("skill", "")) == "athletics" \
-			and str(params.get("advantage_reason", "")).is_empty():
-		params["advantage_reason"] = "ярость"
-	var boots := CharacterRules.carried_with(session.character, Catalog.data, session.items, "stealth_advantage")
-	if str(params.get("skill", "")) == "stealth" and not boots.is_empty() and str(params.get("advantage_reason", "")).is_empty():
-		params["advantage_reason"] = boots
-	if str(params.get("skill", "")) == "stealth" and not SightRules.in_dark(session, Catalog.data).is_empty() and str(params.get("advantage_reason", "")).is_empty():
-		params["advantage_reason"] = SightRules.in_dark(session, Catalog.data)  # v0.8.4.1
-	# v0.7.12: items and potions that give advantage on a skill.
-	var by_item := {"perception": "perception_advantage", "investigation": "investigation_advantage"}
-	if by_item.has(skill_id) and str(params.get("advantage_reason", "")).is_empty():
-		var thing := CharacterRules.carried_with(session.character, Catalog.data, session.items, str(by_item[skill_id]))
-		if not thing.is_empty():
-			params["advantage_reason"] = thing
-	var skill_ab := str(Catalog.rules()["skills"].get(skill_id, params.get("ability", "")))
-	for e: Dictionary in SpellEffects.hero_effects(session.character, "ability_adv"):  # Enhance Ability (v0.7.13.3)
-		if str(e["ability_adv"]) == skill_ab and str(params.get("advantage_reason", "")).is_empty():
-			params["advantage_reason"] = str(e.get("source", {}).get("name", ""))
-	for e: Dictionary in ConditionRules.effects(session.character):
-		if (str(e.get("check_adv", "")) == skill_id or (bool(e.get("enlarged", false)) and skill_id == "athletics")) and not skill_id.is_empty() 				and str(params.get("advantage_reason", "")).is_empty():
-			params["advantage_reason"] = str(e.get("source", {}).get("name", "зелье"))
-	var pet := PetRules.helper(session, Catalog.data, skill_id)  # v0.7.43: a dog's nose, a hawk's eye
-	if not pet.is_empty() and str(params.get("advantage_reason", "")).is_empty():
-		params["advantage_reason"] = pet
 	var room := session.room_id
 	var result: Dictionary
-	var listener_id := _listener_id(params)
-	if not listener_id.is_empty() and ExplorationRules.SOCIAL_SKILLS.has(skill_id):
-		if (params.get("target_id") == null or str(params["target_id"]).is_empty()):
-			params["target_id"] = listener_id  # a talk's check is locked on its NPC, not on the room (v0.7.22.3)
-		var charm := SpellEffects.npc_spells(session, listener_id)
-		if not charm.is_empty() and str(params.get("advantage_reason", "")).is_empty():
-			params["advantage_reason"] = "очарован: " + str(charm[0]["source"]["name"])  # Charm Person and the like (v0.7.22.3)
+	var listener_id := CheckEngine.listener(session, Catalog.data, params)
+	if not listener_id.is_empty() and ExplorationRules.SOCIAL_SKILLS.has(skill_id) and (params.get("target_id") == null or str(params["target_id"]).is_empty()):
+		params["target_id"] = listener_id  # a talk's check is locked on its NPC, not on the room (v0.7.22.3)
 	var state := ExplorationRules.state_key(session, Catalog.data, params, listener_id)
 	var lock := ExplorationRules.locked(session, params, room, state)
 	if not lock.is_empty():
@@ -3376,34 +3271,15 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		result["check_id"] = session.next_check_id()
 		result["blocked"] = true
 	else:
-		var spell_die := SpellEffects.die(session, session.character, "check")  # Guidance (v0.7.13.1)
-		if not str(spell_die["note"]).is_empty():
-			_add(GameSession.effect_entry(["Проверка: " + str(spell_die["note"])]))
-		var bonus := CheckEngine.bonus_for(session.character, params, Catalog.data) + _terrain_bonus(params) + int(tool_fx["bonus"]) + int(spell_die["bonus"])
-		var parts := RollParts.of_params(session.character, Catalog.data, params, session.items)
-		RollParts.add(parts, "исследователь природы", _terrain_bonus(params))
-		RollParts.add(parts, str(tool_fx["note"]), int(tool_fx["bonus"]))
-		parts.append_array(spell_die["parts"])
-		result = _hero_roll(params, bonus, parts)
-		if result.has("error"):
-			return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(result["error"]))
-		if not bool(result["success"]) and int(result["nat"]) != 1 and str(params.get("auto_fail_reason", "")).is_empty():
-			var insp := Roll.inspire(session)  # Bardic Inspiration on a failed check (v0.7.10)
-			if int(insp["value"]) > 0:
-				result["total"] = int(result["total"]) + int(insp["value"])
-				result["bonus"] = int(result["bonus"]) + int(insp["value"])
-				result["success"] = int(result["total"]) >= int(result["dc"])
-				if result.get("parts") is Array:  # seen in the breakdown (v0.7.49.4)
-					(result["parts"] as Array).append(RollParts.part(str(insp["label"]), int(insp["value"])))
+		result = CheckEngine.card(session, Catalog.data, params)
 		ExplorationRules.lock(session, params, room, result, state)
 		var mark := _theft_target(params)
 		if not mark.is_empty():
 			result["note"] = _theft(mark, bool(result["success"]))
-		if bool(result["success"]) and params.get("skill") != null:
-			result["revealed"] = ExplorationRules.active_reveal(session, Catalog.data["world"], str(params["skill"]), int(result["total"]))
-			var told := _listener_id(params)  # v0.7.15.3: a won social check makes the NPC tell what it paid for
-			if not told.is_empty():
-				(result["revealed"] as Array).append_array(SocialRules.reveal_by_check(session, Catalog.data, told, str(params["skill"]), int(result["total"])))
+		if bool(result["success"]) and not skill_id.is_empty():
+			result["revealed"] = ExplorationRules.active_reveal(session, Catalog.data["world"], skill_id, int(result["total"]))
+			if not listener_id.is_empty():  # v0.7.15.3: a won social check makes the NPC tell what it paid for
+				(result["revealed"] as Array).append_array(SocialRules.reveal_by_check(session, Catalog.data, listener_id, skill_id, int(result["total"])))
 	_add(GameSession.check_entry(params, result))
 	if not (result.get("revealed", []) as Array).is_empty():
 		var found := ExplorationRules.take_caches(session, Catalog.data, room)
@@ -3411,20 +3287,6 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		if not found.is_empty():
 			_told(found)
 	return result
-
-
-## The NPC a social check speaks to: the check's target or the one the hero talks with ({} — none).
-func _listener(params: Dictionary) -> Dictionary:
-	var tid := _listener_id(params)
-	return world().npc(tid) if not tid.is_empty() else {}
-
-
-## The id of that NPC ("" — none, or a foe of the fight).
-func _listener_id(params: Dictionary) -> String:
-	var tid := str(params.get("target_id", "")) if params.get("target_id") != null else ""
-	if tid.is_empty() and session.in_conversation():
-		tid = session.npc_id
-	return tid if world().world.get("npcs", {}).has(tid) and not Being.dead(session, tid) else ""
 
 
 ## «Выступить» (v0.7.11): a Performance check on a stage of the pack, once a day; coins and, for an entertainer, a free
@@ -3446,20 +3308,6 @@ func perform() -> String:
 	_request("action", text + " [движок уже бросил Выступление %d — %s; %s — эффекты coins не нужны, опиши выступление и публику]" %
 		[int(result["total"]), "успех" if bool(result["success"]) else "провал", ", ".join(lines)])
 	return ""
-
-
-## Natural Explorer (v0.7.10): in the ranger's favored terrain (`terrain` of the pack's location) a proficient INT or
-## WIS skill gets the proficiency bonus twice.
-func _terrain_bonus(params: Dictionary) -> int:
-	var c := session.character
-	var skill := str(params.get("skill", "")) if params.get("skill") != null else ""
-	if skill.is_empty() or not str(Catalog.rules()["skills"].get(skill, "")) in ["int", "wis"]:
-		return 0
-	var terrain := str(world().location(world().location_id(session.room_id)).get("terrain", ""))
-	if terrain.is_empty() or not CharacterRules.has_feature(c, "natural_explorer_" + terrain):
-		return 0
-	var proficient := (c.get("skill_profs", []) as Array).has(skill) or CharacterRules.has_feature(c, "skill_prof_" + skill)
-	return CharacterRules.prof_bonus(c, Catalog.data) if proficient else 0
 
 
 ## The NPC of the scene a Sleight of Hand check aims at (theft by words, v0.6.5), or "".
@@ -3509,7 +3357,7 @@ func _haggle_check(params: Dictionary) -> Dictionary:
 		p["dc_tier"] = "medium"
 		if bool(DevelopmentRules.effect(session.character, Catalog.data, "trade", "haggle_adv", false)):  # v0.7.19.1
 			p["advantage_reason"] = str(DevelopmentRules.direction(Catalog.data, "trade")["skills"]["silver_tongue"]["name"])
-		result = _hero_roll(p, CheckEngine.bonus_for(session.character, p))
+		result = CheckEngine.card(session, Catalog.data, p)
 		pct = TradeRules.apply_haggle(session, Catalog.data, npc_id, result)
 		result["haggle_pct"] = pct
 	result["note"] = TradeRules.haggle_note(tr("SKILL_" + skill.to_upper()), result, pct)

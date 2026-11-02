@@ -59,10 +59,8 @@ static func fools(s: GameSession, data: Dictionary, h: Dictionary, viewer: Strin
 		return false
 	var seen: Dictionary = g.get("seen", {})
 	if not seen.has(viewer):
-		if mon.is_empty():
-			mon = str(WorldView.new(data["world"]).npc(viewer).get("monster", CombatRules.cfg(data)["default_npc_monster"]))
-		var mod := CharacterRules.mod(int(data["monsters"].get(mon, {}).get("abilities", {}).get("int", 10)))
-		seen[viewer] = Roll.d20(s.rng) + mod < int(g.get("dc", 10))
+		var who := Sheet.who(s, data, viewer) if mon.is_empty() else {"monster": mon}
+		seen[viewer] = not Roll.check(s, data, who, {"skill": "investigation", "dc": int(g.get("dc", 10))})["ok"]  # Investigation against the look
 		g["seen"] = seen
 	return bool(seen[viewer])
 

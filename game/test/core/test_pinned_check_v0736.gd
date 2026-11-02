@@ -34,10 +34,10 @@ func test_the_menu_lists_skills_by_name_then_the_abilities() -> void:
 
 func test_a_bare_ability_check_rolls_the_modifier() -> void:
 	var str_mod := CharacterRules.mod(CharacterRules.ability(s.character, "str"))
-	assert_int(CheckEngine.bonus_for(s.character, {"ability": "str"}, data)).is_equal(str_mod)
-	var r := CheckEngine.roll(data["rules"], s.rng, {"ability": "str", "dc_tier": "easy"}, str_mod, "c-1")
+	var r := CheckEngine.card(s, data, {"ability": "str", "dc_tier": "easy"})
 	assert_bool(r.has("error")).is_false()
-	assert_dict(CheckEngine.roll(data["rules"], s.rng, {"ability": "luck", "dc_tier": "easy"}, 0, "c-2")).contains_keys(["error"])
+	assert_int(int(r["bonus"])).is_equal(str_mod + DifficultyRules.bonus(s, data))
+	assert_dict(CheckEngine.card(s, data, {"ability": "luck", "dc_tier": "easy"})).contains_keys(["error"])
 
 
 func test_the_engine_rolls_the_pinned_skill_not_the_masters() -> void:

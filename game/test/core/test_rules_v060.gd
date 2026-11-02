@@ -74,17 +74,18 @@ func test_conditions_give_disadvantage_or_auto_fail_and_end_with_rests() -> void
 	ConditionRules.add(c, "poisoned", "short_rest")
 	var mods := ConditionRules.check_mods(c, data, {"skill": "perception"})
 	assert_array(mods["disadvantage"]).contains(["poisoned"])
-	var rng := RandomNumberGenerator.new()
 	for i in 50:
-		rng.seed = i
-		var r := CheckEngine.roll(data["rules"], rng, {"skill": "perception", "dc_tier": "easy", "disadvantage_reason": "отравлен"}, 0, "c")
+		s.rng.seed = i
+		var r := CheckEngine.card(s, data, {"skill": "perception", "dc_tier": "easy"})  # the poison is the engine's reason
 		assert_int(r["nat"]).is_equal(mini(r["rolls"][0], r["rolls"][1]))
-	var both := CheckEngine.roll(data["rules"], rng, {"skill": "perception", "dc_tier": "easy", "advantage_reason": "свет", "disadvantage_reason": "отравлен"}, 0, "c")
+		assert_str(str(r["disadvantage_reason"])).contains("отравлен")
+	var both := CheckEngine.card(s, data, {"skill": "perception", "dc_tier": "easy", "advantage_reason": "свет"})
 	assert_array(both["rolls"]).has_size(1)
 	ConditionRules.add(c, "paralyzed", "long_rest")
 	assert_array(ConditionRules.check_mods(c, data, {"save": "dex"})["auto_fail"]).contains(["paralyzed"])
-	var fail := CheckEngine.roll(data["rules"], rng, {"save": "dex", "dc_tier": "very_easy", "auto_fail_reason": "парализован"}, 30, "c")
+	var fail := CheckEngine.card(s, data, {"save": "dex", "dc_tier": "very_easy"})
 	assert_bool(fail["success"]).is_false()
+	assert_str(str(fail["auto_fail_reason"])).contains("парализ")
 	ExplorationRules.short_rest(s, data, 0, s.rng)
 	assert_bool(ConditionRules.has(c, "poisoned")).is_false()
 	assert_bool(ConditionRules.has(c, "paralyzed")).is_true()

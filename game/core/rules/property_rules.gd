@@ -474,16 +474,12 @@ static func shift_hours(s: GameSession, data: Dictionary, id: String) -> int:
 	return int(kind(s, data, id).get("hours", 8))
 
 
-static func _shift_bonus(s: GameSession, data: Dictionary, id: String) -> int:
-	return CheckEngine.bonus_for(s.character, {"skill": str(kind(s, data, id).get("skill", "athletics"))}) + DifficultyRules.bonus(s, data)
-
-
 static func shift_dc(data: Dictionary) -> int:
 	return int(data["rules"]["dc_tiers"]["medium"])
 
 
 static func shift_chance(s: GameSession, data: Dictionary, id: String) -> int:
-	return Roll.chance(_shift_bonus(s, data, id), shift_dc(data), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(kind(s, data, id).get("skill", "athletics")), "dc": shift_dc(data)})
 
 
 ## The hero's own shift in the place (the time passed): the day's income × the outcome, straight to the purse.

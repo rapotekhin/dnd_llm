@@ -18,19 +18,19 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 
 ## The NPC's bonus against `skill` and its name: {bonus, why}, or {} when the skill is not a social one.
-static func resistance(data: Dictionary, npc: Dictionary, skill: String) -> Dictionary:
+static func resistance(s: GameSession, data: Dictionary, npc_id: String, skill: String) -> Dictionary:
 	var against := str(cfg(data)["contests"].get(skill, ""))
 	if against.is_empty():
 		return {}
-	var sheet := Sheet.of(null, data, npc)
+	var who := Sheet.who(s, data, npc_id)
 	match against:
 		"insight":
-			return {"bonus": int(sheet["skills"]["insight"]), "why": "Проницательность"}
+			return {"bonus": Sheet.skill(s, data, who, "insight"), "why": "Проницательность"}
 		"deception":
-			return {"bonus": int(sheet["skills"]["deception"]), "why": "Обман"}
+			return {"bonus": Sheet.skill(s, data, who, "deception"), "why": "Обман"}
 		"wis_save":
-			return {"bonus": int(sheet["saves"]["wis"]), "why": "спасбросок Мудрости"}
-	return {"bonus": CharacterRules.mod(int(sheet["abilities"].get("wis", 10))), "why": "Мудрость"}
+			return {"bonus": Sheet.save_bonus(s, data, who, "wis"), "why": "спасбросок Мудрости"}
+	return {"bonus": Sheet.ability_mod(s, data, who, "wis"), "why": "Мудрость"}
 
 
 ## The engine's DC for a social check against `npc_id`: {dc, reason}, or {} when the engine's tier stays.
@@ -38,7 +38,7 @@ static func dc(s: GameSession, data: Dictionary, npc_id: String, skill: String, 
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
 	if npc.is_empty() or not (data["rules"]["dc_tiers"] as Dictionary).has(tier):
 		return {}
-	var r := resistance(data, npc, skill)
+	var r := resistance(s, data, npc_id, skill)
 	if r.is_empty():
 		return {}
 	var c := cfg(data)

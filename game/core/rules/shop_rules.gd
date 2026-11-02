@@ -319,16 +319,12 @@ static func shift_hours(data: Dictionary) -> int:
 	return int(cfg(data)["shift"]["hours"])
 
 
-static func _shift_bonus(s: GameSession, data: Dictionary) -> int:
-	return CheckEngine.bonus_for(s.character, {"skill": str(cfg(data)["shift"]["skill"])}) + DifficultyRules.bonus(s, data)
-
-
 static func shift_dc(data: Dictionary) -> int:
 	return int(data["rules"]["dc_tiers"][str(cfg(data)["shift"]["dc_tier"])])
 
 
 static func shift_chance(s: GameSession, data: Dictionary) -> int:
-	return Roll.chance(_shift_bonus(s, data), shift_dc(data), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(cfg(data)["shift"]["skill"]), "dc": shift_dc(data)})
 
 
 ## The hero behind the counter (the time passed): a check, its outcome × the shift's buyers, the takings to the purse.

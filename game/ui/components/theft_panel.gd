@@ -54,14 +54,13 @@ func _rebuild() -> void:
 	if list.is_empty():
 		_box.add_child(_label(tr("THEFT_EMPTY"), UiTheme.MUTED_LABEL))
 		return
-	var bonus := int(s.character.get("skills", {}).get("sleight_of_hand", 0))
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 	for e: Dictionary in list:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		_box.add_child(row)
 		var name := str(e["name"]) + ((" (%s)" % Money.format(int(e["cp"]))) if int(e.get("cp", 0)) > 0 else "")
-		var chance := CombatRules.hit_chance(bonus, int(e["dc"]), s.sneaking, false)
+		var chance := TheftRules.chance(s, data, npc_id, e)
 		row.add_child(_label(tr("THEFT_ROW").format({"name": name, "dc": int(e["dc"]), "p": chance})))
 		var b := Button.new()
 		b.name = "Steal_" + str(e["id"])

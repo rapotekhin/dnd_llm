@@ -424,33 +424,17 @@ static func close(s: GameSession) -> void:
 # --- surprise and stealth (v0.6.2) -------------------------------------------------------------------
 
 
-## A Stealth roll of anybody: d20 + skill, disadvantage from armor (stealth_disadvantage) and conditions. {total, nat, note}.
+## A Stealth roll of anybody (Roll.check: armour, statuses, the dark, things). {total, nat, note}.
 static func stealth_roll(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> Dictionary:
-	var hero := Sheet.is_hero(who)
-	var c := Sheet.holder(s, who)
-	var armor := ItemRules.def_of(data["items"], s.items, str(c.get("equipped", {}).get("armor", "")))
-	var dis := bool(armor.get("armor", {}).get("stealth_disadvantage", false))
-	var why: Array[String] = []
-	if dis:
-		why.append("доспех")
-	var mods := ConditionRules.check_mods(c, data, {"skill": "stealth"})
-	if not (mods["disadvantage"] as Array).is_empty():
-		dis = true
-		why.append("состояние")
-	var boots := CharacterRules.carried_with(c, data, s.items, "stealth_advantage")
-	var shade := SightRules.in_dark(s, data, who)  # the author's rule for the dark, v0.8.4.1; a Fog Cloud gives only the Hide itself
-	var adv := not boots.is_empty() or not shade.is_empty()
-	var rolls := Roll.hero_dice(s, adv, dis) if hero else Roll.dice(s.rng, adv, dis)
-	var nat := Roll.kept(rolls, adv, dis)
+	var r := Roll.check(s, data, who, {"what": TranslationServer.translate("SKILL_STEALTH"), "skill": "stealth"})
+	var adv: Array = r["adv"]
+	var dis: Array = r["dis"]
 	var note := ""
-	if dis and not adv:
-		note = " (с помехой: %s)" % ", ".join(why)
-	elif adv and not dis:
-		note = " (с преимуществом: %s)" % (boots if not boots.is_empty() else shade)
-	var bonus := Sheet.skill(s, data, who, "stealth")
-	if hero:
-		RollParts.note(s, TranslationServer.translate("SKILL_STEALTH"), rolls, nat, RollParts.cached(c, data, "skill", "stealth", s.items), bonus)
-	return {"total": nat + bonus, "nat": nat, "note": note}
+	if not dis.is_empty() and adv.is_empty():
+		note = " (с помехой: %s)" % ", ".join(dis)
+	elif not adv.is_empty() and dis.is_empty():
+		note = " (с преимуществом: %s)" % ", ".join(adv)
+	return {"total": int(r["total"]), "nat": int(r["nat"]), "note": note}
 
 
 ## Surprise at the start (5e): a sneaking player rolls Stealth once — every foe whose passive Perception it meets is
@@ -485,11 +469,11 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 			player(s)["hidden"] = true
 			lines.append("Враги не знают, где %s" % who)
 	elif bool(source.get("ambush", false)):
-		var passive := int(s.character.get("passive_perception", 10))
+		var passive := Sheet.passive(s, data, Sheet.HERO)
 		var all_hidden: bool = source.get("hidden", true)
 		if not source.has("hidden"):
 			for id: String in foes:
-				if Roll.d20(s.rng) + Sheet.skill(s, data, fighter(s, id), "stealth") < passive:
+				if int(stealth_roll(s, data, fighter(s, id))["total"]) < passive:
 					all_hidden = false
 		if all_hidden:
 			player(s)["surprised"] = true
@@ -924,6 +908,17 @@ static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, 
 			_condition_on(s, data, spell_id, spec, t, timer, lines)
 
 
+## What a save against a spell of conditions is against: «charm,magic», for the traits that resist it.
+static func _spell_tag(spell_id: String, conds: Array) -> String:
+	var tags: Array[String] = ["magic"]
+	if spell_id == "charm_person":
+		tags.append("fighting")  # 5e: advantage when you or your companions are fighting it (v0.7.13)
+	for pair: Array in [["charmed", "charm"], ["frightened", "fear"], ["unconscious", "sleep"], ["paralyzed", "paralysis"]]:
+		if conds.has(pair[0]):
+			tags.push_front(str(pair[1]))
+	return ",".join(PackedStringArray(tags))
+
+
 ## The spell's conditions try one target: a word of Command, what keeps them off, the save. Lines into `lines`.
 static func _condition_on(s: GameSession, data: Dictionary, spell_id: String, spec: Dictionary, t: Dictionary, timer: Dictionary, lines: Array[String]) -> void:
 	var sp: Dictionary = data["spells"][spell_id]
@@ -931,13 +926,7 @@ static func _condition_on(s: GameSession, data: Dictionary, spell_id: String, sp
 	var word := MonsterRules._command_word(s, spec, t)
 	var conds: Array = word.get("conditions", spec["conditions"])
 	var said := " — «%s»" % word["word"] if not word.is_empty() else ""
-	var tags: Array[String] = ["magic"]
-	if spell_id == "charm_person":
-		tags.append("fighting")  # 5e: advantage when you or your companions are fighting it (v0.7.13)
-	for pair: Array in [["charmed", "charm"], ["frightened", "fear"], ["unconscious", "sleep"], ["paralyzed", "paralysis"]]:
-		if conds.has(pair[0]):
-			tags.push_front(str(pair[1]))
-	var tag := ",".join(PackedStringArray(tags))
+	var tag := _spell_tag(spell_id, conds)
 	var no := _resists(s, data, t, spec, conds, tag)
 	if not no.is_empty():
 		lines.append("%s: на %s не действует%s" % [name, t["name"], "" if no == "-" else " — " + no])
@@ -1616,6 +1605,25 @@ static func _tussle_bonus(s: GameSession, data: Dictionary, t: Dictionary) -> in
 	return maxi(Sheet.skill(s, data, t, "athletics"), Sheet.skill(s, data, t, "acrobatics"))
 
 
+## The better of `skills` for `who`: the first on a tie.
+static func better(s: GameSession, data: Dictionary, who: Dictionary, skills: Array) -> String:
+	var best := str(skills[0])
+	for sk: Variant in skills:
+		if Sheet.skill(s, data, who, str(sk)) > Sheet.skill(s, data, who, best):
+			best = str(sk)
+	return best
+
+
+## A contest of two (5e), each on its own road (Roll.check: statuses, Lucky, the dark): `f` rolls `skill`, `t` the better
+## of `against`; one who cannot act does not resist (0). {mine, theirs, won}: a tie goes to `f`, a failed one loses.
+static func contest(s: GameSession, data: Dictionary, f: Dictionary, skill: String, t: Dictionary, against: Array) -> Dictionary:
+	var r := Roll.check(s, data, f, {"skill": skill, "quiet": true})
+	var theirs := 0
+	if not t.is_empty() and Attack.up(s, t) and not ConditionRules.incapacitated(Sheet.holder(s, t)):
+		theirs = int(Roll.check(s, data, t, {"skill": better(s, data, t, against), "quiet": true})["total"])
+	return {"mine": int(r["total"]), "theirs": theirs, "won": (r["fail"] as Array).is_empty() and int(r["total"]) >= theirs}
+
+
 ## The contest of a grapple or a shove: Athletics of `f` against the better of `t`, who does not resist when it cannot act (5e:
 ## it fails Str / Dex). `what` says the attempt, `cond` is what it lays; "" — nothing to be immune to. True when it won.
 static func tussle(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, what: String, cond: String, lines: Array[String]) -> bool:
@@ -1623,13 +1631,10 @@ static func tussle(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 	var it := Sheet.holder(s, t)
 	points(s, data, f)["attacked"] = true
 	f["rage_kept"] = true
-	var mods := ConditionRules.check_mods(me, data, {"skill": "athletics"})
 	lines.append_array(ConditionRules.end_invisibility_on_attack(me, data))
-	var dis := not (mods["disadvantage"] as Array).is_empty()
-	var mine := Roll.kept(Roll.of(s, f, false, dis), false, dis) + Sheet.skill(s, data, f, "athletics")
-	var theirs := 0 if ConditionRules.incapacitated(it) or not Attack.up(s, t) else Roll.d20(s.rng) + _tussle_bonus(s, data, t)
-	var won := (mods["auto_fail"] as Array).is_empty() and mine >= theirs
-	lines.append("%s %s %s: Атлетика %d против %d — %s" % [me.get("name", ""), what, it.get("name", ""), mine, theirs, "успех" if won else "не выходит"])
+	var c := contest(s, data, f, "athletics", t, ["athletics", "acrobatics"])
+	var won := bool(c["won"])
+	lines.append("%s %s %s: Атлетика %d против %d — %s" % [me.get("name", ""), what, it.get("name", ""), int(c["mine"]), int(c["theirs"]), "успех" if won else "не выходит"])
 	if won and not cond.is_empty() and immune_to(data, t, cond):
 		lines.append("%s: на него это не действует" % it.get("name", ""))
 		return false
@@ -1910,7 +1915,6 @@ static func _fire(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[
 ## A foe's own turn, its start already made (_begin_turn): morale, a call for help, flight, else the AI.
 static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	var p := player(s)
-	var m := Sheet.template(data, f)
 	if not Attack.up(s, f):
 		return
 	if s.combat.has("arena"):  # v0.7.45: no flight from the ring; a bout to surrender ends when a side gives up
@@ -1920,8 +1924,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	# Morale: once, at half HP or less.
 	if not bool(f.get("morale", false)) and int(f["hp"]) * 2 <= int(f["max_hp"]):
 		f["morale"] = true
-		var wis := int(m["saves"].get("wis", CharacterRules.mod(int(m["abilities"].get("wis", 10)))))
-		if Roll.d20(s.rng) + wis < int(cfg(data)["morale_dc"]):
+		if not Sheet.saved(s, data, f, "wis", int(cfg(data)["morale_dc"]), "fear"):  # its own save: Brave, the statuses
 			if _intelligent(data, f) and FightGrid.touching(f, p):
 				lines.append_array(Acts.one("surrender").go(s, data, f))
 				return
@@ -2342,10 +2345,8 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 			var pr := dice_range(str(cspec["pool"]))
 			return {"pool": true, "min": pr[0], "max": pr[1], "condition": conds, "chance": 100, "adv": [], "dis": []}
 		var sab := str(sp["save"]["ability"])
-		var tm := Sheet.template(data, t)
-		var sbonus := int(tm["saves"].get(sab, CharacterRules.mod(int(tm["abilities"].get(sab, 10)))))
-		return {"save": true, "condition": conds, "chance": 100 - hit_chance(sbonus, spell_dc(s), false, false),
-			"adv": [], "dis": [], "immune": not _can_be(data, t, cspec)}
+		var held := Roll.chance_of(s, data, t, {"save": sab, "dc": spell_dc(s), "tag": _spell_tag(spell_id, cspec["conditions"])})
+		return {"save": true, "condition": conds, "chance": 100 - held, "adv": [], "dis": [], "immune": not _can_be(data, t, cspec)}
 	var c := s.character
 	var level := int(c.get("level", 1))
 	var r := dice_range(_spell_dice(sp, maxi(slot, int(sp.get("level", 0))), level))
@@ -2373,16 +2374,9 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 		out["dis"] = dis
 		out["chance"] = hit_chance(spell_attack(s), ac_of(t) + cover_of(s, data, player(s), t), not adv.is_empty(), not dis.is_empty())
 	elif sp.has("save"):
-		var ab := str(sp["save"]["ability"])
-		var m := Sheet.template(data, t)
-		var bonus := int(m["saves"].get(ab, CharacterRules.mod(int(m["abilities"].get(ab, 10)))))
 		out["save"] = true
 		out["half"] = str(sp["save"]["success"]) == "half"
-		var by_status := ConditionRules.check_mods(t, data, {"save": ab})
-		if not (by_status["auto_fail"] as Array).is_empty():
-			out["chance"] = 100
-		else:
-			out["chance"] = 100 - hit_chance(bonus, spell_dc(s), false, not (by_status["disadvantage"] as Array).is_empty())
+		out["chance"] = 100 - Roll.chance_of(s, data, t, {"save": str(sp["save"]["ability"]), "dc": spell_dc(s), "tag": "magic"})  # its own save
 	return out
 
 

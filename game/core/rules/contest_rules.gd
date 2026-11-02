@@ -43,23 +43,22 @@ static func hero_params(data: Dictionary, k: Dictionary, cheat: bool = false) ->
 
 ## The NPC's bonus for a check {skill | ability | save} by its SRD template, with its gaming set when the pack gives it
 ## one (`tools`): {bonus, why}.
-static func npc_bonus(data: Dictionary, npc_id: String, check: Dictionary, tool: String = "") -> Dictionary:
+static func npc_bonus(s: GameSession, data: Dictionary, npc_id: String, check: Dictionary, tool: String = "") -> Dictionary:
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
-	var m := Sheet.template(data, npc)
-	var sheet := Sheet.of(null, data, npc)
+	var who := Sheet.who(s, data, npc_id)
 	var bonus := 0
 	var why := ""
 	if check.has("skill"):
 		why = str(check["skill"])
-		bonus = int(sheet["skills"].get(why, 0))
+		bonus = Sheet.skill(s, data, who, why)
 	elif check.has("save"):
 		why = str(check["save"])
-		bonus = int(sheet["saves"].get(why, 0))
+		bonus = Sheet.save_bonus(s, data, who, why)
 	else:
 		why = str(check.get("ability", "wis"))
-		bonus = CharacterRules.mod(int(sheet["abilities"].get(why, 10)))
+		bonus = Sheet.ability_mod(s, data, who, why)
 	if not tool.is_empty() and (npc.get("tools", []) as Array).has(tool):
-		bonus += 2 + int(maxf(float(m.get("cr", 0)), 1.0) - 1.0) / 4
+		bonus += 2 + int(maxf(float(Sheet.template(data, npc).get("cr", 0)), 1.0) - 1.0) / 4
 	return {"bonus": bonus, "why": why}
 
 
@@ -77,11 +76,11 @@ static func chance(hero: int, npc: int) -> int:
 static func odds(s: GameSession, data: Dictionary, npc_id: String, kind_id: String, cheat: bool = false) -> Dictionary:
 	var k := kind(data, kind_id)
 	var p := hero_params(data, k, cheat)
-	var t := BackgroundRules.tool_check(s.character, data, str(p.get("tool", "")), str(p.get("skill", "")))
-	var hero := CheckEngine.bonus_for(s.character, p, data) + int(t["bonus"]) + DifficultyRules.bonus(s, data)
+	var mine := CheckEngine.preview(s, data, p)  # the roll's own spec: the tool, the statuses, the game's difficulty
+	var hero := int(mine.get("bonus", 0))
 	var check: Dictionary = {"skill": str(k.get("cheat_against", "insight"))} if cheat else k.get("npc_check", k.get("check", {}))
-	var npc := int(npc_bonus(data, npc_id, check, "" if cheat else str(k.get("tool", "")))["bonus"])
-	return {"hero": hero, "npc": npc, "chance": chance(hero, npc)}
+	var npc := int(npc_bonus(s, data, npc_id, check, "" if cheat else str(k.get("tool", "")))["bonus"])
+	return {"hero": hero, "npc": npc, "chance": 0 if int(mine.get("chance", 0)) == 0 else chance(hero, npc)}
 
 
 static func state(s: GameSession) -> Dictionary:
@@ -184,9 +183,11 @@ static func npc_roll(s: GameSession, data: Dictionary, cheat: bool = false) -> D
 	var st := state(s)
 	var k := kind(data, str(st["kind"]))
 	var check: Dictionary = {"skill": str(k.get("cheat_against", "insight"))} if cheat else k.get("npc_check", k.get("check", {}))
-	var b := npc_bonus(data, str(st["npc"]), check, "" if cheat else str(k.get("tool", "")))
-	var nat := Roll.d20(s.rng)
-	return {"total": nat + int(b["bonus"]), "nat": nat, "bonus": int(b["bonus"])}
+	var b := npc_bonus(s, data, str(st["npc"]), check, "" if cheat else str(k.get("tool", "")))
+	# the round compares totals: a save's statuses count as a check's
+	var spec := {"what": str(k.get("name", "")), "bonus": int(b["bonus"]), ("skill" if check.has("skill") else "ability"): str(b["why"])}
+	var r := Roll.check(s, data, Sheet.who(s, data, str(st["npc"])), spec)
+	return {"total": int(r["total"]), "nat": int(r["nat"]), "bonus": int(r["bonus"])}
 
 
 ## One round by the hero's total against the NPC's: lines; the game ends when a side reaches the kind's wins.

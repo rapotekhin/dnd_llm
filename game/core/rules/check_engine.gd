@@ -1,13 +1,116 @@
 class_name CheckEngine
 extends RefCounted
-## Ability checks and saves for engine.check (ADR-0008 §2): the engine owns the DC number, the roll and
-## the result; the LLM only names the skill and a DC tier. Locks of failed checks — ExplorationRules.
+## What a check of anybody has beside its sheet (v0.8.4.14, ADR-0016): the statuses, the light and the weather, a Rage,
+## armour and things, spells, a pet, a tool, a terrain, the listener of the words. Roll.check rolls by it and
+## Roll.chance_of shows the chance by it, so a window and the roll cannot part ways.
+## The engine.check card of the hero (ADR-0008 §2): the engine owns the DC number, the roll and the result; the LLM only
+## names the skill and a DC tier. Locks of failed checks — ExplorationRules.
 
 
-## `params` = engine.check params; `bonus` = the character's total bonus. An engine-set `dc` (haggling: DC by the
-## merchant's attitude, TradeRules) replaces the tier number; the master never sends one.
-## Returns the engine.check result, or {"error": text} for bad params.
-static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictionary, bonus: int, check_id: String) -> Dictionary:
+## What this moment gives a check of `who` by `spec` (a skill or a bare ability; `adv_why`, `dis_why`, `fail_why` — the
+## caller's reasons, a text or a list; `tool`, `target_id`, `sense`): {adv, dis, fail: [why], parts: [{label, value}]}.
+## `peek` — a chance shown before the roll: a spell's die counts by its mean and is not spent.
+static func situation(s: GameSession, data: Dictionary, who: Dictionary, spec: Dictionary, peek := false) -> Dictionary:
+	var me := Sheet.holder(s, who)
+	var skill := str(spec.get("skill", "")) if spec.get("skill") != null else ""
+	var adv := whys(spec.get("adv_why"))
+	var dis := whys(spec.get("dis_why"))
+	var fail := whys(spec.get("fail_why"))
+	var parts: Array[Dictionary] = []
+	var mods := ConditionRules.check_mods(me, data, spec)
+	dis.append_array((mods["disadvantage"] as Array).map(func(id: Variant) -> String: return ConditionRules.why(data, str(id))))
+	fail.append_array((mods["auto_fail"] as Array).map(func(id: Variant) -> String: return ConditionRules.why(data, str(id))))
+	match skill:
+		"perception":
+			if TimeRules.dark(s, data, who):
+				dis.append("темнота")
+			elif not WeatherRules.obscure_why(s, data).is_empty():
+				dis.append(WeatherRules.obscure_why(s, data))  # fog, a downpour (v0.7.46)
+			_add(adv, CharacterRules.carried_with(me, data, s.items, "perception_advantage"))  # v0.7.12
+		"investigation":
+			_add(adv, CharacterRules.carried_with(me, data, s.items, "investigation_advantage"))
+		"stealth":
+			if bool(ItemRules.def_of(data["items"], s.items, str(me.get("equipped", {}).get("armor", ""))).get("armor", {}).get("stealth_disadvantage", false)):
+				dis.append("доспех")
+			_add(adv, CharacterRules.carried_with(me, data, s.items, "stealth_advantage"))
+			_add(adv, SightRules.in_dark(s, data, who))  # the author's rule for the dark, v0.8.4.1
+		"athletics":
+			if Sheet.raging(s, who):
+				adv.append("ярость")
+	var ab := str(data["rules"]["skills"].get(skill, spec.get("ability", "")))
+	for e: Dictionary in ConditionRules.effects(me):
+		if str(e.get("ability_adv", "")) == ab and not ab.is_empty():  # Enhance Ability (v0.7.13.3)
+			_add(adv, str(e.get("source", {}).get("name", "")))
+		if not skill.is_empty() and (str(e.get("check_adv", "")) == skill or (bool(e.get("enlarged", false)) and skill == "athletics")):
+			_add(adv, str(e.get("source", {}).get("name", "зелье")))
+	if Sheet.is_hero(who):
+		_add(adv, PetRules.helper(s, data, skill))  # v0.7.43: a dog's nose, a hawk's eye — the hero's pets
+	var tool := str(spec.get("tool", "")) if spec.get("tool") != null else ""
+	var t := BackgroundRules.tool_check(me, data, tool, skill)
+	_add(fail, str(t["auto_fail"]))
+	_add(adv, str(t["advantage"]))
+	RollParts.add(parts, str(t["note"]), int(t["bonus"]))
+	RollParts.add(parts, "исследователь природы", _terrain(s, data, me, skill))
+	var listener := listener(s, data, spec)
+	if not listener.is_empty() and Sheet.is_hero(who):  # v0.7.11: the words reach only who understands them
+		var gate := LanguageRules.check_gate(me, data, skill, LanguageRules.npc_understands(me, data, data["world"]["npcs"][listener]))
+		_add(fail, str(gate.get("auto_fail", "")))
+		_add(dis, str(gate.get("disadvantage", "")))
+		var charm := SpellEffects.npc_spells(s, listener)
+		if ExplorationRules.SOCIAL_SKILLS.has(skill) and not charm.is_empty():
+			adv.append("очарован: " + str(charm[0]["source"]["name"]))  # Charm Person and the like (v0.7.22.3)
+	var die := SpellEffects.die(s, me, "check", peek)  # Guidance (v0.7.13.1)
+	parts.append_array(die["parts"])
+	return {"adv": adv, "dis": dis, "fail": fail, "parts": parts}
+
+
+## The NPC a check speaks to: its target, or the one the hero talks with ("" — none, or a dead one).
+static func listener(s: GameSession, data: Dictionary, spec: Dictionary) -> String:
+	var tid := str(spec.get("target_id", "")) if spec.get("target_id") != null else ""
+	if tid.is_empty() and s.in_conversation():
+		tid = s.npc_id
+	return tid if (data["world"].get("npcs", {}) as Dictionary).has(tid) and not Being.dead(s, tid) else ""
+
+
+## Natural Explorer (v0.7.10): in the ranger's favored terrain (`terrain` of the location) a proficient INT or WIS skill
+## gets the proficiency bonus twice.
+static func _terrain(s: GameSession, data: Dictionary, me: Dictionary, skill: String) -> int:
+	if skill.is_empty() or not str(data["rules"]["skills"].get(skill, "")) in ["int", "wis"]:
+		return 0
+	var w := WorldView.new(data["world"])
+	var terrain := str(w.location(w.location_id(s.room_id)).get("terrain", ""))
+	if terrain.is_empty() or not CharacterRules.has_feature(me, "natural_explorer_" + terrain):
+		return 0
+	var proficient := (me.get("skill_profs", []) as Array).has(skill) or CharacterRules.has_feature(me, "skill_prof_" + skill)
+	return CharacterRules.prof_bonus(me, data) if proficient else 0
+
+
+## Reasons as a list: a text joined by «, », or a list.
+static func whys(v: Variant) -> Array[String]:
+	var out: Array[String] = []
+	if v is Array:
+		for x: Variant in v:
+			_add(out, str(x))
+	elif v != null:
+		for x: String in str(v).split(", ", false):
+			_add(out, x)
+	return out
+
+
+static func _add(out: Array[String], why: String) -> void:
+	if not why.is_empty() and not out.has(why):
+		out.append(why)
+
+
+# --- the engine.check card ---------------------------------------------------------------------------------------
+
+
+## The hero's check by engine.check `params` (skill, save or a bare ability, dc_tier; an engine-set `dc`; the reasons
+## `advantage_reason` — the master's, with a reason the card shows —, `disadvantage_reason`, `auto_fail_reason`; `tool`,
+## `target_id`, `sense`): {spec, dc_reason} for Roll.check, or {error}. `parts` — the bonus's labelled parts when the
+## rule has its own (thieves' tools); the game's difficulty is added to them.
+static func spec(s: GameSession, data: Dictionary, params: Dictionary, parts: Array[Dictionary] = []) -> Dictionary:
+	var rules: Dictionary = data["rules"]
 	var tiers: Dictionary = rules["dc_tiers"]
 	var tier := str(params.get("dc_tier", ""))
 	if not tiers.has(tier):
@@ -23,45 +126,50 @@ static func roll(rules: Dictionary, rng: RandomNumberGenerator, params: Dictiona
 		return {"error": "unknown skill: %s" % skill}
 	if not save.is_empty() and not (rules["saves"] as Array).has(save):
 		return {"error": "unknown save: %s" % save}
+	var out := {"quiet": true}  # the card is its own breakdown
+	for k: String in ["skill", "save", "ability", "tool", "target_id", "sense"]:
+		if params.get(k) != null and not str(params.get(k, "")).is_empty():
+			out[k] = str(params[k])
+	out["adv_why"] = params.get("advantage_reason")
+	out["dis_why"] = params.get("disadvantage_reason")
+	out["fail_why"] = params.get("auto_fail_reason")
+	var dc_reason := str(params.get("dc_reason", ""))
+	out["dc"] = int(params["dc"]) if params.has("dc") else int(tiers[tier])
+	if not params.has("dc"):
+		var by_npc := SocialRules.dc(s, data, listener(s, data, params), skill, tier)  # v0.7.15.1: the listener's template
+		if not by_npc.is_empty():
+			out["dc"] = int(by_npc["dc"])
+			dc_reason = str(by_npc["reason"])
+	if not parts.is_empty():
+		var all := parts.duplicate()
+		RollParts.difficulty(s, data, all)
+		out["parts"] = all
+	return {"spec": out, "dc_reason": dc_reason}
 
-	var lucky := bool(params.get("reroll_ones", false))  # a halfling's Lucky (v0.7.10)
-	# The LLM may suggest a situational advantage, but only with a reason that the card shows. Disadvantage comes
-	# from the engine (conditions, ConditionRules); both cancel out (5e).
-	var adv := params.get("advantage_reason") != null and not str(params.get("advantage_reason", "")).is_empty()
-	var dis := not str(params.get("disadvantage_reason", "")).is_empty()
-	var rolls := Roll.dice(rng, adv, dis, lucky)
-	var nat := Roll.kept(rolls, adv, dis)
-	var dc := int(params["dc"]) if params.has("dc") else int(tiers[tier])
-	var total := nat + bonus
-	var success := Roll.succeeds(nat, total, dc)
-	var auto_fail := str(params.get("auto_fail_reason", ""))
-	if not auto_fail.is_empty():
-		success = false
-	var out := {
-		"check_id": check_id,
-		"rolls": rolls,
-		"bonus": bonus,
-		"total": total,
-		"dc": dc,
-		"success": success,
-		"nat": nat,
-		"blocked": false,
-	}
-	if dis:
-		out["disadvantage_reason"] = str(params["disadvantage_reason"])
-	if not str(params.get("dc_reason", "")).is_empty():  # the NPC's SRD template set the DC (v0.7.15.1)
-		out["dc_reason"] = str(params["dc_reason"])
-	if not auto_fail.is_empty():
-		out["auto_fail_reason"] = auto_fail
+
+## The engine.check result of the hero, by `params` as in `spec`: {check_id, rolls, nat, bonus, total, dc, success,
+## blocked, parts} and the reasons and notes the card shows, or {error}.
+static func card(s: GameSession, data: Dictionary, params: Dictionary, parts: Array[Dictionary] = []) -> Dictionary:
+	var sp := spec(s, data, params, parts)
+	if sp.has("error"):
+		return sp
+	var r := Roll.check(s, data, Sheet.HERO, sp["spec"])
+	var out := {"check_id": s.next_check_id(), "rolls": r["rolls"], "bonus": r["bonus"], "total": r["total"], "dc": r["dc"],
+		"success": r["ok"], "nat": r["nat"], "blocked": false, "parts": r["parts"]}
+	for k: String in ["adv", "dis", "fail"]:
+		if not (r[k] as Array).is_empty():
+			out[{"adv": "advantage_reason", "dis": "disadvantage_reason", "fail": "auto_fail_reason"}[k]] = ", ".join(r[k])
+	if not str(sp["dc_reason"]).is_empty():
+		out["dc_reason"] = sp["dc_reason"]
+	if DifficultyRules.bonus(s, data) != 0:
+		out["difficulty_note"] = DifficultyRules.note(s, data)
 	return out
 
 
-## The character's total bonus for engine.check params: skill bonus or save bonus from the sheet.
-static func bonus_for(character: Dictionary, params: Dictionary, data: Dictionary = {}) -> int:
-	var skill := str(params.get("skill", "")) if params.get("skill") != null else ""
-	if not skill.is_empty():
-		return int(character.get("skills", {}).get(skill, 0))
-	if not str(params.get("ability", "")).is_empty():
-		return CharacterRules.ability_check_bonus(character, data, str(params["ability"]))
-	var save := str(params.get("save", "")) if params.get("save") != null else ""
-	return int(character.get("saves", {}).get(save, 0))
+## What the engine would roll for `params`: {dc, bonus, chance (%), dc_reason}, or {error}. Nothing is rolled or spent.
+static func preview(s: GameSession, data: Dictionary, params: Dictionary) -> Dictionary:
+	var sp := spec(s, data, params)
+	if sp.has("error"):
+		return sp
+	var odds := Roll.odds(s, data, Sheet.HERO, sp["spec"])
+	return {"dc": int(sp["spec"]["dc"]), "bonus": odds["bonus"], "chance": odds["chance"], "dc_reason": sp["dc_reason"]}

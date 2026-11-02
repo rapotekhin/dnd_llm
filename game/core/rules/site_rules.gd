@@ -101,12 +101,8 @@ static func ask_dc(s: GameSession, data: Dictionary, npc_id: String) -> int:
 	return int(d.get("dc", int(data["rules"]["dc_tiers"][str(p["tier"])])))
 
 
-static func ask_bonus(s: GameSession, data: Dictionary) -> int:
-	return CheckEngine.bonus_for(s.character, {"skill": str(cfg(data)["permit"]["skill"])}) + DifficultyRules.bonus(s, data)
-
-
 static func ask_chance(s: GameSession, data: Dictionary, npc_id: String) -> int:
-	return Roll.chance(ask_bonus(s, data), ask_dc(s, data, npc_id), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(cfg(data)["permit"]["skill"]), "dc": ask_dc(s, data, npc_id), "target_id": npc_id})
 
 
 ## «Попросить впустить»: Persuasion against the owner; yes — all its private sites open until a quarrel, no — again
@@ -114,7 +110,7 @@ static func ask_chance(s: GameSession, data: Dictionary, npc_id: String) -> int:
 static func ask(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	var skill := str(cfg(data)["permit"]["skill"])
 	var dc := ask_dc(s, data, npc_id)
-	var r := Roll.hero(s, data, {"what": "Просьба впустить", "skill": skill, "dc": dc})
+	var r := Roll.hero(s, data, {"what": "Просьба впустить", "skill": skill, "dc": dc, "target_id": npc_id})
 	var nat := int(r["nat"])
 	var b := int(r["bonus"])
 	var ok := bool(r["ok"])

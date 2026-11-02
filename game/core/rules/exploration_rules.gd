@@ -452,6 +452,18 @@ static func can_short_rest(s: GameSession, data: Dictionary) -> String:
 	return ""
 
 
+## What one hit die of the hero heals: {die, con, mult} (Periapt of Wound Closure: twice as much, v0.7.12).
+static func hit_die(c: Dictionary, data: Dictionary) -> Dictionary:
+	return {"die": int(CharacterRules.class_def(c, data).get("hit_die", 8)), "con": CharacterRules.mod(CharacterRules.ability(c, "con")),
+		"mult": 2 if CharacterRules.item_prop(c, "wound_closure") else 1}
+
+
+## The HP `dice` hit dice are likely to give back now (the short rest window): their mean, no more than the wounds.
+static func short_rest_expect(c: Dictionary, data: Dictionary, dice: int) -> int:
+	var hd := hit_die(c, data)
+	return mini(int(c["max_hp"]) - int(c["hp"]), roundi(dice * maxf(0.0, int(hd["die"]) / 2.0 + 0.5 + int(hd["con"])) * int(hd["mult"])))
+
+
 ## A short rest (an hour): spends up to `dice` hit dice (each die + CON, at least 0), gives back short-rest feature
 ## uses and Pact Magic slots, ends short-rest conditions. Returns the chat lines.
 static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomNumberGenerator) -> Array[String]:
@@ -459,13 +471,12 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 	var lines: Array[String] = ["Короткий отдых"]
 	var n := clampi(dice, 0, hit_dice_left(c))
 	if n > 0:
-		var die := int(CharacterRules.class_def(c, data).get("hit_die", 8))
-		var con := CharacterRules.mod(CharacterRules.ability(c, "con"))
+		var hd := hit_die(c, data)
+		var die := int(hd["die"])
 		var healed := 0
 		for i in n:
-			healed += maxi(0, rng.randi_range(1, die) + con)
-		if CharacterRules.item_prop(c, "wound_closure"):  # Periapt of Wound Closure: hit dice heal twice as much (v0.7.12)
-			healed *= 2
+			healed += maxi(0, rng.randi_range(1, die) + int(hd["con"]))
+		healed *= int(hd["mult"])
 		var before := int(c["hp"])
 		c["hp"] = mini(int(c["max_hp"]), before + healed)
 		Stock.spend(c, "hit_dice", n)

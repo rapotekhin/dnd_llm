@@ -72,8 +72,7 @@ func _stops(s: GameSession, data: Dictionary, f: Dictionary, spell: String, slot
 	if circle <= slot:
 		lines.append("%s: %s — «%s» срывается" % [f["name"], what, name])
 		return true
-	var mod := Sheet.ability_mod(s, data, f, CombatRules.spell_ability(s))
-	var total := Roll.d20(s.rng) + mod
-	var ok := total >= 10 + circle
-	lines.append("%s: %s — проверка %d против Сл %d — %s" % [f["name"], what, total, 10 + circle, "«%s» срывается" % name if ok else "не вышло"])
+	var r := Roll.check(s, data, f, {"what": what, "ability": CombatRules.spell_ability(s), "dc": 10 + circle})
+	var ok := bool(r["ok"])
+	lines.append("%s: %s — проверка %d против Сл %d — %s" % [f["name"], what, int(r["total"]), 10 + circle, "«%s» срывается" % name if ok else "не вышло"])
 	return ok

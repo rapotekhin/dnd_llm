@@ -810,12 +810,11 @@ func test_calm_emotions_lowers_their_weapons() -> void:
 
 func test_suggestion_rolls_the_npcs_save() -> void:
 	var s := _hero("bard_yas", 3)
-	var npc: Dictionary = data["world"]["npcs"]["npc_innkeeper"]
 	s.character["spell_dc"] = 40
-	var r := SpellEffects.npc_save(s, data, "suggestion", npc)
+	var r := SpellEffects.npc_save(s, data, "suggestion", "npc_innkeeper")
 	assert_bool(bool(r["ok"])).is_true()
 	assert_str(str(r["line"])).contains("поддался")
-	assert_bool(SpellEffects.npc_save(s, data, "animal_friendship", npc)["ok"]).is_false()
+	assert_bool(SpellEffects.npc_save(s, data, "animal_friendship", "npc_innkeeper")["ok"]).is_false()
 
 
 func test_goodberry_and_create_food_feed_the_camp() -> void:

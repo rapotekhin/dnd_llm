@@ -285,12 +285,8 @@ static func confess_dc(s: GameSession, data: Dictionary, npc_id: String) -> int:
 	return int(d["dc"]) if not d.is_empty() else int(data["rules"]["dc_tiers"][str(k["tier"])])
 
 
-static func _bonus(s: GameSession, data: Dictionary) -> int:
-	return CheckEngine.bonus_for(s.character, {"skill": str(cfg(data)["confess"]["skill"])}) + DifficultyRules.bonus(s, data)
-
-
 static func confess_chance(s: GameSession, data: Dictionary, npc_id: String) -> int:
-	return Roll.chance(_bonus(s, data), confess_dc(s, data, npc_id), false)
+	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(cfg(data)["confess"]["skill"]), "dc": confess_dc(s, data, npc_id), "target_id": npc_id})
 
 
 ## A confession: a Persuasion check against the NPC; yes — a romance, no — a step back and a wait. Lines.
@@ -299,7 +295,7 @@ static func confess(s: GameSession, data: Dictionary, npc_id: String) -> Array[S
 	var k: Dictionary = cfg(data)["confess"]
 	var who := npc_name(s, data, npc_id)
 	var dc := confess_dc(s, data, npc_id)
-	var r := Roll.hero(s, data, {"what": "Признание", "skill": str(k["skill"]), "dc": dc})
+	var r := Roll.hero(s, data, {"what": "Признание", "skill": str(k["skill"]), "dc": dc, "target_id": npc_id})
 	var nat := int(r["nat"])
 	var b := int(r["bonus"])
 	var ok := bool(r["ok"])

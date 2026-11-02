@@ -145,7 +145,8 @@ func test_ac_and_speed_read_one_way() -> void:
 func test_contests_and_talk_read_the_same_sheet() -> void:
 	var npc_id: String = data["world"]["npcs"].keys()[0]
 	var npc: Dictionary = data["world"]["npcs"][npc_id]
-	var sheet := Sheet.of(null, data, npc)
-	assert_int(int(ContestRules.npc_bonus(data, npc_id, {"skill": "insight"})["bonus"])).is_equal(int(sheet["skills"]["insight"]))
+	var s := TestUtils.new_session()
+	var sheet := Sheet.of(s, data, npc)
+	assert_int(int(ContestRules.npc_bonus(s, data, npc_id, {"skill": "insight"})["bonus"])).is_equal(int(sheet["skills"]["insight"]))
 	var skill: String = (SocialRules.cfg(data)["contests"] as Dictionary).keys()[0]
-	assert_dict(SocialRules.resistance(data, npc, skill)).is_not_empty()
+	assert_dict(SocialRules.resistance(s, data, npc_id, skill)).is_not_empty()
