@@ -29,9 +29,9 @@ static func here(s: GameSession, data: Dictionary, room_id: String = "") -> Arra
 	var out: Array[String] = []
 	if not data["rules"].has("wilds"):
 		return out
-	for t: Variant in _room(s, data, room_id).get("tags", []):
-		if cfg(data)["kinds"].has(str(t)):
-			out.append(str(t))
+	for t: String in SceneRules.tags(s, data["world"], s.room_id if room_id.is_empty() else room_id):
+		if cfg(data)["kinds"].has(t):
+			out.append(t)
 	return out
 
 
@@ -274,7 +274,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		return {"reason": "op — deplete (зверь ушёл, рыба ушла), restore (вернулся) или add (новые угодья в комнате)"}
 	if op != "add" and not here(s, data, rid).has(k):
 		return {"reason": "в %s нет угодий %s — op add" % [SceneRules.room(s, data["world"], rid).get("name", rid), k]}
-	if op == "add" and bool(SceneRules.room(s, data["world"], rid).get("indoor", false)):
+	if op == "add" and SceneRules.indoor(s, data["world"], rid):
 		return {"reason": "угодья — не под крышей"}
 	var name := str(kind(data, k)["name"])
 	return {"plan": {"ground": k, "room_id": rid, "op": op, "cause": cause.left(160)},

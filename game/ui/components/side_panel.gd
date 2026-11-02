@@ -279,7 +279,7 @@ func _rebuild() -> void:
 	_hp_bar(c)
 	var next_xp := LevelUp.xp_for(Catalog.data, int(c.get("level", 1)) + 1)
 	var xp := tr("SIDE_HERO_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}) if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data) else ""
-	_line(" · ".join([Money.format(int(c["gold_cp"])), xp].filter(func(x: String) -> bool: return not x.is_empty())), true).name = "HeroMoney"
+	_line(" · ".join([Money.format(Ledger.balance(s)), xp].filter(func(x: String) -> bool: return not x.is_empty())), true).name = "HeroMoney"
 	_festival_line(s, world)
 	if NeedRules.on(s):
 		_needs(s, can_act)

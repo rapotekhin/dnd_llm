@@ -324,7 +324,7 @@ static func plan_beast(s: GameSession, data: Dictionary, e: Dictionary) -> Dicti
 	var gen := WorldGen.generated(s)
 	if TimeRules.today(s, gen, "beasts_made") >= int(cfg(data)["make"]["per_day"]):
 		return {"reason": "сегодня зверей для приручения уже хватит — завтра"}
-	if WorldView.new(data["world"]).flag(room, "indoor") and SIZES.find(str(data["monsters"][monster].get("size", ""))) > SIZES.find("small"):
+	if SceneRules.indoor(s, data["world"], room) and SIZES.find(str(data["monsters"][monster].get("size", ""))) > SIZES.find("small"):
 		return {"reason": "крупный зверь под крышей — только снаружи"}
 	return {"plan": {"monster": monster, "room": room, "cause": cause.left(80)}, "summary": "Здесь: %s — можно приручить" % data["monsters"][monster]["name"]}
 

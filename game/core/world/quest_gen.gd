@@ -986,7 +986,7 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 		var room := str(refs.get(str(it["room"]), it["room"]))
 		var sec := {"id": "q_%s_%s" % [qid, it["key"]], "dc": int(it["dc"]), "text": it["text"], "skill": str(it.get("skill", "perception")),
 			"loot": {"items": {str(it["id"]): 1}}}
-		_add_secret(gen, data, room, sec)
+		Overlay.add(s, data, EntityRef.room(room), "secrets", sec)
 		refs["secret:item:" + str(it["key"])] = "%s:%s" % [room, sec["id"]]
 	q["items"] = known
 	for e: Dictionary in content["encounters"]:
@@ -1002,10 +1002,9 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 			enc["boss"] = true
 		refs["enc:" + str(e["key"])] = enc["id"]
 		if gen.get("rooms", {}).has(room):  # a room the act made: the fight is its own
-			gen["rooms"][room]["encounter"] = enc
-			data["world"]["rooms"][room]["encounter"] = enc.duplicate(true)
+			Overlay.put(s, data, EntityRef.room(room), "encounter", enc)
 		else:  # a known room: a variant of it while the quest is taken (SceneRules)
-			add_variant(gen, data, room, {"vid": enc["id"], "when": {"quest": qid}, "encounter": enc})
+			Overlay.add(s, data, EntityRef.room(room), "variants", {"vid": enc["id"], "when": {"quest": qid}, "encounter": enc})
 	var steps: Array = (plan["steps"] as Array).duplicate(true)
 	for st: Dictionary in steps:
 		st["act"] = int(plan["act"])
@@ -1020,7 +1019,7 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 				ch["attitude"] = att
 			for x: Dictionary in ch.get("changes", []):
 				var room := str(refs.get(str(x["room"]), x["room"]))
-				add_variant(gen, data, room, {"vid": ch["flag"], "when": {"flag": ch["flag"]}, "description": x["description"]})
+				Overlay.add(s, data, EntityRef.room(room), "variants", {"vid": ch["flag"], "when": {"flag": ch["flag"]}, "description": x["description"]})
 			ch.erase("changes")
 			ch.erase("value_cp")
 		var w: Dictionary = st["when"]
@@ -1062,27 +1061,3 @@ static func _resolve(st: Dictionary, refs: Dictionary, key: String) -> void:
 			w[k] = refs[str(w[k])]
 
 
-static func _add_secret(gen: Dictionary, data: Dictionary, room: String, sec: Dictionary) -> void:
-	if gen.get("rooms", {}).has(room):
-		(gen["rooms"][room]["secrets"] as Array).append(sec)
-	else:
-		if not gen.has("room_secrets"):
-			gen["room_secrets"] = {}
-		var list: Array = gen["room_secrets"].get(room, [])
-		list.append(sec)
-		gen["room_secrets"][room] = list
-	var secrets: Array = data["world"]["rooms"][room].get("secrets", [])
-	secrets.append(sec.duplicate(true))
-	data["world"]["rooms"][room]["secrets"] = secrets
-
-
-## A variant of a room this game added (a quest's fight, a choice's change): in the save and in this game's world.
-static func add_variant(gen: Dictionary, data: Dictionary, room: String, v: Dictionary) -> void:
-	if not gen.has("room_variants"):
-		gen["room_variants"] = {}
-	var list: Array = gen["room_variants"].get(room, [])
-	list.append(v.duplicate(true))
-	gen["room_variants"][room] = list
-	var mine: Array = data["world"]["rooms"][room].get("variants", [])
-	mine.append(v.duplicate(true))
-	data["world"]["rooms"][room]["variants"] = mine

@@ -168,7 +168,7 @@ static func start(s: GameSession, data: Dictionary, npc_id: String, kind_id: Str
 		cp = clampi(cp, int(cfg(data)["stake"]["min_cp"]), int(stake["max"]))
 	else:
 		cp = int(stake["cp"])
-	if int(s.character["gold_cp"]) < cp:
+	if Ledger.balance(s) < cp:
 		return {"reason": "у героя нет %s на ставку" % Money.format(cp)}
 	Ledger.add(s, -cp, "contest:start")
 	if str(stake["kind"]) == "coins":

@@ -447,7 +447,7 @@ static func fine(s: GameSession, data: Dictionary, loc: String) -> int:
 		var notable := tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(t))
 		total += int(kind_of(data, crime).get("fine_cp", cfg(data)["fine_cp"])) * (int(cfg(data)["notable_mult"]) if notable else 1)
 	if not BondRules.intercessor(s, data, loc).is_empty():  # v0.7.31: a friend of the law speaks for the hero
-		total = total * int(BondRules.cfg(data)["perks"]["intercede"]["fine_pct"]) / 100
+		total = Price.share(total, float(BondRules.cfg(data)["perks"]["intercede"]["fine_pct"]))
 	return total + debts
 
 
@@ -507,7 +507,7 @@ static func talk_tier(s: GameSession, data: Dictionary, loc: String) -> String:
 
 
 static func bribe(s: GameSession, data: Dictionary, loc: String) -> int:
-	return int(fine(s, data, loc) * float(cfg(data)["bribe_share"]))
+	return Price.share(fine(s, data, loc), float(cfg(data)["bribe_share"]) * 100.0)
 
 
 ## "" when the arrest can be answered this way: pay / stocks / resist / persuade / deceive / intimidate / bribe.
@@ -515,11 +515,11 @@ static func can_answer(s: GameSession, data: Dictionary, how: String) -> String:
 	if not held(s):
 		return "CRIME_NOT_HELD"
 	var loc := WorldView.new(data["world"]).location_id(s.room_id)
-	if how == "pay" and int(s.character["gold_cp"]) < fine(s, data, loc):
+	if how == "pay" and Ledger.balance(s) < fine(s, data, loc):
 		return "CRIME_NO_MONEY"
 	if (TALK.has(how) or how in ["bribe", "resist"]) and s.arrest_tried.has(how):
 		return "CRIME_TRIED"
-	if how == "bribe" and int(s.character["gold_cp"]) < bribe(s, data, loc):
+	if how == "bribe" and Ledger.balance(s) < bribe(s, data, loc):
 		return "CRIME_NO_MONEY"
 	return ""
 

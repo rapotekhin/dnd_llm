@@ -225,7 +225,7 @@ static func elect_why(s: GameSession, data: Dictionary, id: String) -> String:
 	var st: Dictionary = view(s.character).get(id, {})
 	if st.has("election_day") and s.day - int(st["election_day"]) < int(cfg(data)["election"]["retry_days"]):
 		return "OFFICE_ELECTION_SOON"
-	if int(s.character.get("gold_cp", 0)) < int(cfg(data)["election"]["fee_cp"]):
+	if Ledger.balance(s) < int(cfg(data)["election"]["fee_cp"]):
 		return "TRADE_ERR_NO_COINS"
 	return ""
 
@@ -254,7 +254,7 @@ static func buy_why(s: GameSession, data: Dictionary, id: String) -> String:
 		return why
 	if not (def(data, id).get("ways", []) as Array).has("buy"):
 		return "OFFICE_NOT_THIS_WAY"
-	if int(s.character.get("gold_cp", 0)) < int(def(data, id).get("price_cp", 0)):
+	if Ledger.balance(s) < int(def(data, id).get("price_cp", 0)):
 		return "TRADE_ERR_NO_COINS"
 	return ""
 

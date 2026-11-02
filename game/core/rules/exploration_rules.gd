@@ -296,7 +296,7 @@ static func again_line(s: GameSession, data: Dictionary, room_id: String) -> Str
 ## where nobody rents rooms), an entertainer after a show.
 static func rest_place(world: Dictionary, room_id: String, s: GameSession = null, data: Dictionary = {}) -> Dictionary:
 	var room: Dictionary = SceneRules.room(s, world, room_id)  # a variant may make it safe (v0.7.14.1)
-	var free := s != null and not data.is_empty() and BackgroundRules.free_rest(s, data, room)
+	var free := s != null and not data.is_empty() and BackgroundRules.free_rest(s, data, room_id)
 	var safe: Variant = room.get("safe")
 	if s != null and not data.is_empty() and data["rules"].has("property") and not PropertyRules.bed_at(s, data, room_id).is_empty():
 		return {"cost_cp": 0, "free": true, "own": true}  # v0.7.39.5: one's own bed, in any room of the place
@@ -307,7 +307,7 @@ static func rest_place(world: Dictionary, room_id: String, s: GameSession = null
 	if s != null and not data.is_empty() and FaithRules.shelter(s, data, room_id):  # v0.7.49: the shrine's bed
 		return {"cost_cp": 0, "free": true}
 	if not (safe is Dictionary):
-		return {"cost_cp": 0, "free": true} if free and (room.get("tags", []) as Array).has("temple") else {}
+		return {"cost_cp": 0, "free": true} if free and SceneRules.tags(s, world, room_id).has("temple") else {}
 	return {"cost_cp": 0 if free else int(safe.get("rest_cost_cp", 0)), "free": free}
 
 
@@ -320,7 +320,7 @@ static func can_rest(s: GameSession, world: Dictionary, data: Dictionary = {}) -
 		return "REST_IN_CONVERSATION"
 	if int(place["cost_cp"]) > 0 and not data.is_empty() and CrimeRules.wanted_at(s, data, s.room_id):
 		return "REST_WANTED"  # v0.7.22.18 (#30): no paid bed for the wanted
-	if int(s.character.get("gold_cp", 0)) < int(place["cost_cp"]):
+	if Ledger.balance(s) < int(place["cost_cp"]):
 		return "REST_NO_MONEY"
 	return ""
 

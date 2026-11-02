@@ -43,9 +43,7 @@ static func _with_world(base: Dictionary, own: Dictionary) -> Dictionary:
 
 
 static func all(s: GameSession, data: Dictionary) -> Dictionary:
-	var out: Dictionary = (data["world"].get("properties", {}) as Dictionary).duplicate()
-	out.merge(WorldGen.generated(s).get("properties", {}), true)
-	return out
+	return WorldGen.registry(s, data, "properties")
 
 
 static func prop(s: GameSession, data: Dictionary, id: String) -> Dictionary:
@@ -84,7 +82,7 @@ static func main_room(s: GameSession, data: Dictionary, id: String) -> String:
 	var w := WorldView.new(data["world"])
 	var list := rooms(s, data, id)
 	for r: String in list:
-		if w.flag(r, "indoor"):
+		if SceneRules.indoor(s, data["world"], r):
 			return r
 	var entry := w.site_entry(str(prop(s, data, id).get("site", "")))
 	return entry if not entry.is_empty() else (list[0] if not list.is_empty() else "")
@@ -210,7 +208,7 @@ static func buy_why(s: GameSession, data: Dictionary, id: String) -> String:
 		return "PROPERTY_SELLER_AWAY"
 	if SocialRules.refuses(s, data, seller(s, data, id)):
 		return "TALK_REFUSED"
-	if int(s.character.get("gold_cp", 0)) < price(s, data, id):
+	if Ledger.balance(s) < price(s, data, id):
 		return "PROPERTY_NO_MONEY"
 	return ""
 
@@ -241,7 +239,7 @@ static func deed_why(s: GameSession, data: Dictionary, id: String) -> String:
 		return "PROPERTY_DEED_DONE"
 	if registry_here(s, data).is_empty():
 		return "PROPERTY_NO_REGISTRY"
-	if int(s.character.get("gold_cp", 0)) < deed_fee(s, data, id):
+	if Ledger.balance(s) < deed_fee(s, data, id):
 		return "PROPERTY_NO_MONEY"
 	return ""
 
@@ -342,7 +340,7 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int) -> Dict
 		var from_till := mini(wages, int(st["cash"]))
 		st["cash"] = int(st["cash"]) - from_till
 		var rest := wages - from_till
-		if rest > 0 and int(c.get("gold_cp", 0)) >= rest:
+		if rest > 0 and Ledger.balance(s) >= rest:
 			Ledger.add(s, -rest, "property:day")
 		elif rest > 0:  # the hired go, the last hired first, until the rest is paid
 			for h: Dictionary in staff(s, id).duplicate():
@@ -398,8 +396,8 @@ static func collect(s: GameSession, data: Dictionary, id: String) -> Array[Strin
 		parts.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, item), int(st["stock"][item])])
 	st["stock"] = {}
 	FoodRules.sync(s, data)
-	if Ledger.owed(s, "tax:" + id) > 0 and int(c["gold_cp"]) > 0:
-		var pay := mini(Ledger.owed(s, "tax:" + id), int(c["gold_cp"]))
+	if Ledger.owed(s, "tax:" + id) > 0 and Ledger.balance(s) > 0:
+		var pay := mini(Ledger.owed(s, "tax:" + id), Ledger.balance(s))
 		Ledger.add(s, -pay, "property:collect")
 		Ledger.settle(s, "tax:" + id, pay)
 		parts.append("долг по налогу −%s" % Money.format(pay))
@@ -415,12 +413,12 @@ static func pay_tax_why(s: GameSession, data: Dictionary, id: String) -> String:
 		return "PROPERTY_NO_DEBT"
 	if here(s, data) != id and registry_here(s, data).is_empty():
 		return "PROPERTY_TAX_WHERE"
-	return "PROPERTY_NO_MONEY" if int(s.character.get("gold_cp", 0)) <= 0 else ""
+	return "PROPERTY_NO_MONEY" if Ledger.balance(s) <= 0 else ""
 
 
 ## As much of the debt as the purse holds. Lines.
 static func pay_tax(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	var pay := mini(Ledger.owed(s, "tax:" + id), int(s.character.get("gold_cp", 0)))
+	var pay := mini(Ledger.owed(s, "tax:" + id), Ledger.balance(s))
 	Ledger.add(s, -pay, "property:pay_tax")
 	return _pay_debt(s, data, id, pay)
 
@@ -500,7 +498,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 
 
 static func repair_cost(s: GameSession, data: Dictionary, id: String, points: float) -> int:
-	return roundi(price(s, data, id) * float(cfg(data)["repair_pct"]) / 100.0 * points / 100.0)
+	return Price.rounded(Price.mod(Price.mod(Price.start(price(s, data, id)), "", float(cfg(data)["repair_pct"])), "", points))
 
 
 static func repair_hours(s: GameSession, data: Dictionary, id: String) -> int:
@@ -514,7 +512,7 @@ static func repair_why(s: GameSession, data: Dictionary, id: String) -> String:
 	var lost := 100.0 - float(state(s.character)[id].get("cond", 100.0))
 	if lost < 1.0:
 		return "PROPERTY_WHOLE"
-	if int(s.character.get("gold_cp", 0)) < repair_cost(s, data, id, lost):
+	if Ledger.balance(s) < repair_cost(s, data, id, lost):
 		return "PROPERTY_NO_MONEY"
 	return ""
 
@@ -592,7 +590,7 @@ static func worker_why(s: GameSession, data: Dictionary, id: String, role: Strin
 		return "SHOP_STALL_LAPSED"
 	if int(p["taken"]) >= int(p["max"]):
 		return "PROPERTY_HAS_WORKER"
-	if int(s.character.get("gold_cp", 0)) < int(p["wage"]):
+	if Ledger.balance(s) < int(p["wage"]):
 		return "PROPERTY_NO_MONEY"
 	return ""
 
@@ -612,11 +610,9 @@ static func hire_worker(s: GameSession, data: Dictionary, id: String, role: Stri
 
 ## A hired hand: a person the engine makes from the pack's names in the room. {npc, name} or {reason}.
 static func make_hand(s: GameSession, data: Dictionary, role: String, room: String, place: String) -> Dictionary:
-	var gender := "male" if s.rng.randf() < 0.5 else "female"
-	var names: Array = data.get("pack", {}).get("names", {}).get(gender, [])
-	var taken: Array = data["world"]["npcs"].values().map(func(n: Dictionary) -> String: return str(n.get("name", "")))
-	var free: Array = names.filter(func(n: Variant) -> bool: return not taken.has(str(n)))
-	var name := str(free[s.rng.randi_range(0, free.size() - 1)]) if not free.is_empty() else ("Работник" if gender == "male" else "Работница")
+	var p := WorldGen.new_person(s, data)
+	var gender := str(p["gender"])
+	var name := str(p["name"]) if not str(p["name"]).is_empty() else ("Работник" if gender == "male" else "Работница")
 	var plan := WorldGen.plan_npc(s, data, {"name": name, "role": role, "room_id": room, "gender": gender,
 		"description": "%s в %s" % [_upper_first(role), place], "personality": "работящий, держится за место"}, true)
 	if plan.has("reason"):
@@ -628,12 +624,8 @@ static func make_hand(s: GameSession, data: Dictionary, role: String, room: Stri
 
 ## A hired hand leaves the world: out of its room, no room of its own.
 static func dismiss_hand(s: GameSession, data: Dictionary, npc: String) -> void:
-	var gen := WorldGen.generated(s)
-	var room := str(gen.get("npc_rooms", {}).get(npc, ""))
-	if data["world"]["rooms"].has(room):
-		(data["world"]["rooms"][room].get("npcs", []) as Array).erase(npc)
-	if gen.get("npc_rooms", {}).has(npc):
-		gen["npc_rooms"][npc] = ""
+	if WorldGen.generated(s).get("npc_rooms", {}).has(npc):
+		WorldGen.place_npc(s, data, npc, "")
 
 
 ## The hand of the object by its person (an NPC id or a creature id), {} — none.
@@ -745,9 +737,9 @@ static func upgrade_why(s: GameSession, data: Dictionary, id: String, up: String
 		return "PROPERTY_NO_UPGRADE"
 	if has_upgrade(s.character, id, up) or not pending(s.character, id, up).is_empty():
 		return "PROPERTY_UPGRADE_HAS"
-	if bool(u.get("indoor", false)) and not WorldView.new(data["world"]).flag(main_room(s, data, id), "indoor"):
+	if bool(u.get("indoor", false)) and not SceneRules.indoor(s, data["world"], main_room(s, data, id)):
 		return "PROPERTY_NEEDS_ROOF"
-	if int(s.character.get("gold_cp", 0)) < int(u["price_cp"]):
+	if Ledger.balance(s) < int(u["price_cp"]):
 		return "PROPERTY_NO_MONEY"
 	return ""
 
@@ -793,7 +785,7 @@ static func build_why(s: GameSession, data: Dictionary, id: String, b: String) -
 		return "PROPERTY_NOT_LAND"
 	if not (state(s.character)[id].get("building", {}) as Dictionary).is_empty():
 		return "PROPERTY_BUILDING"
-	if int(s.character.get("gold_cp", 0)) < int(cfg(data)["build"][b]["price_cp"]):
+	if Ledger.balance(s) < int(cfg(data)["build"][b]["price_cp"]):
 		return "PROPERTY_NO_MONEY"
 	return ""
 
@@ -919,7 +911,7 @@ static func rent_why(s: GameSession, data: Dictionary, npc_id: String, k: String
 		return "SHOP_NO_SPOT"
 	if not (rent["days"] as Array).any(func(d: Variant) -> bool: return int(d) == days):
 		return "SHOP_NO_SERVICE"
-	return "SHOP_NO_MONEY" if int(s.character.get("gold_cp", 0)) < days * int(rent["cp_day"]) else ""
+	return "SHOP_NO_MONEY" if Ledger.balance(s) < days * int(rent["cp_day"]) else ""
 
 
 static func rent(s: GameSession, data: Dictionary, _npc_id: String, k: String, days: int) -> Array[String]:
@@ -964,7 +956,7 @@ static func animal_why(s: GameSession, data: Dictionary, npc_id: String, monster
 		return "PROPERTY_SELLER_AWAY"
 	if SocialRules.refuses(s, data, npc_id):
 		return "TALK_REFUSED"
-	if int(s.character.get("gold_cp", 0)) < int(animal_cfg(data, monster)["price_cp"]):
+	if Ledger.balance(s) < int(animal_cfg(data, monster)["price_cp"]):
 		return "PROPERTY_NO_MONEY"
 	return ""
 
@@ -1014,7 +1006,7 @@ static func _animals(s: GameSession, data: Dictionary) -> Array[String]:
 				pass
 			elif not pid.is_empty() and int(st.get("cash", 0)) >= feed:
 				st["cash"] = int(st["cash"]) - feed
-			elif int(s.character.get("gold_cp", 0)) >= feed and MountRules.fed_by_purse(s, data, cr):  # v0.7.42: left alone — no feed
+			elif Ledger.balance(s) >= feed and MountRules.fed_by_purse(s, data, cr):  # v0.7.42: left alone — no feed
 				Ledger.add(s, -feed, "property:animals")
 			else:
 				cr["hungry"] = int(cr.get("hungry", 0)) + 1
@@ -1128,7 +1120,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	elif not all_kinds.has(k):
 		return {"reason": "place_kind — из %s, или new_kind — свой вид места" % ", ".join(all_kinds.keys())}
 	var inc := int(spec.get("income_cp_day", 0)) if spec.get("income_cp_day") != null else 0
-	var cap := roundi(p * float(m["income_day_pct"]) / 100.0)
+	var cap := Price.share(p, float(m["income_day_pct"]))
 	if (inc if inc > 0 else int(all_kinds[k].get("income_cp_day", 0))) > cap:
 		return {"reason": "доход не больше %s в день при такой цене — подними цену или убавь доход" % Money.format(cap)}
 	if inc > 0 and int(all_kinds[k].get("income_cp_day", 0)) <= 0:

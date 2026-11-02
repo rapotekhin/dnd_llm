@@ -289,8 +289,7 @@ static func passive_bonus(data: Dictionary, f: Dictionary) -> int:
 static func sunlit(s: GameSession, data: Dictionary) -> bool:
 	if not TimeRules.part(s, data) in ["morning", "day"]:
 		return false
-	var w := WorldView.new(data["world"])
-	return not w.flag(s.room_id, "indoor")
+	return not SceneRules.indoor(s, data["world"], s.room_id)
 
 
 ## `t` was caught by surprise in this first round.

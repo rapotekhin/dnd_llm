@@ -42,13 +42,9 @@ static func _state(s: GameSession) -> Dictionary:
 	return gen["weather"]
 
 
-static func _world(s: GameSession, data: Dictionary) -> Dictionary:
-	return WorldGen.merged(data["world"], WorldGen.generated(s))
-
-
 ## The pack's table {kind: weight} of a location today, {} when it has no weather.
 static func table(s: GameSession, data: Dictionary, loc_id: String) -> Dictionary:
-	var loc: Dictionary = _world(s, data)["locations"].get(loc_id, {})
+	var loc: Dictionary = data["world"]["locations"].get(loc_id, {})
 	if loc.is_empty() or bool(loc.get("indoor", false)):
 		return {}
 	var by_season: Dictionary = data["world"].get("weather", {}).get("terrain", {}).get(str(loc.get("terrain", "")), {})
@@ -84,7 +80,7 @@ static func sync(s: GameSession, data: Dictionary) -> Array[String]:
 	if int(st["day"]) != s.day:
 		var was: Dictionary = st["by_loc"] if int(st["day"]) == s.day - 1 else {}
 		var now := {}
-		for id: String in _world(s, data)["locations"]:
+		for id: String in data["world"]["locations"]:
 			var t := table(s, data, id)
 			if not t.is_empty():
 				now[id] = _roll(s, data, id, t, str(was.get(id, "")))
@@ -134,8 +130,7 @@ static func at(s: GameSession, data: Dictionary, loc_id: String) -> String:
 ## Is the hero's room under a roof (an indoor room or location)?
 static func sheltered(s: GameSession, data: Dictionary, room_id: String = "") -> bool:
 	var rid := s.room_id if room_id.is_empty() else room_id
-	var w := WorldView.new(data["world"])
-	return bool(SceneRules.room(s, data["world"], rid).get("indoor", w.flag(rid, "indoor")))
+	return SceneRules.indoor(s, data["world"], rid)
 
 
 ## The kind the hero stands in: "" under a roof or where there is no weather.

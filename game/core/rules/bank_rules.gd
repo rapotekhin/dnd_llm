@@ -112,7 +112,7 @@ static func deposit_why(s: GameSession, data: Dictionary, npc_id: String, term: 
 		return "BANK_NO_SERVICE"
 	if amount < int(cfg(data)["deposit"]["min_cp"]):
 		return "BANK_TOO_LITTLE"
-	if int(s.character.get("gold_cp", 0)) < amount:
+	if Ledger.balance(s) < amount:
 		return "BANK_NO_MONEY"
 	return ""
 
@@ -233,7 +233,7 @@ static func repay_why(s: GameSession, data: Dictionary, cid: String) -> String:
 		return "BANK_NO_CONTRACT"
 	if not _present(s, data, str(k["bank"])):
 		return "BANK_NOT_HERE"
-	return "BANK_NO_MONEY" if int(s.character.get("gold_cp", 0)) < int(k["balance"]) else ""
+	return "BANK_NO_MONEY" if Ledger.balance(s) < int(k["balance"]) else ""
 
 
 static func repay(s: GameSession, data: Dictionary, cid: String) -> Array[String]:
@@ -283,7 +283,7 @@ static func vault_why(s: GameSession, data: Dictionary, npc_id: String, dir: Str
 	if not why.is_empty():
 		return why
 	var v := vault(s.character, npc_id)
-	var gold := int(s.character.get("gold_cp", 0))
+	var gold := Ledger.balance(s)
 	if dir == "out" and Ledger.owed(s, "vault:" + npc_id) > gold + int(v["coins"]):
 		return "BANK_OWED"
 	if item_id.is_empty():

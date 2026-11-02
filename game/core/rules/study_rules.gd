@@ -33,10 +33,7 @@ static func state(c: Dictionary) -> Dictionary:
 
 
 static func courses(s: GameSession, data: Dictionary) -> Dictionary:
-	var out: Dictionary = (data["world"].get("courses", {}) as Dictionary).duplicate()
-	if s != null:
-		out.merge(WorldGen.generated(s).get("courses", {}), true)
-	return out
+	return WorldGen.registry(s, data, "courses")
 
 
 static func course(s: GameSession, data: Dictionary, id: String) -> Dictionary:
@@ -355,7 +352,7 @@ static func enroll_why(s: GameSession, data: Dictionary, id: String) -> String:
 		return "STUDY_NEED_EXAM"
 	if not _ok(s, data, id):
 		return "STUDY_REQUIREMENTS"
-	return "STUDY_NO_MONEY" if int(s.character.get("gold_cp", 0)) < fee(s, data, id) else ""
+	return "STUDY_NO_MONEY" if Ledger.balance(s) < fee(s, data, id) else ""
 
 
 static func enroll(s: GameSession, data: Dictionary, id: String) -> Array[String]:

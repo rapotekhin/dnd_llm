@@ -126,7 +126,7 @@ func _rebuild() -> void:
 	_to_talk.disabled = not can_act
 	_leave.disabled = not can_act
 	_purse.text = tr("TRADE_PURSE").format({"coins": Money.format(Gear.coins(s, data, _npc))})
-	_coins.text = tr("TRADE_COINS").format({"coins": Money.format(int(s.character["gold_cp"]))})
+	_coins.text = tr("TRADE_COINS").format({"coins": Money.format(Ledger.balance(s))})
 	var pct := int(m["haggle_pct"])
 	var states: Array[String] = []
 	if pct > 0:

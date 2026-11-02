@@ -16,9 +16,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 
 static func all(s: GameSession, data: Dictionary) -> Dictionary:
-	var out: Dictionary = (data["world"].get("orgs", {}) as Dictionary).duplicate()
-	out.merge(WorldGen.generated(s).get("orgs", {}))
-	return out
+	return WorldGen.registry(s, data, "orgs")
 
 
 static func def(s: GameSession, data: Dictionary, id: String) -> Dictionary:
@@ -191,7 +189,7 @@ static func entry_why(s: GameSession, data: Dictionary, id: String) -> String:
 		return "ORG_ENTRY_OPEN"
 	if view(s.character).get(id, {}).has("expelled_day"):
 		return "ORG_ENTRY_REFUSED"
-	if int(s.character.get("gold_cp", 0)) < int(d["entry_cp"]):
+	if Ledger.balance(s) < int(d["entry_cp"]):
 		return "MSG_NO_MONEY"
 	return ""
 
@@ -344,7 +342,7 @@ static func on_heist(s: GameSession, data: Dictionary, heist: String, outcome: S
 		return lines
 	var before := rank(s, data, id)
 	st["points"] = maxi(0, int(st.get("points", 0)) + int(data["rules"]["underworld"]["rep"].get(outcome, 0)))
-	var cut := money_cp * int(def(s, data, id).get("cut_pct", 0)) / 100
+	var cut := Price.share(money_cp, float(def(s, data, id).get("cut_pct", 0)))
 	if cut > 0:
 		Ledger.owe(s, "cut:" + id, "cut", cut, str(def(s, data, id).get("head", "")))
 		lines.append("Доля братству «%s»: %s — отдать главе за %d дн." % [org_name(s, data, id), Money.format(cut), int(cfg(data)["owe_days"])])
@@ -359,7 +357,7 @@ static func pay_why(s: GameSession, data: Dictionary, id: String) -> String:
 		return "ORG_NOTHING_OWED"
 	if not BondRules.here(s, data, str(def(s, data, id).get("head", ""))):
 		return "BOND_NOT_HERE"
-	if int(s.character.get("gold_cp", 0)) < owed:
+	if Ledger.balance(s) < owed:
 		return "TRADE_ERR_NO_COINS"
 	return ""
 
@@ -389,7 +387,7 @@ static func found_why(s: GameSession, data: Dictionary, name: String, place: Str
 		return "ORG_NO_PLACE"
 	if name.strip_edges().is_empty():
 		return "ORG_BAD_NAME"
-	if int(s.character.get("gold_cp", 0)) < int(cfg(data)["found_fee_cp"]):
+	if Ledger.balance(s) < int(cfg(data)["found_fee_cp"]):
 		return "TRADE_ERR_NO_COINS"
 	return ""
 

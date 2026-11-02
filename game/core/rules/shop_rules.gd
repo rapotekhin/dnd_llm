@@ -297,7 +297,7 @@ static func _sold_text(s: GameSession, data: Dictionary, sold: Dictionary) -> St
 static func _after_tax(s: GameSession, data: Dictionary, loc: String, revenue: int) -> Array[int]:
 	if not has_charter(s, loc):
 		return [revenue, 0]
-	var tax := roundi(revenue * float(cfg(data)["charter"]["tax_pct"]) / 100.0)
+	var tax := Price.share(revenue, float(cfg(data)["charter"]["tax_pct"]))
 	return [revenue - tax, tax]
 
 
@@ -364,7 +364,7 @@ static func _fine(s: GameSession, data: Dictionary, loc: String) -> Array[String
 	var ch: Dictionary = cfg(data)["charter"]
 	if has_charter(s, loc) or CrimeRules.law(data, loc).is_empty() or s.rng.randf() >= float(ch["fine_chance"]):
 		return []
-	var fine := mini(int(ch["fine_cp"]), int(s.character.get("gold_cp", 0)))
+	var fine := mini(int(ch["fine_cp"]), Ledger.balance(s))
 	Ledger.add(s, -fine, "shop:fine")
 	return ["Стража: торговля без грамоты — штраф %s" % Money.format(fine)]
 
@@ -432,7 +432,7 @@ static func charter_why(s: GameSession, data: Dictionary, npc_id: String) -> Str
 		return why
 	if has_charter(s, WorldView.new(data["world"]).location_id(s.room_id)):
 		return "SHOP_HAS_CHARTER_ERR"
-	return "SHOP_NO_MONEY" if int(s.character.get("gold_cp", 0)) < int(cfg(data)["charter"]["fee_cp"]) else ""
+	return "SHOP_NO_MONEY" if Ledger.balance(s) < int(cfg(data)["charter"]["fee_cp"]) else ""
 
 
 static func charter(s: GameSession, data: Dictionary, _npc_id: String) -> Array[String]:
@@ -488,7 +488,7 @@ static func wholesale_why(s: GameSession, data: Dictionary, npc_id: String, item
 		return "SHOP_NOT_HERE"
 	if not has_charter(s, WorldView.new(data["world"]).location_id(s.room_id)):
 		return "SHOP_NEED_CHARTER"
-	return "SHOP_NO_MONEY" if int(s.character.get("gold_cp", 0)) < wholesale_price(s, data, npc_id, item_id) * lot(data) else ""
+	return "SHOP_NO_MONEY" if Ledger.balance(s) < wholesale_price(s, data, npc_id, item_id) * lot(data) else ""
 
 
 static func wholesale(s: GameSession, data: Dictionary, npc_id: String, item_id: String) -> Array[String]:

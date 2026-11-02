@@ -353,7 +353,7 @@ func _plan_coins(s: GameSession, data: Dictionary, turn_id: String, e: Dictionar
 	var delta := int(e.get("delta_cp", 0))
 	if delta == 0:
 		return {"reason": "пустое изменение монет"}
-	var gold := int(c["gold_cp"]) + _pending_coins(pending)
+	var gold := Ledger.balance(s) + _pending_coins(pending)
 	if delta < 0 and gold + delta < 0:
 		return {"reason": "у персонажа нет %s (есть %s)" % [Money.format(-delta), Money.format(gold)]}
 	if delta > _reward_cap(rules, level):

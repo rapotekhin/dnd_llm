@@ -713,7 +713,7 @@ func _refresh() -> void:
 			var err := GameState.choose_option(i)
 			if not err.is_empty():
 				EventBus.message.emit(tr(err)), false)
-		b.disabled = not online or (cost > 0 and int(GameState.session.character["gold_cp"]) < cost)
+		b.disabled = not online or (cost > 0 and Ledger.balance(GameState.session) < cost)
 		b.name = "Option_%d" % i
 		var tip := ""
 		if not pv.is_empty():  # the engine's DC and chance (v0.7.22.28, П5)

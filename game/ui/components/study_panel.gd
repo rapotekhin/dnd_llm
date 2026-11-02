@@ -71,7 +71,7 @@ func _rebuild() -> void:
 	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
-	_label(_box, tr("BANK_PURSE").format({"money": Money.format(int(s.character.get("gold_cp", 0)))}), UiTheme.MUTED_LABEL)
+	_label(_box, tr("BANK_PURSE").format({"money": Money.format(Ledger.balance(s))}), UiTheme.MUTED_LABEL)
 	if _npc.is_empty():
 		_mine(s, data)
 	else:

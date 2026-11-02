@@ -21,9 +21,7 @@ static func kind(data: Dictionary, k: String) -> Dictionary:
 
 
 static func all(s: GameSession, data: Dictionary) -> Dictionary:
-	var out: Dictionary = (data["world"].get("heists", {}) as Dictionary).duplicate()
-	out.merge(WorldGen.generated(s).get("heists", {}))
-	return out
+	return WorldGen.registry(s, data, "heists")
 
 
 static func def(s: GameSession, data: Dictionary, id: String) -> Dictionary:

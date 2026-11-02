@@ -236,7 +236,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 
 static func _land(s: GameSession, data: Dictionary, r: Dictionary, loc: String) -> Array[String]:
 	var lines: Array[String] = []
-	var fame := int(r.get("fame", 0)) * int(cfg(data)["fame"]["share_pct"]) / 100
+	var fame := int(r.get("fame", 0)) * int(cfg(data)["fame"]["share_pct"]) / 100  # signed: bad fame too, not a price
 	var crime: Dictionary = {}
 	for c: Dictionary in s.crimes:
 		if str(c["id"]) == str(r.get("crime", "")):

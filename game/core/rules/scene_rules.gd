@@ -36,6 +36,11 @@ static func tags(s: GameSession, world: Dictionary, room_id: String) -> Array[St
 	return out
 
 
+## Is the room under a roof: its variant's word, else its own or a place's above it (`indoor`).
+static func indoor(s: GameSession, world: Dictionary, room_id: String) -> bool:
+	return bool(room(s, world, room_id).get("indoor", WorldView.new(world).flag(room_id, "indoor")))
+
+
 ## The pack NPCs standing in the room now (alive or not): the room's people (by its variants), minus those whose
 ## `schedule` sends them elsewhere at this hour, plus those it sends here (v0.7.14.2); those who go with the hero stand
 ## where the hero is, those left in a room stand there (v0.7.20.3, FollowRules).

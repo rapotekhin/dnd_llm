@@ -182,6 +182,14 @@ game/
 - **Минуты шага** — `TimeRules.step_minutes(s, data, from, to)`: «Странник», езда и погода только между локациями. Его берут и `on_move`, и `WorldMap.minutes`.
 - **Прерванная смена** — `JobRules.broken_off(full_pay, minutes, full)`.
 
+Записи мира и деньги (v0.8.4.18):
+
+- **Правка записи** — `Overlay.put(s, data, ref, key, value)` и `Overlay.add` для списков. Запись, сделанная в этой игре, меняется сама, у пакетной разница ложится в `s.generated["overlay"]`.
+- **Человек движка** — `WorldGen.new_person` (пол и свободное имя), `WorldGen.apply_npc(s, data, plan, prefix)`. Перенос и уход — `WorldGen.place_npc`, `WorldGen.forget_npc`.
+- **Реестр пакета и мастера** — `WorldGen.registry(s, data, bucket, base)`.
+- **Теги и крыша комнаты** — `SceneRules.tags`, `SceneRules.indoor`: вариант, сама комната, места выше.
+- **Монеты героя** — `Ledger.balance`, доля — `Price.share`.
+
 ## Фундамент правил (v0.7.60)
 
 Пять записей, через которые идут все системы ([ADR-0012](adr/0012-unified-models.md)). Копий рядом не заводим: страж в `test_foundation_v0760.gd` не пускает `randi_range(1, 20)` и прямую запись `gold_cp` мимо них.

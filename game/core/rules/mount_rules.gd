@@ -112,7 +112,7 @@ static func blocked(s: GameSession, data: Dictionary, room_id: String, cr: Dicti
 	if not cr.has("until") and not bool(PropertyRules.animal_cfg(data, str(cr["monster"])).get("anywhere", false)):  # a spell's carrier goes where the hero goes
 		if tags.has("no_mounts"):
 			return "сюда животным хода нет"
-		if bool(room.get("indoor", world.flag(room_id, "indoor"))) and not tags.has("stable") and not tags.has("mounts"):
+		if SceneRules.indoor(s, data["world"], room_id) and not tags.has("stable") and not tags.has("mounts"):
 			return "под крышу не заведёшь"
 		if (cfg(data)["no_mount_terrains"] as Array).has(terr) and not tags.has("mounts"):
 			return "в такие ходы не пройдёт"
@@ -219,7 +219,7 @@ static func rent_why(s: GameSession, data: Dictionary, npc_id: String, monster: 
 	var span: Array = cfg(data)["rent_days"]
 	if days < int(span[0]) or days > int(span[1]):
 		return "MOUNT_RENT_DAYS"
-	if int(s.character.get("gold_cp", 0)) < rent_price(data, monster, days):
+	if Ledger.balance(s) < rent_price(data, monster, days):
 		return "PROPERTY_NO_MONEY"
 	return ""
 
@@ -295,7 +295,7 @@ static func vehicle_why(s: GameSession, data: Dictionary, npc_id: String, vid: S
 		return "PROPERTY_SELLER_AWAY"
 	if puller(s, data, vid).is_empty():
 		return "MOUNT_NO_PULLER"
-	if int(s.character.get("gold_cp", 0)) < int(vehicle(data, vid)["price_cp"]):
+	if Ledger.balance(s) < int(vehicle(data, vid)["price_cp"]):
 		return "PROPERTY_NO_MONEY"
 	return ""
 

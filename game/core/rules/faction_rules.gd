@@ -20,9 +20,7 @@ static func all(s: GameSession, data: Dictionary) -> Dictionary:
 	for id: String in OrgRules.all(s, data):
 		var o: Dictionary = OrgRules.all(s, data)[id]
 		out[id] = {"name": str(o.get("name", id)), "kind": "org", "scope": "global", "description": str(o.get("description", "")), "hostile": false, "head": str(o.get("head", ""))}
-	out.merge(data["world"].get("factions", {}), true)
-	out.merge(WorldGen.generated(s).get("factions", {}), true)
-	return out
+	return WorldGen.registry(s, data, "factions", out)
 
 
 static func def(s: GameSession, data: Dictionary, id: String) -> Dictionary:

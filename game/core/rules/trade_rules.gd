@@ -343,7 +343,7 @@ static func quote(s: GameSession, data: Dictionary, npc_id: String, cart: Dictio
 	out["net_cp"] = int(out["buy_cp"]) - int(out["sell_cp"])
 	if int(out["buy_cp"]) == 0 and int(out["sell_cp"]) == 0:
 		return _fail(out, "TRADE_ERR_EMPTY", {})
-	if int(s.character.get("gold_cp", 0)) < int(out["net_cp"]):
+	if Ledger.balance(s) < int(out["net_cp"]):
 		return _fail(out, "TRADE_ERR_NO_MONEY", {"need": Money.format(int(out["net_cp"]))})
 	if Gear.coins(s, data, npc_id) < -int(out["net_cp"]):
 		return _fail(out, "TRADE_ERR_MERCHANT_NO_MONEY", {"have": Money.format(Gear.coins(s, data, npc_id))})
@@ -535,7 +535,7 @@ static func services(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 			why = "SHOP_CLOSED_WANTED"
 		elif not FaithRules.refuses(s, data, npc_id).is_empty():  # v0.7.49: a desecrator
 			why = "FAITH_REFUSED"
-		elif int(s.character.get("gold_cp", 0)) < cost:
+		elif Ledger.balance(s) < cost:
 			why = "TRADE_ERR_NO_COINS"
 		elif targets(s, data, str(id)).is_empty():
 			var sick := str(def.get("op", "")) == "cure_disease" and not DiseaseRules.curable(s, data, "magic").is_empty()

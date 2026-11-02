@@ -93,7 +93,7 @@ func _rebuild() -> void:
 	rule.name = "ArenaRule"
 	if ArenaRules.rule(data, _site) == "death":
 		rule.add_theme_color_override("font_color", UiTheme.BAD)
-	var gold := int(s.character["gold_cp"])
+	var gold := Ledger.balance(s)
 	if not ArenaRules.enlisted(s, _site):
 		_label(_box, tr("ARENA_ENLIST_HINT").format({"fee": Money.format(int(ArenaRules.cfg(data)["fee_cp"]))}), UiTheme.MUTED_LABEL)
 		_button(_box, "ArenaEnlist", tr("BTN_ARENA_ENLIST"), ArenaRules.enlist_why(s, data, _site), func() -> void: _act(GameState.arena_enlist(_site)))

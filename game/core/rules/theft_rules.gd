@@ -179,7 +179,7 @@ static func react(s: GameSession, data: Dictionary, npc_id: String, memory: Stri
 			lines.append("%s захлопывает лавку для вас до завтра" % who)
 		_:
 			var fine := int(cfg(data)["fine_cp"])
-			if int(s.character["gold_cp"]) >= fine:
+			if Ledger.balance(s) >= fine:
 				Ledger.add(s, -fine, "theft:react")
 				lines.append("%s зовёт стражу — штраф %s" % [who, Money.format(fine)])
 			else:

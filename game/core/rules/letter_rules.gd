@@ -194,7 +194,7 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 	var q := quote(s, data, way, to)
 	if q.is_empty():
 		return "до %s не дойти: нет дороги" % WorldView.name_of(data, to)
-	if int(s.character.get("gold_cp", 0)) < int(q["cost"]):
+	if Ledger.balance(s) < int(q["cost"]):
 		return "не хватает денег: %s" % Money.format(int(q["cost"]))
 	return ""
 

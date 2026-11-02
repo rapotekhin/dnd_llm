@@ -14,11 +14,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 ## Every disease the game knows: the rules', the pack's (world.json `diseases`), the master's made ones.
 static func all(s: GameSession, data: Dictionary) -> Dictionary:
-	var out: Dictionary = (cfg(data)["catalog"] as Dictionary).duplicate()
-	out.merge(data["world"].get("diseases", {}), true)
-	if s != null:
-		out.merge(WorldGen.generated(s).get("diseases", {}), true)
-	return out
+	return WorldGen.registry(s, data, "diseases", cfg(data)["catalog"])
 
 
 static func def_of(s: GameSession, data: Dictionary, id: String) -> Dictionary:

@@ -285,7 +285,7 @@ static func plan_festival(s: GameSession, data: Dictionary, e: Dictionary) -> Di
 	var cause := str(e.get("cause", "")).strip_edges() if e.get("cause") != null else ""
 	if cause.length() < 8:
 		return {"reason": "нужна cause — по какому поводу праздник (от 8 знаков)"}
-	var world := WorldGen.merged(data["world"], WorldGen.generated(s))
+	var world: Dictionary = data["world"]
 	var loc := str(e.get("location_id", "")) if e.get("location_id") != null else ""
 	if loc.is_empty():
 		loc = WorldView.new(world).location_id(s.room_id)

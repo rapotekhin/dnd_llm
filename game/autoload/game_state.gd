@@ -1950,7 +1950,7 @@ func choose_option(index: int) -> String:
 	var check: Dictionary = option_check(index)
 	if cost <= 0:
 		return "" if submit(text, "", check) else "MSG_NO_MASTER"
-	if int(session.character["gold_cp"]) < cost:
+	if Ledger.balance(session) < cost:
 		return "MSG_NO_MONEY"
 	if is_busy() or not Backend.is_ready():
 		return "MSG_NO_MASTER"

@@ -32,11 +32,7 @@ static func all(s: GameSession, data: Dictionary) -> Dictionary:
 
 
 static func _plain(s: GameSession, data: Dictionary) -> Dictionary:
-	var out: Dictionary = (cfg(data)["recipes"] as Dictionary).duplicate()
-	out.merge(data["world"].get("recipes", {}), true)
-	if s != null:
-		out.merge(WorldGen.generated(s).get("recipes", {}), true)
-	return out
+	return WorldGen.registry(s, data, "recipes", cfg(data)["recipes"])
 
 
 static func recipe(s: GameSession, data: Dictionary, id: String) -> Dictionary:
@@ -396,7 +392,7 @@ static func can_work(s: GameSession, data: Dictionary) -> String:
 	if not station_here(s, data, str(r.get("station", ""))):
 		return "CRAFT_NO_STATION"
 	var rent_now := rent(s, data, str(r.get("station", "")))
-	if not rent_now.is_empty() and int(s.character.get("gold_cp", 0)) < int(rent_now["cp"]):
+	if not rent_now.is_empty() and Ledger.balance(s) < int(rent_now["cp"]):
 		return "CRAFT_NO_RENT"
 	return ""
 
@@ -410,7 +406,7 @@ static func shift_minutes(s: GameSession, data: Dictionary, hours: int) -> int:
 	var r := recipe(s, data, str(p["recipe"]))
 	var rent_now := rent(s, data, str(r.get("station", "")))
 	if not rent_now.is_empty():
-		var can_hours := int(s.character.get("gold_cp", 0)) / int(rent_now["cp"])
+		var can_hours := Ledger.balance(s) / int(rent_now["cp"])
 		mins = mini(mins, can_hours * 60)
 	return maxi(0, mins)
 
@@ -526,7 +522,7 @@ static func make_output(s: GameSession, data: Dictionary, out_id: String, qty: i
 	for prop: Variant in by_type.get(kind, []):
 		props.append(str(prop))
 	var def := {"name": "%s (%s)" % [base.get("name", out_id), tier["name"]], "item_type": str(base.get("item_type", "gear")), "base": out_id,
-		"rarity": str(base.get("rarity", "common")), "value_cp": int(round(int(base.get("value_cp", 0)) * float(tier.get("value", 1.0)))),
+		"rarity": str(base.get("rarity", "common")), "value_cp": Price.share(int(base.get("value_cp", 0)), float(tier.get("value", 1.0)) * 100.0),
 		"properties": props, "description": str(base.get("description", "")), "generated": true, "quality": str(tier["id"])}
 	var new_id := ItemRules.generated_id(def)
 	s.items[new_id] = def

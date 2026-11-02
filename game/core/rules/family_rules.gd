@@ -116,7 +116,7 @@ static func wedding_why(s: GameSession, data: Dictionary, npc_id: String) -> Str
 		return "FAMILY_NOT_ENGAGED"
 	if home(s, data).is_empty():
 		return "FAMILY_NO_HOME"
-	if int(s.character.get("gold_cp", 0)) < fee(data, k):
+	if Ledger.balance(s) < fee(data, k):
 		return "TRADE_ERR_NO_COINS"
 	return ""
 
@@ -209,25 +209,19 @@ static func _birth(s: GameSession, data: Dictionary, day: int) -> Array[String]:
 	var c := s.character
 	var f := _rw(c)
 	f.erase("pregnant")
-	var gender := "female" if s.rng.randf() < 0.5 else "male"
-	var used := children(s).map(func(id: String) -> String: return BondRules.npc_def(s, data, id).get("name", ""))
-	var pool: Array = (cfg(data)["names"][gender] as Array).filter(func(n: Variant) -> bool: return not used.has(n))
-	if pool.is_empty():
-		pool = cfg(data)["names"][gender]
-	var name := str(pool[s.rng.randi_range(0, pool.size() - 1)])
+	var p := WorldGen.new_person(s, data, cfg(data)["names"])
+	var gender := str(p["gender"])
+	var name := str(p["name"])
+	if name.is_empty():  # every name of the family's list is worn: one of them again
+		var pool: Array = cfg(data)["names"][gender]
+		name = str(pool[s.rng.randi_range(0, pool.size() - 1)])
 	var st: Dictionary = cfg(data)["stages"][0]
+	var room := str(f.get("home_room", s.room_id))
 	var def := {"name": name, "role": _role(data, gender, st), "gender": gender, "race": str(c.get("race_name", "")),
 		"monster": "commoner", "tags": ["commoner"], "description": "Ребёнок героя и %s." % WorldView.name_of(data, spouse(s)),
-		"child": {"born": day, "parents": ["hero", spouse(s)]}}
-	var gen := WorldGen.generated(s)
-	var n := 1
-	while data["world"]["npcs"].has("kin_%d" % n):
-		n += 1
-	var id := "kin_%d" % n
-	var room := str(f.get("home_room", s.room_id))
-	gen["npcs"][id] = def.duplicate(true)
-	gen["npc_rooms"][id] = room
-	data["world"] = WorldGen.merged_into(data["world"], id, def, room)
+		"child": {"born": day, "parents": ["hero", spouse(s)]},
+		"faction": FactionRules.folk_of(s, data, WorldView.new(data["world"]).location_id(room))}
+	var id := WorldGen.apply_npc(s, data, {"npc": def, "room": room}, "kin")
 	(f["children"] as Array).append(id)
 	return ["Родил%s %s: %s" % ["ась дочь" if gender == "female" else "ся сын", "в доме", name]]
 
@@ -237,20 +231,18 @@ static func rename(s: GameSession, data: Dictionary, npc_id: String, name: Strin
 	var nm := name.strip_edges().left(30)
 	if nm.is_empty() or not children(s).has(npc_id):
 		return []
-	WorldGen.generated(s)["npcs"][npc_id]["name"] = nm
-	data["world"]["npcs"][npc_id]["name"] = nm
+	Overlay.put(s, data, EntityRef.npc(npc_id), "name", nm)
 	return ["Имя ребёнка: %s" % nm]
 
 
 static func _grow(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	for id: String in children(s):
-		var n: Dictionary = WorldGen.generated(s)["npcs"].get(id, {})
+		var n: Dictionary = data["world"]["npcs"].get(id, {})
 		var role := _role(data, str(n.get("gender", "male")), stage(s, data, id))
 		if n.is_empty() or str(n.get("role", "")) == role:
 			continue
-		n["role"] = role
-		data["world"]["npcs"][id]["role"] = role
+		Overlay.put(s, data, EntityRef.npc(id), "role", role)
 		lines.append("%s подрос%s: %s" % [n["name"], "ла" if str(n.get("gender", "")) == "female" else "", stage(s, data, id)["name"]])
 	return lines
 
@@ -323,7 +315,7 @@ static func _day(s: GameSession, data: Dictionary, day: int) -> Array[String]:
 	if from_till > 0:
 		till["cash"] = int(till["cash"]) - from_till
 	var rest := need - from_till
-	if rest <= int(c.get("gold_cp", 0)):
+	if rest <= Ledger.balance(s):
 		Ledger.add(s, -rest, "family:day")
 		f["hungry"] = 0
 		return lines
@@ -371,7 +363,7 @@ static func inherit(s: GameSession, data: Dictionary, heir_c: Dictionary) -> Arr
 	var old := s.character
 	var h := heir(s, data)
 	var f := view(old)
-	heir_c["gold_cp"] = int(heir_c.get("gold_cp", 0)) + int(old.get("gold_cp", 0))
+	Ledger.purse(heir_c, int(heir_c.get("gold_cp", 0)) + int(old.get("gold_cp", 0)))
 	var inv: Dictionary = heir_c["inventory"]
 	for id: String in old.get("inventory", {}):
 		inv[id] = int(inv.get(id, 0)) + int(old["inventory"][id])
@@ -396,18 +388,10 @@ static func inherit(s: GameSession, data: Dictionary, heir_c: Dictionary) -> Arr
 		if made.has(id):
 			made[id]["head"] = OwnerRules.HERO
 	var lines: Array[String] = ["%s, наследник рода %s, принимает дом и добро" % [heir_c["name"], old.get("name", "")]]
-	_leave_world(s, data, h)  # the NPC is gone from the world: now the hero
+	WorldGen.forget_npc(s, data, h)  # the NPC is gone from the world: now the hero
 	return lines
 
 
-static func _leave_world(s: GameSession, data: Dictionary, npc_id: String) -> void:
-	var gen := WorldGen.generated(s)
-	var room := str(gen["npc_rooms"].get(npc_id, ""))
-	gen["npcs"].erase(npc_id)
-	gen["npc_rooms"].erase(npc_id)
-	data["world"]["npcs"].erase(npc_id)
-	if data["world"]["rooms"].has(room):
-		(data["world"]["rooms"][room].get("npcs", []) as Array).erase(npc_id)
 
 
 # --- for the master -----------------------------------------------------------------------------------------------

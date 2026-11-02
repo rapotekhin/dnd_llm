@@ -50,9 +50,9 @@ static func master_text(c: Dictionary, data: Dictionary) -> String:
 
 
 ## An acolyte's free rest in a temple, an entertainer's free room the night after a show.
-static func free_rest(s: GameSession, data: Dictionary, room: Dictionary) -> bool:
+static func free_rest(s: GameSession, data: Dictionary, room_id: String) -> bool:
 	var c := s.character
-	if bool(spec(c, data).get("temple_rest", false)) and (room.get("tags", []) as Array).has("temple"):
+	if bool(spec(c, data).get("temple_rest", false)) and SceneRules.tags(s, data["world"], room_id).has("temple"):
 		return true
 	return int(c.get("free_rest_day", 0)) == s.day
 
@@ -75,8 +75,7 @@ static func travel_minutes(s: GameSession, data: Dictionary, minutes: int, to: S
 
 ## "" when the hero can perform here now (an entertainer's stage, once a day), otherwise a localization key.
 static func can_perform(s: GameSession, data: Dictionary) -> String:
-	var w := WorldView.new(data["world"])
-	if not (w.room(s.room_id).get("tags", []) as Array).has("stage"):
+	if not SceneRules.tags(s, data["world"], s.room_id).has("stage"):
 		return "PERFORM_NO_STAGE"
 	if s.in_conversation() or CombatRules.active(s):
 		return "PERFORM_NOT_NOW"

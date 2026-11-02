@@ -303,7 +303,7 @@ static func donate_why(s: GameSession, data: Dictionary) -> String:
 	var gid := str(sh["god"])
 	if bool(step_of(s.character, data, gid).get("refuse", false)):
 		return "FAITH_REFUSED"
-	if int(s.character.get("gold_cp", 0)) < _cp(data, "donation"):
+	if Ledger.balance(s) < _cp(data, "donation"):
 		return "FAITH_NO_MONEY"
 	var d: Array = view(s.character).get("donated", {}).get(gid, [-1, 0])
 	if int(d[0]) == s.day and int(d[1]) >= int(cfg(data)["donation"]["per_day"]):
@@ -393,7 +393,7 @@ static func atone_why(s: GameSession, data: Dictionary) -> String:
 		return "FAITH_NOT_YOUR_GOD"
 	if bool(step_of(s.character, data, str(sh["god"])).get("refuse", false)):
 		return "FAITH_REFUSED"
-	if int(s.character.get("gold_cp", 0)) < atone_cost(s.character, data):
+	if Ledger.balance(s) < atone_cost(s.character, data):
 		return "FAITH_NO_MONEY"
 	return ""
 
@@ -427,7 +427,7 @@ static func convert_why(s: GameSession, data: Dictionary) -> String:
 		return ""
 	if s.day - int(view(c).get("converted", -999)) < int(cfg(data)["convert"]["cooldown_days"]):
 		return "FAITH_CONVERT_SOON"
-	if int(c.get("gold_cp", 0)) < _cp(data, "convert"):
+	if Ledger.balance(s) < _cp(data, "convert"):
 		return "FAITH_NO_MONEY"
 	return ""
 

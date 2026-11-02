@@ -432,7 +432,7 @@ func _gear_tab(c: Dictionary) -> void:
 				_stowed_cards(col, details, c, busy)
 			else:
 				_slot_card(col, details, c, slot, busy)
-	(UiScenes.need(self, "%GearCoins") as Label).text = tr("SIDE_COINS").format({"coins": Money.format(int(c["gold_cp"]))})
+	(UiScenes.need(self, "%GearCoins") as Label).text = tr("SIDE_COINS").format({"coins": Money.format(Ledger.balance(s))})
 	var weight: Label = UiScenes.need(self, "%CarriedWeight")
 	weight.text = tr("SHEET_WEIGHT").format({"n": int(ceilf(CharacterRules.carried_weight(c, Catalog.data, s.items))), "max": CharacterRules.capacity(c, Catalog.data)})
 	weight.remove_theme_color_override("font_color")

@@ -94,7 +94,7 @@ func _rebuild() -> void:
 	var s := GameState.session
 	var data := Catalog.data
 	title.text = tr("BANK_TITLE_AT").format({"name": WorldView.name_of(data, _npc)})
-	var gold := int(s.character.get("gold_cp", 0))
+	var gold := Ledger.balance(s)
 	_label(_box, tr("BANK_PURSE").format({"money": Money.format(gold)}), UiTheme.MUTED_LABEL)
 	var mine := BankRules.open_of(s.character, _npc)
 	if BankRules.offers(s, data, _npc, BankRules.DEPOSIT):

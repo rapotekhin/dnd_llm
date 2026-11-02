@@ -126,7 +126,7 @@ func _stakes(s: GameSession, data: Dictionary) -> void:
 		_rebuild.call_deferred())
 	_box.add_child(stake_box)
 	var stake: Dictionary = stakes[_stake]
-	var gold := int(s.character["gold_cp"])
+	var gold := Ledger.balance(s)
 	if str(stake["kind"]) == "coins":
 		var row := HBoxContainer.new()
 		_box.add_child(row)

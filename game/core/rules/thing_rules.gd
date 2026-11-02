@@ -212,7 +212,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		for p: Dictionary in list.duplicate():
 			if not p.has("effects"):
 				continue
-			if pouring and has(s, p, "burning") and room == s.room_id and not _indoor(data, room):
+			if pouring and has(s, p, "burning") and room == s.room_id and not SceneRules.indoor(s, data["world"], room):
 				douse(s, data, p)
 				lines.append("Дождь гасит огонь: %s" % p["name"])
 				continue
@@ -227,10 +227,6 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 					lines.append("%s сгорает дотла" % p["name"])
 					lines.append_array(said)
 	return lines
-
-
-static func _indoor(data: Dictionary, room: String) -> bool:
-	return WorldView.new(data["world"]).flag(room, "indoor")
 
 
 static func _spread(s: GameSession, data: Dictionary, list: Array, from: Dictionary, cause: String) -> void:

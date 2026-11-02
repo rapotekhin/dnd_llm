@@ -42,6 +42,15 @@ static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
 	return w
 
 
+## A registry of the game: `base` (the rules' own), the pack's `bucket` over it, the master's over that (v0.8.4.18).
+static func registry(s: GameSession, data: Dictionary, bucket: String, base: Dictionary = {}) -> Dictionary:
+	var out := base.duplicate()
+	out.merge(data["world"].get(bucket, {}), true)
+	if s != null:
+		out.merge(generated(s).get(bucket, {}), true)
+	return out
+
+
 static func generated(s: GameSession) -> Dictionary:
 	if s.generated.is_empty():
 		s.generated = {"npcs": {}, "npc_rooms": {}}
@@ -194,13 +203,13 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 		+ ("" if notes.is_empty() else "; " + "; ".join(notes))]}
 
 
-## Makes the NPC: in the save and in this game's world. Its id.
-static func apply_npc(s: GameSession, data: Dictionary, plan: Dictionary) -> String:
+## Makes the NPC: in the save and in this game's world. Its id: `prefix`_N («kin» — the hero's child).
+static func apply_npc(s: GameSession, data: Dictionary, plan: Dictionary, prefix: String = "gen_npc") -> String:
 	var gen := generated(s)
 	var n := 1
-	while data["world"]["npcs"].has("gen_npc_%d" % n):
+	while data["world"]["npcs"].has("%s_%d" % [prefix, n]):
 		n += 1
-	var id := "gen_npc_%d" % n
+	var id := "%s_%d" % [prefix, n]
 	for iid: String in plan.get("items", {}):
 		s.items[iid] = (plan["items"][iid] as Dictionary).duplicate(true)
 	gen["npcs"][id] = (plan["npc"] as Dictionary).duplicate(true)
@@ -208,6 +217,38 @@ static func apply_npc(s: GameSession, data: Dictionary, plan: Dictionary) -> Str
 	data["world"] = merged_into(data["world"], id, plan["npc"], str(plan["room"]))
 	ReputationRules.refresh(s, data)
 	return id
+
+
+## The sex and a free name of a person the engine makes (a child, a hired hand): from `pools` {gender: [names]} or
+## the pack's names, one nobody in the world wears yet; the name is "" when all are worn.
+static func new_person(s: GameSession, data: Dictionary, pools: Dictionary = {}) -> Dictionary:
+	var gender := "female" if s.rng.randf() < 0.5 else "male"
+	var names: Array = pools.get(gender, data.get("pack", {}).get("names", {}).get(gender, []))
+	var taken: Array = data["world"]["npcs"].values().map(func(n: Dictionary) -> String: return str(n.get("name", "")))
+	var free: Array = names.filter(func(n: Variant) -> bool: return not taken.has(str(n)))
+	return {"gender": gender, "name": str(free[s.rng.randi_range(0, free.size() - 1)]) if not free.is_empty() else ""}
+
+
+## A made NPC stands in `room` from now ("" — nowhere, its record kept): in the save and in this game's world.
+static func place_npc(s: GameSession, data: Dictionary, id: String, room: String) -> void:
+	var gen := generated(s)
+	var was := str(gen["npc_rooms"].get(id, ""))
+	if data["world"]["rooms"].has(was):
+		(data["world"]["rooms"][was].get("npcs", []) as Array).erase(id)
+	gen["npc_rooms"][id] = room
+	if data["world"]["rooms"].has(room):
+		var list: Array = data["world"]["rooms"][room].get("npcs", [])
+		if not list.has(id):
+			list.append(id)
+		data["world"]["rooms"][room]["npcs"] = list
+
+
+## A made NPC is gone from the world and the save (an heir who became the hero).
+static func forget_npc(s: GameSession, data: Dictionary, id: String) -> void:
+	place_npc(s, data, id, "")
+	generated(s)["npcs"].erase(id)
+	generated(s)["npc_rooms"].erase(id)
+	data["world"]["npcs"].erase(id)
 
 
 ## The world with one more NPC (in place).
@@ -727,23 +768,7 @@ static func _merge_places(w: Dictionary, gen: Dictionary) -> Dictionary:
 		w["sites"][sid] = (gen["sites"][sid] as Dictionary).duplicate(true)
 	for rid: String in gen.get("rooms", {}):
 		w["rooms"][rid] = (gen["rooms"][rid] as Dictionary).duplicate(true)
-	lay_ways(w, gen)
-	for rid: String in gen.get("room_secrets", {}):  # v0.7.21: the hiding places of quest things
-		if not w["rooms"].has(rid):
-			continue
-		var secrets: Array = (w["rooms"][rid].get("secrets", []) as Array).duplicate(true)
-		for sec: Dictionary in gen["room_secrets"][rid]:
-			if not secrets.any(func(x: Dictionary) -> bool: return str(x.get("id", "")) == str(sec["id"])):
-				secrets.append(sec.duplicate(true))
-		w["rooms"][rid]["secrets"] = secrets
-	for rid: String in gen.get("room_variants", {}):  # v0.7.39.6: a quest's fight in a known room, a choice's change
-		if not w["rooms"].has(rid):
-			continue
-		var variants: Array = (w["rooms"][rid].get("variants", []) as Array).duplicate(true)
-		for v: Dictionary in gen["room_variants"][rid]:
-			if not variants.any(func(x: Dictionary) -> bool: return str(x.get("vid", "")) == str(v.get("vid", "")) and not str(v.get("vid", "")).is_empty()):
-				variants.append(v.duplicate(true))
-		w["rooms"][rid]["variants"] = variants
+	lay_ways(w, gen)  # a quest's secrets and variants of the pack's rooms are the overlay's (v0.8.4.18)
 	return w
 
 

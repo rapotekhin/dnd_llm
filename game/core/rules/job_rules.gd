@@ -15,10 +15,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 
 static func all(s: GameSession, data: Dictionary) -> Dictionary:
-	var out: Dictionary = (data["world"].get("jobs", {}) as Dictionary).duplicate()
-	if s != null:
-		out.merge(WorldGen.generated(s).get("jobs", {}), true)
-	return out
+	return WorldGen.registry(s, data, "jobs")
 
 
 static func job(s: GameSession, data: Dictionary, id: String) -> Dictionary:

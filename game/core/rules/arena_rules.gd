@@ -261,7 +261,7 @@ static func enlist_why(s: GameSession, data: Dictionary, sid: String) -> String:
 		return why
 	if enlisted(s, sid):
 		return "вы уже в списке бойцов"
-	if int(s.character["gold_cp"]) < int(cfg(data)["fee_cp"]):
+	if Ledger.balance(s) < int(cfg(data)["fee_cp"]):
 		return "запись стоит %s" % Money.format(int(cfg(data)["fee_cp"]))
 	return ""
 
@@ -319,7 +319,7 @@ static func bet_why(s: GameSession, data: Dictionary, cp: int) -> String:
 		return "ставка — от %s" % Money.format(int(b["min_cp"]))
 	if cp > max_bet(s, data):
 		return "ставка — не больше %s" % Money.format(max_bet(s, data))
-	if cp > int(s.character["gold_cp"]):
+	if cp > Ledger.balance(s):
 		return "у героя нет %s" % Money.format(cp)
 	return ""
 
@@ -358,7 +358,7 @@ static func after_bout(s: GameSession, data: Dictionary, a: Dictionary, won: boo
 		ObjectRules.note(s, sid, "%s проиграл бой: %s" % [s.character.get("name", ""), a.get("foe", "")])
 		return lines
 	var i := int(a.get("rank", 0))
-	var prize := int(int(ranks(data)[i]["prize_cp"]) * int(rc.get("prize_pct", 100)) / 100)
+	var prize := Price.share(int(ranks(data)[i]["prize_cp"]), float(rc.get("prize_pct", 100)))
 	Ledger.add(s, prize, "arena:after_bout")
 	lines.append("Победа на арене: приз %s" % Money.format(prize))
 	if int(a.get("bet", 0)) > 0:
@@ -367,7 +367,7 @@ static func after_bout(s: GameSession, data: Dictionary, a: Dictionary, won: boo
 		lines.append("Ставка на себя: +%s" % Money.format(pay))
 	r["wins"] = int(r.get("wins", 0)) + 1
 	r["rank_wins"] = int(r.get("rank_wins", 0)) + 1
-	var pts := int(int(fame["win"]) * int(rc.get("fame_pct", 100)) / 100)
+	var pts := Price.share(int(fame["win"]), float(rc.get("fame_pct", 100)))
 	var need := int(ranks(data)[i].get("wins", 0))
 	if need > 0 and int(r["rank_wins"]) >= need and int(r["rank"]) < ranks(data).size() - 1:
 		r["rank"] = int(r["rank"]) + 1
