@@ -1,19 +1,23 @@
 class_name Ledger
 extends RefCounted
-## One account book (v0.7.60, ADR-0012): the hero's coins change only here, each change with its cause, and whatever the
-## hero owes is one kind of record. A loan keeps its contract in BankRules; the list of debts shows it with the rest.
+## One account book (v0.7.60, ADR-0012): the coins of anybody's own life change only here, each change with its cause, and
+## whatever one owes is one kind of record. A loan keeps its contract in BankRules; the list of debts shows it with the rest.
+## `who` — the hero or a person (v0.8.4.20, Life); the journal keeps the hero's changes.
 
 ## The journal keeps this many last changes.
 const KEEP := 300
 
 
-static func balance(s: GameSession) -> int:
-	return int(s.character.get("gold_cp", 0))
+static func balance(s: GameSession, who: String = Being.HERO) -> int:
+	return int(Life.of(s, who).get("gold_cp", 0))
 
 
-## Coins in or out of the hero's purse. `why` — the rule and the deed («arena:enlist»).
-static func add(s: GameSession, cp: int, why: String) -> void:
+## Coins in or out of a purse. `why` — the rule and the deed («arena:enlist»).
+static func add(s: GameSession, cp: int, why: String, who: String = Being.HERO) -> void:
 	if cp == 0:
+		return
+	if who != Being.HERO:
+		purse(Life.of(s, who), balance(s, who) + cp)
 		return
 	s.character["gold_cp"] = balance(s) + cp
 	s.ledger.append({"at": s.clock, "cp": cp, "why": why})
@@ -44,28 +48,28 @@ static func _book(c: Dictionary) -> Dictionary:
 	return c["debts"]
 
 
-## The hero owes `cp` more. `key` — one debt: «tax:<place>», «cut:<org>», «vault:<npc>»; `kind` — its kind, `to` — to whom.
-static func owe(s: GameSession, key: String, kind: String, cp: int, to: String) -> void:
+## `who` owes `cp` more. `key` — one debt: «tax:<place>», «cut:<org>», «vault:<npc>»; `kind` — its kind, `to` — to whom.
+static func owe(s: GameSession, key: String, kind: String, cp: int, to: String, who: String = Being.HERO) -> void:
 	if cp <= 0:
 		return
-	var book := _book(s.character)
+	var book := _book(Life.of(s, who))
 	if not book.has(key):
 		book[key] = {"kind": kind, "cp": 0, "to": to, "day": s.day}
 	book[key]["cp"] = int(book[key]["cp"]) + cp
 
 
-static func owed(s: GameSession, key: String) -> int:
-	return int(s.character.get("debts", {}).get(key, {}).get("cp", 0))
+static func owed(s: GameSession, key: String, who: String = Being.HERO) -> int:
+	return int(Life.of(s, who).get("debts", {}).get(key, {}).get("cp", 0))
 
 
 ## The day the debt began; today when there is none.
-static func since(s: GameSession, key: String) -> int:
-	return int(s.character.get("debts", {}).get(key, {}).get("day", s.day))
+static func since(s: GameSession, key: String, who: String = Being.HERO) -> int:
+	return int(Life.of(s, who).get("debts", {}).get(key, {}).get("day", s.day))
 
 
 ## `cp` of the debt is gone (paid, forgiven): the rest stays, a debt at zero is closed. Coins move by `add`.
-static func settle(s: GameSession, key: String, cp: int) -> void:
-	var book := _book(s.character)
+static func settle(s: GameSession, key: String, cp: int, who: String = Being.HERO) -> void:
+	var book := _book(Life.of(s, who))
 	if not book.has(key):
 		return
 	book[key]["cp"] = int(book[key]["cp"]) - cp
@@ -74,17 +78,18 @@ static func settle(s: GameSession, key: String, cp: int) -> void:
 
 
 ## The debt is gone whole, whatever is left of it.
-static func forgive(s: GameSession, key: String) -> void:
-	_book(s.character).erase(key)
+static func forgive(s: GameSession, key: String, who: String = Being.HERO) -> void:
+	_book(Life.of(s, who)).erase(key)
 
 
-## Everything the hero owes: [{key, kind, cp, to, day}], the loans too.
-static func debts(s: GameSession) -> Array[Dictionary]:
+## Everything `who` owes: [{key, kind, cp, to, day}], the loans too.
+static func debts(s: GameSession, who: String = Being.HERO) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	var book := _book(s.character)
+	var c := Life.of(s, who)
+	var book := _book(c)
 	for key: String in book:
 		out.append((book[key] as Dictionary).merged({"key": key}))
-	for k: Dictionary in BankRules.open_of(s.character):
+	for k: Dictionary in BankRules.open_of(c):
 		if str(k["kind"]) == BankRules.LOAN:
 			out.append({"key": "loan:" + str(k["id"]), "kind": "loan", "cp": int(k["balance"]), "to": str(k["bank"]), "day": int(k["start"])})
 	return out

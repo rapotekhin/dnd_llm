@@ -81,21 +81,21 @@ static func offered_by(s: GameSession, data: Dictionary, npc_id: String) -> Arra
 
 ## The master's courses waiting for the hero at teachers out of the scene (v0.7.39.7): not begun, not finished, not
 ## known some other way, the teacher alive.
-static func waiting(s: GameSession, data: Dictionary) -> Array[String]:
+static func waiting(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Array[String]:
 	var out: Array[String] = []
 	var all := courses(s, data)
-	var c := s.character
+	var c := Life.of(s, who, data)
 	for id: String in all:
-		var who := str(all[id].get("teacher", ""))
-		if bool(all[id].get("generated", false)) and not who.is_empty() and not here(s, data, who) and not Being.dead(s, who) 				and not enrolled(c, id) and not done(c, id) and not known_already(s, data, id):
+		var teacher_id := str(all[id].get("teacher", ""))
+		if bool(all[id].get("generated", false)) and not teacher_id.is_empty() and not here(s, data, teacher_id, who) and not Being.dead(s, teacher_id) 				and not enrolled(c, id) and not done(c, id) and not known_already(s, data, id, who):
 			out.append(id)
 	return out
 
 
 ## Where a course's teacher is, in words: «Ольховый Брод · Мельница» ("" — unknown).
 static func where(s: GameSession, data: Dictionary, id: String) -> String:
-	var who := str(course(s, data, id).get("teacher", ""))
-	var room := Where.base_room(s, data, who)
+	var teacher_id := str(course(s, data, id).get("teacher", ""))
+	var room := Where.base_room(s, data, teacher_id)
 	return WorldView.new(data["world"]).place_path(room) if not room.is_empty() else ""
 
 
@@ -104,9 +104,9 @@ static func is_teacher(s: GameSession, data: Dictionary, npc_id: String) -> bool
 
 
 ## Book courses of the books the hero carries.
-static func books(s: GameSession, data: Dictionary) -> Array[String]:
+static func books(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Array[String]:
 	var out: Array[String] = []
-	var inv: Dictionary = s.character.get("inventory", {})
+	var inv: Dictionary = Life.of(s, who, data).get("inventory", {})
 	var all := courses(s, data)
 	for id: String in all:
 		if not str(all[id].get("book", "")).is_empty() and int(inv.get(str(all[id]["book"]), 0)) > 0:
@@ -169,11 +169,11 @@ static func _knows_spell(c: Dictionary, id: String) -> bool:
 
 
 ## What a course asks: [{text, ok}].
-static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[Dictionary]:
+static func requirements(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[Dictionary]:
 	var co := course(s, data, id)
-	var c := s.character
+	var c := Life.of(s, who, data)
 	var teacher := str(co.get("teacher", ""))
-	var out := Require.rows(s, data, co.get("requires", {}), {"npc": teacher, "npc_word": "учителем", "npc_of": "учителя"})
+	var out := Require.rows(s, data, co.get("requires", {}), {"who": who, "npc": teacher, "npc_word": "учителем", "npc_of": "учителя"})
 	var t: Dictionary = co.get("teaches", {})
 	var what := str(t.get("id", ""))
 	match str(t.get("kind", "")):
@@ -203,8 +203,8 @@ static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[
 
 ## The hero already has what the course teaches (v0.7.39): a skill, a tool, a language, a spell or a recipe known
 ## some other way — a recipe without `learn` by the tool's proficiency. Such a course is shown as learned, not begun.
-static func known_already(s: GameSession, data: Dictionary, id: String) -> bool:
-	var c := s.character
+static func known_already(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> bool:
+	var c := Life.of(s, who, data)
 	var t: Dictionary = course(s, data, id).get("teaches", {})
 	var what := str(t.get("id", ""))
 	match str(t.get("kind", "")):
@@ -223,12 +223,12 @@ static func known_already(s: GameSession, data: Dictionary, id: String) -> bool:
 	return false
 
 
-static func _ok(s: GameSession, data: Dictionary, id: String) -> bool:
-	return requirements(s, data, id).all(func(r: Dictionary) -> bool: return bool(r["ok"]))
+static func _ok(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> bool:
+	return requirements(s, data, id, who).all(func(r: Dictionary) -> bool: return bool(r["ok"]))
 
 
-static func here(s: GameSession, data: Dictionary, npc_id: String) -> bool:
-	return s.npcs_here(data["world"], s.room_id).has(npc_id)
+static func here(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> bool:
+	return s.npcs_here(data["world"], Life.room(s, data, who)).has(npc_id)
 
 
 static func _loc_of_school(data: Dictionary, sid: String) -> String:
@@ -236,8 +236,8 @@ static func _loc_of_school(data: Dictionary, sid: String) -> String:
 	return str(world.site(str(school(data, sid).get("site", ""))).get("location_id", ""))
 
 
-static func _banned(s: GameSession, sid: String) -> bool:
-	return not sid.is_empty() and int(view(s.character)["banned"].get(sid, -1)) >= s.day
+static func _banned(s: GameSession, sid: String, who: String = Being.HERO) -> bool:
+	return not sid.is_empty() and int(view(Life.of(s, who))["banned"].get(sid, -1)) >= s.day
 
 
 static func admitted(c: Dictionary, sid: String) -> bool:
@@ -252,36 +252,36 @@ static func school_state(c: Dictionary) -> Dictionary:
 
 
 ## "" when the hero may sit the school's entrance exam now, else a localization key.
-static func exam_why(s: GameSession, data: Dictionary, sid: String) -> String:
+static func exam_why(s: GameSession, data: Dictionary, sid: String, who: String = Being.HERO) -> String:
 	var unfree := EncounterRules.unfree_why(s)
 	if not unfree.is_empty():
 		return unfree
 	var sc := school(data, sid)
 	if sc.is_empty():
 		return "STUDY_UNKNOWN"
-	if admitted(s.character, sid):
+	if admitted(Life.of(s, who, data), sid):
 		return "STUDY_ADMITTED"
-	if _banned(s, sid):
+	if _banned(s, sid, who):
 		return "STUDY_BANNED"
-	if not here(s, data, str(sc.get("head", ""))):
+	if not here(s, data, str(sc.get("head", "")), who):
 		return "STUDY_TEACHER_AWAY"
-	if SocialRules.refuses(s, data, str(sc["head"])):
+	if (who == Being.HERO and SocialRules.refuses(s, data, str(sc["head"]))):
 		return "TALK_REFUSED"
-	var tried: Dictionary = view(s.character)["tried"]
+	var tried: Dictionary = view(Life.of(s, who, data))["tried"]
 	if tried.has(sid) and s.day - int(tried[sid]) < int(cfg(data)["exam"]["retry_days"]):
 		return "STUDY_TRIED"
 	return ""
 
 
-static func exam_chance(s: GameSession, data: Dictionary, sid: String) -> int:
+static func exam_chance(s: GameSession, data: Dictionary, sid: String, who: String = Being.HERO) -> int:
 	var ex: Dictionary = school(data, sid).get("exam", {})
 	if ex.is_empty():
 		return 100
-	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(ex["skill"]), "dc": int(ex["dc"])})
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(ex["skill"]), "dc": int(ex["dc"])})
 
 
 ## The entrance exam (exam_why first). Lines.
-static func exam(s: GameSession, data: Dictionary, sid: String) -> Array[String]:
+static func exam(s: GameSession, data: Dictionary, sid: String, who: String = Being.HERO) -> Array[String]:
 	var sc := school(data, sid)
 	var ex: Dictionary = sc.get("exam", {})
 	var lines: Array[String] = []
@@ -290,17 +290,17 @@ static func exam(s: GameSession, data: Dictionary, sid: String) -> Array[String]
 	if not ex.is_empty() and not rec.is_empty():
 		lines.append("%s — без экзамена: рекомендация %s" % [sc["name"], rec])
 	elif not ex.is_empty():
-		var r := Roll.hero(s, data, {"what": "%s — экзамен" % sc["name"], "skill": str(ex["skill"]), "dc": int(ex["dc"])})
+		var r := Roll.check(s, data, Sheet.who(s, data, who), {"what": "%s — экзамен" % sc["name"], "skill": str(ex["skill"]), "dc": int(ex["dc"])})
 		var total := int(r["total"])
 		margin = int(r["margin"])
 		lines.append("%s — экзамен: %s %d против Сл %d — %s" % [sc["name"], CraftRules.tr_skill(data, str(ex["skill"])), total, int(ex["dc"]),
 			"сдан" if margin >= 0 else "не сдан"])
 		if margin < 0:
-			state(s.character)["tried"][sid] = s.day
+			state(Life.of(s, who, data))["tried"][sid] = s.day
 			lines.append("Можно попробовать снова через %d дн." % int(cfg(data)["exam"]["retry_days"]))
 			return lines
 	var stipend := margin >= int(cfg(data)["exam"]["stipend_margin"])
-	state(s.character)["schools"][sid] = {"since": s.day, "stipend": stipend}
+	state(Life.of(s, who, data))["schools"][sid] = {"since": s.day, "stipend": stipend}
 	lines.append("Приняты в %s%s" % [sc["name"], " — со стипендией: учёба здесь бесплатно" if stipend else ""])
 	return lines
 
@@ -308,69 +308,69 @@ static func exam(s: GameSession, data: Dictionary, sid: String) -> Array[String]
 # --- enrolment ----------------------------------------------------------------------------------------------------
 
 
-static func fee(s: GameSession, data: Dictionary, id: String) -> int:
+static func fee(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
 	var co := course(s, data, id)
 	var sid := str(co.get("school", ""))
-	if not sid.is_empty() and bool(school_state(s.character).get(sid, {}).get("stipend", false)):
+	if not sid.is_empty() and bool(school_state(Life.of(s, who, data)).get(sid, {}).get("stipend", false)):
 		return 0
-	var who := str(co.get("teacher", school(data, sid).get("head", "") if not sid.is_empty() else ""))
+	var teacher_id := str(co.get("teacher", school(data, sid).get("head", "") if not sid.is_empty() else ""))
 	var q := Price.start(int(co.get("fee_cp", 0)))
-	Price.mod(q, "навык учёбы", float(DevelopmentRules.effect(s.character, data, "study", "fee_pct", 100.0)))
-	return Price.rounded(Price.mod(q, "наставник", BondRules.mentor_fee_pct(s, data, who)))  # v0.7.31: a mentor asks less
+	Price.mod(q, "навык учёбы", float(DevelopmentRules.effect(Life.of(s, who, data), data, "study", "fee_pct", 100.0)))
+	return Price.rounded(Price.mod(q, "наставник", BondRules.mentor_fee_pct(s, data, teacher_id)))  # v0.7.31: a mentor asks less
 
 
-static func lessons_needed(s: GameSession, data: Dictionary, id: String) -> int:
-	return maxi(1, int(course(s, data, id).get("lessons", 1)) - int(DevelopmentRules.effect(s.character, data, "study", "lessons_minus", 0.0)))
+static func lessons_needed(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
+	return maxi(1, int(course(s, data, id).get("lessons", 1)) - int(DevelopmentRules.effect(Life.of(s, who, data), data, "study", "lessons_minus", 0.0)))
 
 
 ## "" when the hero may enrol on the course now, else a localization key.
-static func enroll_why(s: GameSession, data: Dictionary, id: String) -> String:
+static func enroll_why(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> String:
 	var unfree := EncounterRules.unfree_why(s)
 	if not unfree.is_empty():
 		return unfree
 	var co := course(s, data, id)
 	if co.is_empty():
 		return "STUDY_UNKNOWN"
-	if done(s.character, id):
+	if done(Life.of(s, who, data), id):
 		return "STUDY_DONE"
-	if enrolled(s.character, id):
+	if enrolled(Life.of(s, who, data), id):
 		return "STUDY_ENROLLED"
-	if known_already(s, data, id):
+	if known_already(s, data, id, who):
 		return "STUDY_KNOWN"
 	if not str(co.get("book", "")).is_empty():
 		return "STUDY_BOOK"
 	var sid := str(co.get("school", ""))
 	var teacher := str(co.get("teacher", ""))
 	var head := str(school(data, sid).get("head", ""))
-	if not here(s, data, teacher) and (head.is_empty() or not here(s, data, head)):
+	if not here(s, data, teacher, who) and (head.is_empty() or not here(s, data, head, who)):
 		return "STUDY_TEACHER_AWAY"
-	if SocialRules.refuses(s, data, teacher if here(s, data, teacher) else head):
+	if (who == Being.HERO and SocialRules.refuses(s, data, teacher if here(s, data, teacher, who) else head)):
 		return "TALK_REFUSED"
-	if _banned(s, sid):
+	if _banned(s, sid, who):
 		return "STUDY_BANNED"
-	if not admitted(s.character, sid):
+	if not admitted(Life.of(s, who, data), sid):
 		return "STUDY_NEED_EXAM"
-	if not _ok(s, data, id):
+	if not _ok(s, data, id, who):
 		return "STUDY_REQUIREMENTS"
-	return "STUDY_NO_MONEY" if Ledger.balance(s) < fee(s, data, id) else ""
+	return "STUDY_NO_MONEY" if Ledger.balance(s, who) < fee(s, data, id, who) else ""
 
 
-static func enroll(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	var c := s.character
-	var f := fee(s, data, id)
-	Ledger.add(s, -f, "study:enroll")
+static func enroll(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
+	var f := fee(s, data, id, who)
+	Ledger.add(s, -f, "study:enroll", who)
 	var lines: Array[String] = ["Записаны на курс «%s» (%s) — %s, занятий %d%s" % [name_of(s, data, id), WorldView.name_of(data, str(course(s, data, id)["teacher"])),
-		teaches_text(s, data, id), lessons_needed(s, data, id), (", плата " + Money.format(f)) if f > 0 else ""]]
-	lines.append_array(_dorm_open(s, data, str(course(s, data, id).get("school", ""))))
-	state(c)["courses"][id] = _new_course(s, data, id)
+		teaches_text(s, data, id), lessons_needed(s, data, id, who), (", плата " + Money.format(f)) if f > 0 else ""]]
+	lines.append_array(_dorm_open(s, data, str(course(s, data, id).get("school", "")), who))
+	state(c)["courses"][id] = _new_course(s, data, id, who)
 	return lines
 
 
-static func drop(s: GameSession, data: Dictionary, id: String) -> Array[String]:
+static func drop(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
 	var sid := str(course(s, data, id).get("school", ""))
-	view(s.character)["courses"].erase(id)
+	view(Life.of(s, who, data))["courses"].erase(id)
 	var lines: Array[String] = ["Бросили курс «%s»" % name_of(s, data, id)]
-	lines.append_array(_dorm_close(s, data, sid))
+	lines.append_array(_dorm_close(s, data, sid, who))
 	return lines
 
 
@@ -382,28 +382,28 @@ static func _book_course(s: GameSession, data: Dictionary, id: String) -> bool:
 
 
 ## "" when a lesson (or a reading) may go now, else a localization key.
-static func lesson_why(s: GameSession, data: Dictionary, id: String) -> String:
+static func lesson_why(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> String:
 	var unfree := EncounterRules.unfree_why(s)
 	if not unfree.is_empty():
 		return unfree
 	var co := course(s, data, id)
 	if co.is_empty():
 		return "STUDY_UNKNOWN"
-	if done(s.character, id):
+	if done(Life.of(s, who, data), id):
 		return "STUDY_DONE"
-	if not enrolled(s.character, id) and not view(s.character)["courses"].has(id) and known_already(s, data, id):
+	if not enrolled(Life.of(s, who, data), id) and not view(Life.of(s, who, data))["courses"].has(id) and known_already(s, data, id, who):
 		return "STUDY_KNOWN"
 	if _book_course(s, data, id):
-		if not books(s, data).has(id):
+		if not books(s, data, who).has(id):
 			return "STUDY_NO_BOOK"
-		if not _ok(s, data, id):
+		if not _ok(s, data, id, who):
 			return "STUDY_REQUIREMENTS"
 	else:
-		if not enrolled(s.character, id):
+		if not enrolled(Life.of(s, who, data), id):
 			return "STUDY_NOT_ENROLLED"
-		if not here(s, data, str(co.get("teacher", ""))):
+		if not here(s, data, str(co.get("teacher", "")), who):
 			return "STUDY_TEACHER_AWAY"
-	if int(view(s.character)["courses"].get(id, {}).get("lesson_day", -1)) == s.day:
+	if int(view(Life.of(s, who, data))["courses"].get(id, {}).get("lesson_day", -1)) == s.day:
 		return "STUDY_DONE_TODAY"
 	return ""
 
@@ -413,25 +413,26 @@ static func lesson_hours(data: Dictionary) -> int:
 
 
 ## The check of a lesson: {bonus, parts, adv, label}.
-static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+static func _check(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Dictionary:
 	var co := course(s, data, id)
-	var c := s.character
+	var c := Life.of(s, who, data)
 	var adv := bool(DevelopmentRules.effect(c, data, "study", "lesson_adv", false))
 	var parts: Array[Dictionary] = []
 	var label := ""
 	if co.has("ability"):
 		var ab := str(co["ability"])
 		parts = [RollParts.part(RollParts.ability_name(ab), CharacterRules.mod(CharacterRules.ability(c, ab)))]
-		RollParts.difficulty(s, data, parts)
+		if who == Being.HERO:
+			RollParts.difficulty(s, data, parts)
 		label = RollParts.ability_name(ab)
 	else:
 		var skill := str(co.get("skill", "history"))
-		parts = RollParts.skill(s, data, skill)
+		parts = RollParts.skill(s, data, skill, who)
 		label = CraftRules.tr_skill(data, skill)
 	RollParts.development(c, data, "study", "lesson_bonus", parts)
-	var own := PropertyRules.here(s, data) if data["rules"].has("property") else ""
-	if not own.is_empty() and PropertyRules.bonus(s, data, own, "lesson_bonus") != 0:  # v0.7.39.8: a library at the hero's place
-		parts.append(RollParts.part(PropertyRules.name_of(s, data, own), PropertyRules.bonus(s, data, own, "lesson_bonus")))
+	var own := PropertyRules.here(s, data, who) if data["rules"].has("property") else ""
+	if not own.is_empty() and PropertyRules.bonus(s, data, own, "lesson_bonus", who) != 0:  # v0.7.39.8: a library at the hero's place
+		parts.append(RollParts.part(PropertyRules.name_of(s, data, own), PropertyRules.bonus(s, data, own, "lesson_bonus", who)))
 	if _book_course(s, data, id):
 		RollParts.development(c, data, "study", "book_bonus", parts)
 		adv = adv or bool(DevelopmentRules.effect(c, data, "study", "book_adv", false))
@@ -439,47 +440,47 @@ static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 
 
 ## The lesson's check for Activity.attempt and the window's chance.
-static func lesson_spec(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+static func lesson_spec(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Dictionary:
 	var co := course(s, data, id)
-	var ch := _check(s, data, id)
+	var ch := _check(s, data, id, who)
 	return {"what": name_of(s, data, id), "label": ch["label"], "skill": str(co.get("skill", "history")), "parts": ch["parts"], "bonus": ch["bonus"],
-		"dc": int(co.get("dc", 10)), "adv": ch["adv"], "ladder": ladder(s, data)}
+		"dc": int(co.get("dc", 10)), "adv": ch["adv"], "ladder": ladder(s, data, who)}
 
 
-static func lesson_chance(s: GameSession, data: Dictionary, id: String) -> int:
-	return Roll.chance_of(s, data, Sheet.HERO, lesson_spec(s, data, id))
+static func lesson_chance(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), lesson_spec(s, data, id, who))
 
 
-static func ladder(s: GameSession, data: Dictionary) -> Array:
+static func ladder(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Array:
 	return (cfg(data)["outcomes"] as Array).map(func(o: Dictionary) -> Dictionary:
-		return o if str(o["id"]) != "great" else o.merged({"from": DevelopmentRules.effect(s.character, data, "study", "great_from", float(o["from"]))}, true))
+		return o if str(o["id"]) != "great" else o.merged({"from": DevelopmentRules.effect(Life.of(s, who, data), data, "study", "great_from", float(o["from"]))}, true))
 
 
-static func _new_course(s: GameSession, data: Dictionary, id: String) -> Dictionary:
-	return Progress.of_work(lessons_needed(s, data, id)).merged({"last": s.day, "misses": 0, "lesson_day": -1})
+static func _new_course(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Dictionary:
+	return Progress.of_work(lessons_needed(s, data, id, who)).merged({"last": s.day, "misses": 0, "lesson_day": -1})
 
 
 ## A lesson of `minutes` (the time already passed); a lesson broken off counts nothing. Lines.
-static func lesson(s: GameSession, data: Dictionary, id: String, minutes: int) -> Array[String]:
-	var c := s.character
+static func lesson(s: GameSession, data: Dictionary, id: String, minutes: int, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
 	var co := course(s, data, id)
 	var courses_st: Dictionary = state(c)["courses"]
 	if not courses_st.has(id):
-		courses_st[id] = _new_course(s, data, id)
+		courses_st[id] = _new_course(s, data, id, who)
 	var st: Dictionary = courses_st[id]
 	if minutes < lesson_hours(data) * 60:
 		return ["Занятие прервано — не засчитано"]
 	st["lesson_day"] = s.day
 	st["last"] = s.day
-	var a := Activity.attempt(s, data, lesson_spec(s, data, id))
+	var a := Activity.attempt(s, data, lesson_spec(s, data, id, who), who)
 	var o: Dictionary = a["step"]
-	var need := lessons_needed(s, data, id)
+	var need := lessons_needed(s, data, id, who)
 	var finished := Progress.add(st, int(o.get("progress", 0)), need)
 	var lines: Array[String] = ["%s (%d/%d)" % [a["line"], mini(int(st["done"]), need), need]]
 	var dev: Dictionary = DevelopmentRules.direction(data, "study").get("sources", {})
 	lines.append_array(DevelopmentRules.add_xp(c, data, "study", int(dev.get(str(o["id"]), 0))))
 	if finished:
-		lines.append_array(graduate(s, data, id))
+		lines.append_array(graduate(s, data, id, who))
 	return lines
 
 
@@ -487,13 +488,14 @@ static func lesson(s: GameSession, data: Dictionary, id: String, minutes: int) -
 
 
 ## What the course teaches goes to the hero. Lines.
-static func grant(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	var c := s.character
+static func grant(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
 	var t: Dictionary = course(s, data, id).get("teaches", {})
 	var what := str(t.get("id", ""))
 	match str(t.get("kind", "")):
 		"trait":
-			MakeRules.grant_trait(s, data, what)
+			if who == Being.HERO:  # a trait is the hero sheet's
+				MakeRules.grant_trait(s, data, what)
 		"skill":
 			var profs: Array = c.get("skill_profs", [])
 			if not profs.has(what):
@@ -512,20 +514,21 @@ static func grant(s: GameSession, data: Dictionary, id: String) -> Array[String]
 		"spell", "ability":
 			learn_spell(c, what)
 		"recipe":
-			CraftRules.learn(s, data, what)
+			CraftRules.learn(s, data, what, who)
 		"dev":  # the experience of a peaceful direction (v0.7.39.1: «Основы артефакции»)
 			return DevelopmentRules.add_xp(c, data, what, int(t.get("xp", 0)))
 		_:
 			return []
-	CharacterRules.refresh(c, data, s.items)
+	if who == Being.HERO:
+		CharacterRules.refresh(c, data, s.items)
 	return ["Выучено — %s" % teaches_text(s, data, id)]
 
 
-static func graduate(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	var c := s.character
+static func graduate(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
 	var co := course(s, data, id)
 	var lines: Array[String] = ["Курс «%s» окончен" % name_of(s, data, id)]
-	lines.append_array(grant(s, data, id))
+	lines.append_array(grant(s, data, id, who))
 	if not bool(co.get("generated", false)):  # the master's courses give no class experience
 		lines.append_array(XpRules.award(c, data, int(co.get("xp", 0)), "учёба"))
 	var dev: Dictionary = DevelopmentRules.direction(data, "study").get("sources", {})
@@ -541,7 +544,7 @@ static func graduate(s: GameSession, data: Dictionary, id: String) -> Array[Stri
 		lines.append_array(BondRules.mentor(s, data, str(co["teacher"])))  # v0.7.31
 	view(c)["courses"].erase(id)
 	(view(c)["done"] as Array).append(id)
-	lines.append_array(_dorm_close(s, data, sid))
+	lines.append_array(_dorm_close(s, data, sid, who))
 	return lines
 
 
@@ -550,8 +553,8 @@ static func has_diploma(c: Dictionary, id: String) -> bool:
 
 
 ## The hero is out of the school: the courses gone, the school closed for a while. Lines.
-static func expel(s: GameSession, data: Dictionary, sid: String, why: String) -> Array[String]:
-	var c := s.character
+static func expel(s: GameSession, data: Dictionary, sid: String, why: String, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
 	var gone: Array[String] = []
 	for id: String in (view(c)["courses"] as Dictionary).keys():
 		if str(course(s, data, id).get("school", "")) == sid:
@@ -561,7 +564,7 @@ static func expel(s: GameSession, data: Dictionary, sid: String, why: String) ->
 	state(c)["banned"][sid] = s.day + int(cfg(data)["readmit_days"])
 	var lines: Array[String] = ["Отчислены из «%s» — %s%s; вернуться можно через %d дн." % [school(data, sid).get("name", sid), why,
 		(" (курсы: %s)" % ", ".join(gone)) if not gone.is_empty() else "", int(cfg(data)["readmit_days"])]]
-	lines.append_array(_dorm_close(s, data, sid))
+	lines.append_array(_dorm_close(s, data, sid, who))
 	return lines
 
 
@@ -576,10 +579,10 @@ static func _studies_at(c: Dictionary, s: GameSession, data: Dictionary, sid: St
 
 
 ## True when the room is the dorm of a school the hero studies at.
-static func student_room(s: GameSession, data: Dictionary, room_id: String) -> bool:
+static func student_room(s: GameSession, data: Dictionary, room_id: String, who: String = Being.HERO) -> bool:
 	var all: Dictionary = data["world"].get("schools", {})
 	for sid: String in all:
-		if str(all[sid].get("dorm", "")) == room_id and _studies_at(s.character, s, data, sid):
+		if str(all[sid].get("dorm", "")) == room_id and _studies_at(Life.of(s, who, data), s, data, sid):
 			return true
 	return false
 
@@ -588,9 +591,9 @@ static func _chest_id(sid: String) -> String:
 	return "chest_study_" + sid
 
 
-static func _dorm_open(s: GameSession, data: Dictionary, sid: String) -> Array[String]:
+static func _dorm_open(s: GameSession, data: Dictionary, sid: String, who: String = Being.HERO) -> Array[String]:
 	var room := str(school(data, sid).get("dorm", ""))
-	if room.is_empty() or _studies_at(s.character, s, data, sid):
+	if room.is_empty() or _studies_at(Life.of(s, who, data), s, data, sid):
 		return []
 	var list: Array = s.props.get(room, [])
 	if not list.any(func(p: Dictionary) -> bool: return str(p.get("id", "")) == _chest_id(sid)):
@@ -601,9 +604,9 @@ static func _dorm_open(s: GameSession, data: Dictionary, sid: String) -> Array[S
 
 
 ## The last course of the school is over: the chest's things go back to the hero.
-static func _dorm_close(s: GameSession, data: Dictionary, sid: String) -> Array[String]:
+static func _dorm_close(s: GameSession, data: Dictionary, sid: String, who: String = Being.HERO) -> Array[String]:
 	var room := str(school(data, sid).get("dorm", ""))
-	if room.is_empty() or _studies_at(s.character, s, data, sid):
+	if room.is_empty() or _studies_at(Life.of(s, who, data), s, data, sid):
 		return []
 	var list: Array = s.props.get(room, [])
 	var lines: Array[String] = []
@@ -612,7 +615,7 @@ static func _dorm_close(s: GameSession, data: Dictionary, sid: String) -> Array[
 			continue
 		var back: Array[String] = []
 		for item: String in (p.get("contents", {}) as Dictionary):
-			ItemRules.found(s.character, data, s.items, item, int(p["contents"][item]))
+			ItemRules.found(Life.of(s, who, data), data, s.items, item, int(p["contents"][item]))
 			back.append(ItemRules.display_name(data["items"], s.items, item))
 		list.erase(p)
 		lines.append("Каморку освободили" + ((" — вещи из сундука вам отдали: " + ", ".join(back)) if not back.is_empty() else ""))
@@ -625,7 +628,12 @@ static func _dorm_close(s: GameSession, data: Dictionary, sid: String) -> Array[
 
 ## Each new day: misses for long gaps, expelled after too many or for a crime in the school's town. Lines.
 static func tick(s: GameSession, data: Dictionary) -> Array[String]:
-	var c := s.character
+	return Life.each(s, data, "study", tick_of)
+
+
+## One holder's day (v0.8.4.20): the hero's, or a person's who keeps a part of this life.
+static func tick_of(s: GameSession, data: Dictionary, who: String) -> Array[String]:
+	var c := Life.of(s, who, data)
 	if not (c.get("study") is Dictionary):
 		return []
 	var lines: Array[String] = []
@@ -647,8 +655,8 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	for sid: String in (school_state(c) as Dictionary).keys():
 		var loc := _loc_of_school(data, sid)
 		var room := str(school(data, sid).get("dorm", ""))
-		if not loc.is_empty() and not room.is_empty() and CrimeRules.wanted_at(s, data, room):
-			lines.append_array(expel(s, data, sid, "за проступок: вас ищет стража"))
+		if not loc.is_empty() and not room.is_empty() and who == Being.HERO and CrimeRules.wanted_at(s, data, room):
+			lines.append_array(expel(s, data, sid, "за проступок: вас ищет стража", who))
 	for id: String in out:
 		if not enrolled(c, id):
 			continue
@@ -657,7 +665,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 			view(c)["courses"].erase(id)
 			lines.append("Учитель больше не ждёт вас: «%s» — %s" % [name_of(s, data, id), out[id]])
 		else:
-			lines.append_array(expel(s, data, sid, str(out[id])))
+			lines.append_array(expel(s, data, sid, str(out[id]), who))
 	return lines
 
 

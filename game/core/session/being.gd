@@ -38,6 +38,11 @@ const PARTS := {
 	"discount": TYPE_DICTIONARY, "favor": TYPE_INT, "spent": TYPE_DICTIONARY, "exhaustion": TYPE_INT, "diseases": TYPE_ARRAY,
 	"rested": TYPE_INT, "xp": TYPE_INT, "level": TYPE_INT, "creature": TYPE_DICTIONARY, "summon": TYPE_DICTIONARY, "fight": TYPE_DICTIONARY,
 	"was": TYPE_DICTIONARY,
+	# its own life (v0.8.4.20, Life.PARTS): work, property, the bank, study, a shop, offices and what it learned
+	"jobs": TYPE_DICTIONARY, "jobs_tried": TYPE_DICTIONARY, "property": TYPE_DICTIONARY, "bank": TYPE_DICTIONARY, "study": TYPE_DICTIONARY,
+	"shop": TYPE_DICTIONARY, "offices": TYPE_DICTIONARY, "towns": TYPE_DICTIONARY, "debts": TYPE_DICTIONARY, "development": TYPE_DICTIONARY,
+	"skill_profs": TYPE_ARRAY, "tools": TYPE_ARRAY, "languages": TYPE_ARRAY, "spells": TYPE_DICTIONARY, "recipes": TYPE_ARRAY,
+	"stolen_animals": TYPE_ARRAY,
 }
 const NESTED := {
 	"creature": {

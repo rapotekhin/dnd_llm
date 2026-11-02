@@ -10,10 +10,10 @@ static func step(ladder: Array, margin: int) -> Dictionary:
 	return Scale.step(ladder, margin, "from", ladder[0])
 
 
-## The check of `spec` (Roll.hero's keys), with `ladder` and `label`, the word of the check for the line.
+## The check of `spec` (Roll.check's keys) by `who`, with `ladder` and `label`, the word of the check for the line.
 ## {roll, step, line}.
-static func attempt(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
-	var r := Roll.hero(s, data, spec)
+static func attempt(s: GameSession, data: Dictionary, spec: Dictionary, who: String = Being.HERO) -> Dictionary:
+	var r := Roll.check(s, data, Sheet.who(s, data, who), spec)
 	var o := step(spec["ladder"], int(r["margin"]))
 	return {"roll": r, "step": o, "line": line(str(spec["what"]), str(spec.get("label", "")), r, str(o["name"]))}
 

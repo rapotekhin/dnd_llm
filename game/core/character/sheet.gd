@@ -45,8 +45,11 @@ static func of(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
 	for id: String in CharacterRules.ABILITIES:
 		saves[id] = int(m.get("saves", {}).get(id, CharacterRules.mod(int(ab.get(id, 10)))))
 	var skills := {}
+	var learned: Array = who.get("skill_profs", [])  # what a person learned (v0.8.4.20: a course, a book)
 	for id: String in data["rules"]["skills"]:
 		skills[id] = int(m.get("skills", {}).get(id, CharacterRules.mod(int(ab.get(str(data["rules"]["skills"][id]), 10)))))
+		if learned.has(id):
+			skills[id] = maxi(int(skills[id]), CharacterRules.mod(int(ab.get(str(data["rules"]["skills"][id]), 10))) + int(m.get("prof", 2)))
 	return {"abilities": ab, "saves": saves, "skills": skills, "prof_bonus": int(m.get("prof", 2)),
 		"passive_perception": int(m.get("passive_perception", 10 + int(skills["perception"])))}
 

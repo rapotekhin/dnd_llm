@@ -91,8 +91,11 @@ static func of_params(c: Dictionary, data: Dictionary, params: Dictionary, sessi
 	return []
 
 
-## A skill check of a rule: the sheet's parts and the game's difficulty (= bonus_for + DifficultyRules.bonus).
-static func skill(s: GameSession, data: Dictionary, skill_id: String) -> Array[Dictionary]:
+## A skill check of a rule: the sheet's parts and the game's difficulty (= bonus_for + DifficultyRules.bonus); a person's
+## (v0.8.4.20) — its sheet's bonus, what it learned counted.
+static func skill(s: GameSession, data: Dictionary, skill_id: String, who: String = Being.HERO) -> Array[Dictionary]:
+	if who != Being.HERO:
+		return [part(str(TranslationServer.translate("SKILL_" + skill_id.to_upper())), Sheet.skill(s, data, Sheet.who(s, data, who), skill_id))]
 	var out := cached(s.character, data, "skill", skill_id, s.items)
 	difficulty(s, data, out)
 	return out
@@ -118,7 +121,13 @@ static func development(c: Dictionary, data: Dictionary, dir: String, key: Strin
 
 
 ## A tool's check: the tool's ability, the proficiency with it, the game's difficulty (CraftRules.bonus).
-static func tool(s: GameSession, data: Dictionary, tool_id: String, ab: String) -> Array[Dictionary]:
+static func tool(s: GameSession, data: Dictionary, tool_id: String, ab: String, who: String = Being.HERO) -> Array[Dictionary]:
+	if who != Being.HERO:  # a person's (v0.8.4.20): its ability and the tool it learned
+		var w := Sheet.who(s, data, who)
+		var mine: Array[Dictionary] = [part(ability_name(ab), Sheet.ability_mod(s, data, w, ab))]
+		if CraftRules.proficient(Life.of(s, who), tool_id):
+			add(mine, "владение: " + BackgroundRules.tool_name(data, tool_id), Sheet.prof(s, data, w))
+		return mine
 	var out: Array[Dictionary] = [part(ability_name(ab), CharacterRules.mod(CharacterRules.ability(s.character, ab)))]
 	if CraftRules.proficient(s.character, tool_id):
 		add(out, "владение: " + BackgroundRules.tool_name(data, tool_id), CharacterRules.prof_bonus(s.character, data))

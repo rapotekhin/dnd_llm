@@ -437,8 +437,8 @@ static func bonus(s: GameSession, data: Dictionary, tool: String) -> int:
 	return RollParts.sum(bonus_parts(s, data, tool))
 
 
-static func bonus_parts(s: GameSession, data: Dictionary, tool: String) -> Array[Dictionary]:
-	return RollParts.tool(s, data, tool, str(cfg(data)["tools"].get(tool, "int")))
+static func bonus_parts(s: GameSession, data: Dictionary, tool: String, who: String = Being.HERO) -> Array[Dictionary]:
+	return RollParts.tool(s, data, tool, str(cfg(data)["tools"].get(tool, "int")), who)
 
 
 ## The bonus of a recipe's check: its tool's, or a tool-less template's skill (`check`), with the direction's skills.
@@ -717,9 +717,10 @@ static func teachable(s: GameSession, data: Dictionary, sv: Dictionary) -> Array
 	return [id]
 
 
-static func learn(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	if not learned(s.character).has(id):
-		learned(s.character).append(id)
+static func learn(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who)
+	if not learned(c).has(id):
+		learned(c).append(id)
 	return ["Выучен рецепт: %s" % recipe_name(s, data, id)]
 
 

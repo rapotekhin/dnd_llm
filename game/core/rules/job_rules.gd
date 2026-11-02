@@ -72,19 +72,19 @@ static func _rank_cfg(data: Dictionary, r: int) -> Dictionary:
 
 
 ## The pay of a shift at the hero's rank (the direction «Работа» counts).
-static func pay(s: GameSession, data: Dictionary, id: String, r: int = -1) -> int:
-	var rr := rank(s.character, id) if r < 0 else r
+static func pay(s: GameSession, data: Dictionary, id: String, r: int = -1, who: String = Being.HERO) -> int:
+	var rr := rank(Life.of(s, who, data), id) if r < 0 else r
 	var base := float(job(s, data, id).get("pay_cp", 0)) * float(_rank_cfg(data, rr)["pay"])
-	return roundi(base * float(DevelopmentRules.effect(s.character, data, "work", "pay_pct", 100.0)) / 100.0)
+	return roundi(base * float(DevelopmentRules.effect(Life.of(s, who, data), data, "work", "pay_pct", 100.0)) / 100.0)
 
 
-static func dc(s: GameSession, data: Dictionary, id: String) -> int:
-	return int(job(s, data, id).get("dc", 10)) + int(_rank_cfg(data, rank(s.character, id))["dc"])
+static func dc(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
+	return int(job(s, data, id).get("dc", 10)) + int(_rank_cfg(data, rank(Life.of(s, who, data), id))["dc"])
 
 
 ## Good shifts to the next rank.
-static func promote_after(s: GameSession, data: Dictionary) -> int:
-	return maxi(1, roundi(int(cfg(data)["promote_after"]) * float(DevelopmentRules.effect(s.character, data, "work", "promote_mult", 1.0))))
+static func promote_after(s: GameSession, data: Dictionary, who: String = Being.HERO) -> int:
+	return maxi(1, roundi(int(cfg(data)["promote_after"]) * float(DevelopmentRules.effect(Life.of(s, who, data), data, "work", "promote_mult", 1.0))))
 
 
 static func _skilled(c: Dictionary, skill: String) -> bool:
@@ -92,30 +92,30 @@ static func _skilled(c: Dictionary, skill: String) -> bool:
 
 
 ## What the job asks: [{text, ok}].
-static func requirements(s: GameSession, data: Dictionary, id: String) -> Array[Dictionary]:
+static func requirements(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[Dictionary]:
 	var j := job(s, data, id)
 	var employer := str(j.get("employer", ""))
-	return Require.rows(s, data, j.get("requires", {}), {"npc": employer, "npc_word": "нанимателем", "tool": str(j.get("tool", "")),
+	return Require.rows(s, data, j.get("requires", {}), {"who": who, "npc": employer, "npc_word": "нанимателем", "tool": str(j.get("tool", "")),
 		"skill": str(j.get("skill", "")), "location": ReputationRules.home_of(data, employer)})
 
 
-static func employer_here(s: GameSession, data: Dictionary, id: String) -> bool:
-	return s.npcs_here(data["world"], s.room_id).has(str(job(s, data, id).get("employer", "")))
+static func employer_here(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> bool:
+	return s.npcs_here(data["world"], Life.room(s, data, who)).has(str(job(s, data, id).get("employer", "")))
 
 
 ## "" when the hero may ask for the job now, else a localization key.
-static func hire_why(s: GameSession, data: Dictionary, id: String) -> String:
+static func hire_why(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> String:
 	if job(s, data, id).is_empty():
 		return "JOB_UNKNOWN"
-	if hired(s.character, id):
+	if hired(Life.of(s, who, data), id):
 		return "JOB_HIRED"
-	if not employer_here(s, data, id):
+	if not employer_here(s, data, id, who):
 		return "JOB_EMPLOYER_AWAY"
-	if SocialRules.refuses(s, data, str(job(s, data, id)["employer"])):
+	if (who == Being.HERO and SocialRules.refuses(s, data, str(job(s, data, id)["employer"]))):
 		return "TALK_REFUSED"
-	if requirements(s, data, id).any(func(r: Dictionary) -> bool: return not bool(r["ok"])):
+	if requirements(s, data, id, who).any(func(r: Dictionary) -> bool: return not bool(r["ok"])):
 		return "JOB_REQUIREMENTS"
-	var tried: Dictionary = s.character.get("jobs_tried", {})
+	var tried: Dictionary = Life.of(s, who, data).get("jobs_tried", {})
 	if tried.has(id) and s.day - int(tried[id]) < int(cfg(data)["hire"]["retry_days"]):
 		return "JOB_TRIED"
 	return ""
@@ -128,25 +128,25 @@ static func hire_dc(s: GameSession, data: Dictionary, id: String) -> int:
 	return int(d["dc"]) if not d.is_empty() else int(data["rules"]["dc_tiers"][str(h["tier"])])
 
 
-static func hire_auto(s: GameSession, data: Dictionary) -> bool:
-	return bool(DevelopmentRules.effect(s.character, data, "work", "hire_auto", false))
+static func hire_auto(s: GameSession, data: Dictionary, who: String = Being.HERO) -> bool:
+	return bool(DevelopmentRules.effect(Life.of(s, who, data), data, "work", "hire_auto", false))
 
 
-static func hire_chance(s: GameSession, data: Dictionary, id: String) -> int:
-	if hire_auto(s, data):
+static func hire_chance(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
+	if hire_auto(s, data, who):
 		return 100
-	return Roll.chance_of(s, data, Sheet.HERO, {"skill": str(cfg(data)["hire"]["skill"]), "dc": hire_dc(s, data, id)})
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(cfg(data)["hire"]["skill"]), "dc": hire_dc(s, data, id)})
 
 
 ## The interview (hire_why first). Lines.
-static func hire(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	var c := s.character
+static func hire(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
 	var name := str(job(s, data, id).get("name", id))
 	var lines: Array[String] = []
-	if hire_auto(s, data):
+	if hire_auto(s, data, who):
 		lines.append("%s: берут без расспросов — добрая слава" % name)
 	else:
-		var r := EncounterRules.roll(s, data, str(cfg(data)["hire"]["skill"]), hire_dc(s, data, id))
+		var r := EncounterRules.roll(s, data, str(cfg(data)["hire"]["skill"]), hire_dc(s, data, id), false, who)
 		lines.append("%s: %s" % [name, r["line"]])
 		if not bool(r["ok"]):
 			if not (c.get("jobs_tried") is Dictionary):
@@ -155,26 +155,26 @@ static func hire(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 			lines.append("Не взяли — можно попробовать снова завтра")
 			return lines
 	state(c)[id] = {"rank": 0, "good": 0, "shifts": 0}
-	lines.append("Нанят: %s — %s, %s за смену" % [rank_name(s, data, id, 0), name, Money.format(pay(s, data, id))])
+	lines.append("Нанят: %s — %s, %s за смену" % [rank_name(s, data, id, 0), name, Money.format(pay(s, data, id, -1, who))])
 	return lines
 
 
-static func quit(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	state(s.character).erase(id)
+static func quit(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
+	state(Life.of(s, who, data)).erase(id)
 	return ["Ушёл с работы: %s" % job(s, data, id).get("name", id)]
 
 
 ## "" when a shift may go now, else a localization key.
-static func shift_why(s: GameSession, data: Dictionary, id: String) -> String:
+static func shift_why(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> String:
 	var unfree := EncounterRules.unfree_why(s)
 	if not unfree.is_empty():
 		return unfree
-	if not hired(s.character, id):
+	if not hired(Life.of(s, who, data), id):
 		return "JOB_NOT_HIRED"
-	if not employer_here(s, data, id):
+	if not employer_here(s, data, id, who):
 		return "JOB_EMPLOYER_AWAY"
 	var org: Dictionary = job(s, data, id).get("requires", {}).get("org", {})
-	if not org.is_empty() and not OrgRules.member(s.character, str(org.get("id", ""))):
+	if not org.is_empty() and not OrgRules.member(Life.of(s, who, data), str(org.get("id", ""))):
 		return "JOB_NOT_MEMBER"  # left or expelled: the organization's work is not the hero's any more
 	return ""
 
@@ -184,20 +184,20 @@ static func hours(s: GameSession, data: Dictionary, id: String) -> int:
 
 
 ## The check of a shift: {bonus, parts, adv, label}.
-static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+static func _check(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Dictionary:
 	var j := job(s, data, id)
-	var c := s.character
+	var c := Life.of(s, who, data)
 	var skill := str(j.get("skill", ""))
 	var tool := str(j.get("tool", ""))
 	var adv := bool(DevelopmentRules.effect(c, data, "work", "shift_adv", false))
 	var parts: Array[Dictionary] = []
 	var label := ""
 	if skill.is_empty():
-		parts = CraftRules.bonus_parts(s, data, tool)
+		parts = CraftRules.bonus_parts(s, data, tool, who)
 		label = BackgroundRules.tool_name(data, tool)
 	else:
 		var t := BackgroundRules.tool_check(c, data, tool, skill)
-		parts = RollParts.skill(s, data, skill)
+		parts = RollParts.skill(s, data, skill, who)
 		RollParts.add(parts, str(t["note"]), int(t["bonus"]))
 		adv = adv or not str(t["advantage"]).is_empty()
 		label = CraftRules.tr_skill(data, skill)
@@ -206,14 +206,14 @@ static func _check(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 
 
 ## The shift's check for Activity.attempt and the window's chance.
-static func shift_spec(s: GameSession, data: Dictionary, id: String) -> Dictionary:
-	var ch := _check(s, data, id)
+static func shift_spec(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Dictionary:
+	var ch := _check(s, data, id, who)
 	return {"what": str(job(s, data, id).get("name", id)), "label": ch["label"], "skill": str(job(s, data, id).get("skill", "craft")), "parts": ch["parts"],
-		"bonus": ch["bonus"], "dc": dc(s, data, id), "adv": ch["adv"], "ladder": cfg(data)["outcomes"]}
+		"bonus": ch["bonus"], "dc": dc(s, data, id, who), "adv": ch["adv"], "ladder": cfg(data)["outcomes"]}
 
 
-static func shift_chance(s: GameSession, data: Dictionary, id: String) -> int:
-	return Roll.chance_of(s, data, Sheet.HERO, shift_spec(s, data, id))
+static func shift_chance(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), shift_spec(s, data, id, who))
 
 
 ## What a shift broken off pays (v0.8.4.17: a job, a place and a counter alike): its share by the minutes worked, with no
@@ -224,43 +224,45 @@ static func broken_off(full_pay: int, minutes: int, full: int) -> int:
 
 ## A shift worked for `minutes` (the time already passed). A shift broken off pays its share without a check.
 ## {lines, event, fight} — `event` for the master or "", `fight` — the foes of a shift that ends in a fight.
-static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) -> Dictionary:
-	var c := s.character
+static func shift(s: GameSession, data: Dictionary, id: String, minutes: int, who: String = Being.HERO) -> Dictionary:
+	var c := Life.of(s, who, data)
 	var j := job(s, data, id)
 	var st: Dictionary = state(c)[id]
 	var full := hours(s, data, id) * 60
 	var lines: Array[String] = []
 	if minutes < full:
-		var part := broken_off(pay(s, data, id), minutes, full)
-		Ledger.add(s, part, "job:shift")
+		var part := broken_off(pay(s, data, id, -1, who), minutes, full)
+		Ledger.add(s, part, "job:shift", who)
 		lines.append("Смена прервана: %s" % Money.format(part))
 		return {"lines": lines, "event": "", "fight": []}
-	var a := Activity.attempt(s, data, shift_spec(s, data, id))
+	var a := Activity.attempt(s, data, shift_spec(s, data, id, who), who)
 	var o: Dictionary = a["step"]
-	var got := roundi(pay(s, data, id) * float(o.get("pay", 1.0)))
-	var tips := roundi(pay(s, data, id) * float(o.get("tips", 0.0)) * float(DevelopmentRules.effect(c, data, "work", "tips_mult", 1.0)))
-	Ledger.add(s, got + tips, "job:shift")
+	var got := roundi(pay(s, data, id, -1, who) * float(o.get("pay", 1.0)))
+	var tips := roundi(pay(s, data, id, -1, who) * float(o.get("tips", 0.0)) * float(DevelopmentRules.effect(c, data, "work", "tips_mult", 1.0)))
+	Ledger.add(s, got + tips, "job:shift", who)
 	st["shifts"] = int(st.get("shifts", 0)) + 1
 	lines.append(str(a["line"]))
 	lines.append("Плата: %s%s" % [Money.format(got), (", чаевые %s" % Money.format(tips)) if tips > 0 else ""])
 	var employer := str(j.get("employer", ""))
 	if int(o.get("attitude", 0)) < 0 and not bool(DevelopmentRules.effect(c, data, "work", "no_attitude_loss", false)):
-		s.shift_attitude(employer, int(o["attitude"]), data)
+		if who == Being.HERO:  # what the employer thinks is of the hero
+			s.shift_attitude(employer, int(o["attitude"]), data)
 		lines.append("%s недоволен" % employer_name(s, data, id))
 	var dev := DevelopmentRules.direction(data, "work").get("sources", {}) as Dictionary
 	lines.append_array(DevelopmentRules.add_xp(c, data, "work", int(dev.get(str(o["id"]), 0))))
 	if bool(o.get("good", false)):
 		st["good"] = int(st.get("good", 0)) + 1
-		if int(st["good"]) >= promote_after(s, data) and int(st["rank"]) < top_rank(data):
+		if int(st["good"]) >= promote_after(s, data, who) and int(st["rank"]) < top_rank(data):
 			st["rank"] = int(st["rank"]) + 1
 			st["good"] = 0
-			s.shift_attitude(employer, 1, data)
-			lines.append("Повышение: %s — %s за смену" % [rank_name(s, data, id, int(st["rank"])), Money.format(pay(s, data, id))])
+			if who == Being.HERO:
+				s.shift_attitude(employer, 1, data)
+			lines.append("Повышение: %s — %s за смену" % [rank_name(s, data, id, int(st["rank"])), Money.format(pay(s, data, id, -1, who))])
 			lines.append_array(DevelopmentRules.add_xp(c, data, "work", int(dev.get("promoted", 0))))
-	lines.append_array(_org_points(s, data, id, bool(o.get("good", false))))
+	lines.append_array(_org_points(s, data, id, bool(o.get("good", false)), who))
 	var caught: Dictionary = j.get("caught", {})
-	if not caught.is_empty() and str(o["id"]) == "bad":
-		var room := str(caught.get("room", s.room_id))
+	if not caught.is_empty() and str(o["id"]) == "bad" and who == Being.HERO:
+		var room := str(caught.get("room", Life.room(s, data, who)))
 		lines.append("Попался — крик «держи вора!»")
 		lines.append_array(CrimeRules.on_job(s, data, str(caught["crime"]), "", room, WorldView.new(data["world"]).location_id(room)))
 	var fight: Array = []
@@ -278,9 +280,9 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int) ->
 
 
 ## A good shift of an organization's job counts to the hero's standing there.
-static func _org_points(s: GameSession, data: Dictionary, id: String, good: bool) -> Array[String]:
+static func _org_points(s: GameSession, data: Dictionary, id: String, good: bool, who: String = Being.HERO) -> Array[String]:
 	var org := str(job(s, data, id).get("requires", {}).get("org", {}).get("id", ""))
-	if org.is_empty() or not OrgRules.member(s.character, org):
+	if org.is_empty() or who != Being.HERO or not OrgRules.member(Life.of(s, who, data), org):  # the points are the hero's
 		return []
 	var pts: Dictionary = OrgRules.cfg(data).get("job_points", {})
 	return OrgRules.add_points(s, data, org, int(pts.get("good" if good else "bad", 0)))

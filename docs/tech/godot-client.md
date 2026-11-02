@@ -196,6 +196,17 @@ game/
 - **Части окна** — `UiParts.label(parent, text, variation)`, `heading`, `act_button(parent, name, text, why, action)`, `hp_bar`. Цвет полосы — `UiTheme.hp_color`, очистка тела — `ModalFrame.clear_body()`.
 - **Лимит спутников** — `FollowRules.room_why`, порог переговоров — `CombatRules.parley_dc_of`.
 
+«Своя жизнь» любого (v0.8.4.20):
+
+- **Где лежит жизнь** — `Life.of(s, who, data)`: лист героя или запись NPC в `s.beings`. С `data` карманы NPC заполняются до первой покупки. Части записи — `Life.PARTS`, их форма объявлена в `Being.PARTS`.
+- **Где стоит, чьё** — `Life.room(s, data, who)` и `Life.owner(who)`.
+- **`who` в действиях** — у `JobRules`, `PropertyRules`, `BankRules`, `StudyRules`, `ShopRules`, `OfficeRules`, по умолчанию герой.
+  - Деньги и долги — `Ledger.balance` / `add` / `owe` / `owed` / `settle` / `debts` с `who`.
+  - Проверки — `Activity.attempt`, `EncounterRules.roll`, `RollParts.skill` / `tool` с `who`.
+  - Условия — `Require.rows` с `ctx.who`. Строки об отношении к герою, его славе, близости и ступени в организации NPC проходит.
+- **Дни** — `tick(s, data)` правила зовёт `Life.each(s, data, part, tick_of)` по каждому, у кого есть эта часть. Строки показываются только героевы.
+- **Остаётся героевым** — отношение и память людей о герое, слава поселения, очки организаций, преступления и текст для мастера.
+
 ## Фундамент правил (v0.7.60)
 
 Пять записей, через которые идут все системы ([ADR-0012](adr/0012-unified-models.md)). Копий рядом не заводим: страж в `test_foundation_v0760.gd` не пускает `randi_range(1, 20)` и прямую запись `gold_cp` мимо них.

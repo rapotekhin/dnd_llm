@@ -80,8 +80,8 @@ static func offers(s: GameSession, data: Dictionary, npc_id: String, service: St
 	return (terms(s, data, npc_id)["services"] as Array).has(service)
 
 
-static func _present(s: GameSession, data: Dictionary, npc_id: String) -> bool:
-	return s.npcs_here(data["world"], s.room_id).has(npc_id)
+static func _present(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> bool:
+	return s.npcs_here(data["world"], Life.room(s, data, who)).has(npc_id)
 
 
 static func _pct(v: float) -> String:
@@ -93,10 +93,10 @@ static func rate_text(v: float) -> String:
 	return "%s в неделю" % _pct(v)
 
 
-static func _why_bank(s: GameSession, data: Dictionary, npc_id: String, service: String) -> String:
+static func _why_bank(s: GameSession, data: Dictionary, npc_id: String, service: String, who: String = Being.HERO) -> String:
 	if not is_bank(s, data, npc_id) or not offers(s, data, npc_id, service):
 		return "BANK_NO_SERVICE"
-	if not _present(s, data, npc_id):
+	if not _present(s, data, npc_id, who):
 		return "BANK_NOT_HERE"
 	return ""
 
@@ -104,22 +104,22 @@ static func _why_bank(s: GameSession, data: Dictionary, npc_id: String, service:
 # --- deposits -------------------------------------------------------------------------------------------------------
 
 
-static func deposit_why(s: GameSession, data: Dictionary, npc_id: String, term: String, amount: int) -> String:
-	var why := _why_bank(s, data, npc_id, DEPOSIT)
+static func deposit_why(s: GameSession, data: Dictionary, npc_id: String, term: String, amount: int, who: String = Being.HERO) -> String:
+	var why := _why_bank(s, data, npc_id, DEPOSIT, who)
 	if not why.is_empty():
 		return why
 	if not cfg(data)["deposit"]["terms"].has(term):
 		return "BANK_NO_SERVICE"
 	if amount < int(cfg(data)["deposit"]["min_cp"]):
 		return "BANK_TOO_LITTLE"
-	if Ledger.balance(s) < amount:
+	if Ledger.balance(s, who) < amount:
 		return "BANK_NO_MONEY"
 	return ""
 
 
-static func _new(s: GameSession, data: Dictionary, kind: String, npc_id: String, amount: int, rate: float, days: int) -> Dictionary:
-	var st := state(s.character)
-	var k := {"id": "bk%d" % int(st["next"]), "kind": kind, "bank": npc_id, "loc": WorldView.new(data["world"]).location_id(s.room_id),
+static func _new(s: GameSession, data: Dictionary, kind: String, npc_id: String, amount: int, rate: float, days: int, who: String = Being.HERO) -> Dictionary:
+	var st := state(Life.of(s, who, data))
+	var k := {"id": "bk%d" % int(st["next"]), "kind": kind, "bank": npc_id, "loc": WorldView.new(data["world"]).location_id(Life.room(s, data, who)),
 		"principal": amount, "balance": amount, "frac": 0.0, "rate": rate, "start": s.day, "due": s.day + days if days > 0 else 0,
 		"last_day": s.day, "state": OPEN}
 	st["next"] = int(st["next"]) + 1
@@ -127,11 +127,11 @@ static func _new(s: GameSession, data: Dictionary, kind: String, npc_id: String,
 	return k
 
 
-static func deposit(s: GameSession, data: Dictionary, npc_id: String, term: String, amount: int) -> Array[String]:
+static func deposit(s: GameSession, data: Dictionary, npc_id: String, term: String, amount: int, who: String = Being.HERO) -> Array[String]:
 	var t: Dictionary = cfg(data)["deposit"]["terms"][term]
 	var rate := float(terms(s, data, npc_id)["deposit_rates"][term])
-	Ledger.add(s, -amount, "bank:deposit")
-	var k := _new(s, data, DEPOSIT, npc_id, amount, rate, int(t["days"]))
+	Ledger.add(s, -amount, "bank:deposit", who)
+	var k := _new(s, data, DEPOSIT, npc_id, amount, rate, int(t["days"]), who)
 	k["term"] = term
 	return ["%s: вклад %s %s, %s%s" % [WorldView.name_of(data, npc_id), Money.format(amount), t["name"], rate_text(rate),
 		" — до дня %d" % int(k["due"]) if int(k["due"]) > 0 else ""]]
@@ -142,22 +142,22 @@ static func early(s: GameSession, k: Dictionary) -> bool:
 	return str(k["kind"]) == DEPOSIT and int(k["due"]) > 0 and s.day < int(k["due"])
 
 
-static func withdraw_why(s: GameSession, data: Dictionary, cid: String) -> String:
-	var k := contract(s.character, cid)
+static func withdraw_why(s: GameSession, data: Dictionary, cid: String, who: String = Being.HERO) -> String:
+	var k := contract(Life.of(s, who, data), cid)
 	if k.is_empty() or str(k["kind"]) != DEPOSIT or str(k["state"]) != OPEN:
 		return "BANK_NO_CONTRACT"
-	return "BANK_NOT_HERE" if not _present(s, data, str(k["bank"])) else ""
+	return "BANK_NOT_HERE" if not _present(s, data, str(k["bank"]), who) else ""
 
 
 static func payout(s: GameSession, k: Dictionary) -> int:
 	return int(k["principal"]) if early(s, k) else int(k["balance"])
 
 
-static func withdraw(s: GameSession, data: Dictionary, cid: String) -> Array[String]:
-	var k := contract(s.character, cid)
+static func withdraw(s: GameSession, data: Dictionary, cid: String, who: String = Being.HERO) -> Array[String]:
+	var k := contract(Life.of(s, who, data), cid)
 	var sum := payout(s, k)
 	var was_early := early(s, k)
-	Ledger.add(s, sum, "bank:withdraw")
+	Ledger.add(s, sum, "bank:withdraw", who)
 	k["state"] = "closed"
 	return ["%s: вклад забран — %s%s" % [WorldView.name_of(data, str(k["bank"])), Money.format(sum), " — досрочно, без процентов" if was_early else ""]]
 
@@ -167,16 +167,16 @@ static func withdraw(s: GameSession, data: Dictionary, cid: String) -> Array[Str
 
 ## What the hero can pledge at this bank: [{kind, id, name, value, max}] — own places with a deed, not pledged yet,
 ## and things that may leave the hero worth item_min_cp or more (one piece).
-static func collaterals(s: GameSession, data: Dictionary, npc_id: String) -> Array[Dictionary]:
+static func collaterals(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var ltv: Dictionary = terms(s, data, npc_id)["ltv"]
 	if data["rules"].has("property"):
-		for id: String in PropertyRules.state(s.character):
-			var st: Dictionary = PropertyRules.state(s.character)[id]
+		for id: String in PropertyRules.state(Life.of(s, who, data)):
+			var st: Dictionary = PropertyRules.state(Life.of(s, who, data))[id]
 			if bool(st.get("deed", false)) and str(st.get("pledged", "")).is_empty():
 				var v := roundi(PropertyRules.price(s, data, id) * clampf(float(st.get("cond", 100)), 0.0, 100.0) / 100.0)
 				out.append({"kind": "property", "id": id, "name": PropertyRules.name_of(s, data, id), "value": v, "max": roundi(v * int(ltv["property"]) / 100.0)})
-	for id: String in (s.character.get("inventory", {}) as Dictionary).keys():
+	for id: String in (Life.of(s, who, data).get("inventory", {}) as Dictionary).keys():
 		if TradeRules.sellable(s, str(id), data) <= 0:
 			continue
 		var v := int(ItemRules.def_of(data["items"], s.items, str(id)).get("value_cp", 0))
@@ -185,24 +185,24 @@ static func collaterals(s: GameSession, data: Dictionary, npc_id: String) -> Arr
 	return out
 
 
-static func _collateral(s: GameSession, data: Dictionary, npc_id: String, ckind: String, cid: String) -> Dictionary:
-	for o: Dictionary in collaterals(s, data, npc_id):
+static func _collateral(s: GameSession, data: Dictionary, npc_id: String, ckind: String, cid: String, who: String = Being.HERO) -> Dictionary:
+	for o: Dictionary in collaterals(s, data, npc_id, who):
 		if str(o["kind"]) == ckind and str(o["id"]) == cid:
 			return o
 	return {}
 
 
-static func loan_why(s: GameSession, data: Dictionary, npc_id: String, ckind: String, cid: String, days: int) -> String:
-	var why := _why_bank(s, data, npc_id, LOAN)
+static func loan_why(s: GameSession, data: Dictionary, npc_id: String, ckind: String, cid: String, days: int, who: String = Being.HERO) -> String:
+	var why := _why_bank(s, data, npc_id, LOAN, who)
 	if not why.is_empty():
 		return why
-	if (state(s.character)["refused"] as Array).has(npc_id):
+	if (state(Life.of(s, who, data))["refused"] as Array).has(npc_id):
 		return "BANK_REFUSED"
-	if open_of(s.character, npc_id).any(func(k: Dictionary) -> bool: return str(k["kind"]) == LOAN and s.day > int(k["due"])):
+	if open_of(Life.of(s, who, data), npc_id).any(func(k: Dictionary) -> bool: return str(k["kind"]) == LOAN and s.day > int(k["due"])):
 		return "BANK_OVERDUE"
 	if not (cfg(data)["loan"]["terms_days"] as Array).any(func(d: Variant) -> bool: return int(d) == days):
 		return "BANK_NO_SERVICE"
-	var o := _collateral(s, data, npc_id, ckind, cid)
+	var o := _collateral(s, data, npc_id, ckind, cid, who)
 	if o.is_empty():
 		return "BANK_NO_COLLATERAL"
 	if int(o["max"]) < int(cfg(data)["loan"]["min_cp"]):
@@ -210,55 +210,55 @@ static func loan_why(s: GameSession, data: Dictionary, npc_id: String, ckind: St
 	return ""
 
 
-static func loan(s: GameSession, data: Dictionary, npc_id: String, ckind: String, cid: String, days: int) -> Array[String]:
-	var o := _collateral(s, data, npc_id, ckind, cid)
+static func loan(s: GameSession, data: Dictionary, npc_id: String, ckind: String, cid: String, days: int, who: String = Being.HERO) -> Array[String]:
+	var o := _collateral(s, data, npc_id, ckind, cid, who)
 	var amount := int(o["max"])
-	var k := _new(s, data, LOAN, npc_id, amount, float(terms(s, data, npc_id)["loan_rate"]), days)
+	var k := _new(s, data, LOAN, npc_id, amount, float(terms(s, data, npc_id)["loan_rate"]), days, who)
 	k["collateral"] = {"kind": ckind, "id": cid, "qty": 1, "name": str(o["name"]), "value": int(o["value"])}
 	if ckind == "property":
-		PropertyRules.state(s.character)[cid]["pledged"] = str(k["id"])
+		PropertyRules.state(Life.of(s, who, data))[cid]["pledged"] = str(k["id"])
 	else:
-		var inv: Dictionary = s.character["inventory"]
+		var inv: Dictionary = Life.of(s, who, data)["inventory"]
 		inv[cid] = int(inv.get(cid, 0)) - 1
 		if int(inv[cid]) <= 0:
 			inv.erase(cid)
-	Ledger.add(s, amount, "bank:loan")
+	Ledger.add(s, amount, "bank:loan", who)
 	return ["%s: кредит %s под залог — %s, %s, вернуть до дня %d" % [WorldView.name_of(data, npc_id), Money.format(amount), o["name"],
 		rate_text(float(k["rate"])), int(k["due"])]]
 
 
-static func repay_why(s: GameSession, data: Dictionary, cid: String) -> String:
-	var k := contract(s.character, cid)
+static func repay_why(s: GameSession, data: Dictionary, cid: String, who: String = Being.HERO) -> String:
+	var k := contract(Life.of(s, who, data), cid)
 	if k.is_empty() or str(k["kind"]) != LOAN or not str(k["state"]) in [OPEN, WANTED]:
 		return "BANK_NO_CONTRACT"
-	if not _present(s, data, str(k["bank"])):
+	if not _present(s, data, str(k["bank"]), who):
 		return "BANK_NOT_HERE"
-	return "BANK_NO_MONEY" if Ledger.balance(s) < int(k["balance"]) else ""
+	return "BANK_NO_MONEY" if Ledger.balance(s, who) < int(k["balance"]) else ""
 
 
-static func repay(s: GameSession, data: Dictionary, cid: String) -> Array[String]:
-	var k := contract(s.character, cid)
-	Ledger.add(s, -int(k["balance"]), "bank:repay")
+static func repay(s: GameSession, data: Dictionary, cid: String, who: String = Being.HERO) -> Array[String]:
+	var k := contract(Life.of(s, who, data), cid)
+	Ledger.add(s, -int(k["balance"]), "bank:repay", who)
 	var lines: Array[String] = ["%s: долг погашен — %s" % [WorldView.name_of(data, str(k["bank"])), Money.format(int(k["balance"]))]]
-	lines.append_array(_release(s, data, k))
-	if str(k["state"]) == WANTED:
+	lines.append_array(_release(s, data, k, who))
+	if str(k["state"]) == WANTED and who == Being.HERO:
 		lines.append_array(CrimeRules.settle_one(s, data, str(k.get("crime", ""))))
 	k["state"] = "closed"
 	return lines
 
 
 ## The collateral back to the hero. Lines.
-static func _release(s: GameSession, data: Dictionary, k: Dictionary) -> Array[String]:
+static func _release(s: GameSession, data: Dictionary, k: Dictionary, who: String = Being.HERO) -> Array[String]:
 	var col: Dictionary = k.get("collateral", {})
 	if col.is_empty():
 		return []
 	if str(col["kind"]) == "property":
-		var st: Dictionary = PropertyRules.state(s.character).get(str(col["id"]), {})
+		var st: Dictionary = PropertyRules.state(Life.of(s, who, data)).get(str(col["id"]), {})
 		if str(st.get("pledged", "")) == str(k["id"]):
 			st.erase("pledged")
 			return ["%s больше не в залоге" % col["name"]]
 		return []
-	ItemRules.found(s.character, data, s.items, str(col["id"]), int(col.get("qty", 1)))
+	ItemRules.found(Life.of(s, who, data), data, s.items, str(col["id"]), int(col.get("qty", 1)))
 	return ["Заклад возвращён: %s" % col["name"]]
 
 
@@ -278,13 +278,13 @@ static func vault_empty(c: Dictionary, npc_id: String) -> bool:
 
 
 ## "in" — a thing (arg = item id) or coins (amount) into the vault; "out" — back. Unpaid fees are paid first.
-static func vault_why(s: GameSession, data: Dictionary, npc_id: String, dir: String, item_id: String, amount: int) -> String:
-	var why := _why_bank(s, data, npc_id, "vault")
+static func vault_why(s: GameSession, data: Dictionary, npc_id: String, dir: String, item_id: String, amount: int, who: String = Being.HERO) -> String:
+	var why := _why_bank(s, data, npc_id, "vault", who)
 	if not why.is_empty():
 		return why
-	var v := vault(s.character, npc_id)
-	var gold := Ledger.balance(s)
-	if dir == "out" and Ledger.owed(s, "vault:" + npc_id) > gold + int(v["coins"]):
+	var v := vault(Life.of(s, who, data), npc_id)
+	var gold := Ledger.balance(s, who)
+	if dir == "out" and Ledger.owed(s, "vault:" + npc_id, who) > gold + int(v["coins"]):
 		return "BANK_OWED"
 	if item_id.is_empty():
 		if amount <= 0:
@@ -299,22 +299,22 @@ static func vault_why(s: GameSession, data: Dictionary, npc_id: String, dir: Str
 	return "" if int((v["contents"] as Dictionary).get(item_id, 0)) > 0 else "BANK_NO_ITEM"
 
 
-static func vault_move(s: GameSession, data: Dictionary, npc_id: String, dir: String, item_id: String, amount: int) -> Array[String]:
-	var v := vault(s.character, npc_id)
-	var c := s.character
+static func vault_move(s: GameSession, data: Dictionary, npc_id: String, dir: String, item_id: String, amount: int, who: String = Being.HERO) -> Array[String]:
+	var v := vault(Life.of(s, who, data), npc_id)
+	var c := Life.of(s, who, data)
 	var lines: Array[String] = []
-	var owed := Ledger.owed(s, "vault:" + npc_id)
+	var owed := Ledger.owed(s, "vault:" + npc_id, who)
 	if dir == "out" and owed > 0:
 		var from_vault := mini(int(v["coins"]), owed)
 		v["coins"] = int(v["coins"]) - from_vault
-		Ledger.add(s, -(owed - from_vault), "bank:vault_move")
+		Ledger.add(s, -(owed - from_vault), "bank:vault_move", who)
 		lines.append("Уплачен долг за ячейку: %s" % Money.format(owed))
-		Ledger.forgive(s, "vault:" + npc_id)
+		Ledger.forgive(s, "vault:" + npc_id, who)
 	if vault_empty(c, npc_id) and dir == "in":
 		v["fee_day"] = s.day
 	if item_id.is_empty():
 		var sum := mini(amount, int(v["coins"])) if dir == "out" else amount
-		Ledger.add(s, sum if dir == "out" else -sum, "bank:vault_move")
+		Ledger.add(s, sum if dir == "out" else -sum, "bank:vault_move", who)
 		v["coins"] = int(v["coins"]) + (-sum if dir == "out" else sum)
 		lines.append("%s: %s" % ["Взято из ячейки" if dir == "out" else "Положено в ячейку", Money.format(sum)])
 		return lines
@@ -334,18 +334,23 @@ static func vault_move(s: GameSession, data: Dictionary, npc_id: String, dir: St
 ## Each new day: interest on deposits and loans, the penalty and the collateral of an overdue loan, the vault fee.
 ## Lines only for the events (a term ended, overdue, seized, wanted, the fee unpaid).
 static func tick(s: GameSession, data: Dictionary) -> Array[String]:
+	return Life.each(s, data, "bank", tick_of)
+
+
+## One holder's day (v0.8.4.20): the hero's, or a person's who keeps a part of this life.
+static func tick_of(s: GameSession, data: Dictionary, who: String) -> Array[String]:
 	var lines: Array[String] = []
-	if not data["rules"].has("bank") or not s.character.has("bank"):
+	if not data["rules"].has("bank") or not Life.of(s, who, data).has("bank"):
 		return lines
-	for k: Dictionary in open_of(s.character):
+	for k: Dictionary in open_of(Life.of(s, who, data)):
 		for day: int in TimeRules.missed(s, k):
 			if not str(k["state"]) in [OPEN, WANTED]:
 				break
-			lines.append_array(_day(s, data, k, day))
+			lines.append_array(_day(s, data, k, day, who))
 	var fee := int(cfg(data)["vault"]["fee_cp_week"])
-	for npc_id: String in state(s.character)["vaults"]:
-		var v: Dictionary = state(s.character)["vaults"][npc_id]
-		if vault_empty(s.character, npc_id):
+	for npc_id: String in state(Life.of(s, who, data))["vaults"]:
+		var v: Dictionary = state(Life.of(s, who, data))["vaults"][npc_id]
+		if vault_empty(Life.of(s, who, data), npc_id):
 			v["fee_day"] = s.day
 			continue
 		while s.day - int(v["fee_day"]) >= 7:
@@ -353,9 +358,9 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 			if int(v["coins"]) >= fee:
 				v["coins"] = int(v["coins"]) - fee
 			else:
-				if Ledger.owed(s, "vault:" + npc_id) == 0:
+				if Ledger.owed(s, "vault:" + npc_id, who) == 0:
 					lines.append("%s: плата за ячейку не внесена — долг возьмут, когда придёте" % WorldView.name_of(data, npc_id))
-				Ledger.owe(s, "vault:" + npc_id, "vault", fee, npc_id)
+				Ledger.owe(s, "vault:" + npc_id, "vault", fee, npc_id, who)
 	return lines
 
 
@@ -366,21 +371,21 @@ static func _grow(k: Dictionary, pct: float) -> void:
 	k["frac"] = f - whole
 
 
-static func _day(s: GameSession, data: Dictionary, k: Dictionary, day: int) -> Array[String]:
-	var who := WorldView.name_of(data, str(k["bank"]))
+static func _day(s: GameSession, data: Dictionary, k: Dictionary, day: int, who: String = Being.HERO) -> Array[String]:
+	var bank_name := WorldView.name_of(data, str(k["bank"]))
 	if str(k["kind"]) == DEPOSIT:
 		var rate := float(k["rate"])
 		if int(k["due"]) > 0 and day > int(k["due"]):
 			rate = float(terms(s, data, str(k["bank"]))["deposit_rates"].get("demand", rate))
 		_grow(k, rate / 7.0)
 		if int(k["due"]) > 0 and day == int(k["due"]):
-			return ["%s: срок вклада вышел — %s, забрать можно без потерь" % [who, Money.format(int(k["balance"]))]]
+			return ["%s: срок вклада вышел — %s, забрать можно без потерь" % [bank_name, Money.format(int(k["balance"]))]]
 		return []
 	if str(k["state"]) == WANTED:
 		for crime: Dictionary in s.crimes:  # paid or served by the law — the bank is done with it
 			if str(crime["id"]) == str(k.get("crime", "")) and bool(crime["settled"]):
 				k["state"] = "closed"
-				return ["%s: долг закрыт по закону" % who]
+				return ["%s: долг закрыт по закону" % bank_name]
 		return []
 	_grow(k, float(k["rate"]) / 7.0)
 	var due := int(k["due"])
@@ -389,28 +394,31 @@ static func _day(s: GameSession, data: Dictionary, k: Dictionary, day: int) -> A
 	var lc: Dictionary = cfg(data)["loan"]
 	_grow(k, float(lc["penalty_pct_day"]))
 	if day == due + 1:
-		return ["%s: долг просрочен — %s, пеня %s в день; через %d дн. заберут залог" % [who, Money.format(int(k["balance"])), _pct(float(lc["penalty_pct_day"])), int(lc["grace_days"])]]
+		return ["%s: долг просрочен — %s, пеня %s в день; через %d дн. заберут залог" % [bank_name, Money.format(int(k["balance"])), _pct(float(lc["penalty_pct_day"])), int(lc["grace_days"])]]
 	if day < due + int(lc["grace_days"]):
 		return []
-	return _default(s, data, k)
+	return _default(s, data, k, who)
 
 
 ## The grace is over: the collateral goes to the bank; a property lost meanwhile — the debt becomes a crime. Lines.
-static func _default(s: GameSession, data: Dictionary, k: Dictionary) -> Array[String]:
+static func _default(s: GameSession, data: Dictionary, k: Dictionary, who: String = Being.HERO) -> Array[String]:
 	var col: Dictionary = k.get("collateral", {})
-	var who := WorldView.name_of(data, str(k["bank"]))
-	(state(s.character)["refused"] as Array).append(str(k["bank"]))
+	var bank_name := WorldView.name_of(data, str(k["bank"]))
+	(state(Life.of(s, who, data))["refused"] as Array).append(str(k["bank"]))
 	if str(col.get("kind", "")) == "item":
 		k["state"] = "seized"
-		return ["%s оставил заклад себе: %s — долг закрыт, в долг вам больше не дают" % [who, col["name"]]]
+		return ["%s оставил заклад себе: %s — долг закрыт, в долг вам больше не дают" % [bank_name, col["name"]]]
 	var id := str(col.get("id", ""))
-	if PropertyRules.owned(s.character, id) and str(PropertyRules.state(s.character)[id].get("pledged", "")) == str(k["id"]):
+	if PropertyRules.owned(Life.of(s, who, data), id) and str(PropertyRules.state(Life.of(s, who, data))[id].get("pledged", "")) == str(k["id"]):
 		k["state"] = "seized"
-		return PropertyRules._lose(s, data, id, "взыскано за долг (%s)" % who)
+		return PropertyRules._lose(s, data, id, "взыскано за долг (%s)" % bank_name, who)
+	if who != Being.HERO:  # a person's unpaid debt is the bank's loss: a crime of anybody is v0.8.4.21
+		k["state"] = "seized"
+		return []
 	k["state"] = WANTED
 	var r := CrimeRules.on_debt(s, data, str(k["bank"]), str(k["loc"]), int(k["balance"]))
 	k["crime"] = r[0]
-	var lines: Array[String] = ["%s: долг не обеспечен залогом — %s, дело передано страже" % [who, Money.format(int(k["balance"]))]]
+	var lines: Array[String] = ["%s: долг не обеспечен залогом — %s, дело передано страже" % [bank_name, Money.format(int(k["balance"]))]]
 	lines.append_array(r.slice(1))
 	return lines
 
@@ -424,11 +432,11 @@ static func text(s: GameSession, data: Dictionary) -> String:
 		return ""
 	var parts: Array[String] = []
 	for k: Dictionary in open_of(s.character):
-		var who := WorldView.name_of(data, str(k["bank"]))
+		var bank_name := WorldView.name_of(data, str(k["bank"]))
 		if str(k["kind"]) == DEPOSIT:
-			parts.append("вклад (%s): %s, %s" % [who, Money.format(int(k["balance"])), rate_text(float(k["rate"]))])
+			parts.append("вклад (%s): %s, %s" % [bank_name, Money.format(int(k["balance"])), rate_text(float(k["rate"]))])
 		else:
-			parts.append("долг (%s): %s, вернуть до дня %d, залог — %s%s" % [who, Money.format(int(k["balance"])), int(k["due"]),
+			parts.append("долг (%s): %s, вернуть до дня %d, залог — %s%s" % [bank_name, Money.format(int(k["balance"])), int(k["due"]),
 				k.get("collateral", {}).get("name", "нет"), " — в розыске за неуплату" if str(k["state"]) == WANTED else " — просрочен" if s.day > int(k["due"]) else ""])
 	var vaults: Dictionary = s.character["bank"]["vaults"] if s.character.has("bank") else {}
 	for npc_id: String in vaults:

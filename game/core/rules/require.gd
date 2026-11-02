@@ -2,11 +2,15 @@ class_name Require
 extends RefCounted
 ## What a job, a course or an office asks (v0.7.67): one reading of a `requires` record, rows [{text, ok}]. `ctx` says what
 ## the record leaves unsaid: `npc` and `npc_word` (a common tongue is asked with them), `tool`, `skill` (a job's `true`),
-## `location`, `waive` {key: who} — a recommendation stands for that row.
+## `location`, `waive` {key: who} — a recommendation stands for that row; `who` — whose rows (v0.8.4.20, the hero by
+## default). What people think (attitude, a settlement's fame, closeness, an organization's step) is kept of the hero
+## only: a person passes those rows.
 
 
 static func rows(s: GameSession, data: Dictionary, req: Dictionary, ctx: Dictionary = {}) -> Array[Dictionary]:
-	var c := s.character
+	var who := str(ctx.get("who", Being.HERO))
+	var hero := who == Being.HERO
+	var c := Life.of(s, who, data)
 	var out: Array[Dictionary] = []
 	var n := WorldView.new(data["world"]).npc(str(ctx.get("npc", "")))
 	if not n.is_empty() and ctx.has("npc_word") and not LanguageRules.npc_understands(c, data, n):
@@ -18,7 +22,7 @@ static func rows(s: GameSession, data: Dictionary, req: Dictionary, ctx: Diction
 	if req.has("attitude"):
 		var a := int(req["attitude"])
 		var word := TranslationServer.translate("ATTITUDE_0" if a == 0 else ("ATTITUDE_P%d" % a if a > 0 else "ATTITUDE_M%d" % -a))
-		out.append({"text": "отношение %s не хуже: %s" % [str(ctx.get("npc_of", "")), word], "ok": s.attitude(str(ctx.get("npc", ""))) >= a})
+		out.append({"text": "отношение %s не хуже: %s" % [str(ctx.get("npc_of", "")), word], "ok": not hero or s.attitude(str(ctx.get("npc", ""))) >= a})
 	if req.has("quest"):
 		var qid := str(req["quest"])
 		out.append({"text": "сделано задание «%s»" % data["world"].get("quests", {}).get(qid, {}).get("title", qid), "ok": Cond.met(s, {"quest_done": qid})})
@@ -41,11 +45,11 @@ static func rows(s: GameSession, data: Dictionary, req: Dictionary, ctx: Diction
 		var need := int(req["org"].get("rank", 0))
 		var rank_word := str(OrgRules.ranks(s, data, org)[clampi(need, 0, OrgRules.ranks(s, data, org).size() - 1)]["name"])
 		out.append({"text": "член «%s»%s" % [OrgRules.org_name(s, data, org), (", ступень от «%s»" % rank_word) if need > 0 else ""],
-			"ok": OrgRules.member(c, org) and OrgRules.rank(s, data, org) >= need})
+			"ok": OrgRules.member(c, org) and (not hero or OrgRules.rank(s, data, org) >= need)})
 	var waive: Dictionary = ctx.get("waive", {})
 	if req.has("reputation"):
 		var loc := str(ctx.get("location", ""))
-		var ok := not ReputationRules.is_settlement(data, loc) or ReputationRules.step(s, data, loc) >= int(req["reputation"])
+		var ok := not hero or not ReputationRules.is_settlement(data, loc) or ReputationRules.step(s, data, loc) >= int(req["reputation"])
 		out.append(_waived("слава в поселении не ниже «%s»" % ReputationRules.word(data, int(req["reputation"])), ok, str(waive.get("reputation", ""))))
 	if req.has("served"):
 		var loc := str(ctx.get("location", ""))
@@ -54,7 +58,7 @@ static func rows(s: GameSession, data: Dictionary, req: Dictionary, ctx: Diction
 	if req.has("bond"):
 		var b: Dictionary = req["bond"]
 		out.append(_waived("близость с %s от %d" % [WorldView.name_of(data, str(b["npc"])), int(b["at"])],
-			BondRules.points(c, str(b["npc"])) >= int(b["at"]), str(waive.get("bond", ""))))
+			not hero or BondRules.points(c, str(b["npc"])) >= int(b["at"]), str(waive.get("bond", ""))))
 	return out
 
 
