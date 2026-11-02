@@ -114,10 +114,10 @@ func test_how_far_the_hero_sees() -> void:
 
 func test_a_light_shows_the_hero_in_the_dark() -> void:
 	var s := _session("mine-gallery")
-	assert_int(WatchRules.range_of(s, data, 0)).is_equal(int(SightRules.cfg(data)["blind"]))
-	assert_int(WatchRules.range_of(s, data, 12)).is_equal(12)
+	assert_int(WatchRules.range_of(s, data, {"monster": "commoner"})).is_equal(int(SightRules.cfg(data)["blind"]))
+	assert_int(WatchRules.range_of(s, data, {"monster": "goblin"})).is_equal(12)  # its 60 ft of darkvision
 	s.character["inventory"] = {"torch": 1}
-	assert_int(WatchRules.range_of(s, data, 0)).is_equal(int(SightRules.cfg(data)["watch"]))
+	assert_int(WatchRules.range_of(s, data, {"monster": "commoner"})).is_equal(int(SightRules.cfg(data)["watch"]))
 
 
 # --- the hero's view ---------------------------------------------------------------------------------------------
@@ -325,9 +325,9 @@ func test_while_sneaking_a_back_turned_sees_nothing() -> void:
 
 func test_in_the_dark_a_deed_is_seen_only_up_close() -> void:
 	var s := _session(TRAIL)
-	assert_int(WatchRules.range_of(s, data, 0, true)).is_equal(int(SightRules.cfg(data)["day"]))
+	assert_int(WatchRules.range_of(s, data, {"monster": "commoner"}, true)).is_equal(int(SightRules.cfg(data)["day"]))
 	s.minute = 60
-	assert_int(WatchRules.range_of(s, data, 0, true)).is_equal(int(SightRules.cfg(data)["blind"]))
+	assert_int(WatchRules.range_of(s, data, {"monster": "commoner"}, true)).is_equal(int(SightRules.cfg(data)["blind"]))
 
 
 func test_one_absent_from_the_map_still_counts() -> void:

@@ -119,23 +119,18 @@ static func sight_mods(s: GameSession, data: Dictionary, a: Dictionary, t: Dicti
 	return {"adv": ("" if FightGrid.blind(s, t) else FightGrid.veiled(s, data, t, a)).to_lower(), "dis": FightGrid.veiled(s, data, a, t).to_lower()}
 
 
-## It sees nothing here: an unlit place, no light of the hero's and no darkvision of its own.
+## It sees nothing here (one road, v0.8.4.12): an unlit place, no darkvision, no light of its own and none carried on the
+## field (the hero's lights it for everybody).
 static func dark_for(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
-	if Sheet.is_hero(f):
-		return TimeRules.dark(s, data)
-	return not SightRules.in_dark(s, data).is_empty() and WatchRules.dark_of(data, f) <= 0
+	return TimeRules.dark(s, data, f)
 
 
-## How far it sees to shoot in an unlit place, in squares (v0.8.4.1); far past the map where it is light.
-static func dark_sight(s: GameSession, data: Dictionary, f: Dictionary) -> int:
-	if Sheet.is_hero(f):
-		return SightRules.reach(s, data) if TimeRules.unlit(s, data) else 1 << 20
-	return WatchRules.dark_of(data, f) if not SightRules.in_dark(s, data).is_empty() else 1 << 20
-
-
-## A shot beyond what it sees by: past its darkvision or the hero's light.
+## A shot beyond what it sees by in an unlit place (v0.8.4.1): past its darkvision or its light, at a target that carries
+## no light of its own (a torch is a mark).
 static func shot_in_dark(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary) -> bool:
-	return FightGrid.dist(f, t) > dark_sight(s, data, f)
+	if not TimeRules.unlit(s, data) or SightRules.lit(s, data, t):
+		return false
+	return FightGrid.dist(f, t) > SightRules.reach(s, data, f)
 
 
 static func _spell_squares(s: GameSession, data: Dictionary, spell_id: String, f: Dictionary = Sheet.HERO) -> int:
@@ -442,8 +437,8 @@ static func stealth_roll(s: GameSession, data: Dictionary, who: Dictionary = She
 	if not (mods["disadvantage"] as Array).is_empty():
 		dis = true
 		why.append("состояние")
-	var boots := CharacterRules.carried_with(c, data, s.items, "stealth_advantage") if hero else ""
-	var shade := SightRules.in_dark(s, data) if hero else ""  # the author's rule for the dark, v0.8.4.1; a Fog Cloud gives only the Hide itself
+	var boots := CharacterRules.carried_with(c, data, s.items, "stealth_advantage")
+	var shade := SightRules.in_dark(s, data, who)  # the author's rule for the dark, v0.8.4.1; a Fog Cloud gives only the Hide itself
 	var adv := not boots.is_empty() or not shade.is_empty()
 	var rolls := Roll.hero_dice(s, adv, dis) if hero else Roll.dice(s.rng, adv, dis)
 	var nat := Roll.kept(rolls, adv, dis)

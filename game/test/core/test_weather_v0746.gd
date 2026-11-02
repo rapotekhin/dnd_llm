@@ -83,10 +83,10 @@ func test_fog_and_downpour_blind_the_watchers_and_the_hero() -> void:
 	var s := _session()
 	_weather(s, "brod", "clear")
 	var base := TimeRules.passive_penalty(s, data)
-	var unseen := WeatherRules.unseen(s, data)
+	var watcher := Sheet.passive(s, data, {"monster": "guard"})
 	_weather(s, "brod", "downpour")
 	assert_int(TimeRules.passive_penalty(s, data)).is_equal(base + 5)
-	assert_int(WeatherRules.unseen(s, data)).is_equal(unseen + 5)
+	assert_int(Sheet.passive(s, data, {"monster": "guard"})).is_equal(watcher - 5)  # a watcher's own passive (v0.8.4.12)
 
 
 func test_a_night_in_frost_without_a_fire_costs_a_save_against_exhaustion() -> void:

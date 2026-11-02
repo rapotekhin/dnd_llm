@@ -92,7 +92,7 @@ static func watch(s: GameSession, data: Dictionary, map: Dictionary) -> Dictiona
 	var quiet := WatchRules.sneaky(s, data)
 	for t: Dictionary in foes:
 		var at := Vector2i(int(t["x"]), int(t["y"]))
-		if not WatchRules.sees(s, data, map, str(t["id"]), at, hero, WatchRules.range_of(s, data, WatchRules.dark_of(data, t["record"]))):
+		if not WatchRules.sees(s, data, map, str(t["id"]), at, hero, WatchRules.range_of(s, data, t["record"])):
 			continue
 		if not quiet:
 			out.merge({"fight": true, "source": {"ambush": true} if shown.is_empty() else {}}, true)

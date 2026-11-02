@@ -45,6 +45,22 @@ static func of(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
 		"passive_perception": int(m.get("passive_perception", 10 + int(skills["perception"])))}
 
 
+## `who` of an id, for reading (v0.8.4.12): the hero, its fighter in a fight, else its record with the id and the template
+## it is of (a creature's, a person's of the pack). Nothing is written.
+static func who(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+	if id == Being.HERO:
+		return HERO
+	var b := Being.view(s, id)
+	if b.has("fight"):
+		return b["fight"]
+	var out := b.duplicate()
+	out["id"] = id
+	if not out.has("monster"):
+		var cr: Dictionary = b.get("creature", {})
+		out["monster"] = str(cr.get("monster", data["world"]["npcs"].get(id, {}).get("monster", CombatRules.cfg(data)["default_npc_monster"])))
+	return out
+
+
 ## The one it is: the hero's sheet, or the fighter or record itself. Statuses live on this.
 static func holder(s: GameSession, who: Dictionary) -> Dictionary:
 	return s.character if is_hero(who) else who
@@ -64,10 +80,11 @@ static func save_bonus(s: GameSession, data: Dictionary, who: Dictionary, ab: St
 	return int(of(s, data, who)["saves"].get(ab, 0))
 
 
-## What it notices without looking: keen senses count, the hero's sneaking and darkness too.
+## What it notices without looking: keen senses count, the hero's sneaking, darkness it does not see in and the weather
+## too (one road, v0.8.4.12).
 static func passive(s: GameSession, data: Dictionary, who: Dictionary) -> int:
-	var v := int(of(s, data, who)["passive_perception"])
-	return v - TimeRules.passive_penalty(s, data) if is_hero(who) else v + MonsterRules.passive_bonus(data, who)
+	var v := int(of(s, data, who)["passive_perception"]) - TimeRules.passive_penalty(s, data, who)
+	return v if is_hero(who) else v + MonsterRules.passive_bonus(data, who)
 
 
 ## The AC it stands with now: its armour, its statuses, the cover of this moment.

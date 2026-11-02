@@ -1,15 +1,19 @@
 class_name WatchRules
 extends RefCounted
-## Who sees the hero on the map (v0.8.3). A hero who does not hide is seen by anyone with a line of sight in range; one who
-## sneaks or is invisible only in a watcher's cone, and then Stealth decides. A watcher looks towards the middle of the map,
+## Who sees whom on the map (v0.8.3; anybody of either since v0.8.4.12, ADR-0016). One who does not hide is seen by anyone
+## with a line of sight in range; one who sneaks, hides or is invisible only in a watcher's cone, and then Stealth decides. A watcher looks towards the middle of the map,
 ## off by the seed, and turns with the rounds of a sneaking walk, so a save holds nothing but the round. The numbers are
 ## `rules.sight`.
 
 const FACES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1), Vector2i(-1, 1), Vector2i(-1, 0), Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1)]
 
 
-static func sneaky(s: GameSession, data: Dictionary) -> bool:
-	return s.sneaking or ConditionRules.invisible(s.character, data)
+## It goes unseen but in a cone: the hero sneaking, anybody hidden or invisible (v0.8.4.12).
+static func sneaky(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> bool:
+	if Sheet.is_hero(who):
+		return s.sneaking or ConditionRules.invisible(s.character, data)
+	var h := Sheet.holder(s, who)
+	return bool(h.get("hidden", false)) or ConditionRules.invisible(h, data)
 
 
 static func _cell(t: Dictionary) -> Vector2i:
@@ -34,48 +38,45 @@ static func in_cone(s: GameSession, data: Dictionary, map: Dictionary, id: Strin
 	return absf(Vector2(FACES[face(s, data, map, id, at)]).angle_to(Vector2(cell - at))) <= half
 
 
-## The squares a watcher takes in. `sees_dark` — its darkvision in squares. `wide` — the whole room in the light: a deed in
-## the open is seen from further than a stranger is noticed.
-static func range_of(s: GameSession, data: Dictionary, sees_dark: int, wide: bool = false) -> int:
+## The squares `watcher` takes in of `doer` (v0.8.4.12: anybody of either). `wide` — the whole room in the light: a deed in
+## the open is seen from further than a stranger is noticed. A doer that carries a light in the dark shows from afar; else
+## the watcher's own darkvision or light; a blinded one only hears beside it.
+static func range_of(s: GameSession, data: Dictionary, watcher: Dictionary, wide: bool = false, doer: Dictionary = Sheet.HERO) -> int:
 	var c := SightRules.cfg(data)
+	if ConditionRules.has(Sheet.holder(s, watcher), "blinded"):
+		return int(c["blind"])
 	var near := int(c["obscured"]) if WeatherRules.passive(s, data) > 0 else int(c["day"]) if wide else int(c["watch"])
-	if not TimeRules.unlit(s, data) or SightRules.lit(s, data):
+	if not TimeRules.unlit(s, data) or SightRules.lit(s, data, doer):
 		return near
-	return maxi(sees_dark, int(c["blind"]))
+	return SightRules.reach(s, data, watcher)
 
 
-## Darkvision of a person or a foe in squares.
-static func dark_of(data: Dictionary, f: Dictionary) -> int:
-	return int(Sheet.template(data, f).get("darkvision", 0)) / 5
-
-
-static func _npc_dark(data: Dictionary, id: String) -> int:
-	var world := WorldView.new(data["world"])
-	return dark_of(data, {"monster": str(world.npc(id).get("monster", CombatRules.cfg(data)["default_npc_monster"]))})
-
-
-## This one on the square `at` sees `cell`.
-static func sees(s: GameSession, data: Dictionary, map: Dictionary, id: String, at: Vector2i, cell: Vector2i, reach: int) -> bool:
+## This one on the square `at` sees `cell`, where `doer` stands.
+static func sees(s: GameSession, data: Dictionary, map: Dictionary, id: String, at: Vector2i, cell: Vector2i, reach: int, doer: Dictionary = Sheet.HERO) -> bool:
 	if WalkRules.distance(at, cell) > reach:
 		return false
-	if sneaky(s, data) and not in_cone(s, data, map, id, at, cell):
+	if sneaky(s, data, doer) and not in_cone(s, data, map, id, at, cell):
 		return false
 	return SightRules.line(map, data["layouts"], at, cell)
 
 
-## Those of `ids`, people of the room here, who see the hero now. One who does not stand on the map here walks with the
-## hero or is behind a door being forced: it counts.
-static func eyes(s: GameSession, data: Dictionary, ids: Array) -> Array:
+## Those of `ids`, people of the room here, who see `doer` now: the hero, or anybody who stands on this map (v0.8.4.12).
+## One who does not stand on the map here walks with the hero or is behind a door being forced: it counts; a doer off the
+## map is seen by them all.
+static func eyes(s: GameSession, data: Dictionary, ids: Array, doer: String = Being.HERO) -> Array:
 	if ids.is_empty():
 		return []
 	var map := WalkRules.view(s, data)
-	var hero := WalkRules.settle(s, data, map)
 	var at := {}
-	for t: Dictionary in MapSpots.of(s, data, map):
-		if str(t["kind"]) == "npc":
+	for t: Dictionary in MapSpots.of(s, data, map) + MapSpots.foes(s, data, map):
+		if str(t["kind"]) in ["npc", "foe"]:
 			at[str(t["id"])] = _cell(t)
+	var cell: Vector2i = WalkRules.settle(s, data, map) if doer == Being.HERO else at.get(doer, Vector2i(-1, -1))
+	if cell == Vector2i(-1, -1):
+		return ids.filter(func(id: String) -> bool: return id != doer)
+	var who := Sheet.who(s, data, doer)
 	return ids.filter(func(id: String) -> bool:
-		return not at.has(id) or sees(s, data, map, id, at[id], hero, range_of(s, data, _npc_dark(data, id), true)))
+		return id != doer and (not at.has(id) or sees(s, data, map, id, at[id], cell, range_of(s, data, Sheet.who(s, data, id), true, who), who)))
 
 
 ## A person of the room here sees the hero.
@@ -93,7 +94,7 @@ static func cones(s: GameSession, data: Dictionary, map: Dictionary, seen: Dicti
 			continue
 		var id := str(t["id"])
 		var at := _cell(t)
-		var far := range_of(s, data, _npc_dark(data, id) if str(t["kind"]) == "npc" else dark_of(data, t["record"]))
+		var far := range_of(s, data, Sheet.who(s, data, id) if str(t["kind"]) == "npc" else t["record"])
 		for cell: Vector2i in SightRules.view(map, data["layouts"], at, far):
 			if in_cone(s, data, map, id, at, cell):
 				out[cell] = true

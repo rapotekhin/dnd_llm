@@ -185,9 +185,9 @@ static func shops_closed(s: GameSession, data: Dictionary) -> bool:
 	return is_night(s, data) and bool(cfg(data).get("night_shops_closed", true))
 
 
-## Darkvision (or Devil's Sight, v0.7.10), the Light spell or a light source in the pack: SightRules.
-static func can_see(s: GameSession, data: Dictionary) -> bool:
-	return SightRules.dark_sight(s, data) > 0 or SightRules.light(s, data) > 0
+## Darkvision (or Devil's Sight, v0.7.10), the Light spell or a light source among its things: SightRules. Anybody's.
+static func can_see(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> bool:
+	return SightRules.dark_sight(s, data, who) > 0 or SightRules.light(s, data, who) > 0
 
 
 ## No light of its own here: night outside a lit location, or a dark room of the pack (`dark` at a room or its location —
@@ -197,14 +197,15 @@ static func unlit(s: GameSession, data: Dictionary) -> bool:
 	return w.flag(s.room_id, "dark") or (is_night(s, data) and not w.flag(s.room_id, "lit"))
 
 
-## An unlit place without a way to see.
-static func dark(s: GameSession, data: Dictionary) -> bool:
-	return unlit(s, data) and not can_see(s, data)
+## An unlit place without a way to see, for anybody (v0.8.4.12): the hero's light lights it for everybody.
+static func dark(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> bool:
+	return unlit(s, data) and not can_see(s, data, who) and not SightRules.lit(s, data)
 
 
-## Passive Perception lost now: sneaking (−5) and darkness (disadvantage = −5).
-static func passive_penalty(s: GameSession, data: Dictionary) -> int:
-	return (ExplorationRules.SNEAK_PASSIVE_PENALTY if s.sneaking else 0) + (5 if dark(s, data) else WeatherRules.passive(s, data))  # fog, a downpour (v0.7.46)
+## Passive Perception lost now: the hero's sneaking (−5), and for anybody darkness (disadvantage = −5) or the weather.
+static func passive_penalty(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
+	var sneak := ExplorationRules.SNEAK_PASSIVE_PENALTY if Sheet.is_hero(who) and s.sneaking else 0
+	return sneak + (5 if dark(s, data, who) else WeatherRules.passive(s, data))  # fog, a downpour (v0.7.46)
 
 
 ## Minutes until `target`: "hour" — 60, a part id — its next start (a full day when it is starting right now).

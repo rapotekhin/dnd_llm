@@ -15,44 +15,63 @@ static func opaque(lib: Dictionary, c: String) -> bool:
 	return c == LayoutGen.BLANK or bool(lib["cells"].get(c, {}).get("opaque", false))
 
 
-## Squares of darkvision the hero has, 0 — none.
-static func dark_sight(s: GameSession, data: Dictionary) -> int:
-	var c := s.character
-	if CharacterRules.has_feature(c, "eldritch_invocation_devils_sight"):
+## Squares of darkvision of anybody (v0.8.4.12, ADR-0016), 0 — none: Devil's Sight, a race's or a template's darkvision,
+## a thing worn or the spell; the longest of them.
+static func dark_sight(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
+	if Sheet.has_trait(s, data, who, "eldritch_invocation_devils_sight"):
 		return int(cfg(data)["devils_sight"])
-	if CharacterRules.has_trait(c, "darkvision") or CharacterRules.item_prop(c, "darkvision") or SpellEffects.has(c, "darkvision"):
-		return int(cfg(data)["darkvision"])
-	return 0
+	var own := int(Sheet.template(data, who).get("darkvision", 0)) / int(FightGrid.cfg(data)["ft"])
+	var h := Sheet.holder(s, who)
+	var props := CharacterRules.item_prop(h, "darkvision") if Sheet.is_hero(who) else CharacterRules.active_props(_things(s, data, who), data, s.items).has("darkvision")
+	if Sheet.has_trait(s, data, who, "darkvision") or props or _spell(h, "darkvision"):
+		return maxi(own, int(cfg(data)["darkvision"]))
+	return own
 
 
-## Squares the hero's own light reaches, 0 — none: the Light spell or the best light source in the pack.
-static func light(s: GameSession, data: Dictionary) -> int:
-	var c := s.character
+## Squares the light it carries reaches, 0 — none: the Light spell or the best light source among its things.
+static func light(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
 	var lights: Dictionary = cfg(data)["lights"]
-	var best := int(lights["light"]) if SpellEffects.has(c, "light") else 0
-	for id: String in c.get("inventory", {}):
+	var best := int(lights["light"]) if _spell(Sheet.holder(s, who), "light") else 0
+	for id: String in _things(s, data, who).get("inventory", {}):
 		if (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source"):
 			best = maxi(best, int(lights.get(id, lights["light"])))
 	return best
 
 
-## The hero carries a light in the dark and needs it: it shows from afar.
-static func lit(s: GameSession, data: Dictionary) -> bool:
-	return TimeRules.unlit(s, data) and dark_sight(s, data) == 0 and light(s, data) > 0
+## What it has on it in the hero's form: the hero's sheet, a fighter's own things, a record's, else its template's gear.
+## Nothing is filled: a look does not roll a person's pockets.
+static func _things(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
+	if Sheet.is_hero(who):
+		return s.character
+	if who.has("inventory"):
+		return who
+	var id := str(who.get("npc_id", who.get("id", "")))
+	if Being.view(s, id).has("inventory"):
+		return Being.view(s, id)
+	return Gear.start(data, Sheet.template_id(data, who))
 
 
-## Why the hero stands in the dark: no light of the place and none shown. "" — lit. A darkvision does not light anyone.
-static func in_dark(s: GameSession, data: Dictionary) -> String:
-	return "темнота" if TimeRules.unlit(s, data) and not lit(s, data) else ""
+static func _spell(h: Dictionary, key: String) -> bool:
+	return (h.get("effects", []) as Array).any(func(e: Dictionary) -> bool: return e.has(key))
 
 
-## How many squares the hero sees here now.
-static func reach(s: GameSession, data: Dictionary) -> int:
-	if ConditionRules.has(s.character, "blinded"):
+## It carries a light in the dark and needs it: it shows from afar.
+static func lit(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> bool:
+	return TimeRules.unlit(s, data) and dark_sight(s, data, who) == 0 and light(s, data, who) > 0
+
+
+## Why it stands in the dark: no light of the place and none shown. "" — lit. A darkvision does not light anyone.
+static func in_dark(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> String:
+	return "темнота" if TimeRules.unlit(s, data) and not lit(s, data, who) else ""
+
+
+## How many squares it sees here now: the day's view, else its darkvision or its light; blinded — only beside.
+static func reach(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
+	if ConditionRules.has(Sheet.holder(s, who), "blinded"):
 		return int(cfg(data)["blind"])
 	if not TimeRules.unlit(s, data):
 		return int(cfg(data)["obscured" if WeatherRules.passive(s, data) > 0 else "day"])
-	return maxi(maxi(dark_sight(s, data), light(s, data)), int(cfg(data)["blind"]))
+	return maxi(maxi(dark_sight(s, data, who), light(s, data, who)), int(cfg(data)["blind"]))
 
 
 ## The squares seen from `from` within `radius`, walls that close the view among them: shadow casting by eight octants.

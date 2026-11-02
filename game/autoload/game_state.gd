@@ -1371,8 +1371,7 @@ func _sneak_past_people(room_id: String) -> String:
 	var best := 0
 	var who := ""
 	for id: String in npcs:
-		var m: Dictionary = Catalog.data["monsters"].get(str(world().npc(id).get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])), {})
-		var pp := int(m.get("passive_perception", 10)) - WeatherRules.unseen(session, Catalog.data)
+		var pp := Sheet.passive(session, Catalog.data, Sheet.who(session, Catalog.data, id)) - WeatherRules.unseen(session, Catalog.data)
 		if pp >= best:
 			best = pp
 			who = str(world().npc(id).get("name", id))
