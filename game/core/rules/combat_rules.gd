@@ -371,11 +371,7 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector
 					f[k] = str(spec[k])
 			if bool(spec.get("helper", false)):
 				f["helper"] = true
-			if not str(spec.get("npc_id", "")).is_empty() and not TheftRules.lost_weapons(s, data, str(spec["npc_id"])).is_empty():
-				f["actions"] = TheftRules.armed_actions(s, data, str(spec["npc_id"]), m["actions"])  # big test #3 (v0.7.22.8)
-			if spec.get("gear") is Dictionary:  # searched before: it fights with what was left on it (v0.8.4.4)
-				f["gear"] = (spec["gear"] as Dictionary).duplicate()
-				f["actions"] = TheftRules.gear_actions(m, f["gear"])
+			Gear.arm(s, data, f, spec)  # what it has: its blows and its AC (v0.8.4.10)
 			ids.append(id)
 	return ids
 
@@ -412,10 +408,13 @@ static func close(s: GameSession) -> void:
 		if id != PLAYER:
 			_give_statuses(b, f)
 		if b.has("creature") or b.has("summon") or (id != PLAYER and not str(f.get("npc_id", "")).is_empty()):
+			if not str(f.get("npc_id", "")).is_empty():
+				Gear.back(b, f)
 			if b.is_empty():
 				Being.forget(s, id)
 		elif str(f.get("status")) == "active" and (b.has("encounter") or captors.has(id)):
 			b["hp"] = int(f["hp"])
+			Gear.back(b, f)
 			if bool(f.get("no_xp", false)):
 				b["no_xp"] = true
 		elif id != PLAYER:
@@ -534,6 +533,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			ConditionRules.remove(h, "chilled")
 	lines.append_array(SpellEffects.turn_start(s, data, f))  # Heroism (v0.7.13.1)
 	SpellEffects.end_until_turn(s, data, f)  # Shield (v0.7.13.7)
+	_fire(s, data, f, lines)
 	if id == PLAYER:
 		if bool(f.get("blinked", false)):  # Blink: back from the Ethereal Plane (v0.7.13.3)
 			f["blinked"] = false
@@ -717,20 +717,6 @@ static func _as_seen(t: Dictionary) -> Dictionary:
 	FightGrid.put(out, FightGrid.shown(t))
 	return out
 
-
-## One arrow (bolt, bullet) is gone; half the spent come back after the fight (v0.7.12, PHB).
-static func spend_ammo(s: GameSession, ammo: String) -> void:
-	if ammo.is_empty():
-		return
-	var inv: Dictionary = s.character["inventory"]
-	var left := int(inv.get(ammo, 0)) - 1
-	if left > 0:
-		inv[ammo] = left
-	else:
-		inv.erase(ammo)
-	if not s.combat.has("ammo_spent"):
-		s.combat["ammo_spent"] = {}
-	s.combat["ammo_spent"][ammo] = int(s.combat["ammo_spent"].get(ammo, 0)) + 1
 
 
 ## The hero aims where an invisible foe was (FightGrid.shown), and it is not there any more.
@@ -1171,9 +1157,9 @@ static func spell_range(s: GameSession, data: Dictionary, spell_id: String, f: D
 
 ## Throws the thing: a ranged attack — improvised (DEX, no proficiency, 20/60 ft) or the net's;
 ## on a hit its damage (only to `types` when given), burning, oil or the net's hold. Lines.
-static func throw_item(s: GameSession, data: Dictionary, item_id: String, target_id: String) -> Array[String]:
-	var c := s.character
-	economy(s)["attacked"] = true
+static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id: String, target_id: String) -> Array[String]:
+	var c := Sheet.holder(s, f)
+	points(s, data, f)["attacked"] = true
 	var fx: Dictionary = ItemRules.consumable(data, item_id, s.items)["throw"]
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
 	ItemRules._remove_one(c, item_id)
@@ -1182,13 +1168,14 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed)
 		return splashed
 	var t := fighter(s, target_id)
-	var dex := CharacterRules.mod(CharacterRules.ability(c, "dex"))
-	var proficient := bool(fx.get("weapon", false)) and ((c.get("weapon_profs", []) as Array).has("martial") or (c.get("weapon_profs", []) as Array).has(item_id))
-	var to_hit := dex + (int(c.get("prof_bonus", 2)) if proficient else 0)
+	var dex := Sheet.ability_mod(s, data, f, "dex")
+	var profs: Array = c.get("weapon_profs", ["martial"])  # a template knows the weapons it carries
+	var proficient := bool(fx.get("weapon", false)) and (profs.has("martial") or profs.has(item_id))
+	var to_hit := dex + (int(Sheet.of(s, data, f).get("prof_bonus", 2)) if proficient else 0)
 	var near := int(fx.get("range", 20))
 	var blow := {"name": name, "to_hit": to_hit, "pieces": [], "melee": false, "range": [near, 60 if bool(fx.get("improvised", false)) else near], "str_based": false}
 	var lines: Array[String] = []
-	var hit := bool(Attack.swing(s, data, player(s), t, blow, lines)["hit"])
+	var hit := bool(Attack.swing(s, data, f, t, blow, lines)["hit"])
 	if not hit:
 		return lines
 	if fx.has("damage"):
@@ -1202,13 +1189,13 @@ static func throw_item(s: GameSession, data: Dictionary, item_id: String, target
 			hurt(s, data, t, dmg, lines, dtype)
 	if fx.has("burning"):
 		FightField.kindle(s, data, FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
-	if fx.has("burning") and str(t.get("status")) == "active":
+	if fx.has("burning") and Attack.up(s, t):
 		t["burning"] = str(fx["burning"])
 		lines.append("%s горит" % t["name"])
-	if fx.has("oiled") and str(t.get("status")) == "active":
+	if fx.has("oiled") and Attack.up(s, t):
 		t["oiled"] = int(fx["oiled"])
 		lines.append("%s облит маслом — огонь возьмёт его сильнее" % t["name"])
-	if fx.has("condition") and str(t.get("status")) == "active":
+	if fx.has("condition") and Attack.up(s, t):
 		if SIZES.find(str(Sheet.template(data, t).get("size", "medium"))) > SIZES.find(str(fx.get("max_size", "large"))):
 			lines.append("%s слишком велик для сети" % t["name"])
 		else:
@@ -1988,6 +1975,18 @@ static func _gives_up(s: GameSession, data: Dictionary, f: Dictionary, lines: Ar
 	return true
 
 
+## Alchemist's fire (v0.7.12) on anybody: it burns at the start of its turn until a DEX save DC 10 puts it out.
+static func _fire(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	if not f.has("burning") or not Attack.up(s, f):
+		return
+	var burn := Sheet.taken(s, data, f, "fire", roll_dice(s.rng, str(f["burning"])))
+	lines.append("%s горит: %d (огонь)" % [f["name"], burn])
+	hurt(s, data, f, burn, lines, "fire")
+	if Attack.up(s, f) and Sheet.saved(s, data, f, "dex", 10):
+		f.erase("burning")
+		lines.append("%s сбивает пламя" % f["name"])
+
+
 static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	f["dodging"] = false
 	var p := player(s)
@@ -2003,15 +2002,8 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 		f.erase("retching")
 		lines.append("%s давится и пропускает ход" % f["name"])
 		return
-	if f.has("burning"):  # alchemist's fire (v0.7.12): burns until a DEX save DC 10 puts it out
-		var burn := Sheet.taken(s, data, f, "fire", roll_dice(s.rng, str(f["burning"])))
-		lines.append("%s горит: %d (огонь)" % [f["name"], burn])
-		hurt(s, data, f, burn, lines, "fire")
-		if str(f["status"]) != "active":
-			return
-		if Sheet.saved(s, data, f, "dex", 10):
-			f.erase("burning")
-			lines.append("%s сбивает пламя" % f["name"])
+	if not Attack.up(s, f):
+		return
 	if s.combat.has("arena"):  # v0.7.45: no flight from the ring; a bout to surrender ends when a side gives up
 		if _gives_up(s, data, f, lines):
 			return
@@ -2287,7 +2279,7 @@ static func results(s: GameSession, data: Dictionary) -> void:
 	s.combat["xp"] = xp if str(s.combat["outcome"]) in ["victory", "truce"] else 0
 
 
-## What a beaten foe has on it, {item: qty}: its gear; of a dead one also the hide and the meat.
+## What a beaten foe has on it, {item: qty}: what it has (Gear) and half of what it shot; of a dead one also the hide and the meat.
 static func spoils(data: Dictionary, f: Dictionary) -> Dictionary:
 	var out := {}
 	var m := Sheet.template(data, f)
@@ -2298,15 +2290,10 @@ static func spoils(data: Dictionary, f: Dictionary) -> Dictionary:
 		out["raw_meat"] = CraftRules.meat(data, m)
 	if not state in ["dead", "surrendered", "unconscious"]:
 		return out
-	if f.get("gear") is Dictionary:  # what was left on it the last time
-		out.merge(f["gear"])
-		return out
-	var ammo: Dictionary = ItemRules.cfg(data)["ammo"]
-	for item: Variant in m.get("equipment", []):
-		if data["items"]["catalog"].has(str(item)):
-			out[str(item)] = int(out.get(str(item), 0)) + 1
-			if ammo.has(str(item)):  # what it shot with
-				out[str(ammo[str(item)])] = int(out.get(str(ammo[str(item)]), 0)) + int(data["rules"]["creatures"]["foe_ammo"])
+	var has: Dictionary = f.get("inventory", Gear.start(data, Sheet.template_id(data, f))["inventory"])  # what it has now (v0.8.4.10)
+	for got: Dictionary in [has, Gear.shot_back(data, f)]:
+		for item: String in got:
+			out[item] = int(out.get(item, 0)) + int(got[item])
 	return out
 
 

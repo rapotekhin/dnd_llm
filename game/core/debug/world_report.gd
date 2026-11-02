@@ -135,7 +135,7 @@ static func npc(s: GameSession, data: Dictionary, query: String) -> String:
 				where.append(rid)
 		return "%s [%s] — %s\n  где: %s · отношение %+d%s\n  %s\n  пакет: %s\n  кошель/запас в игре: %s · карманы: %s\n  память: %s" % [
 			n.get("name", id), id, n.get("role", ""), ", ".join(where), s.attitude(id), " · МЁРТВ" if Being.dead(s, id) else "",
-			n.get("description", ""), JSON.stringify(n), JSON.stringify(s.merchants.get(id, {})), JSON.stringify(Being.view(s, id).get("pockets", {})),
+			n.get("description", ""), JSON.stringify(n), JSON.stringify(s.merchants.get(id, {})), JSON.stringify(Being.view(s, id).get("inventory", {})),
 			s.summaries.get("dialogue:" + id, "—")]
 	return "нет NPC «%s»" % query
 

@@ -73,7 +73,8 @@ func test_an_npc_fights_under_its_own_id() -> void:
 	TestUtils.fight(s, data, [{"monster": "commoner", "name": "Бруно", "npc_id": "npc_innkeeper"}], {})
 	assert_array(CombatRules.enemies(s)).contains_exactly(["npc_innkeeper"])
 	CombatRules.close(s)
-	assert_array(s.beings.keys()).is_equal([Being.HERO])
+	assert_array(s.beings.keys()).is_equal([Being.HERO, "npc_innkeeper"])  # a person keeps its things (v0.8.4.10), nothing else
+	assert_bool(Being.view(s, "npc_innkeeper").has("fight")).is_false()
 
 
 func test_the_beaten_foe_stays_the_same_character() -> void:

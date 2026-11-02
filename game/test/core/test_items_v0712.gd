@@ -65,7 +65,7 @@ func test_arrows_are_spent_and_half_come_back() -> void:
 	c["inventory"].erase("arrows")
 	CombatRules.economy(s)["action"] = 1
 	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_equal("COMBAT_NO_AMMO")
-	assert_int(int(s.combat["ammo_spent"]["arrows"])).is_equal(1)
+	assert_int(int(CombatRules.player(s)["ammo_spent"]["arrows"])).is_equal(1)  # on the fighter, as any shooter's
 
 
 func test_heavy_weapon_for_a_halfling_has_disadvantage() -> void:

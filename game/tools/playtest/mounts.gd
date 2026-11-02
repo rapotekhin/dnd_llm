@@ -17,6 +17,7 @@ func run() -> void:
 	if not step("game started", await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 90.0)):
 		return
 	var s: GameSession = gs.session
+	node("Catalog").data["rules"]["mounts"]["steal_pct_day"] = 0  # the ways of the beasts are checked here, not a thief's luck
 	var data: Dictionary = node("Catalog").data
 	var c := s.character
 	c["gold_cp"] = 100000

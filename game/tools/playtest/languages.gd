@@ -54,7 +54,7 @@ func run() -> void:
 		keeper = id
 		break
 	if step("someone to talk to in the hall", not keeper.is_empty()):
-		var npc: Dictionary = data["world"]["npcs"][keeper]
+		var npc: Dictionary = node("Catalog").data["world"]["npcs"][keeper]  # the game's pack, activated after the start
 		var old_langs: Variant = npc.get("languages")
 		npc["languages"] = ["giant"]
 		var r: Dictionary = gs._engine_check({"skill": "persuasion", "dc_tier": "easy", "target_id": keeper})

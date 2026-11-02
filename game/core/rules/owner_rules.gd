@@ -113,8 +113,8 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 			return {"reason": ("%s разумен: его не продают (рабства нет), а передают, чтобы свели к страже, — награда за поимку не больше %s" if bounty
 				else "за %s дадут не больше %s") % [c["name"], Money.format(cap)]}
 		var npc := world.npc(to)
-		if price > 0 and bool(npc.get("trader", false)) and price > int(TradeRules.merchant(s, data, to)["purse_cp"]):
-			return {"reason": "у %s нет столько денег: в кошельке %s" % [npc.get("name", to), Money.format(int(TradeRules.merchant(s, data, to)["purse_cp"]))]}
+		if price > 0 and price > Gear.coins(s, data, to):
+			return {"reason": "у %s нет столько денег: в кошельке %s" % [npc.get("name", to), Money.format(Gear.coins(s, data, to))]}
 		return {"plan": {"creature": cid, "to": to, "price": price},
 			"summary": "%s теперь у %s%s" % [c["name"], npc.get("name", to), (" — награда за поимку %s" if bounty else " за %s") % Money.format(price) if price > 0 else ""]}
 	var item := str(e.get("item_id", "")) if e.get("item_id") != null else ""
@@ -150,9 +150,7 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 	var price := int(p.get("price", 0))
 	if price > 0:
 		Ledger.add(s, price, "owner:apply")
-		if bool(WorldView.new(data["world"]).npc(to).get("trader", false)):
-			var m := TradeRules.merchant(s, data, to)
-			m["purse_cp"] = int(m["purse_cp"]) - price
+		Gear.pay(s, data, to, -price)
 		lines.append("+" + Money.format(price))
 	var home := ReputationRules.home_room(data, to)
 	if not home.is_empty() and home != s.room_id:  # it goes with its new owner

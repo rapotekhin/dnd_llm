@@ -23,7 +23,8 @@ static func of_action(data: Dictionary, f: Dictionary, a: Dictionary) -> Diction
 	for d: Dictionary in a.get("damage", []):
 		pieces.append({"dice": str(d["dice"]), "type": str(d.get("type", ""))})
 	return {"name": str(a.get("name", "")), "to_hit": int(a.get("to_hit", 0)) + plus, "pieces": pieces, "bonus": plus, "melee": str(a.get("kind")) == "melee",
-		"reach": maxi(1, FightGrid.squares_of(data, int(a.get("reach", 5)))), "range": a.get("range", []), "weapon": true, "act": a}
+		"reach": maxi(1, FightGrid.squares_of(data, int(a.get("reach", 5)))), "range": a.get("range", []), "weapon": true, "act": a,
+		"ammo": str(ItemRules.cfg(data)["ammo"].get(str(a.get("item", "")), ""))}
 
 
 ## A spell's attack roll; `dtype` "" — a roll with no damage of its own.
@@ -211,6 +212,7 @@ static func swing(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	(m["adv"] as Array).append_array(b.get("adv", []))
 	var blow := FeatureRules.armed(s, data, f, t, b, m) if bool(b.get("weapon", false)) else b
 	lines.append_array(SpellEffects.end_on_attack(me))
+	Gear.spend_ammo(s, data, f, str(b.get("ammo", "")))  # arrows and bolts are spent, whoever shoots (v0.8.4.10)
 	var a: Dictionary = b.get("act", {})
 	if not a.is_empty():
 		MonsterRules.spend(f, a)

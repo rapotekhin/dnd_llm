@@ -120,7 +120,7 @@ static func walk(s: GameSession, d: Dictionary, dir: int) -> Array[String]:
 static func enemy_turn(s: GameSession, d: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	var turn: int = s.combat["turn"]
 	s.combat["turn"] = (s.combat["order"] as Array).find(str(f["id"]))
-	f["points"] = CombatRules.fresh_points(s, d, f)
+	CombatRules._begin_turn(s, d, lines)  # the start of its turn as the fight's own loop: fire, Help, riders
 	CombatRules._enemy_turn(s, d, f, lines)
 	s.combat["turn"] = turn
 

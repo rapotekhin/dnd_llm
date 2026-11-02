@@ -21,6 +21,11 @@ static func add(s: GameSession, cp: int, why: String) -> void:
 		s.ledger = s.ledger.slice(s.ledger.size() - KEEP)
 
 
+## The purse of anybody else — a trader's till, a person's coins (v0.8.4.10, Gear): written only here, never under nothing.
+static func purse(c: Dictionary, cp: int) -> void:
+	c["gold_cp"] = maxi(0, cp)
+
+
 ## The sum of the journal's changes for causes starting with `prefix`.
 static func total(s: GameSession, prefix: String = "") -> int:
 	var n := 0

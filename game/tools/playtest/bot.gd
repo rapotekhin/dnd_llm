@@ -286,8 +286,8 @@ func _invariants() -> String:
 		return "trading with a non-trader %s" % s.npc_id
 	for npc: String in s.merchants:
 		var m: Dictionary = s.merchants[npc]
-		if int(m["purse_cp"]) < 0:
-			return "merchant %s purse %d" % [npc, m["purse_cp"]]
+		if int(Being.view(s, npc).get("gold_cp", 0)) < 0:
+			return "merchant %s purse %d" % [npc, Being.view(s, npc)["gold_cp"]]
 		for id: String in m["stock"]:
 			if int(m["stock"][id]) < 0:
 				return "merchant %s stock %s %d" % [npc, id, m["stock"][id]]

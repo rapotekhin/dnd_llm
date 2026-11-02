@@ -216,10 +216,7 @@ static func gift(s: GameSession, data: Dictionary, npc_id: String, item_id: Stri
 		var cured: Array[String] = ["Подарок — %s: «%s»" % [who, name]]
 		cured.append_array(DiseaseRules.cure_npc(s, data, npc_id, str(remedy.get("power", "magic"))))
 		return cured
-	var pockets := TheftRules.pockets(s, data, npc_id)
-	var e := {"id": "g%d" % (pockets.size() + 1), "name": name, "item_id": item_id, "cp": 0, "qty": 1, "worn": false}
-	e["dc"] = TheftRules.dc(s, data, npc_id, e)
-	pockets.append(e)
+	Gear.give(s, data, npc_id, item_id)
 	var b := _rw(c, npc_id)
 	b["gift_day"] = s.day
 	var lines: Array[String] = ["Подарок — %s: «%s»" % [who, name]]

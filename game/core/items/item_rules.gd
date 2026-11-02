@@ -534,7 +534,8 @@ static func can_use(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 
 ## Uses one item (can_use first): removes it, heals, lifts conditions; with the session (v0.7.8) it also leaves its
 ## boon for a while (antitoxin — advantage on saves against poison for an hour). Returns the chat lines.
-static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, rng: RandomNumberGenerator, s: GameSession = null) -> Array[String]:
+static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, rng: RandomNumberGenerator, s: GameSession = null,
+		who: Dictionary = Sheet.HERO) -> Array[String]:
 	var fx := consumable(data, id, session_items)
 	var d := def_of(data["items"], session_items, real_id(id))
 	var lines: Array[String] = ["Использовано: %s" % d.get("name", id)]
@@ -555,16 +556,19 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 	if s != null and fx.has("poison"):  # a Potion of Poison drunk for a healing one
 		var p: Dictionary = fx["poison"]
 		var dmg := CombatRules.roll_dice(rng, str(p["dice"]))
-		var r := Sheet.save(s, data, Sheet.HERO, str(p["save"]), int(p["dc"]), "poison")
+		var r := Sheet.save(s, data, who, str(p["save"]), int(p["dc"]), "poison")
 		if bool(r["ok"]):
 			dmg /= 2
-		var adj := Sheet.damage(s, data, Sheet.HERO, "poison", dmg)
-		c["hp"] = maxi(0, int(c["hp"]) - int(adj["damage"]))
+		var adj := Sheet.damage(s, data, who, "poison", dmg)
 		lines.append("яд! −%d HP, спасбросок %s" % [int(adj["damage"]), r["text"]])
 		if not bool(r["ok"]):
 			lines.append_array(ConditionRules.impose(s, data, {"condition": "poisoned", "ends": ConditionRules.ends_for(s, data, "hour"),
-				"source": {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}}))
-		lines.append_array(HeroDefense.after_damage(s, data, int(adj["damage"])))
+				"source": {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}}, who))
+		if Sheet.is_hero(who):  # the hero's road to 0 HP and its death saves
+			c["hp"] = maxi(0, int(c["hp"]) - int(adj["damage"]))
+			lines.append_array(HeroDefense.after_damage(s, data, int(adj["damage"])))
+		else:
+			CombatRules.hurt(s, data, who, int(adj["damage"]), lines, "poison")
 		return lines
 	if s != null and fx.has("meal"):  # a dish (v0.7.25)
 		lines.append_array(FoodRules.eat_one(s, data, id))
@@ -584,7 +588,7 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		c["hp"] = mini(int(c["max_hp"]), before + amount)
 		lines.append("+%d HP" % (int(c["hp"]) - before))
 	if s != null and (fx.has("adv_tag") or fx.has("resist") or fx.has("check_adv") or fx.has("enlarged") or fx.has("cure")):
-		lines.append_array(ConditionRules.cure(s, data, fx, {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}))
+		lines.append_array(ConditionRules.cure(s, data, fx, {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}, who))
 		return lines
 	for cond: Variant in fx.get("remove", []):
 		if ConditionRules.has(c, str(cond)):
@@ -627,17 +631,17 @@ static func scroll_numbers(data: Dictionary, level: int) -> Array:
 	return cfg(data)["scrolls"].get(str(clampi(level, 0, 3)), [13, 5])
 
 
-## Reading a scroll: {"ok", "line"}. A spell of the hero's class list and within the slots they have — no check;
-## otherwise Arcana DC 10 + circle, a failure wastes the scroll.
-static func read_scroll(s: GameSession, data: Dictionary, spell_id: String, level: int) -> Dictionary:
-	var c := s.character
+## Reading a scroll: {"ok", "line"}. A spell of the reader's class list and within the slots it has — no check;
+## otherwise Arcana DC 10 + circle, a failure wastes the scroll. Anybody's (v0.8.4.10).
+static func read_scroll(s: GameSession, data: Dictionary, spell_id: String, level: int, who: Dictionary = Sheet.HERO) -> Dictionary:
+	var c := Sheet.holder(s, who)
 	var sp: Dictionary = data["spells"].get(spell_id, {})
 	var name := str(sp.get("name", spell_id))
 	var own := (sp.get("classes", []) as Array).has(str(c.get("class", ""))) and (level == 0 or int(c.get("slots_max", [0, 0, 0, 0, 0])[maxi(0, level - 1)]) > 0)
 	if own:
 		return {"ok": true, "line": "свиток прочитан: %s" % name}
 	var dc := 10 + level
-	var r := Roll.hero(s, data, {"what": "Свиток", "skill": "arcana", "dc": dc})
+	var r := Roll.check(s, data, who, {"what": "Свиток", "skill": "arcana", "dc": dc})
 	var ok := bool(r["ok"])
-	return {"ok": ok, "line": "Магия %d + %d против Сл %d: %s" % [int(r["nat"]), int(r["bonus"]), dc,
+	return {"ok": ok, "line": "Магия %d + %d против Сл %d: %s" % [int(r["nat"]), int(r["total"]) - int(r["nat"]), dc,
 		("свиток прочитан: " + name) if ok else "слова не даются, свиток рассыпается впустую"]}

@@ -70,9 +70,7 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String, treas
 		var state := str(f.get("status", ""))
 		var npc := str(f.get("npc_id", ""))
 		var gear := CombatRules.spoils(data, f)
-		var person := not npc.is_empty()
-		if person and state == DEAD:  # a person's things are in its pockets, searched with them
-			_into_pockets(s, data, npc, gear)
+		var person := not npc.is_empty()  # a person's things go back to its record with the fight's end (Gear.back)
 		if only_dead and state != DEAD:
 			continue
 		if not state in ["truce", "surrendered", "unconscious", DEAD] or (person and state != "unconscious"):
@@ -141,15 +139,6 @@ static func _leave_things(s: GameSession, data: Dictionary, c: Dictionary) -> vo
 
 static func _empty(c: Dictionary) -> bool:
 	return (c.get("contents", {}) as Dictionary).is_empty() and int(c.get("coins_cp", 0)) <= 0
-
-
-## Weapons stay in the pockets of a person (TheftRules.pockets), the rest of its gear joins them.
-static func _into_pockets(s: GameSession, data: Dictionary, npc: String, gear: Dictionary) -> void:
-	var list := TheftRules.pockets(s, data, npc)
-	for item: String in gear:
-		if data["items"]["catalog"].get(item, {}).has("weapon"):
-			continue
-		list.append({"name": ItemRules.display_name(data["items"], s.items, item), "item_id": item, "cp": 0, "qty": int(gear[item]), "worn": false})
 
 
 ## Has things to look through like a chest.
@@ -376,14 +365,14 @@ static func _taken_from_owner(s: GameSession, data: Dictionary, c: Dictionary) -
 ## A knocked-out pack NPC searched: what its pockets hold; whoever sees it — a theft before their eyes. Lines.
 static func _search(s: GameSession, data: Dictionary, npc_id: String, name: String) -> Array[String]:
 	var got: Array[String] = []
-	for e: Dictionary in TheftRules.pockets(s, data, npc_id):
-		if int(e.get("cp", 0)) > 0:
-			Ledger.add(s, int(e["cp"]), "creature:search")
-			got.append(Money.format(int(e["cp"])))
-		elif not str(e.get("item_id", "")).is_empty() and not bool(e.get("worn", false)):
-			OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, str(e["item_id"]), int(e.get("qty", 1))), int(e.get("qty", 1)), npc_id)
-			got.append(str(e["name"]))
-	Being.of(s, npc_id)["pockets"] = (TheftRules.pockets(s, data, npc_id) as Array).filter(func(e: Dictionary) -> bool: return bool(e.get("worn", false)))
+	var things := Gear.strip(s, data, npc_id, true)  # what it wears stays on it
+	if int(things["cp"]) > 0:
+		Ledger.add(s, int(things["cp"]), "creature:search")
+		got.append(Money.format(int(things["cp"])))
+	for item: String in things["items"]:
+		var n := int(things["items"][item])
+		OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, item, n), n, npc_id)
+		got.append(ItemRules.display_name(data["items"], s.items, item))
 	var lines: Array[String] = ["Обыскан(а) %s: %s" % [name, ", ".join(got) if not got.is_empty() else "ничего"]]
 	var world := WorldView.new(data["world"])
 	var seen := WatchRules.eyes(s, data, s.npcs_here(world.world, s.room_id))

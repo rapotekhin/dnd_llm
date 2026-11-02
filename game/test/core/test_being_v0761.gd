@@ -64,7 +64,8 @@ func test_a_record_comes_back_from_a_save_unchanged() -> void:
 	var b := Being.of(s, "npc_innkeeper")
 	b["hp"] = 3
 	b["attitude"] = -2
-	b["pockets"] = [{"id": "p1", "cp": 12, "qty": 1, "dc": 10}]
+	b["inventory"] = {"dagger": 1}
+	b["gold_cp"] = 12
 	b["memory"] = [Fact.of(s, "помнит")]
 	b["sick"] = {"id": "flu", "until": 2880}
 	b["disarmed"] = {"dagger": 2}

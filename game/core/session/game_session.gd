@@ -73,7 +73,7 @@ var day: int:
 		return clock / 1440 + 1
 	set(v):
 		clock = (v - 1) * 1440 + clock % 1440
-## npc_id → merchant state (TradeRules): purse_cp, stock {item_id: qty}, day of the last restock, haggle_pct of
+## npc_id → merchant state (TradeRules): stock {item_id: qty}, day of the last restock, haggle_pct of
 ## the current visit, haggle_failed_day, haggle_result. Created from the pack on the first trade.
 var merchants: Dictionary = {}
 ## The fight in progress (CombatRules), {} when there is none.
@@ -686,7 +686,7 @@ func held_as_creature(npc_id: String) -> bool:
 
 static func _normalized_merchant(m: Dictionary) -> Dictionary:
 	var out := m.duplicate(true)
-	for k: String in ["purse_cp", "day", "haggle_pct", "haggle_failed_day", "haggles", "haggle_day"]:
+	for k: String in ["day", "haggle_pct", "haggle_failed_day", "haggles", "haggle_day"]:
 		out[k] = int(out.get(k, 0))
 	if out.has("fence_day"):  # the fence's restock (v0.7.33)
 		out["fence_day"] = int(out["fence_day"])

@@ -102,6 +102,14 @@ static func item_def(c: Dictionary, data: Dictionary, session_items: Dictionary,
 	return {} if id.is_empty() else ItemRules.def_of(data["items"], session_items, id)
 
 
+## The AC of worn armour: its base and DEX within its cap. Anybody's (Gear.ac).
+static func armored(armor: Dictionary, dex: int) -> int:
+	var ac := int(armor.get("base", 10))
+	if bool(armor.get("dex", false)):
+		ac += dex if armor.get("max_dex") == null else mini(dex, int(armor["max_dex"]))
+	return ac
+
+
 ## Armor Class: worn armor (base + DEX within its cap) or an unarmored formula (Barbarian 10+DEX+CON,
 ## Monk 10+DEX+WIS without a shield, Draconic Resilience 13+DEX), +2 for a shield, +1 for the Defense style in armor.
 static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> int:
@@ -112,9 +120,7 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 	var shield: Dictionary = item_def(c, data, session_items, "shield").get("armor", {})
 	var ac := 10 + dex
 	if not armor.is_empty():
-		ac = int(armor["base"])
-		if bool(armor.get("dex", false)):
-			ac += dex if armor.get("max_dex") == null else mini(dex, int(armor["max_dex"]))
+		ac = armored(armor, dex)
 		for f: Variant in c.get("features", []):
 			if str(f).ends_with("fighting_style_defense"):
 				ac += 1

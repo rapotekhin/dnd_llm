@@ -38,7 +38,7 @@ func _win(total: int, dc: int) -> Dictionary:
 
 func test_a_merchant_starts_from_the_pack() -> void:
 	var m := TradeRules.merchant(s, data, INNKEEPER)
-	assert_int(m["purse_cp"]).is_equal(3000)
+	assert_int(Gear.coins(s, data, INNKEEPER)).is_equal(3000)
 	assert_int(m["stock"]["ale"]).is_equal(40)
 	var list_npc := {"stock": ["ale", "bread"]}
 	assert_dict(TradeRules.pack_stock(list_npc, data["rules"])).is_equal({"ale": 5, "bread": 5})
@@ -70,7 +70,7 @@ func test_a_deal_moves_coins_items_and_stock_both_ways() -> void:
 	var m := TradeRules.merchant(s, data, INNKEEPER)
 	assert_int(m["stock"]["ale"]).is_equal(38)
 	assert_int(m["stock"]["dagger"]).is_equal(1)  # resold later
-	assert_int(m["purse_cp"]).is_equal(3000 + 8 - 100)
+	assert_int(Gear.coins(s, data, INNKEEPER)).is_equal(3000 + 8 - 100)
 	assert_str(" ".join(lines)).contains("Куплено").contains("Продано").contains("Итого: +9 см 2 мм")
 	assert_str(TradeRules.deal_note(lines, int(q["net_cp"]))).ends_with("итог: торговец доплачивает игроку 9 см 2 мм")
 
@@ -103,7 +103,7 @@ func test_a_new_day_restocks_and_keeps_what_was_sold() -> void:
 	var m := TradeRules.merchant(s, data, INNKEEPER)
 	assert_int(m["stock"]["ale"]).is_equal(40)
 	assert_int(m["stock"]["dagger"]).is_equal(1)
-	assert_int(m["purse_cp"]).is_equal(3000)  # the purse came back to the pack's after paying for the dagger
+	assert_int(Gear.coins(s, data, INNKEEPER)).is_equal(3000)  # the purse came back to the pack's after paying for the dagger
 
 
 func test_haggling_by_margin_for_this_visit() -> void:

@@ -120,9 +120,11 @@ func test_theft_by_words_takes_the_purse_or_the_npc_notices() -> void:
 	GameState.busy_turn = "t-1"
 	s.character["skills"]["sleight_of_hand"] = 40
 	var gold := int(s.character["gold_cp"])
+	Ledger.purse(Gear.of(s, data, "npc_innkeeper"), 500)  # less than a handful: one theft empties it
 	var r := GameState.handle_engine_check({"turn_id": "t-1", "skill": "sleight_of_hand", "dc_tier": "medium", "target_id": "npc_innkeeper"})
 	assert_str(str(r["note"])).contains("движок уже выдал")
 	assert_int(int(s.character["gold_cp"])).is_greater(gold)
+	s.rng.seed = 7  # a d20 that is not a 1: the empty purse is what is checked, not the luck
 	var again := GameState.handle_engine_check({"turn_id": "t-1", "skill": "sleight_of_hand", "dc_tier": "medium", "target_id": "npc_innkeeper"})
 	assert_str(str(again["note"])).contains("больше ничего нет")
 	s.character["skills"]["sleight_of_hand"] = -40

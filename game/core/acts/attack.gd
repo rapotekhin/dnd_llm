@@ -39,7 +39,7 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	var b := Attack.way(s, data, f, how)
 	if b.is_empty():
 		return "COMBAT_BAD_TARGET"
-	if not str(b.get("ammo", "")).is_empty() and int(s.character.get("inventory", {}).get(str(b["ammo"]), 0)) <= 0:
+	if not str(b.get("ammo", "")).is_empty() and int(Sheet.holder(s, f).get("inventory", {}).get(str(b["ammo"]), 0)) <= 0:
 		return "COMBAT_NO_AMMO"  # v0.7.12: arrows and bolts are spent
 	if str((b.get("act", {}) as Dictionary).get("kind", "")) == "save":
 		return ""
@@ -74,7 +74,6 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	s.combat["melee_strike"] = bool(b["melee"]) and CombatRules.blade_reaches(s, data, f, t, int(b.get("reach", 1)))  # nonlethal needs a melee blow (5e)
 	Attack.swing(s, data, f, t, b, lines)
 	s.combat.erase("melee_strike")
-	CombatRules.spend_ammo(s, str(b.get("ammo", "")))
 	return lines
 
 

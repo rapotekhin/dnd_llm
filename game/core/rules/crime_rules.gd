@@ -657,19 +657,18 @@ static func bodies_here(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	return out
 
 
-## Searching a body: its pockets and a few things of its wares; living NPCs here see a theft. Lines.
+## Searching a body: all it had and a few things of its wares; living NPCs here see a theft. Lines.
 static func search_body(s: GameSession, data: Dictionary, npc_id: String) -> Array[String]:
 	var world := WorldView.new(data["world"])
 	var c := s.character
 	var got: Array[String] = []
-	for e: Dictionary in TheftRules.pockets(s, data, npc_id):
-		if int(e.get("cp", 0)) > 0:
-			Ledger.add(s, int(e["cp"]), "crime:search_body")
-			got.append(Money.format(int(e["cp"])))
-		elif not str(e.get("item_id", "")).is_empty():
-			ItemRules.found(c, data, s.items, str(e["item_id"]), int(e.get("qty", 1)))
-			got.append(str(e["name"]))
-	Being.of(s, npc_id)["pockets"] = []
+	var things := Gear.strip(s, data, npc_id, false)
+	if int(things["cp"]) > 0:
+		Ledger.add(s, int(things["cp"]), "crime:search_body")
+		got.append(Money.format(int(things["cp"])))
+	for item: String in things["items"]:
+		ItemRules.found(c, data, s.items, item, int(things["items"][item]))
+		got.append(ItemRules.display_name(data["items"], s.items, item))
 	# What a trader carried of its wares — out of its stock, the rest stays in its shop (v0.7.22.8).
 	var wares: Dictionary = TradeRules.merchant(s, data, npc_id)["stock"] if bool(world.npc(npc_id).get("trader", false)) else {}
 	var stock := wares.keys().filter(func(id: Variant) -> bool: return int(wares[id]) > 0)

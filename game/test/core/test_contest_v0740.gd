@@ -18,10 +18,8 @@ func _session() -> GameSession:
 	s.room_id = "brod-tavern-hall"
 	s.minute = 19 * 60
 	s.character["gold_cp"] = 10000
-	Being.of(s, NPC)["pockets"] = [
-		{"id": "k1", "name": "Кошель", "item_id": "", "cp": 3000, "qty": 1, "worn": false, "dc": 12},
-		{"id": "k2", "name": "Кинжал", "item_id": "dagger", "cp": 0, "qty": 1, "worn": false, "dc": 14},
-	]
+	Being.of(s, NPC)["inventory"] = {"dagger": 1}
+	Being.of(s, NPC)["gold_cp"] = 3000
 	return s
 
 
@@ -72,7 +70,7 @@ func test_a_thing_on_the_table_goes_to_the_winner() -> void:
 	ContestRules.round(s, data, 20, 1)
 	assert_int(int(s.character.get("inventory", {}).get("dagger", 0))).is_greater(0)
 	assert_int(int(s.character["gold_cp"])).is_equal(10000)
-	assert_bool(TheftRules.pockets(s, data, NPC).any(func(e: Dictionary) -> bool: return str(e["id"]) == "k2")).is_false()
+	assert_bool(TheftRules.pockets(s, data, NPC).any(func(e: Dictionary) -> bool: return str(e["id"]) == "dagger")).is_false()
 
 
 func test_cheating_caught_loses_the_stake_and_shuts_the_table() -> void:

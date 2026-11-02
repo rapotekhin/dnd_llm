@@ -1,47 +1,39 @@
 class_name TheftRules
 extends RefCounted
 ## Pockets of NPCs and what happens when the player is caught (roadmap v0.7.0, decision of the author: a pockets
-## window like in BG3). The engine fills the pockets once (s.pockets) from the pack (`pockets` of the NPC) or by the
-## NPC's monster template (rules.theft.pockets): a purse of coins, small things, worn gear. Each entry has its DC:
+## window like in BG3). The pockets are a view of what the NPC has (Gear, v0.8.4.10): a handful of its purse, small
+## things, worn gear. Each entry has its DC:
 ## the NPC's passive Perception (at least 10) + the entry's modifiers (rules.theft.dc). A Sleight of Hand at least the
 ## DC takes it; a failure — the NPC reacts by its kind (rules.theft.reactions): a guard fights, a trader closes the
 ## shop for the day, others call the guard (a fine, or a fight with the guard when the player cannot pay).
+
+
+const COINS := "coins"
 
 
 static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["theft"]
 
 
-## The NPC's pockets, filled on the first look: [{id, name, item_id, cp, qty, worn, dc}]; its `carries` always.
+## The NPC's pockets (v0.8.4.10, a view of `Gear`): [{id, name, item_id, cp, qty, worn, dc}] — a handful of its coins
+## (`rules.theft.handful_cp`, `id` "coins") and its things by id, what it wears on its back left out.
 static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
-	if Being.view(s, npc_id).has("pockets"):
-		return Being.of(s, npc_id)["pockets"]
-	var npc := WorldView.new(data["world"]).npc(npc_id)
-	var table: Dictionary = cfg(data)["pockets"]
-	var spec: Dictionary = table.get(Sheet.template_id(data, npc), table["_default"])
+	var c := Gear.of(s, data, npc_id)
+	var tid := Sheet.template_id(data, WorldView.new(data["world"]).npc(npc_id))
 	var out: Array = []
-	var cp := CombatRules.roll_dice(s.rng, str(spec["coins_dice"])) * int(spec["unit_cp"])
+	var cp := mini(int(c.get("gold_cp", 0)), int(cfg(data)["handful_cp"]))
 	if cp > 0:
-		out.append({"name": "Кошель", "item_id": "", "cp": cp, "qty": 1, "worn": false})
-	for id: Variant in npc.get("carries", []):  # v0.7.48: what it always has on it — a letter, a ledger
-		if data["items"]["catalog"].has(str(id)):
-			out.append({"name": ItemRules.display_name(data["items"], s.items, str(id)), "item_id": str(id), "cp": 0, "qty": 1, "worn": false})
-	var pool: Array = npc.get("pockets", spec.get("items", []))
-	var n := mini(pool.size(), int(spec.get("item_count", 2)))
-	var picked: Array = pool.duplicate()
-	for i in n:
-		var id := str(picked.pop_at(s.rng.randi_range(0, picked.size() - 1)))
-		if data["items"]["catalog"].has(id):
-			out.append({"name": ItemRules.display_name(data["items"], s.items, id), "item_id": id, "cp": 0, "qty": 1, "worn": false})
-	for id: Variant in data["monsters"].get(Sheet.template_id(data, npc), {}).get("equipment", []):
-		if data["items"]["catalog"].has(str(id)) and not data["items"]["catalog"][str(id)].has("armor"):  # no armor off a back
-			out.append({"name": ItemRules.display_name(data["items"], s.items, str(id)), "item_id": str(id), "cp": 0, "qty": 1, "worn": true})
-	var i := 0
+		out.append({"id": COINS, "name": "Кошель", "item_id": "", "cp": cp, "qty": 1, "worn": false})
+	var on: Array = (c.get("equipped", {}) as Dictionary).values()
+	var items: Array = (c["inventory"] as Dictionary).keys()
+	items.sort()  # one order before and after a save
+	for item: String in items:
+		var qty := int(c["inventory"][item]) - (1 if on.has(item) else 0)
+		if qty > 0:
+			out.append({"id": item, "name": ItemRules.display_name(data["items"], s.items, item), "item_id": item, "cp": 0, "qty": qty,
+				"worn": Gear.worn(data, tid, item)})
 	for e: Dictionary in out:
-		i += 1
-		e["id"] = "k%d" % i
 		e["dc"] = dc(s, data, npc_id, e)
-	Being.of(s, npc_id)["pockets"] = out
 	return out
 
 
@@ -91,13 +83,14 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 			lines.append_array(react(s, data, npc_id))
 			lines.append_array(WorldEvent.deed(s, data, "pickpocket"))  # v0.7.49
 			return lines
-		list.erase(e)
 		if int(e.get("cp", 0)) > 0:
+			Gear.pay(s, data, npc_id, -int(e["cp"]))
 			Ledger.add(s, int(e["cp"]), "theft:steal")
 			lines.append("%s — украдено: %s" % [who, Money.format(int(e["cp"]))])
 		else:
 			var id := str(e["item_id"])
-			OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, id, int(e.get("qty", 1))), int(e.get("qty", 1)), npc_id)
+			var n := Gear.take(s, data, npc_id, id, int(e.get("qty", 1)))
+			OwnerRules.mark(s, ItemRules.found(s.character, data, s.items, id, n), n, npc_id)
 			lines.append("%s — украдено: %s" % [who, e["name"]])
 			if bool(e.get("worn", false)) and ItemRules.def_of(data["items"], s.items, id).has("weapon"):
 				var gone: Dictionary = Being.view(s, npc_id).get("disarmed", {})  # big test #3 (v0.7.22.8): not in its hands in a fight
@@ -118,20 +111,6 @@ static func lost_weapons(s: GameSession, data: Dictionary, npc_id: String) -> Ar
 	return out
 
 
-## The NPC's statblock actions without the stolen weapons; with no weapon left — its fists.
-static func armed_actions(s: GameSession, data: Dictionary, npc_id: String, actions: Array) -> Array:
-	return without(actions, lost_weapons(s, data, npc_id))
-
-
-## A foe already searched (v0.8.4.4): the template's weapons that are no longer in its `gear` are out of its statblock.
-static func gear_actions(m: Dictionary, gear: Dictionary) -> Array:
-	var lost: Array[String] = []
-	for a: Dictionary in m["actions"]:
-		if a.has("item") and not gear.has(str(a["item"])):
-			lost.append(str(a["item"]))
-	return without(m["actions"], lost)
-
-
 ## An action says which thing it is struck with (`item`, tools/srd_import.py).
 static func without(actions: Array, lost: Array[String]) -> Array:
 	if lost.is_empty():
@@ -145,15 +124,13 @@ static func without(actions: Array, lost: Array[String]) -> Array:
 	return kept
 
 
-## Coins by words (a Sleight of Hand at an NPC without the window): the purse of the pockets, if any is left. cp.
+## Coins by words (a Sleight of Hand at an NPC without the window): a handful of its purse, if any is left. cp.
 static func take_purse(s: GameSession, data: Dictionary, npc_id: String) -> int:
-	for e: Dictionary in pockets(s, data, npc_id):
-		if int(e.get("cp", 0)) > 0:
-			var cp := int(e["cp"])
-			(Being.of(s, npc_id)["pockets"] as Array).erase(e)
-			Ledger.add(s, cp, "theft:take_purse")
-			return cp
-	return 0
+	var cp := mini(Gear.coins(s, data, npc_id), int(cfg(data)["handful_cp"]))
+	if cp > 0:
+		Gear.pay(s, data, npc_id, -cp)
+		Ledger.add(s, cp, "theft:take_purse")
+	return cp
 
 
 ## What the NPC's kind does on a caught theft or a thing taken before its eyes (rules.theft.reactions). Lines.

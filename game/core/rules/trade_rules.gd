@@ -1,7 +1,7 @@
 class_name TradeRules
 extends RefCounted
 ## Trade with a merchant of the pack (roadmap v0.5.3, ADR-0008: the engine runs the deal, the master narrates it):
-## - a merchant has a purse and a quantity per item (world.json `purse_cp`, `stock` as {id: qty} or a list of ids
+## - a merchant has a purse (its own coins, Gear) and a quantity per item (world.json `purse_cp`, `stock` as {id: qty} or a list of ids
 ##   with rules.trade.default_stock_qty each); the state lives in the session and restocks on a new day — the pack
 ##   quantities and purse come back, what the player sold stays for resale;
 ## - prices come from the catalog value: buying × the attitude percent × (1 − haggle), rounded up; selling at
@@ -19,7 +19,7 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
 	var m: Dictionary = s.merchants.get(npc_id, {})
 	if m.is_empty():
-		m = {"purse_cp": 0, "stock": {}, "day": 0, "haggle_pct": 0, "haggle_failed_day": 0, "haggle_result": {}, "sold": {}, "haggles": 0, "haggle_day": 0}
+		m = {"stock": {}, "day": 0, "haggle_pct": 0, "haggle_failed_day": 0, "haggle_result": {}, "sold": {}, "haggles": 0, "haggle_day": 0}
 		s.merchants[npc_id] = m
 	if not m.has("sold"):
 		m["sold"] = {}
@@ -40,7 +40,7 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 		_day_extras(s, data["rules"], npc_id, npc, m, pack)
 		for id: String in mods["remove"]:
 			stock.erase(id)
-		m["purse_cp"] = maxi(int(m["purse_cp"]), int(npc.get("purse_cp", 0)))
+		Gear.keep(s, data, npc_id, int(npc.get("purse_cp", 0)))  # one till: its purse (v0.8.4.10)
 		m["day"] = s.day
 		m["pack_ids"] = pack.keys()
 	elif not Being.dead(s, npc_id):
@@ -345,8 +345,8 @@ static func quote(s: GameSession, data: Dictionary, npc_id: String, cart: Dictio
 		return _fail(out, "TRADE_ERR_EMPTY", {})
 	if int(s.character.get("gold_cp", 0)) < int(out["net_cp"]):
 		return _fail(out, "TRADE_ERR_NO_MONEY", {"need": Money.format(int(out["net_cp"]))})
-	if int(m["purse_cp"]) < -int(out["net_cp"]):
-		return _fail(out, "TRADE_ERR_MERCHANT_NO_MONEY", {"have": Money.format(int(m["purse_cp"]))})
+	if Gear.coins(s, data, npc_id) < -int(out["net_cp"]):
+		return _fail(out, "TRADE_ERR_MERCHANT_NO_MONEY", {"have": Money.format(Gear.coins(s, data, npc_id))})
 	return out
 
 
@@ -392,7 +392,7 @@ static func execute(s: GameSession, data: Dictionary, npc_id: String, cart: Dict
 			inv.erase(id)
 	var net := int(q["net_cp"])
 	Ledger.add(s, -net, "trade:execute")
-	m["purse_cp"] = int(m["purse_cp"]) + net
+	Gear.pay(s, data, npc_id, net)
 	if int(m["haggle_pct"]) > 0:  # the haggle was for this deal (v0.7.17.2)
 		m["haggle_pct"] = 0
 		m["haggle_result"] = {}
@@ -513,7 +513,7 @@ static func info(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary
 		if qty > 0 and price > 0:
 			buys.append({"item_id": id, "name": ItemRules.display_name(items, s.items, id), "qty": qty, "price_cp": price,
 				"wanted": demand(s, data, npc_id, id) == "wants"})
-	return {"npc_id": npc_id, "purse_cp": int(m["purse_cp"]), "haggle_pct": int(m["haggle_pct"]), "discount_pct": SocialRules.discount(s, npc_id),
+	return {"npc_id": npc_id, "purse_cp": Gear.coins(s, data, npc_id), "haggle_pct": int(m["haggle_pct"]), "discount_pct": SocialRules.discount(s, npc_id),
 		"haggle_locked": int(m["haggle_failed_day"]) == s.day, "stock": stock, "buys": buys,
 		"wants": tag_words(data, wants(data, npc_id)), "shuns": tag_words(data, shuns(data, npc_id)), "news": variant(s, data, npc_id)["news"]}
 

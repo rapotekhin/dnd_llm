@@ -518,8 +518,8 @@ static func end_invisibility_on_attack(c: Dictionary, data: Dictionary) -> Array
 
 ## A spell cast on the hero or a consumable used (`spec` from rules.hero_effects.spell_cures or consumables):
 ## lifts its conditions, takes exhaustion away, leaves a boon (advantage on saves of a tag, resistances). Lines.
-static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dictionary) -> Array[String]:
-	var c := s.character
+static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dictionary, who: Dictionary = Sheet.HERO) -> Array[String]:
+	var c := Sheet.holder(s, who)
 	var lines: Array[String] = []
 	for cond: Variant in spec.get("remove", []):
 		if has(c, str(cond)):
@@ -528,7 +528,7 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 	if int(spec.get("exhaustion", 0)) > 0 and exhaustion(c) > 0:
 		lines.append_array(add_exhaustion(s, data, -int(spec["exhaustion"]), ""))
 	for tag: Variant in spec.get("cure", []):  # a disease and the like: effects of that tag go (v0.7.12)
-		if str(tag) == "disease":  # herbs take only some, and the incubating ones go too (v0.7.23.1)
+		if str(tag) == "disease" and Sheet.is_hero(who):  # herbs take only some, and the incubating ones go too (v0.7.23.1); an NPC's: v0.8.4.11
 			lines.append_array(DiseaseRules.cure(s, data, str(spec.get("power", "magic"))))
 			continue
 		for e: Dictionary in effects(c):

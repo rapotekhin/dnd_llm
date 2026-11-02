@@ -114,14 +114,14 @@ func test_stealing_and_getting_caught_by_the_kind_of_npc() -> void:
 	assert_str(TheftRules.can_steal(s, data, "npc_serving")).is_equal("THEFT_CAUGHT")
 	var v := _session()
 	TheftRules.pockets(v, data, "npc_veteran")
-	TheftRules.steal(v, data, "npc_veteran", "k1", false)
+	TheftRules.steal(v, data, "npc_veteran", TheftRules.COINS, false)
 	assert_array(v.pending_fight).has_size(1)  # a guard fights
 	assert_str(str(v.pending_fight[0]["npc_id"])).is_equal("npc_veteran")
 	var poor := _session()
 	poor.character["gold_cp"] = 0
 	TheftRules.pockets(poor, data, "npc_cook")
 	poor.room_id = "brod-tavern-kitchen"
-	TheftRules.steal(poor, data, "npc_cook", "k1", false)
+	TheftRules.steal(poor, data, "npc_cook", TheftRules.COINS, false)
 	assert_str(str(poor.pending_fight[0]["monster"])).is_equal("guard")  # cannot pay the fine
 
 
@@ -133,5 +133,5 @@ func test_props_and_pockets_survive_the_save() -> void:
 	Being.of(s, "npc_serving")["caught"] = 2
 	var back := GameSession.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(500))))
 	assert_int((back.props["brod-tavern-hall"] as Array).size()).is_equal(3)
-	assert_int(int(Being.of(back, "npc_serving")["pockets"][0]["dc"])).is_equal(int(Being.of(s, "npc_serving")["pockets"][0]["dc"]))
+	assert_array(TheftRules.pockets(back, data, "npc_serving")).is_equal(TheftRules.pockets(s, data, "npc_serving"))
 	assert_int(int(back.shop_closed["npc_innkeeper"])).is_equal(3)

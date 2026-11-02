@@ -133,7 +133,7 @@ func run() -> void:
 	await _go(gs, "brod-square")
 	await _go(gs, "brod-tavern-hall")
 	s.minute = 19 * 60
-	Being.of(s, "npc_innkeeper")["pockets"] = [{"id": "k1", "name": "Кошель", "item_id": "", "cp": 2000, "qty": 1, "worn": false, "dc": 12}]
+	Being.of(s, "npc_innkeeper")["gold_cp"] = 2000
 	c["hp"] = int(c["max_hp"])
 	node("EventBus").state_changed.emit()
 	await frames(3)

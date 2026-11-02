@@ -26,14 +26,16 @@ func run() -> void:
 	step("the pockets window", view != null and view.visible, str(TheftRules.pockets(s, node("Catalog").data, "npc_serving").map(func(e: Dictionary) -> String: return "%s Сл %d" % [e["name"], e["dc"]])))
 	await shot("pockets")
 	s.character["skills"]["sleight_of_hand"] = 40  # a sure hand for the first try
-	var first: Button = find(view, "Steal_k1")
+	var have := TheftRules.pockets(s, node("Catalog").data, "npc_serving")  # its coins first, then its things by id (v0.8.4.10)
+	var first: Button = find(view, "Steal_" + str(have[0]["id"])) if not have.is_empty() else null
 	if step("steal the first thing", first != null and not first.disabled):
 		var gold: int = s.character["gold_cp"]
 		await press(first)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		step("taken", int(s.character["gold_cp"]) > gold or s.character["inventory"].size() > 0, "gold %d → %d" % [gold, s.character["gold_cp"]])
 	s.character["skills"]["sleight_of_hand"] = -40  # and a clumsy one for the second
-	var next: Button = find(screen(), "TheftView").find_child("Steal_k2", true, false) if find(screen(), "TheftView") != null else null
+	have = TheftRules.pockets(s, node("Catalog").data, "npc_serving")
+	var next: Button = find(screen(), "TheftView").find_child("Steal_" + str(have.back()["id"]), true, false) if find(screen(), "TheftView") != null and not have.is_empty() else null
 	if next != null and not next.disabled:
 		await press(next)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)

@@ -23,7 +23,7 @@ func run() -> void:
 	s.settings["needs"] = false
 	s.minute = 19 * 60
 	s.room_id = "brod-tavern-hall"
-	Being.of(s, NPC)["pockets"] = [{"id": "k1", "name": "Кошель", "item_id": "", "cp": 2000, "qty": 1, "worn": false, "dc": 12}]
+	Being.of(s, NPC)["gold_cp"] = 2000
 	node("EventBus").state_changed.emit()
 	await frames(3)
 

@@ -98,28 +98,13 @@ static func _day(s: GameSession, npc_id: String) -> Dictionary:
 	return rec
 
 
-## The coins in the NPC's pockets, cp.
+## The coins of the NPC, cp: its one purse (Gear).
 static func purse(s: GameSession, data: Dictionary, npc_id: String) -> int:
-	var cp := 0
-	for e: Dictionary in TheftRules.pockets(s, data, npc_id):
-		cp += int(e.get("cp", 0))
-	return cp
+	return Gear.coins(s, data, npc_id)
 
 
 static func _purse_add(s: GameSession, data: Dictionary, npc_id: String, delta: int) -> void:
-	var list: Array = TheftRules.pockets(s, data, npc_id)
-	for e: Dictionary in list.duplicate():
-		if int(e.get("cp", 0)) <= 0:
-			continue
-		var left := int(e["cp"]) + delta
-		if left > 0 or delta > 0:
-			e["cp"] = maxi(0, left)
-			return
-		delta = left
-		list.erase(e)
-	if delta > 0:
-		list.append({"id": "k%d" % (list.size() + 100), "name": "Кошель", "item_id": "", "cp": delta, "qty": 1, "worn": false,
-			"dc": TheftRules.dc(s, data, npc_id, {"item_id": ""})})
+	Gear.pay(s, data, npc_id, delta)
 
 
 ## Why `npc_id` will not play now ("" — it will).
@@ -236,7 +221,9 @@ static func round(s: GameSession, data: Dictionary, hero_total: int, npc_total: 
 static func forfeit(s: GameSession, data: Dictionary) -> Array[String]:
 	if state(s).is_empty():
 		return []
-	return ["Герой сдаётся"] + _finish(s, data, false)
+	var lines: Array[String] = ["Герой сдаётся"]
+	lines.append_array(_finish(s, data, false))
+	return lines
 
 
 ## Whether a kind is a duel by the arena's way (v0.7.45).
@@ -280,11 +267,11 @@ static func _finish(s: GameSession, data: Dictionary, won: bool) -> Array[String
 				Ledger.add(s, cp, "contest:finish")
 				lines.append("Победа: +%s" % Money.format(cp))
 			"item":
-				for e: Dictionary in TheftRules.pockets(s, data, npc).duplicate():
-					if str(e["id"]) == str(stake["entry"]):
-						(Being.of(s, npc)["pockets"] as Array).erase(e)
-						ItemRules.found(s.character, data, s.items, str(e["item_id"]), int(e.get("qty", 1)))
-						lines.append("Победа: %s отдаёт %s" % [who, e["name"]])
+				var item := str(stake["entry"])
+				var n := Gear.take(s, data, npc, item, 1)
+				if n > 0:
+					ItemRules.found(s.character, data, s.items, item, n)
+					lines.append("Победа: %s отдаёт %s" % [who, ItemRules.display_name(data["items"], s.items, item)])
 			"permit":
 				lines.append("Победа")
 				lines.append_array(SiteRules.grant(s, data, npc, str(stake["site"])))

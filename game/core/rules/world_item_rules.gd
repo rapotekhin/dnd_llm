@@ -2,7 +2,7 @@ class_name WorldItemRules
 extends RefCounted
 ## The master moves a thing of the world with a cause (v0.7.39.8, the author: «правка созданного места — одна дорога»):
 ## effect `move_item` world>npc, npc>world, world>container, container>world {npc_id | prop_id, item_id or item, qty, cause} — into or out of a person's
-## pockets (TheftRules.pockets) or a container of the hero's room (ContainerRules). The hero's own things and bags are
+## things (Gear) or a container of the hero's room (ContainerRules). The hero's own things and bags are
 ## the engine's alone; a thing given that nobody owns (a container without an owner) is the master's gift within the
 ## reward budget; a new thing is checked as any made item (ItemRules.check_generated), its value up to
 ## rules.props.item_value_cap_cp.
@@ -40,11 +40,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 			return {"reason": "человека %s нет в живых или в мире" % npc}
 		p["npc"] = npc
 		if op == "take":
-			var have := 0
-			for k: Dictionary in TheftRules.pockets(s, data, npc):
-				if str(k.get("item_id", "")) == item:
-					have += int(k.get("qty", 1))
-			if have < qty:
+			if Gear.count(s, data, npc, item) < qty:
 				return {"reason": "у %s нет %s ×%d" % [n.get("name", npc), name, qty]}
 		return {"plan": p, "summary": "%s %s: %s%s (%s)" % [n.get("name", npc), "получает" if op == "give" else "лишается", name,
 			" ×%d" % qty if qty > 1 else "", cause]}
@@ -74,21 +70,10 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 	var item := str(p["item_id"])
 	var qty := int(p["qty"])
 	if p.has("npc"):
-		var list: Array = TheftRules.pockets(s, data, str(p["npc"]))
 		if str(p["op"]) == "give":
-			var e := {"name": ItemRules.display_name(data["items"], s.items, item), "item_id": item, "cp": 0, "qty": qty, "worn": false}
-			e["id"] = "w%d" % (list.size() + 1)
-			e["dc"] = TheftRules.dc(s, data, str(p["npc"]), e)
-			list.append(e)
+			Gear.give(s, data, str(p["npc"]), item, qty)
 		else:
-			var left := qty
-			for k: Dictionary in list.duplicate():
-				if left > 0 and str(k.get("item_id", "")) == item:
-					var n := mini(left, int(k.get("qty", 1)))
-					left -= n
-					k["qty"] = int(k.get("qty", 1)) - n
-					if int(k["qty"]) <= 0:
-						list.erase(k)
+			Gear.take(s, data, str(p["npc"]), item, qty)
 		s.remember(str(p["npc"]), str(p["cause"]))
 		return []
 	var box := PropRules.find(s, str(p["room"]), str(p["prop"]))

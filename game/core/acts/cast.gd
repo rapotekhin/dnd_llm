@@ -33,6 +33,11 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 		var chk := SpellRules.check(s.character, data, spell, int(how.get("slot", 0)))
 		if chk.has("reason"):
 			return str(chk["reason"])
+	return target_why(s, data, f, to, spell)
+
+
+## Whether the spell goes at `to` now, whatever gives it — a slot, a template, a scroll or a wand.
+func target_why(s: GameSession, data: Dictionary, f: Dictionary, to: String, spell: String) -> String:
 	var sp: Dictionary = data["spells"][spell]
 	if SpellRules.long_cast(sp):
 		return "COMBAT_SPELL_TOO_LONG"  # v0.7.13: minutes to cast — not in a fight (Prayer of Healing)

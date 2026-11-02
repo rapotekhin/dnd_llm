@@ -4,7 +4,7 @@ extends RefCounted
 ## During the unified models saves do not carry over and there are no migrations (ADR-0012): only a save of this very
 ## version loads, the player starts a new game.
 
-const SAVE_VERSION := 64
+const SAVE_VERSION := 65
 
 const ERR_UNREADABLE := "MSG_LOAD_FAILED"
 const ERR_TOO_NEW := "MSG_SAVE_TOO_NEW"

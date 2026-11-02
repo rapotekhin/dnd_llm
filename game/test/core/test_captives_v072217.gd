@@ -141,12 +141,13 @@ func test_the_master_sells_a_beast_not_a_thinking_one() -> void:
 	no = engine.validate(s, data, "t-1", {"kind": "owner", "creature_id": str(wolf["id"]), "owner_id": "npc_merchant", "price_cp": 999999})
 	assert_str(str(no["reason"])).contains("не больше")
 	var gold := int(s.character["gold_cp"])
-	var purse := int(TradeRules.merchant(s, data, "npc_merchant")["purse_cp"])
+	TradeRules.merchant(s, data, "npc_merchant")
+	var purse := Gear.coins(s, data, "npc_merchant")
 	var ok := engine.validate(s, data, "t-1", {"kind": "owner", "creature_id": str(wolf["id"]), "owner_id": "npc_merchant", "price_cp": 500})
 	assert_bool(bool(ok["accepted"])).is_true()
 	engine.apply(s, "t-1", [ok["effect_id"]])
 	assert_int(int(s.character["gold_cp"]) - gold).is_equal(500)
-	assert_int(int(TradeRules.merchant(s, data, "npc_merchant")["purse_cp"])).is_equal(purse - 500)
+	assert_int(Gear.coins(s, data, "npc_merchant")).is_equal(purse - 500)
 	assert_str(str(wolf["owner"])).is_equal("npc_merchant")
 	assert_bool(CreatureRules.foreign(wolf)).is_true()
 	assert_str(CreatureRules.text(wolf, data)).contains("принадлежит")
@@ -178,6 +179,7 @@ func test_a_stolen_thing_stays_its_owners() -> void:
 	if entry.is_empty():
 		return
 	var id := str(entry["item_id"])
+	s.character["inventory"][id] = int(s.character["inventory"].get(id, 0)) + 1  # one of its own beside the stolen one
 	TheftRules.steal(s, data, "npc_merchant", str(entry["id"]), true)
 	var key: String = OwnerRules.foreign(s).keys()[0]
 	assert_int(OwnerRules.held_of(s, key, "npc_merchant")).is_greater(0)

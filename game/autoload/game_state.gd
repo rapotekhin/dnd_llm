@@ -1470,10 +1470,7 @@ func finish_combat() -> void:
 	var lines: Array[String] = [tr("COMBAT_OUTCOME_" + outcome.to_upper())]
 	if outcome in ["victory", "truce"]:
 		var back := {}  # v0.7.12: half the spent arrows can be picked up here
-		for ammo: String in s.combat.get("ammo_spent", {}):
-			var n := int(floor(int(s.combat["ammo_spent"][ammo]) * float(ItemRules.cfg(Catalog.data)["recover"])))
-			if n > 0:
-				back[ammo] = n
+		back = Gear.shot_back(Catalog.data, CombatRules.player(s))
 		if not back.is_empty():
 			s.character["ammo_left"] = {"room": s.room_id, "items": back}
 		if int(s.combat.get("xp", 0)) > 0:

@@ -35,7 +35,8 @@ func run() -> void:
 		await shot("no_calm")
 		return
 	await shot("calm")
-	s.rng.randi()  # this seed's next d20 is a natural 1
+	s.character["skills"]["animal_handling"] = 40  # a sure hand: the truce is checked, not the d20
+	s.rng.seed = 7  # a d20 that is not a 1
 	await press(calm)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)

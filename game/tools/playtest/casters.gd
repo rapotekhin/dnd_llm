@@ -137,5 +137,8 @@ func _effects(s: GameSession, from: int) -> String:
 
 
 func _my_turn(gs: Node, s: GameSession) -> bool:
-	return await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy() and not gs.combat_playing \
-		and (CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty()), 120.0)
+	return await wait_until(func() -> bool:
+		if s.combat.has("pending") and not gs.combat_playing:
+			gs.combat_react("none")  # a reaction asked in the goblin's turn (Shield, Hellish Rebuke) is not what is checked here
+		return screen_is("fight") and not gs.is_busy() and not gs.combat_playing \
+			and (CombatRules.player_can_act(s) or not str(s.combat.get("outcome", "")).is_empty()), 120.0)
