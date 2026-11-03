@@ -199,6 +199,8 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Diction
 	var c := Sheet.holder(s, who)
 	var cond := str(e.get("condition", ""))
 	var lines: Array[String] = []
+	if not hero and CombatRules.immune_to(data, who, cond):  # its template's condition immunities, whatever lays it
+		return lines
 	if cond == "exhaustion" and (hero or who.has("id")):  # a level of the one scale, whoever takes it (v0.8.4.11)
 		return add_exhaustion(s, data, 1, str(e.get("source", {}).get("name", "")), str(who.get("id", Being.HERO)))
 	add_effect(c, e.merged(MakeRules.fx(s, cond)))

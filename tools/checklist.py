@@ -3,8 +3,10 @@
 One .xlsx with a sheet per kind (ordinary items, magic items, monsters, abilities, spells, conditions, resistances and
 immunities, damage types);
 each row has the command to put it into the game (the dev console, `--dev` or «Режим разработчика»: docs/tech/godot-client.md
-«Отладка») and the author's columns: проверено, есть баг, исправлено, комментарий. Run again after the data changes:
-the marks and comments already in the file stay with their rows (by the sheet and the id).
+«Отладка»), the engine's own check of the row (ChecklistProbe: «Автотест» — работает, нет механики, через мастера,
+ошибка; its steps beside, from game/test/fixtures/checklist_probes.json written by game/tools/checklist_probes.gd) and the
+author's columns: проверено, есть баг, исправлено, комментарий. Run again after the data changes: the marks and comments
+already in the file stay with their rows (by the sheet and the id).
 
     uv run --with openpyxl python tools/checklist.py            # → docs/checklist/test-checklist.xlsx
     uv run --with openpyxl python tools/checklist.py --out x.xlsx --world frontier
@@ -29,6 +31,11 @@ OUT = ROOT / "docs" / "checklist" / "test-checklist.xlsx"
 # The author's columns, the same on every sheet, at its end.
 MARKS = ["Проверено", "Есть баг", "Исправлено", "Комментарий"]
 FLAGS = MARKS[:3]
+# The engine's check of every row (ChecklistProbe), before the author's columns.
+PROBES = ROOT / "game" / "test" / "fixtures" / "checklist_probes.json"
+AUTO = ["Автотест", "Автотест: что проверено"]
+# A status of the check → its cell's colour.
+AUTO_FILL = {"работает": "D9EAD3", "через мастера": "FFF2CC", "нет механики": "FCE5CD", "ошибка": "F4C7C3", "без механики": "EEEEEE"}
 # Magic by its kind: what is not plain gear even when its rarity is common (a potion, a wand, a wondrous thing).
 MAGIC_TYPES = {"wondrous"}
 DICE = str.maketrans({"d": "к"})
@@ -502,7 +509,7 @@ def conditions_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
 
 # --- the workbook ----------------------------------------------------------------------------------------------------
 
-WIDTHS = {"Описание": 70, "Как проверить": 60, "Что делает": 60, "Накладывают заклинания": 35, "Накладывают монстры": 45, "Снимают": 30, "Иммунны": 40,
+WIDTHS = {"Автотест: что проверено": 60, "Описание": 70, "Как проверить": 60, "Что делает": 60, "Накладывают заклинания": 35, "Накладывают монстры": 45, "Снимают": 30, "Иммунны": 40,
           "Снять": 24, "Способности": 50, "Заклинания": 45, "Инвентарь": 35, "Защиты": 45, "Комментарий": 40, "Монстры с ней": 50,
           "Вещи с ней": 35, "Классы": 30, "Команда": 30, "Союзник": 28, "На юнита": 32, "Юниту": 26, "Герою": 22, "Проверить ударом": 40, "Проверить без боя": 40, "Юниту ударом": 32, "Герою без боя": 26,
           "Крит": 30, "Немагическое": 45, "Оружие": 35, "Монстры бьют": 50}
@@ -522,12 +529,25 @@ def old_marks(path: Path) -> dict[tuple[str, str], dict]:
         for row in ws.iter_rows(min_row=2, values_only=True):
             rid = row[head.index("id")]
             if rid is not None:
-                out[(ws.title, str(rid))] = {name: row[i] for name, i in at.items()}
+                out[(ws.title, str(rid))] = {name: flag(row[i]) if name in FLAGS else row[i] for name, i in at.items()}
     return out
 
 
-def build(data: Data, path: Path) -> dict[str, int]:
+def flag(value: object) -> bool:
+    """A mark as Excel keeps it: a boolean, or a formula «=TRUE()» / «=FALSE()» typed by hand."""
+    if isinstance(value, str):
+        return value.strip().upper().lstrip("=").rstrip("()") == "TRUE"
+    return bool(value)
+
+
+def probes(path: Path = PROBES) -> dict:
+    """The engine's check of every row: {sheet: {id: {status, steps}}}; {} before the first run of checklist_probes.gd."""
+    return load(path) if path.exists() else {}
+
+
+def build(data: Data, path: Path, run: dict | None = None) -> dict[str, int]:
     marks = old_marks(path)
+    run = probes() if run is None else run
     wb = Workbook()
     wb.remove(wb.active)
     counts = {}
@@ -536,7 +556,8 @@ def build(data: Data, path: Path) -> dict[str, int]:
     for title, cols, rows in (items_sheet(data, False), items_sheet(data, True), monsters_sheet(data), abilities_sheet(data),
                               spells_sheet(data), conditions_sheet(data), defenses_sheet(data), damage_sheet(data)):
         ws = wb.create_sheet(title)
-        all_cols = cols + MARKS
+        all_cols = cols + AUTO + MARKS
+        auto = run.get(title, {})
         ws.append(all_cols)
         for c in ws[1]:
             c.font = bold
@@ -545,15 +566,20 @@ def build(data: Data, path: Path) -> dict[str, int]:
         for row in rows:
             kept = marks.get((title, str(row["id"])), {})
             values = [row.get(c, "") for c in cols]
+            got = auto.get(str(row["id"]), {})
+            values += [got.get("status", ""), "\n".join(got.get("steps", []))]
             values += [bool(kept.get(f)) if kept.get(f) is not None else False for f in FLAGS] + [kept.get("Комментарий") or ""]
             ws.append(values)
+            cell = ws.cell(row=ws.max_row, column=len(cols) + 1)
+            if cell.value in AUTO_FILL:
+                cell.fill = PatternFill("solid", fgColor=AUTO_FILL[cell.value])
         n = len(rows) + 1
         for i, name in enumerate(all_cols, start=1):
             letter = get_column_letter(i)
             ws.column_dimensions[letter].width = WIDTHS.get(name, 12 if name in FLAGS else 18)
             for cell in ws[letter][1:]:
                 cell.alignment = Alignment(vertical="top", wrap_text=name in WIDTHS)
-        flags_from = len(cols) + 1
+        flags_from = len(cols) + len(AUTO) + 1
         rng = f"{get_column_letter(flags_from)}2:{get_column_letter(flags_from + 2)}{n}"
         dv = DataValidation(type="list", formula1='"TRUE,FALSE"', allow_blank=True)
         ws.add_data_validation(dv)

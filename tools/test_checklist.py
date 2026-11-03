@@ -49,6 +49,13 @@ def test_every_kind_has_its_sheet_with_a_command_per_row(tmp_path: Path, data: "
     plain = {r["id"]: r for r in _rows(out, "Обычные предметы")}
     assert "хиты +2к4+2" in plain["healing_potion"]["Как проверить"] and "КД 16" in plain["chain_mail"]["Как проверить"]
     assert all(r["Проверено"] is False and r["Есть баг"] is False for r in _rows(out, "Монстры"))
+    assert plain["chain_mail"]["Автотест"] in checklist.AUTO_FILL and "КД 16" in plain["chain_mail"]["Автотест: что проверено"]
+    assert {r["Автотест"] for r in _rows(out, "Состояния")} == {"работает"}
+
+
+def test_a_mark_typed_as_a_formula_is_read_as_the_author_meant() -> None:
+    assert checklist.flag("=FALSE()") is False and checklist.flag("=TRUE()") is True
+    assert checklist.flag(True) is True and checklist.flag(None) is False
 
 
 def test_the_marks_stay_with_their_rows_on_a_rebuild(tmp_path: Path, data: "checklist.Data") -> None:
