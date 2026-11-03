@@ -1,5 +1,6 @@
 # Dev / CI dependencies of the root tests (evals format) and the tools; the backend has its own uv env.
 pytest>=8.0
 pyyaml>=6.0
+openpyxl>=3.1  # tools/checklist.py: the author's test checklist
 jsonschema>=4.0
 uv

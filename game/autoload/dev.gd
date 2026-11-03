@@ -6,16 +6,16 @@ const MESSAGES_KEPT := 50
 ## Every command, for the completion of the first word.
 const COMMANDS: Array[String] = ["help", "backend", "reconnect", "say", "retry", "cancel", "save", "load", "seed", "snapshot", "clear",
 	"room", "rooms", "quests", "items", "npc", "state", "find", "give", "gold", "spawn", "goto", "heal", "god", "slots", "xp", "level",
-	"reset", "class", "spell", "feature", "trait", "resist", "cond", "units"]
+	"reset", "class", "spell", "feature", "trait", "resist", "immune", "vulnerable", "cond", "units"]
 ## The cheats (Cheats): they change the game, each through the engine's own road.
 const CHEATS: Array[String] = ["give", "gold", "spawn", "goto", "heal", "god", "slots", "xp", "level", "reset", "class", "spell",
-	"feature", "trait", "resist", "cond"]
+	"feature", "trait", "resist", "immune", "vulnerable", "cond"]
 ## The cheats that take a unit of the room after `@цель` instead of the hero.
-const UNIT_CHEATS: Array[String] = ["give", "gold", "heal", "resist", "cond", "feature", "trait"]
+const UNIT_CHEATS: Array[String] = ["give", "gold", "heal", "resist", "immune", "vulnerable", "cond", "feature", "trait"]
 ## What a command's argument is: the kind `find` and the completion search (Cheats.KINDS).
 const ARG_KIND := {"give": "item", "spawn": "monster", "goto": "room", "class": "class", "spell": "spell", "feature": "feature",
-	"trait": "trait", "resist": "damage", "cond": "condition"}
-## The last word of `spawn`: whose side the creatures take; of `resist` and `cond`: take it off.
+	"trait": "trait", "resist": "damage", "immune": "damage", "vulnerable": "damage", "cond": "condition"}
+## The last word of `spawn`: whose side the creatures take; of `resist`, `immune`, `vulnerable` and `cond`: take it off.
 const ALLY_WORDS: Array[String] = ["ally", "союзник"]
 const FOE_WORDS: Array[String] = ["foe", "враг"]
 const OFF_WORDS: Array[String] = ["off", "снять"]
@@ -101,7 +101,7 @@ func run(line: String) -> String:
 			return "help · backend · reconnect · say <text> · retry · cancel · save <slot> · load <slot> · seed · snapshot · clear\n" \
 				+ "мир: room [id] · rooms · quests · items [поиск] · npc <id|имя> · state\n" \
 				+ "читы: give <вещь> [n] · gold <зм> · spawn <монстр> [n] [ally] · goto <комната> · heal · god · slots · xp <n> · " \
-				+ "level [до] · reset · class <класс> · spell <имя> · feature <имя> · trait <имя> · resist <урон> [off] · cond <состояние> [off]\n" \
+				+ "level [до] · reset · class <класс> · spell <имя> · feature <имя> · trait <имя> · resist|immune|vulnerable <урон> [off] · cond <состояние> [off]\n" \
 				+ "на юнита комнаты: @<цель> %s · units — кто здесь\n" % ", ".join(UNIT_CHEATS) \
 				+ "поиск: find <%s> <часть имени> · Tab — дополнить имя" % "|".join(Cheats.KINDS)
 		"units":
@@ -268,12 +268,12 @@ func _cheat(cmd: String, args: PackedStringArray, u: Dictionary = {}) -> String:
 			var circle := SpellRules.level_of(data, id)
 			return "заклинание: %s [%s] — всегда готово%s" % [data["spells"][id]["name"], id,
 				" (ячеек %d круга нет — slots)" % circle if circle > 0 and SpellRules.slots_left(c, circle) <= 0 else ""]
-		"resist", "cond":
+		"resist", "immune", "vulnerable", "cond":
 			var off := not args.is_empty() and OFF_WORDS.has(args[-1])
 			var r := Cheats.resolve(s, data, ARG_KIND[cmd], " ".join(args.slice(0, args.size() - 1) if off else args))
 			if r.has("reason"):
 				return str(r["reason"])
-			var line := Cheats.resist(s, data, who, str(r["id"]), not off) if cmd == "resist" \
+			var line := Cheats.defense(s, data, who, cmd, str(r["id"]), not off) if cmd != "cond" \
 				else "; ".join(Cheats.condition(s, data, who, str(r["id"]), not off))
 			_changed()
 			return to + line

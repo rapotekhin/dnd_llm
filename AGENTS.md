@@ -136,6 +136,7 @@ python tools/provider_cost.py                                       # OpenRouter
 python tools/promote_items.py                                       # the master's item library: checked, how often given; --promote gen_id[=id] moves an item into the catalog (tools/srd/promoted.json)
 python tools/promote_world.py                                       # people and places the master made, from the saves; --promote save:gen_id[=id] moves one (a place whole, a quest with what it stands on) into the pack's world.json
 python tools/concepts_audit.py                                      # audit by pillar 6: closed lists of cases in the engine and the prompts → docs/production/concepts-audit.md (registry: docs/design/concepts.md)
+uv run --with openpyxl python tools/checklist.py                     # the author's test checklist → docs/checklist/test-checklist.xlsx: items, magic items, monsters, abilities, spells, defenses, a console command per row and the marks «Проверено / Есть баг / Исправлено / Комментарий» kept on a rebuild
 python tools/rules_audit.py                                         # audit of the 5e rules (conditions, monsters, features, traits, languages, items, spells): engine or master only → docs/production/rules-audit.md
 python tools/srd_import.py build                                      # tools/srd/source + tools/srd/ru.json → game/data/srd/ and the item catalog
 uv run --project llm_server python tools/srd_import.py translate      # translate new SRD entries into tools/srd/ru.json (cents)
@@ -155,7 +156,7 @@ Godot binary: `C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.
 "$GODOT" --headless --path game --import     # after adding scripts or editing strings.csv (registers class_name, builds translations)
 "$GODOT" --path game --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test --ignoreHeadlessMode   # gdUnit4 (exit 0 = pass)
 "$GODOT" --path game                         # run the game; saves in %APPDATA%/Godot/app_userdata/Between the Rolls/
-"$GODOT" --path game -- --dev               # the game with the dev console (~: room, rooms, quests, items, npc, state; cheats give, gold, spawn [ally], goto, heal, god, slots, xp, level, reset, class, spell, feature, trait, resist, cond, find; `@<unit> <cheat>` on one of the room, `units`; Tab completes), F3 overlay, F12 bug snapshot; also «Режим разработчика» in the settings
+"$GODOT" --path game -- --dev               # the game with the dev console (~: room, rooms, quests, items, npc, state; cheats give, gold, spawn [ally], goto, heal, god, slots, xp, level, reset, class, spell, feature, trait, resist, immune, vulnerable, cond, find; `@<unit> <cheat>` on one of the room, `units`; Tab completes), F3 overlay, F12 bug snapshot; also «Режим разработчика» in the settings
 "$GODOT" --path game -- --preview=combat    # straight into a screen with a ready state (--preview=list; --preset=<hero>, --room=<room>); saves go to the «preview» profile
 ```
 

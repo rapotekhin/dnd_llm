@@ -10,7 +10,8 @@
 ├── /design        — What: геймдизайн и UX
 ├── /narrative     — World: лор, тон, контент
 ├── /tech          — How: архитектура и решения
-└── /production    — When: роадмап и бэклог
+├── /production    — When: роадмап и бэклог
+└── /checklist     — Check: чек-лист ручной проверки автора (xlsx)
 ```
 
 ## С чего начать
@@ -23,6 +24,7 @@
 | **Работаешь с мастером (бэкенд, промпты)** | [tech/master-tools.md](tech/master-tools.md) — все инструменты и эффекты мастера, [tech/master-scenarios.md](tech/master-scenarios.md) — что мастер умеет по сценариям, [tech/llm-integration.md](tech/llm-integration.md), [../llm_server/README.md](../llm_server/README.md), [ADR-0009 — протокол](tech/adr/0009-godot-backend-protocol.md), [tech/golden-scenarios.md](tech/golden-scenarios.md) |
 | **Хочешь добавить контент (мир, NPC, задания)** | [tech/godot-client.md → «Пакеты миров»](tech/godot-client.md#пакеты-миров), пакет `game/data/worlds/frontier/` |
 | **Планируешь, что делать дальше** | [production/roadmap.md](production/roadmap.md), [production/backlog.md](production/backlog.md) |
+| **Проверяешь игру руками: предметы, монстры, способности, заклинания** | [checklist/](checklist/) — `test-checklist.xlsx` с командой консоли в каждой строке |
 | **Разворачиваешь сервер мастера** | [tech/deploy.md](tech/deploy.md) |
 | **Думаешь о своей модели вместо OpenRouter** | [tech/local-model.md](tech/local-model.md) — копилка: кандидаты, наши числа, данные для дообучения |
 | **Видишь странное архитектурное решение** | [tech/adr/](tech/adr/) |

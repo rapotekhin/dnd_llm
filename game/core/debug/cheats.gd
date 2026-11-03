@@ -10,6 +10,8 @@ extends RefCounted
 const TOGGLES: Array[String] = ["god", "slots"]
 ## Where a resistance or a status of the console comes from: it lasts until taken off.
 const SOURCE := {"kind": "dev", "name": "консоль"}
+## The defenses against a damage type a cheat lays: the effect's list → its word.
+const DEFENSES := {"resist": "сопротивление", "immune": "иммунитет", "vulnerable": "уязвимость"}
 ## What a search is over: a command's argument kind → where its entries live.
 const KINDS: Array[String] = ["item", "monster", "spell", "feature", "trait", "room", "class", "damage", "condition"]
 ## Fields of the hero a rebuild keeps: who it is, what it carries, what lies on it and what it chose at creation beside
@@ -139,18 +141,18 @@ static func unit(s: GameSession, data: Dictionary, query: String) -> Dictionary:
 	return {"reason": "несколько: %s" % ", ".join(hit.map(func(u: Dictionary) -> String: return "%s [@%s]" % [u["name"], u["id"]]))}
 
 
-## A resistance of `who` (an id) to `dtype` until it is taken off: a boon on its effects, read by Sheet.defenses for
-## anybody; `on` false takes the console's off. Its line.
-static func resist(s: GameSession, data: Dictionary, who: String, dtype: String, on: bool) -> String:
+## A defense of `who` (an id) against `dtype` until it is taken off: `kind` of DEFENSES — an effect on it with that list,
+## read by Sheet.defenses for anybody; `on` false takes the console's off. Its line.
+static func defense(s: GameSession, data: Dictionary, who: String, kind: String, dtype: String, on: bool) -> String:
 	var h := Sheet.holder(s, Sheet.own(s, who))
-	var name := str(data["misc"]["damage_types"][dtype])
+	var name := "%s: %s" % [DEFENSES[kind], data["misc"]["damage_types"][dtype]]
 	if not on:
 		for e: Dictionary in ConditionRules.effects(h).duplicate():
-			if str(e.get("source", {}).get("kind", "")) == SOURCE["kind"] and (e.get("resist", []) as Array).has(dtype):
+			if str(e.get("source", {}).get("kind", "")) == SOURCE["kind"] and (e.get(kind, []) as Array).has(dtype):
 				ConditionRules.remove_effect(h, int(e["uid"]))
-		return "сопротивление снято: %s" % name
-	ConditionRules.add_effect(h, {"condition": "", "resist": [dtype], "source": SOURCE.duplicate(), "ends": {}})
-	return "сопротивление: %s" % name
+		return "снято — " + name
+	ConditionRules.add_effect(h, {"condition": "", kind: [dtype], "source": SOURCE.duplicate(), "ends": {}})
+	return name
 
 
 ## A status of the engine on `who` (an id) until it is taken off, laid as anything lays it (ConditionRules.impose), or

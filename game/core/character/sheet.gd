@@ -304,6 +304,10 @@ static func defenses(s: GameSession, data: Dictionary, who: Dictionary, dtype: S
 	var res := HeroDefense.resistances(s, data, who)
 	if res.has(dtype):
 		out["resist"] = str(res[dtype])
+	for e: Dictionary in ConditionRules.effects(holder(s, who)):  # an immunity or a vulnerability laid on anybody
+		for key: String in ["immune", "vulnerable"]:
+			if (e.get(key, []) as Array).has(dtype):
+				out[key] = str(e.get("source", {}).get("name", dtype))
 	if is_hero(who):
 		return out
 	var m := template(data, who)

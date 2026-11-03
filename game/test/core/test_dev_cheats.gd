@@ -164,3 +164,16 @@ func test_unit_cheats_out_of_a_fight_aim_at_the_people_here() -> void:
 	assert_str(Dev.run("@%s resist cold" % id)).contains("сопротивление")
 	assert_int(Sheet.taken(s, Catalog.data, Sheet.who(s, Catalog.data, id), "cold", 10)).is_equal(5)
 	assert_str(Dev.run("@%s feature second_wind" % id)).contains("только бойцу")
+
+
+func test_immunity_and_vulnerability_on_a_unit_and_on_the_hero() -> void:
+	TestUtils.fight(s, Catalog.data, [{"monster": "goblin", "col": 1}])
+	var g := CombatRules.fighter(s, TestUtils.foe(s, 1))
+	assert_str(Dev.run("@гоблин immune огонь")).contains("иммунитет")
+	assert_int(Sheet.taken(s, Catalog.data, g, "fire", 10)).is_equal(0)
+	Dev.run("@гоблин immune fire off")
+	Dev.run("@гоблин vulnerable fire")
+	assert_int(Sheet.taken(s, Catalog.data, g, "fire", 10)).is_equal(20)
+	Dev.run("immune poison")
+	assert_int(Sheet.taken(s, Catalog.data, Sheet.HERO, "poison", 10)).is_equal(0)
+	assert_int(Sheet.taken(s, Catalog.data, Sheet.HERO, "cold", 10)).is_equal(10)
