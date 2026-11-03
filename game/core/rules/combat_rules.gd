@@ -539,6 +539,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			CharacterRules.refresh(me, data, s.items)
 			lines.append("%s поднимает %s" % [name, ItemRules.display_name(data["items"], s.items, dropped)])
 	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # Moonbeam, Spirit Guardians (v0.7.13.5)
+	Move.recount(s, data, f)  # a web that holds at the start of the turn
 	if ConditionRules.has(me, "slowed_spell"):
 		f["reacted"] = true  # Slow: no reactions
 	if bool(f.get("retching", false)):  # Stinking Cloud (v0.7.13.6)
@@ -788,6 +789,8 @@ static func hostile_spell(data: Dictionary, spell_id: String) -> bool:
 	var sp: Dictionary = data["spells"].get(spell_id, {})
 	if (cfg(data)["engine_spells"] as Array).has(spell_id) and (sp.has("attack") or sp.has("damage_at_slot") or sp.has("damage_at_level")):
 		return true
+	if SpellEffects.sustained(data, spell_id).has("cond"):
+		return true  # a zone that holds: Web, Entangle, Grease
 	var cs: Dictionary = cfg(data)["condition_spells"].get(spell_id, {}) if cfg(data)["condition_spells"].get(spell_id) is Dictionary else {}
 	return not cs.is_empty() and (cs.get("conditions", []) as Array).any(func(x: Variant) -> bool: return str(x) != "charmed")
 
@@ -857,6 +860,9 @@ static func _add_condition(s: GameSession, data: Dictionary, f: Dictionary, cond
 		e["wake"] = true
 	if timer.has("item"):
 		e["item"] = str(timer["item"])
+	for k: String in ["escape_dc", "escape", "zone"]:  # held until broken by «Вырваться» (a net, a web), or until its zone is gone
+		if timer.has(k):
+			e[k] = timer[k]
 	if bool(data["spells"].get(str(timer.get("spell", "")), {}).get("concentration", false)):
 		e["conc"] = true
 	var lines := ConditionRules.impose(s, data, e, f)
@@ -1136,7 +1142,7 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 		if SIZES.find(str(Sheet.template(data, t).get("size", "medium"))) > SIZES.find(str(fx.get("max_size", "large"))):
 			lines.append("%s слишком велик для сети" % t["name"])
 		else:
-			_add_condition(s, data, t, str(fx["condition"]), {"rounds": 10, "save": "str", "dc": int(fx.get("escape_dc", 10)), "item": item_id})
+			_add_condition(s, data, t, str(fx["condition"]), {"escape_dc": int(fx.get("escape_dc", 10)), "escape": ["athletics"], "item": item_id})  # a net: until broken (5e)
 			lines.append("%s: %s, вырваться — Сил Сл %d" % [t["name"], cond_name(data, str(fx["condition"])), int(fx.get("escape_dc", 10))])
 	return lines
 
@@ -2056,11 +2062,11 @@ static func _reach_strike(s: GameSession, data: Dictionary, f: Dictionary, lines
 	Attack.swing(s, data, player(s), f, Attack.of_weapon(w), lines)
 
 
-## A fighter that comes beside a hidden foe finds it, whoever either is (v0.8.4.15).
-static func _find_hidden(s: GameSession, f: Dictionary, lines: Array[String]) -> void:
+## A fighter that comes beside a hidden foe finds it, whoever either is (v0.8.4.15), or feels it in its web (v0.8.4.27.3).
+static func _find_hidden(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	for id: String in foes_of(s, f):
 		var o := fighter(s, id)
-		if bool(o.get("hidden", false)) and FightGrid.touching(f, o):
+		if bool(o.get("hidden", false)) and (FightGrid.touching(f, o) or FightField.feels(s, data, f, o)):
 			o["hidden"] = false
 			lines.append("%s находит, где прячется %s" % [f["name"], Sheet.holder(s, o).get("name", "")])
 

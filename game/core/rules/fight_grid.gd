@@ -467,7 +467,7 @@ static func reach(s: GameSession, data: Dictionary, f: Dictionary, budget: int, 
 	var mine := side_of(str(f.get("side", "enemy")))
 	var occupied := in_way(s, data, f)
 	var across := passable(s, data, f, int(opts.get("larger_by", 2)))
-	var slow := slow_cells(s, data, str(f.get("side", "enemy")))
+	var slow := slow_cells(s, data, f)
 	var fear: Vector2i = opts.get("fear", NONE)
 	var latch := bool(opts.get("latch", true))
 	var cost: PackedByteArray = g["cost"]
@@ -791,11 +791,12 @@ static func pack_cells(cells: Array[Vector2i]) -> Array:
 	return out
 
 
-## Squares that slow a walker of this side: a zone that says so; the caster's friends pass where it spares them.
-static func slow_cells(s: GameSession, data: Dictionary, side: String) -> Dictionary:
+## Squares that slow `f`: a zone that says so; the caster's friends pass where it spares them, a web walker its webs.
+static func slow_cells(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 	var out := {}
 	for z: Dictionary in s.combat.get("zones", []):
-		if bool(z.get("slow", false)) and not (bool(z.get("spares_friends", false)) and side_of(side) == "friend"):
+		if bool(z.get("slow", false)) and not (bool(z.get("spares_friends", false)) and side_of(str(f.get("side", "enemy"))) == "friend") \
+				and not FightField.passes(s, data, f, z):
 			for at: Vector2i in zone_cells(s, data, z):
 				out[at] = true
 	return out

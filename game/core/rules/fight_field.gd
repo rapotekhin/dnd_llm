@@ -13,6 +13,8 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 ## What a fight finds on its map: the doors as they stand, the things that can be moved, the ground that hurts.
 static func lay(s: GameSession, data: Dictionary) -> void:
+	for id: String in s.combat["fighters"]:  # a spider's webs around it, on any field (v0.8.4.27.3)
+		_lays(s, data, CombatRules.fighter(s, id))
 	if s.combat.has("field"):
 		return
 	var m := FightGrid.map(s, data)
@@ -52,13 +54,57 @@ static func lay(s: GameSession, data: Dictionary) -> void:
 	FightGrid.changed(s)
 
 
+## What a fighter's trait strews around it as the fight begins (`lays`: Web Sense — the lair's webs): a row of
+## `rules.combat.grid.strewn` on a `share` of the free squares within `around`, its own square among them.
+static func _lays(s: GameSession, data: Dictionary, f: Dictionary) -> void:
+	if f.is_empty() or Sheet.is_hero(f):
+		return
+	var born := ItemRules.born_rows(f, data, Sheet.template(data, f))
+	for id: String in born:
+		var lays: Variant = born[id]["row"].get("lays")
+		if not lays is Dictionary:
+			continue
+		var g := FightGrid.grid(s, data)
+		var others := {}
+		for o: String in CombatRules.foes_of(s, f):
+			for at: Vector2i in FightGrid.body(CombatRules.fighter(s, o)):
+				others[at] = true
+		var cells: Array[Vector2i] = []
+		var around := int(lays.get("around", 3))
+		var own := FightGrid.body(f)
+		for at: Vector2i in FightGrid.body_at(FightGrid.cell(f) - Vector2i(around, around), around * 2 + own.size()):
+			if at.x >= 0 and at.y >= 0 and at.x < int(g["w"]) and at.y < int(g["h"]) and FightGrid.walkable(g, at) and not others.has(at) \
+					and (own.has(at) or s.rng.randf() < float(lays.get("share", 0.3))):
+				cells.append(at)
+		var row: Dictionary = cfg(data)["strewn"][str(lays["ground"])]
+		SpellEffects.add_zone(s, zone_of(str(lays["ground"]), row.merged({"side": str(f.get("side", "enemy"))}), FightGrid.pack_cells(cells)))
+
+
+## `a` knows where `b` is through a zone it feels (Web Sense, v0.8.4.27.3): both touch one zone whose `feel` is a flag of
+## `a`'s statuses — `a` standing in it or beside it, `b` in it.
+static func feels(s: GameSession, data: Dictionary, a: Dictionary, b: Dictionary) -> bool:
+	for z: Dictionary in SpellEffects.zones(s):
+		if not z.has("feel") or not ConditionRules.does(Sheet.holder(s, a), data, str(z["feel"])):
+			continue
+		var cells := FightGrid.zone_cells(s, data, z)
+		if FightGrid.in_cells(b, cells) and FightGrid.body(a).any(func(at: Vector2i) -> bool:
+				return WalkRules.DIRS.any(func(d: Vector2i) -> bool: return cells.has(at + d)) or cells.has(at)):
+			return true
+	return false
+
+
+## A zone does not hold `f`: its `pass` is a flag of `f`'s statuses (Web Walker, v0.8.4.27.3).
+static func passes(s: GameSession, data: Dictionary, f: Dictionary, z: Dictionary) -> bool:
+	return z.has("pass") and ConditionRules.does(Sheet.holder(s, f), data, str(z["pass"]))
+
+
 static func _ends(m: Dictionary, d: Dictionary) -> Array[String]:
 	return [str(m["ids"][int(d["a"])]), str(m["ids"][int(d["b"])])]
 
 
 ## The keys of a row a zone takes as they are: what a failed save does, what it hides, who it spares, whom it touches.
 const ZONE_KEYS: Array[String] = ["cond", "fail", "tag", "obscure", "veil", "silence", "retch", "block_ranged", "spares_friends", "for",
-	"types", "sees", "spare_saved", "shape", "follow", "by", "side"]
+	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel"]
 
 
 ## A zone of the field by its row: one record for the ground, strewn things, the fire, a spell's zone and a trait's aura
@@ -156,7 +202,7 @@ static func _fall(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[
 ## Standing on this square hurts: the AI's fear of it.
 static func hurts(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 	for z: Dictionary in SpellEffects.zones(s):
-		if not str(z.get("dice", "")).is_empty() and not bool(z.get("hidden", false)) and FightGrid.in_cells(f, FightGrid.zone_cells(s, data, z)):
+		if SpellEffects.harmful(z) and not bool(z.get("hidden", false)) and SpellEffects.bites(s, data, z, f):
 			return true
 	return false
 
@@ -389,6 +435,8 @@ static func _burnable(s: GameSession, data: Dictionary, at: Vector2i) -> bool:
 	var key := FightGrid.tag(at)
 	if (s.combat.get("oil", {}) as Dictionary).has(key):
 		return true
+	if SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return bool(z.get("burns", false)) and (z.get("cells", []) as Array).has(key)):
+		return true  # a web, Entangle's plants (v0.8.4.27.3)
 	var b: Dictionary = (s.combat.get("blocks", {}) as Dictionary).get(key, {})
 	if not b.is_empty():
 		return bool(ThingRules.material(data, {"material": b["made_of"]}).get("burns", false))
@@ -414,6 +462,9 @@ static func _light(s: GameSession, at: Vector2i) -> void:
 	var key := FightGrid.tag(at)
 	s.combat["fires"][key] = int(s.combat["round"])
 	(s.combat.get("oil", {}) as Dictionary).erase(key)
+	for z: Dictionary in SpellEffects.zones(s):  # what burns of a zone is gone with the fire
+		if bool(z.get("burns", false)):
+			(z.get("cells", []) as Array).erase(key)
 
 
 ## A flask broken on a square: oil lies there, alchemist's fire burns at once.

@@ -96,6 +96,14 @@ static func steps(s: GameSession, data: Dictionary, f: Dictionary) -> int:
 	return FightGrid.steps_of(data, Sheet.speed(s, data, f))
 
 
+## What a status laid in the middle of a turn leaves of its walk (v0.8.4.27.3): no more squares than its speed gives now — a
+## web holds it where it stands, a slowing one cuts it. The squares left.
+static func recount(s: GameSession, data: Dictionary, f: Dictionary) -> int:
+	var e := CombatRules.points(s, data, f)
+	e["move"] = mini(int(e["move"]), steps(s, data, f))
+	return int(e["move"])
+
+
 ## What the way asks of the map, for FightGrid.reach: its rows put together, the fear and a door it cannot open.
 static func opts(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 	var rows := table(data)
@@ -163,7 +171,7 @@ static func go(s: GameSession, data: Dictionary, f: Dictionary, to: Vector2i, li
 		FightField.opens_on_way(s, data, f, at, lines)
 		FightGrid.put(f, at)
 		walked.append(FightGrid.tag(at))
-		if FightField.stepped(s, data, f, lines) or CombatRules.stopped(s, f):
+		if FightField.stepped(s, data, f, lines) or CombatRules.stopped(s, f) or Move.recount(s, data, f) <= 0:
 			break
 	if not walked.is_empty():
 		e["walked"] = int(e.get("walked", 0)) + walked.size()

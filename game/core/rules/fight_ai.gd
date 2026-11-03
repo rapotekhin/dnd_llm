@@ -261,7 +261,7 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[St
 	var moved := _walk(s, data, f, path, lines)
 	if str(f.get("status")) != "active":
 		return
-	CombatRules._find_hidden(s, f, lines)
+	CombatRules._find_hidden(s, data, f, lines)
 	if o.is_empty():
 		if foe and CombatRules.airborne(s, data, CombatRules.player(s)) and not Move.air(s, data, f):
 			lines.append("%s не достаёт летящего героя" % f["name"])

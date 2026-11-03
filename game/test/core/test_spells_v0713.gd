@@ -125,7 +125,7 @@ func test_condition_spells_match_the_srd() -> void:
 	var cs: Dictionary = data["rules"]["combat"]["condition_spells"]
 	var want := {"sleep": ["unconscious", "5d8"], "color_spray": ["blinded", "6d10"], "hold_person": ["paralyzed", ""],
 		"command": ["incapacitated", ""], "charm_person": ["charmed", ""], "blindness_deafness": ["blinded", ""],
-		"hideous_laughter": ["prone", ""], "entangle": ["restrained", ""], "fear": ["frightened", ""], "web": ["restrained", ""]}
+		"hideous_laughter": ["prone", ""], "fear": ["frightened", ""]}  # Web and Entangle: zones (v0.8.4.27.3)
 	for id: String in want:
 		assert_bool((cs[id]["conditions"] as Array).has(want[id][0])).override_failure_message(id).is_true()
 		if not str(want[id][1]).is_empty():

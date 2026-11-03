@@ -155,7 +155,7 @@ static func zones_on(s: GameSession, f: Dictionary) -> Array[String]:
 
 ## The zones slow a fighter down where it stands.
 static func slowed(s: GameSession, f: Dictionary) -> bool:
-	return FightGrid.slow_cells(s, data(), str(f.get("side", "enemy"))).has(FightGrid.cell(f))
+	return FightGrid.slow_cells(s, data(), f).has(FightGrid.cell(f))
 
 
 ## Old columns between two fighters: 0 — within reach.

@@ -37,7 +37,7 @@ func _hold(s: GameSession, f: Dictionary) -> Dictionary:
 func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
 	var me := Sheet.holder(s, f)
 	var hold := _hold(s, f)
-	var skill := CombatRules.better(s, data, f, ["athletics", "acrobatics"])
+	var skill := CombatRules.better(s, data, f, hold.get("escape", ["athletics", "acrobatics"]))  # a web or a net: Strength (5e)
 	var dc := int(hold.get("escape_dc", 0))
 	var mine := 0
 	var against := "Сл %d" % dc
