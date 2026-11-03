@@ -43,6 +43,11 @@ def test_every_kind_has_its_sheet_with_a_command_per_row(tmp_path: Path, data: "
     assert set(dmg) == set(data.damage) and dmg["fire"]["Герою без боя"].startswith("dmg 2d6 fire")
     assert "Огненный шар" in dmg["fire"]["Заклинания"] and "Длинный меч" in dmg["slashing"]["Оружие"]
     assert "silver → 8" in dmg["slashing"]["Немагическое"] and not dmg["fire"]["Немагическое"]
+    magic = {r["id"]: r for r in _rows(out, "Магические предметы")}
+    brooch = magic["brooch_of_shielding"]["Как проверить"]
+    assert "Настроиться" in brooch and "dmg 4d1 force crit → 4" in brooch
+    plain = {r["id"]: r for r in _rows(out, "Обычные предметы")}
+    assert "хиты +2к4+2" in plain["healing_potion"]["Как проверить"] and "КД 16" in plain["chain_mail"]["Как проверить"]
     assert all(r["Проверено"] is False and r["Есть баг"] is False for r in _rows(out, "Монстры"))
 
 

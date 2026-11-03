@@ -35,7 +35,7 @@ DICE = str.maketrans({"d": "к"})
 # Words of the data in Russian for the sheet: an item's kind, a weapon's category and range, an armour's category.
 WORDS = {"gear": "снаряжение", "weapon": "оружие", "armor": "доспех", "consumable": "расходник", "wondrous": "чудесный",
          "treasure": "сокровище", "quest": "квест", "simple": "простое", "martial": "воинское", "melee": "ближнее",
-         "ranged": "дальнобойное", "light": "лёгкий", "medium": "средний", "heavy": "тяжёлый", "shield": "щит"}
+         "ranged": "дальнобойное", "hour": "час", "minute": "минуту", "day": "день", "light": "лёгкий", "medium": "средний", "heavy": "тяжёлый", "shield": "щит"}
 
 
 def load(path: Path) -> dict:
@@ -124,16 +124,156 @@ def item_text(d: dict, data: "Data") -> str:
     return "; ".join(parts)
 
 
+# How to see a property of a thing work: the console's commands and what to look at. {t} — a damage type, {d} — the probe.
+PROP_CHECKS = {
+    "ac_plus1": "Лист: КД +1 (сравнить без неё)",
+    "magic_plus1": "spawn goblin, в бою удар — +1 к атаке и урону (разбор при наведении); spawn wererat_human — урон не режется (магическое)",
+    "checks_plus1": "любая проверка — +1 в разборе броска",
+    "saves_plus1": "любой спасбросок — +1 в разборе броска; лист: спасброски +1",
+    "darkvision": "goto brod-tavern-cellar без света — комната видна",
+    "light_source": "goto brod-tavern-cellar, вещь на пояс — свет, комната видна",
+    "int_19": "Лист: Интеллект 19 (если был ниже)",
+    "str_19": "Лист: Сила 19 (если была ниже); удар — бонус от 19",
+    "investigation_advantage": "проверка Анализа — с преимуществом (разбор броска)",
+    "perception_advantage": "проверка Внимательности — с преимуществом (разбор броска)",
+    "stealth_advantage": "«Красться» — Скрытность с преимуществом",
+    "missile_snaring": "hit 1d8 piercing ranged — реакция «Перчатки ловли снарядов»: урон −1к10 + Лов",
+    "no_crit": "hit 2d6 slashing crit — крит становится обычным попаданием (кости один раз)",
+    "mithral": "Лист: нет помехи Скрытности, нет требования Силы",
+    "ranged_damage_plus2": "выстрел из длинного или короткого лука — урон +2",
+    "speed_30": "Лист: скорость 30 футов и в тяжёлом доспехе, и с грузом",
+    "spell_attack_plus1": "атака заклинанием (например «Огненный снаряд») — +1 к броску",
+    "understand_all": "разговор с NPC без общего языка — речь понятна",
+    "warm": "ночь на морозе без укрытия (погода) — без спасброска Телосложения",
+    "wound_closure": "бой, герой на 0 хитов — стабилизируется сам; короткий отдых — кости хитов лечат вдвое",
+    "carry_plus_500": "Лист: полоса веса — грузоподъёмность +500",
+    "immune_disease": "spawn giant_rat_diseased враг, дать укусить — болезнь не цепляется",
+    "healing": "dmg 3d1, затем «Использовать» — хиты растут",
+    "finesse": "удар — с Ловкостью, если она выше Силы (разбор)",
+    "reach": "удар по цели в 10 футах",
+    "thrown": "«Бросить» по цели на расстоянии",
+    "ammunition": "выстрел тратит боеприпас (стрелы, болты)",
+    "two_handed": "занимает обе руки: щит снимается",
+    "light": "лёгкое: вторым оружием во вторую руку — бонусный удар",
+    "heavy": "тяжёлое: маленький народ бьёт с помехой",
+    "versatile": "",
+}
+# Properties a thing's use already shows: its probe is the use's own.
+USE_SAYS = {"healing", "thrown", "resist_poison"}
+# What the description of one thing promises and its data does not carry: a check that shows the gap.
+ITEM_EXTRA = {
+    "brooch_of_shielding": "spawn mage враг — его «Волшебная стрела» по герою → 0 урона (в данных броши этого нет: скорее всего не работает)",
+}
+
+
+def wear_slot(d: dict, data: "Data") -> str:
+    """CharacterRules.slot_for: the slot a thing is worn in, "" — it works carried."""
+    if "armor" in d:
+        return "shield" if d["armor"].get("category") == "shield" else "armor"
+    if "weapon" in d or d.get("item_type") == "weapon":
+        return "main_hand"
+    if d.get("slot"):
+        return str(d["slot"])
+    if d.get("item_type") != "wondrous":
+        return ""
+    by = data.rules["wear_slots"]["by_look"]
+    look = str(d.get("look", "")).lower()
+    if look in by:
+        return str(by[look])
+    first = str(d.get("name", "")).lower().split(" ")[0]
+    return next((str(v) for k, v in by.items() if first.startswith(k.split(" ")[0])), "")
+
+
+def item_check(item_id: str, d: dict, data: "Data") -> str:
+    """How to see the thing work, step by step: get it, wear or attune it, then a probe per property and per use."""
+    steps = [f"give {item_id}"]
+    slot = wear_slot(d, data)
+    if slot:
+        steps.append("Лист → " + {"main_hand": "В основную руку", "shield": "Взять щит"}.get(slot, "Надеть"))
+    if d.get("attunement"):
+        steps.append("Лист → Настроиться (1 ч)")
+    w = d.get("weapon")
+    if isinstance(w, dict) and w.get("damage"):
+        steps.append(f"spawn goblin, в бою удар — {ru_dice(w.get('damage', ''))} {data.damage_name(w.get('damage_type', ''))}"
+                     + (f"; двумя руками {ru_dice(w['versatile'])}" if w.get("versatile") else ""))
+    a = d.get("armor")
+    if isinstance(a, dict):
+        steps.append(f"Лист: КД {a.get('base', '')}" + (" + Лов" if a.get("dex") else "")
+                     + (f" (не больше {a['max_dex']})" if a.get("max_dex") is not None else ""))
+        if a.get("stealth_disadvantage"):
+            steps.append("«Красться» — Скрытность с помехой")
+        if a.get("str_min"):
+            steps.append(f"с Силой ниже {a['str_min']} — скорость −10")
+    use = data.rules.get("consumables", {}).get(item_id) or d.get("use")  # ItemRules.consumable: the rules' row first
+    for p in map(str, d.get("properties", [])):
+        if isinstance(use, dict) and p in USE_SAYS:
+            continue
+        if p.startswith("resist_"):
+            t = p.removeprefix("resist_")
+            steps.append(f"dmg {PROBE.format(t)} → {EXPECT['resist']} (без вещи {EXPECT['']})")
+        elif PROP_CHECKS.get(p):
+            steps.append(PROP_CHECKS[p])
+    if isinstance(use, dict):
+        if use.get("spell"):
+            spell = data.spell_name(str(use["spell"]))
+            steps.append(f"«Использовать» — заклинание «{spell}»" + (f", {use['level']} круг" if use.get("level") else "")
+                         + ("; свиток чужого класса — проверка" if use.get("scroll") else ""))
+        for_time = f" (на {ru(use['duration'])})" if use.get("duration") else ""
+        if use.get("resist"):
+            steps.append(f"«Использовать», затем dmg {PROBE.format(use['resist'])} → {EXPECT['resist']}{for_time}")
+        if use.get("heal"):
+            n, die, plus = use["heal"]
+            steps.append(f"dmg 3d6, затем «Использовать» — хиты +{f'{n}к{die}' if n else ''}{f'+{plus}' if plus and n else plus if plus else ''}")
+        if use.get("adv_tag"):
+            steps.append(f"«Использовать» — спасброски против «{data.damage_name(use['adv_tag'])}» с преимуществом{for_time}")
+        if isinstance(use.get("throw"), dict):
+            th = use["throw"]
+            hurt = f": {ru_dice(th['damage'][0])} {data.damage_name(th['damage'][1])}" if th.get("damage") else ""
+            held = f": {data.condition_name(th['condition'])}, вырваться СЛ {th.get('escape_dc', '')}" if th.get("condition") else ""
+            steps.append(f"spawn goblin, в бою «Бросить» на {th.get('range', '')} фт{hurt}{held}"
+                         + (f", горение {ru_dice(th['burning'])} в ход" if th.get("burning") else "")
+                         + (" (только по нежити и исчадиям)" if th.get("types") else ""))
+        if isinstance(use.get("meal"), dict):
+            steps.append("«Поесть» — " + ("полосы голода и жажды растут" if use["meal"].get("water") else "полоса голода растёт"))
+        if use.get("poison"):
+            steps.append("«Использовать» — яд: спасбросок, урон ядом, отравление")
+        if use.get("invisible_minutes"):
+            steps.append(f"«Использовать» — невидимость на {ru_dice(use['invisible_minutes'])} мин")
+        if use.get("recover_slot"):
+            steps.append(f"slots, потратить ячейку, «Использовать» — ячейка до {use['recover_slot']} круга вернулась")
+        if use.get("check_adv"):
+            steps.append(f"«Использовать» — преимущество на проверки ({use['check_adv']}){for_time}")
+        if use.get("enlarged"):
+            steps.append(f"«Использовать» — увеличение: урон оружием +1к4, преимущество Силы{for_time}")
+        for cond in use.get("remove", []):
+            steps.append(f"cond {cond}, затем «Использовать» — состояние снято")
+        if use.get("cure"):
+            steps.append("spawn giant_rat_diseased враг, заразиться, затем «Использовать» — болезнь излечена")
+    if d.get("charges"):
+        ch = d["charges"]
+        steps.append(f"«Использовать» — заряды убывают (из {ch.get('max', '')})"
+                     + (f", на рассвете +{ru_dice(ch['regain'])}" if ch.get("regain") else "")
+                     + ("; на последнем заряде может рассыпаться" if ch.get("crumble") else ""))
+    if d.get("spoils_days"):
+        steps.append(f"через {d['spoils_days']} дн. портится (ждать или долгий отдых)")
+    if d.get("master"):  # its effect is the master's by its description (ItemInfo: ITEM_MASTER)
+        steps.append("сказать мастеру, что применяешь вещь, — он решает по описанию; проверить, что эффект совпал с описанием")
+    if item_id in ITEM_EXTRA:
+        steps.append(ITEM_EXTRA[item_id])
+    return "\n".join(steps)
+
+
 # --- the sheets: (title, columns, rows); a row is {"id": …, column: value} -----------------------------------------
 
 
 def items_sheet(data: Data, magic: bool) -> tuple[str, list[str], list[dict]]:
-    cols = ["Предмет", "id", "Команда", "Тип"] + (["Редкость", "Настройка"] if magic else []) + ["Цена, зм", "Источник", "Описание"]
+    cols = ["Предмет", "id", "Команда", "Как проверить", "Тип"] + (["Редкость", "Настройка"] if magic else []) + ["Цена, зм", "Источник", "Описание"]
     rows = []
     for item_id, d in sorted(data.items.items(), key=lambda kv: str(kv[1].get("name", kv[0]))):
         if is_magic(d) != magic:
             continue
-        row = {"id": item_id, "Предмет": d.get("name", item_id), "Команда": f"give {item_id}", "Тип": ru(d.get("item_type", "")),
+        row = {"id": item_id, "Предмет": d.get("name", item_id), "Команда": f"give {item_id}",
+               "Как проверить": item_check(item_id, d, data), "Тип": ru(d.get("item_type", "")),
                "Цена, зм": round(int(d.get("value_cp", 0)) / 100, 2), "Источник": d["source"], "Описание": item_text(d, data)}
         if magic:
             row["Редкость"] = d.get("rarity", "common")
@@ -362,7 +502,7 @@ def conditions_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
 
 # --- the workbook ----------------------------------------------------------------------------------------------------
 
-WIDTHS = {"Описание": 70, "Что делает": 60, "Накладывают заклинания": 35, "Накладывают монстры": 45, "Снимают": 30, "Иммунны": 40,
+WIDTHS = {"Описание": 70, "Как проверить": 60, "Что делает": 60, "Накладывают заклинания": 35, "Накладывают монстры": 45, "Снимают": 30, "Иммунны": 40,
           "Снять": 24, "Способности": 50, "Заклинания": 45, "Инвентарь": 35, "Защиты": 45, "Комментарий": 40, "Монстры с ней": 50,
           "Вещи с ней": 35, "Классы": 30, "Команда": 30, "Союзник": 28, "На юнита": 32, "Юниту": 26, "Герою": 22, "Проверить ударом": 40, "Проверить без боя": 40, "Юниту ударом": 32, "Герою без боя": 26,
           "Крит": 30, "Немагическое": 45, "Оружие": 35, "Монстры бьют": 50}
