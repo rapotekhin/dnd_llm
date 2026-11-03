@@ -1,7 +1,7 @@
 """The author's test checklist: every item, monster, ability, spell and defense of the game with its dev console command.
 
 One .xlsx with a sheet per kind (ordinary items, magic items, monsters, abilities, spells, conditions, resistances and
-immunities);
+immunities, damage types);
 each row has the command to put it into the game (the dev console, `--dev` or «Режим разработчика»: docs/tech/godot-client.md
 «Отладка») and the author's columns: проверено, есть баг, исправлено, комментарий. Run again after the data changes:
 the marks and comments already in the file stay with their rows (by the sheet and the id).
@@ -266,6 +266,36 @@ def defenses_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
     return "Сопротивления и иммунитеты", cols, rows
 
 
+def damage_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
+    """A row per damage type: `dmg` and `hit` with what each must give, the defenses laid and lifted, the nonmagical blow on a
+    monster that resists it (Sheet.defenses), and what deals it in the game's data."""
+    cols = ["Тип урона", "id", "Герою без боя", "Юниту ударом", "Крит", "Защиты", "Немагическое", "Заклинания", "Оружие", "Монстры бьют"]
+    rows = []
+    for dtype in data.damage:
+        spells = sorted(s["name"] for s in data.spells.values() if s.get("damage_type") == dtype)
+        weapons = sorted(d.get("name", i) for i, d in data.items.items() if isinstance(d.get("weapon"), dict) and d["weapon"].get("damage_type") == dtype)
+        mons = sorted({m.get("name", mid) for mid, m in data.monsters.items()
+                       for a in m.get("actions", []) if any(isinstance(x, dict) and x.get("type") == dtype for x in a.get("damage", []))})
+        bare = ""
+        for key, word, left in (("immunities", "иммунитет", 0), ("resistances", "сопротивление", 4)):  # of the 8 a crit 4d1 rolls
+            found = next(((mid, str(x)) for mid, m in data.monsters.items() for x in m.get(key, [])
+                          if dtype in str(x) and "nonmagical" in str(x) and "adamantine" not in str(x)), None)
+            if found:
+                mid, text = found
+                bare = (f"spawn {mid} ({word} к немагическому)\n@<цель> hit 4d1 {dtype} crit → {left}"
+                        f"\n@<цель> hit 4d1 {dtype} crit magic → 8")
+                if "silvered" in text:
+                    bare += f"\n@<цель> hit 4d1 {dtype} crit silver → 8"
+                break
+        rows.append({"id": dtype, "Тип урона": data.damage_name(dtype), "Герою без боя": f"dmg 2d6 {dtype} → 2–12 урона",
+                     "Юниту ударом": f"@<цель> hit 2d6 {dtype} → при попадании 2–12",
+                     "Крит": f"dmg 4d1 {dtype} crit → 8 (кости дважды)",
+                     "Защиты": (f"resist {dtype}, dmg 4d1 {dtype} → 2\nimmune {dtype}, dmg 4d1 {dtype} → 0\n"
+                                f"vulnerable {dtype}, dmg 4d1 {dtype} → 8\nснять: resist {dtype} off (и так же immune, vulnerable)"),
+                     "Немагическое": bare, "Заклинания": ", ".join(spells), "Оружие": ", ".join(weapons), "Монстры бьют": ", ".join(mons)})
+    return "Типы урона", cols, rows
+
+
 def creature_conditions(data: Data) -> list[str]:
     """What `cond` lays (Cheats.conditions): the rules' conditions and the spells' statuses, not a thing's nor an exhaustion step."""
     effects = data.rules.get("condition_effects", {})
@@ -326,8 +356,9 @@ def conditions_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
 # --- the workbook ----------------------------------------------------------------------------------------------------
 
 WIDTHS = {"Описание": 70, "Что делает": 60, "Накладывают заклинания": 35, "Накладывают монстры": 45, "Снимают": 30, "Иммунны": 40,
-          "Снять": 24, "Способности": 50, "Заклинания": 45, "Инвентарь": 35, "Защиты": 35, "Комментарий": 40, "Монстры с ней": 50,
-          "Вещи с ней": 35, "Классы": 30, "Команда": 30, "Союзник": 28, "На юнита": 32, "Юниту": 26, "Герою": 22, "Проверить ударом": 40, "Проверить без боя": 40}
+          "Снять": 24, "Способности": 50, "Заклинания": 45, "Инвентарь": 35, "Защиты": 45, "Комментарий": 40, "Монстры с ней": 50,
+          "Вещи с ней": 35, "Классы": 30, "Команда": 30, "Союзник": 28, "На юнита": 32, "Юниту": 26, "Герою": 22, "Проверить ударом": 40, "Проверить без боя": 40, "Юниту ударом": 32, "Герою без боя": 26,
+          "Крит": 30, "Немагическое": 45, "Оружие": 35, "Монстры бьют": 50}
 
 
 def old_marks(path: Path) -> dict[tuple[str, str], dict]:
@@ -356,7 +387,7 @@ def build(data: Data, path: Path) -> dict[str, int]:
     bold = Font(bold=True)
     head_fill = PatternFill("solid", fgColor="DDD5C4")
     for title, cols, rows in (items_sheet(data, False), items_sheet(data, True), monsters_sheet(data), abilities_sheet(data),
-                              spells_sheet(data), conditions_sheet(data), defenses_sheet(data)):
+                              spells_sheet(data), conditions_sheet(data), defenses_sheet(data), damage_sheet(data)):
         ws = wb.create_sheet(title)
         all_cols = cols + MARKS
         ws.append(all_cols)

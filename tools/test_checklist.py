@@ -9,7 +9,7 @@ openpyxl = pytest.importorskip("openpyxl")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import checklist  # noqa: E402
 
-SHEETS = ["Обычные предметы", "Магические предметы", "Монстры", "Способности", "Заклинания", "Состояния", "Сопротивления и иммунитеты"]
+SHEETS = ["Обычные предметы", "Магические предметы", "Монстры", "Способности", "Заклинания", "Состояния", "Сопротивления и иммунитеты", "Типы урона"]
 
 
 @pytest.fixture(scope="module")
@@ -39,6 +39,10 @@ def test_every_kind_has_its_sheet_with_a_command_per_row(tmp_path: Path, data: "
     assert conds["frightened"]["Герою"] == "cond frightened" and conds["frightened"]["Юниту"] == "@<цель> cond frightened"
     assert "outlined" in conds and "burning" not in conds and "exhaustion_3" not in conds
     assert "Борода" in conds["poisoned"]["Накладывают монстры"]
+    dmg = {r["id"]: r for r in _rows(out, "Типы урона")}
+    assert set(dmg) == set(data.damage) and dmg["fire"]["Герою без боя"].startswith("dmg 2d6 fire")
+    assert "Огненный шар" in dmg["fire"]["Заклинания"] and "Длинный меч" in dmg["slashing"]["Оружие"]
+    assert "silver → 8" in dmg["slashing"]["Немагическое"] and not dmg["fire"]["Немагическое"]
     assert all(r["Проверено"] is False and r["Есть баг"] is False for r in _rows(out, "Монстры"))
 
 
