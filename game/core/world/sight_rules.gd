@@ -27,12 +27,13 @@ static func dark_sight(s: GameSession, data: Dictionary, who: Dictionary = Sheet
 	return own
 
 
-## Squares the light it carries reaches, 0 — none: the Light spell or the best light source among its things.
+## Squares the light it carries reaches, 0 — none: the Light spell or the best light source on its belt (v0.8.4.24: one
+## in the pack is not lit).
 static func light(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
 	var lights: Dictionary = cfg(data)["lights"]
 	var best := int(lights["light"]) if _spell(Sheet.holder(s, who), "light") else 0
-	for id: String in Sheet.things(s, data, who).get("inventory", {}):
-		if (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source"):
+	for id: String in ItemRules.belt(Sheet.things(s, data, who), data, s.items):
+		if not id.is_empty() and (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source"):
 			best = maxi(best, int(lights.get(id, lights["light"])))
 	return best
 

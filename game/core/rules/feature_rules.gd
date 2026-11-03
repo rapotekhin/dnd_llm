@@ -447,12 +447,16 @@ static func why(s: GameSession, data: Dictionary, f: Dictionary, id: String, tar
 		return "COMBAT_ATTACK_FIRST"
 	if bool(row.get("before_attack", false)) and (bool(e.get("attacked", false)) or bool(f.get(id, false))):
 		return "COMBAT_RECKLESS_LATE"
+	if id == "breath":  # a cone or a line laid towards a square or a body, as an area spell (v0.8.4.24)
+		var at := CombatRules.aimed(s, target_id)
+		if at.is_empty() or FightGrid.cell(at) == FightGrid.cell(f):
+			return "COMBAT_BAD_TARGET"
+		return "COMBAT_OUT_OF_REACH" if FightGrid.shown_dist(f, at) > FightGrid.squares_of(data, aim_ft(s, data, f, id)) else ""
 	if bool(spec["target"]):
 		var t := CombatRules.fighter(s, target_id) if CombatRules.foes_of(s, f).has(target_id) else {}
 		if t.is_empty() or not Attack.up(s, t):
 			return "COMBAT_BAD_TARGET"
-		var reach := 1 if id != "breath" else FightGrid.squares_of(data, int(_breath_area(c, data)["size"]))
-		if FightGrid.shown_dist(f, t) > reach:
+		if FightGrid.shown_dist(f, t) > 1:
 			return "COMBAT_OUT_OF_REACH"
 	return ""
 
@@ -787,6 +791,44 @@ static func _breath_area(c: Dictionary, data: Dictionary) -> Dictionary:
 	return {"type": "line", "size": 30} if breath_shape(c, data) == "line" else {"type": "cone", "size": 15}
 
 
+## The act is laid on a square as an area (its row's `aims`): the button aims it as an area spell.
+static func aims(data: Dictionary, id: String) -> bool:
+	return bool(rows(data).get(id, {}).get("aims", false))
+
+
+## How far an aimed act reaches, feet.
+static func aim_ft(s: GameSession, data: Dictionary, f: Dictionary, id: String) -> int:
+	return int(_breath_area(Sheet.holder(s, f), data)["size"]) if id == "breath" else 0
+
+
+## The squares an aimed act covers at `target_id`.
+static func aim_cells(s: GameSession, data: Dictionary, f: Dictionary, id: String, target_id: String) -> Array[Vector2i]:
+	return breath_cells(s, data, f, target_id) if id == "breath" else [] as Array[Vector2i]
+
+
+## The squares of the breath of `f` towards `target_id` — a square ("@x,y") or a body, as an area spell is aimed (v0.8.4.24).
+static func breath_cells(s: GameSession, data: Dictionary, f: Dictionary, target_id: String) -> Array[Vector2i]:
+	var t := CombatRules.aimed(s, target_id)
+	if t.is_empty():
+		return []
+	var aim := FightGrid.cell(t) if bool(t.get("aim", false)) else FightGrid._facing(f, t)[1]
+	return FightGrid.area(s, data, _breath_area(Sheet.holder(s, f), data), FightGrid.cell(f), aim, true)
+
+
+## Who the breath of `f` catches at `target_id`: every creature in its squares but the breather, foes and friends alike (5e).
+static func breath_caught(s: GameSession, data: Dictionary, f: Dictionary, target_id: String) -> Array[Dictionary]:
+	var cells := breath_cells(s, data, f, target_id)
+	var out: Array[Dictionary] = []
+	var field := CombatRules.foes_of(s, f)
+	if bool(CombatRules.cfg(data)["friendly_fire"]["on"]):
+		field.append_array(CombatRules.friends_of(s, f))
+	for id: String in field:
+		var t := CombatRules.fighter(s, id)
+		if id != str(f["id"]) and Attack.up(s, t) and FightGrid.in_cells(t, cells):
+			out.append(t)
+	return out
+
+
 ## The dragonborn's breath towards `target_id`: its shape from the breather, on who stands there. Lines.
 static func _breath(s: GameSession, data: Dictionary, f: Dictionary, target_id: String) -> Array[String]:
 	var c := Sheet.holder(s, f)
@@ -795,17 +837,20 @@ static func _breath(s: GameSession, data: Dictionary, f: Dictionary, target_id: 
 	var ab := "con" if dtype in ["cold", "poison"] else "dex"
 	var dc := 8 + ab_mod(c, "con") + CharacterRules.prof_bonus(c, data)
 	var dice := "%dd6" % (2 if level(c) < 6 else 3)
-	var cells := FightGrid.area(s, data, _breath_area(c, data), FightGrid.cell(f), FightGrid.cell(CombatRules.aimed(s, target_id)), true)
+	var cells := breath_cells(s, data, f, target_id)
+	AnimRules.emit(s, {"by": str(f["id"]), "act": "cast", "anim": breath_shape(c, data), "dtype": dtype, "result": "hit", "cells": FightGrid.pack_cells(cells)})
 	var full := CombatRules.roll_dice(s.rng, dice)
-	var lines: Array[String] = ["%s выдыхает %s" % [c.get("name", ""), data["misc"]["damage_types"].get(dtype, dtype)]]
-	for id: String in CombatRules.foes_of(s, f):
-		var t := CombatRules.fighter(s, id)
-		if not FightGrid.in_cells(t, cells):
-			continue
+	var lines: Array[String] = ["%s выдыхает %s (%s)" % [c.get("name", ""), data["misc"]["damage_types"].get(dtype, dtype), dice.replace("d", "к")]]
+	for t: Dictionary in breath_caught(s, data, f, target_id):
 		var ok := Sheet.saved(s, data, t, ab, dc)
 		var dmg := Sheet.taken(s, data, t, dtype, full / 2 if ok else full)
+		AnimRules.outcome(s, t, "impact" if dmg > 0 else "resist", dtype)
 		lines.append("%s: %s против Сл %d — %s, %d" % [Sheet.holder(s, t).get("name", ""), CombatRules.ab_name(ab), dc, "успех" if ok else "провал", dmg])
+		if Sheet.is_hero(f):
+			CombatRules._caught_friend(s, data, t)
 		Harm.take(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(f))
+	if lines.size() == 1:
+		lines.append("Никого не задело")
 	return lines
 
 

@@ -119,7 +119,8 @@ static func watch(s: GameSession, data: Dictionary, map: Dictionary) -> Dictiona
 ## What a fight of the encounter starts from, over `extra`.
 static func source(enc: Dictionary, from: String, extra: Dictionary = {}) -> Dictionary:
 	var out := {"encounter": str(enc.get("id", "")), "room_from": from, "waves": enc.get("waves", []), "help": enc.get("help", {}),
-		"parley": str(enc.get("parley", "")), "allies": enc.get("allies", []), "faction": str(enc.get("faction", ""))}
+		"parley": str(enc.get("parley", "")), "allies": enc.get("allies", []), "faction": str(enc.get("faction", "")),
+		"on_map": true}  # its foes stood on the map: the fight keeps their squares, captors without an encounter too
 	out.merge(extra, true)
 	return out
 

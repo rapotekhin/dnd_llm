@@ -44,23 +44,24 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 		var t := _token("npc:" + id, "npc", id, str(n.get("name", id)), at)
 		t["attitude"] = s.attitude(id)
 		out.append(t)
+	var spots := _clear(map, lib, cells)  # a creature, a body or a thing never lies in a doorway
 	for c: Dictionary in CreatureRules.here(s, s.room_id):
 		var id := str(c["id"])
 		if str(c["state"]) == PropertyRules.TAME or bool(c.get("led", false)) or bool(c.get("ally", false)):
 			continue
 		var fell := Vector2i(int(c.get("x", -1)), int(c.get("y", -1)))
-		var at := fell if cells.has(fell) and not taken.has(fell) else _seeded(cells, taken, "%d|%s" % [s.game_seed, id])
+		var at := _closest(spots, taken, fell) if cells.has(fell) else _seeded(spots, taken, "%d|%s" % [s.game_seed, id])
 		taken[at] = true
 		out.append(_token("cr:" + id, "body" if str(c["state"]) == CreatureRules.DEAD else "creature", id, str(c["name"]), at))
 	for b: Dictionary in CrimeRules.bodies_here(s, data):
 		var id := str(b["npc_id"])
-		var at := _seeded(cells, taken, "%d|%s" % [s.game_seed, id])
+		var at := _seeded(spots, taken, "%d|%s" % [s.game_seed, id])
 		taken[at] = true
 		out.append(_token("body:" + id, "body", id, str(b["name"]), at))
 	for p: Dictionary in PropRules.room_props(s, s.room_id):
 		if not _shown(data, p):
 			continue
-		var at := _prop_cell(s, data, map, cells, taken, out, p)
+		var at := _prop_cell(s, data, map, spots, taken, out, p)
 		taken[at] = true
 		out.append(_token("prop:" + str(p["id"]), "prop", str(p["id"]), str(p["name"]), at))
 	return out
@@ -122,43 +123,56 @@ static func crowd(s: GameSession) -> Array[Dictionary]:
 	return out
 
 
-## The square a fighter of a fight starts on: its person's, its creature's, the lair of its encounter. (-1, -1) — no such.
+## The square a fighter of a fight starts on: its person's, its creature's. (-1, -1) — no such. The heads of an
+## encounter come to the fight with their squares of the map (`on_lair`).
 static func of_fighter(s: GameSession, data: Dictionary, spec: Dictionary) -> Vector2i:
-	var map := FightGrid.map(s, data)
 	var npc := str(spec.get("npc_id", ""))
 	var creature := str(spec.get("creature_id", ""))
 	if not npc.is_empty() or not creature.is_empty():
 		var ref := "npc:" + npc if not npc.is_empty() else "cr:" + creature
-		for t: Dictionary in of(s, data, map):
+		for t: Dictionary in of(s, data, FightGrid.map(s, data)):
 			if str(t["ref"]) == ref:
 				return Vector2i(int(t["x"]), int(t["y"]))
-	var key := str(s.combat.get("encounter", ""))
-	var cells := _cells(map, data["layouts"], s.room_id)
-	if key.is_empty() or cells.is_empty():
-		return Vector2i(-1, -1)
-	return _lair(s, data, map, cells, key)
+	return Vector2i(-1, -1)
 
 
-## The foes of the room before a fight, each with its "record". They stand together, away from the ways in; the seed
-## keeps their squares.
-static func foes(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dictionary]:
+## The foes of the room before a fight, each with its "record", on their squares by `on_lair`. `_map` is the hero's
+## view: the squares come from the whole map.
+static func foes(s: GameSession, data: Dictionary, _map: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if EncounterRules.lurking(s, s.room_id).is_empty():
 		return out
-	var cells := _cells(map, data["layouts"], s.room_id)
-	if cells.is_empty():
-		return out
 	var enc := EncounterRules.lurking_encounter(s, data, s.room_id)
-	var taken := {}
-	var lair := _lair(s, data, map, cells, str(enc.get("id", "")))
-	for e: Dictionary in enc.get("enemies", []):
-		if Being.dead(s, EncounterRules.foe_id(e)):
+	var heads: Array = enc.get("enemies", [])
+	var placed := on_lair(s, data, str(enc.get("id", "")), heads)
+	for i: int in heads.size():
+		var e: Dictionary = heads[i]
+		var p: Dictionary = placed[i]
+		if Being.dead(s, EncounterRules.foe_id(e)) or not p.has("x"):
 			continue
-		var at := _closest(cells, taken, lair)
-		taken[at] = true
-		var t := _token("foe:" + EncounterRules.foe_id(e), "foe", EncounterRules.foe_id(e), str(e.get("name", e.get("monster", ""))), at)
+		var t := _token("foe:" + EncounterRules.foe_id(e), "foe", EncounterRules.foe_id(e), str(e.get("name", e.get("monster", ""))), Vector2i(int(p["x"]), int(p["y"])))
 		t["record"] = e
 		out.append(t)
+	return out
+
+
+## The heads of an encounter on the room's map, each a copy with its "x", "y": together by the lair, away from the ways
+## in, kept by the seed. The whole map, not the hero's view of it: a way shut for now (a ford in a downpour) moves
+## nobody. One road for the foes on the map and the fight's start (v0.8.4.24). A head with its own square keeps it.
+static func on_lair(s: GameSession, data: Dictionary, key: String, heads: Array) -> Array:
+	var map := LayoutRules.map_of(s, data, s.room_id)
+	var cells := _cells(map, data["layouts"], s.room_id)
+	var lair := _lair(s, data, map, cells, key) if not cells.is_empty() else FightGrid.NONE
+	var taken := {}
+	var out: Array = []
+	for e: Dictionary in heads:
+		var spec := e.duplicate()
+		if lair != FightGrid.NONE and not spec.has("x") and not Being.dead(s, EncounterRules.foe_id(e)):
+			var at := _closest(cells, taken, lair)
+			taken[at] = true
+			spec["x"] = at.x
+			spec["y"] = at.y
+		out.append(spec)
 	return out
 
 
@@ -185,7 +199,7 @@ static func _ways_in(map: Dictionary, room: String) -> Array[Vector2i]:
 ## The square of a trap or a cache: a trap lies before the way it guards, a thing where the pack says (`near`, a mark) or
 ## where the seed puts it. (-1, -1) — the room has no free square.
 static func secret_cell(s: GameSession, data: Dictionary, map: Dictionary, room: String, sec: Dictionary) -> Vector2i:
-	var cells := _cells(map, data["layouts"], room)
+	var cells := _clear(map, data["layouts"], _cells(map, data["layouts"], room))
 	if cells.is_empty():
 		return Vector2i(-1, -1)
 	var to := str((sec.get("trap", {}) as Dictionary).get("guards", ""))
@@ -232,6 +246,21 @@ static func _cells(map: Dictionary, lib: Dictionary, room: String) -> Array[Vect
 			if WalkRules.room_of(map, cell) == room and WalkRules.passable(map, lib, cell):
 				out.append(cell)
 	return out
+
+
+## The squares of `cells` a thing may lie on (v0.8.4.24): no cell kept free by layouts.json (a door), no door between
+## rooms, no way out nor the square before it. None left — `cells` as they are.
+static func _clear(map: Dictionary, lib: Dictionary, cells: Array[Vector2i]) -> Array[Vector2i]:
+	var ways := {}
+	for e: Dictionary in map["exits"]:
+		ways[Vector2i(int(e["x"]), int(e["y"]))] = true
+		ways[Vector2i(int(e["ax"]), int(e["ay"]))] = true
+	for d: Dictionary in map["doors"]:
+		ways[Vector2i(int(d["x"]), int(d["y"]))] = true
+	var rows: Array = map["rows"]
+	var out: Array[Vector2i] = cells.filter(func(at: Vector2i) -> bool:
+		return not ways.has(at) and not bool(lib["cells"].get(str(rows[at.y])[at.x], {}).get("keep_free", false)))
+	return out if not out.is_empty() else cells
 
 
 static func _seeded(cells: Array[Vector2i], taken: Dictionary, key: String) -> Vector2i:

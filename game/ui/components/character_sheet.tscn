@@ -151,6 +151,16 @@ layout_mode = 2
 auto_translate_mode = 2
 text = "Правая рука: длинный меч"
 
+[node name="BeltBox" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SampleCell" type="Label" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/BeltBox" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Пояс: зелье лечения ×2 · свеча ×10 · — · — · —"
+
 [node name="GearSep" type="HSeparator" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
 layout_mode = 2
 

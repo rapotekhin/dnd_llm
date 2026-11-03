@@ -279,6 +279,66 @@ func test_breath_weapon_once_a_rest() -> void:
 	assert_bool(bool(s.character["breath_used"])).is_false()
 
 
+## A 15-ft cone from the breather: the foe aimed at and the one behind it are hurt, the one aside is not; the cone is seen.
+func test_breath_weapon_is_a_cone_that_hurts() -> void:
+	var s := _hero("paladin_gordey")
+	TestUtils.fight(s, data, [{"monster": "goblin", "count": 3, "col": 0}], {})
+	var hero := CombatRules.player(s)
+	var foes: Array[Dictionary] = []
+	for id: String in CombatRules.enemies(s):
+		foes.append(CombatRules.fighter(s, id))
+	FightGrid.put(hero, Vector2i(5, 5))
+	FightGrid.put(foes[0], Vector2i(6, 5))
+	FightGrid.put(foes[1], Vector2i(7, 5))
+	FightGrid.put(foes[2], Vector2i(2, 9))
+	var order: Array = s.combat["order"]
+	order.erase(CombatRules.PLAYER)
+	order.push_front(CombatRules.PLAYER)
+	s.combat["turn"] = 0
+	CombatRules._begin_turn(s, data, [] as Array[String])
+	var hp: Array[int] = []
+	for f in foes:
+		f["hp"] = 100
+		f["max_hp"] = 100
+		hp.append(100)
+	AnimRules.take(s)
+	assert_str(Acts.one("feature").can(s, data, hero, str(foes[0]["id"]), {"id": "breath"})).is_empty()
+	var lines := Acts.one("feature").go(s, data, hero, str(foes[0]["id"]), {"id": "breath"})
+	assert_int(int(foes[0]["hp"])).override_failure_message("the aimed foe: %s" % "\n".join(lines)).is_less(hp[0])
+	assert_int(int(foes[1]["hp"])).override_failure_message("the one behind: %s" % "\n".join(lines)).is_less(hp[1])
+	assert_int(int(foes[2]["hp"])).is_equal(hp[2])
+	var cones := AnimRules.take(s).filter(func(e: Dictionary) -> bool: return str(e.get("anim")) == "cone")
+	assert_int(cones.size()).override_failure_message("no cone seen").is_equal(1)
+	assert_bool((cones[0].get("cells", []) as Array).has(FightGrid.tag(Vector2i(7, 5)))).override_failure_message(str(cones[0])).is_true()
+
+
+## The breath is aimed at a square as an area spell: a diagonal cone catches who stands in it, out of 15 ft it is refused.
+func test_breath_weapon_aimed_at_a_square() -> void:
+	var s := _hero("paladin_gordey")
+	TestUtils.fight(s, data, [{"monster": "goblin", "count": 2, "col": 0}], {})
+	var hero := CombatRules.player(s)
+	var a := CombatRules.fighter(s, CombatRules.enemies(s)[0])
+	var b := CombatRules.fighter(s, CombatRules.enemies(s)[1])
+	FightGrid.put(hero, Vector2i(5, 5))
+	FightGrid.put(a, Vector2i(7, 7))
+	FightGrid.put(b, Vector2i(5, 9))
+	var order: Array = s.combat["order"]
+	order.erase(CombatRules.PLAYER)
+	order.push_front(CombatRules.PLAYER)
+	s.combat["turn"] = 0
+	CombatRules._begin_turn(s, data, [] as Array[String])
+	a["hp"] = 100
+	b["hp"] = 100
+	assert_str(Acts.one("feature").can(s, data, hero, FightGrid.aim_id(Vector2i(12, 5)), {"id": "breath"})).is_equal("COMBAT_OUT_OF_REACH")
+	var aim := FightGrid.aim_id(Vector2i(7, 7))
+	assert_str(Acts.one("feature").can(s, data, hero, aim, {"id": "breath"})).is_empty()
+	var caught := FeatureRules.breath_caught(s, data, hero, aim)
+	assert_bool(caught.has(a) and not caught.has(b)).is_true()
+	Acts.one("feature").go(s, data, hero, aim, {"id": "breath"})
+	assert_int(int(a["hp"])).is_less(100)
+	assert_int(int(b["hp"])).is_equal(100)
+
+
 func test_dark_rooms_of_the_pack() -> void:
 	var human := _hero("fighter_aira")
 	human.room_id = "mine-gallery"

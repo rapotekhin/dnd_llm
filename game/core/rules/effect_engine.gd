@@ -933,7 +933,7 @@ func _plan_other_set(s: GameSession, data: Dictionary, id: String, slot: String)
 		if ItemRules.held_by_curse(c, data, s.items, str(c.get("equipped", {}).get(sl, ""))):
 			return {"reason": "%s проклят и не снимается — только «Снятие проклятия»" % ItemRules.display_name(data["items"], s.items, str(c["equipped"][sl]))}
 	var probe := c.duplicate(true)
-	CharacterRules.swap_hands(probe)
+	CharacterRules.swap_hands(probe, data, s.items)
 	if str(probe["equipped"].get(slot, "")) == id:
 		return {"plan": {"slots": [], "item_id": id, "swap": true}, "summary": "В руках: %s" % ItemRules.display_name(data["items"], s.items, id)}
 	var why := CharacterRules.can_equip(probe, data, s.items, id, slot)
@@ -1397,7 +1397,7 @@ func _do_flag(s: GameSession, plan: Dictionary) -> void:
 func _do_equip(s: GameSession, plan: Dictionary) -> void:
 	var before: Dictionary = (s.character["equipped"] as Dictionary).duplicate()
 	if bool(plan.get("swap", false)):
-		CharacterRules.swap_hands(s.character)
+		CharacterRules.swap_hands(s.character, _data, s.items)
 	if bool(plan.get("stowed", false)):
 		s.character["stowed"] = {}
 	for sl: Variant in plan["slots"]:

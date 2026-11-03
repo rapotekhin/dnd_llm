@@ -12,6 +12,8 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	var fight := CombatRules.active(s) and (hero or who.has("status"))
 	var f: Dictionary = CombatRules.player(s) if hero and fight else who
 	var me := Sheet.holder(s, who)
+	if fight:
+		FightField.din(s, data, dtype)  # a thunderous blow carries farther
 	if dmg <= 0:
 		return
 	if dtype == "fire" and f.has("oiled"):  # oil on it catches (v0.7.12)

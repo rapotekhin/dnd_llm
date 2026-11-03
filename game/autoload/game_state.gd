@@ -400,7 +400,8 @@ func attach_choices() -> Array[Dictionary]:
 	for iid: String in c.get("inventory", {}):
 		var usable := not ItemRules.consumable(data, iid, session.items).is_empty()
 		out.append({"kind": "item" if usable else "item_note", "id": iid,
-			"name": "%s ×%d" % [ItemRules.display_name(data["items"], session.items, iid), int(c["inventory"][iid])], "slots": [], "off": false})
+			"name": "%s ×%d" % [ItemRules.display_name(data["items"], session.items, iid), int(c["inventory"][iid])], "slots": [],
+			"off": usable and not ItemRules.can_use(c, data, session.items, iid).is_empty()})  # off the belt (v0.8.4.24)
 	return out
 
 
@@ -2662,12 +2663,12 @@ func cancel_turn() -> void:
 
 
 ## Puts an owned item into an equipment slot (CharacterRules.SLOTS). "" on success, else a localization key.
-## Not while the master thinks: the snapshot of the turn in flight would no longer match.
-func equip(item_id: String, slot: String, both: bool = false) -> String:
+## Not while the master thinks: the snapshot of the turn in flight would no longer match. `spare` — into the set put away.
+func equip(item_id: String, slot: String, both: bool = false, spare: bool = false) -> String:
 	if not _idle():
 		return "EQUIP_BUSY"
 	var c := session.character
-	if CharacterRules.HANDS.has(slot) and CharacterRules.goes_stowed(c, Catalog.data, session.items, item_id):
+	if CharacterRules.HANDS.has(slot) and (spare or CharacterRules.goes_stowed(c, Catalog.data, session.items, item_id)):
 		return _equip_stowed(item_id, slot)
 	var freed := CharacterRules.hands_freed(c, Catalog.data, session.items, item_id, slot, both)
 	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot) or freed.has("shield")) and session.mode == GameSession.MODE_COMBAT:
@@ -2678,6 +2679,8 @@ func equip(item_id: String, slot: String, both: bool = false) -> String:
 	if ItemRules.held_by_curse(c, Catalog.data, session.items, str(c["equipped"].get(slot, ""))):
 		return "ITEM_CURSED"
 	var before: Dictionary = (c["equipped"] as Dictionary).duplicate()
+	if CharacterRules.HANDS.has(slot):  # the last copy in the set put away comes to the hands (v0.8.4.24)
+		CharacterRules.free_copy(c, item_id, CharacterRules.stowed(c), slot, c["equipped"])
 	c["equipped"][slot] = item_id
 	for sl: String in freed:  # both hands on the weapon: the shield and the off hand go to the pack
 		c["equipped"][sl] = ""
@@ -2695,11 +2698,12 @@ func _equip_stowed(item_id: String, slot: String) -> String:
 	var c := session.character
 	if slot == "shield" and session.mode == GameSession.MODE_COMBAT:
 		return "EQUIP_IN_COMBAT"
-	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot)
+	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot, true)
 	if not why.is_empty():
 		return why
 	CharacterRules.put_stowed(c, Catalog.data, session.items, item_id, slot)
 	_refresh()
+	EventBus.state_changed.emit()  # the sheet draws the set again (v0.8.4.24: it did not)
 	return ""
 
 
@@ -2721,6 +2725,31 @@ func unequip_stowed(slot: String) -> void:
 		return
 	CharacterRules.stowed(session.character)[slot] = ""
 	_refresh()
+	EventBus.state_changed.emit()
+
+
+## A thing onto the belt under the doll (v0.8.4.24): "" or the reason. Not in a fight, as in Pathfinder.
+func belt_put(item_id: String, at: int = -1) -> String:
+	if not _idle():
+		return "EQUIP_BUSY"
+	if CombatRules.active(session):
+		return "BELT_IN_COMBAT"
+	var why := ItemRules.belt_why(session.character, Catalog.data, session.items, item_id, at)
+	if not why.is_empty():
+		return why
+	ItemRules.belt_put(session.character, Catalog.data, session.items, item_id, at)
+	EventBus.state_changed.emit()
+	return ""
+
+
+func belt_take(at: int) -> String:
+	if not _idle():
+		return "EQUIP_BUSY"
+	if CombatRules.active(session):
+		return "BELT_IN_COMBAT"
+	ItemRules.belt_take(session.character, Catalog.data, session.items, at)
+	EventBus.state_changed.emit()
+	return ""
 
 
 func unequip(slot: String) -> void:

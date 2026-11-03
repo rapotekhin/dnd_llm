@@ -996,7 +996,7 @@
 		"turn_unholy": "nova",
 		"wild_shape": "summon",
 		"font": "aura",
-		"breath": "cone",
+		"breath": "",
 		"martial_strike": "",
 		"flurry": "",
 		"flurry_topple": "",

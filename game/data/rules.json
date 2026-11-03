@@ -2743,6 +2743,7 @@
 	"rest": {
 		"short_rests_per_day": 2
 	},
+	"belt": {"_doc": "The belt under the doll (v0.8.4.24, as in Pathfinder): its cells hold the things at hand — only they are drunk, read, thrown, and a light there lights the way (ItemRules.belt).", "size": 5},
 	"consumables": {
 		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions]. Thrown in a fight (v0.7.12, the «Предметы» tab, PHB): `throw` — a ranged attack (improvised: no proficiency; range ft) and on a hit `damage` [dice, type] (only to `types` when given), `burning` dice at the start of the foe's turn until a DEX save DC 10 puts it out, `oiled` — the next fire damage to the foe +N, `condition` with an escape (a STR save each turn, `escape_dc`) on foes up to `max_size`. A catalog item may carry its own `use` (potions, the ointment, scrolls, wands).",
 		"alchemists_fire_flask": {"throw": {"range": 20, "improvised": true, "damage": ["1d4", "fire"], "burning": "1d4"}},
@@ -3605,7 +3606,7 @@
 			"charge": 4,
 			"pit": {"dice": "1d6"},
 			"pursuit": 6,
-			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "dice": "5", "type": "fire", "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "noise": {"reach": 30, "wall": 6, "beyond": 8}
+			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "dice": "5", "type": "fire", "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "noise": {"reach": 16, "wall": 6, "beyond": 6, "loud": {"thunder": 12}, "deaf": ["road"], "_v08_4_24": "Squares of a fight's noise (80 ft), minus `wall` per wall square on the line; a room past a way out hears it from `beyond` left, only within one location and not along a way of a `deaf` kind; a blow of a `loud` damage type adds its squares to the next round's noise."}
 		},
 		"classed": {
 			"_doc": "The class of a fighter by its SRD template (v0.8.4.9, FeatureRules.give_class): class, level, subclass. A pack's NPC or an encounter may name its own.",
@@ -4311,7 +4312,7 @@
 		}
 	},
 	"feature_actions": {
-		"_doc": "The actions of features in a fight (v0.7.64, FeatureRules): name, cost (action, bonus, free), target (a foe in reach), tip; who has it: features (all of them), stock (a resource owned), trait; pay {id, n}: the resource it needs, spent unless check_only; after_attack — after the Attack action; effects, each by kind: strike {profile, times, opts}, stance {key} on the fighter, dash, turn {types, destroy}, heal_half, for {key, rounds}, line {text}; hook — what stays code (FeatureRules._hook); spend false — the hook spends by itself.",
+		"_doc": "The actions of features in a fight (v0.7.64, FeatureRules): name, cost (action, bonus, free), target (a foe in reach), aims (laid on a square as an area, FeatureRules.aim_cells: the button aims it as an area spell, v0.8.4.24), tip; who has it: features (all of them), stock (a resource owned), trait; pay {id, n}: the resource it needs, spent unless check_only; after_attack — after the Attack action; effects, each by kind: strike {profile, times, opts}, stance {key} on the fighter, dash, turn {types, destroy}, heal_half, for {key, rounds}, line {text}; hook — what stays code (FeatureRules._hook); spend false — the hook spends by itself.",
 		"reckless": {
 			"name": "Безрассудная атака",
 			"cost": "free",
@@ -4642,6 +4643,7 @@
 			"name": "Оружие дыхания",
 			"cost": "action",
 			"target": true,
+			"aims": true,
 			"trait": "breath_weapon",
 			"hook": "breath"
 		}

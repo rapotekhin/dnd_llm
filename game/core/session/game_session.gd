@@ -276,6 +276,8 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		c["ammo_left"] = whole(c["ammo_left"])
 	if c.get("stowed") is Dictionary:
 		c["stowed"] = whole(c["stowed"])
+	if c.get("belt") is Array:  # v0.8.4.24
+		c["belt"] = (c["belt"] as Array).map(func(v: Variant) -> String: return str(v))
 	return c
 
 

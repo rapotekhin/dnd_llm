@@ -133,6 +133,9 @@ static func identify(c: Dictionary, data: Dictionary, session_items: Dictionary,
 		var att: Array = c.get("attuned", [])
 		if att.has(key):
 			att[att.find(key)] = real
+		var belt_ids: Array = c.get("belt", [])
+		if belt_ids.has(key):
+			belt_ids[belt_ids.find(key)] = real
 		Thing.rename(c, key, real)
 		lines.append("опознано: %s" % display_name(data["items"], session_items, real))
 	if not lines.is_empty():  # «Артефакция» learns from the things it sees through (v0.7.39.1)
@@ -142,6 +145,66 @@ static func identify(c: Dictionary, data: Dictionary, session_items: Dictionary,
 
 static func _artifice_xp(data: Dictionary, source: String) -> int:
 	return int(DevelopmentRules.direction(data, "artifice").get("sources", {}).get(source, 0))
+
+
+# --- the belt under the doll (v0.8.4.24, as in Pathfinder) -----------------------------------------------------------
+
+
+## A thing for the belt: one used by an act — a potion, a scroll, a wand, a flask — or a light. Food is eaten from the pack.
+static func belt_fits(data: Dictionary, session_items: Dictionary, id: String) -> bool:
+	var fx := consumable(data, id, session_items)
+	if not fx.is_empty() and not fx.has("meal"):
+		return true
+	return (def_of(data["items"], session_items, real_id(id)).get("properties", []) as Array).has("light_source")
+
+
+## The belt's cells of anybody, "" — empty: only these things are used, and a light here lights the way. A record that has
+## not laid its own belt (a foe of the engine) carries the first things that fit, in the order of its pack.
+static func belt(c: Dictionary, data: Dictionary, session_items: Dictionary) -> Array[String]:
+	var size := int(data["rules"]["belt"]["size"])
+	var inv: Dictionary = c.get("inventory", {})
+	var out: Array[String] = []
+	if c.get("belt") is Array:
+		for i: int in size:
+			var id := str((c["belt"] as Array)[i]) if i < (c["belt"] as Array).size() else ""
+			out.append(id if int(inv.get(id, 0)) > 0 else "")
+		return out
+	for id: String in inv:
+		if out.size() < size and int(inv[id]) > 0 and belt_fits(data, session_items, id):
+			out.append(id)
+	while out.size() < size:
+		out.append("")
+	return out
+
+
+static func on_belt(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> bool:
+	return not id.is_empty() and belt(c, data, session_items).has(id)
+
+
+## "" when the thing can go to the belt (the first empty cell, or `at`), otherwise the reason (localization key).
+static func belt_why(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, at: int = -1) -> String:
+	if int(c.get("inventory", {}).get(id, 0)) <= 0:
+		return "EQUIP_NOT_OWNED"
+	if not belt_fits(data, session_items, id):
+		return "BELT_NOT_FOR"
+	var cells := belt(c, data, session_items)
+	if cells.has(id):
+		return "BELT_ALREADY"
+	return "" if (at >= 0 and at < cells.size()) or cells.has("") else "BELT_FULL"
+
+
+## Lays the thing on the belt (belt_why first): the cell `at`, or the first empty one.
+static func belt_put(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, at: int = -1) -> void:
+	var cells := belt(c, data, session_items)
+	cells[at if at >= 0 else cells.find("")] = id
+	c["belt"] = cells
+
+
+static func belt_take(c: Dictionary, data: Dictionary, session_items: Dictionary, at: int) -> void:
+	var cells := belt(c, data, session_items)
+	if at >= 0 and at < cells.size():
+		cells[at] = ""
+	c["belt"] = cells
 
 
 # --- attunement (v0.7.12) --------------------------------------------------------------------------
@@ -528,6 +591,8 @@ static func can_use(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 	var fx := consumable(data, id, session_items)
 	if fx.is_empty():
 		return "%s нельзя использовать так — это не расходник с действием движка" % display_name(data["items"], session_items, id)
+	if not fx.has("meal") and not on_belt(c, data, session_items, id):  # only the belt's things are at hand (v0.8.4.24)
+		return "%s не на поясе: сначала положите на пояс под куклой" % display_name(data["items"], session_items, id)
 	var d := def_of(data["items"], session_items, id)
 	if not active(c, d, id):
 		return "%s не работает без настройки" % d.get("name", id)
