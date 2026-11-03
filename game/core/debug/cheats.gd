@@ -12,6 +12,8 @@ const TOGGLES: Array[String] = ["god", "slots"]
 const SOURCE := {"kind": "dev", "name": "консоль"}
 ## The defenses against a damage type a cheat lays: the effect's list → its word.
 const DEFENSES := {"resist": "сопротивление", "immune": "иммунитет", "vulnerable": "уязвимость"}
+## The rows of exhaustion's own steps (exhaustion_3): read by the level, never laid by hand.
+static var EXHAUSTION_STEP := RegEx.create_from_string("^exhaustion_\\d+$")
 ## What a search is over: a command's argument kind → where its entries live.
 const KINDS: Array[String] = ["item", "monster", "spell", "feature", "trait", "room", "class", "damage", "condition"]
 ## Fields of the hero a rebuild keeps: who it is, what it carries, what lies on it and what it chose at creation beside
@@ -67,11 +69,22 @@ static func pool(s: GameSession, data: Dictionary, kind: String) -> Dictionary:
 				types[id] = {"name": str(data["misc"]["damage_types"][id])}
 			return types
 		"condition":
-			var conds := {}
-			for id: String in data["rules"]["conditions"]:
-				conds[id] = {"name": ConditionRules.name_of(data, id)}
-			return conds
+			return conditions(data)
 	return {}
+
+
+## The statuses a creature can have: the conditions of the rules and the statuses of spells with a row of their own
+## (Faerie Fire's light, Ray of Enfeeblement), not a thing's (burning, oiled) nor a step of exhaustion. {id: {name}}.
+static func conditions(data: Dictionary) -> Dictionary:
+	var out := {}
+	var ids: Array = (data["rules"]["conditions"] as Dictionary).keys()
+	for id: String in data["rules"].get("condition_effects", {}):
+		if not id.begins_with("_") and not ids.has(id):
+			ids.append(id)
+	for id: String in ids:
+		if not ThingRules.lies_on_things(data, id) and not EXHAUSTION_STEP.search(id):
+			out[id] = {"name": ConditionRules.name_of(data, id)}
+	return out
 
 
 ## Entries whose id or name (Russian or English) holds `query`, the ones that begin with it first: [{id, name}].
@@ -159,6 +172,8 @@ static func defense(s: GameSession, data: Dictionary, who: String, kind: String,
 ## lifted. Lines.
 static func condition(s: GameSession, data: Dictionary, who: String, cond: String, on: bool) -> Array[String]:
 	var w := Sheet.own(s, who)
+	if not on and cond == "exhaustion":  # a level of the one scale off, as a rest takes it
+		return ConditionRules.add_exhaustion(s, data, -1, "", who)
 	if not on:
 		ConditionRules.remove(Sheet.holder(s, w), cond)
 		return ["снято: %s" % ConditionRules.name_of(data, cond)]

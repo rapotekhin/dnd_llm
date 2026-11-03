@@ -1,6 +1,7 @@
 """The author's test checklist: every item, monster, ability, spell and defense of the game with its dev console command.
 
-One .xlsx with a sheet per kind (ordinary items, magic items, monsters, abilities, spells, resistances and immunities);
+One .xlsx with a sheet per kind (ordinary items, magic items, monsters, abilities, spells, conditions, resistances and
+immunities);
 each row has the command to put it into the game (the dev console, `--dev` or «Режим разработчика»: docs/tech/godot-client.md
 «Отладка») and the author's columns: проверено, есть баг, исправлено, комментарий. Run again after the data changes:
 the marks and comments already in the file stay with their rows (by the sheet and the id).
@@ -12,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
@@ -260,9 +262,67 @@ def defenses_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
     return "Сопротивления и иммунитеты", cols, rows
 
 
+def creature_conditions(data: Data) -> list[str]:
+    """What `cond` lays (Cheats.conditions): the rules' conditions and the spells' statuses, not a thing's nor an exhaustion step."""
+    effects = data.rules.get("condition_effects", {})
+    ids = list(data.rules["conditions"]) + [k for k in effects if not k.startswith("_") and k not in data.rules["conditions"]]
+    return [i for i in ids if "thing" not in effects.get(i, {}).get("on", []) and not re.fullmatch(r"exhaustion_\d+", i)]
+
+
+# A status row's words (rules.condition_effects): what it does to rolls.
+MODES = {"advantage": "преимущество", "disadvantage": "помеха", "auto_fail": "автопровал"}
+EFFECT_WORDS = {"attack": "его атаки", "attacked": "атаки по нему", "attacked_near": "атаки по нему вблизи",
+                "attacked_far": "атаки по нему издалека", "checks": "его проверки"}
+
+
+def effect_text(row: dict) -> str:
+    parts = [f"{word}: {MODES.get(str(row[k]), row[k])}" for k, word in EFFECT_WORDS.items() if k in row]
+    parts += [f"{k}" for k in ("no_move", "no_threat", "resist_all", "crit_near") if row.get(k)]
+    return "; ".join(parts)
+
+
+def _holds(value: object, cond: str, keys: tuple[str, ...]) -> bool:
+    """`cond` under one of `keys` anywhere in a row of data (a list or a value)."""
+    if isinstance(value, dict):
+        return any((k in keys and (v == cond or (isinstance(v, list) and cond in v))) or _holds(v, cond, keys) for k, v in value.items())
+    if isinstance(value, list):
+        return any(_holds(v, cond, keys) for v in value)
+    return False
+
+
+def conditions_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
+    """A row per status: the commands to lay it and lift it, what it does, who lays it and lifts it in the game's data."""
+    cols = ["Состояние", "id", "Вид", "Герою", "Юниту", "Снять", "Что делает", "Накладывают заклинания", "Накладывают монстры",
+            "Снимают", "Иммунны"]
+    lay_keys = ("conditions", "condition", "curse", "cond", "flag", "status", "hold")
+    combat = data.rules.get("combat", {})
+    by_spell: dict[str, list] = {}  # a spell → its rows in every table that lays a status: condition_spells, spell_effects, riders
+    for table in (combat.get("condition_spells", {}), data.rules.get("spell_effects", {}), combat.get("riders", {})):
+        for k, v in table.items():
+            by_spell.setdefault(k, []).append(v)
+    cures = {**data.rules.get("spell_effects", {}), **data.rules.get("hero_effects", {}).get("spell_cures", {})}
+    rows = []
+    for cond in creature_conditions(data):
+        text = str(data.rules["conditions"].get(cond, ""))
+        text = text.split(":", 1)[1].strip() if ":" in text else text
+        spells = sorted({data.spell_name(s) for s, v in by_spell.items() if not s.startswith("_") and _holds(v, cond, lay_keys)})
+        if not text:
+            text = effect_text(data.rules.get("condition_effects", {}).get(cond, {})) or "по правилам заклинания: " + ", ".join(spells)
+        mons = sorted({f"{m.get('name', mid)}: {a.get('name', '')}" for mid, m in data.monsters.items()
+                       for a in m.get("actions", []) + m.get("reactions", []) if _holds(a.get("effect", {}), cond, lay_keys)})
+        lift = sorted({data.spell_name(s) for s, v in cures.items() if not s.startswith("_") and _holds(v, cond, ("remove", "immune"))})
+        immune = sorted(m.get("name", mid) for mid, m in data.monsters.items() if cond in map(str, m.get("condition_immunities", [])))
+        rows.append({"id": cond, "Состояние": data.condition_name(cond), "Вид": "5e" if cond in data.rules["conditions"] else "статус заклинания",
+                     "Герою": f"cond {cond}", "Юниту": f"@<цель> cond {cond}", "Снять": f"cond {cond} off", "Что делает": text,
+                     "Накладывают заклинания": ", ".join(spells), "Накладывают монстры": "\n".join(mons),
+                     "Снимают": ", ".join(lift), "Иммунны": ", ".join(immune)})
+    return "Состояния", cols, rows
+
+
 # --- the workbook ----------------------------------------------------------------------------------------------------
 
-WIDTHS = {"Описание": 70, "Способности": 50, "Заклинания": 45, "Инвентарь": 35, "Защиты": 35, "Комментарий": 40, "Монстры с ней": 50,
+WIDTHS = {"Описание": 70, "Что делает": 60, "Накладывают заклинания": 35, "Накладывают монстры": 45, "Снимают": 30, "Иммунны": 40,
+          "Снять": 24, "Способности": 50, "Заклинания": 45, "Инвентарь": 35, "Защиты": 35, "Комментарий": 40, "Монстры с ней": 50,
           "Вещи с ней": 35, "Классы": 30, "Команда": 30, "Союзник": 28, "На юнита": 32, "Юниту": 26, "Герою": 22}
 
 
@@ -292,7 +352,7 @@ def build(data: Data, path: Path) -> dict[str, int]:
     bold = Font(bold=True)
     head_fill = PatternFill("solid", fgColor="DDD5C4")
     for title, cols, rows in (items_sheet(data, False), items_sheet(data, True), monsters_sheet(data), abilities_sheet(data),
-                              spells_sheet(data), defenses_sheet(data)):
+                              spells_sheet(data), conditions_sheet(data), defenses_sheet(data)):
         ws = wb.create_sheet(title)
         all_cols = cols + MARKS
         ws.append(all_cols)

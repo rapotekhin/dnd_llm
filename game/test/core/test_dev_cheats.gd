@@ -177,3 +177,22 @@ func test_immunity_and_vulnerability_on_a_unit_and_on_the_hero() -> void:
 	Dev.run("immune poison")
 	assert_int(Sheet.taken(s, Catalog.data, Sheet.HERO, "poison", 10)).is_equal(0)
 	assert_int(Sheet.taken(s, Catalog.data, Sheet.HERO, "cold", 10)).is_equal(10)
+
+
+func test_conditions_on_a_unit_and_on_the_hero_with_the_spells_statuses() -> void:
+	TestUtils.fight(s, Catalog.data, [{"monster": "goblin", "col": 1}])
+	var g := CombatRules.fighter(s, TestUtils.foe(s, 1))
+	assert_str(Dev.run("@гоблин cond испуган")).contains("Испуган")
+	assert_bool(ConditionRules.has(g, "frightened")).is_true()
+	assert_str(Dev.run("@гоблин cond Светится")).contains("Светится")
+	assert_array(ConditionRules.attack(Catalog.data, {}, g, true)["adv"]).is_not_empty()
+	Dev.run("@гоблин cond outlined off")
+	assert_bool(ConditionRules.has(g, "outlined")).is_false()
+	assert_str(Dev.run("cond горит")).contains("не найдено")
+	Dev.run("cond exhaustion")
+	Dev.run("cond exhaustion")
+	assert_int(ConditionRules.exhaustion(s.character)).is_equal(2)
+	Dev.run("cond exhaustion off")
+	assert_int(ConditionRules.exhaustion(s.character)).is_equal(1)
+	assert_str(Dev.run("cond ослеплён")).contains("Ослеплён")
+	assert_bool(ConditionRules.has(s.character, "blinded")).is_true()
