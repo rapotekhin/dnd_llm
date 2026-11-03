@@ -117,7 +117,7 @@ func run() -> void:
 	var f := fx.validate(s, data, "t-qb", {"kind": "furnish", "props": [{"name": "Доска объявлений", "text": "Заказы Брода"}]})
 	if f["accepted"]:
 		fx.apply(s, "t-qb", [f["effect_id"]])
-	var board := str(PropRules.room_props(s, s.room_id)[0]["id"])
+	var board := str(PropRules.room_props(s, s.room_id).filter(func(x: Dictionary) -> bool: return QuestGen.is_board(data, x))[0]["id"])  # the pack's own or the furnished one
 	QuestGen.mark_board_read(s, board)
 	fx.searched_quests["t-qd"] = true
 	var o := fx.validate(s, data, "t-qd", {"kind": "create", "what": "quest", "giver": "npc_smith", "board_prop_id": board,

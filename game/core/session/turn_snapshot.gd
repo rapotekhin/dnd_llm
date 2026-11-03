@@ -214,7 +214,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 ## The hero's conditions for the master, invisibility from a held spell included (v0.7.5).
 ## The things of the room for the master, the trader's wares among them (v0.7.22.8).
 static func _props(s: GameSession, data: Dictionary) -> Array[Dictionary]:
-	PropRules.ensure_wares(s, data, s.room_id)
+	PropRules.ensure(s, data, s.room_id)
 	return PropRules.snapshot(s, data, s.room_id)
 
 

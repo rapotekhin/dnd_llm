@@ -63,10 +63,11 @@ static func board_why_not(s: GameSession, data: Dictionary, prop_id: String) -> 
 	return "BOARD_READ_TODAY"
 
 
-static func mark_board_read(s: GameSession, prop_id: String) -> void:
+## Read when orders hang on it (v0.8.4.25.4): a turn that put none up leaves it unread, to be read again.
+static func mark_board_read(s: GameSession, prop_id: String, room_id := "") -> void:
 	var gen := WorldGen.generated(s)
 	var read: Dictionary = gen.get("boards_read", {})
-	read["board:%s:%s" % [s.room_id, prop_id]] = {"read_day": s.day, "fresh_day": 0}
+	read["board:%s:%s" % [s.room_id if room_id.is_empty() else room_id, prop_id]] = {"read_day": s.day, "fresh_day": 0}
 	gen["boards_read"] = read
 
 
@@ -289,6 +290,8 @@ static func apply_quest(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 	if not made.is_empty():
 		q["giver"] = WorldGen.apply_npc(s, data, {"npc": made["npc"], "room": made["room"], "items": made.get("items", {})})
 	_store(s, data, id, q)
+	if q.has("board"):
+		mark_board_read(s, str(q["board"]["prop"]), str(q["board"]["room"]))
 	return id
 
 

@@ -3477,7 +3477,7 @@
 		"_doc": "The master readies ahead (v0.8.4.25, the author's decision of 2026-11-02, PrepareRules): a room's furnishing, a board's orders, a quest of a person around and the next act of a taken quest, on a second line of requests beside the player's own turn. `depth` — the rooms readied around the hero by the map's ways (2: neighbours and theirs); `parallel` — the background turns at once; `candidates` — the catalog things the engine offers for a room instead of a search: `everyday` for any room, then those of its kind, role and tags, then the goods of a trader who lives there, cut to the count by the game's seed; `quests_per_day` — people around readied with a quest each day, within `quest_depth` rooms of the hero.",
 		"on": true,
 		"depth": 2,
-		"parallel": 2,
+		"parallel": 16,
 		"candidates": 40,
 		"quests_per_day": 2,
 		"quest_depth": 1,

@@ -279,6 +279,7 @@
 							"npcs": {"$ref": "#/$defs/strings"},
 							"open_edges": {"type": "array", "items": {"type": "object", "required": ["text", "terrain"], "properties": {"text": {"$ref": "#/$defs/nonempty"}, "terrain": {"type": "array", "items": {"type": "string"}, "minItems": 1}, "new_location": {"type": "boolean"}}, "additionalProperties": false}},
 							"hooks": {"$ref": "#/$defs/strings"},
+							"props": {"type": "array", "items": {"type": "object", "required": ["id", "name"], "properties": {"id": {"$ref": "#/$defs/nonempty"}, "name": {"$ref": "#/$defs/nonempty"}, "description": {"type": "string"}, "text": {"type": "string"}}, "additionalProperties": false}},
 							"secrets": {
 								"type": "array",
 								"items": {

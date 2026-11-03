@@ -120,7 +120,7 @@ static func target(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 		bag["name"] = bag_name(data, s.character, id)
 		bag["container"] = bag["kind"]
 		return bag
-	PropRules.ensure_wares(s, data, s.room_id)  # the trader's wares (v0.7.22.8)
+	PropRules.ensure(s, data, s.room_id)  # the pack's fixed things, the trader's wares (v0.7.22.8)
 	var p := PropRules.find(s, s.room_id, id)
 	return p if not p.is_empty() and is_container(p) else {}
 

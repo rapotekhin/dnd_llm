@@ -238,7 +238,7 @@
 | Магических вещей | 1 до долгого отдыха | `rules.json` `reward_budget.magic_per_rest` |
 | Вещей в обстановке | 10 | `rules.json` `props.max_per_room` |
 | Время за ход | до 720 минут | `rules.json` `time.max_master_minutes` |
-| Фоновых ходов заготовки | 2 сразу на сессию; последние 20 % дневного лимита — только ходам игрока | `rules.json` `prepare.parallel`; `LLM_SERVER_MAX_BACKGROUND`, `LLM_SERVER_BACKGROUND_RESERVE` |
+| Фоновых ходов заготовки | 16 сразу на сессию (с v0.8.4.25.4); последние 20 % дневного лимита — только ходам игрока | `rules.json` `prepare.parallel`; `LLM_SERVER_MAX_BACKGROUND`, `LLM_SERVER_BACKGROUND_RESERVE` |
 | Квестов людей заранее | 2 в день, люди в комнате героя и рядом (`quest_depth` 1) | `rules.json` `prepare.quests_per_day` |
 
 ## Нападение на NPC (v0.7.22.16)

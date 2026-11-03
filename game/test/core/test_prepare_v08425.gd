@@ -70,6 +70,9 @@ func test_the_jobs_go_by_need_and_none_twice() -> void:
 	assert_array(rooms).not_contains(["brod-tavern-hall"])
 	for r: String in rooms:
 		assert_bool(PrepareRules.around(s, data, 2).has(r)).is_true()
+	var first := func(kind: String) -> int: return kinds.find(kind)
+	assert_int(first.call("board")).is_less(first.call("furnish"))  # v0.8.4.25.4: a board does not stale with the hour
+	assert_dict(jobs[first.call("board")]).contains_key_value("prop", "f_board").contains_key_value("room", "brod-tavern-hall")
 	var quests := jobs.filter(func(j: Dictionary) -> bool: return j["kind"] == "quest")
 	assert_int(quests.size()).is_less_equal(int(PrepareRules.cfg(data)["quests_per_day"]))
 	var again := PrepareRules.jobs(s, data, ["furnish:" + str(rooms[0])])  # asked on the line already
@@ -124,11 +127,15 @@ func test_a_furnishing_of_a_changed_room_is_thrown_away() -> void:
 
 
 func test_orders_readied_for_a_board_are_put_up_when_it_is_read() -> void:
-	var r0 := fx.validate(s, data, "t-b", {"kind": "furnish", "props": [{"name": "Доска объявлений", "text": "Заказы Брода"}]})
-	fx.apply(s, "t-b", [r0["effect_id"]])
-	var board := str(PropRules.room_props(s, s.room_id)[0]["id"])
+	var board := "f_board"  # the pack's own board of the hall, there before the room is furnished
+	assert_bool(PropRules.needs_furnish(s, s.room_id)).is_true()
 	var job: Dictionary = PrepareRules.jobs(s, data).filter(func(j: Dictionary) -> bool: return j["kind"] == "board")[0]
 	assert_str(str(job["prop"])).is_equal(board)
+	assert_bool(PropRules.needs_furnish(s, s.room_id)).is_true()  # the board is no furnishing
+	var r0 := fx.validate(s, data, "t-b", {"kind": "furnish", "props": [{"name": "Доска для объявлений"}, {"name": "Лавка", "body": "bench"}]})
+	fx.apply(s, "t-b", [r0["effect_id"]])
+	assert_int(PropRules.room_props(s, s.room_id).filter(func(p: Dictionary) -> bool: return QuestGen.is_board(data, p)).size()).is_equal(1)
+	assert_bool(QuestGen.board_unread(s, s.room_id, board)).is_true()
 	s.room_id = PrepareRules.around(s, data, 1)[0]  # the hero walked away: the board is readied from afar
 	var order := {"kind": "create", "what": "quest", "board_prop_id": board, "giver": "new:goat", "title": "Пропавшая коза",
 		"difficulty": "easy", "description": "Коза ушла в лес.", "offer_text": "Найдите козу!",
@@ -139,6 +146,7 @@ func test_orders_readied_for_a_board_are_put_up_when_it_is_read() -> void:
 	var lines := _lay(PrepareRules.orders(s, "brod-tavern-hall", board))
 	assert_str(" ".join(lines)).contains("Пропавшая коза")
 	assert_int(QuestGen.offered_by(s, "board:brod-tavern-hall:" + board).size()).is_equal(1)
+	assert_bool(QuestGen.board_unread(s, s.room_id, board)).is_false()  # read once an order hangs on it
 
 
 func test_a_persons_quest_waits_for_the_question() -> void:

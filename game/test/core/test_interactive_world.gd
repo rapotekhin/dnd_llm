@@ -21,7 +21,7 @@ func _session() -> GameSession:
 
 func _furnish(s: GameSession, fx: EffectEngine) -> void:
 	var r := fx.validate(s, data, "t-1", {"kind": "furnish", "props": [
-		{"name": "Доска объявлений", "description": "Листки на гвоздях", "text": "Пропал лесоруб Влас. Видевших — к капитану Ратмиру."},
+		{"name": "Записка у стойки", "description": "Приколота к балке", "text": "Пропал лесоруб Влас. Видевших — к капитану Ратмиру."},
 		{"name": "Кружка Бруно", "item_id": "flask_or_tankard", "owner": "npc_innkeeper"},
 		{"name": "Свеча на столе", "item_id": "candle"},
 	]})
@@ -38,7 +38,7 @@ func test_a_room_is_furnished_once_and_kept() -> void:
 	assert_bool(PropRules.needs_furnish(s, s.room_id)).is_false()
 	var snap: Dictionary = TurnSnapshot.build(s, data, 4000)
 	assert_bool(snap["scene"]["furnish"]).is_false()
-	assert_int((snap["scene"]["props"] as Array).filter(func(p: Dictionary) -> bool: return not str(p["prop_id"]).begins_with("w_")).size()).is_equal(3)  # and Bruno's wares (v0.7.22.8)
+	assert_int((snap["scene"]["props"] as Array).filter(func(p: Dictionary) -> bool: return not str(p["prop_id"]).begins_with("w_")).size()).is_equal(4)  # and the pack's board (v0.8.4.25.4), and Bruno's wares (v0.7.22.8)
 	assert_str(str(snap["scene"]["props"][0]["text"])).contains("Пропал лесоруб")
 	assert_bool(snap["scene"]["props"][1]["portable"]).is_true()
 	assert_str(str(fx.validate(s, data, "t-2", {"kind": "furnish", "props": [{"name": "Стул"}]}).get("reason", ""))).contains("уже обставлена")

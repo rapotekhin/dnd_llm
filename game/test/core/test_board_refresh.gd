@@ -29,6 +29,17 @@ func test_a_board_is_unread_until_looked_at() -> void:
 	assert_str(QuestGen.board_why_not(s, data, "p1")).is_equal("BOARD_READ_TODAY")
 
 
+## v0.8.4.25.4: the master's turn at a board that put no order up leaves it unread — the hero reads it again.
+func test_a_board_is_read_only_once_an_order_hangs_on_it() -> void:
+	var s := TestUtils.new_session()
+	var plan := {"quest": {"title": "Листок", "giver": "", "steps": [{"text": "Сделать"}], "board": {"room": s.room_id, "prop": "p1"}}}
+	assert_str(QuestGen.board_why_not(s, data, "p1")).is_empty()
+	assert_bool(QuestGen.board_unread(s, s.room_id, "p1")).is_true()  # nothing was put up: still to read
+	QuestGen.apply_quest(s, data.duplicate(true), plan)  # the world grows in this test only
+	assert_bool(QuestGen.board_unread(s, s.room_id, "p1")).is_false()
+	assert_str(QuestGen.board_why_not(s, data, "p1")).is_equal("BOARD_READ_TODAY")
+
+
 func test_taking_an_order_fills_the_board_again_in_d4_days() -> void:
 	var s := TestUtils.new_session()
 	QuestGen.mark_board_read(s, "p1")

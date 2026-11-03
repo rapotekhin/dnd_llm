@@ -79,7 +79,7 @@ func _rebuild() -> void:
 	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
-	PropRules.ensure_wares(s, data, s.room_id)  # the trader's wares (v0.7.22.8)
+	PropRules.ensure(s, data, s.room_id)  # the pack's fixed things, the trader's wares (v0.7.22.8)
 	var can_act := Backend.is_ready() and not GameState.is_busy() and not s.in_conversation() and not CombatRules.active(s)
 	title.text = str(GameState.world().room(s.room_id).get("name", s.room_id))
 	_object(s, data)

@@ -242,8 +242,9 @@ def test_a_background_turn_runs_beside_the_players_turn(client):
         assert ws.receive_json()["result"]["turn_id"] == "t-1"
 
 
-def test_the_background_line_has_its_own_limit(client):
-    with client.websocket_connect("/ws", headers=AUTH) as ws:
+def test_the_background_line_has_its_own_limit(data_dir):
+    with TestClient(create_app(make_settings(data_dir=data_dir, max_background_turns=2))) as client, \
+            client.websocket_connect("/ws", headers=AUTH) as ws:
         hello(ws)
         prepare(ws, "g-2", "t-1")
         first = ws.receive_json()

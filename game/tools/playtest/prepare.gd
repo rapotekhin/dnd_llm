@@ -51,10 +51,11 @@ func run() -> void:
 	await _go(gs, HALL)
 	var fx: EffectEngine = gs.effects
 	var r := fx.validate(s, data, "t-board", {"kind": "furnish", "cause": "староста прибил доску у двери", "props": [{"name": "Доска объявлений", "text": "Заказы Брода"}]})
-	if not step("a board is put up in the hall", bool(r["accepted"]), str(r)):
+	step("no second board beside the pack's own (v0.8.4.25.4)", not bool(r["accepted"]), str(r))
+	var boards := PropRules.room_props(s, HALL).filter(func(p: Dictionary) -> bool: return QuestGen.is_board(data, p))
+	if not step("the hall has the pack's board", boards.size() == 1 and str(boards[0]["id"]) == "f_board", str(boards)):
 		return
-	fx.apply(s, "t-board", [r["effect_id"]])
-	var board := str(PropRules.room_props(s, HALL).filter(func(p: Dictionary) -> bool: return QuestGen.is_board(data, p))[0]["id"])
+	var board := str(boards[0]["id"])
 	gs._prepare()
 	var key := "%s:%s" % [HALL, board]
 	step("the board's orders are readied", await wait_until(func() -> bool: return PrepareRules.part(s, PrepareRules.BOARDS).has(key), 60.0))

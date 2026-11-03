@@ -52,8 +52,10 @@ static func fingerprint(s: GameSession, data: Dictionary, room: String) -> Strin
 	return str(hash([r.get("name", ""), r.get("description", ""), SceneRules.tags(s, data["world"], room), r.get("npcs", [])]))
 
 
-## What to ready now, the most wanted first: the next act of a quest, then the rooms by distance (again when the hour,
-## the weather or the people of one changed: its description is told for them), the boards, the people around. [{kind: act|furnish|board|quest, key, …}] without what is readied already or asked on the line (`busy`).
+## What to ready now, the most wanted first: the next act of a quest, the boards (the hero's own first: they do not
+## stale with the hour, v0.8.4.25.4), then the rooms by distance (again when the hour, the weather or the people of one
+## changed: its description is told for them), the people around. [{kind: act|board|furnish|quest, key, …}] without
+## what is readied already or asked on the line (`busy`).
 static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if not on(data) or CombatRules.active(s):
@@ -66,12 +68,8 @@ static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Di
 			if not part(s, ACTS).has(key) and not busy.has("act:" + key):
 				out.append({"kind": "act", "key": key, "quest": qid})
 	var rooms := around(s, data, int(c.get("depth", 2)))
-	for room: String in rooms:
-		var rec: Dictionary = part(s, ROOMS).get(room, {})
-		if PropRules.needs_furnish(s, room) and not busy.has("furnish:" + room) \
-				and (str(rec.get("ver", "")) != fingerprint(s, data, room) or str(rec.get("moment", "")) != moment(s, data, room)):
-			out.append({"kind": "furnish", "key": room, "room": room})
 	for room: String in [s.room_id] + rooms:
+		PropRules.ensure_fixed(s, data, room)  # a pack's board is there before the room is furnished
 		for p: Dictionary in PropRules.room_props(s, room):
 			if not QuestGen.is_board(data, p):
 				continue
@@ -79,6 +77,11 @@ static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Di
 			var left := int(QuestGen.cfg(data)["max_offered"]) - QuestGen.offered_by(s, "board:" + key).size()
 			if left > 0 and not part(s, BOARDS).has(key) and not busy.has("board:" + key):
 				out.append({"kind": "board", "key": key, "room": room, "prop": str(p["id"]), "left": left})
+	for room: String in rooms:
+		var rec: Dictionary = part(s, ROOMS).get(room, {})
+		if PropRules.needs_furnish(s, room) and not busy.has("furnish:" + room) \
+				and (str(rec.get("ver", "")) != fingerprint(s, data, room) or str(rec.get("moment", "")) != moment(s, data, room)):
+			out.append({"kind": "furnish", "key": room, "room": room})
 	var today := TimeRules.today(s, s.prepared, "quests_today") + busy.filter(func(b: Variant) -> bool: return str(b).begins_with("quest:")).size()
 	var near: Array[String] = [s.room_id]
 	near.append_array(around(s, data, int(c.get("quest_depth", 1))))

@@ -377,7 +377,7 @@ func _rebuild() -> void:
 			cb.theme_type_variation = UiTheme.ACCENT_BUTTON
 		# «Взаимодействие с местом» (v0.7.22.7, big test #17): every thing of the room in its own window — take one,
 		# open, look closer, «Забрать всё».
-		PropRules.ensure_wares(s, Catalog.data, s.room_id)  # the trader's wares (v0.7.22.8)
+		PropRules.ensure(s, Catalog.data, s.room_id)  # the pack's fixed things, the trader's wares (v0.7.22.8)
 		_content = _bar.page(ActionBar.PLACE)
 		var n_things := PropRules.room_props(s, s.room_id).size() + CrimeRules.bodies_here(s, Catalog.data).size()
 		var pb := Button.new()

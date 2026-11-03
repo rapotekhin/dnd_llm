@@ -81,7 +81,7 @@ func run() -> void:
 		fx.apply(s, "t-pb", [f["effect_id"]])
 	var board := ""
 	for p: Dictionary in PropRules.room_props(s, s.room_id):  # the real master may have furnished the hall before
-		if str(p.get("name", "")) == "Доска объявлений":
+		if board.is_empty() and QuestGen.is_board(data, p):  # the pack's own board of the hall (v0.8.4.25.4)
 			board = str(p["id"])
 	node("EventBus").state_changed.emit()
 	await frames(3)

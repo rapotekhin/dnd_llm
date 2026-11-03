@@ -38,6 +38,25 @@ static func abandon(s: GameSession, data: Dictionary, room_id: String) -> Array[
 	return gone
 
 
+## What the engine keeps in a room beside the master's furnishing: the pack's fixed things and a trader's wares.
+static func ensure(s: GameSession, data: Dictionary, room_id: String) -> void:
+	ensure_fixed(s, data, room_id)
+	ensure_wares(s, data, room_id)
+
+
+## The pack's fixed things of a room (v0.8.4.25.4: a notice board is there before anyone furnishes the room, so its
+## orders are readied from the start): `props` of the room, kept as «f_<id>» and never counted as its furnishing.
+static func ensure_fixed(s: GameSession, data: Dictionary, room_id: String) -> void:
+	var list: Array = s.props.get(room_id, [])
+	for spec: Dictionary in data["world"]["rooms"].get(room_id, {}).get("props", []):
+		var pid := "f_" + str(spec["id"])
+		if list.any(func(x: Dictionary) -> bool: return str(x["id"]) == pid):
+			continue
+		list.append({"id": pid, "name": str(spec["name"]), "description": str(spec.get("description", "")), "item_id": "",
+			"owner": "", "text": str(spec.get("text", "")), "state": "", "fixed": true})
+		s.props[room_id] = list
+
+
 ## The trader's wares (v0.7.22.8, big test #4: the goods of a killed smith were nowhere): a container «Товары: …» in
 ## the trader's own room whose contents ARE its stock (TradeRules.merchant) — a deal, a theft and a death all show in
 ## it; taking from it before the trader is a theft. Made and linked anew whenever the room is looked at.
@@ -131,9 +150,12 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 	var gift := 0  # what nobody owns inside the containers: the master's gift (v0.7.18.1)
 	var made := {}
 	var props: Array = []
+	var fixed: Array = room_props(s, room).filter(func(p: Dictionary) -> bool: return bool(p.get("fixed", false)))
 	for spec: Variant in specs:
 		if not (spec is Dictionary) or str(spec.get("name", "")).strip_edges().is_empty():
 			return {"reason": "у каждой вещи нужно имя"}
+		if fixed.any(func(f: Dictionary) -> bool: return _same(data, f, spec)):
+			continue  # the pack's own board is there already: not a second one
 		var item := str(spec.get("item_id", "")) if spec.get("item_id") != null else ""
 		if spec.get("item") != null and spec["item"] is Dictionary:  # a portable thing the catalog lacks (v0.7.34.4)
 			var chk := ItemRules.check_generated(data["items"], spec["item"], int(s.character.get("level", 1)), data.get("spells", {}))
@@ -173,12 +195,18 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			if owner.is_empty():
 				gift += int(box["value"])
 		props.append(prop)
+	if props.is_empty():
+		return {"reason": "эти вещи в комнате уже есть — обставь её другими"}
 	if total > value_cap:
 		return {"reason": "переносные вещи комнаты стоят %d мм при пределе %d для %s уровня — убери дорогое" % [total, value_cap, level]}
 	if gift > EffectEngine.budget_left(s, data):
 		return {"reason": "ничейное в контейнерах стоит %d мм — больше, чем мастер может дать до долгого отдыха (%d мм); положи меньше или дай им хозяина" % [gift, EffectEngine.budget_left(s, data)]}
 	return {"plan": {"room": room, "props": props, "made": made, "reward": gift, "add": add, "cause": cause},
 		"summary": ("Добавлено в комнату (%s): " % cause if add else "Обстановка: ") + ", ".join(props.map(func(p: Dictionary) -> String: return p["name"]))}
+
+
+static func _same(data: Dictionary, a: Dictionary, b: Dictionary) -> bool:
+	return str(a["name"]).to_lower() == str(b["name"]).strip_edges().to_lower() or (QuestGen.is_board(data, a) and QuestGen.is_board(data, b))
 
 
 ## Who may own the room's things: who is here now and who lives or works here though out at this hour (v0.8.4.25: a room
@@ -194,7 +222,7 @@ static func owners(s: GameSession, data: Dictionary, room: String) -> Array[Stri
 
 ## A thing of the room's furnishing, not the hero's dropped one, a seized one or a trader's wares.
 static func furnished(p: Dictionary) -> bool:
-	return not (bool(p.get("dropped", false)) or p.has("wares") or bool(p.get("seized", false)))
+	return not (bool(p.get("dropped", false)) or p.has("wares") or bool(p.get("seized", false)) or bool(p.get("fixed", false)))
 
 
 static func apply_furnish(s: GameSession, plan: Dictionary) -> void:

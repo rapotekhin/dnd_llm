@@ -127,7 +127,7 @@ class Settings:
     max_concurrent_turns: int = 1
     # The second line (0.106.0): background turns of one game beside its own turn, and the share of the daily limit they
     # leave to the player's turns — the master readies ahead only while more than it is left (the author, 2026-11-02).
-    max_background_turns: int = 2
+    max_background_turns: int = 16  # 0.8.4.25.4: as many as the client's rules.prepare.parallel
     background_reserve: float = 0.2
     max_message_bytes: int = MAX_MESSAGE_BYTES
     ws_ping_interval: float = 20.0

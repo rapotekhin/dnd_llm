@@ -399,7 +399,7 @@ const LABELS = {
 	reactions: 'реакции', multiattack: 'мультиатака', languages: 'языки', resistances: 'сопротивления', immunities: 'иммунитеты',
 	vulnerabilities: 'уязвимости', condition_immunities: 'иммунитет к состояниям', class: 'класс', subclass: 'подкласс',
 	hit_die: 'кость хитов', race: 'раса', subraces: 'подрасы', ability_bonuses: 'бонусы характеристик', features: 'умения',
-	location_id: 'локация', exits: 'выходы', npcs: 'NPC', hooks: 'зацепки', secrets: 'тайны', encounter: 'встреча',
+	location_id: 'локация', exits: 'выходы', npcs: 'NPC', hooks: 'зацепки', props: 'вещи пакета', secrets: 'тайны', encounter: 'встреча',
 	enemies: 'враги', allies: 'союзники', waves: 'волны', help: 'подмога', loot: 'добыча', open_edges: 'открытые края',
 	ways: 'проходы', variants: 'варианты по флагам', safe: 'безопасный отдых', tags: 'метки', dark: 'темно',
 	indoor: 'в помещении', role: 'роль', gender: 'пол', personality: 'характер', trader: 'торговец', stock: 'товар',

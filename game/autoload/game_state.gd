@@ -2379,9 +2379,9 @@ func read_board(prop_id: String) -> String:
 	if not why.is_empty():
 		return why
 	var p := PropRules.find(session, session.room_id, prop_id)
-	QuestGen.mark_board_read(session, prop_id)
 	var room_left := int(QuestGen.cfg(Catalog.data)["max_offered"]) - QuestGen.offered_by(session, "board:%s:%s" % [session.room_id, prop_id]).size()
 	if room_left <= 0:  # still full of old orders: nothing new fits, no master's turn
+		QuestGen.mark_board_read(session, prop_id)  # a new order marks it read when it is put up (QuestGen.apply_quest)
 		EventBus.state_changed.emit()
 		return ""
 	var text := tr("BOARD_READ_SAY").format({"name": p.get("name", prop_id)})
