@@ -259,45 +259,48 @@
 
 Источник — колонка «Автотест» [чек-листа](../checklist/test-checklist.xlsx) (`ChecklistProbe`). Здесь строки, где правило решает только мастер словами: 28 обычных вещей, 38 магических, 51 заклинание и 49 способностей, всего 166. Ниже они разложены по механикам, которые в движке уже есть: нужны строки данных и проба, нового понятия не нужно. Каждая группа — отдельный шаг. Шаг закрыт, когда его строки в чек-листе стали «работает», фикстура `checklist_probes.json` переписана, а мастеру осталось только описание.
 
-**Магические вещи на готовых механиках — 32 из 38**
+**Магические вещи на готовых механиках — v0.8.4.26: 21 из 38 стали «работает»**
 
-- [ ] Передвижение: строки `rules.combat.moves` и `Jump` на свойстве вещи.
-  - `ring_of_swimming`
-  - `gloves_of_swimming_and_climbing`
-  - `slippers_of_spider_climbing`
-  - `cloak_of_the_manta_ray` (плавание и дыхание под водой)
-  - `winged_boots`
-  - `broom_of_flying`
-  - `ring_of_jumping`
-  - `ring_of_water_walking` (брод проходим, `WayRules`)
-- [ ] Заклинание вещи с зарядами (`ItemRules.charges`) по одной дороге действия:
-  - `circlet_of_blasting` — Палящий луч
-  - `eyes_of_charming` — Очарование личности
-  - `wand_of_magic_detection` — Обнаружение магии
-  - `hat_of_disguise` — Маскировка (`Guise`)
-  - `wind_fan` — Порыв ветра
-  - `medallion_of_thoughts` и `helm_of_telepathy` — после «Обнаружения мыслей» ниже
-- [ ] Зона и бросок:
-  - `eversmoking_bottle` — `veil`, как у Туманного облака
-  - `oil_of_slipperiness` — Смазка на клетках или статус свободы движения
-  - `dust_of_sneezing_and_choking` — брошенная склянка: спасбросок и состояние
-  - `pipes_of_haunting` — испуг в области
-- [ ] Призыв (`AllyRules.summon`): `elemental_gem`, `bag_of_tricks`, `pipes_of_the_sewers`
-- [ ] Статус на выпившем или на цели:
-  - `potion_of_water_breathing`
-  - `necklace_of_adaptation`
-  - `potion_of_animal_friendship` — успокоить зверя (фракции)
-  - `philter_of_love` — очарованный NPC
-- [ ] Свет и зрение:
-  - `gem_of_brightness` — свет и заряд ослепления
-  - `lantern_of_revealing` — свет, в котором видны невидимые (`rules.sight.pierce`)
-- [ ] Вещи и места:
-  - `efficient_quiver` — сумка для боеприпасов (`ContainerRules`)
-  - `decanter_of_endless_water` — бездонный сосуд (`VesselRules`)
-  - `robe_of_useful_items` — заплатка становится вещью (`Gear.give`)
-  - `wand_of_secrets` — находит скрытое в комнате
-- Остаются у мастера: `deck_of_illusions`, `immovable_rod`, `rope_of_climbing`, `dust_of_dryness`.
-- `amulet_of_proof_against_detection_and_location` и `ring_of_mind_shielding` уходят в движок со вторым шагом v0.8.4.27 (статус «не обнаружить»).
+- [x] Пока вещь работает — `wear`, статус словами эффекта заклинания, его кладёт `ItemRules.wear`, а читают `Move`, `SightRules` и `WatchRules`:
+  - `ring_of_swimming` — плавание 40 фт;
+  - `cloak_of_the_manta_ray` — плавание 60 фт;
+  - `slippers_of_spider_climbing` — лазание со скоростью ходьбы;
+  - `gloves_of_swimming_and_climbing` — лазание и плавание со скоростью ходьбы;
+  - `winged_boots` — полёт со скоростью ходьбы;
+  - `broom_of_flying` — полёт 50 фт;
+  - `lantern_of_revealing` — видны невидимые, пока фонарь горит на поясе
+- [x] Заклинание вещи по дороге `item_spell`, вне боя — дорогой листа (`SpellRules.cast`) без ячейки:
+  - `circlet_of_blasting` — «Испепеляющий луч» с атакой +5;
+  - `eyes_of_charming` — «Очарование личности»;
+  - `wand_of_magic_detection` — «Обнаружение магии»;
+  - `wand_of_secrets` — «Обнаружение ловушек»;
+  - `hat_of_disguise` — «Маскировка» без ограничений (`at_will`);
+  - `wind_fan` — «Порыв ветра»;
+  - `eversmoking_bottle` — «Облако тумана» 3 круга;
+  - `oil_of_slipperiness` — «Жир»;
+  - `dust_of_sneezing_and_choking` — «Зловонное облако»;
+  - `pipes_of_haunting` — «Страх»;
+  - `gem_of_brightness` — «Слепота/глухота» и свет
+- [x] Призыв `use.summon` (`AllyRules.summon_by`): `bag_of_tricks` — один зверь из списка, `pipes_of_the_sewers` — рой крыс
+- [x] `decanter_of_endless_water` — свойство `water_source`, вода где угодно
+- Пока не сделано из-за упрощений, вне 5e:
+  - у Крылатых ботинок нет предела 4 часов;
+  - у Веера ветра нет шанса порваться при повторе;
+  - Перчатки не дают +5 к Атлетике;
+  - Трубы не делают крыс безразличными;
+  - Свирель пугает конусом «Страха», а не кругом
+- Ждут другого шага:
+  - `cloak_of_the_manta_ray` — дыхание под водой; `potion_of_water_breathing`, `necklace_of_adaptation`, `ring_of_water_walking` — им нужна вода на клетках карты (v0.8.4.27);
+  - `ring_of_jumping` — после заклинания «Прыжок»;
+  - `medallion_of_thoughts`, `helm_of_telepathy` — после «Обнаружения мыслей»;
+  - `efficient_quiver` — вместе с колчаном и футлярами, которым нужно правило «что вмещает» (v0.8.4.27);
+  - `elemental_gem` — элементалей нет в импорте SRD;
+  - `potion_of_animal_friendship` — «Дружба с животными» из вещи пока не доходит до зверя;
+  - `robe_of_useful_items` — нужно окно выбора заплатки;
+  - `philter_of_love` — очарование самого выпившего;
+  - `amulet_of_proof_against_detection_and_location`, `ring_of_mind_shielding` — статус «не обнаружить» (v0.8.4.27)
+- Остаются у мастера: `deck_of_illusions`, `immovable_rod`, `rope_of_climbing`, `dust_of_dryness`
+- Мастер пока не создаёт вещь с `wear` или `use.summon`: это понятие ещё не входит в его инструмент вещей (`ItemRules` проверка силы)
 
 **Способности на готовых механиках — 47 из 49**
 

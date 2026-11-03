@@ -37,11 +37,13 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	var use := use_line(data, id, session_items)
 	if not use.is_empty():
 		out.append(use)
+	if def.get("wear") is Dictionary:  # v0.8.4.26: what it lays while it works, in the words of a spell's effect
+		out.append(_t("ITEM_WEAR").format({"what": SpellEffects.text(data, ItemRules.wear_spec(c, data, def))}))
 	if ItemRules.charges_max(def) > 0:  # v0.7.12
 		out.append(_t("ITEM_CHARGES").format({"left": ItemRules.charges_left(c, def, id) if not c.is_empty() else ItemRules.charges_max(def), "max": ItemRules.charges_max(def)}))
 	if ItemRules.needs_attunement(def):
 		out.append(_t("ITEM_ATTUNED") if not c.is_empty() and ItemRules.attuned(c).has(id) else _t("ITEM_NEEDS_ATTUNEMENT"))
-	elif str(def.get("item_type", "")) == "wondrous" and not (def.get("properties", []) as Array).is_empty() and not id.begins_with(ItemRules.UNKNOWN):
+	elif str(def.get("item_type", "")) == "wondrous" and (not (def.get("properties", []) as Array).is_empty() or def.has("wear")) and not id.begins_with(ItemRules.UNKNOWN):
 		# big test #23: a worn kind works only worn (v0.7.22.9), a stone or a pearl — in the pack
 		out.append(_t("ITEM_WORN_TO_WORK" if not CharacterRules.wear_slot(def, data).is_empty() else "ITEM_WORKS_CARRIED"))
 	if int(def.get("spoils_days", 0)) > 0:
@@ -136,6 +138,12 @@ static func use_line(data: Dictionary, id: String, session_items: Dictionary = {
 	if fx.has("spell"):
 		var sp: Dictionary = data["spells"].get(str(fx["spell"]), {})
 		parts.append(_t("ITEM_USE_SPELL").format({"spell": sp.get("name", fx["spell"]), "n": int(fx.get("level", 1))}))
+	if fx.has("summon"):  # v0.8.4.26: a row of the summons
+		var sp := AllyRules.summon_spec(data, str(fx["summon"]))
+		var who: Array = (sp.get("pick", [sp.get("monster", "")]) as Array).map(func(m: Variant) -> String: return str(data["monsters"].get(str(m), {}).get("name", m)))
+		parts.append(_t("ITEM_USE_SUMMON").format({"who": " или ".join(who)}))
+	if bool(fx.get("at_will", false)):
+		parts.append(_t("ITEM_USE_AT_WILL"))
 	if fx.has("resist"):
 		parts.append(_t("ITEM_USE_RESIST").format({"type": str(data["misc"]["damage_types"].get(str(fx["resist"]), fx["resist"]))}))
 	if fx.has("recover_slot"):

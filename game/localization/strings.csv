@@ -375,6 +375,7 @@ ITEM_DEX, + Лов
 ITEM_DEX_MAX, + Лов (макс. {n})
 ITEM_MASTER,"Что умеет эта вещь, решает мастер по её описанию"
 ITEM_WORKS_CARRIED,Действует, пока вещь при вас — надевать и настраивать не нужно
+ITEM_WEAR,Пока работает: {what}
 ITEM_NEEDS_ATTUNEMENT,"Требует настройки: час с вещью, не больше трёх вещей сразу"
 ITEM_NO_PROF_ARMOR,Вы не владеете этим доспехом: надеть нельзя
 ITEM_NO_PROF_WEAPON,Вы не владеете этим оружием: атака без бонуса мастерства
@@ -427,6 +428,7 @@ ITEM_PROP_TWO_HANDED,двуручное
 ITEM_PROP_UNDERSTAND_ALL,понимание любого языка
 ITEM_PROP_VERSATILE,универсальное
 ITEM_PROP_WOUND_CLOSURE,при смерти — сразу стабилизирует; кости хитов лечат вдвое
+ITEM_PROP_WATER_SOURCE,источник воды: бурдюк наполняется где угодно
 ITEM_RANGE,дальность {near}/{far} фт.
 ITEM_SHIELD_LINE,Щит · КД +{n}
 ITEM_STEALTH_DIS,помеха Скрытности
@@ -442,6 +444,8 @@ ITEM_USE_HEAL,Лечит {dice} хитов
 ITEM_USE_REMOVE,Снимает: {list}
 ITEM_USE_RESIST,Сопротивление: {type} на час
 ITEM_USE_SLOT,Восстанавливает потраченную ячейку до 3 круга
+ITEM_USE_SUMMON,Призывает: {who}
+ITEM_USE_AT_WILL,сколько угодно раз — не тратится
 ITEM_USE_FOOD,сытость +{n}
 ITEM_USE_WATER,вода +{n}
 ITEM_USE_TEMP_HP,временные хиты {n}

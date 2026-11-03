@@ -58,7 +58,7 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 		return out
 	var me := Sheet.holder(s, f)
 	var cast := Acts.one("cast")
-	for item: String in ItemRules.belt(me, data, s.items):
+	for item: String in ItemRules.at_hand(me, data, s.items):
 		var fx := ItemRules.consumable(data, item, s.items)
 		var spell := str(fx.get("spell", ""))
 		if not data["spells"].has(spell) or not ItemRules.can_use(me, data, s.items, item).is_empty():

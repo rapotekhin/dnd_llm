@@ -57,7 +57,7 @@ static func run(s: GameSession, data: Dictionary, id: String, slot: int, target_
 	var t := CombatRules.aimed(s, target_id) if not target_id.is_empty() else {}
 	match way(data, id, not target_id.is_empty()):
 		"summon":  # v0.7.22.22: the summoned fight on the hero's side, or on the side of one who is not the hero
-			lines.append_array(AllyRules.summon(s, data, id) if hero else CombatRules.summon_for(s, data, me, id))
+			lines.append_array(AllyRules.summon_by(s, data, me, id))
 		"condition":
 			CombatRules._cast_condition(s, data, id, slot, t, lines)
 		"dispel":  # Dispel Magic (v0.7.13.7)

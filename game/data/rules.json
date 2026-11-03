@@ -1428,13 +1428,16 @@
 		"_doc": "Allies in a fight (v0.7.22.22, AllyRules): fighters on the hero's side under the engine's AI — followers who join (not against the law's guard or the people of their own location), a pack encounter's `allies`, summoned creatures. summons — a spell → {monster, count, minutes (absent — until let go), helper (does not attack: the Help action, the hero's next attack at that foe with advantage)}; a concentration spell's creatures go when it ends. Followers at 0 HP fall unconscious and come to after the fight; a summoned one at 0 HP vanishes.",
 		"followers_join": true,
 		"_v08_4_4": "A row of `summons` with `carrier`: no fighter, a creature of the hero like a horse (MountRules) that goes with him until its time is out; `carries_lb` — its own load, without it the beast's pack.",
+		"_v08_4_26": "A row may be named by a thing, not a spell: its `use.summon` calls it (a Bag of Tricks); `pick` — one of these creatures by the dice instead of one `monster`.",
 		"summons": {
 			"find_familiar": {"monster": "owl", "count": 1, "helper": true},
 			"find_steed": {"monster": "warhorse", "count": 1},
 			"conjure_animals": {"monster": "wolf", "count": 4, "minutes": 60},
 			"animate_dead": {"monster": "skeleton", "count": 1, "minutes": 1440},
 			"floating_disk": {"carrier": true, "monster": "riding_horse", "carries_lb": 500, "minutes": 60},
-			"phantom_steed": {"carrier": true, "monster": "riding_horse", "minutes": 60}
+			"phantom_steed": {"carrier": true, "monster": "riding_horse", "minutes": 60},
+			"bag_of_tricks": {"pick": ["weasel", "giant_rat", "badger", "boar", "panther", "giant_badger", "dire_wolf", "giant_elk"], "count": 1, "minutes": 1440},
+			"pipes_of_the_sewers": {"monster": "swarm_of_rats", "count": 1, "minutes": 10}
 		}
 	},
 	"reputation": {
@@ -2981,7 +2984,7 @@
 		"darkvision": 12,
 		"devils_sight": 24,
 		"pierce": {"dark": ["devils_sight", "blindsight", "truesight"], "fog": ["blindsight"]},
-		"lights": {"light": 8, "torch": 8, "lamp": 9, "lantern": 12, "lantern_of_revealing": 12, "lantern_bullseye": 12, "candle_tallow": 2, "candle": 2},
+		"lights": {"light": 8, "torch": 8, "lamp": 9, "lantern": 12, "lantern_of_revealing": 12, "gem_of_brightness": 12, "lantern_bullseye": 12, "candle_tallow": 2, "candle": 2},
 		"watch": 12,
 		"cone": 120,
 		"face_spread": 1,
@@ -3286,7 +3289,8 @@
 			"speed_30": "скорость +30 фт",
 			"spell_attack_plus1": "атака заклинанием +1",
 			"understand_all": "понимает любой язык",
-			"wound_closure": "стабилизация при 0 HP, лечение кубами хитов вдвое"
+			"wound_closure": "стабилизация при 0 HP, лечение кубами хитов вдвое",
+			"water_source": "источник воды: наполнить сосуд где угодно"
 		}
 	},
 	"wear_slots": {

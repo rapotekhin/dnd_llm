@@ -174,12 +174,13 @@ static func arm(s: GameSession, data: Dictionary, f: Dictionary, spec: Dictionar
 
 
 ## Its blows and AC by what it has now: the template's without the weapons it lost or has nothing to shoot with, and with
-## the weapons it got.
+## the weapons it got; what its worn things lay (v0.8.4.26).
 static func follow(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 	var tid := str(f.get("monster", ""))
 	var m: Dictionary = data["monsters"].get(tid, {})
 	if m.is_empty() or not f.has("inventory"):
 		return
+	ItemRules.wear(f, data, s.items)  # v0.8.4.26: what its worn things lay, as on the hero
 	var acts := actions(s, data, tid, f)
 	if acts != m["actions"]:
 		f["actions"] = acts

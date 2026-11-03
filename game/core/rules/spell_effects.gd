@@ -339,6 +339,9 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 		parts.append("преимущество на спасброски Мудрости и от смерти, лечение по максимуму")
 	if bool(sp.get("haste", false)):
 		parts.append("КД +2, скорость вдвое, ещё одно действие; потом ход вялости")
+	for row: Dictionary in Move.table(data).values():  # v0.8.4.26: «плавание 40 фт» of a ring as of a spell
+		if row.has("word") and sp.has(str(row.get("status", ""))):
+			parts.append("%s %d фт" % [row["word"], int(sp[str(row["status"])])])
 	if bool(sp.get("flying", false)):
 		parts.append("полёт: враги без дальних атак не достают, пока герой не ударит вблизи")
 	if sp.has("guise"):

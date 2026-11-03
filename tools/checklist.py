@@ -95,6 +95,9 @@ class Data:
     def damage_name(self, dtype: str) -> str:
         return str(self.damage.get(dtype, dtype))
 
+    def monster_name(self, mid: str) -> str:
+        return str(self.monsters.get(mid, {}).get("name", mid))
+
 
 def is_magic(d: dict) -> bool:
     use = d.get("use")
@@ -128,6 +131,8 @@ def item_text(d: dict, data: "Data") -> str:
         parts.append("свойства: " + ", ".join(map(str, d["properties"])))
     if isinstance(d.get("use"), dict):
         parts.append("использование: " + json.dumps(d["use"], ensure_ascii=False))
+    if isinstance(d.get("wear"), dict):
+        parts.append("пока работает: " + json.dumps(d["wear"], ensure_ascii=False))
     return "; ".join(parts)
 
 
@@ -153,6 +158,7 @@ PROP_CHECKS = {
     "understand_all": "разговор с NPC без общего языка — речь понятна",
     "warm": "ночь на морозе без укрытия (погода) — без спасброска Телосложения",
     "wound_closure": "бой, герой на 0 хитов — стабилизируется сам; короткий отдых — кости хитов лечат вдвое",
+    "water_source": "goto в комнату без воды, бурдюк пуст — «Набрать воды» доступно",
     "carry_plus_500": "Лист: полоса веса — грузоподъёмность +500",
     "immune_disease": "spawn giant_rat_diseased враг, дать укусить — болезнь не цепляется",
     "healing": "dmg 3d1, затем «Использовать» — хиты растут",
@@ -212,6 +218,11 @@ def item_check(item_id: str, d: dict, data: "Data") -> str:
         if a.get("str_min"):
             steps.append(f"с Силой ниже {a['str_min']} — скорость −10")
     use = data.rules.get("consumables", {}).get(item_id) or d.get("use")  # ItemRules.consumable: the rules' row first
+    moves = {row["status"]: row["word"] for row in data.rules["combat"]["moves"].values() if isinstance(row, dict) and row.get("word")}
+    for key, value in (d.get("wear") or {}).items():  # ItemRules.wear: a status while it works
+        feet = "скорость ходьбы" if value == "walk" else f"{value} фт"
+        steps.append(f"Лист → «От вещей»: {moves[key]} {feet}; в бою по воде, стене или в воздухе" if key in moves
+                     else f"Лист → «От вещей»: {key}" + (" (вещь на поясе)" if "light_source" in d.get("properties", []) else ""))
     for p in map(str, d.get("properties", [])):
         if isinstance(use, dict) and p in USE_SAYS:
             continue
@@ -224,7 +235,12 @@ def item_check(item_id: str, d: dict, data: "Data") -> str:
         if use.get("spell"):
             spell = data.spell_name(str(use["spell"]))
             steps.append(f"«Использовать» — заклинание «{spell}»" + (f", {use['level']} круг" if use.get("level") else "")
-                         + ("; свиток чужого класса — проверка" if use.get("scroll") else ""))
+                         + ("; свиток чужого класса — проверка" if use.get("scroll") else "")
+                         + ("; сколько угодно раз, вещь не тратится" if use.get("at_will") else ""))
+        if use.get("summon"):
+            row = data.rules["allies"]["summons"].get(str(use["summon"]), {})
+            who = " или ".join(data.monster_name(m) for m in row.get("pick", [row.get("monster", "")]))
+            steps.append(f"«Использовать» — призыв: {who} идёт с героем, в бою — союзник")
         for_time = f" (на {ru(use['duration'])})" if use.get("duration") else ""
         if use.get("resist"):
             steps.append(f"«Использовать», затем dmg {PROBE.format(use['resist'])} → {EXPECT['resist']}{for_time}")

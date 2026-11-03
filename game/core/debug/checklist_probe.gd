@@ -221,6 +221,9 @@ static func item(data: Dictionary, id: String) -> Dictionary:
 		_armor(s, data, id, d, steps)
 	for p: Variant in d.get("properties", []):
 		mech += 1 if _prop(s, data, id, d, str(p), steps) else 0
+	if d.get("wear") is Dictionary:
+		mech += 1
+		_wear(s, data, id, d, steps)
 	var use := ItemRules.consumable(data, id, s.items)
 	if not use.is_empty():
 		mech += 1
@@ -511,6 +514,9 @@ static func _prop(s: GameSession, data: Dictionary, id: String, d: Dictionary, p
 			return check(steps, with == bare + 2, "урон длинного лука +2", "%d, без вещи %d" % [with, bare])
 		"warm":
 			return check(steps, not WeatherRules.guard(s, data, "cold", false).is_empty(), "греет: холодная ночь не страшна", "не греет")
+		"water_source":
+			var dry := _without(s, data, id, func() -> int: return 1 if NeedRules.water_here(s, data) else 0)
+			return check(steps, NeedRules.water_here(s, data) and dry == 0, "вода где угодно: сосуд наполняется", "воды нет")
 		"missile_snaring", "wound_closure":
 			return check(steps, on, said, "не действует")
 		"mithral":
@@ -545,6 +551,30 @@ static func _without(s: GameSession, data: Dictionary, id: String, read: Callabl
 	return out
 
 
+## What a worn thing lays while it works (`wear`): a way of moving on the hero's speeds (Move), any other status on the hero and
+## read by the engine; gone when the thing is taken off. A light lays its own lit on the belt.
+static func _wear(s: GameSession, data: Dictionary, id: String, d: Dictionary, steps: Array[String]) -> void:
+	var c := s.character
+	if (d.get("properties", []) as Array).has("light_source") and ItemRules.belt_why(c, data, s.items, id).is_empty():
+		ItemRules.belt_put(c, data, s.items, id)
+	CharacterRules.refresh(c, data, s.items)
+	var moves := Move.table(data)
+	var spec := ItemRules.wear_spec(c, data, d)
+	for k: String in spec:
+		var way := ""
+		for m: String in moves:
+			if str(moves[m].get("status", "")) == k:
+				way = m
+		if not way.is_empty():
+			var feet := func() -> int: return int(Move.speeds(s, data, Sheet.HERO).get(way, 0))
+			var got: int = feet.call()
+			check(steps, got >= int(spec[k]) and _without(s, data, id, feet) < int(spec[k]), "%s %d фт, пока надета" % [moves[way]["word"], int(spec[k])],
+				"%d фт" % got)
+		elif check(steps, not reads(k).is_empty(), "движок читает %s (%s)" % [k, ", ".join(reads(k))], "никто не читает"):
+			var on := func() -> int: return 1 if SpellEffects.has(c, k) else 0
+			check(steps, int(on.call()) == 1 and _without(s, data, id, on) == 0, "%s, пока работает" % k, "не лежит на герое")
+
+
 static func _skill_total(s: GameSession, data: Dictionary, skill: String) -> int:
 	return RollParts.sum(RollParts.skill(s, data, skill))
 
@@ -558,14 +588,14 @@ static func _use(data: Dictionary, id: String, use: Dictionary, steps: Array[Str
 	ItemRules.identify(c, data, s.items)
 	if ItemRules.needs_attunement(d):
 		ItemRules.attune(c, data, s.items, id)
-		var slot := CharacterRules.slot_for(d, data)
-		if not slot.is_empty():
-			c["equipped"][slot] = id
-		CharacterRules.refresh(c, data, s.items)
+	var slot := CharacterRules.slot_for(d, data)
+	if not slot.is_empty():  # a worn thing is used where it is worn (ItemRules.at_hand)
+		c["equipped"][slot] = id
+	CharacterRules.refresh(c, data, s.items)
 	if use.has("throw"):
 		_throw(s, data, id, use, steps)
 		return
-	if not use.has("meal") and ItemRules.belt_fits(data, s.items, id):
+	if not use.has("meal") and slot.is_empty() and ItemRules.belt_fits(data, s.items, id):
 		ItemRules.belt_put(c, data, s.items, id)
 	if use.has("recover_slot"):
 		c["class"] = "wizard"
@@ -588,9 +618,10 @@ static func _use(data: Dictionary, id: String, use: Dictionary, steps: Array[Str
 	var food := NeedRules.value(s, data, "food")
 	var water := NeedRules.value(s, data, "water")
 	var effects := ConditionRules.effects(c).size()
+	var called := AllyRules.called(s).size()
 	var lines := ItemRules.use(c, data, s.items, id, s.rng, s)
 	var said := " ".join(lines).left(160)
-	if ItemRules.charges_max(d) <= 0 and not bool(d.get("stack_keep", false)):
+	if ItemRules.charges_max(d) <= 0 and not bool(use.get("at_will", false)):
 		check(steps, Gear.count(s, data, Being.HERO, id) == 0 or ItemRules.charges_max(d) > 0, "тратится", "осталась")
 	if use.has("heal"):
 		var h: Array = use["heal"]
@@ -617,6 +648,10 @@ static func _use(data: Dictionary, id: String, use: Dictionary, steps: Array[Str
 		check(steps, _hp(s, data) < hp, "яд ранит", said)
 	if use.has("recover_slot"):
 		check(steps, said.contains("восстановлена") or said.contains("целы"), "возвращает ячейку", said)
+	if use.has("summon"):
+		check(steps, AllyRules.called(s).size() > called, "призывает: %s" % said, "никто не пришёл")
+	if bool(use.get("at_will", false)):
+		check(steps, Gear.count(s, data, Being.HERO, id) == 1, "без ограничений: вещь не тратится", "потрачена")
 	if use.has("spell"):
 		var sp := str(use["spell"])
 		if data["spells"].get(sp, {}).has("heal_at_slot"):
@@ -624,9 +659,17 @@ static func _use(data: Dictionary, id: String, use: Dictionary, steps: Array[Str
 		elif sp == "identify":
 			check(steps, said.contains("неопознанных") or lines.size() > 1, "опознаёт", said)
 		else:
-			check(steps, said.contains(str(data["spells"].get(sp, {}).get("name", sp))) or said.contains("Магия"), "читается: %s" % data["spells"].get(sp, {}).get("name", sp), said)
-			if not CombatRules.is_engine_spell(data, sp) and ActionRules.way(data, sp, true).is_empty():
-				master(steps, "«%s» вне боя — рассказ мастера" % data["spells"].get(sp, {}).get("name", sp))
+			var name := str(data["spells"].get(sp, {}).get("name", sp))
+			check(steps, said.contains(name) or said.contains("Магия"), "читается: %s" % name, said)
+			var landed: Array[String] = []
+			for i in lines.size():
+				if lines[i].begins_with(name):
+					landed = lines.slice(i + 1)  # past the spell's line: what the sheet's road did (SpellRules.cast)
+					break
+			if not landed.is_empty():
+				check(steps, true, "вне боя: %s" % " · ".join(landed).left(120))
+			elif not CombatRules.is_engine_spell(data, sp) and ActionRules.way(data, sp, true).is_empty():
+				master(steps, "«%s» вне боя — рассказ мастера" % name)
 
 
 ## A disease of the rules that `power` cures: herbs take only the ones marked so, magic any.

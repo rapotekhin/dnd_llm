@@ -353,7 +353,14 @@ game/
 - **`CharacterRules`:** `item_props` — свойства работающих вещей (кэш `refresh`), `item_prop`; `ability` учитывает `ability_floor` (Сила 19 от Рукавиц).
 - **Бой:** боеприпасы (`weapon_profile.ammo`, `spend_ammo`, `ammo_spent` → `c.ammo_left` и кнопка «Собрать стрелы»), стихийный урон и увеличение (`_item_extras`), тяжёлое оружие маленьким, досягаемость (`_reach_strike`), адамантин, Амулет закрытия ран; вкладка «Предметы»: `can_throw` / `throw_item` (`rules.consumables.*.throw`: урон, горение, масло, сеть), `can_item_spell` / `item_spell` (заклинание свитка или жезла с его Сл без ячейки героя).
 - **Торговцы:** услуги NPC (`services`; с v0.7.16 — данные `rules.json` `item_rules.services` и пакета `services` над операциями движка `identify`, `lift_curse`, `enchant`: `TradeRules.service_def`, `targets`, `services`, `buy_service`).
-- **Каталог:** `tools/srd_import.py` — `MAGIC_OTHER` (свойства, `look`, `attunement`, `charges`, `use`, `master`), зелья сопротивления по типам, мифрил и адамантин на средних и тяжёлых доспехах, `scrolls` — свитки заклинаний движка 0–2 круга.
+- **Каталог:** `tools/srd_import.py` — `MAGIC_OTHER` (свойства, `look`, `attunement`, `charges`, `use`, `wear`, `master`), зелья сопротивления по типам, мифрил и адамантин на средних и тяжёлых доспехах, `scrolls` — свитки заклинаний движка 0–2 круга.
+- **Вещи без слов мастера (v0.8.4.26):** 21 из 38 магических вещей, что вёл мастер, идут дорогами движка.
+  - `wear` — статус, пока вещь работает, словами эффекта заклинания: `swim_speed`, `climb_speed`, `fly_speed`, `flying`, `see_invisible`; `"walk"` — скорость ходьбы носителя. `ItemRules.wear` кладёт по записи с источником `worn` на героя (`CharacterRules.refresh`) и на бойца (`Gear.follow`). Читают их те же правила, что и заклинание: `Move`, `SightRules`, `WatchRules`. Свет кладёт своё, только горя на поясе.
+  - `use.spell` вне боя у героя идёт дорогой заклинания листа без ячейки (`SpellRules.cast` из `ItemRules._spell_use`): лечение, «Опознание», заклинание на себя, заклинания мира (Обнаружение магии и ловушек, Маскировка). `use.at_will` — вещь не тратится (Шляпа маскировки).
+  - `use.summon` — строка `rules.allies.summons` по id вещи (`AllyRules.summon_by` — одна дорога призыва для заклинания и вещи), `pick` — одно существо из списка по кубам (Мешок фокусов).
+  - Свойство `water_source` — вода где угодно (`NeedRules.water_here`, Графин).
+  - Под рукой (`ItemRules.at_hand`) — пояс и надетые вещи со своим применением: обруч, линзы, шляпа применяются там, где надеты, на пояс не кладутся (`belt_fits`).
+  - `CharacterRules.working_ids` / `carried_ids` — id того же списка, что `working` / `carried`.
 
 ## Языки, предыстории, инструменты (v0.7.11)
 

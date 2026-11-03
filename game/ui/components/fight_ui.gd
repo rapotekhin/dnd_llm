@@ -1143,7 +1143,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			b.pressed.connect(func() -> void: _do(GameState.combat_use_feature(rid)))
 	# Items.
 	var usable: Array[String] = []
-	for id: String in ItemRules.belt(c, data, s.items):  # only the belt's things are at hand (v0.8.4.24)
+	for id: String in ItemRules.at_hand(c, data, s.items):  # only the belt's and the worn things are at hand (v0.8.4.24, v0.8.4.26)
 		if not id.is_empty() and not ItemRules.consumable(data, id, s.items).is_empty():
 			usable.append(id)
 	if not usable.is_empty():

@@ -138,32 +138,47 @@ static func style(c: Dictionary, id: String) -> bool:
 ## Wondrous items that work now (v0.6.3): carried — those that need it, only when attuned (v0.7.12); a worn kind (a
 ## cloak, a ring, boots) only in its slot (v0.7.22.9).
 static func carried(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
+	return _defs(carried_ids(c, data, session_items), data, session_items)
+
+
+## The ids of `carried`.
+static func carried_ids(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[String]:
+	var out: Array[String] = []
 	var eq: Dictionary = c.get("equipped", {})
 	for id: String in c.get("inventory", {}):
 		var d := ItemRules.def_of(data["items"], session_items, id)
 		if str(d.get("item_type", "")) != "wondrous" or not ItemRules.active(c, d, id):
 			continue
 		if wear_slot(d, data).is_empty():
-			out.append(d)
+			out.append(id)
 			continue
 		for slot: String in WEAR_SLOTS:
 			if str(eq.get(slot, "")) == id:
-				out.append(d)
+				out.append(id)
 	return out
 
 
 ## The things that work now (v0.8.4.15: one list for the boons, the properties and the resistances): the wondrous
 ## ones carried or worn (`carried`) and the gear in the other slots, attuned when they need it.
 static func working(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[Dictionary]:
-	var defs := carried(c, data, session_items)
+	return _defs(working_ids(c, data, session_items), data, session_items)
+
+
+## The ids of `working` (v0.8.4.26: what a worn thing lays is named by its thing).
+static func working_ids(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[String]:
+	var ids := carried_ids(c, data, session_items)
 	for slot: String in SLOTS:
 		var id := str(c.get("equipped", {}).get(slot, ""))
-		if not WEAR_SLOTS.has(slot) and not id.is_empty():
-			var d := ItemRules.def_of(data["items"], session_items, id)
-			if ItemRules.active(c, d, id):
-				defs.append(d)
-	return defs
+		if not WEAR_SLOTS.has(slot) and not id.is_empty() and ItemRules.active(c, ItemRules.def_of(data["items"], session_items, id), id):
+			ids.append(id)
+	return ids
+
+
+static func _defs(ids: Array[String], data: Dictionary, session_items: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for id: String in ids:
+		out.append(ItemRules.def_of(data["items"], session_items, id))
+	return out
 
 
 ## What the things that work now give, for the sheet (v0.7.49.4): «Очки ночного видения: тёмное зрение 60 фт» — each
@@ -173,6 +188,8 @@ static func item_boons(c: Dictionary, data: Dictionary, session_items: Dictionar
 	var out: Array[String] = []
 	for d: Dictionary in working(c, data, session_items):
 		var what: Array = (d.get("properties", []) as Array).filter(func(p: Variant) -> bool: return names.has(str(p))).map(func(p: Variant) -> String: return str(names[str(p)]))
+		if d.get("wear") is Dictionary:  # v0.8.4.26: what it lays while it works, in the words of a spell's effect
+			what.append(SpellEffects.text(data, ItemRules.wear_spec(c, data, d)))
 		if not what.is_empty():
 			out.append("%s: %s" % [d.get("name", ""), ", ".join(what)])
 	return out
@@ -284,6 +301,7 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	if (c.get("body", {}) as Dictionary).is_empty() and data.has("rules") and data["rules"].has("body") and c.has("race"):
 		c["body"] = BodyRules.make(data, str(c.get("gender", "other")), {}, "hero:" + str(c.get("name", "")), true)  # an old save (v0.7.22.5)
 	c["item_props"] = active_props(c, data, session_items)  # v0.7.12
+	ItemRules.wear(c, data, session_items)  # v0.8.4.26: what the worn things lay, before the speed reads it
 	var floors := {}
 	for p: Variant in c["item_props"]:
 		if str(p).ends_with("_19") and ABILITIES.has(str(p).get_slice("_", 0)):

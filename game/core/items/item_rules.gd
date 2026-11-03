@@ -7,6 +7,7 @@ extends RefCounted
 ## charges with a regain at dawn (the long rest); a catalog item's own `use` (potions, scrolls, wands, the pearl).
 
 const UNKNOWN := "unk_"
+const WORN := "worn"  # the source kind of what a worn thing lays (v0.8.4.26)
 
 
 ## Definition of an item: catalog first, then items generated in this session. {} if unknown. An item on a `base`
@@ -150,12 +151,16 @@ static func _artifice_xp(data: Dictionary, source: String) -> int:
 # --- the belt under the doll (v0.8.4.24, as in Pathfinder) -----------------------------------------------------------
 
 
-## A thing for the belt: one used by an act — a potion, a scroll, a wand, a flask — or a light. Food is eaten from the pack.
+## A thing for the belt: one used by an act — a potion, a scroll, a wand, a flask — or a light. Food is eaten from the pack; a
+## worn thing with a use (a hat, a circlet) is used where it is worn (`at_hand`, v0.8.4.26).
 static func belt_fits(data: Dictionary, session_items: Dictionary, id: String) -> bool:
+	var d := def_of(data["items"], session_items, real_id(id))
+	if not CharacterRules.wear_slot(d, data).is_empty():
+		return false
 	var fx := consumable(data, id, session_items)
 	if not fx.is_empty() and not fx.has("meal"):
 		return true
-	return (def_of(data["items"], session_items, real_id(id)).get("properties", []) as Array).has("light_source")
+	return (d.get("properties", []) as Array).has("light_source")
 
 
 ## The belt's cells of anybody, "" — empty: only these things are used, and a light here lights the way. A record that has
@@ -179,6 +184,16 @@ static func belt(c: Dictionary, data: Dictionary, session_items: Dictionary) -> 
 
 static func on_belt(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> bool:
 	return not id.is_empty() and belt(c, data, session_items).has(id)
+
+
+## What is at hand to use (v0.8.4.26): the belt's things and the worn ones with a use of their own — a circlet, a hat, lenses
+## are used where they are worn.
+static func at_hand(c: Dictionary, data: Dictionary, session_items: Dictionary) -> Array[String]:
+	var out := belt(c, data, session_items).filter(func(id: String) -> bool: return not id.is_empty())
+	for id: String in CharacterRules.carried_ids(c, data, session_items):
+		if not out.has(id) and not CharacterRules.wear_slot(def_of(data["items"], session_items, id), data).is_empty() and not consumable(data, id, session_items).is_empty():
+			out.append(id)
+	return out
 
 
 ## "" when the thing can go to the belt (the first empty cell, or `at`), otherwise the reason (localization key).
@@ -360,6 +375,8 @@ static func dawn(c: Dictionary, data: Dictionary, session_items: Dictionary, rng
 
 ## One use of the thing: a charge, or the thing itself. Lines.
 static func consume(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, rng: RandomNumberGenerator) -> Array[String]:
+	if bool(consumable(data, id, session_items).get("at_will", false)):  # v0.8.4.26: a Hat of Disguise casts with no end
+		return []
 	if charges_max(def_of(data["items"], session_items, id)) > 0:
 		return spend_charge(c, data, session_items, id, rng)
 	remove(c, id)
@@ -380,6 +397,42 @@ static func remove(c: Dictionary, id: String, qty: int = 1) -> int:
 		CharacterRules.sanitize_equipped(c)
 	Thing.trim(c)
 	return n
+
+
+# --- what a worn thing lays (v0.8.4.26) ------------------------------------------------------------
+
+
+## What a thing lays on its wearer while it works: its `wear` in the words of a spell's effect (swim_speed, climb_speed,
+## fly_speed, see_invisible…), "walk" read as the wearer's walking speed.
+static func wear_spec(c: Dictionary, data: Dictionary, d: Dictionary) -> Dictionary:
+	var out := {}
+	var spec: Dictionary = d.get("wear", {})
+	for k: String in spec:
+		out[k] = _walk(c, data) if str(spec[k]) == "walk" else spec[k]
+	return out
+
+
+## The walking speed of its race or its template.
+static func _walk(c: Dictionary, data: Dictionary) -> int:
+	var race: Dictionary = data["races"]["races"].get(str(c.get("race", "")), {})
+	return int(race.get("speed", data["monsters"].get(str(c.get("monster", "")), {}).get("speed", 30)))
+
+
+## The things that work now lay their `wear` on anybody who has them: one status each with the source kind `worn`, read by
+## the same rules as a spell's (Move, SightRules, WatchRules); a light lays its own only lit on the belt. Called by the sheet's
+## refresh and the fighter's gear (Gear.follow).
+static func wear(c: Dictionary, data: Dictionary, session_items: Dictionary) -> void:
+	for e: Dictionary in ConditionRules.effects(c).duplicate():
+		if str(e.get("source", {}).get("kind", "")) == WORN:
+			ConditionRules.remove_effect(c, int(e["uid"]))
+	var lit := belt(c, data, session_items)
+	for id: String in CharacterRules.working_ids(c, data, session_items):
+		var d := def_of(data["items"], session_items, id)
+		if not (d.get("wear") is Dictionary) or ((d.get("properties", []) as Array).has("light_source") and not lit.has(id)):
+			continue
+		var e := wear_spec(c, data, d)
+		e.merge({"condition": "", "ends": {}, "source": {"kind": WORN, "id": real_id(id), "name": str(d.get("name", ""))}})
+		ConditionRules.add_effect(c, e)
 
 
 # --- what a found thing may be (v0.7.12) -----------------------------------------------------------
@@ -591,9 +644,11 @@ static func can_use(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 	var fx := consumable(data, id, session_items)
 	if fx.is_empty():
 		return "%s нельзя использовать так — это не расходник с действием движка" % display_name(data["items"], session_items, id)
-	if not fx.has("meal") and not on_belt(c, data, session_items, id):  # only the belt's things are at hand (v0.8.4.24)
-		return "%s не на поясе: сначала положите на пояс под куклой" % display_name(data["items"], session_items, id)
 	var d := def_of(data["items"], session_items, id)
+	if not fx.has("meal") and not at_hand(c, data, session_items).has(id):  # only the belt's and the worn things are at hand (v0.8.4.24)
+		if not CharacterRules.wear_slot(d, data).is_empty():
+			return "%s не надета: сначала наденьте" % display_name(data["items"], session_items, id)
+		return "%s не на поясе: сначала положите на пояс под куклой" % display_name(data["items"], session_items, id)
 	if not active(c, d, id):
 		return "%s не работает без настройки" % d.get("name", id)
 	if charges_max(d) > 0 and charges_left(c, d, id) <= 0:
@@ -616,6 +671,9 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		return lines
 	if fx.has("spell"):
 		lines.append_array(_spell_use(c, data, session_items, fx, rng, s, who))
+		return lines
+	if s != null and fx.has("summon"):  # v0.8.4.26: a Bag of Tricks, the Pipes of the Sewers — a row of rules.allies.summons
+		lines.append_array(AllyRules.summon_by(s, data, who, str(fx["summon"])))
 		return lines
 	if fx.has("recover_slot"):
 		for lv in range(mini(int(fx["recover_slot"]), 5), 0, -1):
@@ -663,8 +721,9 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 
 
 ## A scroll read or a wand used out of a fight: a scroll of the hero's own class within their power needs no check,
-## otherwise Arcana DC 10 + the circle (BG3: anyone may try); healing lands on the hero, Identify names every unknown
-## thing, the rest is the master's to narrate. Lines.
+## otherwise Arcana DC 10 + the circle (BG3: anyone may try). The hero's goes the road of the sheet's spell with no slot
+## (SpellRules.cast, v0.8.4.26): healing, Identify, a spell on oneself and the world's spells land; the rest is the master's
+## to narrate. Lines.
 static func _spell_use(c: Dictionary, data: Dictionary, session_items: Dictionary, fx: Dictionary, rng: RandomNumberGenerator, s: GameSession,
 		who: Dictionary = Sheet.HERO) -> Array[String]:
 	var sp_id := str(fx["spell"])
@@ -675,20 +734,19 @@ static func _spell_use(c: Dictionary, data: Dictionary, session_items: Dictionar
 		lines.append(str(read["line"]))
 		if not bool(read["ok"]):
 			return lines
-	var dcs := scroll_numbers(data, int(fx.get("level", 1)))
-	if sp_id == "identify":
-		lines.append_array(identify(c, data, session_items))
-		if lines.size() == 1:
-			lines.append("неопознанных вещей нет")
-		return lines
-	if sp.has("heal_at_slot"):
-		var ab := CharacterRules.mod(CharacterRules.ability(c, str(c.get("spell_ability", "wis")))) if not str(c.get("spell_ability", "")).is_empty() else 0
-		var heal := CombatRules.roll_dice(rng, str(sp["heal_at_slot"].get(str(maxi(1, int(fx.get("level", 1)))), "1d8+MOD")), false, ab)
-		var before := int(c["hp"])
-		c["hp"] = mini(int(c["max_hp"]), before + heal)
-		lines.append("+%d HP" % (int(c["hp"]) - before))
-		return lines
-	lines.append("%s (Сл %d)" % [sp.get("name", sp_id), int(fx.get("dc", dcs[0]))])
+	var level := int(fx.get("level", 1))
+	var landed: Array[String] = []
+	if s != null and Sheet.is_hero(who):  # v0.8.4.26: one road with the sheet's spell — Detect Magic finds, Disguise Self changes the look
+		landed.assign(SpellRules.cast(c, data, sp_id, level, s, true, true).slice(1))
+	elif sp_id == "identify":
+		landed = identify(c, data, session_items)
+	else:
+		landed = SpellRules.heal_self(c, data, sp_id, level, rng)
+	if sp_id == "identify" and landed.is_empty():
+		landed.append("неопознанных вещей нет")
+	if sp_id != "identify" and not sp.has("heal_at_slot"):
+		lines.append("%s (Сл %d)" % [sp.get("name", sp_id), int(fx.get("dc", scroll_numbers(data, level)[0]))])
+	lines.append_array(landed)
 	return lines
 
 

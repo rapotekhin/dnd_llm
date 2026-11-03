@@ -160,8 +160,10 @@ static func drinks(s: GameSession, data: Dictionary) -> float:
 
 
 ## Water here: the room's tag `water` or `foul_water`, a thing of the room with `source` (v0.7.34.6, the master's
-## river), or one named by rules.needs.water_words (a well, a stream).
+## river), one named by rules.needs.water_words (a well, a stream), or a thing of the hero's that pours it (`water_source`).
 static func water_here(s: GameSession, data: Dictionary) -> bool:
+	if Sheet.prop(s, data, Sheet.HERO, "water_source"):  # v0.8.4.26: a Decanter of Endless Water pours anywhere
+		return true
 	var tags := SceneRules.tags(s, data["world"], s.room_id)
 	if tags.has("water") or tags.has("foul_water"):
 		return true

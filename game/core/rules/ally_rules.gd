@@ -15,6 +15,23 @@ static func summon_spec(data: Dictionary, spell_id: String) -> Dictionary:
 	return cfg(data)["summons"].get(spell_id, {})
 
 
+## The name of what calls: a spell, or a thing whose row it is (v0.8.4.26: a Bag of Tricks).
+static func source_name(data: Dictionary, key: String) -> String:
+	return str(data["spells"].get(key, data["items"]["catalog"].get(key, {})).get("name", key))
+
+
+## The creature a row calls: its `monster`, or one of `pick` by the session's dice (a Bag of Tricks).
+static func monster_of(s: GameSession, sp: Dictionary) -> String:
+	var pick: Array = sp.get("pick", [])
+	return str(pick[s.rng.randi_range(0, pick.size() - 1)]) if not pick.is_empty() else str(sp.get("monster", ""))
+
+
+## A row of the summons called by anybody (v0.8.4.26: one road for a spell and a thing): the hero's go with him, another's
+## join its side of the fight.
+static func summon_by(s: GameSession, data: Dictionary, who: Dictionary, key: String) -> Array[String]:
+	return summon(s, data, key) if Sheet.is_hero(who) else CombatRules.summon_for(s, data, who, key)
+
+
 ## The fighters' specs of the followers who join this fight against `foes` (CombatRules.start's specs).
 static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 	var out: Array = []
@@ -72,7 +89,8 @@ static func summon_specs(s: GameSession) -> Array:
 ## The spell calls its creatures: they go with the hero (and the fight, when there is one). Lines.
 static func summon(s: GameSession, data: Dictionary, spell_id: String) -> Array[String]:
 	var sp := summon_spec(data, spell_id)
-	var m: Dictionary = data["monsters"].get(str(sp.get("monster", "")), {})
+	var mon := monster_of(s, sp)
+	var m: Dictionary = data["monsters"].get(mon, {})
 	if m.is_empty():
 		return []
 	if bool(sp.get("carrier", false)):
@@ -88,7 +106,7 @@ static func summon(s: GameSession, data: Dictionary, spell_id: String) -> Array[
 	var made: Array = []
 	for i in count:
 		var name := str(m["name"]) + (" %d" % (i + 1) if count > 1 else "")
-		made.append(Being.made(s, "summon", {"spell": spell_id, "monster": str(sp["monster"]), "name": name,
+		made.append(Being.made(s, "summon", {"spell": spell_id, "monster": mon, "name": name,
 			"until": until, "concentration": conc, "hp": int(m["hp"]), "helper": bool(sp.get("helper", false))}))
 	lines.append("Призваны: %s — идут с героем%s" % [", ".join(made.map(func(x: Dictionary) -> String: return str(x["name"]))),
 		" до конца концентрации" if conc else " %s" % _left_text(until - TimeRules.abs_minute(s)) if until >= 0 else ", пока их не отпустят"])
@@ -128,7 +146,7 @@ static func _carrier(s: GameSession, data: Dictionary, spell_id: String, sp: Dic
 		if str(cr.get("spell", "")) == spell_id:
 			_end_carrier(s, data, cr)
 	var now := TimeRules.abs_minute(s)
-	var name := str(data["spells"][spell_id]["name"])
+	var name := source_name(data, spell_id)
 	var c := {"name": name, "monster": str(sp["monster"]), "state": PropertyRules.TAME, "bound": false, "led": true, "owner": OwnerRules.HERO,
 		"since": now, "hp": int(m["hp"]), "max_hp": int(m["hp"]), "xp_given": true, "fed_day": s.day, "spell": spell_id, "until": now + int(sp["minutes"])}
 	if sp.has("carries_lb"):
@@ -243,5 +261,5 @@ static func summon_lines(s: GameSession, data: Dictionary) -> Array[String]:
 	var now := TimeRules.abs_minute(s)
 	for m: Dictionary in called(s):
 		var left := "до конца концентрации" if bool(m["concentration"]) else _left_text(int(m["until"]) - now) if int(m["until"]) >= 0 else "пока не отпустят"
-		out.append("%s (%s, %s)" % [m["name"], data["spells"].get(str(m["spell"]), {}).get("name", m["spell"]), left])
+		out.append("%s (%s, %s)" % [m["name"], source_name(data, str(m["spell"])), left])
 	return out

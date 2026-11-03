@@ -2065,18 +2065,19 @@ static func add_allies(s: GameSession, data: Dictionary, specs: Array, mid_fight
 ## A spell calls its creatures to the side of `f`, not to the hero's: they live as long as this fight.
 static func summon_for(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String) -> Array[String]:
 	var sp := AllyRules.summon_spec(data, spell_id)
-	var m: Dictionary = data["monsters"].get(str(sp.get("monster", "")), {})
+	var mon := AllyRules.monster_of(s, sp)
+	var m: Dictionary = data["monsters"].get(mon, {})
 	if m.is_empty() or bool(sp.get("carrier", false)):
 		return []
 	var foe := str(f.get("side")) == "enemy"
 	var specs: Array = []
 	for i in int(sp.get("count", 1)):
-		var spec := {"monster": str(sp["monster"]), "spell": spell_id, "called_by": str(f["id"]), "no_xp": true}
+		var spec := {"monster": mon, "spell": spell_id, "called_by": str(f["id"]), "no_xp": true}
 		if not foe:
 			spec["ally"] = "summon"
 		specs.append(spec)
 	var ids := add_allies(s, data, specs, true, "enemy" if foe else "ally", FightGrid.cell(f))
-	return ["%s: %s" % [data["spells"][spell_id]["name"], ", ".join(Array(ids).map(func(x: String) -> String: return str(fighter(s, x)["name"])))]]
+	return ["%s: %s" % [AllyRules.source_name(data, spell_id), ", ".join(Array(ids).map(func(x: String) -> String: return str(fighter(s, x)["name"])))]]
 
 
 ## An ally's turn: a helper (a familiar) distracts the foe nearest the hero — the hero's next attack at it has
