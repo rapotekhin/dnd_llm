@@ -264,6 +264,11 @@ static func scout(s: GameSession, data: Dictionary, cid: String, room: String) -
 	var cr := _here(s, cid)
 	TimeRules.count(s, cr, "scouted")
 	Knows.add(s, Knows.SCOUTED, room)
+	return ["%s облетает «%s» и возвращается: %s" % [cr["name"], WorldView.new(data["world"]).room(room).get("name", room), seen(s, data, room)]]
+
+
+## What a look from above finds in `room`: the danger, the people, the beasts — or quiet (a raven, Clairvoyance).
+static func seen(s: GameSession, data: Dictionary, room: String) -> String:
 	var world := WorldView.new(data["world"])
 	var seen: Array[String] = []
 	var enc := EncounterRules.live(s, data, room)
@@ -277,7 +282,7 @@ static func scout(s: GameSession, data: Dictionary, cid: String, room: String) -
 	var beasts: Array = CreatureRules.here(s, room).filter(func(c: Dictionary) -> bool: return str(c["state"]) != CreatureRules.DEAD).map(func(c: Variant) -> String: return str((c as Dictionary)["name"]))
 	if not beasts.is_empty():
 		seen.append("звери: " + ", ".join(beasts))
-	return ["%s облетает «%s» и возвращается: %s" % [cr["name"], world.room(room).get("name", room), "; ".join(seen) if not seen.is_empty() else "тихо, никого"]]
+	return "; ".join(seen) if not seen.is_empty() else "тихо, никого"
 
 
 # --- the world's beasts ---------------------------------------------------------------------------------------------

@@ -411,12 +411,13 @@ static func wear_spec(c: Dictionary, data: Dictionary, d: Dictionary) -> Diction
 	var spec: Dictionary = d.get("wear", {})
 	for k: String in spec:
 		var v: Variant = spec[k]
-		out[k] = _walk(c, data) if str(v) == "walk" else maxi(0, CharacterRules.mod(int(c.get("abilities", {}).get(str(v), 10)))) 			if (data["rules"]["saves"] as Array).has(str(v)) else v  # an ability: its modifier (Second-Story Work's jump)
+		out[k] = walk_of(c, data) if str(v) == "walk" else maxi(0, CharacterRules.mod(int(c.get("abilities", {}).get(str(v), 10)))) \
+			if (data["rules"]["saves"] as Array).has(str(v)) else v  # an ability: its modifier (Second-Story Work's jump)
 	return out
 
 
 ## The walking speed of its race or its template.
-static func _walk(c: Dictionary, data: Dictionary) -> int:
+static func walk_of(c: Dictionary, data: Dictionary) -> int:
 	var race: Dictionary = data["races"]["races"].get(str(c.get("race", "")), {})
 	return int(race.get("speed", data["monsters"].get(str(c.get("monster", "")), {}).get("speed", 30)))
 

@@ -90,6 +90,8 @@ static func foe_understands(c: Dictionary, data: Dictionary, f: Dictionary) -> b
 	var m := monster(data, str(f.get("monster", "")))
 	if bool(m["telepathy"]):
 		return true
+	if str(data["monsters"].get(str(f.get("monster", "")), {}).get("type", "")) == "beast" and ConditionRules.effects(c).any(func(e: Dictionary) -> bool: return bool(e.get("beast_speech", false))):
+		return true  # Speak with Animals (v0.8.4.26.2)
 	var mine := hero(c, data)
 	return (m["speaks"] as Array).any(func(l: Variant) -> bool: return mine.has(str(l)))
 

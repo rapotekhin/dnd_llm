@@ -33,6 +33,8 @@ func _reach(s: GameSession, data: Dictionary, f: Dictionary) -> int:
 		return 0
 	var e := CombatRules.points(s, data, f)
 	var ft := Sheet.ability(s, data, f, "str")
+	for x: Dictionary in ConditionRules.effects(Sheet.holder(s, f)):  # Jump: three times as far (v0.8.4.26.2)
+		ft *= maxi(1, int(x.get("jump_mult", 1)))
 	if int(e.get("walked", 0)) < 2:
 		ft /= 2
 	else:  # a running jump goes further by a status (Second-Story Work, v0.8.4.26.1)

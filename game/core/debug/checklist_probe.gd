@@ -986,7 +986,12 @@ static func _reaction(data: Dictionary, id: String, steps: Array[String]) -> Str
 	var g := fight(s, data, "goblin")
 	var when := str(SpellEffects.spec(data, id).get("reaction", ""))
 	var ok := false
-	if when == "spell":
+	if when == "fall":  # Feather Fall: a fall of 20 hurts nothing (v0.8.4.26.2)
+		var hp := int(s.character["hp"])
+		var lines: Array[String] = []
+		CombatRules.fall(s, data, CombatRules.player(s), "20", "падает", {"kind": "engine", "name": "падение"}, lines)
+		ok = check(steps, int(s.character["hp"]) == hp, "реакция на падение: %s" % ", ".join(lines).left(90), hp - int(s.character["hp"]))
+	elif when == "spell":
 		ok = check(steps, not SpellEffects.counter_option(s, data, g, "magic_missile").is_empty(), "реакция: окно на заклинание врага", "окна нет")
 	else:
 		var ac := int(s.character.get("ac", 10))
@@ -1000,7 +1005,9 @@ static func _reaction(data: Dictionary, id: String, steps: Array[String]) -> Str
 static func _spell_world(data: Dictionary, id: String, slot: int) -> String:
 	var s := caster_session(data, id)
 	var c := s.character
-	c["hp"] = maxi(1, int(c["max_hp"]) / 2)
+	_prepare_cure(s, data, id)  # something to cure, to know, to fill and to clean (v0.8.4.26.2)
+	ItemRules.found(c, data, s.items, "ring_of_warmth")  # comes unidentified
+	VesselRules.drain(c)
 	var chk := SpellRules.check(c, data, id, slot)
 	if chk.has("reason"):
 		return ""

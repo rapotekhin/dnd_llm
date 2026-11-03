@@ -19,7 +19,7 @@ static func _speeds(data: Dictionary, m: Dictionary, me: Dictionary) -> Dictiona
 	var rows := table(data)
 	for id: String in rows:
 		var row: Dictionary = rows[id]
-		var ft := int(m.get(str(row["speed"]), row.get("default", 0)))
+		var ft := int(m.get(str(row.get("speed", "")), row.get("default", 0)))  # a row of a status alone: Water Walk
 		for e: Dictionary in SpellEffects.hero_effects(me, str(row.get("status", ""))):
 			ft = maxi(ft, int(e[str(row["status"])]))
 		if ft > 0:

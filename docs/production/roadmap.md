@@ -328,45 +328,35 @@
   - `eldritch_invocation_eyes_of_the_rune_keeper` — в движке пока нечего читать: у книг и писем нет языка письма
 - Упрощения: разбег у прыжка — 10 футов ходьбы в этом ходу; след врага не отличается от другой проверки Выживания с ним; «Первобытное чутьё» видит только встречи, не людей мастера
 
-**Заклинания на готовых механиках — 36 из 51**
+**Заклинания на готовых механиках — v0.8.4.26.2: 17 из 51 стали «работает»**
 
-- [ ] Жизнь и смерть:
-  - `spare_the_dying` — стабилизирует без проверки;
-  - `lesser_restoration` — снимает состояние или болезнь (`ConditionRules`, `DiseaseRules.cure`);
-  - `detect_poison_and_disease` — открывает скрытые болезни и яды;
-  - `gentle_repose` — тело не тлеет
-- [ ] Еда, вода, вещи:
-  - `purify_food_and_drink` — испорченная еда, грязная вода;
-  - `create_or_destroy_water` — сосуды (`VesselRules`);
-  - `identify` — опознание, как у жрицы;
-  - `mending` — хиты вещи (`Thing`)
-- [ ] Передвижение — строки `moves`, статусы и брод:
-  - `jump`, `spider_climb`, `feather_fall`, `levitate`, `gaseous_form`, `water_breathing`, `water_walk`;
-  - `alter_self` — облик (`Guise`) и плавание
-- [ ] Зоны боя:
-  - `sleet_storm` — трудная местность, падение ничком, концентрация;
-  - `plant_growth` — трудная местность;
-  - `magic_circle` — зона против типа существ
-- [ ] Защита: `warding_bond` — +1 к КД и спасброскам, сопротивление, половина урона на заклинателя через `Harm`
-- [ ] Отдых и лагерь:
-  - `tiny_hut` — погода не мочит, засада не входит;
-  - `alarm` — без внезапности;
-  - `rope_trick` и `meld_into_stone` — укрытие для отдыха
-- [ ] Связь и разведка:
-  - `sending` и `animal_messenger` — письмо сразу или со зверем;
-  - `clairvoyance` — выход на карту, как разведка ворона;
-  - `locate_object` и `locate_animals_or_plants` — отметка на карте, запас угодий;
-  - `detect_evil_and_good` — типы существ рядом
-- [ ] Разговор:
-  - `speak_with_animals` — язык зверей, преимущество Обращения с животными (хвост v0.7.50);
-  - `detect_thoughts` — тайны NPC (v0.7.15.3);
-  - `zone_of_truth` — Обман в зоне проваливается
-- [ ] Мелочи на карте:
-  - `mage_hand` — взять вещь в 30 футах (`MapSpots`);
-  - `unseen_servant` — переносит вещи;
-  - `glyph_of_warding` — ловушка героя на клетке
-- Остаются у мастера (12): `augury`, `speak_with_dead`, `speak_with_plants`, `message`, `magic_mouth`, `illusory_script`, `minor_illusion`, `silent_image`, `major_image`, `prestidigitation`, `thaumaturgy`, `druidcraft`. Иллюзиям позже можно дать отвлечение для скрытности.
-- `revivify` и `nondetection` — во втором шаге v0.8.4.27, `arcanists_magic_aura` — там же, со статусом «не обнаружить».
+Сделано на дорогах, которые в движке уже были:
+- [x] `lesser_restoration` и `identify` работали и раньше — проба теперь даёт им что снять и что опознать
+- [x] Передвижение — строки `spell_effects` словами статусов (`"walk"` — скорость ходьбы):
+  - `spider_climb` — лазание, `alter_self` — плавание (водная приспособленность), `gaseous_form` — полёт 10 фт и сопротивление оружию;
+  - `water_walk` — новая строка `moves` по клеткам воды;
+  - `jump` — прыжок втрое (`jump_mult`);
+  - `feather_fall` — реакция на падение (`core/acts/slow_fall.gd`, ячейка снимает весь урон)
+- [x] Разговор: `speak_with_animals` — зверь понимает героя (`beast_speech` в `LanguageRules.foe_understands`), преимущество Ухода за животными; `detect_thoughts` — преимущество Проницательности
+- [x] Знание мира (`world_spell`):
+  - `detect_evil_and_good` — типы существ рядом (`EncounterRules.sense`);
+  - `detect_poison_and_disease` — зреющая болезнь героя и больные люди рядом;
+  - `clairvoyance` — место за выходом на карте, как разведка ворона (`PetRules.seen`)
+- [x] Вода и еда: `create_or_destroy_water` наполняет сосуды, `purify_food_and_drink` очищает воду и делает еду свежей (`VesselRules.clean`, `FoodRules.freshen`)
+- [x] Зоны боя: `sleet_storm` (ничком по спасброску, трудная местность, туман), `plant_growth` (трудная местность)
+- Упрощения: ясновидение смотрит за первый неизведанный выход; «Смена облика» даёт только плавание; «Обнаружение мыслей» — только преимущество Проницательности, тайны NPC открываются обычной проверкой
+
+Осталось в группе — нужны новые части движка (v0.8.4.27):
+- [ ] `spare_the_dying` — дорога заклинания на союзника при 0 хитов (стабилизация уже есть в спасбросках от смерти)
+- [ ] `water_breathing` и брод — путь, который открывает статус (`water_walk`, `water_breathing` через затопленный брод)
+- [ ] `levitate` — подъём без движения по клеткам
+- [ ] `warding_bond` — половина урона на заклинателя через `Harm`
+- [ ] Отдых: `tiny_hut` (палатка в `WeatherRules.camp` на всю ночь), `alarm`, `rope_trick`, `meld_into_stone` — у долгого отдыха пока нет засады, которой они мешают
+- [ ] `sending`, `animal_messenger` — окно письма, открытое самим героем, а не у почты
+- [ ] `locate_object`, `locate_animals_or_plants` — отметка на карте и запас угодий
+- [ ] `magic_circle`, `zone_of_truth`, `mage_hand`, `unseen_servant`, `glyph_of_warding`, `gentle_repose`, `mending`
+- Остаются у мастера (12): `augury`, `speak_with_dead`, `speak_with_plants`, `message`, `magic_mouth`, `illusory_script`, `minor_illusion`, `silent_image`, `major_image`, `prestidigitation`, `thaumaturgy`, `druidcraft`
+- `revivify`, `nondetection`, `arcanists_magic_aura` — во втором шаге v0.8.4.27
 
 **Инструменты — 28: кнопка и проверка**
 

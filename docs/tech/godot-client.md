@@ -361,6 +361,11 @@ game/
   - Свойство `water_source` — вода где угодно (`NeedRules.water_here`, Графин).
   - Под рукой (`ItemRules.at_hand`) — пояс и надетые вещи со своим применением: обруч, линзы, шляпа применяются там, где надеты, на пояс не кладутся (`belt_fits`).
   - `CharacterRules.working_ids` / `carried_ids` — id того же списка, что `working` / `carried`.
+- **Заклинания без слов мастера (v0.8.4.26.2):** 17 из 51.
+  - В строке `spell_effects` значение `"walk"` — скорость ходьбы заклинателя (`ItemRules.walk_of`, та же, что у надетой вещи). Строка `moves` может быть без `speed` — только статус (`water_walk` по клеткам воды).
+  - `jump_mult` — прыжок во столько раз дальше (`core/acts/jump.gd`); `beast_speech` — зверь понимает героя (`LanguageRules.foe_understands`).
+  - `reaction: "fall"` — заклинание-реакция на падение: его предлагает тот же акт, что и Медленное падение (`core/acts/slow_fall.gd`).
+  - `world_spell` знает ещё `reveal`: `disease` (зреющая болезнь, больные рядом), `kinds` (типы существ, `EncounterRules.sense`), `scout` (место за выходом, `PetRules.seen` — общий с вороном); и `water`: `fill` (`VesselRules.fill`), `clean` (`VesselRules.clean`, `FoodRules.freshen`).
 - **Умения без слов мастера (v0.8.4.26.1):** 47 из 49 умений и черт, что вёл мастер, идут дорогами движка.
   - `rules.spellcasting.feature_always` — заклинания, всегда подготовленные по умению и уровню класса (земля Круга); `LevelUp.always` собирает их вместе с заклинаниями подкласса при создании и повышении.
   - Строка `rules.resources` с `features` и `spell` — заряды заклинания умения (воззвание раз за долгий отдых). `SpellRules.stock_of` — чем платит заклинание без ячейки (своя `stock` способности мастера или такая строка), `SpellRules.free_now` — можно ли без ячейки сейчас; кончились заряды, а заклинание подготовлено — идёт ячейкой.

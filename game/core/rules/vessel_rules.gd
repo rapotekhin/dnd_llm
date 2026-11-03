@@ -62,6 +62,16 @@ static func fill(c: Dictionary, data: Dictionary, foul: bool, only := "") -> voi
 		_put(c, v, float(v["cap"]), foul)
 
 
+## Foul water in the vessels turns clean (Purify Food and Drink, v0.8.4.26.2). Lines.
+static func clean(c: Dictionary, data: Dictionary) -> Array[String]:
+	var n := 0
+	for v: Dictionary in carried(c, data):
+		if bool(v["foul"]):
+			_put(c, v, float(v["pints"]), false)
+			n += 1
+	return ["вода очищена: сосудов %d" % n] if n > 0 else [] as Array[String]
+
+
 ## Takes up to `want` pints, the least full first (stacks empty one by one). {pints, foul}.
 static func take(c: Dictionary, data: Dictionary, want: float) -> Dictionary:
 	var list := carried(c, data).filter(func(v: Dictionary) -> bool: return float(v["pints"]) > 0.0)

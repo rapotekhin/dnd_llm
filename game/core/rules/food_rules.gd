@@ -59,6 +59,20 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	return ["Испортилось: " + ", ".join(names)]
 
 
+## The hero's perishables fresh again, as just got (Purify Food and Drink, v0.8.4.26.2). Lines.
+static func freshen(s: GameSession, data: Dictionary) -> Array[String]:
+	var now := TimeRules.abs_minute(s)
+	var n := 0
+	for h: Dictionary in Thing.holders(s.character):
+		for id: String in h.get("copies", {}).keys():
+			if spoils_days(data, s.items, id) > 0:
+				for st: Dictionary in Thing.states(h, id):
+					if st.has("got"):
+						st["got"] = now
+						n += 1
+	return ["еда свежая: %d" % n] if n > 0 else ["испорченной еды нет"] as Array[String]
+
+
 ## A dish eaten by `who` (already taken from its things): its temporary HP and boon, the hero's water (v0.8.4.15: the one
 ## who ate it gets them). Lines.
 static func meal(s: GameSession, data: Dictionary, id: String, who: Dictionary = Sheet.HERO) -> Array[String]:

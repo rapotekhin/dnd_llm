@@ -129,7 +129,7 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	if bool(sp.get("lift_curse", false)):  # Remove Curse (v0.7.13.7)
 		var lifted := ItemRules.lift_curse(c, data, s.items)
 		return lifted if not lifted.is_empty() else ["проклятых вещей на герое нет"] as Array[String]
-	if sp.has("reveal") or sp.has("knock"):  # Find Traps, Detect Magic, Knock (v0.7.13.8)
+	if sp.has("reveal") or sp.has("knock") or sp.has("water"):  # Find Traps, Detect Magic, Knock (v0.7.13.8); water (v0.8.4.26.2)
 		var found := world_spell(s, data, spell_id)
 		if not bool(spell.get("concentration", false)):
 			return found
@@ -181,7 +181,7 @@ static func _effect(s: GameSession, data: Dictionary, spell_id: String, slot: in
 	for k: String in sp:
 		if not k in ["foe", "targets", "save", "temp_dice", "temp_per_slot", "per_slot", "resist_auto", "remove", "max_hp_plus", "plus_at_slot",
 				"next_dice", "blade_dice", "foe_target"]:
-			e[k] = sp[k]
+			e[k] = ItemRules.walk_of(Sheet.holder(s, who), data) if str(sp[k]) == "walk" else sp[k]  # Spider Climb: the walk (v0.8.4.26.2)
 	var slot_up := maxi(0, slot - maxi(1, int(spell["level"])))
 	if sp.has("self_status"):  # a spell the master built: its status with what it lays
 		e["condition"] = str(sp["self_status"])
@@ -350,6 +350,14 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 		parts.append("в конце хода к20 11+ — герой исчезает до своего хода")
 	if sp.has("speed_plus"):
 		parts.append("скорость +%d фт" % int(sp["speed_plus"]))
+	if int(sp.get("jump_mult", 1)) > 1:  # v0.8.4.26.2
+		parts.append("прыжок ×%d" % int(sp["jump_mult"]))
+	if sp.has("jump_ft"):
+		parts.append("прыжок с разбега +%d фт" % int(sp["jump_ft"]))
+	if bool(sp.get("beast_speech", false)):
+		parts.append("понимает зверей и говорит с ними")
+	if sp.has("check_adv"):
+		parts.append("преимущество: %s" % TranslationServer.translate("SKILL_" + str(sp["check_adv"]).to_upper()))
 	if bool(sp.get("bonus_dash", false)):
 		parts.append("Рывок бонусным действием")
 	if bool(sp.get("enlarged", false)):
@@ -1196,4 +1204,30 @@ static func world_spell(s: GameSession, data: Dictionary, spell_id: String) -> A
 					WayRules.spell(s, data, room, e, spell_id)
 					lines.append("открылась дверь: %s" % WorldView.new(world).room(e).get("name", e))
 			lines.append("громкий стук разносится вокруг" if not lines.is_empty() else "запертого рядом нет — только громкий стук")
+		"disease":  # Detect Poison and Disease (v0.8.4.26.2): what incubates in the hero, who is sick here
+			for d: Dictionary in DiseaseRules.incubating(s.character):
+				lines.append("в теле зреет болезнь: %s" % DiseaseRules.def_of(s, data, str(d["id"])).get("name", d["id"]))
+			for n: String in s.npcs_here(world, room):
+				var ill := DiseaseRules.npc_disease(s, data, n)
+				if not ill.is_empty():
+					lines.append("%s болен: %s" % [WorldView.name_of(data, n), DiseaseRules.def_of(s, data, ill).get("name", ill)])
+			if lines.is_empty():
+				lines.append("ни болезни, ни яда рядом")
+		"kinds":  # Detect Evil and Good: the kinds of creatures here (EncounterRules.sense)
+			var kinds := EncounterRules.sense(s, data, sp.get("types", []), int(sp.get("depth", 0)))
+			lines.append(("рядом есть: " + ", ".join(kinds)) if not kinds.is_empty() else "рядом никого из этих существ")
+		"scout":  # Clairvoyance: a place beyond an exit seen as a raven sees it (PetRules.seen)
+			var at := PetRules.scout_targets(s, data)
+			if at.is_empty():
+				lines.append("неизведанных мест рядом нет")
+			else:
+				Knows.add(s, Knows.SCOUTED, at[0])
+				lines.append("незримый глаз видит «%s»: %s" % [WorldView.new(world).room(at[0]).get("name", at[0]), PetRules.seen(s, data, at[0])])
+	match str(sp.get("water", "")):
+		"fill":  # Create Water: every vessel full of clean water
+			VesselRules.fill(s.character, data, false)
+			lines.append_array(VesselRules.lines(s.character, data, s.items))
+		"clean":  # Purify Food and Drink: the water clean, the food fresh again
+			lines.append_array(VesselRules.clean(s.character, data))
+			lines.append_array(FoodRules.freshen(s, data))
 	return lines
