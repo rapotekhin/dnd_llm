@@ -3355,6 +3355,80 @@ scenarios:
     rubric:
       - "v0.7.38.1 (трейс автора): мастер вешает заказ create:quest с board_prop_id p1; нового заказчика (старосту, купца) даёт в new_npcs самого задания с giver new:<key>, а не отдельным create:npc"
 
+  - id: prepare_furnish_from_candidates
+    title: "Заготовка: обстановка соседней комнаты из кандидатов движка, без поиска и без героя (v0.8.4.25)"
+    category: concepts
+    extends: tavern
+    kind: prepare
+    input: |
+      [prepare furnish | room room_cellar]
+      Комната: Серое Устье — Погреб.
+      Описание: Низкий погреб под таверной: бочки с элем, мешки с мукой, на крюках окорока. Пахнет сыростью.
+      Вид места: cellar; теги: cellar, indoor; под крышей.
+      Люди комнаты: Горм [npc_innkeeper], трактирщик.
+      Места комнаты: лестница [stairs], стена [wall].
+      Кандидаты (item_id — название, цена):
+      - ale — Эль (4 мм)
+      - barrel — Бочка (200 мм)
+      - sack — Мешок (1 мм)
+      - candle — Свеча (1 мм)
+      - lantern — Фонарь (500 мм)
+      - rope — Верёвка (100 мм)
+      - jug_or_pitcher — Кувшин (2 мм)
+      - bread — Хлеб (2 мм)
+      - cheese — Сыр (10 мм)
+    engine:
+      validate:
+        - {kind: furnish, summary: "Обстановка: Бочки с элем, Мешки с мукой, Окорока на крюках, Свеча"}
+    expect:
+      effects: {required_kinds_all: [furnish], forbidden_kinds: [move_item:world>hero, coins, note, create:quest], max_count: 1}
+      tools_forbidden: [find_items]
+    rubric:
+      - "Мастер предлагает один furnish на 4–8 вещей погреба по его описанию; переносные вещи — с item_id из списка кандидатов (не выдуманные id), мебель и бочки — без item_id или с body; хозяин, если указан, — npc_innkeeper"
+      - "Героя в ходе нет: рассказ — одна короткая строка для журнала, без сцены и без обращения к герою"
+
+  - id: prepare_board_orders
+    title: "Заготовка: заказы доски заранее — find_quests, затем create:quest с board_prop_id (v0.8.4.25)"
+    category: concepts
+    extends: tavern
+    kind: prepare
+    input: |
+      [prepare board | room room_tavern_hall | prop p1 | left 2]
+      Доска: «Доска объявлений» [p1], Серое Устье — Зал таверны «Хромой Ворон».
+      На ней уже: Заказы и вести Серого Устья
+      Округа: Речной городок у брода: рынок, таверна, мельница выше по течению, лес за северными воротами.
+    engine:
+      find_quests: []
+      find_npcs: []
+      validate:
+        - {kind: create:quest, summary: "Новое задание: «Пропавшая коза» — заказ на доске, заказчик Дед Ермил (простое)"}
+    expect:
+      effects: {required_kinds_any: [create:quest], forbidden_kinds: [create:npc, furnish, move_item:world>hero, coins], required_fields: [board_prop_id]}
+      tools_required: [find_quests]
+    rubric:
+      - "Мастер вешает 1–2 заказа create:quest с board_prop_id p1, каждый — каркас: сложность и акты с целями; заказчик — человек мира или новый в new_npcs самого задания (giver new:<key>), без отдельного create:npc"
+      - "Героя в ходе нет: рассказ — одна короткая строка для журнала"
+
+  - id: prepare_quest_of_person
+    title: "Заготовка: задание человека, отданное лишь на вопрос героя (v0.8.4.25)"
+    category: concepts
+    extends: tavern
+    kind: prepare
+    input: |
+      [prepare quest | giver npc_innkeeper]
+      Заказчик: Горм [npc_innkeeper] — трактирщик; Зал таверны «Хромой Ворон», Серое Устье.
+      Ворчливый, но честный хозяин таверны; держит погреб и пару комнат наверху.
+    engine:
+      find_quests: []
+      validate:
+        - {kind: create:quest, summary: "Новое задание: «Крысы в погребе» от Горм (простое)"}
+    expect:
+      effects: {required_kinds_all: [create:quest], forbidden_kinds: [create:npc, furnish, move_item:world>hero, coins], max_count: 1}
+      tools_required: [find_quests]
+    rubric:
+      - "Мастер готовит одно задание create:quest с giver npc_innkeeper по его делам: сложность, акты с целями, offer_text — как Горм сам изложит дело, когда герой спросит о работе"
+      - "Героя в ходе нет: рассказ — одна короткая строка для журнала, без сцены"
+
   - id: trade_stock_missing_thing
     title: "Вещи ремесла нет в товаре — эффект stock, а не отказ или выдача словами"
     category: trade

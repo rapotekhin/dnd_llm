@@ -26,7 +26,7 @@ func required() -> Dictionary:
 		"%SheetSplit": "HBoxContainer", "%SheetTabs": "TabContainer", "%StatsBox": "VBoxContainer",
 		"%FeaturesBox": "VBoxContainer", "%DevBox": "VBoxContainer", "%DollLeft": "VBoxContainer",
 		"%DollRight": "VBoxContainer", "%GearCoins": "Label", "%CarriedWeight": "Label", "%WeightBar": "ProgressBar",
-		"%AttunedCount": "Label", "%GearRows": "VBoxContainer",
+		"%AttunedCount": "Label", "%GearRows": "VBoxContainer", "%BeltBox": "VBoxContainer",
 	})
 	return nodes
 
@@ -432,6 +432,7 @@ func _gear_tab(c: Dictionary) -> void:
 				_stowed_cards(col, details, c, busy)
 			else:
 				_slot_card(col, details, c, slot, busy)
+	_belt_cells(details, c, busy)
 	(UiScenes.need(self, "%GearCoins") as Label).text = tr("SIDE_COINS").format({"coins": Money.format(Ledger.balance(s))})
 	var weight: Label = UiScenes.need(self, "%CarriedWeight")
 	weight.text = tr("SHEET_WEIGHT").format({"n": int(ceilf(CharacterRules.carried_weight(c, Catalog.data, s.items))), "max": CharacterRules.capacity(c, Catalog.data)})
@@ -469,8 +470,21 @@ func _gear_tab(c: Dictionary) -> void:
 		var qty := int(c["inventory"][id])
 		var water := VesselRules.summary(c, Catalog.data, id)  # v0.7.34.6: what each vessel holds
 		_item_button(row, details, c, id, "%s%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else "", " (%s)" % water if not water.is_empty() else ""], "Item_" + id)
-		if not ItemRules.consumable(Catalog.data, id, GameState.session.items).is_empty():
+		var fx := ItemRules.consumable(Catalog.data, id, s.items)
+		if fx.has("meal"):  # food from the pack; the rest is used from the belt (v0.8.4.24)
 			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
+		elif ItemRules.belt_fits(Catalog.data, s.items, id) and not ItemRules.on_belt(c, Catalog.data, s.items, id):
+			var bw := ItemRules.belt_why(c, Catalog.data, s.items, id)
+			var bb := Button.new()
+			bb.name = "BeltPut_" + id
+			bb.text = "BTN_BELT_PUT"
+			bb.disabled = busy or not bw.is_empty()
+			bb.tooltip_text = tr(bw) if not bw.is_empty() else tr("BELT_USE_TIP")
+			bb.pressed.connect(func() -> void:
+				var err := GameState.belt_put(id)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)))
+			row.add_child(bb)
 		var free := ContainerRules.droppable(s, Catalog.data, id)  # big test #10 (v0.7.22.2)
 		if free > 0:
 			_drop_button(row, id, 1, "Drop_" + id, "BTN_DROP", busy)
@@ -497,25 +511,78 @@ func _gear_tab(c: Dictionary) -> void:
 				if not at_why.is_empty():
 					(row.get_child(row.get_child_count() - 1) as Button).tooltip_text = tr(at_why)
 		for t: String in CharacterRules.slots_of(def, Catalog.data):
-			if str(c["equipped"].get(t, "")) == id or str(CharacterRules.stowed(c).get(t, "")) == id:
-				continue
-			var why := CharacterRules.can_equip(c, Catalog.data, s.items, id, t)
-			var b := Button.new()
-			var two := t == "main_hand" and (def.get("properties", []) as Array).has("two_handed")
-			b.text = tr("BTN_EQUIP_BOTH_HANDS" if two else "BTN_EQUIP_" + t.to_upper())
-			b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			b.name = "Equip_%s_%s" % [t, id]
-			b.disabled = busy or not why.is_empty()
-			if not why.is_empty():
-				b.tooltip_text = tr(why)
-			b.pressed.connect(func() -> void:
-				var err := GameState.equip(id, t)
-				if not err.is_empty():
-					EventBus.message.emit(tr(err)))
-			row.add_child(b)
+			var hand := CharacterRules.HANDS.has(t)
+			var only_spare := hand and CharacterRules.goes_stowed(c, Catalog.data, s.items, id)  # v0.8.4.24: the button says so
+			if not only_spare and str(c["equipped"].get(t, "")) != id:
+				_equip_button(row, c, def, id, t, false, busy)
+			if hand and CharacterRules.fits_stowed(c, Catalog.data, s.items, id) and str(CharacterRules.stowed(c).get(t, "")) != id:
+				_equip_button(row, c, def, id, t, true, busy)
 	var shown := _picked_item if (c.get("inventory", {}) as Dictionary).has(_picked_item) else ""
 	if not shown.is_empty():
 		details.show_text(ItemRules.display_name(items, s.items, shown), DetailsPanel.item_text(c, Catalog.data, s.items, shown))
+
+
+## «В основную руку» or «В запасной набор» (`spare`): the thing to a slot of the hands' set or of the set put away.
+func _equip_button(row: Control, c: Dictionary, def: Dictionary, id: String, t: String, spare: bool, busy: bool) -> void:
+	var s := GameState.session
+	var why := CharacterRules.can_equip(c, Catalog.data, s.items, id, t, spare)
+	var b := Button.new()
+	var two := t == "main_hand" and (def.get("properties", []) as Array).has("two_handed")
+	if spare:
+		b.text = tr("BTN_EQUIP_STOWED" if t != "off_hand" else "BTN_EQUIP_STOWED_OFF")
+	else:
+		b.text = tr("BTN_EQUIP_BOTH_HANDS" if two else "BTN_EQUIP_" + t.to_upper())
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	b.name = "%s_%s_%s" % ["EquipStowed" if spare else "Equip", t, id]
+	b.disabled = busy or not why.is_empty()
+	if not why.is_empty():
+		b.tooltip_text = tr(why)
+	b.pressed.connect(func() -> void:
+		var err := GameState.equip(id, t, false, spare)
+		if not err.is_empty():
+			EventBus.message.emit(tr(err)))
+	row.add_child(b)
+
+
+## The belt under the doll (v0.8.4.24, as in Pathfinder): five cells of the things at hand, «Использовать» and «Снять».
+func _belt_cells(details: DetailsPanel, c: Dictionary, busy: bool) -> void:
+	var s := GameState.session
+	var box := _page("%BeltBox")
+	var head := _text(box, tr("SHEET_BELT"), UiTheme.MUTED_LABEL)
+	head.tooltip_text = tr("BELT_USE_TIP")
+	head.mouse_filter = Control.MOUSE_FILTER_PASS
+	var cells := HFlowContainer.new()
+	cells.add_theme_constant_override("h_separation", 6)
+	box.add_child(cells)
+	var belt := ItemRules.belt(c, Catalog.data, s.items)
+	for i: int in belt.size():
+		var id := belt[i]
+		var card := PanelContainer.new()
+		card.name = "BeltCell_%d" % i
+		card.theme_type_variation = UiTheme.CARD
+		cells.add_child(card)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 4)
+		card.add_child(row)
+		if id.is_empty():
+			var none := _text(row, "—", UiTheme.MUTED_LABEL)
+			none.tooltip_text = tr("BELT_EMPTY_TIP")
+			none.mouse_filter = Control.MOUSE_FILTER_PASS
+			continue
+		var qty := int(c["inventory"].get(id, 0))
+		_item_button(row, details, c, id, "%s%s" % [ItemRules.display_name(Catalog.data["items"], s.items, id), " ×%d" % qty if qty > 1 else ""], "Belt_%d" % i)
+		if not ItemRules.consumable(Catalog.data, id, s.items).is_empty():
+			var why := ItemRules.can_use(c, Catalog.data, s.items, id)
+			_action(row, "BeltUse_%d" % i, "BTN_USE", Backend.is_ready() and not busy and why.is_empty(), GameState.use_item.bind(id))
+		var off := Button.new()
+		off.name = "BeltTake_%d" % i
+		off.text = "BTN_UNEQUIP"
+		off.disabled = busy
+		off.pressed.connect(func() -> void:
+			var err := GameState.belt_take(i)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
+		row.add_child(off)
 
 
 ## The other weapon set under the hands (v0.8.4.1, as in BG3): its row, what is in it and the swap.
@@ -535,8 +602,13 @@ func _stowed_cards(parent: Control, details: DetailsPanel, c: Dictionary, busy: 
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		card.add_child(row)
+		_slot_pick(card, slot, busy, true)  # v0.8.4.24: its own list, as the doll's slots
 		if id.is_empty():
-			_text(row, "—", UiTheme.MUTED_LABEL)
+			var none := _text(row, "—", UiTheme.MUTED_LABEL)
+			none.tooltip_text = tr("STOWED_EMPTY_TIP")
+			none.mouse_filter = Control.MOUSE_FILTER_PASS
+			none.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_slot_arrow(row, card)
 			continue
 		_item_button(row, details, c, id, ItemRules.display_name(Catalog.data["items"], s.items, id), "Stowed_" + slot)
 		var b := Button.new()
@@ -545,6 +617,7 @@ func _stowed_cards(parent: Control, details: DetailsPanel, c: Dictionary, busy: 
 		b.disabled = busy
 		b.pressed.connect(GameState.unequip_stowed.bind(slot))
 		row.add_child(b)
+		_slot_arrow(row, card)
 	var why := Acts.one("swap").can(s, Catalog.data, Sheet.HERO)
 	var swap := Button.new()
 	swap.name = "SwapWeapons"
@@ -559,17 +632,25 @@ func _stowed_cards(parent: Control, details: DetailsPanel, c: Dictionary, busy: 
 
 
 ## A click on a slot's card: the list of what can be worn there (v0.8.4.2). What may not be worn now is grey with why.
-func _slot_pick(card: PanelContainer, slot: String, busy: bool) -> void:
+## `spare` — a slot of the set put away, only what may lie there; a hand of the doll lists only its own set's things.
+func _slot_pick(card: PanelContainer, slot: String, busy: bool, spare: bool = false) -> void:
 	var pop := PopupMenu.new()
 	pop.name = "SlotList_" + slot
 	card.add_child(pop)
 	var s := GameState.session
+	var c := s.character
+	var hand := CharacterRules.HANDS.has(slot)
 	var ids: Array[String] = []
-	for id: String in s.character.get("inventory", {}):
-		if CharacterRules.slots_of(ItemRules.def_of(Catalog.data["items"], s.items, id), Catalog.data).has(slot) and str(s.character["equipped"].get(slot, "")) != id:
+	for id: String in c.get("inventory", {}):
+		if not CharacterRules.slots_of(ItemRules.def_of(Catalog.data["items"], s.items, id), Catalog.data).has(slot):
+			continue
+		if spare:
+			if CharacterRules.fits_stowed(c, Catalog.data, s.items, id) and str(CharacterRules.stowed(c).get(slot, "")) != id:
+				ids.append(id)
+		elif str(c["equipped"].get(slot, "")) != id and not (hand and CharacterRules.goes_stowed(c, Catalog.data, s.items, id)):
 			ids.append(id)
 	for i in ids.size():
-		var why := CharacterRules.can_equip(s.character, Catalog.data, s.items, ids[i], slot)
+		var why := CharacterRules.can_equip(c, Catalog.data, s.items, ids[i], slot, spare)
 		pop.add_item(ItemRules.display_name(Catalog.data["items"], s.items, ids[i]), i)
 		pop.set_item_disabled(i, busy or not why.is_empty())
 		pop.set_item_tooltip(i, tr(why) if not why.is_empty() else "")
@@ -577,7 +658,7 @@ func _slot_pick(card: PanelContainer, slot: String, busy: bool) -> void:
 		pop.add_item(tr("SLOT_PICK_NONE"), -1)
 		pop.set_item_disabled(0, true)
 	pop.id_pressed.connect(func(i: int) -> void:
-		var err := GameState.equip(ids[i], slot)
+		var err := GameState.equip(ids[i], slot, false, spare)
 		if not err.is_empty():
 			EventBus.message.emit(tr(err)))
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -587,14 +668,14 @@ func _slot_pick(card: PanelContainer, slot: String, busy: bool) -> void:
 
 
 func _open_slot(card: PanelContainer) -> void:
-	var pop: PopupMenu = card.get_node("SlotList_" + card.name.trim_prefix("SlotCard_"))
+	var pop: PopupMenu = card.find_children("SlotList_*", "PopupMenu", false, false)[0]
 	pop.position = Vector2i(card.get_screen_position() + Vector2(0, card.size.y))
 	pop.popup()
 
 
 func _slot_arrow(row: HBoxContainer, card: PanelContainer) -> void:
 	var b := Button.new()
-	b.name = "SlotPick_" + card.name.trim_prefix("SlotCard_")
+	b.name = card.name.replace("Card_", "Pick_")
 	b.text = "▾"
 	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	b.tooltip_text = tr("SLOT_PICK_TIP")

@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.105.0"
+PROTOCOL_VERSION = "0.106.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -163,9 +163,11 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # contest (0.84.0): a game with an NPC ended in the contest window — the engine rolled and applied it; `input` holds the lines.
 # letter (0.92.0): a letter of the hero reached its person and the reply day came — the master writes the person's
 # answer (`narration` is the letter); `input` holds the engine's frame «[letter:<id>] …» with the verdict.
+# prepare (0.106.0): the master readies ahead what the hero will meet — a room's furnishing, a board's orders, a quest of a
+# person around (`input` is the engine's frame «[prepare <subject> | …] …»); its effects are kept by the engine, not applied.
 TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
                    "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift", "quest_act",
-                   "contest", "letter"]
+                   "contest", "letter", "prepare"]
 Gender = Literal["male", "female", "other"]
 
 
@@ -469,7 +471,7 @@ class Snapshot(_In):
 
 
 class TurnRequestParams(_In):
-    turn_id: str = Field(pattern=r"^t-\d+$")
+    turn_id: str = Field(pattern=r"^[tb]-\d+$")  # 0.106.0: b-N — a turn of the second line
     mode: Mode
     kind: TurnKind
     input: str = ""
@@ -477,6 +479,7 @@ class TurnRequestParams(_In):
     model: str | None = None  # the player's pick from HelloResult.models; None = server default
     provider: str | None = None  # the provider the player pinned, a tag of ModelInfo.providers; None = the server picks (0.35.0)
     pinned_check: str = ""  # 0.74.0: the skill the player pinned, by name — the turn may not end without request_check
+    background: bool = False  # 0.106.0: a turn of the second line (`prepare`, an act ahead) beside the player's own turn
     snapshot: Snapshot = Field(default_factory=Snapshot)
 
 

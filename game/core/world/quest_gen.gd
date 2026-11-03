@@ -187,6 +187,7 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 	if not searched:
 		return {"reason": "сначала find_quests: может, такое задание уже есть"}
 	var world := WorldView.new(data["world"])
+	var here := str(spec.get("at", s.room_id))  # v0.8.4.25: readied ahead for a board or a person not of the scene yet
 	var own := bool(spec.get("own", false))
 	var giver := "" if own else _str(spec, "giver")
 	var board := _str(spec, "board_prop_id")
@@ -195,10 +196,10 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		if open_made(s).size() >= int(c["max_open"]):
 			return {"reason": "у героя уже %d созданных дел в работе — сначала их" % open_made(s).size()}
 	elif not board.is_empty():
-		var prop := PropRules.find(s, s.room_id, board)
+		var prop := PropRules.find(s, here, board)
 		if prop.is_empty():
 			return {"reason": "доски %s в этой комнате нет — вещь из «Вокруг» (prop_id)" % board}
-		if offered_by(s, "board:%s:%s" % [s.room_id, board]).size() >= int(c["max_offered"]):
+		if offered_by(s, "board:%s:%s" % [here, board]).size() >= int(c["max_offered"]):
 			return {"reason": "на %s уже %d заказа — больше не помещается" % [prop.get("name", board), int(c["max_offered"])]}
 		if giver.begins_with("new:"):
 			if people.size() != 1 or str((people[0] as Dictionary).get("key", "")) != giver.trim_prefix("new:"):
@@ -206,7 +207,7 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		elif not data["world"]["npcs"].has(giver) or Being.dead(s, giver):
 			return {"reason": "заказчик заказа на доске — живой человек мира (find_npcs) или новый «new:<key>»"}
 	else:
-		if not s.npcs_here(data["world"], s.room_id).has(giver):
+		if not s.npcs_here(data["world"], here).has(giver):
 			return {"reason": "заказчик %s — только NPC этой сцены (или заказ на доске — board_prop_id, или своё дело — own)" % giver}
 		if offered_by(s, giver).size() >= int(c["max_offered"]):
 			return {"reason": "%s уже предлагает %d дела — сначала их" % [world.npc_name(giver), int(c["max_offered"])]}
@@ -214,7 +215,7 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		return {"reason": "new_npcs — только новый заказчик заказа на доске; люди дела появятся в его актах"}
 	if not giver.is_empty() and not giver.begins_with("new:") and SocialRules.refuses(s, data, giver):
 		return {"reason": "%s враждебен герою и работы не даст" % world.npc_name(giver)}
-	if not own and s.wanted.has(world.location_id(s.room_id)):
+	if not own and s.wanted.has(world.location_id(here)):
 		return {"reason": "герой в розыске: здесь ему работы не дают"}
 	var depth := int(world.npc(giver).get("quest_depth", 0)) if not giver.is_empty() and not giver.begins_with("new:") else 0
 	if depth >= int(c["quest_depth"]):
@@ -272,7 +273,7 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 	if not follows.is_empty():
 		q["follows"] = follows
 	if not board.is_empty():
-		q["board"] = {"room": s.room_id, "prop": board}
+		q["board"] = {"room": here, "prop": board}
 	var who := str(giver_npc["npc"]["name"]) if not giver_npc.is_empty() else str(world.npc_name(giver))
 	var from := "своё дело" if own else ("заказ на доске, заказчик %s" % who) if not board.is_empty() else "от %s" % who
 	return {"plan": {"quest": q, "giver_npc": giver_npc}, "summary": "Новое задание: «%s» — %s (%s, актов %d: %s). Подробности акта соберёт мастер, когда герой его откроет" % [
@@ -418,7 +419,8 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	if q.is_empty() or not q.has("acts"):
 		return {"reason": "нет задания по актам %s" % qid}
 	var n := int(q.get("built", 0))
-	if not QuestRules.awaiting(s, data["world"]).has(qid):
+	var ahead := bool(spec.get("ahead", false)) and QuestRules.on_last_step(s, data["world"], qid)  # v0.8.4.25: built ahead, kept
+	if not QuestRules.awaiting(s, data["world"]).has(qid) and not ahead:
 		return {"reason": "у «%s» сейчас нечего собирать: задание не взято или акт %d уже есть" % [q["title"], n]}
 	if spec.get("act") != null and int(spec["act"]) != n + 1:
 		return {"reason": "собирается акт %d, не %d" % [n + 1, int(spec["act"])]}

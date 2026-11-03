@@ -7,6 +7,7 @@ lists only effect ids the engine reserved this turn.
 from __future__ import annotations
 
 import json
+import re
 import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Annotated, Any, Literal
@@ -301,6 +302,10 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     if (effect.kind == "letter_reply") != (t.params.kind == "letter") and effect.kind != "note":  # v0.7.48: the answer to a letter
         return ("Отказ: в ответе на письмо — только letter_reply (и note)." if t.params.kind == "letter" else
                 "Отказ: letter_reply — только в ответе на письмо героя.")
+    if t.params.kind == "prepare":  # 0.106.0: the second line readies one thing of its subject, nothing else
+        subject = prepare_subject(t.params)
+        if (effect.kind == "furnish") != (subject == "furnish") or (subject != "furnish" and not isinstance(effect, CreateQuestEffect)):
+            return f"Отказ: в этой заготовке — только {'furnish' if subject == 'furnish' else 'create:quest'}."
     if (effect.kind == "quest_act") != (t.params.kind == "quest_act"):  # v0.7.39.6: the designer builds acts, only acts
         return ("Отказ: в ходе сценария — только quest_act." if t.params.kind == "quest_act" else
                 "Отказ: акт задания собирает сценарист, когда герой до него дойдёт; новое задание — create:quest.")
@@ -323,7 +328,7 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         if effect.item is not None and not t.searched_items:
             return "Отказ: перед созданием нового предмета найди похожие через find_items."
     topic = prompts.topic_for(effect_tag(effect.model_dump()))
-    if topic and topic not in t.topics and t.params.kind != "quest_act":  # the rules come with the refusal: no extra call (v0.7.34.3)
+    if topic and topic not in t.topics and t.params.kind not in ("quest_act", "prepare"):  # the rules come with the refusal: no extra call (v0.7.34.3)
         t.topics.add(topic)
         return f"Отказ: эффект темы «{topic}» — по её правилам. Вот они:\n{prompts.topic_text(topic)}\nПредложи эффект снова по ним."
     if isinstance(effect, CreateNpcEffect) and t.library is not None:
@@ -368,7 +373,7 @@ def _effect_kinds(only: set[str] | None = None) -> str:
     for cls in effect_classes():
         kind, tag = cls.model_fields["kind"].default, class_tag(cls)
         if only is not None:
-            if kind in only:
+            if kind in only or tag in only:  # a kind, or one member of a family: `create:quest`
                 lines.append(effect_line(cls))
         elif prompts.topic_for(tag):
             what = tag.partition(":")[2]
@@ -613,6 +618,62 @@ def build_designer_agent(model: Model, system: str) -> Agent[TurnContext, TurnOu
     return agent
 
 
+# The second line (0.106.0): «[prepare furnish | room brod-mill]», «[prepare board | room … | prop p2 | left 2]»,
+# «[prepare quest | giver npc_smith]» — the engine's frame head names what is readied.
+_PREPARE_HEAD = re.compile(r"^\[prepare (\w+)((?: \| [^\]|]*)*)\]")
+PREPARE_SUBJECTS = ("furnish", "board", "quest")
+PREPARE_MAX_TOKENS = {"furnish": 4000, "board": 8000, "quest": 8000}  # orders with their new people need the designer's room
+
+
+def is_prepare(params: TurnRequestParams) -> bool:
+    return params.kind == "prepare"
+
+
+def prepare_head(params: TurnRequestParams) -> dict[str, str]:
+    """The frame head of a `prepare` turn: {"subject": …, and its fields}; the subject is furnish when unreadable."""
+    m = _PREPARE_HEAD.match(params.input or "")
+    out = {"subject": m.group(1) if m and m.group(1) in PREPARE_SUBJECTS else "furnish"}
+    for part in (m.group(2) if m else "").split(" | "):
+        name, _, value = part.strip().partition(" ")
+        if name:
+            out[name] = value.strip()
+    return out
+
+
+def prepare_subject(params: TurnRequestParams) -> str:
+    return prepare_head(params)["subject"]
+
+
+def build_prepare_agent(model: Model, system: str, subject: str) -> Agent[TurnContext, TurnOutput]:
+    """The master of the second line (0.106.0): one thing readied ahead in one answer. A room is furnished from the
+    engine's candidates without searching; an order or a person's quest searches the world's quests and people first."""
+    tools: list[Any] = ([propose_effect_tool({"furnish"})] if subject == "furnish" else
+                        [propose_effect_tool({"create:quest"}), find_quests, find_npcs, find_places, lookup])
+    agent: Agent[TurnContext, TurnOutput] = Agent(
+        model,
+        output_type=TurnOutput,
+        deps_type=TurnContext,
+        instructions=system,
+        tools=tools,
+        retries=2,
+        model_settings=no_thinking(settings_for(model, {**MODEL_SETTINGS, "max_tokens": PREPARE_MAX_TOKENS.get(subject, 4000)})),  # type: ignore[typeddict-item]
+        name=f"prepare_{subject}",
+    )
+
+    @agent.output_validator
+    def _validate(ctx: RunContext[TurnContext], out: TurnOutput) -> TurnOutput:
+        t = ctx.deps
+        if not t.accepted:
+            raise ModelRetry("Ничего не подготовлено: предложи эффект через propose_effect и исправь то, в чём движок отказал.")
+        out.effect_ids = list(t.accepted)
+        out.options, out.option_costs, out.option_checks, out.next_mode, out.npc_id, out.changes = [], [], [], None, None, []
+        if not out.narration.strip():
+            out.narration = "Подготовлено."
+        return out
+
+    return agent
+
+
 def build_summary_agent(model: Model, kind: str) -> Agent[None, SummaryOutput]:
     return Agent(model, output_type=SummaryOutput, retries=2, model_settings=settings_for(model, {"temperature": 0.3, "max_tokens": 400}),
                  instructions="Ты пишешь краткие записи по-русски для памяти мастера игры.", name=f"summary_{kind}")
@@ -638,6 +699,9 @@ def is_entry(params: TurnRequestParams) -> bool:
 
 
 def system_prompt_for(params: TurnRequestParams) -> str:
+    if is_prepare(params):
+        head = prepare_head(params)
+        return prompts.prepare_prompt(params.snapshot, head["subject"], int(head.get("left", "3") or 3))
     if is_quest_act(params):
         return prompts.quest_act_prompt(params.snapshot)
     if is_entry(params):
@@ -646,6 +710,6 @@ def system_prompt_for(params: TurnRequestParams) -> str:
 
 
 def turn_user_prompt(params: TurnRequestParams) -> str:
-    if is_quest_act(params):
+    if is_quest_act(params) or is_prepare(params):
         return params.input  # the engine's frame of the act
     return prompts.turn_prompt(params.mode, params.kind, params.input, params.snapshot, scene_npc(params, params.npc_id))

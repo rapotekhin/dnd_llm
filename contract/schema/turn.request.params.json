@@ -1441,6 +1441,11 @@
     }
   },
   "properties": {
+    "background": {
+      "default": false,
+      "title": "Background",
+      "type": "boolean"
+    },
     "input": {
       "default": "",
       "title": "Input",
@@ -1468,7 +1473,8 @@
         "shift",
         "quest_act",
         "contest",
-        "letter"
+        "letter",
+        "prepare"
       ],
       "title": "Kind",
       "type": "string"
@@ -1528,7 +1534,7 @@
       "$ref": "#/$defs/Snapshot"
     },
     "turn_id": {
-      "pattern": "^t-\\d+$",
+      "pattern": "^[tb]-\\d+$",
       "title": "Turn Id",
       "type": "string"
     }

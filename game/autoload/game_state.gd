@@ -35,6 +35,11 @@ var _retry_spend: Dictionary = {}  # an attachment given back by a failed turn: 
 ## A combat spell pinned to words aimed at an NPC (v0.7.7, as in BG3): if that turn starts the fight, the hero
 ## strikes first with it, the NPC caught off guard. {spell, slot, npc_id} or {}.
 var _opening: Dictionary = {}
+## The second line (v0.8.4.25): turn_id → the job the master readies ahead beside the player's turns; the day the
+## server kept the rest of the daily limit for the player's turns — nothing more is readied that day.
+var _ahead: Dictionary = {}
+var _ahead_stop := -1
+var _ahead_n := 0  # its own ids, b-N: the session's turn counter counts the player's turns only
 
 
 func has_session() -> bool:
@@ -400,7 +405,8 @@ func attach_choices() -> Array[Dictionary]:
 	for iid: String in c.get("inventory", {}):
 		var usable := not ItemRules.consumable(data, iid, session.items).is_empty()
 		out.append({"kind": "item" if usable else "item_note", "id": iid,
-			"name": "%s ×%d" % [ItemRules.display_name(data["items"], session.items, iid), int(c["inventory"][iid])], "slots": [], "off": false})
+			"name": "%s ×%d" % [ItemRules.display_name(data["items"], session.items, iid), int(c["inventory"][iid])], "slots": [],
+			"off": usable and not ItemRules.can_use(c, data, session.items, iid).is_empty()})  # off the belt (v0.8.4.24)
 	return out
 
 
@@ -1906,7 +1912,10 @@ func start(s: GameSession) -> void:
 	busy_turn = ""
 	_last_kind = ""
 	effects = EffectEngine.new()
+	_ahead = {}
+	_ahead_stop = -1
 	EventBus.session_started.emit()
+	_prepare.call_deferred()
 
 
 func close_session() -> void:
@@ -2353,6 +2362,11 @@ func read_board(prop_id: String) -> String:
 	var text := tr("BOARD_READ_SAY").format({"name": p.get("name", prop_id)})
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
+	var lines := _lay_prepared(session, PrepareRules.orders(session, session.room_id, prop_id))
+	if not lines.is_empty():  # v0.8.4.25: the orders readied ahead are on it — no master's turn
+		_effect_lines(lines)
+		SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+		return ""
 	_request("action", text + (" [движок: на «%s» [%s] есть место для новых заказов — повесь 1–%d настоящих заказа: сначала find_quests, потом create:quest с board_prop_id %s " +
 		"и заказчиком из этой округи — живым человеком из find_npcs или новым в new_npcs самого create:quest (giver new:<key>), без отдельного create:npc; " +
 		"каждый заказ — каркас: сложность (лучше разная: простое, среднее, сложное) и акты с целями, без шагов; " +
@@ -2689,12 +2703,12 @@ func cancel_turn() -> void:
 
 
 ## Puts an owned item into an equipment slot (CharacterRules.SLOTS). "" on success, else a localization key.
-## Not while the master thinks: the snapshot of the turn in flight would no longer match.
-func equip(item_id: String, slot: String, both: bool = false) -> String:
+## Not while the master thinks: the snapshot of the turn in flight would no longer match. `spare` — into the set put away.
+func equip(item_id: String, slot: String, both: bool = false, spare: bool = false) -> String:
 	if not _idle():
 		return "EQUIP_BUSY"
 	var c := session.character
-	if CharacterRules.HANDS.has(slot) and CharacterRules.goes_stowed(c, Catalog.data, session.items, item_id):
+	if CharacterRules.HANDS.has(slot) and (spare or CharacterRules.goes_stowed(c, Catalog.data, session.items, item_id)):
 		return _equip_stowed(item_id, slot)
 	var freed := CharacterRules.hands_freed(c, Catalog.data, session.items, item_id, slot, both)
 	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot) or freed.has("shield")) and session.mode == GameSession.MODE_COMBAT:
@@ -2705,6 +2719,8 @@ func equip(item_id: String, slot: String, both: bool = false) -> String:
 	if ItemRules.held_by_curse(c, Catalog.data, session.items, str(c["equipped"].get(slot, ""))):
 		return "ITEM_CURSED"
 	var before: Dictionary = (c["equipped"] as Dictionary).duplicate()
+	if CharacterRules.HANDS.has(slot):  # the last copy in the set put away comes to the hands (v0.8.4.24)
+		CharacterRules.free_copy(c, item_id, CharacterRules.stowed(c), slot, c["equipped"])
 	c["equipped"][slot] = item_id
 	for sl: String in freed:  # both hands on the weapon: the shield and the off hand go to the pack
 		c["equipped"][sl] = ""
@@ -2722,11 +2738,12 @@ func _equip_stowed(item_id: String, slot: String) -> String:
 	var c := session.character
 	if slot == "shield" and session.mode == GameSession.MODE_COMBAT:
 		return "EQUIP_IN_COMBAT"
-	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot)
+	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot, true)
 	if not why.is_empty():
 		return why
 	CharacterRules.put_stowed(c, Catalog.data, session.items, item_id, slot)
 	_refresh()
+	EventBus.state_changed.emit()  # the sheet draws the set again (v0.8.4.24: it did not)
 	return ""
 
 
@@ -2748,6 +2765,31 @@ func unequip_stowed(slot: String) -> void:
 		return
 	CharacterRules.stowed(session.character)[slot] = ""
 	_refresh()
+	EventBus.state_changed.emit()
+
+
+## A thing onto the belt under the doll (v0.8.4.24): "" or the reason. Not in a fight, as in Pathfinder.
+func belt_put(item_id: String, at: int = -1) -> String:
+	if not _idle():
+		return "EQUIP_BUSY"
+	if CombatRules.active(session):
+		return "BELT_IN_COMBAT"
+	var why := ItemRules.belt_why(session.character, Catalog.data, session.items, item_id, at)
+	if not why.is_empty():
+		return why
+	ItemRules.belt_put(session.character, Catalog.data, session.items, item_id, at)
+	EventBus.state_changed.emit()
+	return ""
+
+
+func belt_take(at: int) -> String:
+	if not _idle():
+		return "EQUIP_BUSY"
+	if CombatRules.active(session):
+		return "BELT_IN_COMBAT"
+	ItemRules.belt_take(session.character, Catalog.data, session.items, at)
+	EventBus.state_changed.emit()
+	return ""
 
 
 func unequip(slot: String) -> void:
@@ -2869,6 +2911,8 @@ func _request(kind: String, input: String) -> void:
 		_forced["turn"] = turn_id if kind == "action" and str(_forced.get("input", "")) == input else ""  # a retry keeps it
 	_set_options([])
 	EventBus.turn_started.emit(turn_id)
+	if kind == "enter":
+		_lay_furnishing(s)
 	var params := {
 		"turn_id": turn_id,
 		"mode": GameSession.MODE_EXPLORATION if kind in ["quest_act", "letter"] else s.mode,  # the designer builds, nobody speaks
@@ -2909,6 +2953,7 @@ func _request(kind: String, input: String) -> void:
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
 	_maybe_summarize_location()
+	_prepare()
 	if follow_up != "combat":
 		_opening = {}
 	if kind == "death" and s.mode != GameSession.MODE_COMBAT:
@@ -2939,11 +2984,107 @@ func _after_turn(s: GameSession, kind: String) -> void:
 ## failed build is tried again after the next turn, not in a loop.
 func _build_next_act(s: GameSession) -> bool:
 	var waiting := QuestRules.awaiting(s, Catalog.data["world"])
-	if waiting.is_empty() or not Backend.is_ready() or is_busy():
+	if waiting.is_empty() or is_busy():
+		return false
+	var built := int(QuestRules.quest(Catalog.data["world"], waiting[0]).get("built", 0))
+	var lines := _lay_prepared(s, [PrepareRules.act_of(s, waiting[0], built + 1)])
+	if not lines.is_empty():  # v0.8.4.25: built ahead and still fits the world — no designer's turn
+		_effect_lines(lines)
+		return _build_next_act(s)
+	if not Backend.is_ready():
 		return false
 	_add(GameSession.system_entry("QUEST_ACT_BUILDING"))
 	_request("quest_act", QuestGen.act_frame(s, Catalog.data, waiting[0]))
 	return true
+
+
+## «Есть дело?» at a person (v0.8.4.25): the quest it readied ahead, checked again, offered in its own words without a
+## master's turn. "" or a key.
+func ask_work(npc_id: String) -> String:
+	if not _idle() or not session.npcs_here(Catalog.data["world"], session.room_id).has(npc_id):
+		return "QUEST_BUSY"
+	var e := PrepareRules.quest_of(session, npc_id)
+	PrepareRules.part(session, PrepareRules.QUESTS).erase(npc_id)
+	var lines := _lay_prepared(session, [e])
+	if lines.is_empty():
+		EventBus.state_changed.emit()
+		return "WORK_NONE"
+	_add(GameSession.player_entry(tr("ASK_WORK_SAY")))
+	var say := str(e.get("offer_text", "")).strip_edges()
+	if not say.is_empty():
+		_add(GameSession.npc_entry(npc_id, world().npc_name(npc_id), say, ""))
+	_effect_lines(lines)
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	return ""
+
+
+## The readied furnishing of the room the hero enters is laid before the entry turn, which then only tells of it.
+func _lay_furnishing(s: GameSession) -> void:
+	if PropRules.needs_furnish(s, s.room_id):
+		var lines := _lay_prepared(s, [PrepareRules.furnishing(s, Catalog.data, s.room_id)])
+		if not lines.is_empty():
+			_log("События: " + ", ".join(lines))
+
+
+## Effects readied ahead, checked by the engine again as if the master proposed them now and applied: the lines of
+## those the world still takes.
+func _lay_prepared(s: GameSession, raw: Array) -> Array[String]:
+	_ahead_n += 1
+	var turn_id := "lay-%d" % _ahead_n  # never sent: checked and applied here
+	effects.searched_quests[turn_id] = true  # the master searched when it readied them
+	var ids: Array = []
+	for e: Variant in raw:
+		if e is Dictionary and not (e as Dictionary).is_empty():
+			var r := effects.validate(s, Catalog.data, turn_id, e)
+			if bool(r.get("accepted", false)):
+				ids.append(r["effect_id"])
+	if ids.is_empty():
+		effects.discard(turn_id)
+		return []
+	return effects.apply(s, turn_id, ids)
+
+
+## The second line (v0.8.4.25, master-prefetch.md): beside the player's turns the master readies what the hero meets
+## soon — up to `parallel` turns at once, out of a fight; the server refuses them near the end of the daily limit.
+func _prepare() -> void:
+	var s := session
+	if s == null or not Backend.is_ready() or _ahead_stop == s.day or s.mode == GameSession.MODE_COMBAT:
+		return
+	var busy: Array = _ahead.values().map(func(j: Dictionary) -> String: return "%s:%s" % [j["kind"], j["key"]])
+	for job: Dictionary in PrepareRules.jobs(s, Catalog.data, busy):
+		if _ahead.size() >= int(PrepareRules.cfg(Catalog.data).get("parallel", 1)):
+			return
+		_prepare_one(s, job)
+
+
+func _prepare_one(s: GameSession, job: Dictionary) -> void:
+	_ahead_n += 1
+	var turn_id := "b-%d" % _ahead_n
+	_ahead[turn_id] = job
+	effects.ahead[turn_id] = PrepareRules.ahead_of(job)
+	var params := {
+		"turn_id": turn_id,
+		"mode": GameSession.MODE_EXPLORATION,
+		"kind": "quest_act" if job["kind"] == "act" else "prepare",
+		"input": PrepareRules.frame(s, Catalog.data, job),
+		"snapshot": TurnSnapshot.build(s, Catalog.data, int(Catalog.game()["chat"]["history_chars"])),
+		"background": true,
+	}
+	SaveManager.master_params(params)
+	var call := await Backend.request("turn.request", params, float(Catalog.game()["turn"]["client_timeout_s"]))
+	_ahead.erase(turn_id)
+	if session != s:
+		return
+	if call.is_error():
+		effects.discard(turn_id)
+		if call.reason() == "budget_exceeded":
+			_ahead_stop = s.day
+		_log("Заготовка %s %s: %s" % [job["kind"], job["key"], call.reason()])
+		return
+	PrepareRules.keep(s, Catalog.data, job, effects.kept(turn_id, call.result.get("effect_ids", [])))
+	_log("Заготовка %s %s: %s" % [job["kind"], job["key"], str(call.result.get("narration", ""))])
+	if not is_busy():
+		_prepare()
 
 
 ## A letter's reply day came (v0.7.48): the master writes the person's answer in a turn of its own.
@@ -3176,7 +3317,8 @@ static func _error_key(reason: String) -> String:
 
 
 func _active(params: Dictionary) -> bool:
-	return session != null and str(params.get("turn_id", "")) == busy_turn
+	var turn_id := str(params.get("turn_id", ""))
+	return session != null and (turn_id == busy_turn or _ahead.has(turn_id))  # a turn of the second line too (v0.8.4.25)
 
 
 func handle_engine_check(params: Dictionary) -> Dictionary:
@@ -3334,7 +3476,7 @@ func _haggle_check(params: Dictionary) -> Dictionary:
 func handle_engine_validate(params: Dictionary) -> Dictionary:
 	if not _active(params) or not (params.get("effect") is Dictionary):
 		return JsonRpcPeer.fail(-32041, "no such active turn or no effect")
-	return effects.validate(session, Catalog.data, busy_turn, params["effect"])
+	return effects.validate(session, Catalog.data, str(params["turn_id"]), params["effect"])
 
 
 func handle_engine_lookup(params: Dictionary) -> Dictionary:
@@ -3347,7 +3489,7 @@ func handle_engine_lookup(params: Dictionary) -> Dictionary:
 func handle_engine_find_places(params: Dictionary) -> Dictionary:
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")
-	effects.searched_places[busy_turn] = true
+	effects.searched_places[str(params["turn_id"])] = true
 	return {"places": WorldGen.find_places(session, Catalog.data, str(params.get("query", ""))).slice(0, 10),
 		"edges": WorldGen.reach_edges(session, Catalog.data).slice(0, 12)}  # where a new place may grow (the author, 2026-10-24)
 
@@ -3356,7 +3498,7 @@ func handle_engine_find_places(params: Dictionary) -> Dictionary:
 func handle_engine_find_npcs(params: Dictionary) -> Dictionary:
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")
-	effects.searched_npcs[busy_turn] = true
+	effects.searched_npcs[str(params["turn_id"])] = true
 	return {"npcs": WorldGen.find_npcs(session, Catalog.data, str(params.get("query", ""))).slice(0, 10)}
 
 
@@ -3377,7 +3519,7 @@ func handle_engine_find_teachers(params: Dictionary) -> Dictionary:
 func handle_engine_find_quests(params: Dictionary) -> Dictionary:  # v0.7.21
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")
-	effects.searched_quests[busy_turn] = true
+	effects.searched_quests[str(params["turn_id"])] = true
 	return {"quests": QuestGen.find_quests(session, Catalog.data, str(params.get("query", ""))).slice(0, 10),
 		"open_made": QuestGen.open_made(session).size(), "max_open": int(QuestGen.cfg(Catalog.data)["max_open"])}
 
@@ -3385,7 +3527,7 @@ func handle_engine_find_quests(params: Dictionary) -> Dictionary:  # v0.7.21
 func handle_engine_find_items(params: Dictionary) -> Dictionary:
 	if not _active(params):
 		return JsonRpcPeer.fail(-32041, "no such active turn")
-	effects.mark_searched(busy_turn)
+	effects.mark_searched(str(params["turn_id"]))
 	var base := str(params.get("base", "")) if params.get("base") != null else ""
 	return {"items": ItemRules.find(Catalog.data["items"], session.items, str(params.get("query", "")), base,
 		params.get("properties", []))}

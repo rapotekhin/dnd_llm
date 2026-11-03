@@ -135,6 +135,9 @@ var permit_asked: Dictionary = {}
 var ways: Dictionary = {}
 ## The day the master last described each room (v0.7.22.20, ExplorationRules.again_line): {room_id: day}.
 var described: Dictionary = {}
+## What the master readied ahead (v0.8.4.25, PrepareRules): {rooms: {room: {effect, ver}}, boards: {"room:prop": [effect]},
+## quests: {npc: effect}, acts: {"quest:act": effect}} — kept until used, each checked again by the engine then.
+var prepared: Dictionary = {}
 ## The rolls of the rules since the last chat line of effects (RollParts.note, v0.7.39.5): not saved, the next
 ## effect line takes them for its hover.
 var roll_notes: Array[Dictionary] = []
@@ -276,6 +279,8 @@ static func normalized_character(t: Dictionary) -> Dictionary:
 		c["ammo_left"] = whole(c["ammo_left"])
 	if c.get("stowed") is Dictionary:
 		c["stowed"] = whole(c["stowed"])
+	if c.get("belt") is Array:  # v0.8.4.24
+		c["belt"] = (c["belt"] as Array).map(func(v: Variant) -> String: return str(v))
 	return c
 
 
@@ -490,6 +495,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"sneak_noticed": sneak_noticed,
 		"fight_on_load": fight_on_load,
 		"props": props,
+		"prepared": prepared,
 		"shop_closed": shop_closed,
 		"notes": notes,
 		"generated": generated,
@@ -588,6 +594,7 @@ static func from_dict(saved: Dictionary) -> GameSession:
 	s.sneak_noticed = str(d.get("sneak_noticed", ""))
 	var fight: Variant = d.get("fight_on_load", {})
 	s.fight_on_load = (fight as Dictionary).duplicate(true) if fight is Dictionary else {}
+	s.prepared = whole(d.get("prepared", {}))
 	s.props = whole(d.get("props", {}))  # days and counters, the food batches lying there
 	for room: String in s.props:  # whole numbers back from JSON: contents, the lock, when it was dropped (v0.7.22.8)
 		for p: Variant in s.props[room]:

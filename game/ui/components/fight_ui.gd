@@ -583,10 +583,14 @@ func _aim_hint(s: GameSession, data: Dictionary, cell: Vector2i, id: String, tex
 	if not why.is_empty():
 		return tr(why)
 	var sp: Dictionary = data["spells"].get(_pending_aim, {})
-	if not sp.has("area"):
+	var cells: Array[Vector2i] = []
+	if sp.has("area"):
+		cells = CombatRules.area_cells(s, data, sp, CombatRules.aimed(s, aim))
+	elif FeatureRules.aims(data, _pending_aim):  # a feature laid as an area: a dragonborn's breath (v0.8.4.24)
+		cells = FeatureRules.aim_cells(s, data, CombatRules.player(s), _pending_aim, aim)
+	else:
 		return text
 	var caught: Array[String] = []
-	var cells := CombatRules.area_cells(s, data, sp, CombatRules.aimed(s, aim))
 	for at: Vector2i in cells:
 		_field.blast[at] = true
 	for f: Dictionary in _field.fighters:
@@ -1120,8 +1124,10 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			var fid := str(fa["id"])
 			var label := "%s%s" % [fa["name"], tr("COMBAT_BONUS_SHORT") if str(fa["cost"]) == "bonus" else ""]
 			if bool(fa["target"]):
+				var area := FeatureRules.aims(data, fid)
 				var tb := _action(fb, "Feat_" + fid, label, me, func(t: String) -> String: return GameState.combat_feature(fid, t),
-					func(t: String) -> String: return Acts.one("feature").can(s, data, CombatRules.player(s), t, {"id": fid}), func(_t: String) -> Dictionary: return {})
+					func(t: String) -> String: return Acts.one("feature").can(s, data, CombatRules.player(s), t, {"id": fid}), func(_t: String) -> Dictionary: return {},
+					fid if area else "", FeatureRules.aim_ft(s, data, CombatRules.player(s), fid) if area else 0)
 				tb.tooltip_text = str(fa["tip"])
 				_details.hook(tb, str(fa["name"]), str(fa["tip"]))
 			else:
@@ -1137,8 +1143,8 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			b.pressed.connect(func() -> void: _do(GameState.combat_use_feature(rid)))
 	# Items.
 	var usable: Array[String] = []
-	for id: String in c.get("inventory", {}):
-		if not ItemRules.consumable(data, id, s.items).is_empty():
+	for id: String in ItemRules.belt(c, data, s.items):  # only the belt's things are at hand (v0.8.4.24)
+		if not id.is_empty() and not ItemRules.consumable(data, id, s.items).is_empty():
 			usable.append(id)
 	if not usable.is_empty():
 		var ib := _tab_box("COMBAT_TAB_ITEMS")

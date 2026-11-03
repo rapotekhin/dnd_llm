@@ -5,7 +5,7 @@
 		".": {"name": "floor"},
 		"=": {"name": "road"},
 		",": {"name": "path"},
-		"+": {"name": "door", "opaque": true},
+		"+": {"name": "door", "opaque": true, "keep_free": true},
 		"%": {"name": "difficult", "cost": 2},
 		"^": {"name": "hazard", "hazard": true},
 		"~": {"name": "water", "cost": 2},

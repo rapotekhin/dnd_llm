@@ -39,7 +39,9 @@ func run() -> void:
 		await press(attack)
 		await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)
 		await frames(3)
-		var caught := CombatRules.enemies(s).all(func(id: String) -> bool: return bool(CombatRules.fighter(s, id).get("surprised", false)))
+		# a wolf that won the initiative has spent its surprised turn already (5e): the fight's lines say it was caught
+		var caught := CombatRules.enemies(s).all(func(id: String) -> bool: return bool(CombatRules.fighter(s, id).get("surprised", false))) \
+			or JSON.stringify(s.chat.slice(maxi(0, s.chat.size() - 6))).contains("застигнут")
 		step("the fight — the wolves caught off guard", CombatRules.active(s) and caught, str(s.combat.get("start_lines", [])))
 		await shot("surprise")
 		s.combat = {}

@@ -221,6 +221,7 @@
 		"crimes": [],
 		"day": 1,
 		"described": {},
+		"prepared": {},
 		"dialogue_log": [],
 		"effect_counter": 0,
 		"encounters_done": [],

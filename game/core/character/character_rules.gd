@@ -352,6 +352,14 @@ static func set_kind(def: Dictionary) -> String:
 	return "ranged" if str(def.get("weapon", {}).get("range", "melee")) == "ranged" else "melee"
 
 
+## The rows a thing may lie in: a thrown weapon (a javelin, a handaxe) in either (v0.8.4.24).
+static func set_kinds(def: Dictionary) -> Array[String]:
+	var kind := set_kind(def)
+	if kind == "melee" and def.has("weapon") and (def.get("properties", []) as Array).has("thrown"):
+		return ["melee", "ranged"] as Array[String]
+	return [kind] as Array[String]
+
+
 static func _hands_kind(hands: Dictionary, data: Dictionary, session_items: Dictionary) -> String:
 	for slot: String in HANDS:
 		var id := str(hands.get(slot, ""))
@@ -360,17 +368,29 @@ static func _hands_kind(hands: Dictionary, data: Dictionary, session_items: Dict
 	return ""
 
 
-## The row in the hands: by what is held, empty hands — the row the stowed set is not.
+## The row in the hands: the one laid by a swap or by filling the other row (`wield`, v0.8.4.24: a javelin may lie in
+## either), else by what is held, empty hands — the row the stowed set is not.
 static func active_kind(c: Dictionary, data: Dictionary, session_items: Dictionary) -> String:
+	if not str(c.get("wield", "")).is_empty():
+		return str(c["wield"])
 	var held := _hands_kind(c.get("equipped", {}), data, session_items)
 	if not held.is_empty():
 		return held
 	return "melee" if _hands_kind(stowed(c), data, session_items) != "melee" else "ranged"
 
 
-## This thing belongs to the row that is put away.
+## This thing belongs to the row that is put away only.
 static func goes_stowed(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> bool:
-	return set_kind(ItemRules.def_of(data["items"], session_items, id)) != active_kind(c, data, session_items)
+	return not set_kinds(ItemRules.def_of(data["items"], session_items, id)).has(active_kind(c, data, session_items))
+
+
+## This thing may lie in the row that is put away.
+static func fits_stowed(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> bool:
+	return set_kinds(ItemRules.def_of(data["items"], session_items, id)).size() > 1 or goes_stowed(c, data, session_items, id)
+
+
+static func other_kind(kind: String) -> String:
+	return "melee" if kind == "ranged" else "ranged"
 
 
 ## "" when the sets can change places, otherwise a reason (localization key).
@@ -383,7 +403,9 @@ static func swap_why(c: Dictionary, data: Dictionary, session_items: Dictionary)
 	return ""
 
 
-static func swap_hands(c: Dictionary) -> void:
+static func swap_hands(c: Dictionary, data: Dictionary = {}, session_items: Dictionary = {}) -> void:
+	if not data.is_empty():
+		c["wield"] = other_kind(active_kind(c, data, session_items))
 	var eq: Dictionary = c.get("equipped", {})
 	var was := stowed(c)
 	var out := {}
@@ -393,17 +415,31 @@ static func swap_hands(c: Dictionary) -> void:
 	c["stowed"] = out
 
 
-## Puts a thing into the row put away (can_equip first): a weapon of two hands empties the other hand of that row.
+## Puts a thing into the row put away (can_equip first): a weapon of two hands empties the other hand of that row; the
+## last copy held in the hands moves over (v0.8.4.24).
 static func put_stowed(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, slot: String) -> void:
+	c["wield"] = active_kind(c, data, session_items)  # the rows stay what they are, a javelin among them
 	if not c.has("stowed"):
 		c["stowed"] = {}
 	var row := stowed(c)
+	free_copy(c, id, c.get("equipped", {}), slot, row)
 	row[slot] = id
 	if _two_handed(data, session_items, id) and slot == "main_hand":
 		row["off_hand"] = ""
 		row["shield"] = ""
 	if slot == "main_hand" and str(row.get("off_hand", "")) == id and int(c["inventory"].get(id, 0)) < 2:
 		row["off_hand"] = ""
+
+
+## A copy of `id` about to go to `to[slot]`: when every copy is already held, the one in the hands of the other row
+## leaves them — a javelin moves between the sets, it is not doubled.
+static func free_copy(c: Dictionary, id: String, from: Dictionary, slot: String, to: Dictionary) -> void:
+	if str(to.get(slot, "")) == id or held_copies(c, id) < int(c.get("inventory", {}).get(id, 0)):
+		return
+	for sl: String in HANDS:
+		if str(from.get(sl, "")) == id:
+			from[sl] = ""
+			return
 
 
 ## How many copies of the thing are held or worn: a stowed weapon is not for sale either.
@@ -459,7 +495,8 @@ static func slots_of(def: Dictionary, data: Dictionary) -> Array[String]:
 
 
 ## "" when the character can equip `id` into `slot`, otherwise a reason (localization key).
-static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, slot: String) -> String:
+## `spare` — into the row put away, for a thing that may lie in either (fits_stowed).
+static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, slot: String, spare: bool = false) -> String:
 	if int(c.get("inventory", {}).get(id, 0)) <= 0:
 		return "EQUIP_NOT_OWNED"
 	var def := ItemRules.def_of(data["items"], session_items, id)
@@ -468,7 +505,7 @@ static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary
 		return "EQUIP_WRONG_SLOT"
 	if natural == "ring1" and str(c.get("equipped", {}).get("ring1" if slot == "ring2" else "ring2", "")) == id and int(c["inventory"][id]) < 2:
 		return "EQUIP_NOT_OWNED"
-	var eq: Dictionary = stowed(c) if HANDS.has(slot) and goes_stowed(c, data, session_items, id) else c.get("equipped", {})
+	var eq: Dictionary = stowed(c) if HANDS.has(slot) and (spare or goes_stowed(c, data, session_items, id)) else c.get("equipped", {})
 	var profs: Array = c.get("armor_profs", [])
 	match slot:
 		"armor":
@@ -583,7 +620,7 @@ static func auto_equip(c: Dictionary, data: Dictionary) -> void:
 		if str(row.get("main_hand", "")).is_empty():
 			row["main_hand"] = id
 	if str(eq["main_hand"]).is_empty():
-		swap_hands(c)
+		swap_hands(c, data, {})
 	for id: String in c.get("inventory", {}):
 		if slot_for(ItemRules.def_of(data["items"], {}, id)) == "shield" and can_equip(c, data, {}, id, "shield").is_empty():
 			(stowed(c) if goes_stowed(c, data, {}, id) else eq)["shield"] = id

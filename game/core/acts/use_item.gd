@@ -34,7 +34,7 @@ func spare(s: GameSession, data: Dictionary, f: Dictionary, moment: String) -> A
 	if Sheet.is_hero(f) or moment != str(w["when"]) or float(f.get("hp", 0)) >= float(w["heal_below"]) * float(f.get("max_hp", 1)):
 		return []
 	var me := Sheet.holder(s, f)
-	for item: String in me.get("inventory", {}):
+	for item: String in ItemRules.belt(me, data, s.items):
 		if ItemRules.consumable(data, item, s.items).has("heal") and ItemRules.can_use(me, data, s.items, item).is_empty():
 			return [{"to": "", "how": {"item": item}}]
 	return []

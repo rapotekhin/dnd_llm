@@ -219,6 +219,9 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 	var ring := ArenaRules.ring(s, data)  # v0.8.4.5: its sides and its crowd
 	s.combat["crowd"] = ring.get("crowd", [])
 	FightGrid.put(player(s), FightGrid.free_near(s, data, ring["hero"]) if ring.has("hero") else _hero_square(s, data))
+	var key := str(source.get("encounter", ""))
+	if (not key.is_empty() or bool(source.get("on_map", false))) and not s.combat.has("field") and not s.combat.has("arena"):
+		foes = MapSpots.on_lair(s, data, key, foes)  # the foes seen on the map keep their squares (v0.8.4.24)
 	var own := FactionRules.own_heads(s, data, foes, str(source.get("encounter", "")))  # v0.7.63: the hero's look, a side of their own
 	foes = foes.filter(func(f: Dictionary) -> bool: return not own.has(f))
 	_add_foes(s, data, _on_square(foes, ring.get("foe", FightGrid.NONE)))

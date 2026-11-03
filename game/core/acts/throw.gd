@@ -22,7 +22,7 @@ func cost(_s: GameSession, _data: Dictionary, _f: Dictionary, _how: Dictionary) 
 func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dictionary) -> String:
 	var item := str(how.get("item", ""))
 	var fx: Dictionary = ItemRules.consumable(data, item, s.items).get("throw", {})
-	if fx.is_empty() or int(Sheet.holder(s, f).get("inventory", {}).get(item, 0)) <= 0:
+	if fx.is_empty() or not ItemRules.on_belt(Sheet.holder(s, f), data, s.items, item):  # thrown from the belt (v0.8.4.24)
 		return "COMBAT_ITEM_CANT"
 	var far := 60 if bool(fx.get("improvised", false)) else int(fx.get("range", 15))
 	if FightGrid.is_aim(to):  # a flask on a square
@@ -49,7 +49,7 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 	var out: Array[Dictionary] = []
 	if Sheet.is_hero(f):
 		return out
-	for item: String in Sheet.holder(s, f).get("inventory", {}):
+	for item: String in ItemRules.belt(Sheet.holder(s, f), data, s.items):
 		var fx: Dictionary = ItemRules.consumable(data, item, s.items).get("throw", {})
 		if not fx.has("damage"):
 			continue

@@ -550,6 +550,8 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 	if RumorRules.on(Catalog.data):  # v0.7.47: what they say around here
 		var rw := RumorRules.ask_why(s, Catalog.data, id)
 		_flow(acts, tr("BTN_RUMORS"), _try.bind(GameState.rumor_ask.bind(id)), can_act and rw.is_empty(), "Rumors_" + id, tr(rw) if not rw.is_empty() else tr("BTN_RUMORS_TIP").format({"name": n.get("name", id)}))
+	if not PrepareRules.quest_of(s, id).is_empty():  # v0.8.4.25: a quest it readied ahead, given when asked
+		_flow(acts, tr("BTN_ASK_WORK"), _try.bind(GameState.ask_work.bind(id)), can_act, "AskWork_" + id, tr("BTN_ASK_WORK_TIP").format({"name": n.get("name", id)}))
 	if not LetterRules.ways_of(Catalog.data, id).is_empty():  # v0.7.48: a person with a post sends letters
 		_flow(acts, tr("BTN_LETTER"), letter_requested.emit.bind(id), can_act, "Letter_" + id, tr("BTN_LETTER_TIP").format({"name": n.get("name", id)}))
 	var arena_site := ArenaRules.of_manager(Catalog.data, id)  # v0.7.45

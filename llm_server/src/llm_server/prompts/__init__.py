@@ -341,6 +341,13 @@ def quest_act_prompt(snap: Snapshot) -> str:
     return render("quest_act.md.j2", world=snap.world)
 
 
+def prepare_prompt(snap: Snapshot, subject: str, room_left: int = 3) -> str:
+    """The second line's prompt (0.106.0): the master readies ahead what the hero will meet — a room's furnishing, a
+    board's orders, a quest of a person around; the engine's frame is the input, the hero is not in it."""
+    return render("prepare.md.j2", subject=subject, room_left=room_left, world=snap.world,
+                  quests_rules=topic_text("quests") if subject != "furnish" else "")
+
+
 def short_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE) -> str:
     """The short system prompt of the router (v0.7.20.4): only words, the scene in brief."""
     if snap.world is not None and snap.world.tone:

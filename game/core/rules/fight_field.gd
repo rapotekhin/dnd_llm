@@ -451,13 +451,26 @@ static func _sync_fire(s: GameSession, data: Dictionary) -> void:
 # --- noise ---------------------------------------------------------------------------------------------------
 
 
-## What is left of the noise from `a` at `b`: below 0 it is not heard.
-static func _loud(g: Dictionary, c: Dictionary, a: Vector2i, b: Vector2i) -> int:
-	var left := int(c["reach"]) - WalkRules.distance(a, b)
+## What is left of the noise from `a` at `b`: below 0 it is not heard. `more` — a loud blow's extra squares.
+static func _loud(g: Dictionary, c: Dictionary, a: Vector2i, b: Vector2i, more: int = 0) -> int:
+	var left := int(c["reach"]) + more - WalkRules.distance(a, b)
 	for at: Vector2i in FightGrid.line_of(a, b):
 		if FightGrid.flags_at(g, at) & FightGrid.OPAQUE != 0:
 			left -= int(c["wall"])
 	return left
+
+
+## A blow of a loud kind sounded (thunder: Thunderwave, Shatter): the next round is heard farther. Called by Harm.
+static func din(s: GameSession, data: Dictionary, dtype: String) -> void:
+	var more := int(cfg(data)["noise"]["loud"].get(dtype, 0))
+	if more > 0:
+		s.combat["loud"] = maxi(int(s.combat.get("loud", 0)), more)
+
+
+## Does the fight's noise go through the way `a` → `b`? Only within one location and never along a road.
+static func carries(data: Dictionary, a: String, b: String) -> bool:
+	var w := WorldView.new(data["world"])
+	return w.location_id(a) == w.location_id(b) and not (cfg(data)["noise"]["deaf"] as Array).has(str(WayRules.row(data, a, b)["kind"]))
 
 
 ## The fight is heard. Those who hear stand where they stand: the guard and the foes' own come, the peaceful hide.
@@ -468,16 +481,18 @@ static func hear(s: GameSession, data: Dictionary, lines: Array[String]) -> void
 	var g := FightGrid.grid(s, data)
 	var m: Dictionary = g["map"]
 	var at := FightGrid.cell(CombatRules.player(s))
+	var more := int(s.combat.get("loud", 0))
+	s.combat.erase("loud")
 	for room: String in m["ids"]:
 		var cells := MapSpots._cells(m, data["layouts"], room)
 		if cells.is_empty():
 			continue
 		var spot: Vector2i = cells[cells.size() / 2]
-		if room == s.room_id or _loud(g, c, at, spot) >= 0:
+		if room == s.room_id or _loud(g, c, at, spot, more) >= 0:
 			_wakes(s, data, room, spot, lines)
 	for e: Dictionary in m["exits"]:
 		var spot := Vector2i(int(e["ax"]), int(e["ay"]))
-		if _loud(g, c, at, spot) >= int(c["beyond"]):
+		if carries(data, str(e["room"]), str(e["to"])) and _loud(g, c, at, spot, more) >= int(c["beyond"]):
 			_wakes(s, data, str(e["to"]), spot, lines)
 
 

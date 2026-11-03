@@ -39,6 +39,34 @@ func run() -> void:
 	await frames(4)
 	await shot("sheet")
 	step("the other set on the doll", find(screen(), "StowedCard_main_hand") != null and find(screen(), "SwapWeapons") != null)
+	# v0.8.4.24: a javelin to the set put away by its own button, the sheet drawn again at once; the belt under the doll
+	c["inventory"]["javelin"] = 1
+	c["inventory"]["candle"] = 5
+	c["belt"] = ["", "", "", "", ""]
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	var spare: Button = find(screen(), "EquipStowed_main_hand_javelin")
+	if step("a javelin may go to the set put away", spare != null and not spare.disabled):
+		await press(spare)
+		await frames(3)
+		step("the javelin lies in the set and shows at once", str(CharacterRules.stowed(c)["main_hand"]) == "javelin" and find(screen(), "Stowed_main_hand") != null and (find(screen(), "Stowed_main_hand") as Button).text.contains(str(data["items"]["catalog"]["javelin"]["name"])))
+	var bow_back: Button = find(screen(), "EquipStowed_main_hand_longbow")
+	step("the bow's button says where it goes", bow_back != null and bow_back.text == tr("BTN_EQUIP_STOWED"))
+	var belt: Button = find(screen(), "BeltPut_candle")
+	if step("candles go to the belt", belt != null and not belt.disabled):
+		await press(belt)
+		await frames(3)
+		step("the candles in a cell of the belt", ItemRules.on_belt(c, data, s.items, "candle") and find(screen(), "Belt_0") != null)
+	await shot("sheet_belt")
+	var said := []
+	var hear := func(m: String) -> void: said.append(m)
+	node("EventBus").message.connect(hear)
+	var again: Button = find(screen(), "EquipStowed_main_hand_longbow")
+	if again != null:
+		await press(again)
+		await frames(3)
+	node("EventBus").message.disconnect(hear)
+	step("the bow back in the set", str(CharacterRules.stowed(c)["main_hand"]) == "longbow", "%s %s" % [str(CharacterRules.stowed(c)), str(said)])
 	await press(find(screen(), "SwapWeapons"))
 	await frames(3)
 	step("the sheet's button swaps", str(c["equipped"]["main_hand"]) == "longbow")

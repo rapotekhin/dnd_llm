@@ -81,9 +81,10 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 		if not bool(a["target"]):
 			out.append(base.merged({"to": str(f["id"]), "t": f, "far": 0, "self": true}))
 			continue
-		var far := 1 if at != "breath" else FightGrid.squares_of(data, int(FeatureRules._breath_area(Sheet.holder(s, f), data)["size"]))
+		var area := FeatureRules.aims(data, at)
+		var far := FightGrid.squares_of(data, FeatureRules.aim_ft(s, data, f, at)) if area else 1
 		for t: Dictionary in targets:
-			out.append(base.merged({"to": str(t["id"]), "t": t, "far": far, "touch": at != "breath"}))
+			out.append(base.merged({"to": str(t["id"]), "t": t, "far": far, "touch": not area}))
 	return out
 
 

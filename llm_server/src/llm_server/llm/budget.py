@@ -42,6 +42,11 @@ class DailyBudget:
             return None
         return max(0.0, self.limit_usd - self.spent_today())
 
+    def keeps(self, share: float) -> bool:
+        """More than `share` of the limit is left: the background line runs only then (0.106.0)."""
+        left = self.left()
+        return left is None or left > share * float(self.limit_usd or 0.0)
+
     def exhausted(self) -> bool:
         return self.limit_usd is not None and self.spent_today() >= self.limit_usd
 

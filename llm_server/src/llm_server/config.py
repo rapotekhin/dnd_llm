@@ -125,6 +125,10 @@ class Settings:
     turn_timeout: float = 180.0  # a slow provider day: a late answer beats an error (v0.7.14.5, was 90)
     engine_timeout: float = 10.0
     max_concurrent_turns: int = 1
+    # The second line (0.106.0): background turns of one game beside its own turn, and the share of the daily limit they
+    # leave to the player's turns — the master readies ahead only while more than it is left (the author, 2026-11-02).
+    max_background_turns: int = 2
+    background_reserve: float = 0.2
     max_message_bytes: int = MAX_MESSAGE_BYTES
     ws_ping_interval: float = 20.0
     ws_ping_timeout: float = 20.0
@@ -184,6 +188,8 @@ class Settings:
             turn_timeout=num("LLM_SERVER_TURN_TIMEOUT", cls.turn_timeout),
             engine_timeout=num("LLM_SERVER_ENGINE_TIMEOUT", cls.engine_timeout),
             max_concurrent_turns=int(num("LLM_SERVER_MAX_TURNS", cls.max_concurrent_turns)),
+            max_background_turns=int(num("LLM_SERVER_MAX_BACKGROUND", cls.max_background_turns)),
+            background_reserve=num("LLM_SERVER_BACKGROUND_RESERVE", cls.background_reserve),
             turn_handler=handler,
             model=model,
             models=models,

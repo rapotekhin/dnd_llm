@@ -2743,6 +2743,7 @@
 	"rest": {
 		"short_rests_per_day": 2
 	},
+	"belt": {"_doc": "The belt under the doll (v0.8.4.24, as in Pathfinder): its cells hold the things at hand — only they are drunk, read, thrown, and a light there lights the way (ItemRules.belt).", "size": 5},
 	"consumables": {
 		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions]. Thrown in a fight (v0.7.12, the «Предметы» tab, PHB): `throw` — a ranged attack (improvised: no proficiency; range ft) and on a hit `damage` [dice, type] (only to `types` when given), `burning` dice at the start of the foe's turn until a DEX save DC 10 puts it out, `oiled` — the next fire damage to the foe +N, `condition` with an escape (a STR save each turn, `escape_dc`) on foes up to `max_size`. A catalog item may carry its own `use` (potions, the ointment, scrolls, wands).",
 		"alchemists_fire_flask": {"throw": {"range": 20, "improvised": true, "damage": ["1d4", "fire"], "burning": "1d4"}},
@@ -3472,6 +3473,65 @@
 			"5": 9000
 		}
 	},
+	"prepare": {
+		"_doc": "The master readies ahead (v0.8.4.25, the author's decision of 2026-11-02, PrepareRules): a room's furnishing, a board's orders, a quest of a person around and the next act of a taken quest, on a second line of requests beside the player's own turn. `depth` — the rooms readied around the hero by the map's ways (2: neighbours and theirs); `parallel` — the background turns at once; `candidates` — the catalog things the engine offers for a room instead of a search: `everyday` for any room, then those of its kind, role and tags, then the goods of a trader who lives there, cut to the count by the game's seed; `quests_per_day` — people around readied with a quest each day, within `quest_depth` rooms of the hero.",
+		"on": true,
+		"depth": 2,
+		"parallel": 2,
+		"candidates": 40,
+		"quests_per_day": 2,
+		"quest_depth": 1,
+		"everyday": ["candle", "candlestick", "lamp", "lantern", "torch", "jug_or_pitcher", "cup_clay", "pewter_mug", "flask_or_tankard", "bowl_wooden", "plate_clay", "spoon_wooden", "bucket", "basket", "sack", "barrel", "chest", "stool", "broom", "rag", "blanket", "pillow", "bedsheet", "towel", "soap", "washbasin", "bottle_glass", "scrap_note", "letter", "parchment_one_sheet", "ink_1_ounce_bottle", "ink_pen", "dice_set", "playing_card_set", "wooden_toy", "comb", "needle_and_thread", "string_10_feet", "rope", "tinderbox", "pipe_tobacco", "figurine"],
+		"by_kind": {
+			"tavern": ["ale", "bread", "cheese", "stew", "roast_meat", "bottle_wine", "flask_or_tankard", "pewter_mug", "kettle", "ladle", "frying_pan", "cooks_utensils", "drum", "flute", "lute"],
+			"inn": ["ale", "bread", "bedroll", "blanket", "pillow", "bottle_wine", "pewter_mug"],
+			"smithy": ["hammer", "hammer_sledge", "iron_bar", "iron_ore", "horseshoe", "nails", "pliers", "whetstone", "poker", "spike_iron", "chain_10_feet"],
+			"shop": ["scale_merchants", "abacus", "ledger", "sack", "rope"],
+			"workshop": ["carpenters_tools", "woodcarvers_tools", "saw", "chisel", "nails", "timber", "leather", "leatherworkers_tools", "weavers_tools", "potters_tools", "spindle", "yarn", "cloth_bolt"],
+			"mill": ["flour_sack", "grain", "oats_sack", "sack", "hay_bundle", "pitchfork", "rake"],
+			"temple": ["censer", "incense", "block_of_incense", "prayer_book", "alms_box", "chalice", "vestments", "robes", "reliquary", "emblem", "candle"],
+			"registry": ["ledger", "parchment_one_sheet", "paper_one_sheet", "ink_1_ounce_bottle", "ink_pen", "sealing_wax", "case_map_or_scroll", "map_local", "abacus", "scale_merchants"],
+			"school": ["ledger", "parchment_one_sheet", "ink_1_ounce_bottle", "ink_pen", "chalk_1_piece", "case_map_or_scroll", "abacus", "map_local"],
+			"house": ["kettle", "pot_iron", "kitchen_knife", "cutting_board", "spindle", "yarn", "wash_tub", "clothes_common"],
+			"home": ["kettle", "pot_iron", "kitchen_knife", "cutting_board", "spindle", "yarn", "wash_tub", "clothes_common"],
+			"bathhouse": ["bath_broom", "wash_tub", "soap", "towel", "bucket", "washbasin"],
+			"prison": ["manacles", "key_iron", "lock", "chain_10_feet", "stool", "bucket"],
+			"hideout": ["dice_set", "playing_card_set", "crowbar", "manacles", "small_knife", "lantern_bullseye", "map_local", "caltrops"],
+			"cave": ["torch", "rope", "piton", "pick_miners"],
+			"mine": ["pick_miners", "shovel", "iron_ore", "lantern", "piton", "wheelbarrow", "rope", "crowbar"],
+			"wild": ["firewood", "brushwood", "mushrooms", "berries", "herbs", "hunting_trap", "stake", "wood_axe"],
+			"square": ["barrel", "flour_sack", "vegetables", "apples", "bell", "scrap_note"],
+			"market": ["vegetables", "apples", "cheese", "bread", "scale_merchants", "basket", "spices", "honey_jar", "dried_fish"],
+			"gate": ["spear", "torch", "bell", "signal_whistle", "lantern"],
+			"arena": ["wooden_staff", "staff", "bandages", "bucket", "towel"],
+			"ruin": ["candle_tallow", "chain_10_feet", "rag", "cloth_scrap", "figurine"],
+			"land": ["hoe", "rake", "pitchfork", "seeds", "shovel", "scythe", "wheelbarrow"]
+		},
+		"by_role": {
+			"kitchen": ["kettle", "pot_iron", "frying_pan", "ladle", "kitchen_knife", "cutting_board", "cooks_utensils", "spices", "flour_sack", "vegetables", "raw_meat", "honey_jar"],
+			"cellar": ["barrel", "sack", "vegetables", "apples", "bottle_wine", "ale", "oats_sack", "dried_fish"],
+			"upstairs": ["bedroll", "blanket", "pillow", "bedsheet", "washbasin", "clothes_travelers", "mirror_steel"],
+			"hall": ["pewter_mug", "flask_or_tankard", "plate_clay", "candlestick"]
+		},
+		"by_tag": {
+			"hearth": ["firewood", "poker", "kettle", "pot_iron"],
+			"forge": ["hammer", "iron_bar", "horseshoe", "nails", "pliers", "whetstone"],
+			"workbench": ["carpenters_tools", "saw", "chisel", "nails", "timber"],
+			"alchemy": ["mortar_pestle", "vial", "herbs", "herbalism_kit", "empty_flask"],
+			"temple": ["censer", "incense", "prayer_book", "alms_box"],
+			"stage": ["drum", "flute", "lute", "horn", "shawm", "clothes_costume"],
+			"market": ["scale_merchants", "basket", "vegetables", "apples"],
+			"water": ["bucket", "fishing_net", "fishing_tackle", "waterskin"],
+			"fish": ["fishing_net", "fishing_tackle", "fresh_fish"],
+			"ore": ["pick_miners", "iron_ore", "shovel"],
+			"timber": ["wood_axe", "timber", "saw"],
+			"herbs": ["herbs", "herbalism_kit", "mushrooms"],
+			"forage": ["berries", "mushrooms", "basket"],
+			"game": ["hunting_trap", "raw_hide", "stake"],
+			"road": ["horseshoe", "walking_stick", "waterskin"],
+			"mounts": ["bridle", "hay_bundle", "horseshoe", "oats_sack"]
+		}
+	},
 	"time": {
 		"_doc": "Time of day (v0.6.3): minutes since midnight. A step between rooms of one location — move_minutes, into another location — travel_minutes; a short rest — short_rest_minutes; a long rest ends at wake_minute. Parts start at `from`; night — traders closed (night_shops_closed), darkness outside lit locations.",
 		"move_minutes": 10,
@@ -3605,7 +3665,7 @@
 			"charge": 4,
 			"pit": {"dice": "1d6"},
 			"pursuit": 6,
-			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "dice": "5", "type": "fire", "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "noise": {"reach": 30, "wall": 6, "beyond": 8}
+			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "dice": "5", "type": "fire", "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "noise": {"reach": 16, "wall": 6, "beyond": 6, "loud": {"thunder": 12}, "deaf": ["road"], "_v08_4_24": "Squares of a fight's noise (80 ft), minus `wall` per wall square on the line; a room past a way out hears it from `beyond` left, only within one location and not along a way of a `deaf` kind; a blow of a `loud` damage type adds its squares to the next round's noise."}
 		},
 		"classed": {
 			"_doc": "The class of a fighter by its SRD template (v0.8.4.9, FeatureRules.give_class): class, level, subclass. A pack's NPC or an encounter may name its own.",
@@ -4311,7 +4371,7 @@
 		}
 	},
 	"feature_actions": {
-		"_doc": "The actions of features in a fight (v0.7.64, FeatureRules): name, cost (action, bonus, free), target (a foe in reach), tip; who has it: features (all of them), stock (a resource owned), trait; pay {id, n}: the resource it needs, spent unless check_only; after_attack — after the Attack action; effects, each by kind: strike {profile, times, opts}, stance {key} on the fighter, dash, turn {types, destroy}, heal_half, for {key, rounds}, line {text}; hook — what stays code (FeatureRules._hook); spend false — the hook spends by itself.",
+		"_doc": "The actions of features in a fight (v0.7.64, FeatureRules): name, cost (action, bonus, free), target (a foe in reach), aims (laid on a square as an area, FeatureRules.aim_cells: the button aims it as an area spell, v0.8.4.24), tip; who has it: features (all of them), stock (a resource owned), trait; pay {id, n}: the resource it needs, spent unless check_only; after_attack — after the Attack action; effects, each by kind: strike {profile, times, opts}, stance {key} on the fighter, dash, turn {types, destroy}, heal_half, for {key, rounds}, line {text}; hook — what stays code (FeatureRules._hook); spend false — the hook spends by itself.",
 		"reckless": {
 			"name": "Безрассудная атака",
 			"cost": "free",
@@ -4642,6 +4702,7 @@
 			"name": "Оружие дыхания",
 			"cost": "action",
 			"target": true,
+			"aims": true,
 			"trait": "breath_weapon",
 			"hook": "breath"
 		}
