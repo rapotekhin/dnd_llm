@@ -549,8 +549,10 @@ func _belt_cells(details: DetailsPanel, c: Dictionary, busy: bool) -> void:
 	var head := _text(box, tr("SHEET_BELT"), UiTheme.MUTED_LABEL)
 	head.tooltip_text = tr("BELT_USE_TIP")
 	head.mouse_filter = Control.MOUSE_FILTER_PASS
-	var cells := HFlowContainer.new()
-	cells.add_theme_constant_override("h_separation", 6)
+	# The cells share the row's whole width alike: a name on top, the buttons under it, an empty one a dash in the middle.
+	var cells := HBoxContainer.new()
+	cells.name = "BeltCells"
+	cells.add_theme_constant_override("separation", 6)
 	box.add_child(cells)
 	var belt := ItemRules.belt(c, Catalog.data, s.items)
 	for i: int in belt.size():
@@ -558,17 +560,28 @@ func _belt_cells(details: DetailsPanel, c: Dictionary, busy: bool) -> void:
 		var card := PanelContainer.new()
 		card.name = "BeltCell_%d" % i
 		card.theme_type_variation = UiTheme.CARD
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card.custom_minimum_size = Vector2(0, 64)
 		cells.add_child(card)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 4)
-		card.add_child(row)
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 2)
+		card.add_child(col)
 		if id.is_empty():
-			var none := _text(row, "—", UiTheme.MUTED_LABEL)
+			var none := _text(col, "—", UiTheme.MUTED_LABEL)
+			none.autowrap_mode = TextServer.AUTOWRAP_OFF
+			none.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			none.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			none.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			none.tooltip_text = tr("BELT_EMPTY_TIP")
 			none.mouse_filter = Control.MOUSE_FILTER_PASS
 			continue
 		var qty := int(c["inventory"].get(id, 0))
-		_item_button(row, details, c, id, "%s%s" % [ItemRules.display_name(Catalog.data["items"], s.items, id), " ×%d" % qty if qty > 1 else ""], "Belt_%d" % i)
+		var named := _item_button(col, details, c, id, "%s%s" % [ItemRules.display_name(Catalog.data["items"], s.items, id), " ×%d" % qty if qty > 1 else ""], "Belt_%d" % i)
+		named.clip_text = true  # a long name is cut, the whole of it is in the description on hover
+		named.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 4)
+		col.add_child(row)
 		if not ItemRules.consumable(Catalog.data, id, s.items).is_empty():
 			var why := ItemRules.can_use(c, Catalog.data, s.items, id)
 			_action(row, "BeltUse_%d" % i, "BTN_USE", Backend.is_ready() and not busy and why.is_empty(), GameState.use_item.bind(id))
@@ -721,7 +734,7 @@ func _drop_button(row: Control, what: String, qty: int, node_name: String, text:
 
 
 ## The item's name as a flat button: a click shows what it is in the details panel (v0.7.7 fixes).
-func _item_button(row: Control, details: DetailsPanel, c: Dictionary, id: String, text: String, node_name: String) -> void:
+func _item_button(row: Control, details: DetailsPanel, c: Dictionary, id: String, text: String, node_name: String) -> Button:
 	var b := Button.new()
 	b.name = node_name
 	b.text = text
@@ -734,3 +747,4 @@ func _item_button(row: Control, details: DetailsPanel, c: Dictionary, id: String
 	b.pressed.connect(func() -> void: _picked_item = id)
 	details.hook(b, ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), DetailsPanel.item_text(c, Catalog.data, GameState.session.items, id))
 	row.add_child(b)
+	return b

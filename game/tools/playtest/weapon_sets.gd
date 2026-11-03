@@ -57,6 +57,19 @@ func run() -> void:
 		await press(belt)
 		await frames(3)
 		step("the candles in a cell of the belt", ItemRules.on_belt(c, data, s.items, "candle") and find(screen(), "Belt_0") != null)
+	var row: Control = find(screen(), "BeltCells")
+	if step("the belt's row", row != null):
+		var scroll := row.get_parent()
+		while scroll != null and not scroll is ScrollContainer:
+			scroll = scroll.get_parent()
+		if scroll != null:
+			(scroll as ScrollContainer).ensure_control_visible(row)
+		await frames(3)
+		var widths: Array[float] = []
+		for cell: Control in row.get_children():
+			widths.append(cell.size.x)
+		# five cells alike across the whole row, not narrow boxes with a dash over their edges
+		step("the belt's cells share the row alike", widths.size() == 5 and widths.max() - widths.min() <= 2.0 and widths.max() * 5 >= row.size.x * 0.9, str(widths) + " of " + str(row.size.x))
 	await shot("sheet_belt")
 	var said := []
 	var hear := func(m: String) -> void: said.append(m)
