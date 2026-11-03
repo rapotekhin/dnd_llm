@@ -13,6 +13,8 @@ const BUG := "ошибка"
 const GAP := "нет механики"
 const MASTER := "через мастера"
 const PLAIN := "без механики"
+## A trait the engine reads through an act shown for the template that has it: in the engine only where that act shows.
+const BY_ACT := {"shapechanger": "shape"}
 ## A step's mark → the status it gives its row; the worst one wins.
 const MARKS := {"✗": BUG, "○": GAP, "◇": MASTER, "✓": OK}
 const WORST: Array[String] = [BUG, GAP, MASTER, OK, PLAIN]
@@ -1262,7 +1264,14 @@ static func monster(data: Dictionary, mid: String) -> Dictionary:
 		var tid := str(t.get("id", ""))
 		if tid.is_empty() or m.has(str(t.get("into", ""))):  # read into its `spellcasting`: checked by its spells below
 			continue
-		if _known(data, tid):
+		if BY_ACT.has(tid):
+			if Acts.one(str(BY_ACT[tid])).shown(s, data, f):
+				check(steps, true, "черта «%s» — в движке: %s" % [t.get("name", tid), Acts.one(str(BY_ACT[tid])).title()])
+			else:
+				gap(steps, "черта «%s» — только текст" % t.get("name", tid))
+		elif t.has("check"):  # told apart by a check whose DC the trait gives (CheckEngine.trait_dc)
+			check(steps, true, "черта «%s» — проверка Сл %d в движке" % [t.get("name", tid), int(t["check"]["dc"])])
+		elif _known(data, tid):
 			check(steps, true, "черта «%s» — в движке" % t.get("name", tid))
 		else:
 			gap(steps, "черта «%s» — только текст" % t.get("name", tid))

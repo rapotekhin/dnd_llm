@@ -1,7 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Monster traits in a live fight (python tools/godot_playtest.py --scenario traits), v0.8.4.27.1: a swarm of rats comes
 ## into the hero's square and bites there, drawn small in its corner; a click on the shared square opens the swarm's acts;
-## a sea hag's look frightens the hero.
+## a sea hag's look frightens the hero. v0.8.4.27.2: a werewolf takes another form for its blows, with the same hit points.
 
 
 func run() -> void:
@@ -15,12 +15,14 @@ func run() -> void:
 	if not step("game started", await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)):
 		return
 	var s: GameSession = gs.session
-	gs.start_combat([{"monster": "swarm_of_rats", "name": "Рой крыс", "x": 1, "y": 1}, {"monster": "sea_hag", "name": "Морская карга", "x": 2, "y": 1}], {})
+	gs.start_combat([{"monster": "swarm_of_rats", "name": "Рой крыс", "x": 1, "y": 1}, {"monster": "sea_hag", "name": "Морская карга", "x": 2, "y": 1},
+		{"monster": "werewolf_human", "name": "Оборотень", "x": 3, "y": 1}], {})
 	if not step("the fight", await wait_until(func() -> bool: return screen_is("fight"), 10.0)):
 		return
 	Cheats.toggle(s.character, "god")
 	var data: Dictionary = node("Catalog").data
 	var rats := {}
+	var wolf := {}
 	var start := FightGrid.cell(CombatRules.player(s))
 	var g := FightGrid.grid(s, data)
 	var near: Array[Vector2i] = []
@@ -32,6 +34,9 @@ func run() -> void:
 		FightGrid.put(f, near.pop_front())
 		if str(f.get("monster")) == "swarm_of_rats":
 			rats = f
+		if str(f.get("monster")) == "werewolf_human":
+			wolf = f
+	var wolf_hp := int(wolf["hp"])
 	FightGrid.changed(s)
 	node("EventBus").state_changed.emit()
 	var feared := false
@@ -40,7 +45,7 @@ func run() -> void:
 		await wait_until(func() -> bool: return (CombatRules.is_player_turn(s) or not CombatRules.active(s)) and not gs.is_busy(), 60.0)
 		feared = feared or ConditionRules.has(s.character, "frightened")
 		bitten = bitten or JSON.stringify(s.chat.slice(-40)).contains("Укусы")
-		if FightGrid.cell(rats) == FightGrid.cell(CombatRules.player(s)) and bitten:
+		if FightGrid.cell(rats) == FightGrid.cell(CombatRules.player(s)) and bitten and not FeatureRules.form_of(s, wolf).is_empty():
 			break
 		var end: Button = find(screen(), "EndTurnButton")
 		if end != null and not end.disabled:
@@ -48,6 +53,10 @@ func run() -> void:
 	var hero := FightGrid.cell(CombatRules.player(s))
 	step("the swarm stands in the hero's square", FightGrid.cell(rats) == hero, "%s / %s" % [FightGrid.cell(rats), hero])
 	step("and has bitten", bitten)
+	var form := FeatureRules.form_of(s, wolf)
+	step("the werewolf took another form for its blows", not form.is_empty(), form)
+	step("its hit points are its own", int(wolf["hp"]) <= wolf_hp and int(wolf["hp"]) <= Sheet.max_hp(s, data, wolf), "%d / %d" % [int(wolf["hp"]), wolf_hp])
+	step("the hero has no form to take", find(screen(), "Shape_own") == null and find(screen(), "Shape_wolf") == null)
 	await frames(4)
 	var field: Control = find(screen(), "Field")
 	field.call("zoom", 2.0, field.size / 2.0)

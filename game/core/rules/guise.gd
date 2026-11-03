@@ -40,10 +40,10 @@ static func blank(dc: int) -> Dictionary:
 	return {"name": "", "faction": "", "dc": dc, "seen": {}}
 
 
-## Puts a look on: the old one goes.
-static func wear(h: Dictionary, guise: Dictionary, source: Dictionary, ends: Dictionary = {}) -> void:
+## Puts a look on: the old one goes. `more` — what the status also gives while it is worn (a mimic's object form: `still`).
+static func wear(h: Dictionary, guise: Dictionary, source: Dictionary, ends: Dictionary = {}, more: Dictionary = {}) -> void:
 	take_off(h)
-	ConditionRules.add_effect(h, {"guise": guise.duplicate(true), "source": source, "ends": ends})
+	ConditionRules.add_effect(h, more.merged({"guise": guise.duplicate(true), "source": source, "ends": ends}, true))
 
 
 static func take_off(h: Dictionary) -> void:

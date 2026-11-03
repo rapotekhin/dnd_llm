@@ -194,6 +194,8 @@ static func spec(s: GameSession, data: Dictionary, params: Dictionary, parts: Ar
 	out["dc"] = int(params["dc"]) if params.has("dc") else int(tiers[tier])
 	if not params.has("dc"):
 		var by_npc := SocialRules.dc(s, data, listener(s, data, params), skill, tier)  # v0.7.15.1: the listener's template
+		if by_npc.is_empty():
+			by_npc = trait_dc(s, data, str(out.get("about", "")), skill)  # v0.8.4.27.2: a mimic's voice
 		if not by_npc.is_empty():
 			out["dc"] = int(by_npc["dc"])
 			dc_reason = str(by_npc["reason"])
@@ -202,6 +204,27 @@ static func spec(s: GameSession, data: Dictionary, params: Dictionary, parts: Ar
 		RollParts.difficulty(s, data, all)
 		out["parts"] = all
 	return {"spec": out, "dc_reason": dc_reason}
+
+
+## A check about a creature's trait (`about` names it: the voice of Mimicry is told by Insight, v0.8.4.27.2): the DC its
+## template gives that trait (`check` of the import, the SRD's own number) — of one on the room's map, a foe lurking there
+## or a fighter. {dc, reason}, {} — none here.
+static func trait_dc(s: GameSession, data: Dictionary, about: String, skill: String) -> Dictionary:
+	if about.is_empty() or skill.is_empty():
+		return {}
+	var map := WalkRules.view(s, data)
+	var whos: Array = []
+	for t: Dictionary in MapSpots.of(s, data, map) + MapSpots.foes(s, data, map):
+		if str(t["kind"]) in ["npc", "foe", "creature"]:
+			whos.append(t.get("record", Sheet.who(s, data, str(t["id"]))))
+	for id: String in s.combat.get("fighters", []):
+		whos.append(CombatRules.fighter(s, id))
+	for w: Dictionary in whos:
+		var tr := MonsterRules.trait_of(data, w, about)
+		var chk: Dictionary = tr.get("check", {})
+		if str(chk.get("skill", "")) == skill:
+			return {"dc": int(chk["dc"]), "reason": "«%s»: Сл %d" % [tr["name"], int(chk["dc"])]}
+	return {}
 
 
 ## The engine.check result of the hero, by `params` as in `spec`: {check_id, rolls, nat, bonus, total, dc, success,

@@ -632,6 +632,13 @@ static func zones(s: GameSession) -> Array:
 	return s.combat.get("zones", [])
 
 
+## A zone onto the field (v0.8.4.27.2): the one way in for a spell's, a rune's, strewn things', the ground's and an aura's.
+static func add_zone(s: GameSession, z: Dictionary) -> void:
+	if not s.combat.has("zones"):
+		s.combat["zones"] = []
+	(s.combat["zones"] as Array).append(z)
+
+
 ## The zones as the map draws them: [{name, cells: Array[Vector2i], kind}].
 static func zone_view(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
@@ -683,21 +690,15 @@ static func start_sustained(s: GameSession, data: Dictionary, spell_id: String, 
 		"sustained": spell_id, "dice": dice, "target": str(t.get("id", "")), "dc": CombatRules.spell_dc(s), "attack": CombatRules.spell_attack(s),
 		"ability": CombatRules.spell_ability(s)}
 	if str(sus["kind"]) == "zone":
-		if not s.combat.has("zones"):
-			s.combat["zones"] = []
 		var at := FightGrid.cell(me) if bool(sus.get("follow", false)) or t.is_empty() else CombatRules._aim_square(s, t)
 		var shape: Dictionary = (sus.get("shape", spell.get("area", {"type": "sphere", "size": 5})) as Dictionary).duplicate()
 		shape["size"] = int(shape.get("size", 5)) + int(sus.get("grow", 0)) * maxi(0, slot - int(spell["level"]))  # Fog Cloud: 20 ft a slot
-		var zone := {"spell": spell_id, "name": str(spell["name"]), "shape": shape, "follow": bool(sus.get("follow", false)), "by": str(me["id"]), "side": str(me.get("side", "player")),
-			"dice": dice, "type": str(sus.get("type", "")), "save": str(sus.get("save", "")), "on": sus.get("on", []), "dc": CombatRules.spell_dc(s),
-			"slow": bool(sus.get("slow", false))}
-		for k: String in ["cond", "obscure", "veil", "silence", "retch", "block_ranged", "spares_friends"]:
-			if sus.has(k):
-				zone[k] = sus[k]
+		var zone := FightField.zone_of(spell_id, sus.merged({"name": str(spell["name"]), "shape": shape, "follow": bool(sus.get("follow", false)), "by": str(me["id"]),
+			"side": str(me.get("side", "player")), "dice": dice, "on": sus.get("on", []), "dc": CombatRules.spell_dc(s)}, true), [])
 		if not bool(spell.get("concentration", false)) and rounds > 0:  # Grease: a minute on the field
 			zone["until_round"] = int(s.combat.get("round", 1)) + rounds
 		_lay(s, data, zone, at)
-		(s.combat["zones"] as Array).append(GameSession.whole(zone))
+		add_zone(s, GameSession.whole(zone))
 		lines.append("%s: %s" % [spell["name"], ("вокруг: " + str(me["name"])) if bool(sus.get("follow", false)) and not Sheet.is_hero(me) else "вокруг героя" if bool(sus.get("follow", false)) else "встаёт на поле"])
 		if sus.has("douses"):
 			lines.append_array(_douse(s, data, zone, int(sus["douses"])))
@@ -1053,7 +1054,7 @@ static func hit_reactions(s: GameSession, data: Dictionary, ctx: Dictionary) -> 
 static func guard(s: GameSession, data: Dictionary, who: Dictionary, spell_id: String) -> int:
 	var plus := int(spec(data, spell_id).get("ac_plus", 0))
 	var c := Sheet.holder(s, who)
-	ConditionRules.add_effect(c, {"condition": "", "ac_plus": plus, "until_turn": true, "ends": {},
+	ConditionRules.add_effect(c, {"condition": "", "ac_plus": plus, "ends": {"turn": str(who.get("id", CombatRules.PLAYER))},
 		"source": {"kind": "spell", "id": spell_id, "name": str(data["spells"][spell_id]["name"])}})
 	if Sheet.is_hero(who):
 		CharacterRules.refresh(c, data, s.items)
@@ -1084,17 +1085,6 @@ static func rebuke(s: GameSession, data: Dictionary, f: Dictionary, spell_id: St
 	var dc := int(s.character.get("spell_dc", 10)) if hero else int(by["dc"])  # its own DC: a foe's spell may be landing around this
 	lines.append_array(_save_hit(s, data, str(sp["name"]), str(sp["damage_type"]), str(sp["save"]["ability"]), dice, dc, f,
 		str(sp["save"].get("success", "half")) == "half", hero))
-
-
-## The start of its turn: Shield's AC goes.
-static func end_until_turn(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> void:
-	var c := Sheet.holder(s, who)
-	var gone := false
-	for e: Dictionary in hero_effects(c, "until_turn").duplicate():
-		ConditionRules.remove_effect(c, int(e["uid"]))
-		gone = true
-	if gone and Sheet.is_hero(who):
-		CharacterRules.refresh(c, data, s.items)
 
 
 ## Counterspell at a foe's spell: "" when the hero cannot, else the option label.
@@ -1305,11 +1295,11 @@ static func lay_glyph(s: GameSession, data: Dictionary, spell_id: String, g: Dic
 ## The runes of the fight's room come onto its field: zones of a square that go off once under a foe, unseen by it.
 static func lay_glyphs(s: GameSession, data: Dictionary) -> void:
 	for g: Dictionary in Overlay.target(data["world"], EntityRef.room(str(s.combat.get("map", s.room_id)))).get("glyphs", []):
-		var zone := {"spell": str(g["spell"]), "name": str(data["spells"].get(str(g["spell"]), {}).get("name", "")), "shape": {"type": "sphere", "size": 5},
-			"follow": false, "by": CombatRules.PLAYER, "side": "player", "dice": str(g["dice"]), "type": str(g["type"]), "save": str(g["save"]),
-			"on": ["enter", "start"], "dc": int(g["dc"]), "slow": false, "once": true, "hidden": true, "spares_friends": true, "glyph": [int(g["x"]), int(g["y"])]}
+		var zone := FightField.zone_of(str(g["spell"]), g.merged({"name": str(data["spells"].get(str(g["spell"]), {}).get("name", "")), "shape": {"type": "sphere", "size": 5},
+			"by": CombatRules.PLAYER, "side": "player", "spares_friends": true}, true), [])
+		zone.merge({"once": true, "hidden": true, "glyph": [int(g["x"]), int(g["y"])]}, true)
 		_lay(s, data, zone, Vector2i(int(g["x"]), int(g["y"])))
-		zones(s).append(zone)
+		add_zone(s, zone)
 
 
 ## A zone that goes off once is gone; a rune leaves its room.

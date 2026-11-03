@@ -29,7 +29,7 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, _how: Dict
 
 func run(s: GameSession, _data: Dictionary, f: Dictionary, to: String, _how: Dictionary) -> Array[String]:
 	var t := CombatRules.fighter(s, to)
-	CombatRules._hold(Sheet.holder(s, t), "helped", str(f["id"]))
+	ConditionRules.add_effect(Sheet.holder(s, t), {"condition": "helped", "by": str(f["id"]), "ends": {"turn": str(f["id"])}})  # until the helper's next turn
 	return ["%s отвлекает: %s, союзник ударит с преимуществом" % [_name(s, f), Sheet.holder(s, t)["name"]]]
 
 

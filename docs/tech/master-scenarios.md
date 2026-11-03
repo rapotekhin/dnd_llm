@@ -114,6 +114,7 @@
 - **Когда:** исход действия не очевиден: убедить, найти, подкрасться, удержаться, вскрыть.
 - **Пайплайн:** `request_check {skill | save, dc_tier, reason, target_id?, sense?, tool?, argument?}` → описание по итогу (успех — удача, провал — неудача и её цена).
 - **Движок:** DC по ступени (в разговоре — по шаблону SRD собеседника), бонус героя, состояния, темнота, язык, инструмент, вещи и заклинания ([_engine_check](../../game/autoload/game_state.gd#L2224)); одна проверка за ход.
+- **Черта существа (v0.8.4.27.2):** голос, который подделал ворон или зелёная карга, или прозрачный студень — `request_check {skill: insight | perception, about: mimicry | transparent}`: Сл даёт черта существа сцены ([CheckEngine.trait_dc](../../game/core/rules/check_engine.gd)).
 - **Повтор:** та же проверка без перемен не бросается — прежний итог (`blocked`); новый довод (`argument`), заклинание, отношение, инструмент — перемена ([ExplorationRules.locked](../../game/core/rules/exploration_rules.gd#L51)).
 - **Golden:** `no_fake_rolls`, `one_check_per_turn`, `retry_blocked`, `social_repeat_same_words`, `impossible_persuasion_success`, `lie_to_guard_contest`, `tool_pick_lock`.
 

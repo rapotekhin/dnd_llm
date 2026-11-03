@@ -182,9 +182,11 @@ func test_ray_of_frost_slows_until_the_hero_turn() -> void:
 	var f := _fight(s, [{"monster": "goblin", "col": 2}])[0]
 	var lines: Array[String] = []
 	ActionRules.riders(s, data, "ray_of_frost", 0, f, true, lines)
-	assert_int(int(f["slowed"])).is_equal(10)
+	var free := Sheet.speed(s, data, f) + 10
+	assert_int(ConditionRules.sum(f, "speed")).is_equal(-10)
 	CombatRules._begin_turn(s, data, lines)
-	assert_bool(f.has("slowed")).is_false()
+	assert_int(ConditionRules.sum(f, "speed")).is_equal(0)
+	assert_int(Sheet.speed(s, data, f)).is_equal(free)
 
 
 func test_shocking_grasp_against_metal_and_no_reaction() -> void:

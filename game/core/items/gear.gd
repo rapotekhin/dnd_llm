@@ -181,6 +181,9 @@ static func follow(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 	if m.is_empty() or not f.has("inventory"):
 		return
 	ItemRules.wear(f, data, s.items)  # v0.8.4.26: what its worn things lay, as on the hero
+	if Guise.has_body(f):  # a form: its template's blows as they are, its gear is not transformed (5e, v0.8.4.27.2)
+		f.erase("actions")
+		return
 	var acts := actions(s, data, tid, f)
 	if acts != m["actions"]:
 		f["actions"] = acts

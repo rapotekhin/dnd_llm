@@ -188,9 +188,7 @@ static func size(s: GameSession, data: Dictionary, who: Dictionary) -> String:
 static func speed(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 	var ft := int(s.character.get("speed", 30))
 	var me := holder(s, who)
-	if is_hero(who):
-		ft -= int(CombatRules.player(s).get("slowed", 0)) if CombatRules.active(s) else 0
-	else:
+	if not is_hero(who):  # the hero's sheet keeps its own, statuses with `speed` in it (Ray of Frost)
 		ft = Move.feet(s, data, who) + ConditionRules.sum(who, "speed")
 		ft -= CharacterRules.armor_slow(CharacterRules.item_def(things(s, data, who), data, s.items, "armor"),
 			ability(s, data, who, "str"), str(me.get("race", "")), data)
@@ -200,7 +198,6 @@ static func speed(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 		if tired >= 5 or ConditionRules.does(me, data, "no_move"):
 			return 0
 		ft = ft / 2 if tired >= 2 else ft
-		ft -= int(who.get("slowed", 0))
 	return ft / 2 if ConditionRules.has(me, "slowed_spell") else ft
 
 

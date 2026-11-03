@@ -645,9 +645,55 @@ static func _wild_shape(s: GameSession, data: Dictionary, mid: String, who: Dict
 	Stock.use(c, data, "wild_shape", 1, s.rng)
 	var m: Dictionary = data["monsters"][mid]
 	Guise.wear(c, {"monster": mid, "hp": int(m["hp"]), "max_hp": int(m["hp"]), "ac": int(m["ac"])}, {"kind": "feature", "id": "wild_shape", "name": "Дикий облик: " + str(m["name"])})  # concentration holds through it (5e)
-	if Sheet.is_hero(who):
-		CharacterRules.refresh(c, data, s.items)
+	_reshaped(s, data, who)
 	return ["%s принимает облик: %s (HP %d, КД %d)" % [c.get("name", ""), m["name"], int(m["hp"]), int(m["ac"])]]
+
+
+## The forms of a shapechanger (v0.8.4.27.2): the row of `rules.shapes` whose `of` has its own template — {form: {name,
+## monster, speeds, wear}}; {} — none.
+static func forms(data: Dictionary, who: Dictionary) -> Dictionary:
+	var tid := str(who.get("monster", ""))
+	for id: String in data["rules"].get("shapes", {}):
+		var row: Variant = data["rules"]["shapes"][id]
+		if row is Dictionary and (row.get("of", []) as Array).has(tid):
+			return row["forms"]
+	return {}
+
+
+## The form it is in: a key of `forms`, "" — its own.
+static func form_of(s: GameSession, who: Dictionary) -> String:
+	return str(Guise.body(Sheet.holder(s, who)).get("form", ""))
+
+
+## A shapechanger takes a form of `forms`, "" or its own template — back (5e: the hit points stay its own, the gear is not
+## transformed). The body of Wild Shape without hit points of its own: `Sheet.template_id`, `Move` and the AC read it. Lines.
+static func take_form(s: GameSession, data: Dictionary, who: Dictionary, form: String) -> Array[String]:
+	var row: Dictionary = forms(data, who).get(form, {})
+	var own := str(who.get("monster", ""))
+	var mid := str(row.get("monster", own))
+	if is_own(row, own):
+		return end_shape(s, data, 0, who)
+	var c := Sheet.holder(s, who)
+	var name := str(row.get("name", data["monsters"][mid]["name"]))
+	var body := {"monster": mid, "ac": int(data["monsters"][mid]["ac"]), "form": form, "name": name}
+	if row.has("speeds"):
+		body["speeds"] = row["speeds"]
+	Guise.wear(c, body, {"kind": "trait", "id": "shape", "name": "Облик: " + name}, {}, row.get("wear", {}))
+	_reshaped(s, data, who)
+	return ["%s принимает облик: %s" % [c.get("name", ""), name]]
+
+
+## A row of `forms` that is the template's own form (a werewolf met as a man): taking it is going back.
+static func is_own(row: Dictionary, tid: String) -> bool:
+	return row.is_empty() or str(row.get("monster", tid)) == tid and not row.has("speeds") and not row.has("wear")
+
+
+## A body put on or taken off: the sheet read again — the hero's by its refresh, anybody else's blows and AC by its gear.
+static func _reshaped(s: GameSession, data: Dictionary, who: Dictionary) -> void:
+	if Sheet.is_hero(who):
+		CharacterRules.refresh(Sheet.holder(s, who), data, s.items)
+	else:
+		Gear.follow(s, data, Sheet.holder(s, who))
 
 
 ## The beast form ends; `overflow` — damage past its hit points goes to the character. Lines.
@@ -655,10 +701,9 @@ static func end_shape(s: GameSession, data: Dictionary, overflow: int, who: Dict
 	var c := Sheet.holder(s, who)
 	if not Guise.has_body(c):
 		return []
-	var name := str(data["monsters"].get(str(Guise.body(c)["monster"]), {}).get("name", ""))
+	var name := str(Guise.body(c).get("name", data["monsters"].get(str(Guise.body(c)["monster"]), {}).get("name", "")))
 	Guise.take_off(c)
-	if Sheet.is_hero(who):
-		CharacterRules.refresh(c, data, s.items)
+	_reshaped(s, data, who)
 	var lines: Array[String] = ["%s снова в своём облике (был: %s)" % [c.get("name", ""), name]]
 	if overflow > 0:
 		lines.append("урон сверх облика: %d" % overflow)
@@ -669,7 +714,7 @@ static func end_shape(s: GameSession, data: Dictionary, overflow: int, who: Dict
 ## Damage to one in a beast form goes to the form first. Returns what is left for the character.
 static func hurt_shape(s: GameSession, data: Dictionary, dmg: int, lines: Array[String], who: Dictionary = Sheet.HERO) -> int:
 	var c := Sheet.holder(s, who)
-	if not Guise.has_body(c) or dmg <= 0:
+	if not Guise.has_body(c) or dmg <= 0 or not Guise.body(c).has("hp"):  # a shapechanger's form has no hit points of its own
 		return dmg
 	var ws: Dictionary = Guise.body(c)
 	ws["hp"] = int(ws["hp"]) - dmg

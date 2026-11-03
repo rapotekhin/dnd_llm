@@ -211,6 +211,7 @@ func test_a_druid_foe_turns_into_a_beast_and_back() -> void:
 	var hp := int(f["hp"])
 	var lines := Acts.one("feature").go(s, data, f, "", {"id": "wild_shape"})
 	assert_str(str(Sheet.template(data, f)["type"])).is_equal("beast")
+	assert_bool(Attack.way(s, data, f, {"action": "Quarterstaff"}).is_empty()).is_true()  # the beast's blows, not its staff
 	assert_array(MonsterRules.castable(data, f)).is_empty()
 	assert_int(CombatRules.ac_of(f)).is_equal(int(Guise.body(f)["ac"]))
 	assert_int(int(CombatRules.points(s, data, f)["action"])).is_equal(0)
@@ -218,6 +219,7 @@ func test_a_druid_foe_turns_into_a_beast_and_back() -> void:
 	Harm.take(s, data, f, body + 3, lines, "slashing", false, true)
 	assert_bool(Guise.has_body(f)).is_false()
 	assert_str(str(Sheet.template(data, f)["type"])).is_equal("humanoid")
+	assert_bool(Attack.way(s, data, f, {"action": "Quarterstaff"}).is_empty()).is_false()
 	assert_int(int(f["hp"])).is_equal(hp - 3)
 
 

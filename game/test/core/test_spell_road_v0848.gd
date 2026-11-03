@@ -209,7 +209,7 @@ func test_a_mage_shields_itself_from_a_hit() -> void:
 	assert_int(CombatRules.ac_of(f)).is_equal(ac + 5)
 	assert_int(int(f["slots"][str(left)])).is_equal(was - 1)
 	assert_bool(bool(f["reacted"])).is_true()
-	SpellEffects.end_until_turn(s, data, f)
+	ConditionRules.turn_comes(f, str(f["id"]))  # its own turn comes
 	assert_int(CombatRules.ac_of(f)).is_equal(ac)
 
 

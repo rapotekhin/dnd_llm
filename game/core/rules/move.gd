@@ -32,7 +32,7 @@ static func speeds(s: GameSession, data: Dictionary, who: Dictionary) -> Diction
 	var me := Sheet.holder(s, who)
 	var body := Guise.body(me)
 	var m: Dictionary = data["monsters"].get(str(body.get("monster", "")), Sheet.template(data, who))
-	return _speeds(data, m, me)
+	return _speeds(data, m.merged(body.get("speeds", {}), true), me)  # a form with its own feet: an imp as a raven (v0.8.4.27.2)
 
 
 ## The way covered in a turn: the fastest that goes anywhere; one that works only on some squares only for one who has no other.

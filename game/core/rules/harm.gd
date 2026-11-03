@@ -75,6 +75,8 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	_share(s, data, who, dmg, dtype, lines)
 	if int(me["hp"]) > 0 or not fight:
 		return
+	if not hero and Guise.has_body(me) and not Guise.body(me).has("hp"):  # a shapechanger falls in its true form (5e)
+		lines.append_array(FeatureRules.end_shape(s, data, 0, who))
 	if hero:
 		lines.append_array(ConditionRules.impose(s, data, {"condition": "unconscious", "ends": {"rest": "long"}, "source": {"kind": "engine", "name": "0 HP"}}))
 		s.combat["death_saves"] = {"ok": 0, "fail": 0}

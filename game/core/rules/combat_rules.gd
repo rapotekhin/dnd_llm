@@ -409,6 +409,7 @@ static func close(s: GameSession) -> void:
 		var f: Dictionary = b.get("fight", {})
 		b.erase("fight")
 		b.erase("was")
+		ConditionRules.turn_comes(Sheet.holder(s, f if id != PLAYER else Sheet.HERO), "")  # what lasts until a turn is the fight's
 		if id != PLAYER:
 			_give_statuses(b, f)
 		if b.has("creature") or b.has("summon") or (id != PLAYER and not str(f.get("npc_id", "")).is_empty()):
@@ -513,21 +514,14 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	f["reacted"] = false  # the reaction comes back at the start of one's own turn (5e)
 	f.erase("swooped")
 	f["points"] = fresh_points(s, data, f)
-	for o: String in s.combat["order"]:  # Help and the riders of a spell last until the start of its one's next turn
-		var other := fighter(s, o)
-		var h := Sheet.holder(s, other)
-		for e: Dictionary in ConditionRules.effects(h).duplicate():
-			if str(e.get("condition", "")) == "helped" and str(e.get("by", "")) == id:
-				ConditionRules.remove_effect(h, int(e["uid"]))
-		if str(other.get("set_by", "")) == id:
-			for k: String in ["slowed", "no_heal", "set_by"]:
-				other.erase(k)
-			ConditionRules.remove(h, "chilled")
+	for o: String in s.combat["order"]:  # Shield, Help and a spell's riders last until the start of `ends.turn`'s turn
+		var h := Sheet.holder(s, fighter(s, o))
+		if ConditionRules.turn_comes(h, id) and Sheet.is_hero(fighter(s, o)):
+			CharacterRules.refresh(h, data, s.items)
 	if str(f.get("status")) != "active":
 		return
 	MonsterRules.start_turn(s, data, f, lines)  # recharges, once-a-turn extras, Reckless Attack lasts until now
 	lines.append_array(SpellEffects.turn_start(s, data, f))  # Heroism (v0.7.13.1)
-	SpellEffects.end_until_turn(s, data, f)  # Shield (v0.7.13.7)
 	_fire(s, data, f, lines)
 	if bool(f.get("blinked", false)):  # Blink: back from the Ethereal Plane (v0.7.13.3)
 		f["blinked"] = false
@@ -1273,11 +1267,8 @@ static func heal_roll(s: GameSession, data: Dictionary, spell_id: String, slot: 
 ## A healing spell lands on anyone in the fight: one who lay at 0 HP is back in it.
 static func heal(s: GameSession, data: Dictionary, spell_id: String, slot: int, t: Dictionary, lines: Array[String]) -> void:
 	var it := Sheet.holder(s, t)
-	if bool(t.get("no_heal", false)):  # Chill Touch
-		lines.append("%s: раны не затягиваются" % t["name"])
-		return
 	var before := int(it["hp"])
-	if Harm.heal(data, it, heal_roll(s, data, spell_id, slot)) <= 0 and before <= 0:
+	if Harm.heal(data, it, heal_roll(s, data, spell_id, slot)) <= 0 and ConditionRules.does(it, data, "no_heal"):  # Chill Touch, a swarm
 		lines.append("%s: раны не затягиваются" % t["name"])
 		return
 	AnimRules.outcome(s, t, "heal")

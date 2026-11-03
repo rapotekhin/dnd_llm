@@ -114,6 +114,8 @@ static func left_text(s: GameSession, e: Dictionary) -> String:
 		return TimeRules.span(maxi(1, mins))
 	if ends.has("hp"):
 		return "пока не подлечат"
+	if ends.has("turn"):
+		return "до следующего хода"
 	match str(ends.get("rest", "")):
 		"short":
 			return "до короткого отдыха"
@@ -344,6 +346,21 @@ static func _run_out(h: Dictionary, data: Dictionary, t: int) -> Array[String]:
 			if not what.is_empty() and not gone.has(what):
 				gone.append(what)
 	_sync(h)
+	return gone
+
+
+## The start of `id`'s turn: the statuses of `h` that last until then go (`ends.turn` — Shield on itself, Help and a spell's
+## rider by whoever laid them, v0.8.4.27.2); "" — the fight is over, all of them go. True when one went.
+static func turn_comes(h: Dictionary, id: String) -> bool:
+	var list := effects(h)
+	var gone := false
+	for e: Dictionary in list.duplicate():
+		var turn: Variant = e.get("ends", {}).get("turn")
+		if turn != null and (id.is_empty() or str(turn) == id):
+			list.erase(e)
+			gone = true
+	if gone:
+		_sync(h)
 	return gone
 
 

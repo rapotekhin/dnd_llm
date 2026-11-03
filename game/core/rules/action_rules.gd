@@ -125,12 +125,14 @@ static func riders(s: GameSession, data: Dictionary, id: String, slot: int, t: D
 			continue
 		if r.has("status"):
 			lines.append_array(CombatRules._add_condition(s, data, t, str(r["status"]), {"rounds": int(r.get("rounds", 1)), "spell": id}))
-		if r.has("hold"):
-			CombatRules._hold(Sheet.holder(s, t), str(r["hold"]))
-		for k: String in r.get("set", {}):
+		if r.has("hold") or r.has("wear"):  # a status until the start of the caster's next turn (`ends.turn`, v0.8.4.27.2)
+			var me := Sheet.holder(s, t)
+			ConditionRules.add_effect(me, (r.get("wear", {}) as Dictionary).merged({"condition": str(r.get("hold", "")), "by": by,
+				"ends": {"turn": by}, "source": {"kind": "spell", "id": id, "name": str(data["spells"].get(id, {}).get("name", id))}}))
+			if Sheet.is_hero(t):
+				CharacterRules.refresh(me, data, s.items)
+		for k: String in r.get("set", {}):  # the fighter's own state: a reaction spent
 			t[k] = r["set"][k]
-		if r.has("set") or r.has("hold"):
-			t["set_by"] = by  # until the start of the caster's next turn
 		if r.has("push"):
 			CombatRules.push_away(s, data, t, int(r["push"]))
 		if r.has("line"):

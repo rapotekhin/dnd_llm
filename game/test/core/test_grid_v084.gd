@@ -199,7 +199,7 @@ func test_a_flask_goes_on_a_square() -> void:
 func test_the_maps_bad_ground_is_a_zone() -> void:
 	var s := _session()
 	_field(s)
-	var z := FightField._ground("hazard", FightGrid.cfg(data)["hazard"], [FightGrid.tag(FightGrid.cell(CombatRules.player(s)))])
+	var z := FightField.zone_of("hazard", FightGrid.cfg(data)["hazard"], [FightGrid.tag(FightGrid.cell(CombatRules.player(s)))])
 	(s.combat["zones"] as Array).append(z)
 	var hp := int(s.character["hp"])
 	SpellEffects.zone_tick(s, data, CombatRules.player(s), "start")

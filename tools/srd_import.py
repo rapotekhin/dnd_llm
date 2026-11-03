@@ -723,6 +723,9 @@ class Builder:
                     trait["effect"] = fx
                 if t.get("spellcasting"):  # read into the template's `spellcasting` (monster_spells), v0.8.4.27.1
                     trait["into"] = "spellcasting"
+                seen = re.search(r"successful DC (\d+) \w+ \(([\w ]+)\) check", t.get("desc", ""))
+                if seen:  # told apart by a check (Mimicry: Insight), v0.8.4.27.2 — CheckEngine.trait_dc
+                    trait["check"] = {"skill": seen.group(2).lower().replace(" ", "_"), "dc": int(seen.group(1))}
                 traits.append(trait)
             gear = [sid(x["index"]) for ac in m.get("armor_class", []) for x in ac.get("armor", [])]
             for a in actions:  # what it fights with, it carries, and the action says which thing that is

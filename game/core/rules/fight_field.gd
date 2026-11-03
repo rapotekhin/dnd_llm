@@ -39,7 +39,7 @@ static func lay(s: GameSession, data: Dictionary) -> void:
 			elif row[x] == str(hz["cell"]):
 				ground.append(FightGrid.tag(Vector2i(x, y)))
 	if not ground.is_empty():
-		(s.combat["zones"] as Array).append(_ground("hazard", hz, ground))
+		SpellEffects.add_zone(s, zone_of("hazard", hz, ground))
 	for p: Dictionary in PropRules.room_props(s, s.room_id):
 		var body := ThingRules.body(data, p)
 		if (body.get("blocks", []) as Array).has("path"):
@@ -56,12 +56,18 @@ static func _ends(m: Dictionary, d: Dictionary) -> Array[String]:
 	return [str(m["ids"][int(d["a"])]), str(m["ids"][int(d["b"])])]
 
 
-## A zone of the ground: one kind with the zones of spells. A row may say its save, what a failed one does (`cond`,
-## `fail`) and when it bites (`on`).
-static func _ground(id: String, row: Dictionary, cells: Array) -> Dictionary:
+## The keys of a row a zone takes as they are: what a failed save does, what it hides, who it spares, whom it touches.
+const ZONE_KEYS: Array[String] = ["cond", "fail", "tag", "obscure", "veil", "silence", "retch", "block_ranged", "spares_friends", "for",
+	"types", "sees", "spare_saved", "shape", "follow", "by", "side"]
+
+
+## A zone of the field by its row: one record for the ground, strewn things, the fire, a spell's zone and a trait's aura
+## (v0.8.4.27.2). A row says its save, what a failed one does (`cond`, `fail`, `for`) and when it bites (`on`); `cells` — its
+## squares, or none with `shape` and `follow` (it moves with `by`).
+static func zone_of(id: String, row: Dictionary, cells: Array) -> Dictionary:
 	var z := {"spell": id, "name": str(row["name"]), "shape": {}, "follow": false, "dice": str(row.get("dice", "")), "type": str(row.get("type", "")),
 		"save": str(row.get("save", "")), "on": row.get("on", ["enter", "start"]), "dc": int(row.get("dc", 0)), "slow": bool(row.get("slow", false)), "cells": cells}
-	for k: String in ["cond", "fail", "tag"]:
+	for k: String in ZONE_KEYS:
 		if row.has(k):
 			z[k] = row[k]
 	return z
@@ -76,14 +82,8 @@ static func auras(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 		var row: Dictionary = born[id]["row"]
 		if not row.get("aura") is Dictionary:
 			continue
-		var z := _ground("aura:" + id, (row["aura"] as Dictionary).merged({"name": born[id]["name"]}), [])
-		z.merge({"follow": true, "shape": {"type": "sphere", "size": int(row["aura"].get("ft", 5))}, "by": str(f["id"]), "side": str(f.get("side", "enemy"))}, true)
-		for k: String in ["for", "types", "sees", "spare_saved"]:
-			if row["aura"].has(k):
-				z[k] = row["aura"][k]
-		var all := SpellEffects.zones(s)
-		all.append(z)
-		s.combat["zones"] = all
+		SpellEffects.add_zone(s, zone_of("aura:" + id, (row["aura"] as Dictionary).merged({"name": born[id]["name"], "follow": true,
+			"shape": {"type": "sphere", "size": int(row["aura"].get("ft", 5))}, "by": str(f["id"]), "side": str(f.get("side", "enemy"))}), []))
 
 
 static func _block(data: Dictionary, body_id: String, name: String) -> Dictionary:
@@ -443,9 +443,7 @@ static func strew(s: GameSession, data: Dictionary, at: Vector2i, row_id: String
 	for c: Vector2i in FightGrid.body_at(at, int(row.get("span", 1))):
 		if FightGrid.walkable(g, c):
 			cells.append(c)
-	var z := _ground(row_id, row, FightGrid.pack_cells(cells))
-	z["side"] = side
-	(s.combat["zones"] as Array).append(z)
+	SpellEffects.add_zone(s, zone_of(row_id, row.merged({"side": side}), FightGrid.pack_cells(cells)))
 	lines.append("%s: рассыпаны по клетке — кто войдёт, спасбросок %s Сл %d" % [row["name"], CombatRules.ab_name(str(row["save"])), int(row["dc"])])
 
 
@@ -482,7 +480,7 @@ static func _sync_fire(s: GameSession, data: Dictionary) -> void:
 		if str(z["spell"]) == "fire":
 			zones.erase(z)
 	if not cells.is_empty():
-		zones.append(_ground("fire", cfg(data)["fire"], cells))
+		zones.append(zone_of("fire", cfg(data)["fire"], cells))
 	s.combat["zones"] = zones
 
 
