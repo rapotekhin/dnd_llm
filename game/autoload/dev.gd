@@ -6,16 +6,19 @@ const MESSAGES_KEPT := 50
 ## Every command, for the completion of the first word.
 const COMMANDS: Array[String] = ["help", "backend", "reconnect", "say", "retry", "cancel", "save", "load", "seed", "snapshot", "clear",
 	"room", "rooms", "quests", "items", "npc", "state", "find", "give", "gold", "spawn", "goto", "heal", "god", "slots", "xp", "level",
-	"reset", "class", "spell", "feature", "trait"]
+	"reset", "class", "spell", "feature", "trait", "resist", "cond", "units"]
 ## The cheats (Cheats): they change the game, each through the engine's own road.
 const CHEATS: Array[String] = ["give", "gold", "spawn", "goto", "heal", "god", "slots", "xp", "level", "reset", "class", "spell",
-	"feature", "trait"]
+	"feature", "trait", "resist", "cond"]
+## The cheats that take a unit of the room after `@цель` instead of the hero.
+const UNIT_CHEATS: Array[String] = ["give", "gold", "heal", "resist", "cond", "feature", "trait"]
 ## What a command's argument is: the kind `find` and the completion search (Cheats.KINDS).
 const ARG_KIND := {"give": "item", "spawn": "monster", "goto": "room", "class": "class", "spell": "spell", "feature": "feature",
-	"trait": "trait"}
-## The last word of `spawn`: whose side the creatures take.
+	"trait": "trait", "resist": "damage", "cond": "condition"}
+## The last word of `spawn`: whose side the creatures take; of `resist` and `cond`: take it off.
 const ALLY_WORDS: Array[String] = ["ally", "союзник"]
 const FOE_WORDS: Array[String] = ["foe", "враг"]
+const OFF_WORDS: Array[String] = ["off", "снять"]
 const FOUND_SHOWN := 30
 const HINTS_SHOWN := 8
 
@@ -89,6 +92,8 @@ func run(line: String) -> String:
 	if parts.is_empty():
 		return ""
 	var args := parts.slice(1)
+	if parts[0].begins_with("@"):
+		return _at(parts[0], args)
 	if CHEATS.has(parts[0]):
 		return _cheat(parts[0], args)
 	match parts[0]:
@@ -96,8 +101,13 @@ func run(line: String) -> String:
 			return "help · backend · reconnect · say <text> · retry · cancel · save <slot> · load <slot> · seed · snapshot · clear\n" \
 				+ "мир: room [id] · rooms · quests · items [поиск] · npc <id|имя> · state\n" \
 				+ "читы: give <вещь> [n] · gold <зм> · spawn <монстр> [n] [ally] · goto <комната> · heal · god · slots · xp <n> · " \
-				+ "level [до] · reset · class <класс> · spell <имя> · feature <имя> · trait <имя>\n" \
+				+ "level [до] · reset · class <класс> · spell <имя> · feature <имя> · trait <имя> · resist <урон> [off] · cond <состояние> [off]\n" \
+				+ "на юнита комнаты: @<цель> %s · units — кто здесь\n" % ", ".join(UNIT_CHEATS) \
 				+ "поиск: find <%s> <часть имени> · Tab — дополнить имя" % "|".join(Cheats.KINDS)
+		"units":
+			if not GameState.has_session():
+				return "no session"
+			return _units()
 		"find":
 			if not GameState.has_session():
 				return "no session"
@@ -156,8 +166,33 @@ func _world_report(cmd: String, arg: String) -> String:
 # --- cheats -------------------------------------------------------------------------------------------
 
 
-## One cheat: refused without a session, while the master answers or where the act has no sense (a fight).
-func _cheat(cmd: String, args: PackedStringArray) -> String:
+## `@<цель> <команда …>`: a cheat of UNIT_CHEATS on a unit of this room (Cheats.unit) instead of the hero.
+func _at(target: String, args: PackedStringArray) -> String:
+	if not GameState.has_session():
+		return "no session"
+	if args.is_empty() or not UNIT_CHEATS.has(args[0]):
+		return "@<цель> <%s> (units — кто здесь)" % "|".join(UNIT_CHEATS)
+	var u := Cheats.unit(GameState.session, Catalog.data, target)
+	if u.has("reason"):
+		return str(u["reason"])
+	return _cheat(args[0], args.slice(1), u)
+
+
+## `units`: who a cheat may aim at here, with the id to put after `@`.
+func _units() -> String:
+	var s: GameSession = GameState.session
+	var out := PackedStringArray()
+	for u: Dictionary in Cheats.units(s, Catalog.data):
+		var w := Sheet.own(s, str(u["id"]))
+		var top := Sheet.max_hp(s, Catalog.data, w)
+		out.append("%s [@%s]%s · HP %d/%d" % [u["name"], u["id"], " — %s, %s" % [u["side"], u["status"]] if bool(u["fighter"]) else "",
+			int(Sheet.holder(s, w).get("hp", top)), top])
+	return "\n".join(out) if not out.is_empty() else "здесь никого"
+
+
+## One cheat on the hero, or on the unit `u` (Cheats.unit) when given: refused without a session, while the master
+## answers or where the act has no sense (a fight).
+func _cheat(cmd: String, args: PackedStringArray, u: Dictionary = {}) -> String:
 	if not GameState.has_session():
 		return "no session"
 	if GameState.is_busy():
@@ -165,6 +200,8 @@ func _cheat(cmd: String, args: PackedStringArray) -> String:
 	var s: GameSession = GameState.session
 	var data: Dictionary = Catalog.data
 	var c := s.character
+	var who := str(u.get("id", Being.HERO))
+	var to := "%s: " % u["name"] if not u.is_empty() else ""
 	if CombatRules.active(s) and cmd in ["goto", "level", "reset", "class"]:
 		return "в бою нельзя: %s" % cmd
 	Cheats.note(c, cmd)
@@ -175,15 +212,15 @@ func _cheat(cmd: String, args: PackedStringArray) -> String:
 			var r := Cheats.resolve(s, data, "item", str(q["words"]))
 			if r.has("reason"):
 				return str(r["reason"])
-			Gear.give(s, data, Being.HERO, str(r["id"]), n)
+			Gear.give(s, data, who, str(r["id"]), n)
 			_changed()
-			return "+%d %s [%s]" % [n, ItemRules.display_name(data["items"], s.items, str(r["id"])), r["id"]]
+			return "%s+%d %s [%s]" % [to, n, ItemRules.display_name(data["items"], s.items, str(r["id"])), r["id"]]
 		"gold":
 			if args.is_empty() or not args[0].is_valid_int():
 				return "gold <зм> (с минусом — забрать)"
-			Gear.pay(s, data, Being.HERO, int(args[0]) * Money.GP)
+			Gear.pay(s, data, who, int(args[0]) * Money.GP)
 			_changed()
-			return "монеты: %s" % Money.format(Ledger.balance(s))
+			return "%sмонеты: %s" % [to, Money.format(Gear.coins(s, data, who))]
 		"spawn":
 			return _spawn(s, data, args)
 		"goto":
@@ -193,9 +230,12 @@ func _cheat(cmd: String, args: PackedStringArray) -> String:
 			var why := GameState.teleport(str(r["id"]))
 			return tr(why) if not why.is_empty() else "→ %s [%s]" % [GameState.world().room(str(r["id"])).get("name", ""), r["id"]]
 		"heal":
-			var lines := Rest.long(s, data, Being.HERO)
+			var lines := Rest.long(s, data, who)
 			_changed()
-			return "HP %d/%d, ячейки и заряды полны%s" % [int(c["hp"]), int(c["max_hp"]), "; " + "; ".join(lines) if not lines.is_empty() else ""]
+			var w := Sheet.own(s, who)
+			var top := Sheet.max_hp(s, data, w)
+			return "%sHP %d/%d, ячейки и заряды полны%s" % [to, int(Sheet.holder(s, w).get("hp", top)), top,
+				"; " + "; ".join(lines) if not lines.is_empty() else ""]
 		"god", "slots":
 			var on := Cheats.toggle(c, cmd)
 			_changed()
@@ -228,16 +268,28 @@ func _cheat(cmd: String, args: PackedStringArray) -> String:
 			var circle := SpellRules.level_of(data, id)
 			return "заклинание: %s [%s] — всегда готово%s" % [data["spells"][id]["name"], id,
 				" (ячеек %d круга нет — slots)" % circle if circle > 0 and SpellRules.slots_left(c, circle) <= 0 else ""]
+		"resist", "cond":
+			var off := not args.is_empty() and OFF_WORDS.has(args[-1])
+			var r := Cheats.resolve(s, data, ARG_KIND[cmd], " ".join(args.slice(0, args.size() - 1) if off else args))
+			if r.has("reason"):
+				return str(r["reason"])
+			var line := Cheats.resist(s, data, who, str(r["id"]), not off) if cmd == "resist" \
+				else "; ".join(Cheats.condition(s, data, who, str(r["id"]), not off))
+			_changed()
+			return to + line
 		"feature", "trait":
 			var r := Cheats.resolve(s, data, cmd, " ".join(args))
 			if r.has("reason"):
 				return str(r["reason"])
-			var list: Array = c.get(cmd + "s", [])
+			if not u.is_empty() and not bool(u["fighter"]):
+				return "%sспособности и черты — только бойцу: сначала бой (spawn)" % to
+			var h := c if u.is_empty() else Sheet.holder(s, Sheet.own(s, who))
+			var list: Array = h.get(cmd + "s", [])
 			if not list.has(str(r["id"])):
 				list.append(str(r["id"]))
-			c[cmd + "s"] = list
+			h[cmd + "s"] = list
 			_changed()
-			return "%s: %s [%s]" % ["способность" if cmd == "feature" else "черта", Cheats.pool(s, data, cmd)[r["id"]].get("name", ""), r["id"]]
+			return "%s%s: %s [%s]" % [to, "способность" if cmd == "feature" else "черта", Cheats.pool(s, data, cmd)[r["id"]].get("name", ""), r["id"]]
 	return "unknown cheat: %s" % cmd
 
 
@@ -302,6 +354,8 @@ func complete(line: String) -> Dictionary:
 	var parts := line.strip_edges(true, false).split(" ", false)
 	if parts.is_empty():
 		return none
+	if parts[0].begins_with("@"):
+		return _complete_at(line, parts)
 	if parts.size() == 1 and not line.ends_with(" "):
 		var cmds := COMMANDS.filter(func(x: String) -> bool: return x.begins_with(parts[0]))
 		return {"hints": PackedStringArray(cmds), "line": cmds[0] + " " if not cmds.is_empty() else line}
@@ -314,7 +368,7 @@ func complete(line: String) -> Dictionary:
 	if not GameState.has_session() or not Cheats.KINDS.has(kind) or args.is_empty():
 		return none
 	var tail := PackedStringArray()
-	while args.size() > 1 and (args[-1].is_valid_int() or ALLY_WORDS.has(args[-1]) or FOE_WORDS.has(args[-1])):
+	while args.size() > 1 and (args[-1].is_valid_int() or ALLY_WORDS.has(args[-1]) or FOE_WORDS.has(args[-1]) or OFF_WORDS.has(args[-1])):
 		tail.insert(0, args[-1])
 		args = args.slice(0, args.size() - 1)
 	var found := Cheats.find(GameState.session, Catalog.data, kind, " ".join(args), HINTS_SHOWN)
@@ -322,6 +376,21 @@ func complete(line: String) -> Dictionary:
 		return none
 	var hints := PackedStringArray(found.map(func(e: Dictionary) -> String: return "%s [%s]" % [e["name"], e["id"]]))
 	return {"hints": hints, "line": " ".join(head + PackedStringArray([str(found[0]["id"])]) + tail)}
+
+
+## `@цель …`: the units of the room for the first word, then the rest as a line of its own after it.
+func _complete_at(line: String, parts: PackedStringArray) -> Dictionary:
+	if not GameState.has_session():
+		return {"hints": PackedStringArray(), "line": line}
+	if parts.size() == 1 and not line.ends_with(" "):
+		var q := parts[0].trim_prefix("@").to_lower()
+		var hit := Cheats.units(GameState.session, Catalog.data).filter(func(u: Dictionary) -> bool:
+			return str(u["id"]).to_lower().begins_with(q) or str(u["name"]).to_lower().replace(" ", "").begins_with(q))
+		return {"hints": PackedStringArray(hit.map(func(u: Dictionary) -> String: return "%s [@%s]" % [u["name"], u["id"]])),
+			"line": "@%s " % hit[0]["id"] if not hit.is_empty() else line}
+	var rest := line.strip_edges(true, false).trim_prefix(parts[0]).strip_edges(true, false)
+	var inner := complete(rest)
+	return {"hints": inner["hints"], "line": "%s %s" % [parts[0], inner["line"]]}
 
 
 ## A trailing count off the words: {words, n} (n 1 when none).

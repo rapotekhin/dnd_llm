@@ -107,3 +107,60 @@ func test_completion_puts_in_the_first_id_and_keeps_the_count() -> void:
 	assert_array(r["hints"]).is_not_empty()
 	assert_str(Dev.complete("spa")["line"]).is_equal("spawn ")
 	assert_str(Dev.complete("find item длинный м")["line"]).is_equal("find item longsword")
+
+
+## The author's case: a goblin given fire resistance takes half of the hero's Fireball — the same rolls both times.
+func test_a_unit_given_fire_resistance_takes_half_a_fireball() -> void:
+	TestUtils.fight(s, Catalog.data, [{"monster": "goblin", "col": 2}])
+	var gid := TestUtils.foe(s, 1)
+	var g := CombatRules.fighter(s, gid)
+	g["max_hp"] = 500
+	g["hp"] = 500
+	assert_str(Dev.run("units")).contains("[@%s]" % gid)
+	Dev.run("spell Огненный шар")
+	Dev.run("slots")
+	var aim := FightGrid.aim_id(FightGrid.cell(g))
+	var state := s.rng.state
+	CombatRules.economy(s)["action"] = 1
+	Acts.one("cast").go(s, Catalog.data, CombatRules.player(s), aim, {"spell": "fireball", "slot": 3})
+	var full := 500 - int(g["hp"])
+	assert_int(full).is_greater(0)
+	g["hp"] = 500
+	assert_str(Dev.run("@гоблин resist огонь")).contains("Гоблин: сопротивление")
+	assert_int(Sheet.taken(s, Catalog.data, g, "fire", 10)).is_equal(5)
+	s.rng.state = state
+	CombatRules.economy(s)["action"] = 1
+	Acts.one("cast").go(s, Catalog.data, CombatRules.player(s), aim, {"spell": "fireball", "slot": 3})
+	assert_int(500 - int(g["hp"])).is_equal(full / 2)
+	Dev.run("@гоблин resist fire off")
+	assert_int(Sheet.taken(s, Catalog.data, g, "fire", 10)).is_equal(10)
+
+
+func test_unit_cheats_heal_give_a_status_and_a_feature() -> void:
+	TestUtils.fight(s, Catalog.data, [{"monster": "goblin", "col": 1}, {"monster": "goblin", "col": 2}])
+	assert_str(Dev.run("@гобл heal")).contains("несколько")
+	var gid := TestUtils.foe(s, 2)
+	var g := CombatRules.fighter(s, gid)
+	g["hp"] = 1
+	assert_str(Dev.run("@%s heal" % gid)).contains("HP %d/%d" % [int(g["max_hp"]), int(g["max_hp"])])
+	assert_int(g["hp"]).is_equal(int(g["max_hp"]))
+	Dev.run("@%s cond prone" % gid)
+	assert_bool(ConditionRules.has(g, "prone")).is_true()
+	Dev.run("@%s cond prone off" % gid)
+	assert_bool(ConditionRules.has(g, "prone")).is_false()
+	assert_str(Dev.run("@%s feature Второе дыхание" % gid)).contains("[second_wind]")
+	assert_bool((g["features"] as Array).has("second_wind")).is_true()
+	Dev.run("@%s give Длинный меч" % gid)
+	assert_int(Gear.count(s, Catalog.data, gid, "longsword")).is_equal(1)
+	assert_str(Dev.run("@никто heal")).contains("здесь нет")
+	assert_str(Dev.run("@%s xp 5" % gid)).contains("@<цель>")
+	assert_str(Dev.complete("@%s resist ог" % gid)["line"]).is_equal("@%s resist fire" % gid)
+
+
+func test_unit_cheats_out_of_a_fight_aim_at_the_people_here() -> void:
+	var here := s.npcs_here(Catalog.data["world"], s.room_id)
+	assert_array(here).is_not_empty()
+	var id := str(here[0])
+	assert_str(Dev.run("@%s resist cold" % id)).contains("сопротивление")
+	assert_int(Sheet.taken(s, Catalog.data, Sheet.who(s, Catalog.data, id), "cold", 10)).is_equal(5)
+	assert_str(Dev.run("@%s feature second_wind" % id)).contains("только бойцу")

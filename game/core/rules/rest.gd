@@ -20,7 +20,7 @@ static func holder(s: GameSession, id: String) -> Dictionary:
 ## A long rest of `id`. Lines: what went (conditions, exhaustion).
 static func long(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var h := holder(s, id)
-	if id == Being.HERO:
+	if id == Being.HERO or h.has("status"):  # the hero, or a fighter of a fight: its own count of hit points
 		h["hp"] = int(h.get("max_hp", h.get("hp", 1)))
 	else:
 		h.erase("hp")  # whole again: a record's hit points are its template's when it has none of its own

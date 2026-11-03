@@ -8,8 +8,10 @@ extends RefCounted
 ## The toggles: `god` — the hero's hit points never fall under 1 (Harm.take); `slots` — spell slots are never spent and
 ## every circle has one (Stock.spend, SpellRules.slots_left).
 const TOGGLES: Array[String] = ["god", "slots"]
+## Where a resistance or a status of the console comes from: it lasts until taken off.
+const SOURCE := {"kind": "dev", "name": "консоль"}
 ## What a search is over: a command's argument kind → where its entries live.
-const KINDS: Array[String] = ["item", "monster", "spell", "feature", "trait", "room", "class"]
+const KINDS: Array[String] = ["item", "monster", "spell", "feature", "trait", "room", "class", "damage", "condition"]
 ## Fields of the hero a rebuild keeps: who it is, what it carries, what lies on it and what it chose at creation beside
 ## its class.
 const KEPT: Array[String] = ["name", "gender", "race", "subrace", "background", "body", "story", "inventory", "equipped",
@@ -57,6 +59,16 @@ static func pool(s: GameSession, data: Dictionary, kind: String) -> Dictionary:
 			return data["world"]["rooms"]
 		"class":
 			return data["classes"]["classes"]
+		"damage":
+			var types := {}
+			for id: String in data["misc"]["damage_types"]:
+				types[id] = {"name": str(data["misc"]["damage_types"][id])}
+			return types
+		"condition":
+			var conds := {}
+			for id: String in data["rules"]["conditions"]:
+				conds[id] = {"name": ConditionRules.name_of(data, id)}
+			return conds
 	return {}
 
 
@@ -95,6 +107,62 @@ static func resolve(s: GameSession, data: Dictionary, kind: String, query: Strin
 		return {"reason": "не найдено: %s (find %s <часть имени>)" % [query, kind]}
 	return {"reason": "несколько: %s%s" % [", ".join(found.slice(0, 8).map(func(e: Dictionary) -> String: return "%s [%s]" % [e["name"], e["id"]])),
 		" …" if found.size() > 8 else ""]}
+
+
+## The ones in this room a cheat may aim at (`@цель`): the fighters of the fight but the hero, else the people here.
+## [{id, name, fighter}].
+static func units(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if CombatRules.active(s):
+		for id: String in s.combat["fighters"]:
+			var f := CombatRules.fighter(s, id)
+			if id != CombatRules.PLAYER and not f.is_empty():
+				out.append({"id": id, "name": str(f.get("name", id)), "fighter": true, "side": str(f.get("side", "")),
+					"status": str(f.get("status", ""))})
+		return out
+	for id: String in s.npcs_here(data["world"], s.room_id):
+		out.append({"id": id, "name": WorldView.new(data["world"]).npc_name(id), "fighter": false})
+	return out
+
+
+## One unit by its id, its name without spaces or the start of it that only one has: {id, fighter} or {reason}.
+static func unit(s: GameSession, data: Dictionary, query: String) -> Dictionary:
+	var q := query.trim_prefix("@").to_lower().replace(" ", "")
+	var all := units(s, data)
+	var hit := all.filter(func(u: Dictionary) -> bool: return str(u["id"]).to_lower() == q or str(u["name"]).to_lower().replace(" ", "") == q)
+	if hit.is_empty():
+		hit = all.filter(func(u: Dictionary) -> bool: return str(u["name"]).to_lower().replace(" ", "").begins_with(q))
+	if hit.size() == 1:
+		return hit[0]
+	if hit.is_empty():
+		return {"reason": "здесь нет %s (units — кто здесь)" % query}
+	return {"reason": "несколько: %s" % ", ".join(hit.map(func(u: Dictionary) -> String: return "%s [@%s]" % [u["name"], u["id"]]))}
+
+
+## A resistance of `who` (an id) to `dtype` until it is taken off: a boon on its effects, read by Sheet.defenses for
+## anybody; `on` false takes the console's off. Its line.
+static func resist(s: GameSession, data: Dictionary, who: String, dtype: String, on: bool) -> String:
+	var h := Sheet.holder(s, Sheet.own(s, who))
+	var name := str(data["misc"]["damage_types"][dtype])
+	if not on:
+		for e: Dictionary in ConditionRules.effects(h).duplicate():
+			if str(e.get("source", {}).get("kind", "")) == SOURCE["kind"] and (e.get("resist", []) as Array).has(dtype):
+				ConditionRules.remove_effect(h, int(e["uid"]))
+		return "сопротивление снято: %s" % name
+	ConditionRules.add_effect(h, {"condition": "", "resist": [dtype], "source": SOURCE.duplicate(), "ends": {}})
+	return "сопротивление: %s" % name
+
+
+## A status of the engine on `who` (an id) until it is taken off, laid as anything lays it (ConditionRules.impose), or
+## lifted. Lines.
+static func condition(s: GameSession, data: Dictionary, who: String, cond: String, on: bool) -> Array[String]:
+	var w := Sheet.own(s, who)
+	if not on:
+		ConditionRules.remove(Sheet.holder(s, w), cond)
+		return ["снято: %s" % ConditionRules.name_of(data, cond)]
+	var lines := ConditionRules.impose(s, data, {"condition": cond, "ends": {}, "source": SOURCE.duplicate()}, w)
+	lines.push_front("состояние: %s" % ConditionRules.name_of(data, cond))
+	return lines
 
 
 ## The hero again at level 1 of `class_id` (its own class when ""): its race, background, name, things and statuses
