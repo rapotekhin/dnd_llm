@@ -22,7 +22,7 @@ static func spec(data: Dictionary, spell_id: String) -> Dictionary:
 static func self_spell(data: Dictionary, spell_id: String) -> bool:
 	var sp := spec(data, spell_id)
 	return not sp.is_empty() and not bool(sp.get("foe", false)) and not bool(sp.get("foe_target", false)) and not sp.has("sustained") \
-		and not sp.has("curse") and not sp.has("reaction") and not sp.has("npc_save")
+		and not sp.has("curse") and not sp.has("reaction") and not sp.has("npc_save") and not bool(sp.get("other", false))
 
 
 static func foe_spell(data: Dictionary, spell_id: String) -> bool:
@@ -57,6 +57,9 @@ static func reduce_foe(s: GameSession, data: Dictionary, spell_id: String, f: Di
 static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: int, f: Dictionary, lines: Array[String]) -> void:
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
+	if bool(sp.get("stabilize", false)):  # Spare the Dying (v0.8.4.26.3)
+		CombatRules.stabilize(s, f, str(spell["name"]), lines)
+		return
 	if (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell_id):
 		lines.append_array(CombatRules._add_condition(s, data, f, "invisible", {"rounds": 100, "spell": spell_id}))
 		ConditionRules.effects_of(Sheet.holder(s, f), "invisible")[0]["ends_on_attack"] = bool(data["rules"]["invisibility"]["spells"][spell_id].get("ends_on_attack", true))
@@ -91,7 +94,10 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 
 
 ## What is done in the world, not to a body: only the hero's table of apply_self reads these.
-const NOT_ON_A_BODY: Array[String] = ["teleport", "lift_curse", "reveal", "knock", "make", "dispel"]
+const NOT_ON_A_BODY: Array[String] = ["teleport", "lift_curse", "reveal", "knock", "make", "dispel", "water", "mend", "repose", "glyph"]
+
+## The keys of a row that world_spell does.
+const WORLD: Array[String] = ["reveal", "knock", "water", "mend", "repose", "glyph"]
 
 
 ## What the spells on a fighter give, by a key of its statuses: the first value (`fallback` — none).
@@ -129,7 +135,7 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	if bool(sp.get("lift_curse", false)):  # Remove Curse (v0.7.13.7)
 		var lifted := ItemRules.lift_curse(c, data, s.items)
 		return lifted if not lifted.is_empty() else ["проклятых вещей на герое нет"] as Array[String]
-	if sp.has("reveal") or sp.has("knock") or sp.has("water"):  # Find Traps, Detect Magic, Knock (v0.7.13.8); water (v0.8.4.26.2)
+	if WORLD.any(func(k: String) -> bool: return sp.has(k)):  # Find Traps, Detect Magic, Knock (v0.7.13.8); water (v0.8.4.26.2); a thing, a body, a rune (v0.8.4.26.3)
 		var found := world_spell(s, data, spell_id)
 		if not bool(spell.get("concentration", false)):
 			return found
@@ -211,6 +217,8 @@ static func _effect(s: GameSession, data: Dictionary, spell_id: String, slot: in
 		e["temp_hp"] = Sheet.ability_mod(s, data, me, CombatRules.spell_ability(s))
 	if sp.has("sanctuary"):
 		e["dc"] = maxi(CombatRules.spell_dc(s), 10)
+	if bool(sp.get("stay", false)):  # Magic Circle: it holds in this room only (v0.8.4.26.3)
+		e["ends"]["room"] = s.room_id
 	return e
 
 
@@ -360,6 +368,16 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 		parts.append("преимущество: %s" % TranslationServer.translate("SKILL_" + str(sp["check_adv"]).to_upper()))
 	if bool(sp.get("bonus_dash", false)):
 		parts.append("Рывок бонусным действием")
+	if sp.has("saves_plus"):  # v0.8.4.26.3
+		parts.append("спасброски +%d" % int(sp["saves_plus"]))
+	if bool(sp.get("resist_all", false)):
+		parts.append("сопротивление любому урону")
+	if bool(sp.get("ward", false)):
+		parts.append("заклинатель получает тот же урон")
+	if sp.has("hand_ft"):
+		parts.append("призрачная рука: берёт и открывает за %d фт" % int(sp["hand_ft"]))
+	if bool(sp.get("stay", false)):
+		parts.append("пока герой в этом месте")
 	if bool(sp.get("enlarged", false)):
 		parts.append("+1к4 к урону оружием, преимущество на проверки Силы")
 	if bool(sp.get("darkvision", false)):
@@ -942,7 +960,7 @@ static func zone_tick(s: GameSession, data: Dictionary, f: Dictionary, when: Str
 	var lines: Array[String] = []
 	if when == "start":
 		f["zoned"] = []
-	for z: Dictionary in zones(s):
+	for z: Dictionary in zones(s).duplicate():
 		if str(f.get("status")) != "active" or not (z["on"] as Array).has(when) or not FightGrid.in_cells(f, FightGrid.zone_cells(s, data, z)):
 			continue
 		var friend := (str(f.get("side")) == "enemy") == (str(z.get("side", "player")) == "enemy")
@@ -954,6 +972,8 @@ static func zone_tick(s: GameSession, data: Dictionary, f: Dictionary, when: Str
 			f["zoned"] = []
 		(f["zoned"] as Array).append(str(z["spell"]))
 		lines.append_array(_zone_hit(s, data, z, f))
+		if bool(z.get("once", false)):  # a rune goes off once (v0.8.4.26.3)
+			_spent(s, data, z, lines)
 	return lines
 
 
@@ -1117,7 +1137,7 @@ static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc_id:
 	var name := str(data["world"]["npcs"][npc_id].get("name", ""))
 	if sp.has("types") and not (sp["types"] as Array).has(str(Sheet.template(data, who).get("type", "humanoid"))):
 		return {"ok": false, "line": "%s: на %s не действует" % [spell["name"], name]}
-	var ab := str(spell.get("save", {}).get("ability", "wis"))
+	var ab := str(sp.get("ability", spell.get("save", {}).get("ability", "wis")))  # Zone of Truth: CHA (v0.8.4.26.3)
 	var dc := CombatRules.spell_dc(s)
 	var r := Sheet.save(s, data, who, ab, dc, "charm,magic")
 	RollParts.note(s, "%s: %s" % [spell["name"], name], r["rolls"], int(r["nat"]), r["parts"], int(r["bonus"]), dc)
@@ -1134,7 +1154,8 @@ static func charm_npc(s: GameSession, data: Dictionary, spell_id: String, npc_id
 	var b := Being.of(s, npc_id)
 	_end_spell_on(b, spell_id)
 	ConditionRules.add_effect(b, {"source": {"kind": "spell", "id": spell_id, "name": str(data["spells"][spell_id]["name"])}, "charm": true,
-		"conc": bool(data["spells"][spell_id].get("concentration", false)),
+		"conc": bool(data["spells"][spell_id].get("concentration", false)), "skills": spec(data, spell_id).get("skills", ExplorationRules.SOCIAL_SKILLS),
+		"word": str(spec(data, spell_id).get("word", "очарован")),
 		"ends": {"at": ConditionRules.now(s) + int(spec(data, spell_id).get("minutes", 60)) * ConditionRules.ROUNDS_PER_MINUTE}})
 
 
@@ -1230,4 +1251,39 @@ static func world_spell(s: GameSession, data: Dictionary, spell_id: String) -> A
 		"clean":  # Purify Food and Drink: the water clean, the food fresh again
 			lines.append_array(VesselRules.clean(s.character, data))
 			lines.append_array(FoodRules.freshen(s, data))
+	if bool(sp.get("mend", false)):  # Mending (v0.8.4.26.3): one break made whole
+		lines.append_array(ThingRules.mend(s, data, room))
+	if sp.has("repose"):  # Gentle Repose: the bodies here keep
+		lines.append_array(CrimeRules.repose(s, data, room, int(sp["repose"])))
+	if sp.has("glyph"):  # Glyph of Warding: a rune on the hero's square
+		lines.append(lay_glyph(s, data, spell_id, sp["glyph"]))
 	return lines
+
+
+## Glyph of Warding (v0.8.4.26.3): a rune on the hero's square of this room, kept with the room until a foe sets it off.
+static func lay_glyph(s: GameSession, data: Dictionary, spell_id: String, g: Dictionary) -> String:
+	var at := WalkRules.settle(s, data, LayoutRules.map_of(s, data, s.room_id))
+	Overlay.add(s, data, EntityRef.room(s.room_id), "glyphs", {"spell": spell_id, "x": at.x, "y": at.y, "dc": CombatRules.spell_dc(s),
+		"dice": str(g["dice"]), "type": str(g["type"]), "save": str(g["save"])})
+	return "руна начерчена: она взорвётся под первым врагом, который на неё ступит"
+
+
+## The runes of the fight's room come onto its field: zones of a square that go off once under a foe, unseen by it.
+static func lay_glyphs(s: GameSession, data: Dictionary) -> void:
+	for g: Dictionary in Overlay.target(data["world"], EntityRef.room(str(s.combat.get("map", s.room_id)))).get("glyphs", []):
+		var zone := {"spell": str(g["spell"]), "name": str(data["spells"].get(str(g["spell"]), {}).get("name", "")), "shape": {"type": "sphere", "size": 5},
+			"follow": false, "by": CombatRules.PLAYER, "side": "player", "dice": str(g["dice"]), "type": str(g["type"]), "save": str(g["save"]),
+			"on": ["enter", "start"], "dc": int(g["dc"]), "slow": false, "once": true, "hidden": true, "spares_friends": true, "glyph": [int(g["x"]), int(g["y"])]}
+		_lay(s, data, zone, Vector2i(int(g["x"]), int(g["y"])))
+		zones(s).append(zone)
+
+
+## A zone that goes off once is gone; a rune leaves its room.
+static func _spent(s: GameSession, data: Dictionary, z: Dictionary, lines: Array[String]) -> void:
+	zones(s).erase(z)
+	lines.append("%s гаснет" % z["name"])
+	if z.has("glyph"):
+		var ref := EntityRef.room(str(s.combat.get("map", s.room_id)))
+		var left: Array = (Overlay.target(data["world"], ref).get("glyphs", []) as Array).filter(func(g: Dictionary) -> bool:
+			return [int(g["x"]), int(g["y"])] != z["glyph"])
+		Overlay.put(s, data, ref, "glyphs", left)

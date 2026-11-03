@@ -64,6 +64,29 @@ static func ways_of(data: Dictionary, npc_id: String) -> Array[String]:
 	return out
 
 
+## The ways a letter goes by from `poster`: its post; from the hero itself ("") — the spells that carry a word it can
+## cast now (Sending, Animal Messenger, v0.8.4.26.3).
+static func ways(s: GameSession, data: Dictionary, poster: String) -> Array[String]:
+	if not poster.is_empty():
+		return ways_of(data, poster)
+	var out: Array[String] = []
+	if not on(data):
+		return out
+	for w: String in cfg(data)["ways"]:
+		var spell := str(cfg(data)["ways"][w].get("spell", ""))
+		if not spell.is_empty() and not SpellRules.check(s.character, data, spell, 0).has("reason"):
+			out.append(w)
+	return out
+
+
+## The way a spell sends a letter by ("" — none).
+static func spell_way(data: Dictionary, spell_id: String) -> String:
+	for w: String in cfg(data).get("ways", {}):
+		if str(cfg(data)["ways"][w].get("spell", "")) == spell_id:
+			return w
+	return ""
+
+
 ## Where an NPC is now: a follower — with the hero; one placed or travelling — there (the road — its home); else home.
 static func npc_loc(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	if Being.follows(s, npc_id):
@@ -165,9 +188,9 @@ static func law_of(data: Dictionary, npc_id: String) -> String:
 static func send_why(s: GameSession, data: Dictionary, poster: String, to: String, pid: String, text: String, way: String, extra: Dictionary = {}) -> String:
 	if not on(data):
 		return "писем в этих правилах нет"
-	if not ways_of(data, poster).has(way):
+	if not ways(s, data, poster).has(way):
 		return "здесь так письма не отправляют"
-	if not s.npcs_here(data["world"], s.room_id).has(poster):
+	if not poster.is_empty() and not s.npcs_here(data["world"], s.room_id).has(poster):
 		return "отправить письмо можно только у %s" % WorldView.name_of(data, poster)
 	var p := purpose(data, pid)
 	if p.is_empty():
@@ -177,6 +200,9 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 	var words := text.strip_edges()
 	if words.length() < int(cfg(data)["text_min"]) or words.length() > int(cfg(data)["text_max"]):
 		return "письмо — от %d до %d знаков" % [int(cfg(data)["text_min"]), int(cfg(data)["text_max"])]
+	var most := int(cfg(data)["ways"][way].get("words", 0))
+	if most > 0 and words.split(" ", false).size() > most:
+		return "%s — не больше %d слов" % [cfg(data)["ways"][way]["name"], most]
 	if bool(p.get("law", false)) and not law_people(data).has(to):
 		return "донос пишут страже: %s" % ", ".join(law_people(data).map(func(n: String) -> String: return WorldView.name_of(data, n)))
 	if str(p.get("does", "")) == "arrest":
@@ -198,14 +224,18 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 ## The hero sends a letter: the coins, the time to write, a letter on its way. Lines.
 static func send(s: GameSession, data: Dictionary, poster: String, to: String, pid: String, text: String, way: String, extra: Dictionary = {}) -> Array[String]:
 	var q := quote(s, data, way, to)
+	var w: Dictionary = cfg(data)["ways"][way]
 	var st := _state(s)
 	st["seq"] = int(st["seq"]) + 1
 	var l := {"id": "l%d" % int(st["seq"]), "to": to, "purpose": pid, "text": text.strip_edges(), "way": way, "cost": int(q["cost"]),
 		"risk": int(q["risk"]), "sent_day": s.day, "sent_loc": _loc(data, s.room_id), "deliver_day": s.day + int(q["days"]),
-		"reply_day": s.day + int(q["days"]) * 2 + (0 if int(q["days"]) > 0 else 1), "status": "en_route", "room": str(extra.get("room", "")),
+		"reply_day": s.day + (int(q["days"]) + int(w["reply_days"]) if w.has("reply_days") else int(q["days"]) * 2 + (0 if int(q["days"]) > 0 else 1)), "status": "en_route", "room": str(extra.get("room", "")),
 		"about": str(extra.get("about", "")), "evidence": "", "verdict": "", "can": false, "decision": "", "reply": "", "outcome": []}
 	Ledger.add(s, -int(q["cost"]), "letter:send")
 	var lines: Array[String] = []
+	if w.has("spell"):  # Sending, Animal Messenger: the hero casts it (v0.8.4.26.3)
+		var chk := SpellRules.check(s.character, data, str(w["spell"]), 0)
+		lines.append_array(SpellRules.cast(s.character, data, str(chk["spell_id"]), int(chk["slot"]), s))
 	if str(purpose(data, pid).get("does", "")) == "arrest":  # the evidence the hero carries goes with the letter
 		var item := _evidence_item(s, data, str(l["about"]))
 		if not item.is_empty():
@@ -217,8 +247,8 @@ static func send(s: GameSession, data: Dictionary, poster: String, to: String, p
 				s.character["inventory"].erase(item)
 			lines.append("К письму приложено: %s" % ItemRules.display_name(data["items"], s.items, item))
 	st["list"][str(l["id"])] = l
-	lines.push_front("Письмо → %s (%s) отправлено %s за %s — дойдёт к %d-му дню, ответ — не раньше %d-го" % [WorldView.name_of(data, to),
-		purpose(data, pid)["name"], cfg(data)["ways"][way]["name"], Money.format(int(q["cost"])), int(l["deliver_day"]), int(l["reply_day"])])
+	lines.push_front("Письмо → %s (%s) отправлено %s%s — дойдёт к %d-му дню, ответ — не раньше %d-го" % [WorldView.name_of(data, to),
+		purpose(data, pid)["name"], w["name"], (" за " + Money.format(int(q["cost"]))) if int(q["cost"]) > 0 else "", int(l["deliver_day"]), int(l["reply_day"])])
 	lines.append_array(TimeRules.advance(s, data, int(cfg(data)["write_minutes"])))
 	return lines
 

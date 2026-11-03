@@ -279,6 +279,8 @@ static func _save_parts(s: GameSession, data: Dictionary, who: Dictionary, ab: S
 		RollParts.difficulty(s, data, parts)  # the game's difficulty (v0.7.20.4)
 	else:
 		parts.append(RollParts.part(CombatRules.ab_name(ab), save_bonus(s, data, who, ab)))
+	for e: Dictionary in ConditionRules.effects(holder(s, who)):  # Warding Bond (v0.8.4.26.3)
+		RollParts.add(parts, str(e.get("source", {}).get("name", "")), int(e.get("saves_plus", 0)))
 	var fighter := CombatRules.player(s) if is_hero(who) and CombatRules.active(s) else who
 	if ab == "dex":
 		RollParts.add(parts, "укрытие", int(fighter.get("cover", 0)))  # v0.8.4
@@ -333,8 +335,9 @@ static func damage(s: GameSession, data: Dictionary, who: Dictionary, dtype: Str
 	var d := defenses(s, data, who, dtype, magical, silvered) if not dtype.is_empty() else {}
 	if d.has("immune"):
 		return {"damage": 0, "note": "иммунитет"}
-	if ConditionRules.does(holder(s, who), data, "resist_all"):
-		return {"damage": dmg / 2, "note": "сопротивление: окаменение"}
+	var all := ConditionRules.flag_of(holder(s, who), data, "resist_all")
+	if not all.is_empty():
+		return {"damage": dmg / 2, "note": "сопротивление: %s" % all}
 	if d.has("resist"):
 		return {"damage": dmg / 2, "note": "сопротивление: %s" % d["resist"]}
 	if d.has("vulnerable"):

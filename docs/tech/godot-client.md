@@ -361,6 +361,13 @@ game/
   - Свойство `water_source` — вода где угодно (`NeedRules.water_here`, Графин).
   - Под рукой (`ItemRules.at_hand`) — пояс и надетые вещи со своим применением: обруч, линзы, шляпа применяются там, где надеты, на пояс не кладутся (`belt_fits`).
   - `CharacterRules.working_ids` / `carried_ids` — id того же списка, что `working` / `carried`.
+- **Последние заклинания (v0.8.4.26.3):**
+  - Спасброски от смерти у любого павшего на стороне героя: `CombatRules.saves_of`, `dying` / `dying_of`, `stabilize`, `blow_at_fallen`, `_dies`. Союзник при 0 хитов бросает их в `next_actor`; удар по павшему — провал через `Harm.take`; умерший спутник после боя — `CrimeRules.on_death` в `AllyRules.after_fight(s, data)`.
+  - Строка `spell_effects`: `stabilize` — способ `fallen` дорогой `on_friend`, ИИ берёт цель из `dying_of`; `other` — не на себя (`_can_friend`, `Cast.target_why`); `ward` — `Harm._share`; `saves_plus` — в `Sheet._save_parts`; флаг эффекта (`resist_all`) читает `ConditionRules.flag_of` вместе с состояниями.
+  - Мир: `SpellEffects.WORLD` — ключи `world_spell` (`mend` → `ThingRules.mend`, `repose` → `CrimeRules.repose`, `glyph` → `lay_glyph`). Руны комнаты ложатся зонами в `FightField.lay` (`lay_glyphs`), зона `once` уходит после удара (`_spent`), `hidden` не пугает ИИ.
+  - `stay` — эффект с `ends.room`, снимает `ConditionRules.left_room` при уходе. `hand_ft` — дальность `MapSpots.reach` для вещей.
+  - Письмо заклинанием: строка `rules.letters.ways` с `spell`, `words`, `reply_days`; `LetterRules.ways(s, data, poster)` — почта человека или заклинания героя (`poster` ""); `EventBus.letter_requested` открывает окно с листа.
+  - `tools/srd_import.py`: `CUT_SPELLS` — заклинания вне игры (список, классы, домены, колдовство монстров).
 - **Заклинания без слов мастера (v0.8.4.26.2):** 17 из 51.
   - В строке `spell_effects` значение `"walk"` — скорость ходьбы заклинателя (`ItemRules.walk_of`, та же, что у надетой вещи). Строка `moves` может быть без `speed` — только статус (`water_walk` по клеткам воды).
   - `jump_mult` — прыжок во столько раз дальше (`core/acts/jump.gd`); `beast_speech` — зверь понимает героя (`LanguageRules.foe_understands`).

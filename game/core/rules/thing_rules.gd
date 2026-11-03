@@ -199,6 +199,30 @@ static func ruin(s: GameSession, data: Dictionary, room: String, p: Dictionary, 
 	return out
 
 
+## Mending (v0.8.4.26.3): one break made whole — a broken door of `room` (not burnt through), a broken thing standing
+## there, a damaged copy the hero carries. Lines.
+static func mend(s: GameSession, data: Dictionary, room: String) -> Array[String]:
+	for k: String in s.ways:
+		var st: Dictionary = s.ways[k]
+		if room in k.split("|") and bool(st.get("broken", false)) and not bool(st.get("burnt", false)):
+			st.erase("broken")
+			st.erase("dmg")
+			return ["дверь снова цела"] as Array[String]
+	for p: Dictionary in PropRules.room_props(s, room):
+		if int(p.get("dmg", 0)) > 0 or str(p.get("state", "")) == "broken":
+			p.erase("dmg")
+			if str(p.get("state", "")) == "broken":
+				p.erase("state")
+			return ["%s снова цел" % p["name"]] as Array[String]
+	for h: Dictionary in Thing.holders(s.character):
+		for id: String in h.get("copies", {}).keys():
+			for st: Dictionary in Thing.states(h, id):
+				if int(st.get("dmg", 0)) > 0:
+					st.erase("dmg")
+					return ["%s снова цел" % ItemRules.display_name(data["items"], s.items, id)] as Array[String]
+	return ["чинить нечего: всё цело"] as Array[String]
+
+
 ## Time passes: a fire ends in ash and may catch what stands beside it; rain puts it out. Lines for the hero's room.
 static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []

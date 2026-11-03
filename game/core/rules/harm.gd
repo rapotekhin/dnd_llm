@@ -56,24 +56,23 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 			s.combat["outcome"] = "arena_lost"
 			lines.append("%s падает — распорядитель останавливает бой" % me["name"])
 			return
-		var ds: Dictionary = s.combat["death_saves"]
 		if hp <= 0:  # a blow at 0 HP is a failed death save, a critical one two
-			ds["fail"] = int(ds["fail"]) + (2 if crit else 1)
-			ds["stable"] = false
-			lines.append("%s: провал спасброска от смерти (%d из 3)" % [me["name"], mini(3, int(ds["fail"]))])
-			if int(ds["fail"]) >= 3:
-				s.combat["outcome"] = "dead"
+			CombatRules.blow_at_fallen(s, f, crit, lines)
 			return
 		if dmg - hp >= int(me["max_hp"]):  # massive damage
 			me["hp"] = 0
 			s.combat["outcome"] = "dead"
 			lines.append("%s погибает на месте" % me["name"])
 			return
+	if fight and not hero and str(who.get("status")) == "down":  # one of the hero's side who fell (v0.8.4.26.3)
+		CombatRules.blow_at_fallen(s, who, crit, lines)
+		return
 	if dmg >= hp and hp > 0 and survives(s, data, who, dmg, dtype, crit, lines):
 		me["hp"] = 1
 	else:
 		me["hp"] = maxi(0, hp - dmg)
 	_after(s, data, who, dmg, lines)
+	_share(s, data, who, dmg, dtype, lines)
 	if int(me["hp"]) > 0 or not fight:
 		return
 	if hero:
@@ -102,6 +101,21 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	FeatureRules.on_kill(s, data, lines)
 	MonsterRules.release(s, data, who, lines)
 	MonsterRules.death_burst(s, data, who, lines)
+
+
+## Warding Bond (v0.8.4.26.3): the one who laid the bond takes the same damage; the bond is gone once it lies at 0 HP.
+static func _share(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, dtype: String, lines: Array[String]) -> void:
+	var me := Sheet.holder(s, who)
+	for e: Dictionary in ConditionRules.effects(me).duplicate():
+		if not bool(e.get("ward", false)):
+			continue
+		var by := str(e.get("by", ""))
+		var warder: Dictionary = Sheet.HERO if by == Being.HERO else CombatRules.fighter(s, by) if CombatRules.active(s) else {}
+		if warder.is_empty() or by == str(who.get("id")) or Sheet.hp(s, data, warder) <= 0:
+			ConditionRules.remove_effect(me, int(e["uid"]))
+			continue
+		lines.append("%s: %s — урон делит %s" % [me.get("name", ""), e["source"]["name"], Sheet.holder(s, warder).get("name", "")])
+		take(s, data, warder, dmg, lines, dtype)
 
 
 ## Temporary hit points take damage first (Dark One's Blessing, Heroism). What is left.

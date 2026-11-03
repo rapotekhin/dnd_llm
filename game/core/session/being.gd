@@ -34,7 +34,7 @@ const PARTS := {
 	"attitude": TYPE_INT, "attitude_base": TYPE_INT, "memory": TYPE_ARRAY, "inventory": TYPE_DICTIONARY, "gold_cp": TYPE_INT,
 	"equipped": TYPE_DICTIONARY, "copies": TYPE_DICTIONARY, "picked": TYPE_INT, "caught": TYPE_INT,
 	"hp": TYPE_INT, "effects": TYPE_ARRAY, "conditions": TYPE_ARRAY, "next_effect": TYPE_INT, "sick": TYPE_DICTIONARY, "dead": TYPE_BOOL, "body": TYPE_STRING,
-	"body_at": TYPE_INT, "searched": TYPE_BOOL, "disarmed": TYPE_DICTIONARY, "follows": TYPE_INT, "fed": TYPE_DICTIONARY, "at": TYPE_STRING,
+	"body_at": TYPE_INT, "repose_until": TYPE_INT, "searched": TYPE_BOOL, "disarmed": TYPE_DICTIONARY, "follows": TYPE_INT, "fed": TYPE_DICTIONARY, "at": TYPE_STRING,
 	"discount": TYPE_DICTIONARY, "favor": TYPE_INT, "spent": TYPE_DICTIONARY, "exhaustion": TYPE_INT, "diseases": TYPE_ARRAY,
 	"rested": TYPE_INT, "xp": TYPE_INT, "level": TYPE_INT, "creature": TYPE_DICTIONARY, "summon": TYPE_DICTIONARY, "fight": TYPE_DICTIONARY,
 	"was": TYPE_DICTIONARY,

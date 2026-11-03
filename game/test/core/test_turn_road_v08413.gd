@@ -115,7 +115,7 @@ func test_damage_with_no_roll_goes_through_the_defenses_of_anybody() -> void:
 	var lines: Array[String] = []
 	assert_int(Harm.typed(s, data, f, 10, "bludgeoning", lines, "яма: {hp} ({words})")).is_equal(5)
 	assert_int(int(f["hp"])).is_equal(25)
-	assert_str(lines[0]).starts_with("яма: 5 (").contains("окаменение")
+	assert_str(lines[0]).starts_with("яма: 5 (").contains("окаменел")  # the status that gives it (v0.8.4.26.3)
 
 
 func test_damage_with_no_roll_names_its_type_and_an_immunity() -> void:

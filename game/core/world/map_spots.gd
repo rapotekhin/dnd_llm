@@ -313,14 +313,24 @@ static func cell_of(s: GameSession, data: Dictionary, map: Dictionary, name: Str
 	return _mark_cell(map, s.room_id, name)
 
 
-## Is `name` within `reach` of the hero, in a line of sight? One who has no square here stands in reach.
-static func in_reach(s: GameSession, data: Dictionary, name: String, reach: String) -> bool:
+## How far an act of `kind` reaches from the hero, in squares (`rules.map.reach`): a thing — farther by Mage Hand
+## (v0.8.4.26.3); a person — never.
+static func reach(s: GameSession, data: Dictionary, kind: String, ref: String = "") -> int:
+	var r := int(cfg(data)["reach"][kind])
+	if kind == "touch" and not ref.begins_with("npc:"):
+		for e: Dictionary in SpellEffects.hero_effects(s.character, "hand_ft"):
+			r = maxi(r, FightGrid.squares_of(data, int(e["hand_ft"])))
+	return r
+
+
+## Is `name` within `kind` of the hero, in a line of sight? One who has no square here stands in reach.
+static func in_reach(s: GameSession, data: Dictionary, name: String, kind: String) -> bool:
 	var map := LayoutRules.map_of(s, data, s.room_id)
 	var at := cell_of(s, data, map, name)
 	if at.x < 0:
 		return true
 	var hero := WalkRules.settle(s, data, map)
-	return WalkRules.distance(hero, at) <= int(cfg(data)["reach"][reach]) and SightRules.line(map, data["layouts"], hero, at)
+	return WalkRules.distance(hero, at) <= reach(s, data, kind, name) and SightRules.line(map, data["layouts"], hero, at)
 
 
 ## What the master may name as a place of the room: «очаг [hearth]»; of another room for a furnishing readied ahead.

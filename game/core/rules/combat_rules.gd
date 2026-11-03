@@ -1071,12 +1071,13 @@ static func from_self(data: Dictionary, spell_id: String) -> bool:
 
 ## "" when a spell of `f`'s side may land on `target_id`: itself, or one of its side in range; a fallen one only for a heal.
 static func _can_friend(s: GameSession, data: Dictionary, spell_id: String, target_id: String, f: Dictionary) -> String:
-	if target_id == str(f["id"]):
-		return ""
+	var fx := SpellEffects.spec(data, spell_id)
+	if target_id == str(f["id"]):  # Warding Bond, Spare the Dying: on another (v0.8.4.26.3)
+		return "COMBAT_BAD_TARGET" if bool(fx.get("other", false)) else ""
 	var t := fighter(s, target_id)
-	var fallen_ok := str(t.get("status")) == "down" and SpellEffects.spec(data, spell_id).is_empty()
+	var fallen_ok := str(t.get("status")) == "down" and (fx.is_empty() or fx.has("stabilize"))
 	var same := (str(t.get("side")) == "enemy") == (str(f.get("side")) == "enemy")
-	if t.is_empty() or not same or not (str(t.get("status")) == "active" or fallen_ok):
+	if t.is_empty() or not same or not (str(t.get("status")) == "active" or fallen_ok) or (fx.has("stabilize") and not dying(s, t)):
 		return "COMBAT_BAD_TARGET"
 	if FightGrid.dist(f, t) > _spell_squares(s, data, spell_id, f):
 		return "COMBAT_OUT_OF_RANGE"
@@ -1279,6 +1280,7 @@ static func heal(s: GameSession, data: Dictionary, spell_id: String, slot: int, 
 	AnimRules.outcome(s, t, "heal")
 	if not Sheet.is_hero(t):
 		t["status"] = "active"
+		t.erase("death_saves")
 	elif before <= 0 and int(it["hp"]) > 0:
 		ConditionRules.remove(it, "unconscious")
 		s.combat["death_saves"] = {"ok": 0, "fail": 0}
@@ -1824,7 +1826,7 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 	var f := fighter(s, id)
 	if id == PLAYER:
 		if int(s.character["hp"]) <= 0:
-			_death_save(s, data, lines)
+			_death_save(s, data, f, lines)
 		elif bool(f.get("surprised", false)):
 			f.erase("surprised")
 			lines.append("%s застигнут врасплох и не успевает ничего сделать" % s.character["name"])
@@ -1838,7 +1840,9 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 			return lines
 		_finish(s, data, f, lines)
 		return lines
-	if str(f.get("status")) == "active":
+	if dying(s, f):  # one of the hero's side who fell rolls as the hero does (v0.8.4.26.3)
+		_death_save(s, data, f, lines)
+	elif str(f.get("status")) == "active":
 		if bool(f.get("surprised", false)):
 			f.erase("surprised")
 			lines.append("%s застигнут врасплох и не успевает ничего сделать" % f["name"])
@@ -1867,32 +1871,86 @@ static func _burn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[
 		Harm.take(s, data, f, acid, lines, "acid")
 
 
-static func _death_save(s: GameSession, data: Dictionary, lines: Array[String]) -> void:
-	var ds: Dictionary = s.combat["death_saves"]
-	if bool(ds.get("stable", false)):
+## The death saves of `f` (v0.8.4.26.3, one road): the hero's are the fight's, one of its side who fell keeps its own.
+static func saves_of(s: GameSession, f: Dictionary) -> Dictionary:
+	if Sheet.is_hero(f):
+		return s.combat["death_saves"]
+	if not f.has("death_saves"):
+		f["death_saves"] = {"ok": 0, "fail": 0}
+	return f["death_saves"]
+
+
+## It lies at 0 HP and still rolls death saves: the hero, or a person of its side who fell (not a foe, not one called).
+static func dying(s: GameSession, f: Dictionary) -> bool:
+	var down := int(s.character.get("hp", 0)) <= 0 if Sheet.is_hero(f) else str(f.get("status")) == "down"
+	return down and not bool(saves_of(s, f).get("stable", false))
+
+
+## Who of `f`'s side lies dying now: the hero first.
+static func dying_of(s: GameSession, f: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	if str(f.get("side")) == "enemy":
+		return out
+	for id: String in [PLAYER] + allies(s, false):
+		if dying(s, fighter(s, id)):
+			out.append(id)
+	return out
+
+
+## It is stable at 0 HP (Spare the Dying, a Periapt of Wound Closure, three saves): no more death saves. Lines.
+static func stabilize(s: GameSession, f: Dictionary, why: String, lines: Array[String]) -> void:
+	saves_of(s, f)["stable"] = true
+	lines.append("%s стабилизируется%s" % [Sheet.holder(s, f).get("name", ""), (" — " + why) if not why.is_empty() else ""])
+
+
+## A death save of anybody who lies dying (5e): 20 — up with 1 HP, three successes — stable, three failures — dead.
+static func _death_save(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	if not dying(s, f):
 		return
-	if CharacterRules.item_prop(s.character, "wound_closure"):  # Periapt of Wound Closure (v0.7.12)
-		ds["stable"] = true
-		lines.append("%s стабилизируется — Амулет закрытия ран" % s.character["name"])
+	var ds := saves_of(s, f)
+	var me := Sheet.holder(s, f)
+	var name := str(me.get("name", ""))
+	if Sheet.prop(s, data, f, "wound_closure"):  # Periapt of Wound Closure (v0.7.12)
+		stabilize(s, f, "Амулет закрытия ран", lines)
 		return
-	var beacon := not SpellEffects.hero_effects(s.character, "death_adv").is_empty()  # Beacon of Hope (v0.7.13.2)
-	var roll := Roll.kept(Roll.hero_dice(s, beacon, false), beacon, false)
+	var beacon := not SpellEffects.hero_effects(me, "death_adv").is_empty()  # Beacon of Hope (v0.7.13.2)
+	var roll := Roll.kept(Roll.of(s, f, beacon, false), beacon, false)
 	if roll == 20:
-		s.character["hp"] = 1
-		ConditionRules.remove(s.character, "unconscious")
-		s.combat["death_saves"] = {"ok": 0, "fail": 0}
-		lines.append("%s: спасбросок от смерти 20 — приходит в себя с 1 HP!" % s.character["name"])
+		me["hp"] = 1
+		ConditionRules.remove(me, "unconscious")
+		ds.merge({"ok": 0, "fail": 0}, true)
+		if not Sheet.is_hero(f):
+			f["status"] = "active"
+		lines.append("%s: спасбросок от смерти 20 — приходит в себя с 1 HP!" % name)
 		return
-	if roll + DifficultyRules.bonus(s, data) >= 10:
+	if roll + (DifficultyRules.bonus(s, data) if Sheet.is_hero(f) else 0) >= 10:
 		ds["ok"] = int(ds["ok"]) + 1
 	else:
 		ds["fail"] = int(ds["fail"]) + (2 if roll == 1 else 1)
-	lines.append("%s: спасбросок от смерти %d — успехов %d, провалов %d" % [s.character["name"], roll, mini(3, int(ds["ok"])), mini(3, int(ds["fail"]))])
+	lines.append("%s: спасбросок от смерти %d — успехов %d, провалов %d" % [name, roll, mini(3, int(ds["ok"])), mini(3, int(ds["fail"]))])
 	if int(ds["fail"]) >= 3:
-		s.combat["outcome"] = "dead"
+		_dies(s, f, lines)
 	elif int(ds["ok"]) >= 3:
-		ds["stable"] = true
-		lines.append("%s стабилизируется" % s.character["name"])
+		stabilize(s, f, "", lines)
+
+
+## A blow at one who lies at 0 HP: a failed death save, two for a critical one; it is no longer stable.
+static func blow_at_fallen(s: GameSession, f: Dictionary, crit: bool, lines: Array[String]) -> void:
+	var ds := saves_of(s, f)
+	ds["fail"] = int(ds["fail"]) + (2 if crit else 1)
+	ds["stable"] = false
+	lines.append("%s: провал спасброска от смерти (%d из 3)" % [Sheet.holder(s, f).get("name", ""), mini(3, int(ds["fail"]))])
+	if int(ds["fail"]) >= 3:
+		_dies(s, f, lines)
+
+
+## Three failed death saves: the hero's fight is over, one of its side is dead.
+static func _dies(s: GameSession, f: Dictionary, lines: Array[String]) -> void:
+	if Sheet.is_hero(f):
+		s.combat["outcome"] = "dead"
+		return
+	f["status"] = "dead"
+	lines.append("%s умирает" % f["name"])
 
 
 # --- enemies --------------------------------------------------------------------------------------

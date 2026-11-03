@@ -27,6 +27,10 @@ BACKGROUNDS = ROOT / "tools" / "srd" / "backgrounds.json"
 
 MAX_LEVEL = 5
 MAX_SPELL_LEVEL = 3
+# Spells left out of the game until the engine has their mechanic (the author, v0.8.4.26.3: no spell the engine does not
+# play); the backlog keeps them. Out of the spell list, the classes, the domains and the monsters' casting.
+CUT_SPELLS = {"tiny_hut", "alarm", "rope_trick", "meld_into_stone", "water_breathing", "levitate", "locate_object",
+              "locate_animals_or_plants", "revivify", "nondetection", "arcanists_magic_aura"}
 MAX_MONSTER_CR = 3  # the combat of v0.6.x: levels 1–5
 NPC_TEMPLATES = {"mage", "archmage"}  # v0.7.39.7: teachers of the higher circles — people of the world, not foes of levels 1–5
 ABILITIES = ["str", "dex", "con", "int", "wis", "cha"]
@@ -188,19 +192,15 @@ MAGIC_OTHER = {
     "pipes-of-the-sewers": _w("pipes_of_the_sewers", [], 30000, "свирель", attunement=True, charges={"max": 3, "regain": "1d3"},
                               use={"summon": "pipes_of_the_sewers"}),
     "decanter-of-endless-water": _w("decanter_of_endless_water", ["water_source"], 30000, "графин"),
-    # The master's: what they do is in the description.
-    **{i: _w(i.replace("-", "_"), [], v, look, master=True, **kw) for i, v, look, kw in [
-        ("amulet-of-proof-against-detection-and-location", 40000, "амулет", {"attunement": True}),
-        ("deck-of-illusions", 30000, "колода карт", {}), ("dust-of-dryness", 12000, "мешочек с пылью", {"stack": True}),
-        ("efficient-quiver", 30000, "колчан", {}), ("elemental-gem", 30000, "самоцвет", {}),
-        ("helm-of-telepathy", 50000, "шлем", {"attunement": True}), ("immovable-rod", 50000, "жезл", {}),
-        ("medallion-of-thoughts", 30000, "медальон", {"attunement": True}),
-        ("necklace-of-adaptation", 30000, "ожерелье", {"attunement": True}), ("ring-of-jumping", 30000, "кольцо", {"attunement": True}),
-        ("ring-of-mind-shielding", 50000, "кольцо", {"attunement": True}), ("ring-of-water-walking", 30000, "кольцо", {}),
-        ("robe-of-useful-items", 30000, "мантия", {}), ("rope-of-climbing", 30000, "верёвка", {}),
-    ]},
-    **{i: _potion(i.replace("-", "_"), v, master=True) for i, v in [
-        ("potion-of-animal-friendship", 20000), ("potion-of-water-breathing", 18000), ("philter-of-love", 9000)]},
+    # v0.8.4.26.3: on the roads of the spells they cast
+    "ring-of-jumping": _w("ring_of_jumping", [], 30000, "кольцо", attunement=True, use={"spell": "jump", "level": 1, "at_will": True}),
+    "ring-of-water-walking": _w("ring_of_water_walking", [], 30000, "кольцо", wear={"water_walk": "walk"}),
+    "medallion-of-thoughts": _w("medallion_of_thoughts", [], 30000, "медальон", attunement=True, charges={"max": 3, "regain": "1d3"},
+                                use={"spell": "detect_thoughts", "level": 2, "dc": 13}),
+    "helm-of-telepathy": _w("helm_of_telepathy", [], 50000, "шлем", attunement=True, use={"spell": "detect_thoughts", "level": 2, "dc": 13, "at_will": True}),
+    # The master's until the containers' rule of v0.8.4.27: what it does is in the description. The other things only the
+    # master told are out of the game (the author, v0.8.4.26.3); the backlog keeps them.
+    "efficient-quiver": _w("efficient_quiver", [], 30000, "колчан", master=True),
 }
 # Potion of Resistance: one per damage type the pack meets (the SRD leaves the type to the DM).
 RESIST_POTIONS = {"fire": "огня", "cold": "холода", "poison": "яда", "lightning": "электричества", "acid": "кислоты", "necrotic": "некротической энергии"}
@@ -629,7 +629,7 @@ class Builder:
             spells: dict[str, list[str]] = {}
             for sp in s.get("spells", []):
                 lvl = int(sp["prerequisites"][0]["index"].rsplit("-", 1)[1]) if sp.get("prerequisites") else 1
-                if lvl <= MAX_LEVEL:
+                if lvl <= MAX_LEVEL and sid(sp["spell"]["index"]) not in CUT_SPELLS:
                     spells.setdefault(str(lvl), []).append(sid(sp["spell"]["index"]))
             flavor = s.get("subclass_flavor", "")
             subclasses[sid(idx)] = {
@@ -647,7 +647,7 @@ class Builder:
     def spells(self) -> dict[str, dict[str, Any]]:
         out = {}
         for s in all_of("spells"):
-            if s["level"] > MAX_SPELL_LEVEL:
+            if s["level"] > MAX_SPELL_LEVEL or sid(s["index"]) in CUT_SPELLS:
                 continue
             text = desc_text(s)
             if s.get("higher_level"):
@@ -929,6 +929,8 @@ def monster_spells(m: dict[str, Any]) -> dict[str, Any]:
             continue
         spells = []
         for x in sc.get("spells", []):
+            if sid(x["url"].rsplit("/", 1)[-1]) in CUT_SPELLS:
+                continue
             use = x.get("usage", {})
             spells.append({"id": sid(x["url"].rsplit("/", 1)[-1]), "level": x.get("level", 0),
                            **({"per_day": int(use["times"])} if use.get("type") == "per day" else {})})

@@ -59,9 +59,9 @@ static func situation(s: GameSession, data: Dictionary, who: Dictionary, spec: D
 		var gate := LanguageRules.check_gate(me, data, skill, LanguageRules.npc_understands(me, data, data["world"]["npcs"][listener]))
 		_add(fail, str(gate.get("auto_fail", "")))
 		_add(dis, str(gate.get("disadvantage", "")))
-		var charm := SpellEffects.npc_spells(s, listener)
-		if ExplorationRules.SOCIAL_SKILLS.has(skill) and not charm.is_empty():
-			adv.append("очарован: " + str(charm[0]["source"]["name"]))  # Charm Person and the like (v0.7.22.3)
+		var charm := SpellEffects.npc_spells(s, listener).filter(func(e: Dictionary) -> bool: return (e.get("skills", ExplorationRules.SOCIAL_SKILLS) as Array).has(skill))
+		if not charm.is_empty():  # Charm Person and the like (v0.7.22.3), Zone of Truth on Insight (v0.8.4.26.3)
+			adv.append("%s: %s" % [charm[0].get("word", "очарован"), charm[0]["source"]["name"]])
 	var die := SpellEffects.die(s, me, "check", peek)  # Guidance (v0.7.13.1)
 	parts.append_array(die["parts"])
 	return {"adv": adv, "dis": dis, "fail": fail, "parts": parts}

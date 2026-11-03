@@ -59,7 +59,7 @@ func test_an_npc_foe_keeps_its_wounds_after_the_fight() -> void:
 	var s := _hero()
 	TestUtils.fight(s, data, [{"monster": "guard", "name": "Кейра", "npc_id": "npc_mercenary", "col": 0}], {})
 	CombatRules.fighter(s, CombatRules.enemies(s)[0])["hp"] = 4
-	AllyRules.after_fight(s)
+	AllyRules.after_fight(s, data)
 	assert_int(int(Being.of(s, "npc_mercenary")["hp"])).is_equal(4)
 
 

@@ -389,6 +389,9 @@ func _cast_row(parent: Control, c: Dictionary, id: String, level: int, can_act: 
 				_conc_armed = id
 				return tr("CONC_SWITCH_AGAIN").format({"old": held})
 			_conc_armed = ""
+			if not LetterRules.spell_way(Catalog.data, id).is_empty():  # Sending: the letter's window, the slot goes with the letter (v0.8.4.26.3)
+				EventBus.letter_requested.emit("")
+				return ""
 			return GameState.cast(id, pick.get_selected_id() if pick.item_count > 0 else 0))
 	row.add_child(grown)
 

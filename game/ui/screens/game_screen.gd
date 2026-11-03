@@ -219,6 +219,7 @@ func _ready() -> void:
 	_contest = _window(ContestPanel.SCENE, "ContestView")  # v0.7.40
 	_arena = _window(ArenaPanel.SCENE, "ArenaView")  # v0.7.45
 	_letter = _window(LetterPanel.SCENE, "LetterView")  # v0.7.48
+	EventBus.letter_requested.connect(_letter.open)  # Sending from the sheet (v0.8.4.26.3)
 	_faith = _window(FaithPanel.SCENE, "FaithView")  # v0.7.49
 	_pet = _window(PetPanel.SCENE, "PetView")  # v0.7.43
 	_family = _window(FamilyPanel.SCENE, "FamilyView")  # v0.7.32
@@ -488,7 +489,7 @@ func _approach(ref: String, reach: String, act: Callable) -> void:
 	var to := _cell_of(ref)
 	var steps: Array[Vector2i] = []
 	if to.x >= 0 and not s.in_conversation():
-		steps = WalkRules.near(_field.map, Catalog.data["layouts"], _field.hero_cell(), to, int(MapSpots.cfg(Catalog.data)["reach"][reach]), s.room_id)
+		steps = WalkRules.near(_field.map, Catalog.data["layouts"], _field.hero_cell(), to, MapSpots.reach(s, Catalog.data, reach, ref), s.room_id)
 	if steps.is_empty():
 		act.call()
 		return

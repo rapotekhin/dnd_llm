@@ -48,6 +48,7 @@ static func lay(s: GameSession, data: Dictionary) -> void:
 					var b := _block(data, str(p["body"]), str(p["name"]))
 					b["prop"] = str(p["id"])
 					s.combat["blocks"][FightGrid.tag(Vector2i(int(t["x"]), int(t["y"])))] = b
+	SpellEffects.lay_glyphs(s, data)  # the hero's runes of this room (v0.8.4.26.3)
 	FightGrid.changed(s)
 
 
@@ -129,7 +130,7 @@ static func _fall(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[
 ## Standing on this square hurts: the AI's fear of it.
 static func hurts(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 	for z: Dictionary in SpellEffects.zones(s):
-		if not str(z.get("dice", "")).is_empty() and FightGrid.in_cells(f, FightGrid.zone_cells(s, data, z)):
+		if not str(z.get("dice", "")).is_empty() and not bool(z.get("hidden", false)) and FightGrid.in_cells(f, FightGrid.zone_cells(s, data, z)):
 			return true
 	return false
 

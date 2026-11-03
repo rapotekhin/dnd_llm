@@ -82,7 +82,7 @@ func _rebuild() -> void:
 	if people.is_empty():
 		UiParts.label(_box, tr("LETTER_NOBODY"), UiTheme.MUTED_LABEL).name = "LetterNobody"
 		return
-	var ways := LetterRules.ways_of(data, poster)
+	var ways := LetterRules.ways(s, data, poster)
 	if not people.has(_to):
 		_to = people[0]
 	var purposes: Array[String] = []

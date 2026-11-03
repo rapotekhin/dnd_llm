@@ -251,7 +251,7 @@ func test_one_beaten_by_words_comes_along_and_fights_beside() -> void:
 	_fight(s, [{"monster": "wolf", "col": 2}], [])
 	var f := CombatRules.fighter(s, CombatRules.allies(s)[0])
 	f["status"] = "down"
-	AllyRules.after_fight(s)
+	AllyRules.after_fight(s, data)
 	assert_int(int(c["hp"])).is_equal(1)
 	assert_bool(CreatureRules.here(s, s.room_id).has(c)).is_true()
 

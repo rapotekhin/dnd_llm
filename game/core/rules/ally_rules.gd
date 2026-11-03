@@ -217,8 +217,9 @@ static func drop_buffs(s: GameSession, spell_id: String) -> void:
 		ConditionRules.tidy(Being.of(s, id))
 
 
-## After the fight: the summoned keep their wounds (the fallen are gone); the followers who fell come to. Lines.
-static func after_fight(s: GameSession) -> Array[String]:
+## After the fight: the summoned keep their wounds (the fallen are gone); the followers who fell come to, the ones whose
+## death saves failed are dead (v0.8.4.26.3). Lines.
+static func after_fight(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var hp := {}
 	for id: String in CombatRules.allies(s, false):
@@ -229,12 +230,15 @@ static func after_fight(s: GameSession) -> Array[String]:
 			var cr := CreatureRules.find(s, s.room_id, str(f["creature_id"]))
 			if str(f["status"]) == "active":
 				cr["hp"] = int(f["hp"])
-			elif bool(cr.get("ally", false)):  # v0.7.50.1: one who came along falls and comes to
+			elif bool(cr.get("ally", false)) and str(f["status"]) != "dead":  # v0.7.50.1: one who came along falls and comes to
 				cr["hp"] = 1
 				lines.append("%s приходит в себя" % f["name"])
 			elif not cr.is_empty():
 				lines.append("%s погиб в бою" % cr["name"])
 				PropertyRules.remove_creature(s, str(f["creature_id"]))
+		elif str(f.get("status")) == "dead":
+			if not str(f.get("npc_id", "")).is_empty():
+				lines.append_array(CrimeRules.on_death(s, data, str(f["npc_id"]), false, s.room_id))
 		else:
 			if str(f.get("status")) == "down":
 				lines.append("%s приходит в себя" % f["name"])

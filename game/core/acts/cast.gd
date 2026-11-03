@@ -50,6 +50,8 @@ func target_why(s: GameSession, data: Dictionary, f: Dictionary, to: String, spe
 	var side := SpellEffects.picks_side(data, spell)
 	if not to.is_empty() and (side == "friend" or (side == "any" and not CombatRules.foes_of(s, f).has(to))):
 		return CombatRules._can_friend(s, data, spell, to, f)
+	if to.is_empty() and bool(SpellEffects.spec(data, spell).get("other", false)):
+		return "COMBAT_BAD_TARGET"
 	if sp.has("heal_at_slot") or to.is_empty():
 		return ""
 	var t := _foe(s, f, to)
@@ -153,6 +155,8 @@ func _ways(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary, tar
 		"curse", "bane":
 			var fit := targets.filter(func(t: Dictionary) -> bool: return not has_it.call(Sheet.holder(s, t)))
 			return _at(s, data, f, how, fit, float(w["curse"]) * scale)
+	if SpellEffects.spec(data, spell).has("stabilize"):
+		return _fallen(s, data, f, how, float(w["stabilize"]) * scale)
 	if SpellEffects.picks_side(data, spell) in ["friend", "any"]:
 		return _boons(s, data, f, how, float(w["buff"]) * scale, has_it) if _boon(data, spell) else []
 	if SpellEffects.self_spell(data, spell) or (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell):
@@ -176,10 +180,20 @@ func _self(f: Dictionary, how: Dictionary, power: float) -> Dictionary:
 func _boons(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary, power: float, has_it: Callable) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var reach := CombatRules._spell_squares(s, data, str(how["spell"]), f)
+	var other := bool(SpellEffects.spec(data, str(how["spell"])).get("other", false))
 	for one: String in CombatRules.friends_of(s, f):
 		var t := CombatRules.fighter(s, one)
-		if not has_it.call(Sheet.holder(s, t)):
+		if not has_it.call(Sheet.holder(s, t)) and not (other and one == str(f["id"])):
 			out.append({"act": id, "to": one, "how": how, "t": t, "kind": "cast", "far": reach, "power": power, "kindly": true, "touch": reach <= 1, "self": one == str(f["id"])})
+	return out
+
+
+## One of its side who lies dying (CombatRules.dying_of): Spare the Dying.
+func _fallen(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary, power: float) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var reach := CombatRules._spell_squares(s, data, str(how["spell"]), f)
+	for one: String in CombatRules.dying_of(s, f):
+		out.append({"act": id, "to": one, "how": how, "t": CombatRules.fighter(s, one), "kind": "cast", "far": reach, "power": power, "kindly": true, "touch": reach <= 1})
 	return out
 
 

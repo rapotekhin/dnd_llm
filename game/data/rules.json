@@ -1436,6 +1436,7 @@
 			"conjure_animals": {"monster": "wolf", "count": 4, "minutes": 60},
 			"animate_dead": {"monster": "skeleton", "count": 1, "minutes": 1440},
 			"floating_disk": {"carrier": true, "monster": "riding_horse", "carries_lb": 500, "minutes": 60},
+			"unseen_servant": {"carrier": true, "monster": "riding_horse", "carries_lb": 30, "minutes": 60},
 			"phantom_steed": {"carrier": true, "monster": "riding_horse", "minutes": 60},
 			"bag_of_tricks": {"pick": ["weasel", "giant_rat", "badger", "boar", "panther", "giant_badger", "dire_wolf", "giant_elk"], "count": 1, "minutes": 1440},
 			"pipes_of_the_sewers": {"monster": "swarm_of_rats", "count": 1, "minutes": 10}
@@ -1545,11 +1546,11 @@
 		],
 		"feature_always": {
 			"circle_of_the_land_arctic": {"3": ["hold_person", "spike_growth"], "5": ["sleet_storm", "slow"]},
-			"circle_of_the_land_coast": {"3": ["mirror_image", "misty_step"], "5": ["water_breathing", "water_walk"]},
+			"circle_of_the_land_coast": {"3": ["mirror_image", "misty_step"], "5": ["water_walk"]},
 			"circle_of_the_land_desert": {"3": ["blur", "silence"], "5": ["create_food_and_water", "protection_from_energy"]},
 			"circle_of_the_land_forest": {"3": ["barkskin", "spider_climb"], "5": ["call_lightning", "plant_growth"]},
 			"circle_of_the_land_grassland": {"3": ["invisibility", "pass_without_trace"], "5": ["daylight", "haste"]},
-			"circle_of_the_land_mountain": {"3": ["spider_climb", "spike_growth"], "5": ["lightning_bolt", "meld_into_stone"]},
+			"circle_of_the_land_mountain": {"3": ["spider_climb", "spike_growth"], "5": ["lightning_bolt"]},
 			"circle_of_the_land_swamp": {"3": ["darkness", "acid_arrow"], "5": ["water_walk", "stinking_cloud"]}
 		},
 		"_doc": "subclass_spells_ignored: the SRD import keeps Circle of the Land spells as one list for all terrains — the terrain's own come from feature_always (v0.8.4.26.1): a feature id → {class level: spells always prepared}, read with a subclass's by LevelUp.always."
@@ -3638,6 +3639,8 @@
 			"magic_weapon": {"side": "friend", "n": 1},
 			"fly": {"side": "friend", "n": 1, "per_slot": 1},
 			"haste": {"side": "friend", "n": 1},
+			"spare_the_dying": {"side": "friend", "n": 1},
+			"warding_bond": {"side": "friend", "n": 1},
 			"beacon_of_hope": {"side": "friend", "n": 12},
 			"invisibility": {"side": "friend", "n": 1, "per_slot": 1},
 			"enlarge_reduce": {"side": "any", "n": 1},
@@ -3733,7 +3736,7 @@
 				"stunning": {"power": 8}, "turn_undead": {"power": 10, "foes": ["undead"]}, "turn_unholy": {"power": 10, "foes": ["undead", "fiend"]},
 				"preserve_life": {"power": 10, "below": 0.5}, "sacred_weapon": {"power": 3}, "wild_shape": {"power": 6}, "breath": {"power": 7}},
 			"spells": {"_doc": "What a spell is worth to the AI (core/acts/cast.gd), in the units of a blow's damage, times the role's `cast` / 6: condition, curse, summon, buff, sustained, mark, teleport, dispel — a spell of that way, heal — a friend at `heal_below` of its hit points or less, slot — taken from a damage spell per circle, hit — the chance of a spell by a save; boon_keys — what makes a row of rules.spell_effects worth casting on itself.",
-				"condition": 9, "curse": 6, "summon": 10, "buff": 5, "sustained": 8, "mark": 3, "teleport": 5, "dispel": 4, "heal": 12, "heal_below": 0.5, "slot": 0.5, "hit": 0.6, "counter_from": 1,
+				"condition": 9, "curse": 6, "summon": 10, "buff": 5, "sustained": 8, "mark": 3, "teleport": 5, "dispel": 4, "heal": 12, "stabilize": 10, "heal_below": 0.5, "slot": 0.5, "hit": 0.6, "counter_from": 1,
 				"boon_keys": ["die", "ac_plus", "ac_min", "ac_base", "attackers_dis", "images", "sanctuary", "resist", "resist_auto", "haste", "flying", "weapon_plus", "weapon_extra", "temp_dice", "temp_hp", "max_hp_plus", "self_status", "speed_plus", "blink", "enlarged", "foe_types_dis"]},
 			"roles": {
 				"brute": {"focus": 0.3, "finish": 2, "adjacent": 0, "keep": 0, "hazard": 3, "leave": 1, "step": 0.02, "pack": 0, "control": 3, "cast": 6},
@@ -4845,6 +4848,14 @@
 		"create_or_destroy_water": {"water": "fill"},
 		"purify_food_and_drink": {"water": "clean"},
 		"feather_fall": {"reaction": "fall"},
+		"spare_the_dying": {"stabilize": true, "other": true},
+		"warding_bond": {"ac_plus": 1, "saves_plus": 1, "resist_all": true, "ward": true, "other": true},
+		"mage_hand": {"hand_ft": 30},
+		"magic_circle": {"foe_types_dis": ["celestial", "elemental", "fey", "fiend", "undead"], "stay": true},
+		"zone_of_truth": {"npc_save": true, "ability": "cha", "minutes": 10, "skills": ["insight"], "word": "не может лгать"},
+		"glyph_of_warding": {"glyph": {"dice": "5d8", "type": "fire", "save": "dex"}},
+		"gentle_repose": {"repose": 10},
+		"mending": {"mend": true},
 		"grease": {"sustained": {"kind": "zone", "on": ["now", "enter", "end"], "save": "dex", "cond": "prone", "slow": true}},
 		"fog_cloud": {"sustained": {"kind": "zone", "obscure": true, "veil": "fog", "on": [], "grow": 20}},
 		"darkness": {"sustained": {"kind": "zone", "obscure": true, "veil": "dark", "on": [], "douses": 2}},
@@ -4982,7 +4993,9 @@
 		"_doc": "Letters (v0.7.48, LetterRules): the hero writes to a met NPC at a person with `post` (the ways it sends by). A way: base_cp + per_hop_cp × hops of the map's roads; days = max(min_days, hops × days_per_hop), the reply comes back as long again (the same location — the next day); lose_pct per wild location on the route (no law), at most risk_max_pct: a lost letter lies with its text (lost_item) in a room of the first wild place. A purpose: `does` — what the engine does (closeness — bond points once in cooldown_days; ally — the NPC walks to the hero's place in days_per_hop per hop, waits wait_days and joins at the hero's coming; arrest — the law's guard reads a denunciation: evidence (an item with `evidence`, a told secret with `crime_of`) puts the NPC under guard in arrest_days for jail_days, no evidence on a guilty one — no case, an innocent one — the hero's crime false_report; recommendation — a letter item with `recommends` from a person of standing: notable_tags, an office's chief, a school's head, a site's owner); `choice` — the master answers `letter_reply` yes or no by the engine's verdict; min_bond / family / mentor / law — who can do it. recommend.waives — office requirements a recommendation stands for; family — the spouse worries after silence_days away from home with no letter, every every_days a bond loss.",
 		"ways": {
 			"post": {"name": "почтой", "base_cp": 10, "per_hop_cp": 10, "days_per_hop": 2, "min_days": 1, "lose_pct": 15},
-			"courier": {"name": "с гонцом", "base_cp": 100, "per_hop_cp": 50, "days_per_hop": 1, "min_days": 0, "lose_pct": 5}
+			"courier": {"name": "с гонцом", "base_cp": 100, "per_hop_cp": 50, "days_per_hop": 1, "min_days": 0, "lose_pct": 5},
+			"sending": {"name": "Посланием", "spell": "sending", "base_cp": 0, "per_hop_cp": 0, "days_per_hop": 0, "min_days": 0, "lose_pct": 0, "reply_days": 0, "words": 25},
+			"animal_messenger": {"name": "со зверьком-посланцем", "spell": "animal_messenger", "base_cp": 0, "per_hop_cp": 0, "days_per_hop": 1, "min_days": 1, "lose_pct": 0}
 		},
 		"purposes": {
 			"ties": {"name": "весточка", "hint": "письмо близким и знакомым: близость растёт, семья не тревожится", "does": "closeness", "bond": 4, "cooldown_days": 7},

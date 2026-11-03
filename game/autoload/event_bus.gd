@@ -23,3 +23,5 @@ signal settings_applied
 signal navigate(screen: String, args: Dictionary)
 ## Combat (v0.6.1): engine lines of the fight as they happen (the combat screen's log).
 signal combat_lines(lines: Array[String])
+
+signal letter_requested(poster: String)  ## v0.8.4.26.3: the letter window; "" — the hero's own spell (Sending)

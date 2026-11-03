@@ -323,6 +323,16 @@ static func hide(s: GameSession, data: Dictionary, npc_id: String, total: int, s
 	return []
 
 
+## Gentle Repose (v0.8.4.26.3): the bodies lying in `room` keep for `days` — nobody buries them before. Lines.
+static func repose(s: GameSession, data: Dictionary, room: String, days: int) -> Array[String]:
+	var out: Array[String] = []
+	for npc_id: String in Being.with(s, "body"):
+		if str(Being.view(s, npc_id)["body"]) == room:
+			Being.of(s, npc_id)["repose_until"] = TimeRules.abs_minute(s) + days * 1440
+			out.append("тело %s не тронет тление %d дней" % [WorldView.name_of(data, npc_id), days])
+	return out if not out.is_empty() else ["здесь нет тела, которое нужно сберечь"] as Array[String]
+
+
 ## Known bodies are buried after rules.crime.bury_days (a body of a hidden murder is not — nobody knows of it). Lines.
 static func bury(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
@@ -335,7 +345,7 @@ static func bury(s: GameSession, data: Dictionary) -> Array[String]:
 			if str(crime["victim"]) == npc_id:
 				secret = not bool(crime["known"])
 				since = int(crime.get("known_at", since))
-		if secret or now - since < int(cfg(data)["bury_days"]) * 1440:
+		if secret or now - since < int(cfg(data)["bury_days"]) * 1440 or now < int(Being.view(s, npc_id).get("repose_until", 0)):
 			continue
 		var room := str(Being.of(s, npc_id)["body"])
 		Being.drop(s, npc_id, "body")

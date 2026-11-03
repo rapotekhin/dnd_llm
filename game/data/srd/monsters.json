@@ -3431,10 +3431,6 @@
 			"slots": {},
 			"spells": [
 				{
-					"id": "nondetection",
-					"level": 3
-				},
-				{
 					"id": "blindness_deafness",
 					"level": 2,
 					"per_day": 1

@@ -243,9 +243,22 @@ static func mods(h: Dictionary, data: Dictionary) -> Array[Dictionary]:
 	return out
 
 
-## Some status of `h` has the flag `key`.
+## Some status of `h` has the flag `key`: a condition's row or a spell's effect (Warding Bond's `resist_all`, v0.8.4.26.3).
 static func does(h: Dictionary, data: Dictionary, key: String) -> bool:
-	return mods(h, data).any(func(m: Dictionary) -> bool: return bool(m.get(key, false)))
+	return not flag_of(h, data, key).is_empty()
+
+
+## The name of the status of `h` with the flag `key`, "" when none.
+static func flag_of(h: Dictionary, data: Dictionary, key: String) -> String:
+	for id: Variant in h.get("conditions", []):
+		if bool(row(h, data, str(id)).get(key, false)):
+			return name_of(data, str(id)).to_lower()
+	if exhaustion(h) >= 3 and bool(data["rules"]["condition_effects"]["exhaustion_3"].get(key, false)):
+		return "истощение"
+	for e: Dictionary in h.get("effects", []):
+		if bool(e.get(key, false)):
+			return str(e.get("source", {}).get("name", key))
+	return ""
 
 
 ## The sum of a number over the statuses of `h`: `ac`, `speed`.
@@ -535,6 +548,17 @@ static func invisible(c: Dictionary, data: Dictionary) -> bool:
 ## −passive Perception for those who would see the hero (5e disadvantage on a passive check), 0 when visible.
 static func unseen_penalty(c: Dictionary, data: Dictionary) -> int:
 	return int(data["rules"].get("invisibility", {}).get("passive_penalty", 5)) if invisible(c, data) else 0
+
+
+## The hero left the room: what holds only there goes (`ends.room`: Magic Circle, v0.8.4.26.3). Lines.
+static func left_room(c: Dictionary, room_id: String) -> Array[String]:
+	var lines: Array[String] = []
+	for e: Dictionary in effects(c).duplicate():
+		var r := str(e.get("ends", {}).get("room", ""))
+		if not r.is_empty() and r != room_id:
+			remove_effect(c, int(e["uid"]))
+			lines.append("%s остаётся позади" % e.get("source", {}).get("name", ""))
+	return lines
 
 
 ## It moved: what lasts until it moves goes (`ends.move`: One with Shadows, v0.8.4.26.1). Lines.

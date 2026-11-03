@@ -1471,7 +1471,7 @@ func finish_combat() -> void:
 	elif outcome in ["victory", "truce"]:
 		lines.append_array(CreatureRules.after_fight(s, Catalog.data, s.room_id, _treasure()))  # the beaten stay in the room (v0.7.22.11)
 	if not ArenaRules.watching(s):
-		lines.append_array(AllyRules.after_fight(s))  # v0.7.22.22: the fallen followers come to, the summoned keep their wounds
+		lines.append_array(AllyRules.after_fight(s, Catalog.data))  # v0.7.22.22: the fallen followers come to, the summoned keep their wounds
 	var by_law := outcome == "captured" and CombatRules.law_captors(s)
 	if not arena.is_empty():
 		pass
@@ -2170,6 +2170,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 		if not seen.is_empty():
 			lines.append(seen)
 	lines.append_array(MountRules.on_move(session, Catalog.data, from, room_id))  # a beast waits where it cannot go (v0.7.42)
+	lines.append_array(ConditionRules.left_room(session.character, room_id))  # Magic Circle stays behind (v0.8.4.26.3)
 	lines.append_array(WayRules.on_pass(session, Catalog.data, from, room_id))  # a way down is a fall (v0.7.66)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
 	CreatureRules.follow(session, from, room_id)  # a bound captive on the rope (v0.7.22.11)

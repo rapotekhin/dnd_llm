@@ -858,14 +858,19 @@ static func _spell_fight(data: Dictionary, id: String, slot: int, steps: Array[S
 	var why := ""
 	var far := int(data["spells"][id].get("range_ft", 0)) >= 30
 	var act := Acts.one("cast")
+	var fx := SpellEffects.spec(data, id)
+	var side := "ally" if bool(fx.get("other", false)) else "enemy"  # Warding Bond, Spare the Dying: on another of the hero's side
 	for attempt in 8:
 		for to_kind in 4:
 			var s := caster_session(data, id, 42 + attempt * 7 + to_kind)
-			var g := fight(s, data, "goblin", far)
+			var g := fight(s, data, "goblin", far, side)
 			g["ac"] = 1
 			if attempt % 2 == 1:  # a pool of hit points (Sleep, Color Spray) takes a foe of its own hit points
 				g["hp"] = int(Sheet.template(data, g).get("hp", 7))
 				g["max_hp"] = g["hp"]
+			if fx.has("stabilize"):  # an ally who fell, dying
+				g["hp"] = 0
+				g["status"] = "down"
 			var hero := CombatRules.player(s)
 			_prepare_cure(s, data, id)
 			if bool(SpellEffects.spec(data, id).get("dispel", false)):  # something to dispel: a spell on the foe and on the hero
@@ -918,7 +923,7 @@ static func _spell_targets(data: Dictionary, id: String, g: Dictionary) -> Array
 static func _target_word(to: String, g: Dictionary) -> String:
 	if to.is_empty() or to == CombatRules.PLAYER:
 		return "на себя"
-	return "по клетке" if FightGrid.is_aim(to) else "по %s" % g.get("name", "врагу")
+	return "по клетке" if FightGrid.is_aim(to) else ("на союзника %s" if str(g.get("side")) == "ally" else "по %s") % g.get("name", "врагу")
 
 
 ## What a probe looks at in a fight: the foe's and the hero's hit points and statuses, the fighters, the zones, the squares.
@@ -928,7 +933,8 @@ static func _world_now(s: GameSession, data: Dictionary, g: Dictionary) -> Dicti
 	return {"g_hp": int(g.get("hp", 0)), "g_fx": _fx_names(data, g), "h_hp": int(h.get("hp", 0)), "h_temp": int(h.get("temp_hp", 0)),
 		"h_fx": _fx_names(data, h) + _fx_names(data, hero), "fighters": (s.combat["fighters"] as Array).size(), "zones": (s.combat.get("zones", []) as Array).size(),
 		"at": FightGrid.cell(hero), "g_at": FightGrid.cell(g), "g_status": str(g.get("status", "")), "ac": int(h.get("ac", 0)),
-		"light": SightRules.light(s, data), "unseen": ConditionRules.invisible(h, data), "flags": (g.keys() as Array).filter(func(k: String) -> bool: return k in FLAGS)}
+		"light": SightRules.light(s, data), "unseen": ConditionRules.invisible(h, data), "flags": (g.keys() as Array).filter(func(k: String) -> bool: return k in FLAGS),
+		"g_stable": bool(g.get("death_saves", {}).get("stable", false))}
 
 
 ## Flags a spell leaves on a fighter beside its statuses: a mark, a hex, a sanctuary, a cover of fire.
@@ -977,6 +983,8 @@ static func _what_changed(_data: Dictionary, a: Dictionary, b: Dictionary) -> St
 	for k: Variant in b["flags"]:
 		if not (a["flags"] as Array).has(k):
 			out.append("метка: %s" % k)
+	if bool(b["g_stable"]) and not bool(a["g_stable"]):
+		out.append("стабилизирован")
 	return ", ".join(out)
 
 
@@ -1005,6 +1013,8 @@ static func _reaction(data: Dictionary, id: String, steps: Array[String]) -> Str
 static func _spell_world(data: Dictionary, id: String, slot: int) -> String:
 	var s := caster_session(data, id)
 	var c := s.character
+	if not LetterRules.spell_way(data, id).is_empty():
+		return _spell_letter(s, data, id)
 	_prepare_cure(s, data, id)  # something to cure, to know, to fill and to clean (v0.8.4.26.2)
 	ItemRules.found(c, data, s.items, "ring_of_warmth")  # comes unidentified
 	VesselRules.drain(c)
@@ -1020,7 +1030,34 @@ static func _spell_world(data: Dictionary, id: String, slot: int) -> String:
 			did.append(l)
 	if SightRules.light(s, data) > light:
 		did.append("свет")
+	if did.is_empty() and bool(SpellEffects.spec(data, str(chk["spell_id"])).get("npc_save", false)):
+		did.append(_spell_npc(s, data, str(chk["spell_id"])))
 	return "; ".join(did).left(160)
+
+
+## A spell that carries a word (Sending, v0.8.4.26.3): a letter to one met in another room, sent by the hero itself.
+static func _spell_letter(s: GameSession, data: Dictionary, id: String) -> String:
+	for rid: String in data["world"]["rooms"]:
+		if rid != s.room_id and not (data["world"]["rooms"][rid].get("npcs", []) as Array).is_empty():
+			s.visited.append(rid)
+			break
+	var to := LetterRules.recipients(s, data)
+	if to.is_empty():
+		return ""
+	var way := LetterRules.spell_way(data, id)
+	var why := LetterRules.send_why(s, data, "", to[0], "ties", "Жив, здоров, иду к вам.", way)
+	return why if not why.is_empty() else "; ".join(LetterRules.send(s, data, "", to[0], "ties", "Жив, здоров, иду к вам.", way)).left(160)
+
+
+## A spell on a person out of a fight (Zone of Truth): its save by the engine, what holds stays on it.
+static func _spell_npc(s: GameSession, data: Dictionary, id: String) -> String:
+	var here := s.npcs_here(data["world"], s.room_id)
+	if here.is_empty():
+		return ""
+	var r := SpellEffects.npc_save(s, data, id, here[0])
+	if bool(r.get("ok", false)):
+		SpellEffects.charm_npc(s, data, id, here[0])
+	return str(r.get("line", ""))
 
 
 # --- monsters -------------------------------------------------------------------------------------------------------

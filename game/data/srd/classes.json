@@ -3578,7 +3578,6 @@
 				"5": [
 					"sleet_storm",
 					"slow",
-					"water_breathing",
 					"water_walk",
 					"create_food_and_water",
 					"protection_from_energy",
@@ -3587,7 +3586,6 @@
 					"daylight",
 					"haste",
 					"lightning_bolt",
-					"meld_into_stone",
 					"water_walk",
 					"stinking_cloud"
 				]
@@ -3619,8 +3617,7 @@
 					"spiritual_weapon"
 				],
 				"5": [
-					"beacon_of_hope",
-					"revivify"
+					"beacon_of_hope"
 				]
 			},
 			"level": 1

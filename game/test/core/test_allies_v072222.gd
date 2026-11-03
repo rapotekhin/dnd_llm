@@ -92,7 +92,7 @@ func test_a_follower_joins_but_not_against_the_law_or_its_own() -> void:
 	assert_str(str(f.get("npc_id", ""))).is_equal("npc_mercenary")
 	f["status"] = "down"
 	s.combat["outcome"] = "victory"
-	assert_array(AllyRules.after_fight(s)).contains(["%s приходит в себя" % f["name"]])
+	assert_array(AllyRules.after_fight(s, data)).contains(["%s приходит в себя" % f["name"]])
 
 
 func test_summoned_wolves_join_and_leave_with_the_concentration() -> void:
@@ -119,7 +119,7 @@ func test_a_summon_out_of_a_fight_goes_with_the_hero_until_its_time() -> void:
 	assert_int(CombatRules.allies(s).size()).is_equal(1)  # it fights with the hero
 	s.combat["outcome"] = "victory"
 	CombatRules.fighter(s, CombatRules.allies(s)[0])["hp"] = 5
-	AllyRules.after_fight(s)
+	AllyRules.after_fight(s, data)
 	assert_int(int(AllyRules.called(s)[0]["hp"])).is_equal(5)  # its wounds stay
 	s.combat = {}
 	TimeRules.advance(s, data, 1441)
