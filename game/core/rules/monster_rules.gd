@@ -173,8 +173,7 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 		var adj := Sheet.damage(s, data, t, str(fx["damage"]["type"]), dmg)
 		dmg = int(adj["damage"])
 		if dmg > 0:
-			lines.append("%s: ещё %d (%s)%s" % [a["name"], dmg, data["misc"]["damage_types"].get(str(fx["damage"]["type"]), fx["damage"]["type"]),
-				(", " + str(adj["note"])) if not str(adj["note"]).is_empty() else ""])
+			lines.append("%s: ещё %d (%s)" % [a["name"], dmg, Harm.words(data, str(fx["damage"]["type"]), str(adj["note"]))])
 			if hero and bool(fx.get("zero_hp_paralyzed", false)) and int(me["hp"]) - dmg <= 0 and -(int(me["hp"]) - dmg) < int(me["max_hp"]):
 				_poisoned_stable(s, data, f, a, lines)
 				return

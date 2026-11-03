@@ -105,3 +105,24 @@ func test_a_foe_at_zero_drops_its_concentration_through_the_one_road() -> void:
 	Harm.take(s, data, f, 999, lines, "slashing")
 	assert_str(str(f["status"])).is_equal("dead")
 	assert_bool(f.has("concentration")).is_false()
+
+
+func test_damage_with_no_roll_goes_through_the_defenses_of_anybody() -> void:
+	var s := _fight([{"monster": "goblin", "col": 4}])
+	var f := CombatRules.fighter(s, TestUtils.foe(s, 1))
+	f["hp"] = 30
+	ConditionRules.add_effect(f, {"condition": "petrified", "source": {"kind": "engine", "name": "тест"}})  # resists everything
+	var lines: Array[String] = []
+	assert_int(Harm.typed(s, data, f, 10, "bludgeoning", lines, "яма: {hp} ({words})")).is_equal(5)
+	assert_int(int(f["hp"])).is_equal(25)
+	assert_str(lines[0]).starts_with("яма: 5 (").contains("окаменение")
+
+
+func test_damage_with_no_roll_names_its_type_and_an_immunity() -> void:
+	var s := TestUtils.new_session()
+	s.character["hp"] = 10
+	Cheats.defense(s, data, Being.HERO, "immune", "poison", true)
+	var lines: Array[String] = []
+	assert_int(Harm.typed(s, data, Sheet.HERO, 6, "poison", lines)).is_equal(0)
+	assert_int(int(s.character["hp"])).is_equal(10)
+	assert_str(lines[0]).is_equal("−0 HP (%s, иммунитет)" % data["misc"]["damage_types"]["poison"])

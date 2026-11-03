@@ -4,6 +4,24 @@ extends RefCounted
 ## defenses left (`Sheet.damage`) comes here: oil on it catches, temporary hit points and a beast form take it first, a trait
 ## keeps it on its feet, a blow wakes it and shakes its concentration. At 0 HP in a fight the hero falls and rolls death
 ## saves, a fighter falls dead, knocked out, or gone when it was called; out of a fight the hero is knocked out after the turn.
+## Damage of a type with no attack roll comes through `typed`: its defenses, its line, then `take`.
+
+
+## Damage of a type with no attack roll — a trap, a poison, a fall, a monster's rider, the master's word, the console: `dmg`
+## through `who`'s defenses (Sheet.damage), a line of `said` ({hp} — what is left, {words} — `words` of it), then `take`.
+## What was left.
+static func typed(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, dtype: String, lines: Array[String], said := "−{hp} HP ({words})",
+		crit := false, by_hero := true, magical := true, silvered := false) -> int:
+	var adj := Sheet.damage(s, data, who, dtype, dmg, magical, silvered)
+	var left := int(adj["damage"])
+	lines.append(said.format({"hp": left, "words": words(data, dtype, str(adj["note"]))}))
+	take(s, data, who, left, lines, dtype, crit, by_hero)
+	return left
+
+
+## A damage type's name with what a defense did to it: «огонь, сопротивление: …».
+static func words(data: Dictionary, dtype: String, note: String) -> String:
+	return ", ".join([str(data["misc"]["damage_types"].get(dtype, dtype)), note].filter(func(w: String) -> bool: return not w.is_empty()))
 
 
 ## `dmg` to `who`; `by_hero` — the hero's blow (a nonlethal one only knocks out). Lines into `lines`.

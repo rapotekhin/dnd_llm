@@ -213,11 +213,7 @@ static func spring_trap(s: GameSession, data: Dictionary, room_id: String, sec: 
 		if bool(r["ok"]):
 			dmg /= 2
 		lines.append("Спасбросок " + str(r["text"]) + (", урон вдвое меньше" if bool(r["ok"]) else ""))
-	var adj := Sheet.damage(s, data, Sheet.HERO, str(t.get("damage_type", "")), dmg)
-	dmg = int(adj["damage"])
-	lines.append("−%d HP (%s%s)" % [dmg, data["misc"]["damage_types"].get(str(t.get("damage_type", "")), t.get("damage_type", "")),
-		(", " + str(adj["note"])) if not str(adj["note"]).is_empty() else ""])
-	Harm.take(s, data, Sheet.HERO, dmg, lines, str(t.get("damage_type", "")))
+	Harm.typed(s, data, Sheet.HERO, dmg, str(t.get("damage_type", "")), lines)
 	return lines
 
 

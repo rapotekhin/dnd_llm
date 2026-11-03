@@ -630,12 +630,10 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		var r := Sheet.save(s, data, who, str(p["save"]), int(p["dc"]), "poison")
 		if bool(r["ok"]):
 			dmg /= 2
-		var adj := Sheet.damage(s, data, who, "poison", dmg)
-		lines.append("яд! −%d HP, спасбросок %s" % [int(adj["damage"]), r["text"]])
 		if not bool(r["ok"]):
 			lines.append_array(ConditionRules.impose(s, data, {"condition": "poisoned", "ends": ConditionRules.ends_for(s, data, "hour"),
 				"source": {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}}, who))
-		Harm.take(s, data, who, int(adj["damage"]), lines, "poison")
+		Harm.typed(s, data, who, dmg, "poison", lines, "яд! −{hp} HP ({words}), спасбросок " + str(r["text"]))
 		return lines
 	if s != null and fx.has("meal"):  # a dish (v0.7.25), of whoever eats it (v0.8.4.15)
 		lines.append_array(FoodRules.eat_one(s, data, id, who))

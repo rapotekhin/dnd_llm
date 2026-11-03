@@ -345,9 +345,8 @@ func _plan_damage(s: GameSession, data: Dictionary, turn_id: String, e: Dictiona
 	var amount := _roll(s.rng, int(dice[0]), int(dice[1]), 0)
 	var dtype := HeroDefense.damage_type(data, str(e.get("damage_type", "")))
 	var adj := Sheet.damage(s, data, Sheet.HERO, dtype, amount)  # v0.7.8: the hero's resistances
-	var note := str(adj["note"])
-	return {"plan": {"amount": int(adj["damage"])}, "summary": "−%d HP (%s%s)" % [int(adj["damage"]),
-		data["misc"]["damage_types"].get(dtype, e.get("damage_type", "урон")), (", " + note) if not note.is_empty() else ""]}
+	return {"plan": {"amount": int(adj["damage"]), "type": dtype},
+		"summary": "−%d HP (%s)" % [int(adj["damage"]), Harm.words(data, dtype, str(adj["note"])) if not dtype.is_empty() else e.get("damage_type", "урон")]}
 
 
 func _plan_heal(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
@@ -852,8 +851,11 @@ func _plan_on_foe(s: GameSession, data: Dictionary, e: Dictionary, tid: String) 
 			var dice := _damage_dice(data["rules"], int(s.character.get("level", 1)), str(e.get("severity", "")))
 			if dice.is_empty():
 				return {"reason": "неизвестная тяжесть урона"}
-			var amount := _roll(s.rng, int(dice[0]), int(dice[1]), 0)
-			return {"plan": {"foe": tid, "amount": amount}, "summary": "%s: −%d HP" % [f["name"], amount]}
+			var dtype := HeroDefense.damage_type(data, str(e.get("damage_type", "")))
+			var adj := Sheet.damage(s, data, f, dtype, _roll(s.rng, int(dice[0]), int(dice[1]), 0))  # the foe's defenses too
+			var said := Harm.words(data, dtype, str(adj["note"]))
+			return {"plan": {"foe": tid, "amount": int(adj["damage"]), "type": dtype},
+				"summary": "%s: −%d HP%s" % [f["name"], int(adj["damage"]), " (%s)" % said if not said.is_empty() else ""]}
 		"condition":
 			var cond := str(e.get("condition", ""))
 			if not ConditionRules.known(data, cond):
@@ -1102,7 +1104,7 @@ func _apply_one(s: GameSession, kind: String, plan: Dictionary) -> void:
 		var f := CombatRules.fighter(s, str(plan["foe"]))
 		if kind == "damage":
 			var tmp: Array[String] = []
-			Harm.take(s, _data, f, int(plan["amount"]), tmp)
+			Harm.take(s, _data, f, int(plan["amount"]), tmp, str(plan.get("type", "")))
 		elif bool(plan.get("on", true)):
 			CombatRules._hold(f, str(plan["condition"]))
 		else:
@@ -1126,7 +1128,7 @@ func _do_move(s: GameSession, plan: Dictionary) -> void:
 
 
 func _do_damage(s: GameSession, plan: Dictionary) -> void:
-	Harm.take(s, _data, Sheet.HERO, int(plan["amount"]), _extra_lines)
+	Harm.take(s, _data, Sheet.HERO, int(plan["amount"]), _extra_lines, str(plan.get("type", "")))
 
 
 func _do_heal(s: GameSession, plan: Dictionary) -> void:

@@ -237,16 +237,15 @@ static func strike_spec(s: GameSession, data: Dictionary, words: PackedStringArr
 
 
 ## Damage of a spec to `who` (an id) without an attack roll, as a trap or the master's damage lays it: the dice (twice with
-## `crit`), the target's defenses by Sheet.damage, then Harm.take — in a fight or out of it, the hero or anybody. Lines.
+## `crit`), on the one road of damage with no roll (Harm.typed) — in a fight or out of it, the hero or anybody. Lines.
 static func harm(s: GameSession, data: Dictionary, who: String, spec: Dictionary) -> Array[String]:
 	var w := Sheet.own(s, who)
 	var dtype := str(spec["type"])
 	var rolled := CombatRules.roll_dice(s.rng, str(spec["dice"]), bool(spec["crit"]))
-	var adj := Sheet.damage(s, data, w, dtype, rolled, bool(spec["magical"]), bool(spec["silvered"]))
-	var lines: Array[String] = ["%s: %s%s = %d %s → %s −%d HP%s" % [DMG_NAME, str(spec["dice"]).replace("d", "к"), " ×2 (крит)" if bool(spec["crit"]) else "",
-		rolled, data["misc"]["damage_types"].get(dtype, dtype), Sheet.holder(s, w).get("name", WorldView.new(data["world"]).npc_name(who)), int(adj["damage"]),
-		" (%s)" % adj["note"] if not str(adj["note"]).is_empty() else ""]]
-	Harm.take(s, data, w, int(adj["damage"]), lines, dtype, bool(spec["crit"]), false)
+	var lines: Array[String] = []
+	Harm.typed(s, data, w, rolled, dtype, lines, "%s: %s%s = %d → %s −{hp} HP ({words})" % [DMG_NAME, str(spec["dice"]).replace("d", "к"),
+		" ×2 (крит)" if bool(spec["crit"]) else "", rolled, Sheet.holder(s, w).get("name", WorldView.new(data["world"]).npc_name(who))],
+		bool(spec["crit"]), false, bool(spec["magical"]), bool(spec["silvered"]))
 	return lines
 
 

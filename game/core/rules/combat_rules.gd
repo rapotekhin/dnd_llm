@@ -1017,8 +1017,7 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String, by: St
 
 ## Anyone comes down from a height a spell held it at.
 static func _fall(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String, dice: String, lines: Array[String]) -> void:
-	lines.append("%s падает с высоты" % f["name"])
-	Harm.take(s, data, f, roll_dice(s.rng, dice), lines)
+	Harm.typed(s, data, f, roll_dice(s.rng, dice), "bludgeoning", lines, str(f["name"]) + " падает с высоты: {hp} ({words})")
 	lines.append_array(ConditionRules.impose(s, data, {"condition": "prone", "ends": {"rest": "short"}, "source": {"kind": "spell", "id": spell_id, "name": "падение"}}, f))
 
 
