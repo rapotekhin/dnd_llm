@@ -28,6 +28,24 @@ static func is_free(c: Dictionary, spell_id: String) -> bool:
 	return (c.get("spells", {}).get("free", []) as Array).has(spell_id)
 
 
+## The charges a spell spends when it is cast without a slot: its own (an ability of parts, v0.7.64) or a row of
+## `rules.resources` with `spell` of a feature that gives it (an invocation once a long rest, v0.8.4.26.1); "" when none.
+static func stock_of(c: Dictionary, data: Dictionary, spell_id: String) -> String:
+	var own := str(data["spells"].get(spell_id, {}).get("stock", ""))
+	if not own.is_empty():
+		return own
+	for rid: String in Stock.owned(c, data):
+		if str(Stock.table(data)[rid].get("spell", "")) == spell_id:
+			return rid
+	return ""
+
+
+## Cast without a slot now: a spell at will, with its charges left when it has them.
+static func free_now(c: Dictionary, data: Dictionary, spell_id: String) -> bool:
+	var stock := stock_of(c, data, spell_id)
+	return is_free(c, spell_id) and (stock.is_empty() or Stock.left(c, data, stock) > 0)
+
+
 static func level_of(data: Dictionary, spell_id: String) -> int:
 	return int(data["spells"].get(spell_id, {}).get("level", 0))
 
@@ -59,10 +77,12 @@ static func check(c: Dictionary, data: Dictionary, name: String, slot: int, pend
 	if id.is_empty():
 		return {"reason": "«%s» не подготовлено у персонажа — он не может его сотворить" % sname}
 	var lv := level_of(data, id)
-	var stock := str(data["spells"][id].get("stock", ""))
-	if not stock.is_empty() and Stock.left(c, data, stock) - int(pending.get(stock, 0)) <= 0:
+	var stock := stock_of(c, data, id)
+	var spent := not stock.is_empty() and Stock.left(c, data, stock) - int(pending.get(stock, 0)) <= 0
+	var own := lv > 0 and (["prepared", "always"] as Array).any(func(l: String) -> bool: return (c.get("spells", {}).get(l, []) as Array).has(id))
+	if spent and not own:  # an invocation's spell also prepared goes on to a slot
 		return {"reason": "«%s»: заряды кончились — %s" % [sname, "нужен короткий отдых" if Stock.recharge(c, data, stock) == "short" else "нужен долгий отдых"]}
-	if lv == 0 or is_free(c, id):
+	if not spent and (lv == 0 or is_free(c, id)):
 		return {"spell_id": id, "slot": 0}
 	if slot == 0:
 		slot = lowest_slot(c, data, id, pending)
@@ -84,9 +104,10 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 	if slot > 0 and not paid:  # a scroll or a wand pays for itself
 		Stock.spend(c, "slot_%d" % slot)
 		line += " (ячейка %d круга, осталось %d)" % [slot, slots_left(c, slot)]
-	if s.has("stock"):  # an ability the master built spends its own charges
-		Stock.spend(c, str(s["stock"]))
-		line += " (зарядов %d)" % Stock.left(c, data, str(s["stock"]))
+	var stock := stock_of(c, data, spell_id) if slot == 0 and not paid else ""
+	if not stock.is_empty():  # an ability the master built, an invocation once a rest: its own charges
+		Stock.spend(c, stock)
+		line += " (зарядов %d)" % Stock.left(c, data, stock)
 	var lines: Array[String] = [line]
 	if not (data["rules"].get("invisibility", {}).get("spells", {}) as Dictionary).has(spell_id):
 		lines.append_array(ConditionRules.end_invisibility_on_attack(c, data))  # a spell gives the caster away (v0.7.5)

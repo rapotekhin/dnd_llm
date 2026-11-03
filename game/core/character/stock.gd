@@ -20,10 +20,10 @@ static func owned(c: Dictionary, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var all := table(data)
 	for id: String in all:
-		if all[id].has("spell") and SpellRules.ready(c).has(str(all[id]["spell"])):  # an ability of parts: v0.7.64
+		if all[id].has("spell") and not all[id].has("features") and SpellRules.ready(c).has(str(all[id]["spell"])):  # an ability of parts: v0.7.64
 			out.append(id)
 			continue
-		for f: Variant in all[id].get("features", []):
+		for f: Variant in all[id].get("features", []):  # with `spell` too: the charges of a feature's spell (v0.8.4.26.1)
 			if CharacterRules.has_feature(c, str(f)):
 				out.append(id)
 				break
@@ -75,10 +75,14 @@ static func max_uses(c: Dictionary, data: Dictionary, id: String) -> int:
 		return int(spec["per_level"]) * int(c.get("level", 1))
 	if spec.has("slots"):
 		return int(c.get("slots_max", [0, 0, 0, 0, 0])[int(spec["slots"]) - 1])
+	if spec.has("slot_any"):  # paid by any spell slot (Primeval Awareness, v0.8.4.26.1)
+		return (c.get("slots_max", []) as Array).reduce(func(a: int, n: Variant) -> int: return a + int(n), 0)
 	return 0
 
 
 static func left(c: Dictionary, data: Dictionary, id: String) -> int:
+	if table(data).get(id, {}).get("max", {}).has("slot_any"):
+		return range(1, 6).reduce(func(a: int, n: int) -> int: return a + SpellRules.slots_left(c, n), 0)
 	return maxi(0, max_uses(c, data, id) - spent(c, id))
 
 
@@ -127,9 +131,16 @@ static func recharge(c: Dictionary, data: Dictionary, id: String) -> String:
 	return str(spec.get("recharge", "long"))
 
 
-## Spends `amount` uses (can_use first) and does what the data says (heals). Returns the chat lines.
-static func use(c: Dictionary, data: Dictionary, id: String, amount: int, rng: RandomNumberGenerator) -> Array[String]:
-	spend(c, id, amount)
+## Spends `amount` uses (can_use first) and does what the data says (heals; `sense` with the game `s`). Returns the chat lines.
+static func use(c: Dictionary, data: Dictionary, id: String, amount: int, rng: RandomNumberGenerator, s: GameSession = null) -> Array[String]:
+	if table(data)[id].get("max", {}).has("slot_any"):  # the lowest slot left pays
+		for n in range(1, 6):
+			if amount > 0 and SpellRules.slots_left(c, n) > 0:
+				spend(c, "slot_%d" % n)
+				amount -= 1
+		amount = 1
+	else:
+		spend(c, id, amount)
 	var lines: Array[String] = ["%s%s (осталось %d)" % [display_name(c, data, id), " ×%d" % amount if amount > 1 else "", left(c, data, id)]]
 	var on_use: Dictionary = table(data)[id].get("on_use", {})
 	var heal := 0
@@ -156,6 +167,9 @@ static func use(c: Dictionary, data: Dictionary, id: String, amount: int, rng: R
 		ConditionRules.add_effect(c, {"condition": "", "inspiration": die, "ends": {"rest": "short"},
 			"source": {"kind": "feature", "id": id, "name": "Вдохновение (к%d)" % die}})
 		lines.append("к%d добавится к следующему проваленному броску" % die)
+	if on_use.has("sense") and s != null:  # Primeval Awareness: the kinds of creatures around (v0.8.4.26.1)
+		var kinds := EncounterRules.sense(s, data, on_use["sense"]["types"], int(on_use["sense"].get("depth", 1)))
+		lines.append(("рядом есть: " + ", ".join(kinds)) if not kinds.is_empty() else "рядом никого из этих существ")
 	if str(on_use.get("recover_slots", "")) == "half_level":  # Arcane / Natural Recovery: the highest slots first
 		var budget := ceili(int(c.get("level", 1)) / 2.0)
 		var back: Array[String] = []

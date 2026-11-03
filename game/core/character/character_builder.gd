@@ -460,9 +460,7 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 			spells["prepared"] = picked.slice(0, n)
 		"prepared":
 			spells["prepared"] = picked
-	var sub: Dictionary = data["classes"]["subclasses"].get(str(ch.get("subclass", "")), {})
-	for id: Variant in sub.get("spells", {}).get("1", []):
-		(spells["always"] as Array).append(str(id))
+	(spells["always"] as Array).assign(LevelUp.always(c, data, 1))
 	c["spells"] = spells
 
 	var inv := {}

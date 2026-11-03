@@ -167,6 +167,7 @@ static func leg(map: Dictionary, steps: Array[Vector2i], here: String) -> Dictio
 static func stand(s: GameSession, map: Dictionary, room: String, cell: Vector2i) -> void:
 	var kept := LayoutGen.on_grid(map, cell)
 	s.layouts["at"] = {"map": str(map["id"]), "room": room, "x": kept.x, "y": kept.y}
+	ConditionRules.on_move(s.character)  # what lasts until the hero moves (v0.8.4.26.1)
 
 
 ## Where the hero stands on the map of the room now. A move that was no walk (a button, the road, the master) puts the

@@ -38,8 +38,7 @@ func run(s: GameSession, data: Dictionary, _f: Dictionary, to: String, _how: Dic
 	var t := CombatRules.fighter(s, to)
 	var skill := CombatRules.lore_skill(data, t)
 	var dc := CombatRules.lore_dc(data, t)
-	var favored := FeatureRules.has(s.character, "favored_enemy_" + str(Sheet.template(data, t).get("type", "")))  # Favored Enemy (v0.7.10)
-	var r := Roll.hero(s, data, {"what": "Присмотреться", "skill": skill, "dc": dc, "adv": favored})
+	var r := Roll.hero(s, data, {"what": "Присмотреться", "skill": skill, "dc": dc, "target_id": str(t["id"])})  # Favored Enemy by its type
 	if bool(r["ok"]):
 		Knows.add(s, Knows.MONSTER, str(t["monster"]))
 	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], t["name"], TranslationServer.translate("SKILL_" + skill.to_upper()),

@@ -255,7 +255,7 @@ func _stats_tab(c: Dictionary) -> void:
 			var sl := _text(col, "    %s %+d%s" % [tr("SKILL_" + s.to_upper()), int(c["skills"][s]), " ●●" if expert else (" ●" if prof else "")])
 			sl.name = "Skill_" + s
 			sl.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT if expert else UiTheme.ACCENT if prof else UiTheme.MUTED)
-	var langs: Array = LanguageRules.hero(c).map(func(l: String) -> String: return LanguageRules.name_of(d, l))
+	var langs: Array = LanguageRules.hero(c, d).map(func(l: String) -> String: return LanguageRules.name_of(d, l))
 	var lang_line := _text(box, tr("SHEET_LANGUAGES").format({"list": ", ".join(langs)}), UiTheme.MUTED_LABEL)
 	lang_line.mouse_filter = Control.MOUSE_FILTER_STOP
 	lang_line.tooltip_text = tr("SHEET_LANGUAGES_TIP")
@@ -297,6 +297,8 @@ func _abilities_tab(c: Dictionary) -> void:
 			box.add_child(row)
 			_text(row, tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"],
 				"rest": tr("REST_KIND_" + str(r["recharge"]).to_upper())}))
+			if Stock.table(d)[str(r["id"])].has("spell"):  # spent by casting its spell (v0.8.4.26.1)
+				continue
 			if str(r["id"]) == "sorcery_points":  # Font of Magic: slots and points (v0.7.10)
 				for o: Dictionary in FeatureRules.font_options(c, d):
 					_action(row, "Font_" + str(o["id"]), str(o["label"]), can_act, GameState.font_convert.bind(str(o["id"])))
@@ -362,7 +364,7 @@ func _cast_row(parent: Control, c: Dictionary, id: String, level: int, can_act: 
 	var pick := OptionButton.new()
 	pick.name = "Slot_" + id
 	pick.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	if SpellRules.is_free(c, id):
+	if SpellRules.free_now(c, Catalog.data, id):
 		pick.add_item(tr("SLOT_AT_WILL"), 0)  # an invocation's spell (v0.7.22.4)
 	elif level == 0:
 		pick.add_item(tr("SLOT_CANTRIP"), 0)

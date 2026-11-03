@@ -16,17 +16,20 @@ static func name_of(data: Dictionary, id: String) -> String:
 	return str(data["misc"]["languages"].get(id, {}).get("name", cfg(data).get("secret", {}).get(id, id)))
 
 
-## The hero's languages: the sheet's, plus the secret ones of the class.
-static func hero(c: Dictionary) -> Array[String]:
+## The hero's languages: the sheet's, plus those its features give by `rules.languages.by_feature` (a feature or its
+## parent: the secret ones of a class, a dragon ancestor's, a favored enemy's).
+static func hero(c: Dictionary, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	for l: Variant in c.get("languages", []):
 		out.append(str(l))
 	if not out.has("common"):
 		out.append("common")
-	if CharacterRules.has_feature(c, "thieves_cant"):
-		out.append("thieves_cant")
-	if CharacterRules.has_feature(c, "druidic"):
-		out.append("druidic")
+	var by: Dictionary = cfg(data).get("by_feature", {})
+	for f: Variant in c.get("features", []):
+		for key: String in [str(f), str(data["classes"]["features"].get(str(f), {}).get("parent", ""))]:
+			for l: Variant in by.get(key, []):
+				if not out.has(str(l)):
+					out.append(str(l))
 	return out
 
 
@@ -76,7 +79,7 @@ static func understands_all(c: Dictionary) -> bool:
 static func npc_understands(c: Dictionary, data: Dictionary, n: Dictionary) -> bool:
 	if understands_all(c):
 		return true
-	var mine := hero(c)
+	var mine := hero(c, data)
 	return npc(data, n).any(func(l: String) -> bool: return mine.has(l))
 
 
@@ -87,7 +90,7 @@ static func foe_understands(c: Dictionary, data: Dictionary, f: Dictionary) -> b
 	var m := monster(data, str(f.get("monster", "")))
 	if bool(m["telepathy"]):
 		return true
-	var mine := hero(c)
+	var mine := hero(c, data)
 	return (m["speaks"] as Array).any(func(l: Variant) -> bool: return mine.has(str(l)))
 
 

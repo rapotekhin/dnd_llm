@@ -184,7 +184,7 @@ static func requirements(s: GameSession, data: Dictionary, id: String, who: Stri
 		"tool":
 			out.append({"text": "ещё не владеете инструментом", "ok": not CraftRules.proficient(c, what)})
 		"language":
-			out.append({"text": "ещё не знаете язык", "ok": not LanguageRules.hero(c).has(what)})
+			out.append({"text": "ещё не знаете язык", "ok": not LanguageRules.hero(c, data).has(what)})
 		"spell":
 			var sp: Dictionary = data["spells"].get(what, {})
 			var lv := int(sp.get("level", 9))
@@ -215,7 +215,7 @@ static func known_already(s: GameSession, data: Dictionary, id: String, who: Str
 		"tool":
 			return CraftRules.proficient(c, what)
 		"language":
-			return LanguageRules.hero(c).has(what)
+			return LanguageRules.hero(c, data).has(what)
 		"spell", "ability":
 			return _knows_spell(c, what)
 		"recipe":
@@ -316,11 +316,33 @@ static func fee(s: GameSession, data: Dictionary, id: String, who: String = Bein
 	var teacher_id := str(co.get("teacher", school(data, sid).get("head", "") if not sid.is_empty() else ""))
 	var q := Price.start(int(co.get("fee_cp", 0)))
 	Price.mod(q, "навык учёбы", float(DevelopmentRules.effect(Life.of(s, who, data), data, "study", "fee_pct", 100.0)))
+	var sav := savant(s, data, id, who)
+	if not sav.is_empty():
+		Price.mod(q, str(sav["name"]), float(sav["fee_pct"]))
 	return Price.rounded(Price.mod(q, "наставник", BondRules.mentor_fee_pct(s, data, teacher_id)))  # v0.7.31: a mentor asks less
 
 
 static func lessons_needed(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
-	return maxi(1, int(course(s, data, id).get("lessons", 1)) - int(DevelopmentRules.effect(Life.of(s, who, data), data, "study", "lessons_minus", 0.0)))
+	var n := int(course(s, data, id).get("lessons", 1))
+	var sav := savant(s, data, id, who)
+	if not sav.is_empty():
+		n = ceili(n * float(sav["lessons_pct"]) / 100.0)
+	return maxi(1, n - int(DevelopmentRules.effect(Life.of(s, who, data), data, "study", "lessons_minus", 0.0)))
+
+
+## The row of `rules.study.savant` of a feature of `who` for a spell course of its school, with the feature's name; {} when
+## none (Evocation Savant, v0.8.4.26.1).
+static func savant(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Dictionary:
+	var teaches: Dictionary = course(s, data, id).get("teaches", {})
+	if str(teaches.get("kind", "")) != "spell":
+		return {}
+	var school := str(data["spells"].get(str(teaches.get("id", "")), {}).get("school_id", ""))
+	var c := Life.of(s, who, data)
+	var rows: Dictionary = cfg(data).get("savant", {})
+	for fid: String in rows:
+		if not fid.begins_with("_") and str(rows[fid].get("school_id", "")) == school and CharacterRules.has_feature(c, fid):
+			return (rows[fid] as Dictionary).merged({"name": str(data["classes"]["features"].get(fid, {}).get("name", fid))})
+	return {}
 
 
 ## "" when the hero may enrol on the course now, else a localization key.

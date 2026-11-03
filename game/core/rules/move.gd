@@ -114,6 +114,12 @@ static func opts(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 	var src := CombatRules.fear_source(s, f)
 	if not src.is_empty() and not bool(f.get("fleeing", false)):
 		out["fear"] = FightGrid.cell(src)
+	var me := Sheet.holder(s, f)
+	var by: Dictionary = FightGrid.cfg(data).get("pass_foe", {}).get("larger_by", {})
+	out["larger_by"] = int(FightGrid.cfg(data).get("pass_foe", {}).get("sizes", 2))
+	for id: String in by:  # Halfling Nimbleness (v0.8.4.26.1)
+		if CharacterRules.has_trait(me, id) or CharacterRules.has_feature(me, id):
+			out["larger_by"] = mini(int(out["larger_by"]), int(by[id]))
 	return out
 
 
@@ -168,6 +174,7 @@ static func go(s: GameSession, data: Dictionary, f: Dictionary, to: Vector2i, li
 
 ## It stands on a new square: whom it held it holds no more; what stands around the hero is drawn again.
 static func arrived(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	lines.append_array(ConditionRules.on_move(Sheet.holder(s, f)))
 	MonsterRules.release(s, data, f, lines, false)
 	if Sheet.is_hero(f):
 		FightField.hero_stands(s, data)

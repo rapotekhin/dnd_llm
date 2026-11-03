@@ -221,6 +221,7 @@ async def request_check(
     sense: str | None = None,
     tool: str | None = None,
     argument: str | None = None,
+    about: str | None = None,
 ) -> str:
     """Попросить движок о проверке навыка (skill: perception, persuasion, stealth, …) или спасброске
     (save: str, dex, con, int, wis, cha). dc_tier — ступень сложности: very_easy, easy, medium, hard, very_hard,
@@ -230,7 +231,9 @@ async def request_check(
     tool — инструмент, которым герой действует (thieves_tools — вскрыть замок, herbalism_kit — травы, disguise_kit…):
     владение им и его наличие учитывает движок; замок без воровских инструментов не вскрыть.
     argument — для Убеждения, Обмана, Запугивания: довод игрока в нескольких словах; повтор у того же NPC
-    бросается заново только с новым доводом или после перемены (заклинание, подарок, отношение)."""
+    бросается заново только с новым доводом или после перемены (заклинание, подарок, отношение).
+    about — о чём проверка, если это существо или предмет: тип существа (dragon, undead, beast, fiend, humanoid…) или
+    magic_item, alchemy, device, stonework; бонусы умений и черт героя по нему считает движок."""
     t = ctx.deps
     if len(t.check_ids) >= t.limits.max_checks:
         return "Отказ: лимит проверок на этот ход исчерпан. Опиши исход без новой проверки."
@@ -252,7 +255,7 @@ async def request_check(
     try:
         raw = await t.session.call_engine("engine.check", EngineCheckParams(
             turn_id=t.params.turn_id, skill=skill, save=save, dc_tier=dc_tier, target_id=target_id,
-            advantage_reason=advantage_reason, sense=sense, tool=tool, argument=argument))
+            advantage_reason=advantage_reason, sense=sense, tool=tool, argument=argument, about=about or None))
     except RpcError as err:
         if err.code != ErrorCode.ENGINE_ERROR or err.engine_code != ErrorCode.INVALID_PARAMS:
             raise

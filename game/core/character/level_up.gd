@@ -35,6 +35,25 @@ static func _row(c: Dictionary, data: Dictionary, level: int) -> Dictionary:
 	return CharacterRules.class_def(c, data).get("levels", {}).get(str(level), {})
 
 
+## Spells always prepared up to the class `level`: the subclass's (unless `rules.spellcasting.subclass_spells_ignored`) and
+## those of the hero's features by `rules.spellcasting.feature_always` (a land of the Circle, v0.8.4.26.1).
+static func always(c: Dictionary, data: Dictionary, level: int) -> Array[String]:
+	var cfg: Dictionary = data["rules"]["spellcasting"]
+	var by: Array[Dictionary] = []
+	if not (cfg.get("subclass_spells_ignored", []) as Array).has(str(c.get("subclass", ""))):
+		by.append(data["classes"]["subclasses"].get(str(c.get("subclass", "")), {}).get("spells", {}))
+	for f: Variant in c.get("features", []):
+		if cfg.get("feature_always", {}).has(str(f)):
+			by.append(cfg["feature_always"][str(f)])
+	var out: Array[String] = []
+	for table: Dictionary in by:
+		for lv in range(1, level + 1):
+			for id: Variant in table.get(str(lv), []):
+				if not out.has(str(id)):
+					out.append(str(id))
+	return out
+
+
 ## Class and subclass features gained at `level` (subclass from `picks` when chosen at this level).
 static func features_at(c: Dictionary, data: Dictionary, level: int, subclass: String) -> Array[String]:
 	var out: Array[String] = []
@@ -249,11 +268,9 @@ static func apply(c: Dictionary, data: Dictionary, picks: Dictionary, session_it
 		(sp["prepared"] as Array).append_array(picks.get("spells", []))
 	(sp["prepared"] as Array).append_array(picks.get("prepared", []))
 	var sub: Dictionary = data["classes"]["subclasses"].get(str(c.get("subclass", "")), {})
-	var ignored: Array = data["rules"]["spellcasting"].get("subclass_spells_ignored", [])
-	for lv in range(1 if not ignored.has(str(c.get("subclass", ""))) else 99, int(p["level"]) + 1):
-		for id: Variant in sub.get("spells", {}).get(str(lv), []):
-			if not (sp["always"] as Array).has(str(id)):
-				(sp["always"] as Array).append(str(id))
+	for id: String in always(c, data, int(p["level"])):
+		if not (sp["always"] as Array).has(id):
+			(sp["always"] as Array).append(id)
 	c["spells"] = sp
 	CharacterRules.refresh(c, data, session_items)
 	var gain := int(c["max_hp"]) - hp_before

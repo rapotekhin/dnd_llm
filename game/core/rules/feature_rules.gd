@@ -443,6 +443,8 @@ static func why(s: GameSession, data: Dictionary, f: Dictionary, id: String, tar
 	var stop := payable(s, data, f, id)
 	if not stop.is_empty():
 		return stop
+	if bool(row.get("dark", false)) and SightRules.in_dark(s, data, f).is_empty():
+		return "COMBAT_NEEDS_DARK"
 	if bool(row.get("after_attack", false)) and not bool(e.get("attacked", false)):
 		return "COMBAT_ATTACK_FIRST"
 	if bool(row.get("before_attack", false)) and (bool(e.get("attacked", false)) or bool(f.get(id, false))):
@@ -500,7 +502,7 @@ static func use_stock(s: GameSession, data: Dictionary, f: Dictionary, id: Strin
 		e[k] = int(e.get(k, 0)) + int(fx["points"][k])
 	if fx.has("stance"):
 		f[str(fx["stance"])] = true
-	var lines := Stock.use(c, data, id, 1, s.rng)
+	var lines := Stock.use(c, data, id, 1, s.rng, s)
 	if not Sheet.is_hero(f) and not lines.is_empty():
 		lines[0] = "%s: %s" % [f["name"], lines[0]]
 	return lines
@@ -519,6 +521,10 @@ static func _do(s: GameSession, data: Dictionary, f: Dictionary, fx: Dictionary,
 				Attack.swing(s, data, f, t, b, lines)
 		"stance":
 			f[str(fx["key"])] = true
+		"status":  # One with Shadows (v0.8.4.26.1)
+			var st: Dictionary = (fx["status"] as Dictionary).duplicate(true)
+			st["source"] = {"kind": "feature", "name": str(fx.get("name", ""))}
+			lines.append_array(ConditionRules.impose(s, data, st, f))
 		"dash":
 			var e := CombatRules.points(s, data, f)
 			e["move"] = int(e.get("move", 0)) + Move.steps(s, data, f)
@@ -527,7 +533,7 @@ static func _do(s: GameSession, data: Dictionary, f: Dictionary, fx: Dictionary,
 		"line":
 			lines.append(str(fx["text"]) % c.get("name", ""))
 		"turn":
-			lines.append_array(_turn(s, data, f, fx["types"], bool(fx["destroy"])))
+			lines.append_array(_turn(s, data, f, fx["types"], (fx.get("destroy", []) as Array).any(func(x: Variant) -> bool: return has(c, str(x)))))
 		"heal_half":
 			var heal := mini(5 * level(c), maxi(0, int(c["max_hp"]) / 2 - int(c["hp"])))
 			c["hp"] = int(c["hp"]) + heal
@@ -698,12 +704,13 @@ static func shape_profile(c: Dictionary, data: Dictionary) -> Dictionary:
 static func font_options(c: Dictionary, data: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var points := Stock.left(c, data, "sorcery_points")
-	var costs: Dictionary = cfg(data)["font_of_magic"]["slot_cost"]
+	var font: Dictionary = cfg(data)["font_of_magic"]
+	var costs: Dictionary = font["slot_cost"]
 	for lv: String in costs:
-		if Stock.spent(c, "slot_" + lv) > 0 and points >= int(costs[lv]):
+		if has(c, str(font.get("create_with", ""))) and Stock.spent(c, "slot_" + lv) > 0 and points >= int(costs[lv]):
 			out.append({"id": "slot_" + lv, "label": "Ячейка %s круга за %d очк." % [lv, int(costs[lv])]})
 	for lv in range(1, 6):
-		if SpellRules.slots_left(c, lv) > 0 and Stock.spent(c, "sorcery_points") >= lv:
+		if has(c, str(font.get("convert_with", ""))) and SpellRules.slots_left(c, lv) > 0 and Stock.spent(c, "sorcery_points") >= lv:
 			out.append({"id": "points_%d" % lv, "label": "Ячейку %d круга — в %d очк." % [lv, lv]})
 	return out
 

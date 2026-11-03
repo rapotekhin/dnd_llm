@@ -199,6 +199,7 @@ COMBAT_ANSWER_FIRST,Сначала ответьте на вопрос
 COMBAT_ASK_TITLE,Использовать?
 COMBAT_ATTACK,"Атака: {name} ({hit}, {dmg})"
 COMBAT_ATTACK_FIRST,Сначала действие «Атака»
+COMBAT_NEEDS_DARK,Только в тусклом свете или темноте
 COMBAT_ATTACK_FRENZY,Удар в неистовстве: {name} ({dmg}) ▲
 COMBAT_ATTACK_OFF,Второй рукой: {name} ({dmg}) [бонус]
 COMBAT_BAD_MOVE,Туда не дойти за этот ход

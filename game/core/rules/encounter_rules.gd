@@ -36,6 +36,20 @@ static func live(s: GameSession, data: Dictionary, room_id: String) -> Dictionar
 	return enc
 
 
+## The kinds of creatures of `types` (SRD types) in the waiting encounters of this room and the rooms within `depth` ways, by
+## their Russian words of `rules.creature_types`: no count, no place (Primeval Awareness, v0.8.4.26.1).
+static func sense(s: GameSession, data: Dictionary, types: Array, depth: int) -> Array[String]:
+	var out: Array[String] = []
+	var words: Dictionary = data["rules"].get("creature_types", {})
+	for room: String in [s.room_id] + PrepareRules.around(s, data, depth):
+		for e: Dictionary in live(s, data, room).get("enemies", []):
+			var kind := str(data["monsters"].get(str(e.get("monster", "")), {}).get("type", ""))
+			var word := str(words.get(kind, kind))
+			if types.has(kind) and not out.has(word):
+				out.append(word)
+	return out
+
+
 ## The best passive Perception among the foes of an encounter.
 static func best_passive(s: GameSession, data: Dictionary, enemies: Array) -> int:
 	var best := 0

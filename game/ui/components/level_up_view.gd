@@ -207,7 +207,10 @@ func _tip(id: String) -> String:
 		return ""
 	var out := str(f.get("desc", f.get("flavor", "")))
 	for sid: Variant in data["rules"].get("feature_spells", {}).get(id, []):
-		out += "\n\n%s (по желанию, без ячейки)\n%s" % [data["spells"].get(str(sid), {}).get("name", sid), DetailsPanel.spell_text(data, str(sid))]
+		var once := Stock.table(data).values().any(func(r: Dictionary) -> bool:  # charges of its own (v0.8.4.26.1)
+			return (r.get("features", []) as Array).has(id) and str(r.get("spell", "")) == str(sid))
+		out += "\n\n%s (%s)\n%s" % [data["spells"].get(str(sid), {}).get("name", sid), "раз за долгий отдых, без ячейки" if once else "по желанию, без ячейки",
+			DetailsPanel.spell_text(data, str(sid))]
 	return out
 
 

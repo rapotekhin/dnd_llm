@@ -450,6 +450,7 @@
 	"study": {
 		"_doc": "Study (v0.7.30, StudyRules): a course is data — `teaches` {kind: skill | tool | language | spell | recipe | xp, id}, `lessons` (progress points to finish), the check of a lesson (`skill` or `ability`) against `dc`, `fee_cp` for the whole course, `xp` — class experience at the end (pack courses only), `requires` {level, classes}. A course is taught by a `teacher` (an NPC; the lesson goes while it is here, once a day, `lesson.hours`) or read from a `book` (an item the hero carries; no teacher, no fee, no misses). A course of a `school` needs the school's entrance `exam` (a check; a failure — again in `exam.retry_days`; a margin of `exam.stipend_margin` — a stipend: the school's courses for free); its end gives a diploma (a document item, jobs may require it). The school's `dorm` room — a free bed and a chest while the hero studies there. A gap of more than `gap_days` without a lesson is a miss; more than `misses_max` misses or a crime in the school's location — expelled, the school closed for `readmit_days`. Outcomes of a lesson by the margin (`outcomes`, the last whose `from` is reached): progress points and the direction «Учёность». `make` — the limits of the master's course (no class experience).",
 		"lesson": {"hours": 2},
+		"savant": {"_doc": "A feature that halves a spell course of its school (v0.8.4.26.1, StudyRules.fee / lessons_needed: Evocation Savant): `school_id`, `fee_pct`, `lessons_pct`.", "evocation_savant": {"school_id": "evocation", "fee_pct": 50, "lessons_pct": 50}},
 		"outcomes": [
 			{"from": -99, "id": "bad", "name": "занятие не далось", "progress": 0},
 			{"from": 0, "id": "ok", "name": "занятие усвоено", "progress": 1},
@@ -1542,7 +1543,16 @@
 		"subclass_spells_ignored": [
 			"land"
 		],
-		"_doc": "subclass_spells_ignored: the SRD import keeps Circle of the Land spells as one list for all terrains — not granted until the terrain picks them (backlog)."
+		"feature_always": {
+			"circle_of_the_land_arctic": {"3": ["hold_person", "spike_growth"], "5": ["sleet_storm", "slow"]},
+			"circle_of_the_land_coast": {"3": ["mirror_image", "misty_step"], "5": ["water_breathing", "water_walk"]},
+			"circle_of_the_land_desert": {"3": ["blur", "silence"], "5": ["create_food_and_water", "protection_from_energy"]},
+			"circle_of_the_land_forest": {"3": ["barkskin", "spider_climb"], "5": ["call_lightning", "plant_growth"]},
+			"circle_of_the_land_grassland": {"3": ["invisibility", "pass_without_trace"], "5": ["daylight", "haste"]},
+			"circle_of_the_land_mountain": {"3": ["spider_climb", "spike_growth"], "5": ["lightning_bolt", "meld_into_stone"]},
+			"circle_of_the_land_swamp": {"3": ["darkness", "acid_arrow"], "5": ["water_walk", "stinking_cloud"]}
+		},
+		"_doc": "subclass_spells_ignored: the SRD import keeps Circle of the Land spells as one list for all terrains — the terrain's own come from feature_always (v0.8.4.26.1): a feature id → {class level: spells always prepared}, read with a subclass's by LevelUp.always."
 	},
 	"creation": {
 		"main_ability": {
@@ -2530,7 +2540,10 @@
 		}
 	},
 	"resources": {
-		"_doc": "Feature uses (v0.6.0): who has them (features), what a press gives in a fight (in_fight: points, stance; no_armor: refused in this armour), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent). combat_cost: what a use costs in a fight (action by default, bonus, free). v0.7.63: this is the one stock of what a character spends and gets back; without `features` a row is everybody's and is no feature: spell slots (max.slots — a circle of slots_max; short_with may be a list) and hit dice (back half_level — a long rest returns half the level, at least 1). Spent is `spent` {id: n} on the character.",
+		"_doc": "Feature uses (v0.6.0): who has them (features), what a press gives in a fight (in_fight: points, stance; no_armor: refused in this armour), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent). combat_cost: what a use costs in a fight (action by default, bonus, free). v0.7.63: this is the one stock of what a character spends and gets back; without `features` a row is everybody's and is no feature: spell slots (max.slots — a circle of slots_max; short_with may be a list) and hit dice (back half_level — a long rest returns half the level, at least 1). Spent is `spent` {id: n} on the character. v0.8.4.26.1: max.slot_any — paid by the lowest spell slot left; on_use.sense {types, depth} — the kinds of creatures in the waiting encounters around (EncounterRules.sense); `spell` with `features` — the charges of a feature's spell (SpellRules.stock_of).",
+		"invocation_mire_the_mind": {"features": ["eldritch_invocation_mire_the_mind"], "spell": "slow", "max": {"fixed": 1}, "recharge": "long", "combat_cost": "never"},
+		"invocation_sign_of_ill_omen": {"features": ["eldritch_invocation_sign_of_ill_omen"], "spell": "bestow_curse", "max": {"fixed": 1}, "recharge": "long", "combat_cost": "never"},
+		"invocation_thief_of_five_fates": {"features": ["eldritch_invocation_thief_of_five_fates"], "spell": "bane", "max": {"fixed": 1}, "recharge": "long", "combat_cost": "never"},
 		"second_wind": {
 			"features": [
 				"second_wind"
@@ -2636,6 +2649,8 @@
 				"cure_disease": 5
 			}
 		},
+		"primeval_awareness": {"features": ["primeval_awareness"], "max": {"slot_any": true}, "recharge": "long", "combat_cost": "never",
+			"on_use": {"sense": {"types": ["aberration", "celestial", "dragon", "elemental", "fey", "fiend", "undead"], "depth": 2}}},
 		"divine_sense": {
 			"features": [
 				"divine_sense"
@@ -2928,14 +2943,29 @@
 			"attacked_why": "отвлекает союзник"
 		}
 	},
+	"creature_types": {"_doc": "Russian words of the SRD creature types (v0.8.4.26.1): a sense names a kind by them.", "aberration": "аберрации", "beast": "звери", "celestial": "небожители", "construct": "конструкты", "dragon": "драконы", "elemental": "элементали", "fey": "феи", "fiend": "исчадия", "giant": "великаны", "humanoid": "гуманоиды", "monstrosity": "чудовища", "ooze": "слизи", "plant": "растения", "undead": "нежить"},
+	"check_about": {
+		"_doc": "What a check is about gives (v0.8.4.26.1, CheckEngine._about): the subject is `about` of engine.check (the master's: a creature type or a word below) or the type of the target's template. A row: who has it (`parent` of a feature — `about: creature_type` takes the feature's own type —, or `trait`), the subjects (`about`), the checks it touches (`skills`, `abilities` — any check of that ability), what it gives (`gives`: advantage | double — the proficiency twice; `proficient` — counted as proficient).",
+		"favored_enemy": {"parent": "favored_enemy_1_type", "about": "creature_type", "skills": ["survival"], "abilities": ["int"], "gives": "advantage"},
+		"dragon_ancestor": {"parent": "dragon_ancestor", "about": ["dragon"], "abilities": ["cha"], "gives": "double"},
+		"artificers_lore": {"trait": "artificers_lore", "about": ["magic_item", "alchemy", "device"], "skills": ["history"], "gives": "double"},
+		"stonecunning": {"trait": "stonecunning", "about": ["stonework"], "skills": ["history"], "gives": "double", "proficient": true}
+	},
+	"feature_wear": {
+		"_doc": "What a feature or a trait lays for good, in the words of a worn thing's `wear` (v0.8.4.26.1, ItemRules.wear: \"walk\" — the walking speed, an ability — its modifier): climb_speed, jump_ft (a running jump's feet, core/acts/jump.gd)…",
+		"second_story_work": {"climb_speed": "walk", "jump_ft": "dex"}
+	},
 	"feature_spells": {
-		"_doc": "Spells a feature lets the hero cast at will, without a slot (v0.7.22.4, big test #15: «Туманные видения» gave no spell): the warlock's invocations; they come into c.spells.free and cast at their own circle.",
+		"_doc": "Spells a feature lets the hero cast at will, without a slot (v0.7.22.4, big test #15: «Туманные видения» gave no spell): the warlock's invocations; they come into c.spells.free and cast at their own circle. v0.8.4.26.1: a row of `resources` with this feature and `spell` gives it charges (once a long rest), SpellRules.stock_of.",
 		"eldritch_invocation_misty_visions": ["silent_image"],
 		"eldritch_invocation_armor_of_shadows": ["mage_armor"],
 		"eldritch_invocation_beast_speech": ["speak_with_animals"],
 		"eldritch_invocation_eldritch_sight": ["detect_magic"],
 		"eldritch_invocation_fiendish_vigor": ["false_life"],
-		"eldritch_invocation_mask_of_many_faces": ["disguise_self"]
+		"eldritch_invocation_mask_of_many_faces": ["disguise_self"],
+		"eldritch_invocation_mire_the_mind": ["slow"],
+		"eldritch_invocation_sign_of_ill_omen": ["bestow_curse"],
+		"eldritch_invocation_thief_of_five_fates": ["bane"]
 	},
 	"body": {
 		"_doc": "Age, build and height of the hero and the NPCs (v0.7.22.5, BodyRules, the author's choice: words, not numbers): the engine picks each by `weight` (the hero — by `hero_weight`), its own word for men and women; an id without a female or male word is not offered to that gender. A child and a teenager (weight 0) come only when a pack or the master sets them. v0.7.22.15: the player may choose each word at the creation of the hero — any of its gender's list but those with `hero: false`; what is not chosen the engine picks.",
@@ -3664,6 +3694,8 @@
 			"_doc": "The field of a fight (v0.8.4, FightGrid): a square of `ft`; `spans` — the squares of a body by its SRD size; `start` — how far foes with no square of their own stand from the hero; `cover` — the bonus to AC and Dexterity saves; `charge` — the squares of a run before a charge; `pit` — a fall; `pursuit` — how near a way out a foe must stand to follow the hero through it, `pursuit_rounds` — when it comes; `doors` — a bar on a door; `blocks` — the map's cell that is a thing in a fight, its body and HP, how much a point of Strength shifts; `fire` — a burning square, the SRD's oil; `hazard` — the map's cell that hurts; `noise` — who hears the fight: squares, minus `wall` for each wall on the way, `beyond` left to carry through a way out.",
 			"ft": 5,
 			"spans": {"tiny": 1, "small": 1, "medium": 1, "large": 2, "huge": 3, "gargantuan": 4},
+			"slow_fall": {"slow_fall": 5, "_doc": "A feature → feet of a fall's damage its reaction takes off per level (Slow Fall, v0.8.4.26.1, core/acts/slow_fall.gd)."},
+			"pass_foe": {"sizes": 2, "larger_by": {"halfling_nimbleness": 1}, "_doc": "A foe's square is walked through (5e) when its body is `sizes` apart from the walker's (the order of `spans`), or larger by a trait's or feature's `larger_by` (v0.8.4.26.1, FightGrid.passable)."},
 			"start": {"melee": 6, "ranged": 10, "arrival": 12},
 			"cover": {"half": 2, "three_quarters": 5},
 			"charge": 4,
@@ -4111,6 +4143,9 @@
 			"eldritch_invocation_voice_of_the_chain_master": "pact_of_the_chain"
 		},
 		"font_of_magic": {
+			"_doc": "Flexible Casting (v0.8.4.26.1, FeatureRules.font_options): points → a slot with `create_with`, a slot → points with `convert_with`.",
+			"create_with": "flexible_casting_creating_spell_slots",
+			"convert_with": "flexible_casting_converting_spell_slot",
 			"slot_cost": {
 				"1": 2,
 				"2": 3,
@@ -4156,6 +4191,22 @@
 			"кобольд": "draconic"
 		},
 		"secret": {"thieves_cant": "Воровской жаргон", "druidic": "Друидический"},
+		"by_feature": {
+			"_doc": "Languages a feature gives (v0.8.4.26.1, LanguageRules.hero): a feature id or its `parent` → language ids. A favored enemy's tongue is the one most of that type speak (the SRD's choice made by the engine).",
+			"thieves_cant": ["thieves_cant"],
+			"druidic": ["druidic"],
+			"dragon_ancestor": ["draconic"],
+			"favored_enemy_aberration": ["deep_speech"],
+			"favored_enemy_celestial": ["celestial"],
+			"favored_enemy_dragon": ["draconic"],
+			"favored_enemy_elemental": ["primordial"],
+			"favored_enemy_fey": ["sylvan"],
+			"favored_enemy_fiend": ["infernal"],
+			"favored_enemy_giant": ["giant"],
+			"favored_enemy_humanoid": ["goblin"],
+			"favored_enemy_monstrosity": ["undercommon"],
+			"favored_enemy_undead": ["abyssal"]
+		},
 		"understand_spells": [
 			"comprehend_languages",
 			"tongues"
@@ -4375,7 +4426,7 @@
 		}
 	},
 	"feature_actions": {
-		"_doc": "The actions of features in a fight (v0.7.64, FeatureRules): name, cost (action, bonus, free), target (a foe in reach), aims (laid on a square as an area, FeatureRules.aim_cells: the button aims it as an area spell, v0.8.4.24), tip; who has it: features (all of them), stock (a resource owned), trait; pay {id, n}: the resource it needs, spent unless check_only; after_attack — after the Attack action; effects, each by kind: strike {profile, times, opts}, stance {key} on the fighter, dash, turn {types, destroy}, heal_half, for {key, rounds}, line {text}; hook — what stays code (FeatureRules._hook); spend false — the hook spends by itself.",
+		"_doc": "The actions of features in a fight (v0.7.64, FeatureRules): name, cost (action, bonus, free), target (a foe in reach), aims (laid on a square as an area, FeatureRules.aim_cells: the button aims it as an area spell, v0.8.4.24), tip; who has it: features (all of them), stock (a resource owned), trait; pay {id, n}: the resource it needs, spent unless check_only; after_attack — after the Attack action; dark — only in the dark (SightRules.in_dark); effects, each by kind: strike {profile, times, opts}, stance {key} on the fighter, dash, status {status, name} — a status laid on itself (`ends.move` — until it moves, ConditionRules.on_move), turn {types, destroy — the features that destroy the weak by the class table's destroy_undead_cr (v0.8.4.26.1)}, heal_half, for {key, rounds}, line {text}; hook — what stays code (FeatureRules._hook); spend false — the hook spends by itself.",
 		"reckless": {
 			"name": "Безрассудная атака",
 			"cost": "free",
@@ -4566,6 +4617,26 @@
 				}
 			]
 		},
+		"one_with_shadows": {
+			"name": "Единство с тенями",
+			"cost": "action",
+			"features": [
+				"eldritch_invocation_one_with_shadows"
+			],
+			"dark": true,
+			"tip": "В тусклом свете или темноте: невидимость, пока не сдвинетесь и ничего не сделаете",
+			"effects": [
+				{
+					"kind": "status",
+					"status": {"condition": "invisible", "ends": {"move": true}},
+					"name": "Единство с тенями"
+				},
+				{
+					"kind": "line",
+					"text": "%s сливается с тенями"
+				}
+			]
+		},
 		"step_dash": {
 			"name": "Шаг ветра: рывок (1 ки)",
 			"cost": "bonus",
@@ -4615,7 +4686,9 @@
 					"types": [
 						"undead"
 					],
-					"destroy": true
+					"destroy": [
+						"destroy_undead_cr_1_2_or_below"
+					]
 				}
 			]
 		},
@@ -4676,8 +4749,7 @@
 					"types": [
 						"undead",
 						"fiend"
-					],
-					"destroy": false
+					]
 				}
 			]
 		},

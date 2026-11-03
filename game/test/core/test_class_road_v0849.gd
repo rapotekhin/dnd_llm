@@ -12,7 +12,8 @@ const WHO := {"reckless": {"class": "barbarian", "level": 2}, "martial_strike": 
 	"step_dash": {"class": "monk", "level": 5, "subclass": "open_hand"}, "stunning": {"class": "monk", "level": 5, "subclass": "open_hand"},
 	"turn_undead": {"class": "cleric", "level": 5, "subclass": "life"}, "preserve_life": {"class": "cleric", "level": 5, "subclass": "life"},
 	"sacred_weapon": {"class": "paladin", "level": 5, "subclass": "devotion"}, "turn_unholy": {"class": "paladin", "level": 5, "subclass": "devotion"},
-	"wild_shape": {"class": "druid", "level": 4, "subclass": "land"}, "font": {"class": "sorcerer", "level": 3, "subclass": "draconic"}, "breath": {}}
+	"wild_shape": {"class": "druid", "level": 4, "subclass": "land"}, "font": {"class": "sorcerer", "level": 3, "subclass": "draconic"}, "breath": {},
+	"one_with_shadows": {"class": "warlock", "level": 5}}
 
 
 func before_test() -> void:
@@ -58,6 +59,9 @@ func test_every_feature_action_goes_for_a_foe_of_its_class() -> void:
 		if id == "breath":
 			f["traits"] = ["breath_weapon", "draconic_ancestry_red"]
 			f["abilities"] = {"con": 14}
+		if bool(rows[id].get("dark", false)):  # an invocation only in the dark: the tavern's cellar
+			(f["features"] as Array).append("eldritch_invocation_one_with_shadows")
+			s.room_id = "brod-tavern-cellar"
 		CombatRules.points(s, data, f)["attacked"] = bool(rows[id].get("after_attack", false))
 		var to := CombatRules.PLAYER if bool(rows[id].get("target", false)) else ""
 		assert_str(Acts.one("feature").can(s, data, f, to, {"id": id})).override_failure_message(id).is_empty()

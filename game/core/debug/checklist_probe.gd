@@ -1214,6 +1214,7 @@ static func _ability(data: Dictionary, id: String, list: String) -> Dictionary:
 	if id.begins_with("extra_attack"):  # the class table's attacks, read by CharacterRules.extra_attacks
 		var s := _ability_session(data, id, list)
 		check(steps, CharacterRules.extra_attacks(s.character, data) > 0, "дополнительная атака: %d" % CharacterRules.extra_attacks(s.character, data), 0)
+	_roads(data, id, d, list, steps)
 	if steps.any(func(st: String) -> bool: return st.begins_with("✓") or st.begins_with("✗")):
 		return result(steps)
 	var why := _read_by(data, id, d, list)
@@ -1222,6 +1223,116 @@ static func _ability(data: Dictionary, id: String, list: String) -> Dictionary:
 	else:
 		master(steps, "движок не знает: на листе как умение для мастера (по описанию)")
 	return result(steps)
+
+
+## The engine's roads of a feature or a trait by the rows that name it (v0.8.4.26.1): spells always prepared, a check by its
+## subject, a language, what it lays for good, a fall slowed, a foe walked through, a course made cheaper, a turn that
+## destroys, Flexible Casting — each done on a hero that has it.
+static func _roads(data: Dictionary, id: String, d: Dictionary, list: String, steps: Array[String]) -> void:
+	var rules: Dictionary = data["rules"]
+	var parent := str(d.get("parent", ""))
+	if rules["spellcasting"].get("feature_always", {}).has(id):
+		var s := _ability_session(data, id, list)
+		var want: Array[String] = []
+		for lv: String in rules["spellcasting"]["feature_always"][id]:
+			for sp: Variant in rules["spellcasting"]["feature_always"][id][lv]:
+				want.append(str(sp))
+		var got := LevelUp.always(s.character, data, 5)
+		check(steps, want.all(func(x: String) -> bool: return got.has(x)), "всегда подготовлены к 5 уровню: %s" % ", ".join(want.map(func(x: String) -> String: return str(data["spells"][x]["name"]))), got)
+	for key: String in rules.get("check_about", {}):
+		var row: Variant = rules["check_about"][key]
+		if row is Dictionary and (str(row.get("trait", "")) == id or (not parent.is_empty() and str(row.get("parent", "")) == parent)):
+			_about(data, id, d, list, row, steps)
+	for key: String in [id, parent]:
+		for lang: Variant in rules["languages"].get("by_feature", {}).get(key, []):
+			var s := _ability_session(data, id, list)
+			check(steps, LanguageRules.hero(s.character, data).has(str(lang)), "язык: %s" % LanguageRules.name_of(data, str(lang)))
+	if rules.get("feature_wear", {}).has(id):
+		var s := _ability_session(data, id, list)
+		var e: Array = ConditionRules.effects(s.character).filter(func(x: Dictionary) -> bool: return str(x["source"].get("id", "")) == id)
+		check(steps, not e.is_empty(), "своё навсегда: %s" % SpellEffects.text(data, e[0] if not e.is_empty() else {}), "не легло")
+		if rules["feature_wear"][id].has("climb_speed"):
+			check(steps, Move.speeds(s, data, Sheet.HERO).has("climb"), "лазание %d фт" % int(Move.speeds(s, data, Sheet.HERO).get("climb", 0)))
+	if FightGrid.cfg(data).get("slow_fall", {}).has(id):
+		var s := _ability_session(data, id, list)
+		fight(s, data, "goblin", true)
+		var hp := int(s.character["hp"])
+		var lines: Array[String] = []
+		CombatRules.fall(s, data, CombatRules.player(s), "10", "падает", {"kind": "engine", "name": "падение"}, lines)
+		check(steps, int(s.character["hp"]) > hp - 10, "падение 10: %s" % ", ".join(lines).left(90), hp - int(s.character["hp"]))
+	if FightGrid.cfg(data).get("pass_foe", {}).get("larger_by", {}).has(id):
+		var s := _ability_session(data, id, list)
+		s.character["race"] = "halfling"
+		var foe := fight(s, data, "bandit")
+		var p := CombatRules.player(s)
+		check(steps, FightGrid.passable(s, data, p, int(Move.opts(s, data, p)["larger_by"])).has(FightGrid.cell(foe)), "проходит сквозь клетку большего врага (разбойник)")
+	if StudyRules.cfg(data).get("savant", {}).has(id):
+		_savant(data, id, list, StudyRules.cfg(data)["savant"][id], steps)
+	for aid: String in rules["feature_actions"]:
+		var fa: Variant = rules["feature_actions"][aid]
+		for fx: Variant in fa.get("effects", []) if fa is Dictionary else []:
+			if fx is Dictionary and (fx.get("destroy", []) as Array).has(id):
+				var s := _ability_session(data, id, list)
+				var cr := float(CharacterRules.level_row(s.character, data).get("class_specific", {}).get("destroy_undead_cr", 0))
+				check(steps, cr > 0.0, "«%s» уничтожает нежить с опасностью до %s (таблица класса)" % [fa.get("name", aid), cr], cr)
+	var font: Dictionary = FeatureRules.cfg(data).get("font_of_magic", {})
+	if id in [str(font.get("create_with", "")), str(font.get("convert_with", ""))]:
+		var s := _ability_session(data, "font_of_magic", list)
+		var c := s.character
+		Stock.spend(c, "slot_1")
+		if id == str(font.get("convert_with", "")):  # a slot to points needs points spent; points to a slot needs them left
+			Stock.spend(c, "sorcery_points")
+		var bare := FeatureRules.font_options(c, data).size()
+		(c["features"] as Array).append(id)
+		check(steps, FeatureRules.font_options(c, data).size() > bare, "источник магии: %d → %d вариантов" % [bare, FeatureRules.font_options(c, data).size()])
+
+
+## A check by its subject on the hero with the feature or the trait: advantage, or the proficiency twice.
+static func _about(data: Dictionary, id: String, d: Dictionary, list: String, row: Dictionary, steps: Array[String]) -> void:
+	var s := _ability_session(data, id, list)
+	var about := str(d.get("creature_type", "")) if str(row.get("about", "")) == "creature_type" else str((row["about"] as Array)[0])
+	var spec := {"about": about}
+	if not (row.get("skills", []) as Array).is_empty():
+		spec["skill"] = str(row["skills"][0])
+	else:
+		spec["ability"] = str(row["abilities"][0])
+	var what := str(spec.get("skill", spec.get("ability", "")))
+	if str(row["gives"]) == "advantage":
+		var with := CheckEngine.situation(s, data, Sheet.HERO, spec)
+		var bare := CheckEngine.situation(s, data, Sheet.HERO, spec.merged({"about": "nothing"}, true))
+		check(steps, (with["adv"] as Array).size() > (bare["adv"] as Array).size(), "проверка «%s» о «%s»: преимущество" % [what, about])
+		return
+	if spec.has("skill"):
+		s.character["skill_profs"] = (s.character.get("skill_profs", []) as Array) + [spec["skill"]]
+	else:  # a bare ability: Charisma checks by a proficient skill of it (Persuasion)
+		spec.erase("ability")
+		spec["skill"] = "persuasion"
+		s.character["skill_profs"] = (s.character.get("skill_profs", []) as Array) + ["persuasion"]
+	CharacterRules.refresh(s.character, data, s.items)
+	var more := RollParts.sum(CheckEngine.situation(s, data, Sheet.HERO, spec)["parts"]) - RollParts.sum(CheckEngine.situation(s, data, Sheet.HERO, spec.merged({"about": "nothing"}, true))["parts"])
+	check(steps, more > 0, "проверка «%s» о «%s»: мастерство дважды (+%d)" % [str(spec["skill"]), about, more], more)
+
+
+## A spell course of the savant's school costs less: the pack's spell course, its spell swapped for one of the school.
+static func _savant(data: Dictionary, id: String, list: String, row: Dictionary, steps: Array[String]) -> void:
+	var course := ""
+	var spell := ""
+	for cid: String in data["world"].get("courses", {}):
+		if str(data["world"]["courses"][cid].get("teaches", {}).get("kind", "")) == "spell":
+			course = cid
+	for sid: String in data["spells"]:
+		if str(data["spells"][sid].get("school_id", "")) == str(row["school_id"]) and int(data["spells"][sid].get("level", 0)) > 0:
+			spell = sid
+			break
+	if not check(steps, not course.is_empty() and not spell.is_empty(), "курс заклинания в пакете", "нет"):
+		return
+	var teaches: Dictionary = data["world"]["courses"][course]["teaches"]
+	var was := str(teaches["id"])
+	teaches["id"] = spell
+	var fee := StudyRules.fee(session(data), data, course)
+	var now := StudyRules.fee(_ability_session(data, id, list), data, course)
+	teaches["id"] = was
+	check(steps, now < fee, "курс «%s»: плата %s → %s" % [data["spells"][spell]["name"], Money.format(fee), Money.format(now)], now)
 
 
 ## The fields of a feature or a trait the character's building reads (CharacterBuilder, LevelUp): a choice, a grant.
@@ -1259,6 +1370,9 @@ static func _read_by(data: Dictionary, id: String, d: Dictionary, list: String) 
 	if list == "features" and not d.has("subclass") and int(cls.get("subclass_level", 0)) == int(d.get("level", -1)) \
 			and SUBCLASS_WORDS.search(str(d.get("name_en", ""))) != null and not id.contains("spells"):
 		return "выбор подкласса на %d уровне (LevelUp)" % int(d.get("level", 0))
+	if list == "features" and str(d.get("name_en", "")).ends_with(" feature") and (cls.get("subclasses", []) as Array).any(func(x: Variant) -> bool:
+			return not (data["classes"]["subclasses"].get(str(x), {}).get("features", {}).get(str(int(d.get("level", 0))), []) as Array).is_empty()):
+		return "особенность подкласса на %d уровне: умения подкласса этого уровня (LevelUp.features_at)" % int(d.get("level", 0))
 	if id.begins_with("spellcasting_") and cls.has("spellcasting"):
 		return "заклинания класса: ячейки и списки по таблице класса"
 	if id.contains("spells") and (cls.get("subclasses", []) as Array).any(func(x: Variant) -> bool: return data["classes"]["subclasses"].get(str(x), {}).has("spells")):
@@ -1304,6 +1418,12 @@ static func _feature_act(data: Dictionary, id: String, list: String, aid: String
 	var g := fight(s, data, "goblin")
 	var hero := CombatRules.player(s)
 	turn(s, data, hero)
+	if bool(data["rules"]["feature_actions"][aid].get("dark", false)):  # in a dark room of the pack, no light in hand
+		for r: String in data["world"]["rooms"]:
+			if WorldView.new(data["world"]).flag(r, "dark"):
+				s.room_id = r
+				break
+		s.character["belt"] = ["", "", "", "", ""]
 	var act := Acts.one("feature")
 	var name := str(data["rules"]["feature_actions"][aid].get("name", aid))
 	for to: String in [str(g["id"]), ""]:
@@ -1325,9 +1445,16 @@ static func _feature_stock(data: Dictionary, id: String, list: String, rid: Stri
 	var n := Stock.max_uses(c, data, rid)
 	if not check(steps, n > 0, "запас «%s»: %d" % [Stock.display_name(c, data, rid), n], "0 — не выдан"):
 		return
+	var spell := str(Stock.table(data)[rid].get("spell", ""))
+	if not spell.is_empty():  # the charges of a feature's spell: spent by casting it at will (v0.8.4.26.1)
+		var chk := SpellRules.check(c, data, spell, 0)
+		if check(steps, int(chk.get("slot", -1)) == 0, "«%s» без ячейки" % data["spells"][spell]["name"], chk.get("reason", "")):
+			SpellRules.cast(c, data, spell, 0, s)
+			check(steps, Stock.left(c, data, rid) == n - 1 and SpellRules.check(c, data, spell, 0).has("reason"), "сотворено: заряд потрачен, до долгого отдыха нельзя", Stock.left(c, data, rid))
+		return
 	var why := Stock.can_use(c, data, rid, 1)
 	if why.is_empty():
-		var lines := Stock.use(c, data, rid, 1, s.rng)
+		var lines := Stock.use(c, data, rid, 1, s.rng, s)
 		check(steps, Stock.left(c, data, rid) == n - 1, "трата: %s" % ", ".join(lines).left(100), Stock.left(c, data, rid))
 	else:
 		steps.append("· трата «%s»: %s" % [rid, why])

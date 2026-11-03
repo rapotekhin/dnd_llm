@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.106.0"
+PROTOCOL_VERSION = "0.107.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -593,6 +593,7 @@ ItemProperty = Literal[
     "spell_attack_plus1", "speed_30", "perception_advantage", "investigation_advantage", "darkvision", "wound_closure",
     "immune_disease", "understand_all", "missile_snaring", "carry_plus_500", "str_19", "int_19", "mithral", "no_crit",
     "crude", "masterwork",  # 0.56.0: the make of a crafted thing (−1 / +1 to attack; armor −1 AC / no Str and stealth trouble)
+    "water_source",  # 0.107.0: the carrier has water anywhere (Decanter of Endless Water)
 ]
 
 
@@ -2033,6 +2034,7 @@ class EngineCheckParams(_Out):
     sense: Literal["sight", "hearing"] | None = None  # the check needs sight or hearing: blinded / deafened fail (0.16.0)
     tool: str | None = None  # the tool the check uses (thieves_tools, herbalism_kit…): proficiency, a must (0.17.0)
     argument: str | None = None  # 0.42.0: a social check — the player's argument in a few words; a repeat rolls only with a new one
+    about: str | None = None  # 0.107.0: what the check is about — a creature type or a subject (stonework, magic_item…): the hero's features by it
 
 
 class EngineCheckResult(_In):

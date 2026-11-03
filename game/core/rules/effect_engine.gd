@@ -1314,7 +1314,7 @@ func _do_bank(s: GameSession, plan: Dictionary) -> void:
 
 func _do_use_feature(s: GameSession, plan: Dictionary) -> void:
 	var c := s.character
-	Stock.use(c, _data, plan["id"], int(plan["amount"]), s.rng)
+	Stock.use(c, _data, plan["id"], int(plan["amount"]), s.rng, s)
 
 
 func _do_use_item(s: GameSession, plan: Dictionary) -> void:

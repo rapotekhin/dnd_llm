@@ -277,6 +277,9 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	var dis := not (m["dis"] as Array).is_empty()
 	if SpellEffects.take_next_attack_adv(me):  # True Strike (v0.7.13.1)
 		adv = true
+	for o: String in CombatRules.friends_of(s, t):  # Protection: a shield raised for the target (v0.8.4.26.1)
+		if not dis and o != str(t["id"]) and Acts.react(s, data, CombatRules.fighter(s, o), "attacked", {"foe": str(f["id"]), "target": str(t["id"])}, lines):
+			dis = true
 	var rolls := Roll.of(s, f, adv, dis)
 	var nat := Roll.kept(rolls, adv, dis)
 	ConditionRules.remove(it, "guided")  # Guiding Bolt's light goes with the first attack roll (v0.7.13)

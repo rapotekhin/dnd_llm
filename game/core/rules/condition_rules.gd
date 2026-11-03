@@ -537,6 +537,16 @@ static func unseen_penalty(c: Dictionary, data: Dictionary) -> int:
 	return int(data["rules"].get("invisibility", {}).get("passive_penalty", 5)) if invisible(c, data) else 0
 
 
+## It moved: what lasts until it moves goes (`ends.move`: One with Shadows, v0.8.4.26.1). Lines.
+static func on_move(c: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	for e: Dictionary in effects(c).duplicate():
+		if bool(e.get("ends", {}).get("move", false)):
+			remove_effect(c, int(e["uid"]))
+			lines.append("%s: спадает" % str(e.get("source", {}).get("name", e.get("condition", ""))))
+	return lines
+
+
 ## An attack or a spell ends 5e Invisibility (not Greater): its concentration and the condition go. Lines.
 static func end_invisibility_on_attack(c: Dictionary, data: Dictionary) -> Array[String]:
 	var spells: Dictionary = data["rules"].get("invisibility", {}).get("spells", {})

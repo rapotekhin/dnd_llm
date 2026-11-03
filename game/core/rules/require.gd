@@ -37,7 +37,7 @@ static func rows(s: GameSession, data: Dictionary, req: Dictionary, ctx: Diction
 		out.append({"text": "владение навыком: " + CraftRules.tr_skill(data, skill), "ok": JobRules._skilled(c, skill)})
 	if req.has("language"):
 		var lang := str(req["language"])
-		out.append({"text": "язык: " + LanguageRules.name_of(data, lang), "ok": LanguageRules.hero(c).has(lang)})
+		out.append({"text": "язык: " + LanguageRules.name_of(data, lang), "ok": LanguageRules.hero(c, data).has(lang)})
 	if req.has("diploma"):
 		out.append({"text": "грамота выпускника: " + StudyRules.name_of(s, data, str(req["diploma"])), "ok": StudyRules.has_diploma(c, str(req["diploma"]))})
 	if req.has("org"):

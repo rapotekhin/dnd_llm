@@ -91,7 +91,7 @@ static func hooks(s: GameSession, data: Dictionary, room: Dictionary) -> Array:
 	var out: Array = (room.get("hooks", []) as Array).duplicate()
 	for a: String in SceneRules.absent(s, data["world"], s.room_id):  # v0.7.14.2: not here at this hour
 		out.append("нет на месте: " + a)
-	var langs := LanguageRules.hero(s.character)
+	var langs := LanguageRules.hero(s.character, data)
 	if langs.has("thieves_cant") and not str(room.get("thieves_sign", "")).is_empty():
 		out.append("тайный знак (читает только герой): " + str(room["thieves_sign"]))
 	if langs.has("druidic") and not str(room.get("druid_sign", "")).is_empty():
@@ -167,7 +167,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"background": str(data["backgrounds"].get(str(c.get("background", "")), {}).get("name", "")),
 		"background_feature": BackgroundRules.master_text(c, data),
 		"attuned": ItemRules.attuned(c).map(func(id: Variant) -> String: return ItemRules.display_name(items, s.items, str(id))),
-		"languages": LanguageRules.hero(c).map(func(l: String) -> String: return LanguageRules.name_of(data, l)),
+		"languages": LanguageRules.hero(c, data).map(func(l: String) -> String: return LanguageRules.name_of(data, l)),
 		"craft": CraftRules.snapshot(s, data),  # v0.7.24
 		"jobs": JobRules.text(s, data),  # v0.7.26
 		"property": ". ".join([PropertyRules.text(s, data), ObjectRules.text(s, data, s.room_id)].filter(func(x: String) -> bool: return not x.is_empty())),  # v0.7.27; the object here (v0.7.39.5)

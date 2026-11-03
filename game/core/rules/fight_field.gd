@@ -123,13 +123,7 @@ static func stepped(s: GameSession, data: Dictionary, f: Dictionary, lines: Arra
 
 
 static func _fall(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	Harm.typed(s, data, f, CombatRules.roll_dice(s.rng, str(cfg(data)["pit"]["dice"])), "bludgeoning", lines,
-		str(f["name"]) + " падает в яму: {hp} ({words})")
-	if str(f.get("id")) == CombatRules.PLAYER:
-		if int(s.character.get("hp", 0)) > 0:
-			lines.append_array(ConditionRules.impose(s, data, {"condition": "prone", "ends": {"rest": "short"}, "source": {"kind": "engine", "name": "яма"}}))
-	elif str(f.get("status")) == "active":
-		CombatRules._hold(f, "prone")
+	CombatRules.fall(s, data, f, str(cfg(data)["pit"]["dice"]), "падает в яму", {"kind": "engine", "name": "яма"}, lines)
 
 
 ## Standing on this square hurts: the AI's fear of it.

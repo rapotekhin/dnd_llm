@@ -73,7 +73,8 @@
           "mithral",
           "no_crit",
           "crude",
-          "masterwork"
+          "masterwork",
+          "water_source"
         ],
         "type": "string"
       },

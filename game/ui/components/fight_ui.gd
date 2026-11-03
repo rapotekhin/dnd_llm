@@ -1077,7 +1077,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		for id: String in SpellRules.ready(c):
 			var spell: Dictionary = data["spells"].get(id, {})
 			var lv := int(spell.get("level", 0))
-			var free := SpellRules.is_free(c, id)  # an invocation's spell at will (v0.7.22.4)
+			var free := SpellRules.free_now(c, data, id)  # an invocation's spell at will (v0.7.22.4)
 			var slot := 0 if lv == 0 or free else _slot_for(c, data, id)
 			var cost := tr("COMBAT_BONUS_SHORT") if CombatRules.spell_cost(data, id) == "bonus" else ""
 			var label := "%s%s%s%s" % [spell.get("name", id), (" (%d)" % slot) if slot > 0 else "", tr("SPELL_AT_WILL_SHORT") if free else "", cost]

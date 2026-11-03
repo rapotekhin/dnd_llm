@@ -35,6 +35,9 @@ func _reach(s: GameSession, data: Dictionary, f: Dictionary) -> int:
 	var ft := Sheet.ability(s, data, f, "str")
 	if int(e.get("walked", 0)) < 2:
 		ft /= 2
+	else:  # a running jump goes further by a status (Second-Story Work, v0.8.4.26.1)
+		for x: Dictionary in ConditionRules.effects(Sheet.holder(s, f)):
+			ft += int(x.get("jump_ft", 0))
 	return mini(int(ft / int(FightGrid.cfg(data)["ft"])), int(e.get("move", 0)))
 
 

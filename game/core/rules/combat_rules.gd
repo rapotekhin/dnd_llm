@@ -1017,8 +1017,17 @@ static func end_spell(s: GameSession, data: Dictionary, spell_id: String, by: St
 
 ## Anyone comes down from a height a spell held it at.
 static func _fall(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String, dice: String, lines: Array[String]) -> void:
-	Harm.typed(s, data, f, roll_dice(s.rng, dice), "bludgeoning", lines, str(f["name"]) + " падает с высоты: {hp} ({words})")
-	lines.append_array(ConditionRules.impose(s, data, {"condition": "prone", "ends": {"rest": "short"}, "source": {"kind": "spell", "id": spell_id, "name": "падение"}}, f))
+	fall(s, data, f, dice, "падает с высоты", {"kind": "spell", "id": spell_id, "name": "падение"}, lines)
+
+
+## Anybody falls (into a pit, from a height): `dice` of bludgeoning less what a reaction at the moment `fall` takes off
+## (Slow Fall, v0.8.4.26.1), then prone if still up. `what` — the line's words, `source` — of the prone.
+static func fall(s: GameSession, data: Dictionary, f: Dictionary, dice: String, what: String, source: Dictionary, lines: Array[String]) -> void:
+	var ctx := {"dmg": roll_dice(s.rng, dice), "cut": 0}
+	Acts.react(s, data, f, "fall", ctx, lines)
+	Harm.typed(s, data, f, maxi(0, int(ctx["dmg"]) - int(ctx["cut"])), "bludgeoning", lines, str(f["name"]) + " " + what + ": {hp} ({words})")
+	if Attack.up(s, f):
+		lines.append_array(ConditionRules.impose(s, data, {"condition": "prone", "ends": {"rest": "short"}, "source": source}, f))
 
 
 static func spell_cost(data: Dictionary, spell_id: String) -> String:

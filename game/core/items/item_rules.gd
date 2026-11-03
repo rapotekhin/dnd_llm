@@ -8,6 +8,8 @@ extends RefCounted
 
 const UNKNOWN := "unk_"
 const WORN := "worn"  # the source kind of what a worn thing lays (v0.8.4.26)
+## The source kind of what a feature or a trait lays for good by `rules.feature_wear` (v0.8.4.26.1).
+const BORN := "born"
 
 
 ## Definition of an item: catalog first, then items generated in this session. {} if unknown. An item on a `base`
@@ -408,7 +410,8 @@ static func wear_spec(c: Dictionary, data: Dictionary, d: Dictionary) -> Diction
 	var out := {}
 	var spec: Dictionary = d.get("wear", {})
 	for k: String in spec:
-		out[k] = _walk(c, data) if str(spec[k]) == "walk" else spec[k]
+		var v: Variant = spec[k]
+		out[k] = _walk(c, data) if str(v) == "walk" else maxi(0, CharacterRules.mod(int(c.get("abilities", {}).get(str(v), 10)))) 			if (data["rules"]["saves"] as Array).has(str(v)) else v  # an ability: its modifier (Second-Story Work's jump)
 	return out
 
 
@@ -423,8 +426,15 @@ static func _walk(c: Dictionary, data: Dictionary) -> int:
 ## refresh and the fighter's gear (Gear.follow).
 static func wear(c: Dictionary, data: Dictionary, session_items: Dictionary) -> void:
 	for e: Dictionary in ConditionRules.effects(c).duplicate():
-		if str(e.get("source", {}).get("kind", "")) == WORN:
+		if str(e.get("source", {}).get("kind", "")) in [WORN, BORN]:
 			ConditionRules.remove_effect(c, int(e["uid"]))
+	var born: Dictionary = data["rules"].get("feature_wear", {})
+	for fid: Variant in (c.get("features", []) as Array) + (c.get("traits", []) as Array):  # a feature's or a trait's own (v0.8.4.26.1)
+		if born.has(str(fid)):
+			var own := wear_spec(c, data, {"wear": born[str(fid)]})
+			var name := str(data["classes"]["features"].get(str(fid), data["races"]["traits"].get(str(fid), {})).get("name", fid))
+			own.merge({"condition": "", "ends": {}, "source": {"kind": BORN, "id": str(fid), "name": name}})
+			ConditionRules.add_effect(c, own)
 	var lit := belt(c, data, session_items)
 	for id: String in CharacterRules.working_ids(c, data, session_items):
 		var d := def_of(data["items"], session_items, id)

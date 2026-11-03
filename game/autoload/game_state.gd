@@ -290,7 +290,7 @@ func _spend(what: Dictionary) -> Dictionary:
 			var why := Stock.can_use(c, Catalog.data, id, 1)
 			if not why.is_empty():
 				return {"reason": why}
-			lines = Stock.use(c, Catalog.data, id, 1, session.rng)
+			lines = Stock.use(c, Catalog.data, id, 1, session.rng, session)
 			facts = "Игрок использует умение «%s». Движок уже учёл использование: %s. Опиши, как это выглядит." % \
 				[Stock.display_name(c, Catalog.data, id), ", ".join(lines)]
 		"item":

@@ -25,8 +25,8 @@ func _hero(preset_id: String) -> GameSession:
 
 func test_hero_languages_with_the_secret_ones() -> void:
 	var rogue := _hero("rogue_damir").character
-	assert_array(LanguageRules.hero(rogue)).contains(["common", "thieves_cant"])
-	assert_array(LanguageRules.hero(_hero("druid_olha").character)).contains(["druidic"])
+	assert_array(LanguageRules.hero(rogue, data)).contains(["common", "thieves_cant"])
+	assert_array(LanguageRules.hero(_hero("druid_olha").character, data)).contains(["druidic"])
 	assert_str(LanguageRules.name_of(data, "thieves_cant")).is_equal("Воровской жаргон")
 
 

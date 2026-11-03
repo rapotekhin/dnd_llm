@@ -442,7 +442,7 @@ static func _body_free(g: Dictionary, at: Vector2i, span: int, passes: int) -> b
 
 
 ## The squares a fighter can walk to with `budget` squares: {square: [cost, from]}, its own square at cost 0. A friend is
-## passed through, a foe is not; a square to stop on holds no one. A diagonal does not cut a corner. A wide body fits a
+## passed through, a foe is not unless `passable` (sizes apart, `opts.larger_by`); a square to stop on holds no one. A diagonal does not cut a corner. A wide body fits a
 ## passage one size narrower by squeezing (5e): each such square costs one more. `opts` is Move.opts: passes (flags it crosses),
 ## flat (every square costs one), on (flags whose squares cost one), only (flags it cannot leave), fear (a square not to come
 ## nearer to), latch (false — a beast at a shut door).
@@ -456,6 +456,7 @@ static func reach(s: GameSession, data: Dictionary, f: Dictionary, budget: int, 
 	var only := int(opts.get("only", 0))
 	var mine := side_of(str(f.get("side", "enemy")))
 	var occupied := bodies(s, str(f.get("id", "")))
+	var across := passable(s, data, f, int(opts.get("larger_by", 2)))
 	var slow := slow_cells(s, data, str(f.get("side", "enemy")))
 	var fear: Vector2i = opts.get("fear", NONE)
 	var latch := bool(opts.get("latch", true))
@@ -489,7 +490,7 @@ static func reach(s: GameSession, data: Dictionary, f: Dictionary, budget: int, 
 				var stop := false
 				for c: Vector2i in body_at(next, span):
 					if occupied.has(c):
-						if side_of(str(occupied[c])) != mine:
+						if side_of(str(occupied[c])) != mine and not across.has(c):
 							stop = true
 							break
 				if stop:
@@ -507,6 +508,24 @@ static func reach(s: GameSession, data: Dictionary, f: Dictionary, budget: int, 
 					buckets.append([])
 				(buckets[total] as Array).append(next)
 		at_cost += 1
+	return out
+
+
+## The squares of foes `f` may walk through (5e): a body two sizes apart from its own (`rules.combat.grid.pass_foe.sizes`),
+## or larger by `larger_by` (Halfling Nimbleness: one).
+static func passable(s: GameSession, data: Dictionary, f: Dictionary, larger_by: int) -> Dictionary:
+	var out := {}
+	var order: Array = (cfg(data)["spans"] as Dictionary).keys()
+	var apart := int(cfg(data).get("pass_foe", {}).get("sizes", 2))
+	var mine := order.find(Sheet.size(s, data, f))
+	for id: String in s.combat.get("fighters", []):
+		var o: Dictionary = s.beings.get(id, {}).get("fight", {})
+		if o.is_empty() or side_of(str(o.get("side"))) == side_of(str(f.get("side", "enemy"))):
+			continue
+		var d := order.find(Sheet.size(s, data, o)) - mine
+		if absi(d) >= apart or d >= larger_by:
+			for at: Vector2i in body(o):
+				out[at] = true
 	return out
 
 

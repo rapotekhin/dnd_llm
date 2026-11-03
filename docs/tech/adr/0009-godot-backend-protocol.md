@@ -206,6 +206,10 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 117. Протокол 0.107.0 (v0.8.4.26.1)
+
+У `engine.check` появилось поле `about`: о чём проверка, если это существо или предмет. Мастер пишет тип существа (`dragon`, `undead`, `beast`…) или тему (`magic_item`, `alchemy`, `device`, `stonework`). Без него движок берёт тип шаблона цели или собеседника. Бонусы умений и черт героя по теме считает движок (`rules.check_about`). В словарь свойств вещей добавлено `water_source`.
+
 ### 116. Протокол 0.106.0 (v0.8.4.25)
 
 Мастер готовит заранее ([master-prefetch.md](../../production/master-prefetch.md#решение-автора-2-ноября-2026)). У хода появился вид `prepare` и флаг `TurnRequestParams.background`.

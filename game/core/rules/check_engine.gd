@@ -8,7 +8,7 @@ extends RefCounted
 
 
 ## What this moment gives a check of `who` by `spec` (a skill or a bare ability; `adv_why`, `dis_why`, `fail_why` — the
-## caller's reasons, a text or a list; `tool`, `target_id`, `sense`): {adv, dis, fail: [why], parts: [{label, value}]}.
+## caller's reasons, a text or a list; `tool`, `target_id`, `sense`, `about` — a creature type or a subject): {adv, dis, fail: [why], parts: [{label, value}]}.
 ## `peek` — a chance shown before the roll: a spell's die counts by its mean and is not spent.
 static func situation(s: GameSession, data: Dictionary, who: Dictionary, spec: Dictionary, peek := false) -> Dictionary:
 	var me := Sheet.holder(s, who)
@@ -51,6 +51,9 @@ static func situation(s: GameSession, data: Dictionary, who: Dictionary, spec: D
 	_add(adv, str(t["advantage"]))
 	RollParts.add(parts, str(t["note"]), int(t["bonus"]))
 	RollParts.add(parts, "исследователь природы", _terrain(s, data, me, skill))
+	var about := _about(s, data, me, spec, skill)
+	_add(adv, str(about["adv"]))
+	RollParts.add(parts, str(about["label"]), int(about["bonus"]))
 	var listener := listener(s, data, spec)
 	if not listener.is_empty() and Sheet.is_hero(who):  # v0.7.11: the words reach only who understands them
 		var gate := LanguageRules.check_gate(me, data, skill, LanguageRules.npc_understands(me, data, data["world"]["npcs"][listener]))
@@ -83,6 +86,53 @@ static func _terrain(s: GameSession, data: Dictionary, me: Dictionary, skill: St
 		return 0
 	var proficient := (me.get("skill_profs", []) as Array).has(skill) or CharacterRules.has_feature(me, "skill_prof_" + skill)
 	return CharacterRules.prof_bonus(me, data) if proficient else 0
+
+
+## What a check is about: `about` of the spec (the master's word or the caller's: a creature type or a subject of
+## `rules.check_about`), else the type of the template of its target or listener; "" when none.
+static func about_of(s: GameSession, data: Dictionary, spec: Dictionary) -> String:
+	var said := str(spec.get("about", "")) if spec.get("about") != null else ""
+	if not said.is_empty():
+		return said
+	var tid := str(spec.get("target_id", "")) if spec.get("target_id") != null else ""
+	if tid.is_empty() and s.in_conversation():
+		tid = s.npc_id
+	return "" if tid.is_empty() or tid == Being.HERO else str(Sheet.template(data, Sheet.who(s, data, tid)).get("type", ""))
+
+
+## A row of `rules.check_about` of a feature (by its `parent`) or a trait of `me` that fits the check's subject and its skill
+## or ability (v0.8.4.26.1): Favored Enemy gives advantage, Dragon Ancestor, Artificer's Lore and Stonecunning the
+## proficiency twice (`proficient` — counted as proficient). {adv: why, label, bonus}.
+static func _about(s: GameSession, data: Dictionary, me: Dictionary, spec: Dictionary, skill: String) -> Dictionary:
+	var out := {"adv": "", "label": "", "bonus": 0}
+	var about := about_of(s, data, spec)
+	if about.is_empty():
+		return out
+	var ab := str(data["rules"]["skills"].get(skill, spec.get("ability", "")))
+	var feats: Dictionary = data["classes"]["features"]
+	for key: String in data["rules"].get("check_about", {}):
+		var row: Variant = data["rules"]["check_about"][key]
+		if not row is Dictionary or not ((row.get("skills", []) as Array).has(skill) or (row.get("abilities", []) as Array).has(ab)):
+			continue
+		var name := ""
+		if row.has("trait") and CharacterRules.has_trait(me, str(row["trait"])):
+			name = str(data["races"]["traits"].get(str(row["trait"]), {}).get("name", row["trait"]))
+		for f: Variant in me.get("features", []):
+			var d: Dictionary = feats.get(str(f), {})
+			if row.has("parent") and str(d.get("parent", "")) == str(row["parent"]) and (str(row.get("about", "")) != "creature_type" or str(d.get("creature_type", "")) == about):
+				name = str(d.get("name", f))
+		if name.is_empty() or (row.get("about", "") is Array and not (row["about"] as Array).has(about)):
+			continue
+		if str(row["gives"]) == "advantage":
+			out["adv"] = name
+			continue
+		var pb := CharacterRules.prof_bonus(me, data)
+		var proficient := not skill.is_empty() and ((me.get("skill_profs", []) as Array).has(skill) or CharacterRules.has_feature(me, "skill_prof_" + skill))
+		if (me.get("expertise", []) as Array).has(skill):
+			continue
+		out["label"] = name
+		out["bonus"] = pb if proficient else (2 * pb if bool(row.get("proficient", false)) else 0)
+	return out
 
 
 ## Reasons as a list: a text joined by «, », or a list.
@@ -127,7 +177,7 @@ static func spec(s: GameSession, data: Dictionary, params: Dictionary, parts: Ar
 	if not save.is_empty() and not (rules["saves"] as Array).has(save):
 		return {"error": "unknown save: %s" % save}
 	var out := {"quiet": true}  # the card is its own breakdown
-	for k: String in ["skill", "save", "ability", "tool", "target_id", "sense"]:
+	for k: String in ["skill", "save", "ability", "tool", "target_id", "sense", "about"]:
 		if params.get(k) != null and not str(params.get(k, "")).is_empty():
 			out[k] = str(params[k])
 	out["adv_why"] = params.get("advantage_reason")

@@ -31,10 +31,17 @@ static func one(id: String) -> Act:
 	return _load()[id]
 
 
+## The moments at which the hero's reaction goes by itself, with no window: a shield raised for a friend, a fall slowed
+## (v0.8.4.26.1).
+const HERO_BY_ITSELF: Array[String] = ["attacked", "fall"]
+
+
 ## `f` answers what happened with its reaction, when it has one left: the best of what any act offers. The hero has its window
-## instead (`FeatureRules.reactions`), the same features and the same `apply_reaction`. True when it did.
+## instead (`FeatureRules.reactions`), the same features and the same `apply_reaction`, but at `HERO_BY_ITSELF`. True when it did.
 static func react(s: GameSession, data: Dictionary, f: Dictionary, when: String, ctx: Dictionary, lines: Array[String]) -> bool:
-	if Sheet.is_hero(f) or bool(f.get("reacted", false)) or str(f.get("status")) != "active" or CombatRules.incapacitated(f):
+	if Sheet.is_hero(f) and (not HERO_BY_ITSELF.has(when) or FeatureRules.policy(s) == "never"):
+		return false
+	if bool(f.get("reacted", false)) or str(f.get("status")) != "active" or CombatRules.incapacitated(f):
 		return false
 	var best := {}
 	for a: Act in all():
