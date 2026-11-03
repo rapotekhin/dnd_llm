@@ -2,6 +2,8 @@ class_name Money
 extends RefCounted
 ## Coins are stored in copper (cp); shown as «15 зм 3 см 7 мм».
 
+const GP := 100  ## copper in a gold piece
+
 
 static func format(cp: int) -> String:
 	var sign := "−" if cp < 0 else ""

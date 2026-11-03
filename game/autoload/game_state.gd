@@ -2237,6 +2237,33 @@ func travel(to: String) -> String:
 	return ""
 
 
+## The dev console's `goto` (Dev): straight into any room of the world, by the steps of fast travel — no master turn;
+## the room's encounter starts its fight as walking in would. "" or the reason.
+func teleport(to: String) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+		return "TRAVEL_BUSY"
+	if world().room(to).is_empty():
+		return "нет комнаты %s" % to
+	_end_conversation()
+	if not EncounterRules.live(session, Catalog.data, to).is_empty():
+		_move_to(to, [])
+		return ""
+	var names: Array[String] = [str(world().room(session.room_id).get("name", session.room_id))]
+	var lines: Array[String] = []
+	var minute0 := session.day * 1440 + session.minute
+	for f: String in _step(to, lines):
+		lines.append("Замечено: " + f)
+	names.append(str(world().room(to).get("name", to)))
+	_travel_line(names, minute0, lines)
+	_set_options([])
+	EventBus.state_changed.emit()
+	if not session.pending_fight.is_empty():
+		_start_pending_fight()
+		return ""
+	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+	return ""
+
+
 ## «Путь: A → B → C · N мин» and what happened on the way, into the chat and the history (no master turn).
 func _travel_line(names: Array[String], minute0: int, lines: Array[String]) -> void:
 	if names.size() < 2 and lines.is_empty():

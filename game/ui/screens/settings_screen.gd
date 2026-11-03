@@ -53,7 +53,7 @@ func required() -> Dictionary:
 		"%ImageExtra": "VBoxContainer", "%ImagePromptAdd": "TextEdit", "%ImageNegativeAdd": "TextEdit",
 		"%ImagePromptAddLabel": "Label", "%ImageNegativeAddLabel": "Label", "%ImageNegativeOnly": "CheckBox",
 		"%ImagePromptsReset": "Button", "%GameOptions": "VBoxContainer", "%NeedsOption": "CheckButton",
-		"%AdultOption": "CheckButton", "%ConfirmRisky": "CheckBox", "%KeyList": "VBoxContainer", "%KeysReset": "Button",
+		"%AdultOption": "CheckButton", "%ConfirmRisky": "CheckBox", "%DevMode": "CheckBox", "%KeyList": "VBoxContainer", "%KeysReset": "Button",
 	}
 	for path: String in ["%Resolution", "%UiScale", "%CombatSpeed", "%ModelOption", "%ProviderOption", "%ProviderSortOption",
 			"%ImageModelOption", "%ReactionsOption", "%DmStyleOption", "%DifficultyOption"]:
@@ -90,6 +90,12 @@ func _controls_tab() -> void:
 	ask.toggled.connect(func(on: bool) -> void:
 		SaveManager.confirm_risky = on
 		SaveManager.save_settings())
+	var dev: CheckBox = UiScenes.need(self, "%DevMode")  # the console with its cheats, F3 and F12 (Dev)
+	dev.button_pressed = Dev.enabled
+	dev.toggled.connect(func(on: bool) -> void:
+		SaveManager.dev_mode = on
+		SaveManager.save_settings()
+		Dev.set_enabled(on))
 	var list: Control = UiScenes.need(self, "%KeyList")
 	for action: String in Hotkeys.defaults():
 		var row := HBoxContainer.new()

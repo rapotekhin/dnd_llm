@@ -290,6 +290,32 @@ func _dev_console() -> void:
 	console.call("_on_submitted", "room")
 	await frames(5)
 	await shot("dev_console_room")
+	await _cheats(dev, console)
+
+
+## The cheats: things, coins, a spell, immortality, experience; the names under the line and a fight by `spawn`.
+func _cheats(dev: Node, console: Control) -> void:
+	var gs := node("GameState")
+	for cmd: String in ["give Длинный меч 2", "gold 50", "spell Огненный шар", "god", "xp 300", "heal"]:
+		var out: String = dev.run(cmd)
+		step("cheat: " + cmd, not out.is_empty() and not out.begins_with("no session") and not out.begins_with("мастер")
+			and not out.contains("не найдено"), out)
+	step("cheats land on the hero", int(gs.session.character["inventory"].get("longsword", 0)) >= 2
+		and SpellRules.ready(gs.session.character).has("fireball") and Cheats.on(gs.session.character, "god"))
+	var input: LineEdit = console.get("_input")
+	input.text = "spawn вол"
+	console.call("_on_changed", input.text)
+	await frames(3)
+	var hints: Label = console.get("_hints")
+	step("console hints the names", hints.text.contains("[wolf]"), hints.text)
+	await shot("dev_console_hints")
+	input.clear()
+	console.call("_on_submitted", "spawn wolf 2")
+	var fought := await wait_until(func() -> bool: return CombatRules.active(gs.session) and not gs.is_busy(), 20.0)
+	step("spawn starts a fight with two wolves", fought and CombatRules.enemies(gs.session).size() == 2)
+	dev.call("_input", _key_event(KEY_QUOTELEFT))
+	await frames(10)
+	await shot("dev_spawn_fight")
 
 
 func _key_event(code: Key) -> InputEventKey:

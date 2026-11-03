@@ -43,6 +43,8 @@ static func lowest_slot(c: Dictionary, data: Dictionary, spell_id: String, pendi
 static func slots_left(c: Dictionary, circle: int) -> int:
 	if circle < 1 or circle > 5:
 		return 0
+	if Cheats.on(c, "slots"):  # the dev console's endless slots: one of every circle, never spent
+		return maxi(1, int(c.get("slots_max", [0, 0, 0, 0, 0])[circle - 1]))
 	return int(c.get("slots_max", [0, 0, 0, 0, 0])[circle - 1]) - Stock.spent(c, "slot_%d" % circle)
 
 

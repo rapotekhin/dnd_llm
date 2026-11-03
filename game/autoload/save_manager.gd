@@ -35,6 +35,8 @@ var images_on: bool = true
 var image_model: String = ""
 ## The player's additions to a model's prompt (v0.7.37): id → {prompt, negative, only}; absent — the model's own.
 var image_prompts: Dictionary = {}
+## The dev console, F3 and F12 (Dev): on by the settings, by `--dev`, or in a debug build until the settings turn it off.
+var dev_mode: bool = OS.is_debug_build()
 const COMBAT_SPEEDS := {"slow": 1.0, "normal": 0.6, "fast": 0.25, "instant": 0.0}
 const UI_SCALES: Array[float] = [0.85, 1.0, 1.15, 1.3]
 
@@ -172,6 +174,7 @@ func load_settings() -> void:
 		images_on = bool(cfg.get_value("images", "on", true))
 		image_model = str(cfg.get_value("images", "model", ""))
 		image_prompts = cfg.get_value("images", "prompts", {})
+		dev_mode = bool(cfg.get_value("game", "dev_mode", OS.is_debug_build()))
 	Hotkeys.apply(keys)
 
 
@@ -190,6 +193,7 @@ func save_settings() -> void:
 	cfg.set_value("images", "model", image_model)
 	cfg.set_value("images", "prompts", image_prompts)
 	cfg.set_value("keys", "keys", keys)
+	cfg.set_value("game", "dev_mode", dev_mode)
 	cfg.save(settings_path)
 
 

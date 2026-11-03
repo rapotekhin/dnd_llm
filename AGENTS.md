@@ -155,7 +155,7 @@ Godot binary: `C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.
 "$GODOT" --headless --path game --import     # after adding scripts or editing strings.csv (registers class_name, builds translations)
 "$GODOT" --path game --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test --ignoreHeadlessMode   # gdUnit4 (exit 0 = pass)
 "$GODOT" --path game                         # run the game; saves in %APPDATA%/Godot/app_userdata/Between the Rolls/
-"$GODOT" --path game -- --dev               # the game with the dev console (~: room, rooms, quests, items, npc, state, …), F3 overlay, F12 bug snapshot
+"$GODOT" --path game -- --dev               # the game with the dev console (~: room, rooms, quests, items, npc, state; cheats give, gold, spawn [ally], goto, heal, god, slots, xp, level, reset, class, spell, feature, trait, find; Tab completes), F3 overlay, F12 bug snapshot; also «Режим разработчика» in the settings
 "$GODOT" --path game -- --preview=combat    # straight into a screen with a ready state (--preview=list; --preset=<hero>, --room=<room>); saves go to the «preview» profile
 ```
 

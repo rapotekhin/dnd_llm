@@ -515,15 +515,23 @@ static func _add_item(inv: Dictionary, id: String, qty: int) -> void:
 
 
 ## A complete random character (seeded): race, class, background, a sensible point buy, all picks.
-static func random_choices(data: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
+## `fixed` keeps what is given of race, subrace, class, subclass, background, god, gender and name (the dev console's
+## rebuild, Cheats.rebuild); the rest is picked for them. The same draws of `rng` either way.
+static func random_choices(data: Dictionary, rng: RandomNumberGenerator, fixed: Dictionary = {}) -> Dictionary:
 	var ch := empty_choices()
 	ch["race"] = _pick(rng, data["races"]["races"].keys())
+	_fix(ch, fixed, "race")
 	var subs: Array = race(ch, data).get("subraces", [])
 	ch["subrace"] = _pick(rng, subs) if not subs.is_empty() else ""
+	_fix(ch, fixed, "subrace")
 	ch["class"] = _pick(rng, data["classes"]["classes"].keys())
+	_fix(ch, fixed, "class")
 	if subclass_now(ch, data):
 		ch["subclass"] = _pick(rng, klass(ch, data)["subclasses"])
+		if (klass(ch, data)["subclasses"] as Array).has(fixed.get("subclass", "")):
+			_fix(ch, fixed, "subclass")
 	ch["background"] = _pick(rng, data["backgrounds"].keys())
+	_fix(ch, fixed, "background")
 	ch["base_abilities"] = _standard_spread(data, str(ch["class"]))
 	var choice: Variant = race(ch, data).get("ability_choice")
 	if choice is Dictionary:
@@ -555,9 +563,17 @@ static func random_choices(data: Dictionary, rng: RandomNumberGenerator) -> Dict
 	ch["languages"] = _sample(rng, language_options(ch, data), language_count(ch, data))
 	if needs_god(ch, data):
 		ch["god"] = _pick(rng, god_ids(data))
+	_fix(ch, fixed, "god")
 	ch["gender"] = _pick(rng, ["male", "female"])
 	ch["name"] = _pick(rng, data.get("names", data["game"]["creation"]["names"])[ch["gender"]])
+	_fix(ch, fixed, "gender")
+	_fix(ch, fixed, "name")
 	return ch
+
+
+static func _fix(ch: Dictionary, fixed: Dictionary, key: String) -> void:
+	if not str(fixed.get(key, "")).is_empty():
+		ch[key] = fixed[key]
 
 
 ## 15, 14, 13, 12, 10, 8 by point buy (27 points): the class's spell ability and CON high, the rest in order.

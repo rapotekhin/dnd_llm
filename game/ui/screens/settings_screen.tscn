@@ -365,6 +365,12 @@ layout_mode = 2
 tooltip_text = "OPT_CONFIRM_RISKY_TIP"
 text = "OPT_CONFIRM_RISKY"
 
+[node name="DevMode" type="CheckBox" parent="Col/Tabs/Controls/ControlsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "OPT_DEV_MODE_TIP"
+text = "OPT_DEV_MODE"
+
 [node name="KeysLabel" type="Label" parent="Col/Tabs/Controls/ControlsBox"]
 layout_mode = 2
 text = "OPT_KEYS"

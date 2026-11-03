@@ -26,6 +26,10 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	if dmg <= 0:
 		return
 	var hp := int(me.get("hp", 0))
+	if hero and Cheats.on(me, "god"):  # the dev console's immortality: the blow lands, the hero stays up
+		me["hp"] = maxi(1, hp - dmg)
+		_after(s, data, who, dmg, lines)
+		return
 	if hero and fight:
 		if ArenaRules.yield_bout(s) and hp - dmg <= 0:  # v0.7.45: the manager stops the bout
 			me["hp"] = 0

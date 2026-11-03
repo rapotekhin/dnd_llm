@@ -37,6 +37,8 @@ static func spent(c: Dictionary, id: String) -> int:
 
 ## Spends `n` of `id`; what `use` adds to it is the feature's.
 static func spend(c: Dictionary, id: String, n: int = 1) -> void:
+	if id.begins_with("slot_") and Cheats.on(c, "slots"):  # the dev console's endless slots
+		return
 	var used: Dictionary = c.get("spent", {})
 	used[id] = int(used.get(id, 0)) + n
 	c["spent"] = used
