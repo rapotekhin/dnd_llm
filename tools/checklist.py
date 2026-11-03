@@ -235,16 +235,22 @@ def spells_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
     return "Заклинания", cols, rows
 
 
+# The defenses against a damage type: the cheat's word, the monsters' field, its Russian name.
+DEFENSE_KINDS = (("resist", "resistances", "сопротивление"), ("immune", "immunities", "иммунитет"),
+                 ("vulnerable", "vulnerabilities", "уязвимость"))
+# The probe of a defense: fixed dice that always land critically, 4d1 rolled twice — 8 before a defense, then what each leaves.
+PROBE = "4d1 {} crit"
+EXPECT = {"": 8, "resist": 4, "immune": 0, "vulnerable": 16}
+
+
 def defenses_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
     """A row per damage type and defense, then per condition immunity: the commands and who has it by the data."""
     cols = ["Защита", "id", "Герою", "Юниту", "Проверить ударом", "Проверить без боя", "Монстры с ней", "Вещи с ней", "Черты рас"]
-    # A blow of fixed dice that always hits critically: 4d1 rolled twice is 8 before the defense.
-    expect = {"resist": 4, "immune": 0, "vulnerable": 16}
     he = data.rules.get("hero_effects", {})
     by_item: dict[str, str] = he.get("item_resist", {})
     by_trait: dict = he.get("trait_resist", {})
     rows = []
-    for kind, key, word in (("resist", "resistances", "сопротивление"), ("immune", "immunities", "иммунитет"), ("vulnerable", "vulnerabilities", "уязвимость")):
+    for kind, key, word in DEFENSE_KINDS:
         for dtype in data.damage:
             mons = [m.get("name", mid) for mid, m in data.monsters.items() if any(dtype in str(x).lower() for x in m.get(key, []))]
             things, races = [], []
@@ -254,8 +260,8 @@ def defenses_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
                 races = [data.traits.get(t, {}).get("name", t) for t, v in by_trait.items() if isinstance(v, list) and dtype in v]
             rows.append({"id": f"{kind}:{dtype}", "Защита": f"{word}: {data.damage_name(dtype)}", "Герою": f"{kind} {dtype}",
                          "Юниту": f"@<цель> {kind} {dtype}",
-                         "Проверить ударом": f"@<цель> hit 4d1 {dtype} crit → {expect[kind]} урона (без защиты 8)",
-                         "Проверить без боя": f"{kind} {dtype}, затем dmg 4d1 {dtype} crit → {expect[kind]} урона", "Монстры с ней": ", ".join(sorted(mons)), "Вещи с ней": ", ".join(sorted(things)),
+                         "Проверить ударом": f"@<цель> hit {PROBE.format(dtype)} → {EXPECT[kind]} урона (без защиты {EXPECT['']})",
+                         "Проверить без боя": f"{kind} {dtype}, затем dmg {PROBE.format(dtype)} → {EXPECT[kind]} урона", "Монстры с ней": ", ".join(sorted(mons)), "Вещи с ней": ", ".join(sorted(things)),
                          "Черты рас": ", ".join(races)})
     for cond in data.rules["conditions"]:
         mons = [m.get("name", mid) for mid, m in data.monsters.items() if cond in map(str, m.get("condition_immunities", []))]
@@ -277,21 +283,22 @@ def damage_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
         mons = sorted({m.get("name", mid) for mid, m in data.monsters.items()
                        for a in m.get("actions", []) if any(isinstance(x, dict) and x.get("type") == dtype for x in a.get("damage", []))})
         bare = ""
-        for key, word, left in (("immunities", "иммунитет", 0), ("resistances", "сопротивление", 4)):  # of the 8 a crit 4d1 rolls
+        probe = PROBE.format(dtype)
+        for kind, key, word in DEFENSE_KINDS[1::-1]:  # an immunity first: it shows the bypass best
             found = next(((mid, str(x)) for mid, m in data.monsters.items() for x in m.get(key, [])
                           if dtype in str(x) and "nonmagical" in str(x) and "adamantine" not in str(x)), None)
             if found:
                 mid, text = found
-                bare = (f"spawn {mid} ({word} к немагическому)\n@<цель> hit 4d1 {dtype} crit → {left}"
-                        f"\n@<цель> hit 4d1 {dtype} crit magic → 8")
+                bare = (f"spawn {mid} ({word} к немагическому)\n@<цель> hit {probe} → {EXPECT[kind]}"
+                        f"\n@<цель> hit {probe} magic → {EXPECT['']}")
                 if "silvered" in text:
-                    bare += f"\n@<цель> hit 4d1 {dtype} crit silver → 8"
+                    bare += f"\n@<цель> hit {probe} silver → {EXPECT['']}"
                 break
         rows.append({"id": dtype, "Тип урона": data.damage_name(dtype), "Герою без боя": f"dmg 2d6 {dtype} → 2–12 урона",
                      "Юниту ударом": f"@<цель> hit 2d6 {dtype} → при попадании 2–12",
-                     "Крит": f"dmg 4d1 {dtype} crit → 8 (кости дважды)",
-                     "Защиты": (f"resist {dtype}, dmg 4d1 {dtype} → 2\nimmune {dtype}, dmg 4d1 {dtype} → 0\n"
-                                f"vulnerable {dtype}, dmg 4d1 {dtype} → 8\nснять: resist {dtype} off (и так же immune, vulnerable)"),
+                     "Крит": f"dmg {probe} → {EXPECT['']} (кости дважды)",
+                     "Защиты": "\n".join([f"{kind} {dtype}, dmg {probe} → {EXPECT[kind]}" for kind, _, _ in DEFENSE_KINDS]
+                                         + [f"снять: resist {dtype} off (и так же immune, vulnerable)"]),
                      "Немагическое": bare, "Заклинания": ", ".join(spells), "Оружие": ", ".join(weapons), "Монстры бьют": ", ".join(mons)})
     return "Типы урона", cols, rows
 

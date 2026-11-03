@@ -27,7 +27,7 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	dmg = FeatureRules.hurt_shape(s, data, dmg, lines, who)  # a beast form takes it first
 	if dmg <= 0:
 		return
-	var hp := int(me.get("hp", Sheet.max_hp(s, data, who)))  # a record whole has no count of its own: its template's
+	var hp := Sheet.hp(s, data, who)
 	if hero and Cheats.on(me, "god"):  # the dev console's immortality: the blow lands, the hero stays up
 		me["hp"] = maxi(1, hp - dmg)
 		_after(s, data, who, dmg, lines)

@@ -131,8 +131,18 @@ static func resolve(s: GameSession, data: Dictionary, kind: String, query: Strin
 		return {"id": str(found[0]["id"])}
 	if found.is_empty():
 		return {"reason": "не найдено: %s (find %s <часть имени>)" % [query, kind]}
-	return {"reason": "несколько: %s%s" % [", ".join(found.slice(0, 8).map(func(e: Dictionary) -> String: return "%s [%s]" % [e["name"], e["id"]])),
-		" …" if found.size() > 8 else ""]}
+	return {"reason": "несколько: %s%s" % [", ".join(found.slice(0, 8).map(tag)), " …" if found.size() > 8 else ""]}
+
+
+## How the console names an entry or a unit: «Имя [id]», a unit's id with `@` to put after it.
+static func tag(e: Dictionary) -> String:
+	return "%s [%s%s]" % [e["name"], "@" if e.has("fighter") else "", e["id"]]
+
+
+## «HP 7/11» of `who` (an id), the hero or anybody.
+static func hp_line(s: GameSession, data: Dictionary, who: String) -> String:
+	var w := Sheet.own(s, who)
+	return "HP %d/%d" % [Sheet.hp(s, data, w), Sheet.max_hp(s, data, w)]
 
 
 ## The ones in this room a cheat may aim at (`@цель`): the fighters of the fight but the hero, else the people here.
@@ -151,18 +161,24 @@ static func units(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	return out
 
 
-## One unit by its id, its name without spaces or the start of it that only one has: {id, fighter} or {reason}.
-static func unit(s: GameSession, data: Dictionary, query: String) -> Dictionary:
+## The units whose id or name without spaces is `query` (`exact`) or begins with it (`@` and case aside).
+static func units_like(s: GameSession, data: Dictionary, query: String, exact := false) -> Array[Dictionary]:
 	var q := query.trim_prefix("@").to_lower().replace(" ", "")
-	var all := units(s, data)
-	var hit := all.filter(func(u: Dictionary) -> bool: return str(u["id"]).to_lower() == q or str(u["name"]).to_lower().replace(" ", "") == q)
+	return units(s, data).filter(func(u: Dictionary) -> bool:
+		var keys := [str(u["id"]).to_lower(), str(u["name"]).to_lower().replace(" ", "")]
+		return keys.has(q) if exact else keys.any(func(k: String) -> bool: return k.begins_with(q)))
+
+
+## One unit by its id, its name without spaces or the start of either that only one has: {id, fighter} or {reason}.
+static func unit(s: GameSession, data: Dictionary, query: String) -> Dictionary:
+	var hit := units_like(s, data, query, true)
 	if hit.is_empty():
-		hit = all.filter(func(u: Dictionary) -> bool: return str(u["name"]).to_lower().replace(" ", "").begins_with(q))
+		hit = units_like(s, data, query)
 	if hit.size() == 1:
 		return hit[0]
 	if hit.is_empty():
 		return {"reason": "здесь нет %s (units — кто здесь)" % query}
-	return {"reason": "несколько: %s" % ", ".join(hit.map(func(u: Dictionary) -> String: return "%s [@%s]" % [u["name"], u["id"]]))}
+	return {"reason": "несколько: %s" % ", ".join(hit.map(tag))}
 
 
 ## A defense of `who` (an id) against `dtype` until it is taken off: `kind` of DEFENSES — an effect on it with that list,

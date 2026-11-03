@@ -91,6 +91,11 @@ static func max_hp(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 	return maxi(1, top / 2) if ConditionRules.exhaustion(h) >= 4 else top
 
 
+## Its hit points now: its own count, a record whole without one its maximum.
+static func hp(s: GameSession, data: Dictionary, who: Dictionary) -> int:
+	return int(holder(s, who).get("hp", max_hp(s, data, who)))
+
+
 ## The one it is: the hero's sheet, or the fighter or record itself. Statuses live on this.
 static func holder(s: GameSession, who: Dictionary) -> Dictionary:
 	return s.character if is_hero(who) else who

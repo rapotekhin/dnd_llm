@@ -679,17 +679,22 @@ func _start_pending_fight() -> void:
 	start_combat(foes, source)
 
 
-## A deed of the engine in a fight made beside the buttons (the dev console's `hit`): its lines into the fight's log, the end
-## checked as after the hero's act, an outcome played on.
+## A deed of the engine in a fight made beside the buttons (the dev console's `hit`): played on as the hero's act.
 func fight_lines(lines: Array[String]) -> void:
-	if session == null or not CombatRules.active(session):
-		return
+	if session != null and CombatRules.active(session):
+		_after_deed(lines)
+
+
+## A deed of the hero's turn done: its lines into the fight's log, the end checked, an outcome played on. True when it was.
+func _after_deed(lines: Array[String]) -> bool:
 	_refresh()
 	_combat_log(lines)
 	_combat_log(CombatRules.after_player_action(session, Catalog.data))
 	EventBus.state_changed.emit()
-	if not str(session.combat.get("outcome", "")).is_empty():
-		_combat_continue()
+	if str(session.combat.get("outcome", "")).is_empty():
+		return false
+	_combat_continue()
+	return true
 
 
 ## Damage of the engine out of a fight made beside the buttons (the dev console's `dmg`): its lines into the chat; the hero
@@ -722,13 +727,7 @@ func _combat_do(why: String, act: Callable) -> String:
 	if not why.is_empty():
 		return why
 	var lines: Array[String] = act.call()
-	_refresh()
-	_combat_log(lines)
-	_combat_log(CombatRules.after_player_action(session, Catalog.data))
-	EventBus.state_changed.emit()
-	if not str(session.combat.get("outcome", "")).is_empty():
-		_combat_continue()
-	elif int(session.character["hp"]) <= 0:  # dropped on its own turn (an attack of opportunity): the turn is over
+	if not _after_deed(lines) and int(session.character["hp"]) <= 0:  # dropped on its own turn (an attack of opportunity): the turn is over
 		_combat_log(CombatRules.end_player_turn(session, Catalog.data))
 		_combat_continue()
 	return ""
@@ -802,13 +801,7 @@ func combat_feature(id: String, target_id: String = "") -> String:
 func combat_answer(choice: String) -> String:
 	if session == null or not CombatRules.active(session) or not session.combat.has("prompt"):
 		return "COMBAT_NONE"
-	var lines := FeatureRules.answer_prompt(session, Catalog.data, choice)
-	_refresh()
-	_combat_log(lines)
-	_combat_log(CombatRules.after_player_action(session, Catalog.data))
-	EventBus.state_changed.emit()
-	if not str(session.combat.get("outcome", "")).is_empty():
-		_combat_continue()
+	_after_deed(FeatureRules.answer_prompt(session, Catalog.data, choice))
 	return ""
 
 
@@ -2229,6 +2222,24 @@ func travel(to: String) -> String:
 	var why := WayRules.leave_why(session, Catalog.data, session.room_id, path[0])
 	if not why.is_empty():
 		return why
+	_walk(path)
+	return ""
+
+
+## The dev console's `goto` (Dev): straight into any room of the world, walked as one step of fast travel — no master
+## turn; the room's encounter starts its fight as walking in would. "" or the reason.
+func teleport(to: String) -> String:
+	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
+		return "TRAVEL_BUSY"
+	if world().room(to).is_empty():
+		return "нет комнаты %s" % to
+	_walk([to])
+	return ""
+
+
+## The rooms of `path` walked one by one by the engine, no master turn: it stops on a live encounter or a trap (an ordinary
+## move), before a found trap, at death, a hold or a fight that waits (`travel`).
+func _walk(path: Array) -> void:
 	_end_conversation()
 	var names: Array[String] = [str(world().room(session.room_id).get("name", session.room_id))]
 	var lines: Array[String] = []
@@ -2247,9 +2258,9 @@ func travel(to: String) -> String:
 			if not trap.is_empty():
 				step_lines = ExplorationRules.spring_trap(session, Catalog.data, from, trap)
 				if _trap_downed(step_lines):
-					return ""
+					return
 			_move_to(to_room, step_lines)
-			return ""
+			return
 		for f: String in _step(to_room, lines):
 			lines.append("Замечено: " + f)
 		names.append(str(world().room(to_room).get("name", to_room)))
@@ -2260,38 +2271,10 @@ func travel(to: String) -> String:
 	EventBus.state_changed.emit()
 	if not session.pending_fight.is_empty():  # v0.7.39.2: a hideout's guards on the way
 		_start_pending_fight()
-		return ""
+		return
 	if _exhaustion_death():
-		return ""
+		return
 	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
-	return ""
-
-
-## The dev console's `goto` (Dev): straight into any room of the world, by the steps of fast travel — no master turn;
-## the room's encounter starts its fight as walking in would. "" or the reason.
-func teleport(to: String) -> String:
-	if session == null or is_busy() or session.mode == GameSession.MODE_COMBAT:
-		return "TRAVEL_BUSY"
-	if world().room(to).is_empty():
-		return "нет комнаты %s" % to
-	_end_conversation()
-	if not EncounterRules.live(session, Catalog.data, to).is_empty():
-		_move_to(to, [])
-		return ""
-	var names: Array[String] = [str(world().room(session.room_id).get("name", session.room_id))]
-	var lines: Array[String] = []
-	var minute0 := session.day * 1440 + session.minute
-	for f: String in _step(to, lines):
-		lines.append("Замечено: " + f)
-	names.append(str(world().room(to).get("name", to)))
-	_travel_line(names, minute0, lines)
-	_set_options([])
-	EventBus.state_changed.emit()
-	if not session.pending_fight.is_empty():
-		_start_pending_fight()
-		return ""
-	SaveManager.save_slot(SaveManager.AUTOSAVE, session)
-	return ""
 
 
 ## «Путь: A → B → C · N мин» and what happened on the way, into the chat and the history (no master turn).

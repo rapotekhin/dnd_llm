@@ -185,10 +185,8 @@ func _units() -> String:
 	var s: GameSession = GameState.session
 	var out := PackedStringArray()
 	for u: Dictionary in Cheats.units(s, Catalog.data):
-		var w := Sheet.own(s, str(u["id"]))
-		var top := Sheet.max_hp(s, Catalog.data, w)
-		out.append("%s [@%s]%s · HP %d/%d" % [u["name"], u["id"], " — %s, %s" % [u["side"], u["status"]] if bool(u["fighter"]) else "",
-			int(Sheet.holder(s, w).get("hp", top)), top])
+		out.append("%s%s · %s" % [Cheats.tag(u), " — %s, %s" % [u["side"], u["status"]] if bool(u["fighter"]) else "",
+			Cheats.hp_line(s, Catalog.data, str(u["id"]))])
 	return "\n".join(out) if not out.is_empty() else "здесь никого"
 
 
@@ -234,10 +232,7 @@ func _cheat(cmd: String, args: PackedStringArray, u: Dictionary = {}) -> String:
 		"heal":
 			var lines := Rest.long(s, data, who)
 			_changed()
-			var w := Sheet.own(s, who)
-			var top := Sheet.max_hp(s, data, w)
-			return "%sHP %d/%d, ячейки и заряды полны%s" % [to, int(Sheet.holder(s, w).get("hp", top)), top,
-				"; " + "; ".join(lines) if not lines.is_empty() else ""]
+			return "%s%s, ячейки и заряды полны%s" % [to, Cheats.hp_line(s, data, who), "; " + "; ".join(lines) if not lines.is_empty() else ""]
 		"god", "slots":
 			var on := Cheats.toggle(c, cmd)
 			_changed()
@@ -346,15 +341,14 @@ func _dmg(s: GameSession, data: Dictionary, args: PackedStringArray, who: String
 	if CombatRules.active(s) and not Attack.up(s, w if who != Being.HERO else CombatRules.player(s)):
 		return "цель уже лежит"
 	var lines := Cheats.harm(s, data, who, r["spec"])
-	var top := Sheet.max_hp(s, data, w)
-	var hp := int(Sheet.holder(s, w).get("hp", top))
+	var hp := Cheats.hp_line(s, data, who)  # before a knock-out sets the hero at 1
 	if CombatRules.active(s):
 		GameState.fight_lines(lines)
 	elif who == Being.HERO:
 		GameState.harm_lines(lines)  # a knock-out adds its lines
 	else:
 		EventBus.state_changed.emit()
-	return "%s · HP %d/%d" % ["\n".join(lines), hp, top]
+	return "%s · %s" % ["\n".join(lines), hp]
 
 
 ## `spawn <монстр> [n] [ally|foe]`: in a fight they come in at once on their side (CombatRules.add_allies); out of it a
@@ -406,7 +400,7 @@ func _find(args: PackedStringArray) -> String:
 	if not Cheats.KINDS.has(kind):
 		return "нет вида %s: %s" % [args[0], ", ".join(Cheats.KINDS)]
 	var found := Cheats.find(GameState.session, Catalog.data, kind, " ".join(args.slice(1)))
-	var out := PackedStringArray(found.slice(0, FOUND_SHOWN).map(func(e: Dictionary) -> String: return "%s [%s]" % [e["name"], e["id"]]))
+	var out := PackedStringArray(found.slice(0, FOUND_SHOWN).map(Cheats.tag))
 	if found.size() > FOUND_SHOWN:
 		out.append("…и ещё %d" % (found.size() - FOUND_SHOWN))
 	return "\n".join(out) if not out.is_empty() else "ничего не найдено"
@@ -438,7 +432,7 @@ func complete(line: String) -> Dictionary:
 	var found := Cheats.find(GameState.session, Catalog.data, kind, " ".join(args), HINTS_SHOWN)
 	if found.is_empty():
 		return none
-	var hints := PackedStringArray(found.map(func(e: Dictionary) -> String: return "%s [%s]" % [e["name"], e["id"]]))
+	var hints := PackedStringArray(found.map(Cheats.tag))
 	return {"hints": hints, "line": " ".join(head + PackedStringArray([str(found[0]["id"])]) + tail)}
 
 
@@ -447,11 +441,8 @@ func _complete_at(line: String, parts: PackedStringArray) -> Dictionary:
 	if not GameState.has_session():
 		return {"hints": PackedStringArray(), "line": line}
 	if parts.size() == 1 and not line.ends_with(" "):
-		var q := parts[0].trim_prefix("@").to_lower()
-		var hit := Cheats.units(GameState.session, Catalog.data).filter(func(u: Dictionary) -> bool:
-			return str(u["id"]).to_lower().begins_with(q) or str(u["name"]).to_lower().replace(" ", "").begins_with(q))
-		return {"hints": PackedStringArray(hit.map(func(u: Dictionary) -> String: return "%s [@%s]" % [u["name"], u["id"]])),
-			"line": "@%s " % hit[0]["id"] if not hit.is_empty() else line}
+		var hit := Cheats.units_like(GameState.session, Catalog.data, parts[0])
+		return {"hints": PackedStringArray(hit.map(Cheats.tag)), "line": "@%s " % hit[0]["id"] if not hit.is_empty() else line}
 	var rest := line.strip_edges(true, false).trim_prefix(parts[0]).strip_edges(true, false)
 	var inner := complete(rest)
 	return {"hints": inner["hints"], "line": "%s %s" % [parts[0], inner["line"]]}
