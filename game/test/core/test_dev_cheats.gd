@@ -224,3 +224,29 @@ func test_hit_rolls_an_attack_through_the_engine_road() -> void:
 	assert_str(Dev.run("hit fire")).contains("hit <кубики>")
 	g["hp"] = 3
 	assert_str(Dev.run("@гоблин hit 5d1 crit")).contains("повержен")
+
+
+## Damage with no attack roll on the one road (Sheet.damage, Harm.take): out of a fight and in one, the hero and anybody.
+func test_dmg_out_of_a_fight_and_in_one() -> void:
+	var c := s.character
+	var hp := int(c["hp"])
+	var out := Dev.run("dmg 3d1 огонь")
+	assert_str(out).contains("урон консоли")
+	assert_int(hp - int(c["hp"])).is_equal(3)
+	Dev.run("immune fire")
+	assert_str(Dev.run("dmg 3d1 fire")).contains("−0 HP")
+	assert_int(hp - int(c["hp"])).is_equal(3)
+	assert_str(Dev.run("dmg 2d1 cold crit")).contains("×2 (крит)")
+	assert_int(hp - int(c["hp"])).is_equal(7)
+	assert_str(Dev.run("dmg 999d1 cold")).contains("Без сознания")  # out of a fight the hero is knocked out, as by a trap
+	assert_int(c["hp"]).is_equal(1)
+	GameState.busy_turn = ""
+	var npc := str(s.npcs_here(Catalog.data["world"], s.room_id)[0])
+	var top := Sheet.max_hp(s, Catalog.data, Sheet.who(s, Catalog.data, npc))
+	assert_str(Dev.run("@%s dmg 2d1 piercing" % npc)).contains("HP %d/%d" % [top - 2, top])  # its template's count, less the blow
+	TestUtils.fight(s, Catalog.data, [{"monster": "goblin", "col": 1}])
+	var g := CombatRules.fighter(s, TestUtils.foe(s, 1))
+	assert_str(Dev.run("@гоблин dmg 2d1 fire")).contains("HP %d/%d" % [int(g["max_hp"]) - 2, int(g["max_hp"])])
+	assert_str(Dev.run("@гоблин dmg 99d1 fire")).contains("повержен")
+	assert_str(Dev.run("@гоблин dmg 1d1")).contains("уже лежит")
+	assert_str(Dev.run("dmg огонь")).contains("dmg <кубики>")

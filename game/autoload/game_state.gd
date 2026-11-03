@@ -692,6 +692,14 @@ func fight_lines(lines: Array[String]) -> void:
 		_combat_continue()
 
 
+## Damage of the engine out of a fight made beside the buttons (the dev console's `dmg`): its lines into the chat; the hero
+## at 0 HP is knocked out as by a trap, and the master is told.
+func harm_lines(lines: Array[String]) -> void:
+	if session == null or _trap_downed(lines):
+		return
+	_effect_lines(lines)
+
+
 func _combat_log(lines: Array[String]) -> void:
 	if lines.is_empty() or not CombatRules.active(session):
 		return

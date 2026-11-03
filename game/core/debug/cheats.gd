@@ -17,6 +17,9 @@ static var EXHAUSTION_STEP := RegEx.create_from_string("^exhaustion_\\d+$")
 ## The console's blow (`hit`): its name in the lines, the to-hit bonus without `+N`, the type without one, a reach and a range
 ## past any map so the distance gives it nothing.
 const STRIKE := {"name": "удар консоли", "to_hit": 5, "type": "bludgeoning", "reach": 999, "range": 9999}
+const HIT_USAGE := "hit <кубики> [тип урона] [+атака] [adv|dis] [crit] [magic] [silver] [ranged] [@кто бьёт]"
+const DMG_USAGE := "dmg <кубики> [тип урона] [crit] [magic] [silver]"
+const DMG_NAME := "урон консоли"
 ## The words of `hit` → the flag of its spec.
 const STRIKE_WORDS := {"adv": "adv", "преим": "adv", "преимущество": "adv", "dis": "dis", "помеха": "dis", "crit": "crit", "крит": "crit",
 	"magic": "magical", "магия": "magical", "silver": "silvered", "серебро": "silvered", "ranged": "ranged", "выстрел": "ranged"}
@@ -192,7 +195,7 @@ static func condition(s: GameSession, data: Dictionary, who: String, cond: Strin
 
 ## The words of `hit` (after the target, without the striker's `@`): the dice, the damage type, `+N` to hit, the forced
 ## advantage or disadvantage, a critical hit, a magical or silvered blow, a shot. {spec} or {reason}.
-static func strike_spec(s: GameSession, data: Dictionary, words: PackedStringArray) -> Dictionary:
+static func strike_spec(s: GameSession, data: Dictionary, words: PackedStringArray, usage: String = HIT_USAGE) -> Dictionary:
 	var spec := {"dice": "", "type": STRIKE["type"], "to_hit": int(STRIKE["to_hit"]), "adv": false, "dis": false, "crit": false,
 		"magical": false, "silvered": false, "ranged": false}
 	var rest := PackedStringArray()
@@ -208,13 +211,27 @@ static func strike_spec(s: GameSession, data: Dictionary, words: PackedStringArr
 		else:
 			rest.append(w)
 	if str(spec["dice"]).is_empty():
-		return {"reason": "hit <кубики> [тип урона] [+атака] [adv|dis] [crit] [magic] [silver] [ranged] [@кто бьёт]"}
+		return {"reason": usage}
 	if not rest.is_empty():
 		var r := resolve(s, data, "damage", " ".join(rest))
 		if r.has("reason"):
 			return r
 		spec["type"] = str(r["id"])
 	return {"spec": spec}
+
+
+## Damage of a spec to `who` (an id) without an attack roll, as a trap or the master's damage lays it: the dice (twice with
+## `crit`), the target's defenses by Sheet.damage, then Harm.take — in a fight or out of it, the hero or anybody. Lines.
+static func harm(s: GameSession, data: Dictionary, who: String, spec: Dictionary) -> Array[String]:
+	var w := Sheet.own(s, who)
+	var dtype := str(spec["type"])
+	var rolled := CombatRules.roll_dice(s.rng, str(spec["dice"]), bool(spec["crit"]))
+	var adj := Sheet.damage(s, data, w, dtype, rolled, bool(spec["magical"]), bool(spec["silvered"]))
+	var lines: Array[String] = ["%s: %s%s = %d %s → %s −%d HP%s" % [DMG_NAME, str(spec["dice"]).replace("d", "к"), " ×2 (крит)" if bool(spec["crit"]) else "",
+		rolled, data["misc"]["damage_types"].get(dtype, dtype), Sheet.holder(s, w).get("name", WorldView.new(data["world"]).npc_name(who)), int(adj["damage"]),
+		" (%s)" % adj["note"] if not str(adj["note"]).is_empty() else ""]]
+	Harm.take(s, data, w, int(adj["damage"]), lines, dtype, bool(spec["crit"]), false)
+	return lines
 
 
 ## The blow of a spec for Attack.swing: a roll of its own with no weapon nor class behind it, at any distance; a critical
