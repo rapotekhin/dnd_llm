@@ -67,6 +67,16 @@ func run() -> void:
 		await frames(3)
 	node("EventBus").message.disconnect(hear)
 	step("the bow back in the set", str(CharacterRules.stowed(c)["main_hand"]) == "longbow", "%s %s" % [str(CharacterRules.stowed(c)), str(said)])
+	# v0.8.4.25.1: the one sword is never in both sets — to the set put away it leaves the hands, and back
+	c["inventory"][sword] = 1
+	var one := find(screen(), "EquipStowed_main_hand_" + sword)
+	if step("the sword may go to the set put away", one != null and not (one as Button).disabled):
+		await press(one)
+		await frames(3)
+		step("the one sword left the hands", str(CharacterRules.stowed(c)["main_hand"]) == sword and str(c["equipped"]["main_hand"]).is_empty() and CharacterRules.held_copies(c, sword) == 1, "%s / %s" % [str(c["equipped"]), str(CharacterRules.stowed(c))])
+		step("back to the hands it leaves the set", gs.equip(sword, "main_hand").is_empty() and str(c["equipped"]["main_hand"]) == sword and str(CharacterRules.stowed(c)["main_hand"]).is_empty() and CharacterRules.held_copies(c, sword) == 1, "%s / %s" % [str(c["equipped"]), str(CharacterRules.stowed(c))])
+		gs.equip("longbow", "main_hand", false, true)
+		await frames(3)
 	await press(find(screen(), "SwapWeapons"))
 	await frames(3)
 	step("the sheet's button swaps", str(c["equipped"]["main_hand"]) == "longbow")
