@@ -60,15 +60,41 @@ func test_only_a_bow_is_in_hand_when_there_is_no_blade() -> void:
 	assert_str(str(c["equipped"]["main_hand"])).is_equal("longbow")
 
 
-func test_the_kind_in_hand_follows_what_is_held() -> void:
+func test_the_kind_of_a_set_follows_what_it_holds() -> void:
 	var s := _hero()
 	_armed(s)
-	assert_str(CharacterRules.active_kind(s.character, data, s.items)).is_equal("melee")
-	assert_bool(CharacterRules.goes_stowed(s.character, data, s.items, "longbow")).is_true()
-	assert_bool(CharacterRules.goes_stowed(s.character, data, s.items, "longsword")).is_false()
+	assert_str(CharacterRules.hands_kind(s.character["equipped"], data, s.items)).is_equal("melee")
+	assert_str(CharacterRules.hands_kind(CharacterRules.stowed(s.character), data, s.items)).is_equal("ranged")
 	CharacterRules.swap_hands(s.character)
-	assert_str(CharacterRules.active_kind(s.character, data, s.items)).is_equal("ranged")
-	assert_bool(CharacterRules.goes_stowed(s.character, data, s.items, "shield")).is_true()
+	assert_str(CharacterRules.hands_kind(s.character["equipped"], data, s.items)).is_equal("ranged")
+
+
+## v0.8.4.24.1: either set takes any weapon — a second blade and a shield beside it in the set put away, a bow in hand.
+func test_either_set_takes_any_weapon() -> void:
+	var s := _hero()
+	_armed(s)
+	var c := s.character
+	c["inventory"]["dagger"] = 2
+	c["inventory"]["shield"] = 2
+	assert_str(CharacterRules.can_equip(c, data, s.items, "dagger", "off_hand", true)).is_equal("EQUIP_HANDS_BUSY")  # the bow holds both
+	c["stowed"] = {"main_hand": "", "off_hand": "", "shield": ""}
+	for slot: String in ["main_hand", "off_hand"]:
+		assert_str(CharacterRules.can_equip(c, data, s.items, "dagger", slot, true)).is_empty()
+	CharacterRules.put_stowed(c, data, s.items, "dagger", "main_hand")
+	CharacterRules.put_stowed(c, data, s.items, "dagger", "off_hand")
+	assert_str(str(CharacterRules.stowed(c)["main_hand"])).is_equal("dagger")
+	assert_str(str(CharacterRules.stowed(c)["off_hand"])).is_equal("dagger")
+	assert_str(str(c["equipped"]["main_hand"])).is_equal("longsword")
+	c["stowed"] = {"main_hand": "longsword", "off_hand": "", "shield": ""}
+	c["equipped"]["shield"] = ""
+	assert_str(CharacterRules.can_equip(c, data, s.items, "shield", "shield", true)).is_empty()
+	CharacterRules.put_stowed(c, data, s.items, "shield", "shield")
+	assert_str(CharacterRules.can_equip(c, data, s.items, "longbow", "main_hand")).is_empty()  # a bow straight to the hands
+	c["equipped"]["main_hand"] = "longbow"
+	CharacterRules.swap_hands(c)
+	assert_str(str(c["equipped"]["main_hand"])).is_equal("longsword")
+	assert_str(str(c["equipped"]["shield"])).is_equal("shield")
+	assert_str(str(CharacterRules.stowed(c)["main_hand"])).is_equal("longbow")
 
 
 func test_a_swap_changes_the_hands_and_the_armour_class() -> void:
@@ -173,9 +199,9 @@ func test_a_row_is_judged_by_its_own_hands() -> void:
 	_armed(s)
 	s.character["inventory"]["crossbow_hand"] = 2
 	s.character["stowed"] = {"main_hand": "crossbow_hand"}
-	assert_str(CharacterRules.can_equip(s.character, data, s.items, "crossbow_hand", "off_hand")).is_empty()  # the sword's shield is no bother
+	assert_str(CharacterRules.can_equip(s.character, data, s.items, "crossbow_hand", "off_hand", true)).is_empty()  # the sword's shield is no bother
 	s.character["stowed"] = {"main_hand": "longbow"}
-	assert_str(CharacterRules.can_equip(s.character, data, s.items, "crossbow_hand", "off_hand")).is_equal("EQUIP_HANDS_BUSY")
+	assert_str(CharacterRules.can_equip(s.character, data, s.items, "crossbow_hand", "off_hand", true)).is_equal("EQUIP_HANDS_BUSY")
 
 
 func test_a_two_handed_weapon_empties_its_own_row() -> void:

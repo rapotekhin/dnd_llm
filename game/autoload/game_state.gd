@@ -2712,7 +2712,7 @@ func equip(item_id: String, slot: String, both: bool = false, spare: bool = fals
 	if not _idle():
 		return "EQUIP_BUSY"
 	var c := session.character
-	if CharacterRules.HANDS.has(slot) and (spare or CharacterRules.goes_stowed(c, Catalog.data, session.items, item_id)):
+	if CharacterRules.HANDS.has(slot) and spare:
 		return _equip_stowed(item_id, slot)
 	var freed := CharacterRules.hands_freed(c, Catalog.data, session.items, item_id, slot, both)
 	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot) or freed.has("shield")) and session.mode == GameSession.MODE_COMBAT:

@@ -921,8 +921,8 @@ func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		return {"reason": "в бою кольца, плащи и сапоги не меняют — на это уходит время"}
 	if (slot == "armor" or slot == "shield") and CombatRules.active(s):
 		return {"reason": "в бою %s не сменить — на это уходят минуты или целое действие" % ("доспех" if slot == "armor" else "щит")}
-	if not id.is_empty() and CharacterRules.HANDS.has(slot) and int(c.get("inventory", {}).get(id, 0)) > 0 and CharacterRules.goes_stowed(c, data, s.items, id):
-		return _plan_other_set(s, data, id, slot)
+	if not id.is_empty() and CharacterRules.HANDS.has(slot) and CharacterRules.stowed(c).values().has(id) and not eq.values().has(id):
+		return _plan_other_set(s, data, id, slot)  # a weapon of the set put away: that set comes to hand
 	if CombatRules.active(s) and not id.is_empty():  # drawing a weapon: free once a turn, then the action (5e)
 		var econ := CombatRules.economy(s)
 		if bool(econ.get("object", false)) and int(econ.get("action", 0)) <= 0:
@@ -949,7 +949,7 @@ func _plan_other_set(s: GameSession, data: Dictionary, id: String, slot: String)
 		if ItemRules.held_by_curse(c, data, s.items, str(c.get("equipped", {}).get(sl, ""))):
 			return {"reason": "%s проклят и не снимается — только «Снятие проклятия»" % ItemRules.display_name(data["items"], s.items, str(c["equipped"][sl]))}
 	var probe := c.duplicate(true)
-	CharacterRules.swap_hands(probe, data, s.items)
+	CharacterRules.swap_hands(probe)
 	if str(probe["equipped"].get(slot, "")) == id:
 		return {"plan": {"slots": [], "item_id": id, "swap": true}, "summary": "В руках: %s" % ItemRules.display_name(data["items"], s.items, id)}
 	var why := CharacterRules.can_equip(probe, data, s.items, id, slot)
@@ -1413,7 +1413,7 @@ func _do_flag(s: GameSession, plan: Dictionary) -> void:
 func _do_equip(s: GameSession, plan: Dictionary) -> void:
 	var before: Dictionary = (s.character["equipped"] as Dictionary).duplicate()
 	if bool(plan.get("swap", false)):
-		CharacterRules.swap_hands(s.character, _data, s.items)
+		CharacterRules.swap_hands(s.character)
 	if bool(plan.get("stowed", false)):
 		s.character["stowed"] = {}
 	for sl: Variant in plan["slots"]:

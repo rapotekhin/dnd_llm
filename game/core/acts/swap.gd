@@ -35,7 +35,7 @@ func go(s: GameSession, data: Dictionary, f: Dictionary, to: String = "", how: D
 
 
 func run(s: GameSession, data: Dictionary, _f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
-	CharacterRules.swap_hands(s.character, data, s.items)
+	CharacterRules.swap_hands(s.character)
 	CharacterRules.refresh(s.character, data, s.items)
 	if not CombatRules.active(s):
 		return []

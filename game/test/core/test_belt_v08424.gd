@@ -107,7 +107,6 @@ func _melee(s: GameSession) -> void:
 	c["equipped"]["off_hand"] = ""
 	c["equipped"]["shield"] = ""
 	c["stowed"] = {"main_hand": "", "off_hand": "", "shield": ""}
-	c.erase("wield")
 	CharacterRules.refresh(c, data, s.items)
 
 
@@ -115,18 +114,14 @@ func test_a_javelin_lies_in_either_set() -> void:
 	var s := _hero("fighter_aira")
 	_melee(s)
 	var c := s.character
-	var jav := ItemRules.def_of(data["items"], s.items, "javelin")
-	assert_bool(CharacterRules.set_kinds(jav).has("ranged")).is_true()
-	assert_bool(CharacterRules.goes_stowed(c, data, s.items, "javelin")).is_false()  # the hands take it by default
-	assert_bool(CharacterRules.fits_stowed(c, data, s.items, "javelin")).is_true()
+	assert_str(CharacterRules.can_equip(c, data, s.items, "javelin", "main_hand")).is_empty()  # the hands take it
 	assert_str(CharacterRules.can_equip(c, data, s.items, "javelin", "main_hand", true)).is_empty()
 	CharacterRules.put_stowed(c, data, s.items, "javelin", "main_hand")
 	assert_str(str(CharacterRules.stowed(c)["main_hand"])).is_equal("javelin")
 	assert_str(str(c["equipped"]["main_hand"])).is_equal("longsword")
-	assert_str(CharacterRules.active_kind(c, data, s.items)).is_equal("melee")  # the javelin does not make the rows change
-	CharacterRules.swap_hands(c, data, s.items)
+	CharacterRules.swap_hands(c)
 	assert_str(str(c["equipped"]["main_hand"])).is_equal("javelin")
-	assert_str(CharacterRules.active_kind(c, data, s.items)).is_equal("ranged")
+	assert_str(str(CharacterRules.stowed(c)["main_hand"])).is_equal("longsword")
 
 
 func test_one_javelin_moves_between_the_sets() -> void:
@@ -144,7 +139,6 @@ func test_a_crossbow_goes_to_the_set_put_away() -> void:
 	var s := _hero("fighter_aira")
 	_melee(s)
 	var c := s.character
-	assert_bool(CharacterRules.goes_stowed(c, data, s.items, "crossbow_light")).is_true()
 	assert_str(CharacterRules.can_equip(c, data, s.items, "crossbow_light", "main_hand", true)).is_empty()
 	CharacterRules.put_stowed(c, data, s.items, "crossbow_light", "main_hand")
 	assert_str(str(CharacterRules.stowed(c)["main_hand"])).is_equal("crossbow_light")

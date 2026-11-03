@@ -884,7 +884,7 @@ SLOT_MAIN_HAND,Основная рука
 SLOT_N,Слот {n}
 SLOT_OFF_HAND,Вторая рука
 SLOT_SHIELD,Щит
-SLOT_STOWED,Запасной набор: {set}
+SLOT_STOWED,Запасной набор
 SLOT_TURNS,ходов: {n}
 SNEAK_BUSY,Сейчас нельзя
 SNEAK_NOTICED,"Здесь вас уже заметили — красться не выйдет, пока не уйдёте"
