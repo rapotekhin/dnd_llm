@@ -160,7 +160,8 @@ async def _stub_prepare(session: Session, params: TurnRequestParams, usage: Usag
         "engine.validate", EngineValidateParams(turn_id=params.turn_id, effect=effect)))
     if not v.accepted or not v.effect_id:
         return TurnResult(turn_id=params.turn_id, narration=f"Не подготовлено: {v.reason}", usage=usage)
-    return TurnResult(turn_id=params.turn_id, narration="Подготовлено.", effect_ids=[v.effect_id], usage=usage)
+    told = "Комната ждёт: стол, скамья и **заготовленные** вещи на своих местах." if head["subject"] == "furnish" else "Подготовлено."
+    return TurnResult(turn_id=params.turn_id, narration=told, effect_ids=[v.effect_id], usage=usage)
 
 
 STUB_EFFECTS: list[Effect | None] = [  # by turn number; the first turns stay plain (protocol tests rely on that)

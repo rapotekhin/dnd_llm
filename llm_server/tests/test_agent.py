@@ -657,6 +657,7 @@ def test_a_prepare_turn_readies_only_its_subject_with_its_own_tools(data_dir):
     msg, calls, _ = play(data_dir, watched, kind="prepare", input=frame, background=True)
     assert seen["tools"] == ["propose_effect"]
     assert "готовишь" in seen["system"] and "Обставить комнату" in seen["system"]
+    assert "описание комнаты для того, кто в неё войдёт" in seen["system"]  # v0.8.4.25.3: told ahead with its things
     assert last_tool_text(fn.state["prompts"][1]).startswith("Отказ: в этой заготовке — только furnish")
     assert [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"] == ["furnish"]
     assert msg["result"]["effect_ids"] == ["e-1"] and msg["result"]["narration"] == "Подготовлено."

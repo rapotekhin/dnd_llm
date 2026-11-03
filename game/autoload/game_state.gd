@@ -2131,7 +2131,28 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 		_quiet_lines([again] as Array[String])
 		return
 	session.described[room_id] = session.day
-	_request("enter", "\n".join(lines.slice(1)))
+	if not _enter_ready(lines):
+		_request("enter", "\n".join(lines.slice(1)))
+
+
+## The room's description readied with its furnishing (v0.8.4.25.3): told at once, without the master, when nothing
+## happened on the way and the hour, the weather and the people are as they were; a furnishing the world refuses now
+## leaves the entry to the master.
+func _enter_ready(lines: Array[String]) -> bool:
+	var s := session
+	var text := PrepareRules.told(s, Catalog.data, s.room_id) if lines.size() <= 1 else ""
+	if text.is_empty() or not PropRules.needs_furnish(s, s.room_id):  # told of the things it lays, not of others
+		return false
+	_lay_furnishing(s)
+	if PropRules.needs_furnish(s, s.room_id):
+		return false
+	_add(GameSession.dm_entry(text, s.next_turn_id()))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	_maybe_summarize_location()
+	_prepare()
+	_after_turn(s, "enter")
+	return true
 
 
 ## The engine side of a step into `room_id` (no master, no fight): sneaking past people, time, passive Perception,
@@ -3085,7 +3106,7 @@ func _prepare_one(s: GameSession, job: Dictionary) -> void:
 			_ahead_stop = s.day
 		_log("Заготовка %s %s: %s" % [job["kind"], job["key"], call.reason()])
 		return
-	PrepareRules.keep(s, Catalog.data, job, effects.kept(turn_id, call.result.get("effect_ids", [])))
+	PrepareRules.keep(s, Catalog.data, job, effects.kept(turn_id, call.result.get("effect_ids", [])), str(call.result.get("narration", "")))
 	_log("Заготовка %s %s: %s" % [job["kind"], job["key"], str(call.result.get("narration", ""))])
 	if not is_busy():
 		_prepare()

@@ -95,6 +95,27 @@ func test_a_furnishing_readied_ahead_is_laid_when_the_hero_enters() -> void:
 	assert_dict(PrepareRules.furnishing(s, data, room)).is_empty()  # used once
 
 
+## v0.8.4.25.3: the room's description is readied with its furnishing for the hour, the weather and the people it saw.
+func test_a_room_is_told_ahead_for_its_moment() -> void:
+	var room := PrepareRules.around(s, data, 1)[0]
+	assert_str(PrepareRules.frame(s, data, {"kind": "furnish", "room": room})).contains("Сейчас здесь:").contains("Время: %s" % TimeRules.part_name(s, data))
+	var job := {"kind": "furnish", "key": room, "room": room}
+	_ready_ahead(job, [{"kind": "furnish", "props": [{"name": "Лавка", "body": "bench"}]}])
+	assert_str(PrepareRules.told(s, data, room)).is_empty()  # kept without words: the master tells it
+	PrepareRules.keep(s, data, job, [{"kind": "furnish", "props": [{"name": "Лавка", "body": "bench"}]}], "  Тихо, у стены **лавка**. ")
+	assert_str(PrepareRules.told(s, data, room)).is_equal("Тихо, у стены **лавка**.")
+	var minute := s.minute
+	var again := func() -> bool: return PrepareRules.jobs(s, data).any(func(j: Dictionary) -> bool: return j["kind"] == "furnish" and j["room"] == room)
+	assert_bool(again.call()).is_false()
+	s.minute = (minute + 12 * 60) % (24 * 60)  # another part of the day
+	assert_str(PrepareRules.told(s, data, room)).is_empty()
+	assert_bool(again.call()).is_true()  # readied again for the new hour
+	s.minute = minute
+	assert_str(PrepareRules.told(s, data, room)).is_not_empty()
+	data["world"]["rooms"][room]["description"] = "Пепелище: здесь был пожар."
+	assert_str(PrepareRules.told(s, data, room)).is_empty()
+
+
 func test_a_furnishing_of_a_changed_room_is_thrown_away() -> void:
 	var room := PrepareRules.around(s, data, 1)[0]
 	_ready_ahead({"kind": "furnish", "key": room, "room": room}, [{"kind": "furnish", "props": [{"name": "Лавка"}]}])

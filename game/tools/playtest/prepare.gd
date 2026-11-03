@@ -2,7 +2,8 @@ extends "res://tools/playtest/playtest_base.gd"
 ## The master readies ahead (python tools/godot_playtest.py --scenario prepare), v0.8.4.25: on the stub master the second
 ## line furnishes the rooms around the tavern hall while the hero stands; walked into one, its things are those readied,
 ## laid before the entry turn; a board's orders readied from afar go up when it is read, without a master's turn; Bruno's
-## quest readied ahead is given by «Есть дело?» in his own words.
+## quest readied ahead is given by «Есть дело?» in his own words. v0.8.4.25.3: the room is told by the description readied
+## with its things, without an entry turn.
 
 const HALL := "brod-tavern-hall"
 const BRUNO := "npc_innkeeper"
@@ -34,7 +35,14 @@ func run() -> void:
 	var readied: Array = rooms.call()[next]["effect"]["props"].map(func(p: Dictionary) -> String: return p["name"])
 	step("nothing laid before the hero comes", PropRules.needs_furnish(s, next))
 	await wait_until(func() -> bool: return gs._ahead.is_empty(), 60.0)
+	var turns := []
+	var started := func(id: String) -> void: turns.append(id)
+	node("EventBus").turn_started.connect(started)
 	await _go(gs, next)
+	node("EventBus").turn_started.disconnect(started)
+	var told: Dictionary = s.chat[s.chat.size() - 1]
+	step("the room told at once, readied with its things", turns.is_empty() and str(told["kind"]) == GameSession.KIND_DM and str(told["text"]).contains("заготовленные"),
+		"%s %s" % [turns, told])  # v0.8.4.25.3
 	var names: Array = PropRules.room_props(s, next).map(func(p: Dictionary) -> String: return p["name"])
 	step("the room has the things readied for it", s.room_id == next and names == readied, "%s / %s" % [names, readied])
 	step("the stash is used up", not rooms.call().has(next))

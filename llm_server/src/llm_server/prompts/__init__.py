@@ -344,8 +344,11 @@ def quest_act_prompt(snap: Snapshot) -> str:
 def prepare_prompt(snap: Snapshot, subject: str, room_left: int = 3) -> str:
     """The second line's prompt (0.106.0): the master readies ahead what the hero will meet — a room's furnishing, a
     board's orders, a quest of a person around; the engine's frame is the input, the hero is not in it."""
+    character = snap.character
     return render("prepare.md.j2", subject=subject, room_left=room_left, world=snap.world,
-                  quests_rules=topic_text("quests") if subject != "furnish" else "")
+                  quests_rules=topic_text("quests") if subject != "furnish" else "",
+                  tone=snap.world.tone if snap.world is not None and snap.world.tone else DEFAULT_TONE,
+                  gender_rule=gender_rule(character.gender if character else "other"))
 
 
 def short_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DEFAULT_TONE) -> str:

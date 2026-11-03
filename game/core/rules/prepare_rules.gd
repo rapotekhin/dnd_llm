@@ -52,8 +52,8 @@ static func fingerprint(s: GameSession, data: Dictionary, room: String) -> Strin
 	return str(hash([r.get("name", ""), r.get("description", ""), SceneRules.tags(s, data["world"], room), r.get("npcs", [])]))
 
 
-## What to ready now, the most wanted first: the next act of a quest, then the rooms by distance, the boards, the people
-## around. [{kind: act|furnish|board|quest, key, …}] without what is readied already or asked on the line (`busy`).
+## What to ready now, the most wanted first: the next act of a quest, then the rooms by distance (again when the hour,
+## the weather or the people of one changed: its description is told for them), the boards, the people around. [{kind: act|furnish|board|quest, key, …}] without what is readied already or asked on the line (`busy`).
 static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if not on(data) or CombatRules.active(s):
@@ -67,8 +67,9 @@ static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Di
 				out.append({"kind": "act", "key": key, "quest": qid})
 	var rooms := around(s, data, int(c.get("depth", 2)))
 	for room: String in rooms:
+		var rec: Dictionary = part(s, ROOMS).get(room, {})
 		if PropRules.needs_furnish(s, room) and not busy.has("furnish:" + room) \
-				and str(part(s, ROOMS).get(room, {}).get("ver", "")) != fingerprint(s, data, room):
+				and (str(rec.get("ver", "")) != fingerprint(s, data, room) or str(rec.get("moment", "")) != moment(s, data, room)):
 			out.append({"kind": "furnish", "key": room, "room": room})
 	for room: String in [s.room_id] + rooms:
 		for p: Dictionary in PropRules.room_props(s, room):
@@ -150,6 +151,10 @@ static func frame(s: GameSession, data: Dictionary, job: Dictionary) -> String:
 			lines.append("Вид места: %s; теги: %s; %s." % [LayoutRules.kind_of(v, data, room), ", ".join(SceneRules.tags(s, data["world"], room)),
 				"под крышей" if SceneRules.indoor(s, data["world"], room) else "под открытым небом"])
 			lines.append("Люди комнаты: %s." % _people(s, data, PropRules.owners(s, data, room)))
+			lines.append("Сейчас здесь: %s." % _people(s, data, s.npcs_here(data["world"], room)))
+			var weather := WeatherRules.at(s, data, v.location_id(room))
+			lines.append("Время: %s, %s; погода: %s." % [TimeRules.part_name(s, data), TimeRules.clock(s),
+				WeatherRules.kind_name(data, weather) if not weather.is_empty() else "без примет"])
 			var marks := MapSpots.words(s, data, room)
 			if not marks.is_empty():
 				lines.append("Места комнаты: %s." % ", ".join(marks))
@@ -199,13 +204,16 @@ static func ahead_of(job: Dictionary) -> Dictionary:
 	return {"at": str(job["room"])}
 
 
-## What came back from a job's turn is kept: its effects as the master proposed them.
-static func keep(s: GameSession, data: Dictionary, job: Dictionary, effects: Array[Dictionary]) -> void:
+## What came back from a job's turn is kept: its effects as the master proposed them; a furnishing with the room's
+## description (`told`) and the moment it was written for.
+static func keep(s: GameSession, data: Dictionary, job: Dictionary, effects: Array[Dictionary], told := "") -> void:
 	if effects.is_empty():
 		return
 	match str(job["kind"]):
 		"furnish":
-			part(s, ROOMS)[str(job["room"])] = {"effect": effects[0], "ver": fingerprint(s, data, str(job["room"]))}
+			var room := str(job["room"])
+			part(s, ROOMS)[room] = {"effect": effects[0], "ver": fingerprint(s, data, room), "told": told.strip_edges(),
+				"moment": moment(s, data, room)}
 		"board":
 			part(s, BOARDS)[str(job["key"])] = effects
 		"quest":
@@ -213,6 +221,22 @@ static func keep(s: GameSession, data: Dictionary, job: Dictionary, effects: Arr
 			TimeRules.count(s, s.prepared, "quests_today")
 		"act":
 			part(s, ACTS)[str(job["key"])] = effects[0]
+
+
+## What a room's readied description stands on beside its furnishing: the part of the day, the weather and who is there.
+static func moment(s: GameSession, data: Dictionary, room: String) -> String:
+	var here := s.npcs_here(data["world"], room).filter(func(n: String) -> bool: return not Being.follows(s, n))  # they come with the hero
+	here.sort()
+	return str(hash([TimeRules.part(s, data), WeatherRules.at(s, data, WorldView.new(data["world"]).location_id(room)), here]))
+
+
+## The description readied with the furnishing of `room`, while the room, the hour, the weather and its people are as
+## they were; "" — the master's entry turn tells it.
+static func told(s: GameSession, data: Dictionary, room: String) -> String:
+	var rec: Dictionary = part(s, ROOMS).get(room, {})
+	if rec.is_empty() or str(rec.get("ver", "")) != fingerprint(s, data, room) or str(rec.get("moment", "")) != moment(s, data, room):
+		return ""
+	return str(rec.get("told", ""))
 
 
 ## The furnishing readied for `room`, if the room is still as it was; {} — none (a stale one is thrown away).
