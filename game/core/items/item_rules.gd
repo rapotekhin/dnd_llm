@@ -626,6 +626,11 @@ static func _generated_use(items_data: Dictionary, item: Dictionary, spells: Dic
 
 ## What using an item does (rules.json `consumables`): {"heal": [n, sides, bonus], "remove": [conditions]}; {} = not usable.
 ## `session_items` — the generated things of the game: a thing the master made has its own `use` too (v0.7.18).
+## A thrown thing that lands on a square (its `throw`): oil, fire, caltrops strewn (v0.8.4.27).
+static func spills(throw: Dictionary) -> bool:
+	return throw.has("oiled") or throw.has("burning") or throw.has("strew")
+
+
 static func consumable(data: Dictionary, id: String, session_items: Dictionary = {}) -> Dictionary:
 	id = real_id(id)
 	if id.begins_with("_"):

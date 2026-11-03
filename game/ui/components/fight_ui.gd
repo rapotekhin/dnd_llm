@@ -1159,7 +1159,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			var sp: Dictionary = data["spells"].get(sp_id, {})
 			var item_btn: Button
 			if fx.has("throw"):  # v0.7.12: flasks and the net at a foe
-				var spills: bool = fx["throw"].has("oiled") or fx["throw"].has("burning")  # v0.8.4: a flask goes on a square too
+				var spills := ItemRules.spills(fx["throw"])  # v0.8.4: a flask goes on a square too
 				item_btn = _action(ib, "Item_" + id, label, me, func(t: String) -> String: return GameState.combat_act("throw", t, {"item": id}),
 					func(t: String) -> String: return Acts.one("throw").can(s, data, CombatRules.player(s), t, {"item": id}), func(_t: String) -> Dictionary: return {}, id if spills else "",
 					60 if bool(fx["throw"].get("improvised", false)) else int(fx["throw"].get("range", 15)))

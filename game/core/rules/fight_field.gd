@@ -56,10 +56,15 @@ static func _ends(m: Dictionary, d: Dictionary) -> Array[String]:
 	return [str(m["ids"][int(d["a"])]), str(m["ids"][int(d["b"])])]
 
 
-## A zone of the ground: one kind with the zones of spells.
+## A zone of the ground: one kind with the zones of spells. A row may say its save, what a failed one does (`cond`,
+## `fail`) and when it bites (`on`).
 static func _ground(id: String, row: Dictionary, cells: Array) -> Dictionary:
-	return {"spell": id, "name": str(row["name"]), "shape": {}, "follow": false, "dice": str(row["dice"]), "type": str(row["type"]), "save": "",
-		"on": ["enter", "start"], "dc": 0, "slow": false, "cells": cells}
+	var z := {"spell": id, "name": str(row["name"]), "shape": {}, "follow": false, "dice": str(row.get("dice", "")), "type": str(row.get("type", "")),
+		"save": str(row.get("save", "")), "on": row.get("on", ["enter", "start"]), "dc": int(row.get("dc", 0)), "slow": bool(row.get("slow", false)), "cells": cells}
+	for k: String in ["cond", "fail", "tag"]:
+		if row.has(k):
+			z[k] = row[k]
+	return z
 
 
 static func _block(data: Dictionary, body_id: String, name: String) -> Dictionary:
@@ -118,6 +123,8 @@ static func stepped(s: GameSession, data: Dictionary, f: Dictionary, lines: Arra
 	var before := lines.size()
 	if not flying:
 		lines.append_array(SpellEffects.zone_tick(s, data, f, "enter"))
+	if int(CombatRules.points(s, data, f).get("move", 1)) <= 0:
+		return true  # caltrops: a failed save ends the walk (v0.8.4.27)
 	if hero:
 		return int(s.character.get("hp", 0)) <= 0 or ConditionRules.has(s.character, "prone")
 	return str(f.get("status")) != "active" or (lines.size() > before and CombatRules._has(f, "prone"))
@@ -257,7 +264,7 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, how: String, li
 			WayRules.lock(s, ends[0], ends[1])
 			lines.append("%s запирает дверь на ключ" % c["name"])
 		"door_force":
-			var r := Roll.check(s, data, f, {"what": "Выломать дверь", "skill": "athletics", "dc": _door_dc(s, data, at, d)})
+			var r := Roll.check(s, data, f, {"what": "Выломать дверь", "skill": "athletics", "dc": _door_dc(s, data, at, d), "about": "force"})
 			if bool(r["ok"]):
 				_break_door(s, data, at, d)
 				lines.append("%s выбивает дверь" % c["name"])
@@ -391,7 +398,10 @@ static func _light(s: GameSession, at: Vector2i) -> void:
 
 
 ## A flask broken on a square: oil lies there, alchemist's fire burns at once.
-static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionary, name: String, lines: Array[String]) -> void:
+static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionary, name: String, lines: Array[String], side := "player") -> void:
+	if fx.has("strew"):
+		strew(s, data, at, str(fx["strew"]), side, lines)
+		return
 	if fx.has("burning"):
 		_light(s, at)
 		_sync_fire(s, data)
@@ -403,6 +413,21 @@ static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionar
 	lines.append("%s: масло растекается по клетке" % name)
 	if (s.combat["fires"] as Dictionary).has(FightGrid.tag(at)):
 		kindle(s, data, [at] as Array[Vector2i], lines)
+
+
+## Caltrops or ball bearings strewn from `at` (v0.8.4.27): a zone of the ground by the row of `rules.combat.grid.strewn`,
+## the thrower's side its own. Lines.
+static func strew(s: GameSession, data: Dictionary, at: Vector2i, row_id: String, side: String, lines: Array[String]) -> void:
+	var row: Dictionary = cfg(data)["strewn"][row_id]
+	var cells: Array[Vector2i] = []
+	var g := FightGrid.grid(s, data)
+	for c: Vector2i in FightGrid.body_at(at, int(row.get("span", 1))):
+		if FightGrid.walkable(g, c):
+			cells.append(c)
+	var z := _ground(row_id, row, FightGrid.pack_cells(cells))
+	z["side"] = side
+	(s.combat["zones"] as Array).append(z)
+	lines.append("%s: рассыпаны по клетке — кто войдёт, спасбросок %s Сл %d" % [row["name"], CombatRules.ab_name(str(row["save"])), int(row["dc"])])
 
 
 ## The fires of a round: what stands beside a fire and burns catches, what burnt out goes, a thing with it.

@@ -257,7 +257,9 @@ static func describe(s: GameSession, data: Dictionary, a: String, b: String) -> 
 ## The DC to pick the lock (Sleight of Hand) and to force the door (Athletics); an arcane lock adds its own.
 static func dcs(s: GameSession, data: Dictionary, a: String, b: String) -> Dictionary:
 	var d := def(data, a, b)
-	var out := ThingRules.lock_dcs(data, int(data["rules"]["containers"]["lock_dc"].get(str(d.get("lock", "simple")), 10)), d)
+	var own: Dictionary = s.ways.get(key(a, b), {})
+	var dc := int(own["lock_dc"]) if own.has("lock_dc") else int(data["rules"]["containers"]["lock_dc"].get(str(d.get("lock", "simple")), 10))
+	var out := ThingRules.lock_dcs(data, dc, d)
 	if has_effect(s, a, b, "arcane_lock") and not has_effect(s, a, b, "knocked"):
 		out["pick"] = int(out["pick"]) + int(cfg(data)["arcane_plus"])
 		out["force"] = int(out["force"]) + int(cfg(data)["arcane_plus"])
@@ -282,8 +284,11 @@ static func ways(s: GameSession, data: Dictionary, a: String, b: String) -> Arra
 		out.append({"how": "ask"})
 	if why == "DOOR_LOCKED" and str(d.get("latch", "")) == a:
 		out.append({"how": "latch"})
-	if locks and not str(d.get("key", "")).is_empty() and int(inv.get(str(d["key"]), 0)) > 0 and why != "DOOR_ARCANE":
+	var door_key := key_of(s, data, a, b)
+	if locks and not door_key.is_empty() and int(inv.get(door_key, 0)) > 0 and why != "DOOR_ARCANE":
 		out.append({"how": "key"})
+	if not shut and not solid and not bool(s.ways.get(key(a, b), {}).get("broken", false)) and lock_why(s, data, a, b).is_empty():
+		out.append({"how": "lock"})  # the hero's own lock on its own door, or shut again by its key (v0.8.4.27)
 	if locks and int(inv.get("thieves_tools", 0)) > 0:
 		out.append({"how": "pick"})
 	if shut:
@@ -323,6 +328,37 @@ static func unlock(s: GameSession, data: Dictionary, a: String, b: String) -> vo
 	var d := def(data, a, b)
 	var h := hours(s, data, str(d.get("site", "")))
 	st["unlocked_until"] = int(h["opens"]) if not h.is_empty() else TimeRules.abs_minute(s) + int(cfg(data)["private_open_minutes"]) if d.has("private") else -1
+
+
+## The key that opens the door: the hero's own lock's, else the pack's (v0.8.4.27).
+static func key_of(s: GameSession, data: Dictionary, a: String, b: String) -> String:
+	var own := str(s.ways.get(key(a, b), {}).get("key", ""))
+	return own if not own.is_empty() else str(def(data, a, b).get("key", ""))
+
+
+## "" — the hero may lock this open door now: by the key of its own lock, or hanging its lock on a door into its own
+## place (either side the hero's, `owner` of the place); else why not.
+static func lock_why(s: GameSession, data: Dictionary, a: String, b: String) -> String:
+	var k := key_of(s, data, a, b)
+	if s.ways.get(key(a, b), {}).has("key"):
+		return "" if Thing.count(s.character, k) > 0 else "DOOR_NO_KEY"
+	var w := WorldView.new(data["world"])
+	if not [a, b].any(func(r: String) -> bool: return str(w.inherit(r, "owner", "")) == Life.owner(Being.HERO)):
+		return "DOOR_NOT_YOURS"
+	return "" if not ContainerRules.own_lock(s, data).is_empty() else "DOOR_NO_LOCK"
+
+
+## The hero locks the door (lock_why first): its own lock hung the first time — spent, a key made — then by the key. Lines.
+static func lock_with(s: GameSession, data: Dictionary, a: String, b: String) -> Array[String]:
+	var st := _st(s, a, b)
+	lock(s, a, b)
+	if st.has("key"):
+		return ["Дверь заперта ключом"]
+	var item := ContainerRules.own_lock(s, data)
+	Gear.take(s, data, Being.HERO, item, 1)
+	st["lock_dc"] = ContainerRules.own_lock_dc(data, item)
+	st["key"] = ContainerRules.new_key(s, data, "дверь в «%s»" % WorldView.new(data["world"]).room(b).get("name", b))
+	return ["На дверь повешен ваш замок (Сл %d), ключ у вас" % int(st["lock_dc"])]
 
 
 ## The owner or the hero locks it again.

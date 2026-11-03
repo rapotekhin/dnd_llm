@@ -641,7 +641,7 @@ static func zones(s: GameSession) -> Array:
 static func zone_view(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for z: Dictionary in zones(s):
-		out.append({"name": str(z["name"]), "cells": FightGrid.zone_cells(s, data, z), "hurts": not str(z.get("dice", "")).is_empty()})
+		out.append({"name": str(z["name"]), "cells": FightGrid.zone_cells(s, data, z), "hurts": not str(z.get("dice", "")).is_empty() or z.has("fail") or z.has("cond")})
 	return out
 
 
@@ -865,16 +865,34 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 	var lines: Array[String] = []
 	if str(f.get("status")) != "active" or str(z["save"]).is_empty():
 		return lines
-	var ok := Sheet.saved(s, data, f, str(z["save"]), int(z["dc"]), "magic")
+	var ok := Sheet.saved(s, data, f, str(z["save"]), int(z["dc"]), str(z.get("tag", "magic")))
 	if ok:
 		lines.append("%s: %s — спасбросок %s успех" % [z["name"], f["name"], CombatRules.ab_name(str(z["save"]))])
 		return lines
+	_failed(s, data, z, f, lines)
 	if z.has("cond") and not ConditionRules.has(Sheet.holder(s, f), str(z["cond"])):
 		lines.append_array(CombatRules._add_condition(s, data, f, str(z["cond"]), {"name": str(z["name"]), "by": str(z.get("by", CombatRules.PLAYER))}))
 		lines.append("%s: %s — %s" % [z["name"], f["name"], CombatRules.cond_name(data, str(z["cond"]))])
 	if bool(z.get("retch", false)):
 		f["retching"] = true  # its next start of a turn takes the action and says so (CombatRules._begin_turn)
 	return lines
+
+
+## What else a failed save in a zone does (`fail`, caltrops, v0.8.4.27): damage, a speed until a hit point comes back, the
+## walk stopped.
+static func _failed(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	var bad: Dictionary = z.get("fail", {})
+	if bad.has("dice"):
+		Harm.typed(s, data, f, CombatRules.roll_dice(s.rng, str(bad["dice"])), str(bad["type"]), lines, "%s: −{hp} HP ({words})" % z["name"], false, true, false)
+	var me := Sheet.holder(s, f)
+	if int(bad.get("speed", 0)) != 0 and int(me.get("hp", 0)) > 0:
+		ConditionRules.add_effect(me, {"condition": "", "speed": int(bad["speed"]), "ends": {"hp": int(me["hp"])},
+			"source": {"kind": "engine", "name": str(z["name"])}})
+		lines.append("%s: скорость %d фт, пока не подлечат" % [f["name"], int(bad["speed"])])
+		if Sheet.is_hero(f):
+			CharacterRules.refresh(me, data, s.items)
+	if bool(bad.get("stop", false)):
+		CombatRules.points(s, data, f)["move"] = 0
 
 
 ## `f` stands under Fog Cloud or Darkness: those inside see nothing out, nobody sees in.

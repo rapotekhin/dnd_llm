@@ -141,11 +141,18 @@
 		3
 	],
 	"containers": {
-		"_doc": "Containers (v0.7.18.1, ContainerRules): kinds by a catalog item id or furniture (with `name`) — capacity_lb by 5e (a chest 300 lb, a barrel and a basket by volume, a backpack and a sack 30, a pouch 6, a bag of holding 500 and weightless inside), lockable; lock_dc of a lock by its quality; force_dc_plus — Athletics to break it open.",
+		"_doc": "Containers (v0.7.18.1, ContainerRules): kinds by a catalog item id or furniture (with `name`) — capacity_lb by 5e (a chest 300 lb, a barrel and a basket by volume, a backpack and a sack 30, a pouch 6, a bag of holding 500 and weightless inside), lockable; lock_dc of a lock by its quality; force_dc_plus — Athletics to break it open. v0.8.4.27: `holds` — what goes in, groups of item ids (or any item whose `use` has the key `use`) with how many of the group (`n`): a quiver 20 arrows, a scroll case 10 sheets or scrolls, the efficient quiver its three compartments; `at_hand` — a shot takes its ammunition from it as from the belt (Gear.ammo_left); size `load` — never worn: a chest or a barrel with things goes only on a beast or a cart (`load_why`).",
 		"kinds": {
-			"chest": {"capacity_lb": 300, "lockable": true},
-			"barrel": {"capacity_lb": 150},
-			"basket": {"capacity_lb": 40},
+			"chest": {"capacity_lb": 300, "lockable": true, "size": "load"},
+			"barrel": {"capacity_lb": 150, "size": "load"},
+			"basket": {"capacity_lb": 40, "size": "big"},
+			"quiver": {"capacity_lb": 2, "size": "ammo", "at_hand": true, "holds": [{"ids": ["arrows"], "n": 20}]},
+			"case_crossbow_bolt": {"capacity_lb": 2, "size": "ammo", "at_hand": true, "holds": [{"ids": ["crossbow_bolt"], "n": 20}]},
+			"efficient_quiver": {"capacity_lb": 200, "weightless": true, "size": "ammo", "at_hand": true, "holds": [
+				{"ids": ["arrows", "crossbow_bolt", "sling_bullet", "blowgun_needle"], "n": 60},
+				{"ids": ["javelin", "dart"], "n": 18},
+				{"ids": ["longbow", "shortbow", "quarterstaff", "spear", "pike", "trident", "lance"], "n": 6}]},
+			"case_map_or_scroll": {"capacity_lb": 1, "size": "small", "holds": [{"ids": ["paper_one_sheet", "parchment_one_sheet", "map_local"], "use": "scroll", "n": 10}]},
 			"sack": {"capacity_lb": 30, "size": "big"},
 			"backpack": {"capacity_lb": 30, "size": "big"},
 			"pouch": {"capacity_lb": 6, "size": "small"},
@@ -157,9 +164,12 @@
 		},
 		"_wares_lock": "v0.7.49.4 (the author's finding): a trader's goods are under lock (`lock` — a quality of lock_dc): to steal them the lock is picked or forced first; the trader locks them again — and mends a broken lock — the next day.",
 		"lock_dc": {"simple": 10, "good": 15, "masterwork": 20},
+		"own_locks": {"lock": "good"},
+		"_own_locks": "v0.8.4.27: a lock of the hero's own (`own_locks` — the item and the quality of its lock_dc, the SRD lock — DC 15): hung on a lockable container of the room, open and nobody's or the hero's, or on a door into the hero's own place; the lock is spent, its key is made (a copy of key_iron by the name of what it locks); locked again by that key.",
+		"key_item": "key_iron",
 		"bag_weight_share": 0.5,
-		"worn_bags": {"big": 1, "small": 2},
-		"_bags": "v0.7.22.9 (the author's request): what lies in a bag weighs bag_weight_share of its weight (a bag of holding — nothing); the hero carries at most worn_bags of each size as bags (a backpack or a sack — big, a pouch — small), more of them are plain things; a bag does not go into a bag.",
+		"worn_bags": {"big": 1, "small": 2, "ammo": 2},
+		"_bags": "v0.7.22.9 (the author's request): what lies in a bag weighs bag_weight_share of its weight (a bag of holding — nothing); the hero carries at most worn_bags of each size as bags (a backpack or a sack — big, a pouch or a scroll case — small, a quiver or a bolt case — ammo), more of them are plain things, a size not here is never a bag; a bag does not go into a bag.",
 		"force_dc_plus": 2
 	},
 	"development": {
@@ -2764,7 +2774,7 @@
 	},
 	"belt": {"_doc": "The belt under the doll (v0.8.4.24, as in Pathfinder): its cells hold the things at hand — only they are drunk, read, thrown, and a light there lights the way (ItemRules.belt).", "size": 5},
 	"consumables": {
-		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions]. Thrown in a fight (v0.7.12, the «Предметы» tab, PHB): `throw` — a ranged attack (improvised: no proficiency; range ft) and on a hit `damage` [dice, type] (only to `types` when given), `burning` dice at the start of the foe's turn until a DEX save DC 10 puts it out, `oiled` — the next fire damage to the foe +N, `condition` with an escape (a STR save each turn, `escape_dc`) on foes up to `max_size`. A catalog item may carry its own `use` (potions, the ointment, scrolls, wands).",
+		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions]. Thrown in a fight (v0.7.12, the «Предметы» tab, PHB): `throw` — a ranged attack (improvised: no proficiency; range ft) and on a hit `damage` [dice, type] (only to `types` when given), `burning` dice at the start of the foe's turn until a DEX save DC 10 puts it out, `oiled` — the next fire damage to the foe +N, `condition` with an escape (a STR save each turn, `escape_dc`) on foes up to `max_size`; `strew` — only on a square, a row of `rules.combat.grid.strewn` (caltrops, ball bearings, v0.8.4.27). A catalog item may carry its own `use` (potions, the ointment, scrolls, wands).",
 		"alchemists_fire_flask": {"throw": {"range": 20, "improvised": true, "damage": ["1d4", "fire"], "burning": "1d4"}},
 		"acid_vial": {"throw": {"range": 20, "improvised": true, "damage": ["2d6", "acid"]}},
 		"holy_water": {"throw": {"range": 20, "improvised": true, "damage": ["2d6", "radiant"], "types": ["undead", "fiend"]}},
@@ -2780,6 +2790,8 @@
 		"mushroom_soup": {"meal": {"water": 20}, "adv_tag": "poison", "duration": "eight_hours"},
 		"spoiled_food": {"meal": {}},
 		"net": {"throw": {"range": 15, "weapon": true, "condition": "restrained", "escape_dc": 10, "max_size": "large"}},
+		"caltrops": {"throw": {"range": 5, "strew": "caltrops"}},
+		"ball_bearings_bag_of_1000": {"throw": {"range": 10, "strew": "ball_bearings"}},
 		"potion_of_greater_healing": {
 			"heal": [4, 4, 4]
 		},
@@ -2950,7 +2962,11 @@
 		"favored_enemy": {"parent": "favored_enemy_1_type", "about": "creature_type", "skills": ["survival"], "abilities": ["int"], "gives": "advantage"},
 		"dragon_ancestor": {"parent": "dragon_ancestor", "about": ["dragon"], "abilities": ["cha"], "gives": "double"},
 		"artificers_lore": {"trait": "artificers_lore", "about": ["magic_item", "alchemy", "device"], "skills": ["history"], "gives": "double"},
-		"stonecunning": {"trait": "stonecunning", "about": ["stonework"], "skills": ["history"], "gives": "double", "proficient": true}
+		"stonecunning": {"trait": "stonecunning", "about": ["stonework"], "skills": ["history"], "gives": "double", "proficient": true},
+		"_items": "v0.8.4.27: `item` — who carries the thing has the row; `gives` plus — `n` to the check (the portable ram's +4).",
+		"crowbar": {"item": "crowbar", "about": ["force"], "abilities": ["str"], "gives": "advantage"},
+		"ram_portable": {"item": "ram_portable", "about": ["force"], "abilities": ["str"], "gives": "plus", "n": 4},
+		"magnifying_glass": {"item": "magnifying_glass", "about": ["small_object"], "skills": ["investigation"], "gives": "advantage"}
 	},
 	"feature_wear": {
 		"_doc": "What a feature or a trait lays for good, in the words of a worn thing's `wear` (v0.8.4.26.1, ItemRules.wear: \"walk\" — the walking speed, an ability — its modifier): climb_speed, jump_ft (a running jump's feet, core/acts/jump.gd)…",
@@ -3000,8 +3016,10 @@
 		}
 	},
 	"encounters": {
-		"_doc": "Meetings and captivity (v0.7.22.12, EncounterRules): sneaking in unseen — the foes lurk, no fight; talking first — one roll against the parley DC of the fight; a lost fight to thinking foes — captivity: Athletics or Sleight of Hand against escape_dc (a failure costs escape_fail_minutes), or Persuasion against the parley DC.",
-		"escape_dc": 15,
+		"_doc": "Meetings and captivity (v0.7.22.12, EncounterRules): sneaking in unseen — the foes lurk, no fight; talking first — one roll against the parley DC of the fight; a lost fight to thinking foes — captivity: Athletics or Sleight of Hand against the bonds (`bonds`; a failure costs escape_fail_minutes), or Persuasion against the parley DC.",
+		"bonds": {"_doc": "What binds a prisoner (v0.8.4.27, EncounterRules.bond; `tied` — a rope, when nothing else): `escape` — Sleight of Hand to slip out, `break` — Athletics to break them; `item` — the thing they are (manacles are a thing: the binder carries them, a template's kit too), `sizes` — whom they fit. The hero's captors bind with manacles when one of them carries them; the hero binds a prisoner with them when it carries them. A bound prisoner left unwatched (not in the hero's room, not led) tries to get free every leave_minutes.bound of rules.creatures by the same checks.",
+			"tied": {"name": "верёвка", "escape": 15, "break": 15},
+			"manacles": {"name": "кандалы", "item": "manacles", "escape": 20, "break": 20, "sizes": ["small", "medium"]}},
 		"escape_fail_minutes": 60,
 		"_v07_22_17": "Captivity, whole (v0.7.22.17): «Сдаться» in a fight — at once the captive of thinking foes; to the law's guard — held, as at an arrest. The captors take the hero's things into a container of the room (seized_container, made when the room has none): taken back from it once free.",
 		"seized_container": "chest",
@@ -3278,13 +3296,13 @@
 	},
 	"creatures": {
 		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay); a bound one stays and can be led.",
-		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120, "dead": 4320},
+		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120, "dead": 4320, "bound": 240},
 		"_v08_4_4": "A fight gives only XP (v0.8.4.4): a dead foe lies where it fell for leave_minutes.dead, what it had is looked through like a chest of body_capacity_lb.",
 		"body_capacity_lb": 2000,
 		"foe_ammo": 6,
 		"kit": {"_doc": "What a template carries beside its SRD gear (v0.8.4.10, Gear.start): a person has it in its pockets, a foe uses it in a fight (a potion when hurt, a flask, a scroll) and what is left lies on it after.",
 			"veteran": ["healing_potion"], "knight": ["healing_potion"], "gladiator": ["healing_potion"], "scout": ["healing_potion"],
-			"bandit_captain": ["healing_potion", "alchemists_fire_flask"], "thug": ["oil_flask"], "spy": ["acid_vial"],
+			"bandit_captain": ["healing_potion", "alchemists_fire_flask", "manacles"], "thug": ["oil_flask", "manacles"], "spy": ["acid_vial"], "guard": ["manacles"],
 			"priest": ["healing_potion"], "mage": ["healing_potion", "spell_scroll_burning_hands"], "archmage": ["potion_of_greater_healing"]},
 		"heap_name": "Брошенные вещи",
 		"_v07_22_16": "A creature keeps hp and xp_given (fought again — its wounds, no XP twice); the helpless (unconscious or bound) is finished off without a fight. A pack NPC knocked out lies as a creature with its npc_id; waking or let go it goes home with woken_attitude and the assault is known (crime kind `assault`).",
@@ -3705,7 +3723,7 @@
 			"charge": 4,
 			"pit": {"dice": "1d6"},
 			"pursuit": 6,
-			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "dice": "5", "type": "fire", "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "noise": {"reach": 16, "wall": 6, "beyond": 6, "loud": {"thunder": 12}, "deaf": ["road"], "_v08_4_24": "Squares of a fight's noise (80 ft), minus `wall` per wall square on the line; a room past a way out hears it from `beyond` left, only within one location and not along a way of a `deaf` kind; a blow of a `loud` damage type adds its squares to the next round's noise."}
+			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "dice": "5", "type": "fire", "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "strewn": {"_doc": "Things strewn on squares (v0.8.4.27, FightField.strew): a thing's `use.throw.strew` names its row — `span` squares a side, a zone of the ground with `save` and `dc` on entering (`tag` \"\" — no magic in it), `cond` on a failed save, `fail` — what else a failed save does: `dice` of `type`, `speed` until it regains a hit point, `stop` — the walk ends there.", "caltrops": {"name": "Шипы", "span": 1, "save": "dex", "dc": 15, "tag": "", "on": ["enter"], "fail": {"dice": "1", "type": "piercing", "speed": -10, "stop": true}}, "ball_bearings": {"name": "Шарики", "span": 2, "save": "dex", "dc": 10, "tag": "", "on": ["enter"], "cond": "prone"}}, "noise": {"reach": 16, "wall": 6, "beyond": 6, "loud": {"thunder": 12}, "deaf": ["road"], "_v08_4_24": "Squares of a fight's noise (80 ft), minus `wall` per wall square on the line; a room past a way out hears it from `beyond` left, only within one location and not along a way of a `deaf` kind; a blow of a `loud` damage type adds its squares to the next round's noise."}
 		},
 		"classed": {
 			"_doc": "The class of a fighter by its SRD template (v0.8.4.9, FeatureRules.give_class): class, level, subclass. A pack's NPC or an encounter may name its own.",
@@ -4448,6 +4466,7 @@
 		"attune_minutes": 60,
 		"ammo": {"shortbow": "arrows", "longbow": "arrows", "shortbow_plus_1": "arrows", "longbow_plus_1": "arrows", "crossbow_light": "crossbow_bolt", "crossbow_light_plus_1": "crossbow_bolt", "crossbow_hand": "crossbow_bolt", "crossbow_heavy": "crossbow_bolt", "sling": "sling_bullet", "blowgun": "blowgun_needle"},
 		"recover": 0.5,
+		"str_short": {"_doc": "Armour with `str_min` worn by a weaker one (5e, v0.8.4.27): its speed −slow_ft; free_races walk in it freely (the dwarf).", "slow_ft": 10, "free_races": ["dwarf"]},
 		"collect_minutes": 1,
 		"element_dice": "1d6",
 		"small_races": ["small", "tiny"],
@@ -5063,15 +5082,17 @@
 		"shelter_items": ["tent_two_person"],
 		"warm_items": ["blanket"],
 		"fire_items": ["tinderbox"],
+		"sun_fire_items": ["magnifying_glass"],
+		"_sun_fire": "v0.8.4.27: a thing that lights a fire only by the sun — under a sky of a kind with `sun` (a magnifying glass, before the dark).",
 		"magic": {"max_hours": 24},
 		"kinds": {
-			"clear": {"name": "ясно", "text": "ясное небо — далеко видно, дороги сухие"},
+			"clear": {"name": "ясно", "text": "ясное небо — далеко видно, дороги сухие", "sun": true},
 			"rain": {"name": "дождь", "text": "моросит дождь — рыба клюёт охотнее, следы зверя смывает", "fish_pct": 150, "hunt_pct": 75},
 			"downpour": {"name": "ливень", "text": "стеной льёт ливень — стрелять и высматривать трудно, крадущихся не слышно, дороги развезло, костёр не развести", "obscure": true, "passive": 5, "travel_mult": 1.5, "camp": {"fire_out": true, "soak_dc": 12}, "fish_pct": 50, "hunt_pct": 50},
 			"fog": {"name": "туман", "text": "густой туман — в двадцати шагах ничего не видно: стрелять и высматривать трудно, крадущихся не видно, к зверю можно подойти ближе", "obscure": true, "passive": 5, "hunt_pct": 125},
 			"snow": {"name": "снег", "text": "валит снег — дороги замело, зверь оставляет следы, без тепла ночью замёрзнешь", "travel_mult": 2.0, "exposure": "cold", "hunt_pct": 150, "fish_pct": 50},
-			"heat": {"name": "зной", "text": "палящий зной — в пути днём без воды и тени изнуряет, в доспехах тяжелее; зверь и рыба прячутся", "exposure": "heat", "hunt_pct": 75, "fish_pct": 75},
-			"frost": {"name": "мороз", "text": "трескучий мороз — без тёплой одежды, огня или крыши ночь не пережить без вреда; у берегов лёд", "exposure": "cold", "fish_pct": 50}
+			"heat": {"name": "зной", "text": "палящий зной — в пути днём без воды и тени изнуряет, в доспехах тяжелее; зверь и рыба прячутся", "exposure": "heat", "hunt_pct": 75, "fish_pct": 75, "sun": true},
+			"frost": {"name": "мороз", "text": "трескучий мороз — без тёплой одежды, огня или крыши ночь не пережить без вреда; у берегов лёд", "exposure": "cold", "fish_pct": 50, "sun": true}
 		},
 		"exposure": {
 			"cold": {"name": "холод", "dc": 10, "guards": ["shelter", "warm", "fire", "resist"], "resist": "cold"},

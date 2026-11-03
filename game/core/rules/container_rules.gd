@@ -33,6 +33,51 @@ static func is_container(p: Dictionary) -> bool:
 	return not str(p.get("container", "")).is_empty()
 
 
+## How many more of `item_id` go into the container `p` (v0.8.4.27): its kind's `holds` groups — what goes in and how
+## many of the group — and its capacity in pounds (`p.capacity_lb` of a beast's pack or a cart first).
+static func room_for(data: Dictionary, session_items: Dictionary, p: Dictionary, item_id: String) -> int:
+	var k := kind(data, str(p.get("container", "")))
+	var contents: Dictionary = p.get("contents", {})
+	var d := ItemRules.def_of(data["items"], session_items, item_id)
+	var n := 1 << 30
+	if k.has("holds"):
+		var group := _group(data, session_items, k, item_id)
+		if group.is_empty():
+			return 0
+		n = int(group["n"])
+		for id: String in contents:
+			if _group(data, session_items, k, id) == group:
+				n -= int(contents[id])
+	var cap := float(p.get("capacity_lb", k.get("capacity_lb", 0)))
+	var each := float(d.get("weight", 0))
+	if each > 0:
+		n = mini(n, int(floor((cap - weight(data, session_items, contents)) / each + 0.0001)))
+	return maxi(0, n)
+
+
+## The group of a kind's `holds` that takes `item_id` ({} — none): by its id, or by a key of its `use` (a scroll).
+static func _group(data: Dictionary, session_items: Dictionary, k: Dictionary, item_id: String) -> Dictionary:
+	var real := ItemRules.real_id(item_id)
+	var use: Dictionary = ItemRules.def_of(data["items"], session_items, item_id).get("use", {})
+	for g: Dictionary in k.get("holds", []):
+		if (g.get("ids", []) as Array).has(real) or (g.has("use") and bool(use.get(str(g["use"]), false))):
+			return g
+	return {}
+
+
+## Why the hero cannot lift the container `p` with what is in it ("" — can): a chest or a barrel with things goes only on
+## a beast or a cart (size `load`, v0.8.4.27); another kind that is not a bag is emptied first.
+static func load_why(data: Dictionary, p: Dictionary) -> String:
+	if (p.get("contents", {}) as Dictionary).is_empty():
+		return ""
+	var item := str(p.get("item_id", ""))
+	if is_carried_kind(data, item) and str(kind(data, item).get("size", "big")) != "load":
+		return ""
+	if is_carried_kind(data, item):
+		return "%s с вещами поднимет только вьючный зверь или телега — сначала переложите вещи" % p["name"]
+	return "в %s что-то лежит — сначала `move_item:container>hero` содержимое" % p["name"]
+
+
 static func weight(data: Dictionary, session_items: Dictionary, contents: Dictionary) -> float:
 	var w := 0.0
 	for id: String in contents:
@@ -85,8 +130,11 @@ static func plan_spec(s: GameSession, data: Dictionary, spec: Dictionary) -> Dic
 		contents[id] = int(contents.get(id, 0)) + qty
 	var all_items := s.items.duplicate()
 	all_items.merge(made)
-	if weight(data, all_items, contents) > float(kd["capacity_lb"]):
-		return {"reason": "в %s столько не влезет: ёмкость %s фнт" % [kind_name(data, k), kd["capacity_lb"]]}
+	var box := {"container": k, "contents": {}}
+	for id: String in contents:
+		if room_for(data, all_items, box, id) < int(contents[id]):
+			return {"reason": "в %s столько %s не влезет: ёмкость %s фнт%s" % [kind_name(data, k), id, kd["capacity_lb"], _holds_text(data, kd)]}
+		box["contents"][id] = contents[id]
 	var lock := str(spec.get("lock", "")) if spec.get("lock") != null else ""
 	if not lock.is_empty() and (not bool(kd.get("lockable", false)) or not (cfg(data)["lock_dc"] as Dictionary).has(lock)):
 		return {"reason": "%s не запирается или замок не из %s" % [kind_name(data, k), ", ".join((cfg(data)["lock_dc"] as Dictionary).keys())]}
@@ -173,12 +221,24 @@ static func plan_put(s: GameSession, data: Dictionary, prop_id: String, item_id:
 		return {"reason": "у героя нет свободных %s ×%d (надетое сначала снимают, полную сумку — опустошают)" % [item_id, qty]}
 	if bags(s.character).has(prop_id) and is_carried_kind(data, item_id):
 		return {"reason": "сумку в сумку не кладут"}  # v0.7.22.9
-	var add := float(ItemRules.def_of(data["items"], s.items, item_id).get("weight", 0)) * qty
-	var cap := float(p["capacity_lb"]) if p.has("capacity_lb") else float(kind(data, str(p["container"]))["capacity_lb"])
-	if weight(data, s.items, p.get("contents", {})) + add > cap:
-		return {"reason": "в %s не влезет: ёмкость %s фнт" % [p["name"], cap]}
+	if room_for(data, s.items, p, item_id) < qty:
+		var k := kind(data, str(p["container"]))
+		return {"reason": "в %s не влезет: ёмкость %s фнт%s" % [p["name"], p.get("capacity_lb", k.get("capacity_lb", 0)), _holds_text(data, k)]}
 	return {"plan": {"room": s.room_id, "into": prop_id, "item_id": item_id, "qty": qty},
 		"summary": "Положено в %s: %s%s" % [p["name"], ItemRules.display_name(data["items"], s.items, item_id), " ×%d" % qty if qty > 1 else ""]}
+
+
+## «; вмещает: Стрелы ×20» — what a kind with `holds` takes, for a refusal.
+static func _holds_text(data: Dictionary, k: Dictionary) -> String:
+	var bits: Array[String] = []
+	for g: Dictionary in k.get("holds", []):
+		var names: Array[String] = []
+		for id: Variant in g.get("ids", []):
+			names.append(str(data["items"]["catalog"].get(str(id), {}).get("name", id)))
+		if g.has("use"):
+			names.append("свитки")
+		bits.append("%s ×%d" % [", ".join(names), int(g["n"])])
+	return "" if bits.is_empty() else "; вмещает: " + "; ".join(bits)
 
 
 static func apply_put(s: GameSession, data: Dictionary, plan: Dictionary) -> void:
@@ -227,6 +287,65 @@ static func unlock(p: Dictionary, how: String) -> Array[String]:
 		p["state"] = "broken"
 		return ["%s взломан силой — замок сломан" % p["name"]]
 	return ["%s отперт" % p["name"]]
+
+
+# --- the hero's own lock (v0.8.4.27) -----------------------------------------------------------------------------
+
+
+## The lock the hero carries to hang ("" — none): an item of `own_locks`.
+static func own_lock(s: GameSession, data: Dictionary) -> String:
+	for id: String in cfg(data)["own_locks"]:
+		if Thing.count(s.character, id) > 0:
+			return id
+	return ""
+
+
+## The lock_dc of the hero's own lock `item`.
+static func own_lock_dc(data: Dictionary, item: String) -> int:
+	return int(cfg(data)["lock_dc"][str(cfg(data)["own_locks"][item])])
+
+
+## A key made for what the hero's lock shuts: a copy of `key_item` named by it, given to the hero. Its id.
+static func new_key(s: GameSession, data: Dictionary, what: String) -> String:
+	var base := str(cfg(data)["key_item"])
+	var n := 1
+	while s.items.has("%s_own%d" % [base, n]):
+		n += 1
+	var id := "%s_own%d" % [base, n]
+	var d := ItemRules.def_of(data["items"], s.items, base).duplicate(true)
+	d["name"] = "%s: %s" % [d["name"], what]
+	s.items[id] = d
+	Gear.give(s, data, Being.HERO, id, 1)
+	return id
+
+
+## The acts of the hero's lock on a container of the room: "hang" — its lock on a lockable one, open, nobody's or the
+## hero's, without a whole lock of its own; "relock" — shut again by the key the hero holds.
+static func lock_ways(s: GameSession, data: Dictionary, p: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	if bool(p.get("locked", false)) or not bool(kind(data, str(p.get("container", ""))).get("lockable", false)) or bags(s.character).has(str(p.get("id", ""))):
+		return out
+	var whole := not str(p.get("key", "")).is_empty() and str(p.get("state", "")) != "broken"
+	if whole and Thing.count(s.character, str(p["key"])) > 0:
+		out.append("relock")
+	elif not whole and not own_lock(s, data).is_empty() and str(p.get("owner", "")) in ["", OwnerRules.HERO]:
+		out.append("hang")
+	return out
+
+
+## Hangs the hero's lock on `p` (the lock spent, its key made, the chest the hero's) or shuts it again by the key. Lines.
+static func lock_up(s: GameSession, data: Dictionary, p: Dictionary, how: String) -> Array[String]:
+	p["locked"] = true
+	if how != "hang":
+		return ["%s заперт" % p["name"]]
+	var item := own_lock(s, data)
+	Gear.take(s, data, Being.HERO, item, 1)
+	p["lock_dc"] = own_lock_dc(data, item)
+	p["key"] = new_key(s, data, str(p["name"]))
+	p["state"] = ""
+	if str(p.get("owner", "")).is_empty():
+		p["owner"] = OwnerRules.HERO
+	return ["На %s повешен ваш замок (Сл %d), ключ у вас" % [p["name"], int(p["lock_dc"])]]
 
 
 # --- bags of the hero (v0.7.18.2) -------------------------------------------------------------------------------
@@ -282,7 +401,7 @@ static func sync_bags(c: Dictionary, data: Dictionary) -> void:
 ## Whether the hero can carry one more bag of this kind (rules.containers.worn_bags by its size).
 static func _bag_room(c: Dictionary, data: Dictionary, item_id: String) -> bool:
 	var size := str(kind(data, item_id).get("size", "big"))
-	var limit := int(cfg(data).get("worn_bags", {}).get(size, 99))
+	var limit := int(cfg(data).get("worn_bags", {}).get(size, 0))  # a chest or a barrel (`load`) is never a bag
 	var n := 0
 	for id: String in bags(c):
 		if str(kind(data, str(bags(c)[id]["kind"])).get("size", "big")) == size:

@@ -112,6 +112,8 @@ static func left_text(s: GameSession, e: Dictionary) -> String:
 		if mins > 48 * 60:  # a disease: «5 дн.», not «121 ч» (v0.7.23.1)
 			return "%d дн." % ceili(mins / 1440.0)
 		return TimeRules.span(maxi(1, mins))
+	if ends.has("hp"):
+		return "пока не подлечат"
 	match str(ends.get("rest", "")):
 		"short":
 			return "до короткого отдыха"
@@ -263,12 +265,19 @@ static func flag_of(h: Dictionary, data: Dictionary, key: String) -> String:
 	return ""
 
 
-## The sum of a number over the statuses of `h`: `ac`, `speed`.
-static func sum(h: Dictionary, key: String) -> int:
+## The sum of a number over the statuses of `h`: `ac`, `speed`; `plus` false — without the boons' `_plus` (the hero's
+## sheet reads those by its own rules).
+static func sum(h: Dictionary, key: String, plus := true) -> int:
 	var total := 0
 	for e: Dictionary in h.get("effects", []):
-		total += int(e.get(key, 0)) + int(e.get(key + "_plus", 0))  # `_plus` — a boon as the hero's rules read it
+		if not healed(h, e):
+			total += int(e.get(key, 0)) + (int(e.get(key + "_plus", 0)) if plus else 0)  # `_plus` — a boon as the hero's rules read it
 	return total
+
+
+## A status that lasts until a hit point comes back (`ends.hp`: caltrops, v0.8.4.27) and it has come back.
+static func healed(h: Dictionary, e: Dictionary) -> bool:
+	return e.get("ends", {}).has("hp") and int(h.get("hp", 0)) > int(e["ends"]["hp"])
 
 
 ## Some status of `h` halves damage of this type.
@@ -328,7 +337,7 @@ static func _run_out(h: Dictionary, data: Dictionary, t: int) -> Array[String]:
 	var gone: Array[String] = []
 	var list := effects(h)
 	for e: Dictionary in list.duplicate():
-		if e.get("ends", {}).has("at") and int(e["ends"]["at"]) <= t:
+		if (e.get("ends", {}).has("at") and int(e["ends"]["at"]) <= t) or healed(h, e):
 			list.erase(e)
 			var id := str(e.get("condition", ""))
 			var what := name_of(data, id).to_lower() if not id.is_empty() else str(e.get("source", {}).get("name", ""))

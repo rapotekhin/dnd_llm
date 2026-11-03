@@ -434,7 +434,7 @@ ITEM_PROP_WATER_SOURCE,источник воды: бурдюк наполняе�
 ITEM_RANGE,дальность {near}/{far} фт.
 ITEM_SHIELD_LINE,Щит · КД +{n}
 ITEM_STEALTH_DIS,помеха Скрытности
-ITEM_STR_MIN,нужна Сила {n}
+ITEM_STR_MIN,"нужна Сила {n}, иначе скорость −10 фт"
 ITEM_TYPE_ARMOR,Доспех
 ITEM_TYPE_CONSUMABLE,Расходуемый предмет
 ITEM_TYPE_GEAR,Снаряжение
@@ -469,6 +469,8 @@ BTN_TAKE_STACK,Взять все
 BTN_TAKE_ALL_CONTAINER,Взять всё
 BTN_PUT_IN,Положить
 BTN_UNLOCK_KEY,Открыть ключом
+BTN_LOCK_HANG,Повесить свой замок
+BTN_LOCK_RELOCK,Запереть ключом
 BTN_UNLOCK_PICK,Взломать
 BTN_UNLOCK_FORCE,Выбить
 CONTAINER_LOAD,"Внутри {w} из {cap} фнт"
@@ -751,6 +753,8 @@ DOOR_WAY_TORCH,Поджечь факелом
 DOOR_WAY_TORCH_TIP,"Деревянная дверь прогорит за несколько минут. Шумно и заметно"
 DOOR_WAY_WAIT,Ждать открытия
 DOOR_WAY_WAIT_TIP,Подождать до часа открытия объекта
+DOOR_WAY_LOCK,Запереть
+DOOR_WAY_LOCK_TIP,"Свою дверь — своим замком (он тратится, ключ у вас), потом — ключом"
 SIDE_MORE_TIP,"Другие действия: карманы, напасть… (или правая кнопка по имени)"
 SIDE_INVENTORY,Снаряжение
 SIDE_MORE_ITEMS,…и ещё предметов: {n} (в листе персонажа)

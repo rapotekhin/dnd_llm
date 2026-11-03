@@ -271,11 +271,23 @@ static func speed(c: Dictionary, data: Dictionary) -> int:
 		feet *= 2
 	if has_feature(c, "fast_movement") and str(item_def(c, data, {}, "armor").get("armor", {}).get("category", "")) != "heavy":
 		feet += 10  # the barbarian's Fast Movement
+	feet -= armor_slow(item_def(c, data, {}, "armor"), ability(c, "str"), str(c.get("race", "")), data)
+	feet += ConditionRules.sum(c, "speed", false)  # a status's own feet: caltrops (v0.8.4.27)
 	# v0.7.8: grappled and restrained — 0; exhaustion 5 — 0, 2 — half (5e).
 	var exhaustion := int(c.get("exhaustion", 0))
 	if exhaustion >= 5 or ConditionRules.does(c, data, "no_move"):
 		return 0
 	return feet / 2 if exhaustion >= 2 else feet
+
+
+## Armour worn without its Strength (5e): −`slow_ft` feet of `rules.item_rules.str_short`; a race of `free_races` walks
+## in heavy armour freely. Anybody's (`Sheet.speed`).
+static func armor_slow(armor: Dictionary, strength: int, race: String, data: Dictionary) -> int:
+	var row: Dictionary = data["rules"]["item_rules"]["str_short"]
+	var need := int(armor.get("armor", {}).get("str_min", 0))
+	if need <= 0 or strength >= need or (row["free_races"] as Array).has(race):
+		return 0
+	return int(row["slow_ft"])
 
 
 static func race_name(c: Dictionary, data: Dictionary) -> String:

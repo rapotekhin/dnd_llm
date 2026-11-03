@@ -457,7 +457,7 @@ func collect_ammo() -> String:
 		return "AMMO_NOTHING"
 	var lines: Array[String] = []
 	for id: String in left["items"]:
-		session.character["inventory"][id] = int(session.character["inventory"].get(id, 0)) + int(left["items"][id])
+		Gear.stow_ammo(session, Catalog.data, session.character, id, int(left["items"][id]))
 		lines.append("Собрано: %s ×%d" % [ItemRules.display_name(Catalog.data["items"], session.items, id), int(left["items"][id])])
 	session.character.erase("ammo_left")
 	lines.append_array(TimeRules.advance(session, Catalog.data, int(ItemRules.cfg(Catalog.data)["collect_minutes"])))
@@ -1045,6 +1045,20 @@ func container_unlock(prop_id: String, how: String) -> String:
 	return ""
 
 
+## The hero's own lock on a container of the room (v0.8.4.27): "hang" — the lock hung, its key made; "relock" — shut by
+## the key. No master's turn. "" or a localization key.
+func container_lock(prop_id: String, how: String) -> String:
+	if not _idle():
+		return "EQUIP_BUSY"
+	var p := PropRules.find(session, session.room_id, prop_id)
+	if p.is_empty() or not ContainerRules.lock_ways(session, Catalog.data, p).has(how):
+		return "WAIT_NOT_NOW"
+	var lines := ContainerRules.lock_up(session, Catalog.data, p, how)
+	lines.append_array(TimeRules.advance(session, Catalog.data, int(ContainerRules.cfg(Catalog.data).get("minutes", 1))))
+	_quiet_lines(lines)
+	return ""
+
+
 ## A door on the way to `to` (v0.7.22.25, WayRules): a key, thieves' tools (Sleight of Hand), force (Athletics),
 ## blows of the weapon, a door spell, a torch, waiting for the site's hours. Breaking into someone's closed or
 ## private site before eyes is a trespass at once. The master narrates it. "" or a localization key.
@@ -1060,6 +1074,9 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 		return "WAIT_NOT_NOW"
 	if how == "ask":  # a knock: the owner answers as to «Попросить впустить»
 		_quiet_lines(SiteRules.ask(session, data, SiteRules.unwelcome(session, data, to)))
+		return ""
+	if how == "lock":  # the hero's own lock, or its key (v0.8.4.27): no master's turn
+		_quiet_lines(WayRules.lock_with(session, data, from, to))
 		return ""
 	var lines: Array[String] = []
 	var minutes := int(WayRules.cfg(data)["try_minutes"])
@@ -1479,7 +1496,7 @@ func finish_combat() -> void:
 		lines.append_array(CrimeRules.held_after_fight(s, Catalog.data))
 	elif outcome == "captured":  # v0.7.22.12: bound in their place, not a won fight
 		var foes: Array = CombatRules.enemies(s).filter(func(fid: String) -> bool: return str(CombatRules.fighter(s, fid).get("npc_id", "")).is_empty())
-		lines.append_array(EncounterRules.capture(s, foes, str(s.combat.get("encounter", "")), str(s.combat.get("room_from", ""))))
+		lines.append_array(EncounterRules.capture(s, Catalog.data, foes, str(s.combat.get("encounter", "")), str(s.combat.get("room_from", ""))))
 		lines.append_array(EncounterRules.seize(s, Catalog.data))  # v0.7.22.17, #15
 	for id: String in CombatRules.enemies(s, false) if arena.is_empty() else []:
 		var f := CombatRules.fighter(s, id)
@@ -1526,6 +1543,8 @@ func finish_combat() -> void:
 ## Hand), "force" — Athletics, "dodge" — Acrobatics past a trap; against `dc`. Adds the check card; the result.
 func _lock_roll(how: String, dc: int, target: String) -> Dictionary:
 	var params := {"skill": {"pick": "sleight_of_hand", "force": "athletics", "dodge": "acrobatics"}[how], "dc_tier": "medium", "dc": dc, "target_id": target}
+	if how == "force":
+		params["about"] = "force"  # a crowbar, a portable ram (rules.check_about, v0.8.4.27)
 	var parts: Array[Dictionary] = []
 	if how == "pick":
 		var db := ExplorationRules.disarm_bonus(session.character, Catalog.data)

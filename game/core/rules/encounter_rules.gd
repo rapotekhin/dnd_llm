@@ -329,12 +329,47 @@ static func parley(s: GameSession, data: Dictionary, room_id: String, enc: Dicti
 # --- captivity -------------------------------------------------------------------------------------------------
 
 
-## The fight is lost to thinking foes: the hero is their captive here.
-static func capture(s: GameSession, foes: Array, encounter: String, from: String) -> Array[String]:
+## The fight is lost to thinking foes: the hero is their captive here, bound by what they carry (`bonds`).
+static func capture(s: GameSession, data: Dictionary, foes: Array, encounter: String, from: String) -> Array[String]:
 	s.captive = {"room": s.room_id, "foes": foes, "encounter": encounter, "from": from}
+	var holders: Array = captors(s).map(func(e: Dictionary) -> Dictionary: return Sheet.things(s, data, e))
+	s.captive["bonds"] = bonds_for(data, holders, Sheet.size(s, data, Sheet.HERO))
 	var names := ", ".join(captors(s).map(func(e: Dictionary) -> String: return str(e["name"])))
 	var bound: String = {"female": "связана", "male": "связан"}.get(str(s.character.get("gender", "")), "связан(а)")
-	return ["%s %s — в плену у: %s" % [s.character.get("name", ""), bound, names]]
+	return ["%s %s (%s) — в плену у: %s" % [s.character.get("name", ""), bound, bond(data, str(s.captive["bonds"]))["name"], names]]
+
+
+## A row of `rules.encounters.bonds` (v0.8.4.27): `tied` (a rope) when none is named.
+static func bond(data: Dictionary, id: String) -> Dictionary:
+	var all: Dictionary = cfg(data)["bonds"]
+	return all.get(id, all["tied"]) if id != "_doc" else all["tied"]
+
+
+## The ways out of bonds: the skill and the DC of `bonds` it is checked against — Athletics breaks them, Sleight of
+## Hand slips out.
+const ESCAPES := {"escape_athletics": ["athletics", "break"], "escape_sleight": ["sleight_of_hand", "escape"]}
+
+
+## The DC to get free of `bonds` by `how` (a key of ESCAPES).
+static func escape_dc(data: Dictionary, bonds: String, how: String) -> int:
+	return int(bond(data, bonds)[str(ESCAPES[how][1])])
+
+
+## A try of anybody (`who`) to get free of `bonds` by `how`: {total, ok, line}.
+static func escape_roll(s: GameSession, data: Dictionary, bonds: String, how: String, who: String = Being.HERO) -> Dictionary:
+	return roll(s, data, str(ESCAPES[how][0]), escape_dc(data, bonds, how), false, who)
+
+
+## What one binds with who has these things (holders in the hero's form) a body of `size`: a thing of `bonds` that fits
+## it — manacles —, else `tied` (a rope).
+static func bonds_for(data: Dictionary, holders: Array, size: String) -> String:
+	for id: String in cfg(data)["bonds"]:
+		var row: Variant = cfg(data)["bonds"][id]
+		if not row is Dictionary or not row.has("item") or not ((row.get("sizes", []) as Array).is_empty() or (row["sizes"] as Array).has(size)):
+			continue
+		if holders.any(func(h: Dictionary) -> bool: return Thing.count(h, str(row["item"])) > 0):
+			return id
+	return "tied"
 
 
 ## The captors take what the hero carries (v0.7.22.17, #15): the pack and the bags with what is in them go into a
@@ -419,7 +454,7 @@ static func escape(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 	if how == "talk":
 		r = roll(s, data, "persuasion", parley_dc(data, foes, false))
 	else:
-		r = roll(s, data, "athletics" if how == "escape_athletics" else "sleight_of_hand", int(cfg(data)["escape_dc"]))
+		r = escape_roll(s, data, str(s.captive.get("bonds", "")), how)
 	var lines: Array[String] = [str(r["line"])]
 	if not bool(r["ok"]):
 		lines.append("Не вышло — путы держат, за вами следят")

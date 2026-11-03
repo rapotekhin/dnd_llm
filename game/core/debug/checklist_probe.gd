@@ -244,6 +244,18 @@ static func item(data: Dictionary, id: String) -> Dictionary:
 	if data["rules"]["containers"]["kinds"].has(id):
 		mech += 1
 		_container(data, id, steps)
+	if not _about_rows(data, id).is_empty():
+		mech += 1
+		_check_item(data, id, steps)
+	if (data["rules"]["containers"]["own_locks"] as Dictionary).has(id):
+		mech += 1
+		_own_lock(data, id, steps)
+	if not _bond_of(data, id).is_empty():
+		mech += 1
+		_bonds(data, id, steps)
+	if (data["rules"]["weather"].get("sun_fire_items", []) as Array).has(id):
+		mech += 1
+		_sun_fire(data, id, steps)
 	if ItemRules.charges_max(d) > 0:
 		mech += 1
 		_charges(data, id, d, steps)
@@ -709,6 +721,9 @@ static func _throw(s: GameSession, data: Dictionary, id: String, use: Dictionary
 	Gear.give(s, data, Being.HERO, id, 9)
 	if ItemRules.belt_fits(data, s.items, id):
 		ItemRules.belt_put(c, data, s.items, id)
+	if (use["throw"] as Dictionary).has("strew"):
+		_strew(s, data, id, use["throw"], steps)
+		return
 	var types: Array = (use["throw"] as Dictionary).get("types", [])
 	var far := bool(use["throw"].get("improvised", false)) or int(use["throw"].get("range", 15)) >= 30
 	var t := fight(s, data, "skeleton" if types.has("undead") else "goblin", far)
@@ -733,6 +748,34 @@ static func _throw(s: GameSession, data: Dictionary, id: String, use: Dictionary
 		check(steps, t.has("oiled"), "цель облита маслом", said.left(160))
 	if th.has("condition"):
 		check(steps, ConditionRules.has(t, str(th["condition"])), "цель: %s" % ConditionRules.name_of(data, str(th["condition"])), said.left(160))
+
+
+## Caltrops or ball bearings strewn on a square beside the hero: a foe walked onto it fails its save and gets what the
+## row says.
+static func _strew(s: GameSession, data: Dictionary, id: String, th: Dictionary, steps: Array[String]) -> void:
+	var t := fight(s, data, "goblin", true)
+	var hero := CombatRules.player(s)
+	var at := Vector2i(41, 30)
+	var how := {"item": id}
+	turn(s, data, hero)
+	var why := Acts.one("throw").can(s, data, hero, FightGrid.aim_id(at), how)
+	if not check(steps, why.is_empty(), "рассыпать на клетку рядом", why):
+		return
+	Acts.one("throw").go(s, data, hero, FightGrid.aim_id(at), how)
+	var row: Dictionary = FightGrid.cfg(data)["strewn"][str(th["strew"])]
+	var lines: Array[String] = []
+	for i in 12:
+		turn(s, data, t)
+		t["zoned"] = []
+		FightGrid.put(t, at)
+		FightField.stepped(s, data, t, lines)
+		if int(t["hp"]) < 999 or CombatRules._has(t, "prone"):
+			break
+	if row.has("cond"):
+		check(steps, CombatRules._has(t, str(row["cond"])), "вошедший: %s при провале Лов" % ConditionRules.name_of(data, str(row["cond"])), " ".join(lines).left(160))
+	if (row.get("fail", {}) as Dictionary).has("dice"):
+		check(steps, int(t["hp"]) < 999 and ConditionRules.sum(t, "speed") < 0 and int(t["points"]["move"]) <= 0,
+			"вошедший: урон, остановка и скорость −10 при провале Лов", " ".join(lines).left(160))
 
 
 ## Camp food: eaten by the needs' «Поесть».
@@ -818,7 +861,8 @@ static func _tool(data: Dictionary, id: String, steps: Array[String]) -> void:
 		master(steps, "пользоваться — только словами: мастер называет инструмент в проверке, своей кнопки нет")
 
 
-## A container of the rules: a bag the hero carries, or a kind of a room's chest.
+## A container of the rules: a bag the hero carries, what it holds and how many; a chest or a barrel (`load`) never a
+## bag, lifted full only by a beast or a cart; a quiver's arrows at hand for a shot.
 static func _container(data: Dictionary, id: String, steps: Array[String]) -> void:
 	var k: Dictionary = data["rules"]["containers"]["kinds"][id]
 	if str(k.get("size", "")).is_empty():
@@ -830,7 +874,101 @@ static func _container(data: Dictionary, id: String, steps: Array[String]) -> vo
 	Gear.give(s, data, Being.HERO, id, 1)
 	Gear.give(s, data, Being.HERO, "rope", 1)
 	ContainerRules.sync_bags(c, data)
-	check(steps, not ContainerRules.bags(c).is_empty(), "сумка героя: вещи в ней весят меньше", "не стала сумкой")
+	if str(k["size"]) == "load":
+		check(steps, ContainerRules.bags(c).is_empty(), "не сумка: герой её не носит", "стала сумкой")
+		var full := {"name": "Это", "item_id": id, "container": id, "contents": {"rope": 1}}
+		check(steps, not ContainerRules.load_why(data, full).is_empty(), "с вещами поднимет только вьючный зверь или телега", "герой поднимает полной")
+		return
+	if not check(steps, not ContainerRules.bags(c).is_empty(), "сумка героя: вещи в ней весят меньше", "не стала сумкой"):
+		return
+	var bag_id: String = ContainerRules.bags(c).keys()[0]
+	var bag := ContainerRules.target(s, data, bag_id)
+	if k.has("holds"):
+		var g: Dictionary = k["holds"][0]
+		var first := str(g["ids"][0]) if not (g.get("ids", []) as Array).is_empty() else ""
+		if not first.is_empty():
+			var n := ContainerRules.room_for(data, s.items, bag, first)
+			check(steps, n == int(g["n"]), "вмещает: %s ×%d" % [first, int(g["n"])], n)
+		check(steps, ContainerRules.room_for(data, s.items, bag, "rope") == 0, "другое не кладётся", "верёвка влезла")
+	if bool(k.get("at_hand", false)):
+		var ammo := str(k["holds"][0]["ids"][0])
+		Gear.give(s, data, Being.HERO, ammo, 5)
+		Thing.move(c, ContainerRules.bags(c)[bag_id], ammo, 5)
+		check(steps, Gear.ammo_left(data, c, ammo) == 5, "выстрел берёт из неё: %s под рукой" % ammo, Gear.ammo_left(data, c, ammo))
+
+
+## The rows of `rules.check_about` a carried thing gives (v0.8.4.27).
+static func _about_rows(data: Dictionary, id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for key: String in data["rules"]["check_about"]:
+		var row: Variant = data["rules"]["check_about"][key]
+		if row is Dictionary and str(row.get("item", "")) == id:
+			out.append(row)
+	return out
+
+
+## A thing that helps a check about its subject: the check with it gets advantage or a bonus, without it not.
+static func _check_item(data: Dictionary, id: String, steps: Array[String]) -> void:
+	for row: Dictionary in _about_rows(data, id):
+		var s := session(data)
+		var skills: Array = row.get("skills", [])
+		var skill := str(skills[0]) if not skills.is_empty() else ("athletics" if (row.get("abilities", []) as Array).has("str") else "")
+		var spec := {"what": "проба", "skill": skill, "dc": 10, "about": str(row["about"][0])}
+		var before := CheckEngine.situation(s, data, Sheet.HERO, spec, true)
+		Gear.give(s, data, Being.HERO, id, 1)
+		var after := CheckEngine.situation(s, data, Sheet.HERO, spec, true)
+		var gave := (after["adv"] as Array).size() > (before["adv"] as Array).size() or (after["parts"] as Array).size() > (before["parts"] as Array).size()
+		var what := "преимущество" if str(row["gives"]) == "advantage" else "+%d" % int(row.get("n", 0))
+		check(steps, gave, "проверка «%s» (%s): %s" % [skill, row["about"][0], what], "ничего не дала")
+
+
+## The hero's own lock: hung on a chest of the room, its key made, the chest opened by it.
+static func _own_lock(data: Dictionary, id: String, steps: Array[String]) -> void:
+	var s := session(data)
+	Gear.give(s, data, Being.HERO, id, 1)
+	var p := ContainerRules.lay_down(s, data, s.room_id, "chest", {})
+	p["container"] = "chest"
+	p["contents"] = {}
+	if not check(steps, ContainerRules.lock_ways(s, data, p).has("hang"), "вешается на сундук", "нельзя повесить"):
+		return
+	ContainerRules.lock_up(s, data, p, "hang")
+	check(steps, bool(p["locked"]) and int(p["lock_dc"]) > 0 and Gear.count(s, data, Being.HERO, id) == 0, "свой замок Сл %d, замок потрачен" % int(p["lock_dc"]), p)
+	check(steps, ContainerRules.ways(s, data, p).has("key"), "свой ключ у героя открывает", "ключа нет")
+
+
+## The row of `rules.encounters.bonds` that is this thing ("" — none).
+static func _bond_of(data: Dictionary, id: String) -> String:
+	for b: String in data["rules"]["encounters"]["bonds"]:
+		var row: Variant = data["rules"]["encounters"]["bonds"][b]
+		if row is Dictionary and str(row.get("item", "")) == id:
+			return b
+	return ""
+
+
+## Bonds of a thing (manacles): harder to get out of than a rope; the hero binds a prisoner with them, they go back when
+## it is let go.
+static func _bonds(data: Dictionary, id: String, steps: Array[String]) -> void:
+	var b := _bond_of(data, id)
+	var s := session(data)
+	Gear.give(s, data, Being.HERO, id, 1)
+	var dc := EncounterRules.escape_dc(data, b, "escape_athletics")
+	check(steps, dc > EncounterRules.escape_dc(data, "", "escape_athletics"), "вырваться — Сл %d, верёвка легче" % dc, dc)
+	var cr := CreatureRules.add(s, s.room_id, {"name": "Гоблин", "monster": "goblin", "state": "surrendered", "bound": false, "led": false,
+		"since": TimeRules.abs_minute(s)})
+	CreatureRules.act(s, data, str(cr["id"]), "bind")
+	var bound := CreatureRules.find(s, s.room_id, str(cr["id"]))
+	check(steps, str(bound.get("bonds", "")) == b and Gear.count(s, data, Being.HERO, id) == 0, "пленник закован", "связан не ими")
+	CreatureRules.act(s, data, str(cr["id"]), "free")
+	check(steps, Gear.count(s, data, Being.HERO, id) == 1, "отпущен — вещь вернулась", "не вернулась")
+
+
+## A thing that lights a fire by the sun: the camp's fire with it by day, not without it.
+static func _sun_fire(data: Dictionary, id: String, steps: Array[String]) -> void:
+	var s := session(data)
+	s.character["inventory"].clear()
+	var without := WeatherRules.camp_fire(s, data)
+	Gear.give(s, data, Being.HERO, id, 1)
+	check(steps, not without and WeatherRules.camp_fire(s, data), "разжигает костёр солнцем", "костёр не горит")
 
 
 ## Charges: spent by a use, back at dawn.

@@ -200,12 +200,12 @@ static func actions(s: GameSession, data: Dictionary, tid: String, c: Dictionary
 		if item.is_empty():
 			continue
 		held.append(item)
-		if not inv.has(item) or (ammo.has(item) and not inv.has(str(ammo[item]))):
+		if not inv.has(item) or (ammo.has(item) and ammo_left(data, c, str(ammo[item])) <= 0):
 			lost.append(item)
 	var out: Array = TheftRules.without(m["actions"], lost)
 	for item: String in inv:
 		var w: Dictionary = ItemRules.def_of(data["items"], s.items, item).get("weapon", {})
-		if not w.is_empty() and not held.has(item) and (not ammo.has(item) or inv.has(str(ammo[item]))):
+		if not w.is_empty() and not held.has(item) and (not ammo.has(item) or ammo_left(data, c, str(ammo[item])) > 0):
 			out = out + [_blow(s, data, c, m, item)]
 	return out
 
@@ -274,17 +274,48 @@ static func back(b: Dictionary, f: Dictionary) -> void:
 static func spend_ammo(s: GameSession, data: Dictionary, f: Dictionary, ammo: String) -> void:
 	if ammo.is_empty():
 		return
-	var inv: Dictionary = Sheet.holder(s, f).get("inventory", {})
-	var left := int(inv.get(ammo, 0)) - 1
-	if left > 0:
-		inv[ammo] = left
-	else:
-		inv.erase(ammo)
+	var me := Sheet.holder(s, f)
+	var from := quivers(data, me, ammo)
+	if from.is_empty():
+		return
+	Thing.take(from[0], ammo, 1)
 	var spent: Dictionary = f.get("ammo_spent", {})
 	spent[ammo] = int(spent.get(ammo, 0)) + 1
 	f["ammo_spent"] = spent
-	if left <= 0:
+	if ammo_left(data, me, ammo) <= 0:
 		follow(s, data, f)
+
+
+## Where a shot takes `ammo` from (v0.8.4.27): the holder's loose things first, then a quiver or a case of
+## `rules.containers` with `at_hand` — those with some. Anybody's: a foe's record has no bags, only its things.
+static func quivers(data: Dictionary, holder: Dictionary, ammo: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if Thing.count(holder, ammo) > 0:
+		out.append(holder)
+	for b: Dictionary in (holder.get("bags", {}) as Dictionary).values():
+		if bool(ContainerRules.kind(data, str(b["kind"])).get("at_hand", false)) and Thing.count(b, ammo) > 0:
+			out.append(b)
+	return out
+
+
+## Arrows, bolts or bullets at hand: loose and in a quiver.
+static func ammo_left(data: Dictionary, holder: Dictionary, ammo: String) -> int:
+	var n := 0
+	for h: Dictionary in quivers(data, holder, ammo):
+		n += Thing.count(h, ammo)
+	return n
+
+
+## Ammunition picked up after a fight: into a quiver that takes it while there is room, the rest loose.
+static func stow_ammo(s: GameSession, data: Dictionary, holder: Dictionary, ammo: String, qty: int) -> void:
+	for id: String in (holder.get("bags", {}) as Dictionary):
+		var b: Dictionary = holder["bags"][id]
+		if qty > 0 and bool(ContainerRules.kind(data, str(b["kind"])).get("at_hand", false)):
+			var n := mini(qty, ContainerRules.room_for(data, s.items, {"container": b["kind"], "contents": b["contents"]}, ammo))
+			Thing.add(b, ammo, n)
+			qty -= n
+	if qty > 0:
+		Thing.add(holder, ammo, qty)
 
 
 ## What may be picked up of what it shot: {ammo: qty}.

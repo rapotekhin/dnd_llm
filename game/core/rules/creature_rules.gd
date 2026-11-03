@@ -247,12 +247,17 @@ static func can(s: GameSession, id: String, what: String, data: Dictionary = {})
 static func act(s: GameSession, data: Dictionary, id: String, what: String) -> Array[String]:
 	var c := find(s, s.room_id, id)
 	match what:
-		"bind":
+		"bind":  # with manacles when the hero carries ones that fit it (v0.8.4.27)
 			c["bound"] = true
 			c["owner"] = OwnerRules.HERO
 			c.erase("ally")
 			c["led"] = false
-			return ["%s связан — ваш пленник" % c["name"]]
+			c["bonds"] = EncounterRules.bonds_for(data, [s.character], Sheet.size(s, data, c))
+			c["since"] = TimeRules.abs_minute(s)  # unwatched, it tries its bonds from now
+			var row := EncounterRules.bond(data, str(c["bonds"]))
+			if row.has("item"):
+				Gear.take(s, data, Being.HERO, str(row["item"]), 1)
+			return ["%s связан (%s) — ваш пленник" % [c["name"], row["name"]]]
 		"join":
 			var going := not bool(c.get("ally", false))
 			c["led"] = going
@@ -268,10 +273,12 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 		"free":
 			var lines: Array[String] = _taken_from_owner(s, data, c)
 			lines.push_front("%s отпущен и уходит" % c["name"])
+			_unbind(s, data, c)
 			lines.append_array(_npc_back(s, data, c))
 			remove(s, c)
 			return lines
 		"hand_over":  # the law takes the prisoner: a bounty by its XP, the settlement thinks better of the hero
+			_unbind(s, data, c)
 			remove(s, c)
 			var cp := int(cfg(data)["bounty_cp_per_xp"]) * OwnerRules.xp_of(data, c)
 			Ledger.add(s, cp, "creature:act")
@@ -306,7 +313,7 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 			c["state"] = DEAD
 			c["name"] = "Тело: " + str(c["name"])
 			c["since"] = TimeRules.abs_minute(s)
-			c["bound"] = false
+			_unbind(s, data, c)
 			c["led"] = false
 			c.erase("kept")
 			return lines
@@ -395,14 +402,42 @@ static func follow(s: GameSession, from: String, to: String) -> void:
 			c["at"] = to
 
 
+## The bonds come off: manacles go back to the hero's hands (v0.8.4.27).
+static func _unbind(s: GameSession, data: Dictionary, c: Dictionary) -> void:
+	var row := EncounterRules.bond(data, str(c.get("bonds", "")))
+	if bool(c.get("bound", false)) and row.has("item"):
+		Gear.give(s, data, Being.HERO, str(row["item"]), 1)
+	c["bound"] = false
+	c.erase("bonds")
+
+
+## A bound prisoner left unwatched (not in the hero's room, not led) tries to get free every leave_minutes.bound: the
+## better of Athletics against breaking its bonds and Sleight of Hand against slipping out, as the hero's escape
+## (v0.8.4.27). True when it is free; the manacles go with it.
+static func _breaks_free(s: GameSession, data: Dictionary, c: Dictionary, now: int) -> bool:
+	var limit := int(cfg(data)["leave_minutes"].get("bound", 0))
+	if not bool(c.get("bound", false)) or bool(c.get("led", false)) or str(c["at"]) == s.room_id or str(c["state"]) == DEAD \
+			or limit <= 0 or now - int(c["since"]) < limit:
+		return false
+	c["since"] = now
+	for how: String in EncounterRules.ESCAPES:
+		if bool(EncounterRules.escape_roll(s, data, str(c.get("bonds", "")), how, str(c["id"]))["ok"]):
+			return true
+	return false
+
+
 ## Time passes: an unbound knocked-out one wakes and slips away, an unbound surrendered one runs, a truce ends —
-## each after its rules.creatures minutes. Lines only for the hero's room.
+## each after its rules.creatures minutes; a bound one left alone may break free. Lines only for the hero's room.
 static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var now := TimeRules.abs_minute(s)
 	var leave: Dictionary = cfg(data)["leave_minutes"]
 	for c: Dictionary in all(s):
 		if str(c["state"]) == DEAD and bool(c.get("kept", false)) and _empty(c):  # a heap taken away
+			remove(s, c)
+			continue
+		if _breaks_free(s, data, c, now):
+			lines.append_array(_npc_back(s, data, c))
 			remove(s, c)
 			continue
 		var limit := int(leave.get(str(c["state"]), 0))

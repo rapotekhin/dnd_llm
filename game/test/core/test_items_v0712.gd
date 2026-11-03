@@ -40,7 +40,7 @@ func test_catalog_has_the_srd_magic_of_levels_1_to_5() -> void:
 			"potion_of_resistance_fire", "potion_of_climbing", "spell_scroll_cure_wounds", "spell_scroll_identify", "mithral_chain_mail",
 			"adamantine_breastplate", "broom_of_flying"]:
 		assert_bool(cat.has(id)).override_failure_message("нет " + id).is_true()
-	assert_bool(bool(cat["efficient_quiver"].get("master", false))).is_true()  # the one left to the master (v0.8.4.26.3)
+	assert_dict(data["rules"]["containers"]["kinds"]["efficient_quiver"]).contains_keys(["holds", "at_hand"])  # v0.8.4.27: no longer the master's
 	assert_dict(cat["broom_of_flying"]["wear"]).contains_keys(["fly_speed"])  # v0.8.4.26: no longer the master's
 	assert_bool(bool(cat["cloak_of_protection"].get("attunement", false))).is_true()
 	# Every property in the catalog is one the engine knows (the master pays only for working ones).

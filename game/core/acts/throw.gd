@@ -25,15 +25,15 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	if fx.is_empty() or not ItemRules.on_belt(Sheet.holder(s, f), data, s.items, item):  # thrown from the belt (v0.8.4.24)
 		return "COMBAT_ITEM_CANT"
 	var far := 60 if bool(fx.get("improvised", false)) else int(fx.get("range", 15))
-	if FightGrid.is_aim(to):  # a flask on a square
-		if not fx.has("oiled") and not fx.has("burning"):
+	if FightGrid.is_aim(to):  # a flask on a square, caltrops strewn (v0.8.4.27)
+		if not ItemRules.spills(fx):
 			return "COMBAT_BAD_TARGET"
 		var at := FightGrid.aim_of(to)
 		if FightGrid.dist_to(f, at) * int(FightGrid.cfg(data)["ft"]) > far:
 			return "COMBAT_OUT_OF_RANGE"
 		return "" if FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(f), at) else "COMBAT_NO_LINE"
 	var t := _foe(s, f, to)
-	if t.is_empty():
+	if t.is_empty() or fx.has("strew"):
 		return "COMBAT_BAD_TARGET"
 	if CombatRules._no_line(s, data, f, t):
 		return "COMBAT_NO_LINE"

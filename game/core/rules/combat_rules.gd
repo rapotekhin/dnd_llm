@@ -1107,7 +1107,7 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 	ItemRules.remove(c, item_id)
 	if FightGrid.is_aim(target_id):
 		var splashed: Array[String] = []
-		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed)
+		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed, str(f.get("side", "player")))
 		return splashed
 	var t := fighter(s, target_id)
 	var dex := Sheet.ability_mod(s, data, f, "dex")

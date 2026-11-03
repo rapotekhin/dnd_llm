@@ -139,7 +139,7 @@ func test_an_aware_npc_is_not_caught_off_guard() -> void:
 
 func test_captors_without_an_encounter_lurk_after_an_escape() -> void:
 	var s := _hero("pushcha-burrow")
-	EncounterRules.capture(s, [Being.spawn(s, {"monster": "acolyte", "name": "Жрец Пепла", "hp": 5, "no_xp": true})["id"]], "", "pushcha-hollow")
+	EncounterRules.capture(s, data, [Being.spawn(s, {"monster": "acolyte", "name": "Жрец Пепла", "hp": 5, "no_xp": true})["id"]], "", "pushcha-hollow")
 	s.rng.seed = 1
 	var lines: Array[String] = []
 	for i in 30:  # until a roll passes

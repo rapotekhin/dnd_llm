@@ -100,9 +100,10 @@ static func about_of(s: GameSession, data: Dictionary, spec: Dictionary) -> Stri
 	return "" if tid.is_empty() or tid == Being.HERO else str(Sheet.template(data, Sheet.who(s, data, tid)).get("type", ""))
 
 
-## A row of `rules.check_about` of a feature (by its `parent`) or a trait of `me` that fits the check's subject and its skill
-## or ability (v0.8.4.26.1): Favored Enemy gives advantage, Dragon Ancestor, Artificer's Lore and Stonecunning the
-## proficiency twice (`proficient` — counted as proficient). {adv: why, label, bonus}.
+## A row of `rules.check_about` of a feature (by its `parent`), a trait of `me` or a thing it carries (`item`) that fits
+## the check's subject and its skill or ability (v0.8.4.26.1): Favored Enemy gives advantage, Dragon Ancestor, Artificer's
+## Lore and Stonecunning the proficiency twice (`proficient` — counted as proficient), a crowbar advantage on forcing,
+## a portable ram +4 (v0.8.4.27). {adv: why, label, bonus}.
 static func _about(s: GameSession, data: Dictionary, me: Dictionary, spec: Dictionary, skill: String) -> Dictionary:
 	var out := {"adv": "", "label": "", "bonus": 0}
 	var about := about_of(s, data, spec)
@@ -117,6 +118,8 @@ static func _about(s: GameSession, data: Dictionary, me: Dictionary, spec: Dicti
 		var name := ""
 		if row.has("trait") and CharacterRules.has_trait(me, str(row["trait"])):
 			name = str(data["races"]["traits"].get(str(row["trait"]), {}).get("name", row["trait"]))
+		if row.has("item") and Thing.count(me, str(row["item"])) > 0:  # a crowbar, a ram, a magnifying glass (v0.8.4.27)
+			name = ItemRules.display_name(data["items"], s.items, str(row["item"]))
 		for f: Variant in me.get("features", []):
 			var d: Dictionary = feats.get(str(f), {})
 			if row.has("parent") and str(d.get("parent", "")) == str(row["parent"]) and (str(row.get("about", "")) != "creature_type" or str(d.get("creature_type", "")) == about):
@@ -125,6 +128,10 @@ static func _about(s: GameSession, data: Dictionary, me: Dictionary, spec: Dicti
 			continue
 		if str(row["gives"]) == "advantage":
 			out["adv"] = name
+			continue
+		if str(row["gives"]) == "plus":
+			out["label"] = name
+			out["bonus"] = int(out["bonus"]) + int(row["n"])
 			continue
 		var pb := CharacterRules.prof_bonus(me, data)
 		var proficient := not skill.is_empty() and ((me.get("skill_profs", []) as Array).has(skill) or CharacterRules.has_feature(me, "skill_prof_" + skill))

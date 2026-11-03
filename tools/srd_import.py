@@ -208,7 +208,7 @@ MAGIC_OTHER = {
     "helm-of-telepathy": _w("helm_of_telepathy", [], 50000, "шлем", attunement=True, use={"spell": "detect_thoughts", "level": 2, "dc": 13, "at_will": True}),
     # The master's until the containers' rule of v0.8.4.27: what it does is in the description. The other things only the
     # master told are out of the game (the author, v0.8.4.26.3); the backlog keeps them.
-    "efficient-quiver": _w("efficient_quiver", [], 30000, "колчан", master=True),
+    "efficient-quiver": _w("efficient_quiver", [], 30000, "колчан", weight=2),  # a bag of `rules.containers` (v0.8.4.27)
 }
 # Potion of Resistance: one per damage type the pack meets (the SRD leaves the type to the DM).
 RESIST_POTIONS = {"fire": "огня", "cold": "холода", "poison": "яда", "lightning": "электричества", "acid": "кислоты", "necrotic": "некротической энергии"}
@@ -336,6 +336,8 @@ def item_def(e: dict[str, Any]) -> dict[str, Any] | None:
         d["item_type"] = "gear"
         d["properties"] = []
         d["value_cp"] = cost_cp(e.get("cost"), qty)
+        if qty > 1:  # «20 arrows, 1 lb»: one arrow weighs 1/20 lb
+            d["weight"] = round(d["weight"] / qty, 3)
         if cat == "adventuring-gear":  # torches, rations, arrows… come in stacks
             d["stack"] = True
         if cat == "tools":

@@ -80,6 +80,13 @@ func _rebuild() -> void:
 			var pb := _row_button(row, "Unlock_pick", tr("BTN_UNLOCK_PICK"), false, func() -> String: return "")
 			pb.tooltip_text = tr("PICK_NO_TOOLS") + ("" if hint.is_empty() else ": " + hint)
 		return
+	var locks := ContainerRules.lock_ways(s, data, p)  # the hero's own lock (v0.8.4.27)
+	if not locks.is_empty():
+		var lrow := HBoxContainer.new()
+		_box.add_child(lrow)
+		for how: String in locks:
+			var h := how
+			_row_button(lrow, "Lock_" + how, tr("BTN_LOCK_" + how.to_upper()), can_act, func() -> String: return GameState.container_lock(prop_id, h))
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	_box.add_child(head)

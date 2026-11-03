@@ -233,7 +233,7 @@ async def request_check(
     argument — для Убеждения, Обмана, Запугивания: довод игрока в нескольких словах; повтор у того же NPC
     бросается заново только с новым доводом или после перемены (заклинание, подарок, отношение).
     about — о чём проверка, если это существо или предмет: тип существа (dragon, undead, beast, fiend, humanoid…) или
-    magic_item, alchemy, device, stonework; бонусы умений и черт героя по нему считает движок."""
+    magic_item, alchemy, device, stonework, force, small_object; бонусы умений, черт и вещей героя по нему считает движок."""
     t = ctx.deps
     if len(t.check_ids) >= t.limits.max_checks:
         return "Отказ: лимит проверок на этот ход исчерпан. Опиши исход без новой проверки."

@@ -1276,8 +1276,8 @@ func _meeting(s: GameSession, can_act: bool) -> void:
 		_subheading("SIDE_CAPTIVE")
 		for e: Dictionary in EncounterRules.captors(s):
 			_line(str(e["name"]), false)
-		specs = [["Escape_athletics", tr("BTN_ESCAPE_ATHLETICS").format({"dc": int(EncounterRules.cfg(data)["escape_dc"])}), "", func() -> String: return GameState.escape_captivity("escape_athletics")],
-			["Escape_sleight", tr("BTN_ESCAPE_SLEIGHT").format({"dc": int(EncounterRules.cfg(data)["escape_dc"])}), "", func() -> String: return GameState.escape_captivity("escape_sleight")],
+		specs = [["Escape_athletics", tr("BTN_ESCAPE_ATHLETICS").format({"dc": EncounterRules.escape_dc(data, str(s.captive.get("bonds", "")), "escape_athletics")}), "", func() -> String: return GameState.escape_captivity("escape_athletics")],
+			["Escape_sleight", tr("BTN_ESCAPE_SLEIGHT").format({"dc": EncounterRules.escape_dc(data, str(s.captive.get("bonds", "")), "escape_sleight")}), "", func() -> String: return GameState.escape_captivity("escape_sleight")],
 			["Escape_talk", tr("BTN_ESCAPE_TALK"), EncounterRules.can_escape(s, data, "talk"), func() -> String: return GameState.escape_captivity("talk")]]
 	for sp: Array in specs:
 		var act: Callable = sp[3]

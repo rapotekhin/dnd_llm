@@ -219,11 +219,20 @@ static func _has(s: GameSession, ids: Array) -> String:
 	return ""
 
 
-## The camp's fire: the hero carries a way to light it and the weather does not put it out.
+## The camp's fire: the hero carries a way to light it and the weather does not put it out; a magnifying glass lights it
+## under a sunny sky (`sun_fire_items`, v0.8.4.27).
 static func camp_fire(s: GameSession, data: Dictionary) -> bool:
 	if bool(kind(data, here(s, data)).get("camp", {}).get("fire_out", false)):
 		return false
-	return not _has(s, cfg(data).get("fire_items", [])).is_empty()
+	if not _has(s, cfg(data).get("fire_items", [])).is_empty():
+		return true
+	return sunny(s, data) and not _has(s, cfg(data).get("sun_fire_items", [])).is_empty()
+
+
+## The sun is out: by day under a sky of a kind with `sun`, or with no weather here at all (v0.8.4.27).
+static func sunny(s: GameSession, data: Dictionary) -> bool:
+	var w := here(s, data)
+	return not TimeRules.is_night(s, data) and (w.is_empty() or bool(kind(data, w).get("sun", false)))
 
 
 ## A night in a camp (the end of ExplorationRules.long_rest with supplies): a downpour soaks an open camp, the cold

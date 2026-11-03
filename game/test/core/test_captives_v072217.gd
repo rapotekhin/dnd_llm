@@ -102,7 +102,7 @@ func test_the_captors_seize_the_heros_things() -> void:
 	s.props[s.room_id] = []  # furnished with nothing that holds things
 	var had: Dictionary = (s.character["inventory"] as Dictionary).duplicate()
 	assert_bool(had.is_empty()).is_false()
-	EncounterRules.capture(s, [Being.spawn(s, {"monster": "goblin", "name": "Гоблин"})["id"]], "", "pushcha-trail")
+	EncounterRules.capture(s, data, [Being.spawn(s, {"monster": "goblin", "name": "Гоблин"})["id"]], "", "pushcha-trail")
 	var lines := EncounterRules.seize(s, data)
 	assert_str(" ".join(lines)).contains(str(data["rules"]["encounters"]["seized_name"]))
 	assert_dict(s.character["inventory"]).is_empty()

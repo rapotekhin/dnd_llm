@@ -183,7 +183,8 @@ static func size(s: GameSession, data: Dictionary, who: Dictionary) -> String:
 
 
 ## Its way in a turn in feet now, by the fastest of `Move`; a Slow halves it. Anybody's as the hero's sheet counts it
-## (v0.8.4.15): Longstrider, Haste, grappled or restrained — 0, exhaustion 2 — half, 5 — 0.
+## (v0.8.4.15): Longstrider, Haste, grappled or restrained — 0, exhaustion 2 — half, 5 — 0, heavy armour without its
+## Strength −10 (v0.8.4.27).
 static func speed(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 	var ft := int(s.character.get("speed", 30))
 	var me := holder(s, who)
@@ -191,6 +192,8 @@ static func speed(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 		ft -= int(CombatRules.player(s).get("slowed", 0)) if CombatRules.active(s) else 0
 	else:
 		ft = Move.feet(s, data, who) + ConditionRules.sum(who, "speed")
+		ft -= CharacterRules.armor_slow(CharacterRules.item_def(things(s, data, who), data, s.items, "armor"),
+			ability(s, data, who, "str"), str(me.get("race", "")), data)
 		if SpellEffects.has(me, "speed_x2"):
 			ft *= 2
 		var tired := ConditionRules.exhaustion(me)

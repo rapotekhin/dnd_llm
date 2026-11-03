@@ -52,7 +52,7 @@ func run() -> void:
 	# A captivity: bound by bandits in the hall of the outpost yard.
 	s.room_id = "outpost-yard"
 	s.encounters_done.append("yard_dead")
-	EncounterRules.capture(s, [Being.spawn(s, {"monster": "bandit", "name": "Разбойник"})["id"]], "", "outpost-road")
+	EncounterRules.capture(s, node("Catalog").data, [Being.spawn(s, {"monster": "bandit", "name": "Разбойник"})["id"]], "", "outpost-road")
 	node("EventBus").state_changed.emit()
 	await frames(5)
 	game = screen()

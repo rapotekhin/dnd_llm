@@ -130,7 +130,7 @@ func test_captors_are_the_foes_of_the_fight() -> void:
 	TestUtils.fight(s, data, [{"monster": "bandit", "name": "Разбойник"}], {})
 	var id := TestUtils.foe(s, 1)
 	CombatRules.fighter(s, id)["hp"] = 4
-	EncounterRules.capture(s, [id], "", "pushcha-edge")
+	EncounterRules.capture(s, data, [id], "", "pushcha-edge")
 	CombatRules.close(s)
 	assert_str(str(EncounterRules.captors(s)[0]["name"])).is_equal("Разбойник")
 	assert_int(int(Being.view(s, id)["hp"])).is_equal(4)

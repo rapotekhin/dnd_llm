@@ -256,8 +256,8 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		return {"reason": "в комнате нет вещи %s (есть: %s)" % [e.get("prop_id", ""), ", ".join(room_props(s, s.room_id).map(func(x: Dictionary) -> String: return x["id"]))]}
 	if str(p.get("item_id", "")).is_empty():
 		return {"reason": "%s не унести — это обстановка; опиши попытку словами или `prop_state`" % p["name"]}
-	if not (p.get("contents", {}) as Dictionary).is_empty() and not ContainerRules.is_carried_kind(data, str(p["item_id"])):
-		return {"reason": "в %s что-то лежит — сначала `move_item:container>hero` содержимое" % p["name"]}
+	if not ContainerRules.load_why(data, p).is_empty():
+		return {"reason": ContainerRules.load_why(data, p)}
 	if ContainerRules.is_container(p) and not ContainerRules.closed_why(p).is_empty():
 		return {"reason": ContainerRules.closed_why(p)}
 	var owner := str(p.get("owner", ""))
