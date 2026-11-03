@@ -84,8 +84,7 @@ static func meal(s: GameSession, data: Dictionary, id: String, who: Dictionary =
 	var lines: Array[String] = []
 	if int(m.get("water", 0)) > 0 and NeedRules.on(s) and Sheet.is_hero(who):
 		NeedRules.set_value(s, data, "water", NeedRules.value(s, data, "water") + float(m["water"]))
-	if int(m.get("temp_hp", 0)) > int(c.get("temp_hp", 0)):
-		c["temp_hp"] = int(m["temp_hp"])
+	if Harm.shield(data, c, int(m.get("temp_hp", 0))):
 		lines.append("временные хиты: %d" % int(m["temp_hp"]))
 	if fx.has("adv_tag"):
 		var d := ItemRules.def_of(data["items"], s.items, ItemRules.real_id(id))

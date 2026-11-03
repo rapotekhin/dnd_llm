@@ -880,6 +880,5 @@ static func on_kill(s: GameSession, data: Dictionary, lines: Array[String]) -> v
 	var c := Sheet.holder(s, CombatRules.fighter(s, CombatRules.current(s)))
 	if has(c, "dark_ones_blessing"):
 		var thp := maxi(1, ab_mod(c, "cha") + level(c))
-		if thp > int(c.get("temp_hp", 0)):
-			c["temp_hp"] = thp
+		if Harm.shield(data, c, thp):
 			lines.append("Благословение Тёмного: %d временных хитов" % thp)

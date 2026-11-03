@@ -69,19 +69,26 @@ static func meet(s: GameSession, data: Dictionary, room_id: String, from: String
 		s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from, "word": true}
 		return {"lurk": true, "stealth": -1, "line": "Они уже слышали о вас и ждут, что вы скажете: %s" % _names(enc)}
 	s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from, "seen": false}
-	if bool(enc.get("ambush", false)):
-		s.lurking[room_id]["hidden"] = _hide(s, data, made)
+	var hidden := _hide(s, data, made, bool(enc.get("ambush", false)))
+	if bool(enc.get("ambush", false)) or not hidden.is_empty():
+		s.lurking[room_id]["hidden"] = hidden
 	return watch(s, data, WalkRules.view(s, data))
 
 
-## An ambush hides: the heads whose Stealth beats the hero's passive Perception, the rest the hero sees from the start.
-static func _hide(s: GameSession, data: Dictionary, foes: Array) -> Array:
+## Who the hero does not see from the start: one that looks like a thing while it stands still (False Appearance, a born
+## `still`, v0.8.4.27.1) with no roll, and in an ambush the heads whose Stealth beats the hero's passive Perception.
+static func _hide(s: GameSession, data: Dictionary, foes: Array, ambush: bool) -> Array:
 	var passive := Sheet.passive(s, data, Sheet.HERO)
 	var out: Array = []
 	for e: Dictionary in foes:
-		if int(CombatRules.stealth_roll(s, data, e)["total"]) >= passive:
+		if still(data, e) or ambush and int(CombatRules.stealth_roll(s, data, e)["total"]) >= passive:
 			out.append(foe_id(e))
 	return out
+
+
+## It looks like a thing while it stands still: a statue, a suit of armour, a chest (False Appearance).
+static func still(data: Dictionary, e: Dictionary) -> bool:
+	return ItemRules.born(data, e, "still")
 
 
 static func foe_id(e: Dictionary) -> String:
@@ -105,7 +112,7 @@ static func watch(s: GameSession, data: Dictionary, map: Dictionary) -> Dictiona
 		out["new_sight"] = true
 		out["lines"].append("Вы видите: %s" % ", ".join(shown.map(func(t: Dictionary) -> String: return str(t["name"]))))
 	var enc := lurking_encounter(s, data, room)
-	if bool(enc.get("ambush", false)):
+	if bool(enc.get("ambush", false)) or not foes.is_empty() and foes.all(func(t: Dictionary) -> bool: return still(data, t["record"])):  # things that wait
 		var close := foes.any(func(t: Dictionary) -> bool:
 			var at := Vector2i(int(t["x"]), int(t["y"]))
 			return WalkRules.distance(at, hero) <= int(SightRules.cfg(data)["spring"]) and SightRules.line(map, data["layouts"], at, hero))

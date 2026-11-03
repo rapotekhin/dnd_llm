@@ -372,6 +372,7 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector
 				f["max_hp"] = maxi(1, int(f["max_hp"]) / 2)
 				f["hp"] = mini(int(f["hp"]), int(f["max_hp"]))
 			Gear.arm(s, data, f, spec)  # what it has: its blows and its AC (v0.8.4.10)
+			FightField.auras(s, data, f)  # what its traits lay around it (v0.8.4.27.1)
 			ids.append(id)
 	return ids
 
@@ -1276,7 +1277,9 @@ static func heal(s: GameSession, data: Dictionary, spell_id: String, slot: int, 
 		lines.append("%s: раны не затягиваются" % t["name"])
 		return
 	var before := int(it["hp"])
-	it["hp"] = mini(int(it["max_hp"]), before + heal_roll(s, data, spell_id, slot))
+	if Harm.heal(data, it, heal_roll(s, data, spell_id, slot)) <= 0 and before <= 0:
+		lines.append("%s: раны не затягиваются" % t["name"])
+		return
 	AnimRules.outcome(s, t, "heal")
 	if not Sheet.is_hero(t):
 		t["status"] = "active"
@@ -1519,13 +1522,13 @@ static func fear_source(s: GameSession, f: Dictionary) -> Dictionary:
 	return {} if Sheet.is_hero(f) else player(s)
 
 
-## The reach of a foe's blade in squares: its longest melee action.
+## The reach of a foe's blade in squares: its longest melee action; a swarm's 0 ft — its own square (v0.8.4.27.1).
 static func reach_of(data: Dictionary, f: Dictionary) -> int:
-	var feet := 5
+	var feet := -1
 	for a: Dictionary in f.get("actions", Sheet.template(data, f).get("actions", [])):
 		if str(a.get("kind")) == "melee":
 			feet = maxi(feet, int(a.get("reach", 5)))
-	return FightGrid.squares_of(data, feet)
+	return FightGrid.squares_of(data, feet if feet >= 0 else 5)
 
 
 ## The square of the hero's walk nearest to a foe, NONE when no step brings the hero closer.
@@ -1535,7 +1538,7 @@ static func closest_stop(s: GameSession, data: Dictionary, target_id: String) ->
 	var best := FightGrid.NONE
 	var near := FightGrid.dist(player(s), t)
 	var cost := 1 << 20
-	for at: Vector2i in FightGrid.stops(s, player(s), routes):
+	for at: Vector2i in FightGrid.stops(s, data, player(s), routes):
 		var d := FightGrid.dist_to(t, at)
 		if d < near or d == near and best != FightGrid.NONE and int(routes[at][0]) < cost:
 			near = d

@@ -468,16 +468,12 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 		for i in n:
 			healed += maxi(0, rng.randi_range(1, die) + int(hd["con"]))
 		healed *= int(hd["mult"])
-		var before := int(c["hp"])
-		c["hp"] = mini(int(c["max_hp"]), before + healed)
 		Stock.spend(c, "hit_dice", n)
-		lines.append("кости хитов: %d (к%d) — +%d HP" % [n, die, int(c["hp"]) - before])
+		lines.append("кости хитов: %d (к%d) — +%d HP" % [n, die, Harm.heal(data, c, healed)])
 		for f: Variant in c.get("features", []):  # Song of Rest (v0.7.10)
 			if str(f).begins_with("song_of_rest"):
 				var song := rng.randi_range(1, int(CharacterRules.level_row(c, data).get("class_specific", {}).get("song_of_rest_die", 6)))
-				var was := int(c["hp"])
-				c["hp"] = mini(int(c["max_hp"]), was + song)
-				lines.append("Песнь отдыха: +%d HP" % (int(c["hp"]) - was))
+				lines.append("Песнь отдыха: +%d HP" % Harm.heal(data, c, song))
 				break
 	var pact := Stock.recharge(c, data, "slot_1") == "short"
 	Stock.recharge_all(c, data, "short")

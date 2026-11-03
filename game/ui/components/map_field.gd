@@ -435,6 +435,9 @@ func _fighter(f: Dictionary) -> void:
 	var t := _tile
 	var mid := _corner + (pos + Vector2(span, span) / 2.0) * t
 	var r := t * span * 0.42
+	if bool(f.get("shares", false)) and _crowded(f):  # a swarm in another's square: small, in its corner
+		r *= 0.55
+		mid += Vector2(t, -t) * span * 0.24
 	var states: Array = f.get("states", [])
 	var colour: Color = UiTheme.MUTED if bool(f["out"]) else f["colour"]
 	if bool(f["dim"]):
@@ -595,3 +598,8 @@ func _name(at: Vector2, text: String) -> void:
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x
 	draw_string_outline(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2, 3, UiTheme.BG)
 	draw_string(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2, UiTheme.TEXT)
+
+
+## Another body stands in the square of `f`.
+func _crowded(f: Dictionary) -> bool:
+	return fighters.any(func(o: Dictionary) -> bool: return str(o["id"]) != str(f["id"]) and int(o["x"]) == int(f["x"]) and int(o["y"]) == int(f["y"]))

@@ -67,6 +67,25 @@ static func _ground(id: String, row: Dictionary, cells: Array) -> Dictionary:
 	return z
 
 
+## The auras of a fighter's traits (Horrific Appearance, v0.8.4.27.1): a born `aura` is a zone of the field that follows it,
+## the record a spell's zone has (`_ground`) with a sphere of `ft` around it; `types` — only those of these types, `sees` —
+## only those who see it, `spare_saved` — one who saved is spared after, `for` — the status's rounds and repeated save.
+static func auras(s: GameSession, data: Dictionary, f: Dictionary) -> void:
+	var born := ItemRules.born_rows(f, data, Sheet.template(data, f))
+	for id: String in born:
+		var row: Dictionary = born[id]["row"]
+		if not row.get("aura") is Dictionary:
+			continue
+		var z := _ground("aura:" + id, (row["aura"] as Dictionary).merged({"name": born[id]["name"]}), [])
+		z.merge({"follow": true, "shape": {"type": "sphere", "size": int(row["aura"].get("ft", 5))}, "by": str(f["id"]), "side": str(f.get("side", "enemy"))}, true)
+		for k: String in ["for", "types", "sees", "spare_saved"]:
+			if row["aura"].has(k):
+				z[k] = row["aura"][k]
+		var all := SpellEffects.zones(s)
+		all.append(z)
+		s.combat["zones"] = all
+
+
 static func _block(data: Dictionary, body_id: String, name: String) -> Dictionary:
 	var b: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
 	return {"body": body_id, "name": name, "hp": int(cfg(data)["blocks"]["hp"]), "weight": int(b.get("weight", 0)), "made_of": str(b.get("made_of", "wood"))}

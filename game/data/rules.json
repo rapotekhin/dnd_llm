@@ -2969,8 +2969,12 @@
 		"magnifying_glass": {"item": "magnifying_glass", "about": ["small_object"], "skills": ["investigation"], "gives": "advantage"}
 	},
 	"feature_wear": {
-		"_doc": "What a feature or a trait lays for good, in the words of a worn thing's `wear` (v0.8.4.26.1, ItemRules.wear: \"walk\" — the walking speed, an ability — its modifier): climb_speed, jump_ft (a running jump's feet, core/acts/jump.gd)…",
-		"second_story_work": {"climb_speed": "walk", "jump_ft": "dex"}
+		"_doc": "What a feature or a trait lays for good, in the words of a worn thing's `wear` (v0.8.4.26.1, ItemRules.wear: \"walk\" — the walking speed, an ability — its modifier): climb_speed, jump_ft (a running jump's feet, core/acts/jump.gd)… v0.8.4.27.1: a monster template's trait too (ItemRules.wear reads its `traits`); `share` — its square holds no one for another and none for it (FightGrid.bodies, the 5e swarm), `no_heal` — no hit points back and no temporary ones (Harm.heal, Harm.shield), `still` — it looks like a thing while it stands still: unseen at a meeting with no roll, and a room of only such springs like an ambush (EncounterRules._hide), `aura` — a zone of the field that follows it (FightField.auras: `ft`, `on`, `save`, `dc`, `tag`, `cond`, `for` {rounds, save, dc, tag} — the status's time and its repeated save, `types`, `sees`, `spare_saved`).",
+		"second_story_work": {"climb_speed": "walk", "jump_ft": "dex"},
+		"swarm": {"share": true, "no_heal": true},
+		"false_appearance": {"still": true},
+		"false_appearance_object_form_only": {"still": true},
+		"horrific_appearance": {"aura": {"ft": 30, "on": ["start"], "save": "wis", "dc": 11, "tag": "fear", "cond": "frightened", "for": {"rounds": 10, "save": "wis", "dc": 11, "tag": "fear"}, "types": ["humanoid"], "sees": true, "spare_saved": true}}
 	},
 	"feature_spells": {
 		"_doc": "Spells a feature lets the hero cast at will, without a slot (v0.7.22.4, big test #15: «Туманные видения» gave no spell): the warlock's invocations; they come into c.spells.free and cast at their own circle. v0.8.4.26.1: a row of `resources` with this feature and `spell` gives it charges (once a long rest), SpellRules.stock_of.",

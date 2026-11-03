@@ -247,18 +247,28 @@ static func fast(s: GameSession, g: Dictionary, at: Vector2i) -> bool:  # barred
 	return shut(s, g, at) and (bool(d.get("barred", false)) or bool(d.get("locked", false)))
 
 
-## Everyone in the fight who stands: {square: side}.
-static func bodies(s: GameSession, except: String = "") -> Dictionary:
+## Everyone in the fight who stands: {square: side}; with `data` — but those who share a square (`shares`).
+static func bodies(s: GameSession, except: String = "", data: Dictionary = {}) -> Dictionary:
 	var out := {}
 	for id: String in s.combat.get("fighters", []):
 		var f: Dictionary = s.beings.get(id, {}).get("fight", {})
-		if id == except or f.is_empty() or str(f.get("status", "active")) != "active":
+		if id == except or f.is_empty() or str(f.get("status", "active")) != "active" or not data.is_empty() and shares(s, data, f):
 			continue
 		for at: Vector2i in body(f):
 			out[at] = str(f.get("side"))
 	for c: Dictionary in s.combat.get("crowd", []):  # those who watch a bout (v0.8.4.5)
 		out[Vector2i(int(c["x"]), int(c["y"]))] = "crowd"
 	return out
+
+
+## It shares a square (v0.8.4.27.1, the 5e swarm): a status with `share` — its square holds no one for another, and none for it.
+static func shares(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
+	return ConditionRules.does(Sheet.holder(s, f), data, "share")
+
+
+## The bodies that stop `f`'s walk and where it may end: none for one that shares a square, else all but those that share.
+static func in_way(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
+	return {} if shares(s, data, f) else bodies(s, str(f.get("id", "")), data)
 
 
 static func side_of(side: String) -> String:
@@ -455,7 +465,7 @@ static func reach(s: GameSession, data: Dictionary, f: Dictionary, budget: int, 
 	var flat_on := int(opts.get("on", 0))
 	var only := int(opts.get("only", 0))
 	var mine := side_of(str(f.get("side", "enemy")))
-	var occupied := bodies(s, str(f.get("id", "")))
+	var occupied := in_way(s, data, f)
 	var across := passable(s, data, f, int(opts.get("larger_by", 2)))
 	var slow := slow_cells(s, data, str(f.get("side", "enemy")))
 	var fear: Vector2i = opts.get("fear", NONE)
@@ -529,9 +539,9 @@ static func passable(s: GameSession, data: Dictionary, f: Dictionary, larger_by:
 	return out
 
 
-## Where a walk may end: the squares of `reach` that nobody stands on.
-static func stops(s: GameSession, f: Dictionary, routes: Dictionary) -> Array[Vector2i]:
-	var occupied := bodies(s, str(f.get("id", "")))
+## Where a walk may end: the squares of `reach` that nobody stands on (`in_way`: a swarm's square is free, a swarm stops anywhere).
+static func stops(s: GameSession, data: Dictionary, f: Dictionary, routes: Dictionary) -> Array[Vector2i]:
+	var occupied := in_way(s, data, f)
 	var out: Array[Vector2i] = []
 	var span := int(f.get("span", 1))
 	for at: Vector2i in routes:

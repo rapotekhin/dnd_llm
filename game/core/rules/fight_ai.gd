@@ -79,7 +79,7 @@ static func plan(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 	var routes := Move.routes(s, data, f)
 	if routes.is_empty():
 		routes = {FightGrid.cell(f): [0, FightGrid.cell(f)]}
-	var cells := FightGrid.stops(s, f, routes)
+	var cells := FightGrid.stops(s, data, f, routes)
 	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return int(routes[a][0]) < int(routes[b][0]))
 	var options := _options(s, data, f, targets)
 	var budget := int(cfg(data)["budget"])
@@ -172,7 +172,7 @@ static func _closer(s: GameSession, data: Dictionary, f: Dictionary, targets: Ar
 	var field := _way_to(s, data, f, targets)
 	var best := FightGrid.cell(f)
 	var score := int(field.get(best, FAR)) * 4
-	for at: Vector2i in FightGrid.stops(s, f, routes):
+	for at: Vector2i in FightGrid.stops(s, data, f, routes):
 		var v := int(field.get(at, FAR)) * 4 + int(routes[at][0])
 		if v < score:
 			score = v
@@ -299,7 +299,7 @@ static func flee(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[S
 	if Acts.one("dash").can(s, data, f).is_empty():
 		lines.append_array(Acts.one("dash").go(s, data, f))
 	var routes := Move.routes(s, data, f)
-	var cells := FightGrid.stops(s, f, routes)
+	var cells := FightGrid.stops(s, data, f, routes)
 	var ways := FightField.ways_out(s, data)
 	var hero := FightGrid.cell(CombatRules.player(s))
 	var best := FightGrid.cell(f)
@@ -327,7 +327,7 @@ static func go_to(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 		var best := FightGrid.cell(f)
 		var least := FightGrid.dist(f, t)
 		var ghost := f.duplicate()
-		for at: Vector2i in FightGrid.stops(s, f, routes):
+		for at: Vector2i in FightGrid.stops(s, data, f, routes):
 			FightGrid.put(ghost, at)
 			var d := FightGrid.dist(ghost, t)
 			if d < least:

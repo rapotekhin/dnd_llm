@@ -38,7 +38,7 @@ func run() -> void:
 ## A square the walk reaches, a step or two away.
 func _stop(s: GameSession, data: Dictionary) -> Vector2i:
 	var routes := Move.routes(s, data, CombatRules.player(s))
-	for at: Vector2i in FightGrid.stops(s, CombatRules.player(s), routes):
+	for at: Vector2i in FightGrid.stops(s, data, CombatRules.player(s), routes):
 		if int(routes[at][0]) >= 1:
 			return at
 	return FightGrid.cell(CombatRules.player(s))

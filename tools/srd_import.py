@@ -683,6 +683,10 @@ class Builder:
     def monsters(self) -> dict[str, dict[str, Any]]:
         """Monsters of CR ≤ MAX_MONSTER_CR in the engine's shape (v0.6.1): numbers, attacks, saves, traits."""
         out = {}
+        texts: dict[str, set[str]] = {}  # a trait's English texts: one name, several texts — a translation per monster (v0.8.4.27.1)
+        for m in all_of("monsters"):
+            for t in m.get("special_abilities", []):
+                texts.setdefault(t["name"], set()).add(t.get("desc", ""))
         for m in all_of("monsters"):
             if m["challenge_rating"] > MAX_MONSTER_CR and m["index"] not in NPC_TEMPLATES:
                 continue
@@ -710,11 +714,15 @@ class Builder:
             traits = []
             for t in m.get("special_abilities", []):
                 tr = self.tr(f"monster_trait:{t['name']}", t["name"], t.get("desc", ""))
+                if len(texts[t["name"]]) > 1:  # its own text under the shared name
+                    tr = {**self.tr(f"monster_trait:{m['index']}:{t['name']}", t["name"], t.get("desc", "")), "name": tr["name"]}
                 trait = {"id": sid(t["name"].lower().replace(" ", "_").replace("(", "").replace(")", "").replace("'", "")),
                          "name": tr["name"], "desc": tr.get("desc", "")}
                 fx = parse_effect(t.get("desc", ""))  # v0.7.9: charge, pounce, death burst, relentless — numbers for the engine
                 if fx:
                     trait["effect"] = fx
+                if t.get("spellcasting"):  # read into the template's `spellcasting` (monster_spells), v0.8.4.27.1
+                    trait["into"] = "spellcasting"
                 traits.append(trait)
             gear = [sid(x["index"]) for ac in m.get("armor_class", []) for x in ac.get("armor", [])]
             for a in actions:  # what it fights with, it carries, and the action says which thing that is
@@ -978,6 +986,9 @@ def monster_action(a: dict[str, Any], override: dict[str, Any] | None = None) ->
     if override.get("damage"):
         dmg = override["damage"]
     act: dict[str, Any] = {"name_en": a["name"], "damage": dmg}
+    weak = re.search(r"or \d+ \((\d+d\d+)\) (\w+) damage if the \w+ has half of its hit points or fewer", desc)
+    if weak:  # a swarm bites less at half its hit points (v0.8.4.27.1)
+        act["bloodied"] = [{"dice": weak.group(1), "type": weak.group(2)}]
     if "attack_bonus" in a:
         act["to_hit"] = a["attack_bonus"]
         rng = re.search(r"range (\d+)(?: ft\.)?/(\d+) ft", desc)

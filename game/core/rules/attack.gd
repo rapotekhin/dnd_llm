@@ -20,10 +20,11 @@ static func of_weapon(w: Dictionary) -> Dictionary:
 static func of_action(data: Dictionary, f: Dictionary, a: Dictionary) -> Dictionary:
 	var plus := int(SpellEffects.boon(f, "weapon_plus", 0))
 	var pieces: Array = []
-	for d: Dictionary in a.get("damage", []):
+	var hurt := a.has("bloodied") and int(f.get("hp", 1)) * 2 <= int(f.get("max_hp", 0))  # a swarm at half its HP bites less (v0.8.4.27.1)
+	for d: Dictionary in a.get("bloodied" if hurt else "damage", []):
 		pieces.append({"dice": str(d["dice"]), "type": str(d.get("type", ""))})
 	return {"name": str(a.get("name", "")), "to_hit": int(a.get("to_hit", 0)) + plus, "pieces": pieces, "bonus": plus, "melee": str(a.get("kind")) == "melee",
-		"reach": maxi(1, FightGrid.squares_of(data, int(a.get("reach", 5)))), "range": a.get("range", []), "weapon": true, "act": a,
+		"reach": FightGrid.squares_of(data, int(a.get("reach", 5))), "range": a.get("range", []), "weapon": true, "act": a,  # 0 ft — in its own square
 		"ammo": str(ItemRules.cfg(data)["ammo"].get(str(a.get("item", "")), "")), "magical": bool(a.get("magical", false)), "silvered": bool(a.get("silvered", false))}
 
 

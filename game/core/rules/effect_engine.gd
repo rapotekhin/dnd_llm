@@ -1132,8 +1132,7 @@ func _do_damage(s: GameSession, plan: Dictionary) -> void:
 
 
 func _do_heal(s: GameSession, plan: Dictionary) -> void:
-	var c := s.character
-	c["hp"] = mini(int(c["max_hp"]), int(c["hp"]) + int(plan["amount"]))
+	Harm.heal(_data, s.character, int(plan["amount"]))
 
 
 func _do_coins(s: GameSession, plan: Dictionary) -> void:

@@ -156,9 +156,7 @@ static func heal_self(c: Dictionary, data: Dictionary, spell_id: String, slot: i
 	var heal := CombatRules.max_dice(expr, ab) if SpellEffects.max_heal(c) else CombatRules.roll_dice(rng, expr, false, ab)
 	if CharacterRules.has_feature(c, "disciple_of_life") and slot > 0:
 		heal += 2 + slot
-	var before := int(c["hp"])
-	c["hp"] = mini(int(c["max_hp"]), before + heal)
-	return ["+%d HP" % (int(c["hp"]) - before)]
+	return ["+%d HP" % Harm.heal(data, c, heal)]
 
 
 static func s_name(data: Dictionary, spell_id: String) -> String:

@@ -50,9 +50,9 @@ static func short(s: GameSession, data: Dictionary, id: String, dice: int) -> Ar
 		for i in n:
 			healed += maxi(0, s.rng.randi_range(1, int(hd["die"])) + con)
 		if n > 0:
-			body["hp"] = mini(top, wounds + healed)
+			body["hp"] = wounds
 			Stock.spend(h, "hit_dice", n)
-			lines.append("%s: кости хитов %d — +%d HP" % [name_of(s, data, id), n, int(body["hp"]) - wounds])
+			lines.append("%s: кости хитов %d — +%d HP" % [name_of(s, data, id), n, Harm.heal(data, h, healed, top, body)])
 			if int(body["hp"]) >= top and body == h:
 				h.erase("hp")
 	Stock.recharge_all(h, data, "short")

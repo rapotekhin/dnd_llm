@@ -118,6 +118,26 @@ static func _share(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, 
 		take(s, data, warder, dmg, lines, dtype)
 
 
+## Hit points back to anybody (v0.8.4.27.1): up to `top` (its maximum by default) on `body` (its own record by default; a
+## beast's form keeps its own). One that may not regain them (a swarm's `no_heal`) gets none. What it got.
+static func heal(data: Dictionary, me: Dictionary, n: int, top := -1, body: Dictionary = {}) -> int:
+	var on := me if body.is_empty() else body
+	if n <= 0 or ConditionRules.does(me, data, "no_heal"):
+		return 0
+	var before := int(on.get("hp", 0))
+	on["hp"] = mini(int(on.get("max_hp", before)) if top < 0 else top, before + n)
+	return maxi(0, int(on["hp"]) - before)
+
+
+## Temporary hit points of anybody: `n` when more than it has (they do not add up), none for one with `no_heal`. True when
+## they were laid.
+static func shield(data: Dictionary, me: Dictionary, n: int) -> bool:
+	if n <= int(me.get("temp_hp", 0)) or ConditionRules.does(me, data, "no_heal"):
+		return false
+	me["temp_hp"] = n
+	return true
+
+
 ## Temporary hit points take damage first (Dark One's Blessing, Heroism). What is left.
 static func absorb(me: Dictionary, dmg: int, lines: Array[String]) -> int:
 	var thp := int(me.get("temp_hp", 0))

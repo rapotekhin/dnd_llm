@@ -429,13 +429,11 @@ static func wear(c: Dictionary, data: Dictionary, session_items: Dictionary) -> 
 	for e: Dictionary in ConditionRules.effects(c).duplicate():
 		if str(e.get("source", {}).get("kind", "")) in [WORN, BORN]:
 			ConditionRules.remove_effect(c, int(e["uid"]))
-	var born: Dictionary = data["rules"].get("feature_wear", {})
-	for fid: Variant in (c.get("features", []) as Array) + (c.get("traits", []) as Array):  # a feature's or a trait's own (v0.8.4.26.1)
-		if born.has(str(fid)):
-			var own := wear_spec(c, data, {"wear": born[str(fid)]})
-			var name := str(data["classes"]["features"].get(str(fid), data["races"]["traits"].get(str(fid), {})).get("name", fid))
-			own.merge({"condition": "", "ends": {}, "source": {"kind": BORN, "id": str(fid), "name": name}})
-			ConditionRules.add_effect(c, own)
+	var born := born_rows(c, data, data["monsters"].get(str(c.get("monster", "")), {}))
+	for fid: String in born:  # a feature's or a trait's own (v0.8.4.26.1)
+		var own := wear_spec(c, data, {"wear": born[fid]["row"]})
+		own.merge({"condition": "", "ends": {}, "source": {"kind": BORN, "id": fid, "name": str(born[fid]["name"])}})
+		ConditionRules.add_effect(c, own)
 	var lit := belt(c, data, session_items)
 	for id: String in CharacterRules.working_ids(c, data, session_items):
 		var d := def_of(data["items"], session_items, id)
@@ -444,6 +442,28 @@ static func wear(c: Dictionary, data: Dictionary, session_items: Dictionary) -> 
 		var e := wear_spec(c, data, d)
 		e.merge({"condition": "", "ends": {}, "source": {"kind": WORN, "id": real_id(id), "name": str(d.get("name", ""))}})
 		ConditionRules.add_effect(c, e)
+
+
+## What its features and traits lay for good by `rules.feature_wear`: {id: {row, name}} — its own features and race traits,
+## and the traits of `m`, its monster template (a swarm shares a square, v0.8.4.27.1).
+static func born_rows(c: Dictionary, data: Dictionary, m: Dictionary) -> Dictionary:
+	var rows: Dictionary = data["rules"].get("feature_wear", {})
+	var names := {}
+	for t: Dictionary in m.get("traits", []):
+		names[str(t["id"])] = str(t["name"])
+	var out := {}
+	for fid: Variant in (c.get("features", []) as Array) + (c.get("traits", []) as Array) + names.keys():
+		var id := str(fid)
+		if rows.has(id):
+			out[id] = {"row": rows[id], "name": str(data["classes"]["features"].get(id, data["races"]["traits"].get(id, {})).get("name", names.get(id, id)))}
+	return out
+
+
+## Some feature or trait of `who` lays `key` for good — read off its template when it holds no statuses (a head of an
+## encounter not yet in a fight).
+static func born(data: Dictionary, who: Dictionary, key: String) -> bool:
+	var rows := born_rows(who, data, Sheet.template(data, who))
+	return rows.values().any(func(r: Dictionary) -> bool: return (r["row"] as Dictionary).has(key))
 
 
 # --- what a found thing may be (v0.7.12) -----------------------------------------------------------
@@ -731,9 +751,7 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		var amount := int(h[2])
 		for i in int(h[0]):
 			amount += rng.randi_range(1, int(h[1]))
-		var before := int(c["hp"])
-		c["hp"] = mini(int(c["max_hp"]), before + amount)
-		lines.append("+%d HP" % (int(c["hp"]) - before))
+		lines.append("+%d HP" % Harm.heal(data, c, amount))
 	if s != null and (fx.has("cure") or ConditionRules.BOONS.any(func(k: String) -> bool: return fx.has(k))):
 		lines.append_array(ConditionRules.cure(s, data, fx, {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}, who))
 		return lines

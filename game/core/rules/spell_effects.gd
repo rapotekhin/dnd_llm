@@ -88,7 +88,7 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 		f["hp"] = int(f["hp"]) + int(boon["max_hp"])
 	ConditionRules.add_effect(f, GameSession.whole(boon))
 	lines.append("%s: %s" % [f["name"], spell["name"]])
-	_temp_points(s, sp, slot - maxi(1, int(spell["level"])), f, lines)
+	_temp_points(s, data, sp, slot - maxi(1, int(spell["level"])), f, lines)
 	if sp.has("temp_hp"):
 		lines.append_array(turn_start(s, data, f))
 
@@ -156,24 +156,23 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	lines.append("%s: %s" % [spell["name"], text(data, e)])
 	if sp.has("remove"):
 		lines.append_array(ConditionRules.cure(s, data, {"remove": sp["remove"]}, e["source"]))
-	_temp_points(s, sp, slot - maxi(1, int(spell["level"])), Sheet.HERO, lines)
+	_temp_points(s, data, sp, slot - maxi(1, int(spell["level"])), Sheet.HERO, lines)
 	if sp.has("temp_hp"):
 		lines.append_array(turn_start(s, data))
 	CharacterRules.refresh(c, data, s.items)
 	if e.has("max_hp"):
-		c["hp"] = mini(int(c["max_hp"]), int(c["hp"]) + int(e["max_hp"]))
+		Harm.heal(data, c, int(e["max_hp"]))
 	return lines
 
 
 ## False Life: temporary hit points by its dice.
-static func _temp_points(s: GameSession, sp: Dictionary, slot_up: int, who: Dictionary, lines: Array[String]) -> void:
+static func _temp_points(s: GameSession, data: Dictionary, sp: Dictionary, slot_up: int, who: Dictionary, lines: Array[String]) -> void:
 	if not sp.has("temp_dice"):
 		return
 	var it := Sheet.holder(s, who)
 	var n := CombatRules.roll_dice(s.rng, str(sp["temp_dice"])) + int(sp.get("temp_per_slot", 0)) * maxi(0, slot_up)
-	if n > int(it.get("temp_hp", 0)):
-		it["temp_hp"] = n
-	lines.append("временные хиты: %d" % int(it["temp_hp"]))
+	Harm.shield(data, it, n)
+	lines.append("временные хиты: %d" % int(it.get("temp_hp", 0)))
 
 
 ## The effect of a spell by its row on `who`: its source, who laid it, its time and what the row gives.
@@ -459,16 +458,12 @@ static func immune(c: Dictionary, cond: String) -> String:
 
 
 ## The start of its turn: Heroism gives its temporary hit points again. Lines.
-static func turn_start(s: GameSession, _data: Dictionary, who: Dictionary = Sheet.HERO) -> Array[String]:
+static func turn_start(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> Array[String]:
 	var c := Sheet.holder(s, who)
 	var lines: Array[String] = []
 	for e: Dictionary in ConditionRules.effects(c):
-		if not e.has("temp_hp"):
-			continue
-		var n := int(e["temp_hp"])
-		if n > int(c.get("temp_hp", 0)):
-			c["temp_hp"] = n
-			lines.append("%s: %d временных хитов" % [e.get("source", {}).get("name", ""), n])
+		if e.has("temp_hp") and Harm.shield(data, c, int(e["temp_hp"])):
+			lines.append("%s: %d временных хитов" % [e.get("source", {}).get("name", ""), int(e["temp_hp"])])
 	return lines
 
 
@@ -811,11 +806,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 			var res := Attack.swing(s, data, me, t, Attack.of_spell(name, CombatRules.spell_attack(s), str(e["dice"]).replace("+MOD", ""),
 				ab if str(e["dice"]).contains("MOD") else 0, str(sus["type"]), false, 5).merged({"spell": spell_id}), lines)
 			if bool(res["hit"]) and bool(sus.get("drain", false)):
-				var it := Sheet.holder(s, me)
-				var back := int(res["damage"]) / 2
-				var was := int(it["hp"])
-				it["hp"] = mini(int(it["max_hp"]), was + back)
-				lines.append("%s: +%d HP" % [name, int(it["hp"]) - was])
+				lines.append("%s: +%d HP" % [name, Harm.heal(data, Sheet.holder(s, me), int(res["damage"]) / 2)])
 		"heat":
 			var dmg := Sheet.taken(s, data, t, str(sus["type"]), CombatRules.roll_dice(s.rng, str(e["dice"])))
 			lines.append("%s: %s — %d (огонь)" % [name, t["name"], dmg])
@@ -868,10 +859,12 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 	var ok := Sheet.saved(s, data, f, str(z["save"]), int(z["dc"]), str(z.get("tag", "magic")))
 	if ok:
 		lines.append("%s: %s — спасбросок %s успех" % [z["name"], f["name"], CombatRules.ab_name(str(z["save"]))])
+		if bool(z.get("spare_saved", false)):  # Horrific Appearance: one who saved is not afraid of it again
+			z["spared"] = (z.get("spared", []) as Array) + [str(f["id"])]
 		return lines
 	_failed(s, data, z, f, lines)
 	if z.has("cond") and not ConditionRules.has(Sheet.holder(s, f), str(z["cond"])):
-		lines.append_array(CombatRules._add_condition(s, data, f, str(z["cond"]), {"name": str(z["name"]), "by": str(z.get("by", CombatRules.PLAYER))}))
+		lines.append_array(CombatRules._add_condition(s, data, f, str(z["cond"]), (z.get("for", {}) as Dictionary).merged({"name": str(z["name"]), "by": str(z.get("by", CombatRules.PLAYER))})))
 		lines.append("%s: %s — %s" % [z["name"], f["name"], CombatRules.cond_name(data, str(z["cond"]))])
 	if bool(z.get("retch", false)):
 		f["retching"] = true  # its next start of a turn takes the action and says so (CombatRules._begin_turn)
@@ -989,7 +982,7 @@ static func zone_tick(s: GameSession, data: Dictionary, f: Dictionary, when: Str
 	if when == "start":
 		f["zoned"] = []
 	for z: Dictionary in zones(s).duplicate():
-		if str(f.get("status")) != "active" or not (z["on"] as Array).has(when) or not FightGrid.in_cells(f, FightGrid.zone_cells(s, data, z)):
+		if str(f.get("status")) != "active" or not (z["on"] as Array).has(when) or not _reaches(s, data, z, f) or not FightGrid.in_cells(f, FightGrid.zone_cells(s, data, z)):
 			continue
 		var friend := (str(f.get("side")) == "enemy") == (str(z.get("side", "player")) == "enemy")
 		if friend and (bool(z.get("spares_friends", false)) or not bool(CombatRules.cfg(data)["friendly_fire"]["on"])):
@@ -1003,6 +996,19 @@ static func zone_tick(s: GameSession, data: Dictionary, f: Dictionary, when: Str
 		if bool(z.get("once", false)):  # a rune goes off once (v0.8.4.26.3)
 			_spent(s, data, z, lines)
 	return lines
+
+
+## A zone works on `f` (v0.8.4.27.1): an aura only while its owner stands, on those of its `types`, who see it (`sees`), and
+## not on one that saved against it (`spare_saved`).
+static func _reaches(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary) -> bool:
+	if not z.has("types") and not z.has("sees") and not z.has("spared"):
+		return true
+	var owner := CombatRules.fighter(s, str(z.get("by", CombatRules.PLAYER)))
+	if owner.is_empty() or str(f.get("id")) == str(owner.get("id")) or not Sheet.is_hero(owner) and str(owner.get("status")) != "active":
+		return false
+	if z.has("types") and not (z["types"] as Array).has(str(Sheet.template(data, f).get("type", "humanoid"))):
+		return false
+	return not (bool(z.get("sees", false)) and not FightGrid.sees(s, data, f, owner)) and not (z.get("spared", []) as Array).has(str(f["id"]))
 
 
 ## The concentration (or the time) of `by` ends: the zones of the spell go.

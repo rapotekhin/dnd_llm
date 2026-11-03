@@ -426,16 +426,20 @@ func _bodies(s: GameSession, now: Dictionary, open: bool) -> Array[Dictionary]:
 			"colour": UiTheme.ACCENT_BRIGHT if hero else UiTheme.OK if side == "ally" else UiTheme.BAD,
 			"span": int(f.get("span", 1)), "x": at.x, "y": at.y, "hp": int(s.character["hp"]) if hero else int(f.get("hp", 0)),
 			"most": int(s.character["max_hp"]) if hero else int(f.get("max_hp", 1)), "out": status != "active" or (hero and int(s.character["hp"]) <= 0),
-			"now": id == cur, "dim": bool(f.get("hidden", false)) or heard, "gear": AnimRules.gear(s, Catalog.data, f), "states": AnimRules.states(s, Catalog.data, f)})
+			"now": id == cur, "dim": bool(f.get("hidden", false)) or heard, "gear": AnimRules.gear(s, Catalog.data, f), "states": AnimRules.states(s, Catalog.data, f),
+			"shares": FightGrid.shares(s, Catalog.data, f)})  # a swarm in another's square: drawn small in its corner (v0.8.4.27.1)
 	return out
 
 
 ## The fighter on a square, "" — nobody. Those who lie are in the list: a foe down is no target.
 func _id_at(cell: Vector2i) -> String:
+	var hero := ""  # a swarm in the hero's square: the click is at the swarm (v0.8.4.27.1)
 	for f: Dictionary in _field.fighters:
 		if FightGrid.body_at(Vector2i(int(f["x"]), int(f["y"])), int(f["span"])).has(cell):
-			return str(f["id"])
-	return ""
+			if str(f["id"]) != CombatRules.PLAYER:
+				return str(f["id"])
+			hero = CombatRules.PLAYER
+	return hero
 
 
 ## A click on the field: the picked act goes at the square or the body, a foe opens its acts, else the hero walks.

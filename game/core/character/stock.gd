@@ -156,9 +156,7 @@ static func use(c: Dictionary, data: Dictionary, id: String, amount: int, rng: R
 			heal -= cost
 			lines.append("болезнь исцелена")
 	if heal > 0:
-		var before := int(c["hp"])
-		c["hp"] = mini(int(c["max_hp"]), before + heal)
-		lines.append("+%d HP" % (int(c["hp"]) - before))
+		lines.append("+%d HP" % Harm.heal(data, c, heal))
 	if bool(on_use.get("inspire", false)):  # a solo bard inspires themself (house rule, ADR-0010 §6в, v0.7.10)
 		var die := int(CharacterRules.level_row(c, data).get("class_specific", {}).get("bardic_inspiration_die", 6))
 		for e: Dictionary in ConditionRules.effects(c).duplicate():

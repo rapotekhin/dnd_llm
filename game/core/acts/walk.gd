@@ -24,7 +24,7 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, _how: Dict
 		return stop
 	var at := FightGrid.aim_of(to)
 	var here := FightGrid.cell(f)
-	if at != here and FightGrid.stops(s, f, Move.routes(s, data, f)).has(at):
+	if at != here and FightGrid.stops(s, data, f, Move.routes(s, data, f)).has(at):
 		return ""
 	var src := CombatRules.fear_source(s, f)
 	if not src.is_empty() and WalkRules.distance(at, FightGrid.cell(src)) < WalkRules.distance(here, FightGrid.cell(src)):

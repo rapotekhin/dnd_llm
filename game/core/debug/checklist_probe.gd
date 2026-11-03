@@ -1260,7 +1260,7 @@ static func monster(data: Dictionary, mid: String) -> Dictionary:
 		_monster_action(data, mid, a, offered, steps)
 	for t: Dictionary in m.get("traits", []):
 		var tid := str(t.get("id", ""))
-		if tid == "spellcasting" or tid.is_empty():
+		if tid.is_empty() or m.has(str(t.get("into", ""))):  # read into its `spellcasting`: checked by its spells below
 			continue
 		if _known(data, tid):
 			check(steps, true, "черта «%s» — в движке" % t.get("name", tid))
@@ -1330,6 +1330,8 @@ static func _monster_action(data: Dictionary, mid: String, a: Dictionary, offere
 		var s := _monster_fight(data, mid, 42 + attempt * 13)
 		var m := _monster_in(s, mid)
 		s.character["ac"] = 1
+		if int(Attack.way(s, data, m, {"action": name_en}).get("reach", 1)) == 0:  # a swarm's 0 ft: in the hero's own square
+			FightGrid.put(m, FightGrid.cell(CombatRules.player(s)))
 		var before := _world_now(s, data, m)
 		turn(s, data, m)
 		var why := Acts.one("attack").can(s, data, m, CombatRules.PLAYER, {"action": name_en})
