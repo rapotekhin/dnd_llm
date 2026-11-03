@@ -213,7 +213,8 @@ static func swing(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	var me := Sheet.holder(s, f)
 	var m := mods(s, data, f, t, b)
 	(m["adv"] as Array).append_array(b.get("adv", []))
-	var blow := FeatureRules.armed(s, data, f, t, b, m) if bool(b.get("weapon", false)) else b
+	(m["dis"] as Array).append_array(b.get("dis", []))
+	var blow :=FeatureRules.armed(s, data, f, t, b, m) if bool(b.get("weapon", false)) else b
 	lines.append_array(SpellEffects.end_on_attack(me))
 	Gear.spend_ammo(s, data, f, str(b.get("ammo", "")))  # arrows and bolts are spent, whoever shoots (v0.8.4.10)
 	var a: Dictionary = b.get("act", {})

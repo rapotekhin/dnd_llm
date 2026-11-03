@@ -196,3 +196,31 @@ func test_conditions_on_a_unit_and_on_the_hero_with_the_spells_statuses() -> voi
 	assert_int(ConditionRules.exhaustion(s.character)).is_equal(1)
 	assert_str(Dev.run("cond ослеплён")).contains("Ослеплён")
 	assert_bool(ConditionRules.has(s.character, "blinded")).is_true()
+
+
+## The damage simulator: one attack roll by Attack.swing — dice, type, crit, forced advantage, the target's defenses, Harm.
+func test_hit_rolls_an_attack_through_the_engine_road() -> void:
+	assert_str(Dev.run("hit 1d6 fire")).contains("только в бою")
+	s.settings["reactions"] = "never"
+	TestUtils.fight(s, Catalog.data, [{"monster": "goblin", "col": 1}])
+	var g := CombatRules.fighter(s, TestUtils.foe(s, 1))
+	g["max_hp"] = 500
+	g["hp"] = 500
+	var out := Dev.run("@гоблин hit 4d1 огонь crit")
+	assert_str(out).contains("удар консоли")
+	assert_int(500 - int(g["hp"])).is_equal(8)  # a critical hit rolls the dice twice
+	Dev.run("@гоблин resist fire")
+	g["hp"] = 500
+	out = Dev.run("@гоблин hit 4d1 fire crit")
+	assert_int(500 - int(g["hp"])).is_equal(4)
+	assert_str(out).contains("сопротивление: огонь")
+	assert_str(Dev.run("@гоблин hit 1d1 cold crit adv")).contains("(с преимуществом)")
+	assert_str(Dev.run("@гоблин hit 1d1 cold crit dis")).contains("(с помехой)")
+	var hp := int(s.character["hp"])
+	out = Dev.run("hit 3d1 cold crit")
+	assert_str(out).contains("Гоблин — удар консоли")
+	assert_int(hp - int(s.character["hp"])).is_equal(6)
+	assert_str(Dev.run("hit 1d6 нет-такого-урона")).contains("не найдено")
+	assert_str(Dev.run("hit fire")).contains("hit <кубики>")
+	g["hp"] = 3
+	assert_str(Dev.run("@гоблин hit 5d1 crit")).contains("повержен")

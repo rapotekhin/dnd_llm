@@ -14,6 +14,14 @@ const SOURCE := {"kind": "dev", "name": "консоль"}
 const DEFENSES := {"resist": "сопротивление", "immune": "иммунитет", "vulnerable": "уязвимость"}
 ## The rows of exhaustion's own steps (exhaustion_3): read by the level, never laid by hand.
 static var EXHAUSTION_STEP := RegEx.create_from_string("^exhaustion_\\d+$")
+## The console's blow (`hit`): its name in the lines, the to-hit bonus without `+N`, the type without one, a reach and a range
+## past any map so the distance gives it nothing.
+const STRIKE := {"name": "удар консоли", "to_hit": 5, "type": "bludgeoning", "reach": 999, "range": 9999}
+## The words of `hit` → the flag of its spec.
+const STRIKE_WORDS := {"adv": "adv", "преим": "adv", "преимущество": "adv", "dis": "dis", "помеха": "dis", "crit": "crit", "крит": "crit",
+	"magic": "magical", "магия": "magical", "silver": "silvered", "серебро": "silvered", "ranged": "ranged", "выстрел": "ranged"}
+static var DICE := RegEx.create_from_string("^\\d*d\\d+([+-]\\d+)?$")
+static var TO_HIT := RegEx.create_from_string("^[+-]\\d+$")
 ## What a search is over: a command's argument kind → where its entries live.
 const KINDS: Array[String] = ["item", "monster", "spell", "feature", "trait", "room", "class", "damage", "condition"]
 ## Fields of the hero a rebuild keeps: who it is, what it carries, what lies on it and what it chose at creation beside
@@ -180,6 +188,48 @@ static func condition(s: GameSession, data: Dictionary, who: String, cond: Strin
 	var lines := ConditionRules.impose(s, data, {"condition": cond, "ends": {}, "source": SOURCE.duplicate()}, w)
 	lines.push_front("состояние: %s" % ConditionRules.name_of(data, cond))
 	return lines
+
+
+## The words of `hit` (after the target, without the striker's `@`): the dice, the damage type, `+N` to hit, the forced
+## advantage or disadvantage, a critical hit, a magical or silvered blow, a shot. {spec} or {reason}.
+static func strike_spec(s: GameSession, data: Dictionary, words: PackedStringArray) -> Dictionary:
+	var spec := {"dice": "", "type": STRIKE["type"], "to_hit": int(STRIKE["to_hit"]), "adv": false, "dis": false, "crit": false,
+		"magical": false, "silvered": false, "ranged": false}
+	var rest := PackedStringArray()
+	for w: String in words:
+		var lw := w.to_lower()
+		var flag := str(STRIKE_WORDS.get(lw, ""))
+		if DICE.search(lw.replace("к", "d")):
+			spec["dice"] = lw.replace("к", "d")
+		elif TO_HIT.search(lw):
+			spec["to_hit"] = int(lw)
+		elif not flag.is_empty():
+			spec[flag] = true
+		else:
+			rest.append(w)
+	if str(spec["dice"]).is_empty():
+		return {"reason": "hit <кубики> [тип урона] [+атака] [adv|dis] [crit] [magic] [silver] [ranged] [@кто бьёт]"}
+	if not rest.is_empty():
+		var r := resolve(s, data, "damage", " ".join(rest))
+		if r.has("reason"):
+			return r
+		spec["type"] = str(r["id"])
+	return {"spec": spec}
+
+
+## The blow of a spec for Attack.swing: a roll of its own with no weapon nor class behind it, at any distance; a critical
+## one hits on any roll. The striker's statuses and the target's defenses work on it as on any blow.
+static func blow(spec: Dictionary) -> Dictionary:
+	var b := {"name": STRIKE["name"], "to_hit": int(spec["to_hit"]), "pieces": [{"dice": str(spec["dice"]), "type": str(spec["type"])}],
+		"bonus": 0, "melee": not bool(spec["ranged"]), "reach": int(STRIKE["reach"]), "range": [] if not bool(spec["ranged"]) else [int(STRIKE["range"]), int(STRIKE["range"])],
+		"magical": bool(spec["magical"]), "silvered": bool(spec["silvered"]), "str_based": false}
+	if bool(spec["adv"]):
+		b["adv"] = [STRIKE["name"]]
+	if bool(spec["dis"]):
+		b["dis"] = [STRIKE["name"]]
+	if bool(spec["crit"]):
+		b["crit_min"] = 1
+	return b
 
 
 ## The hero again at level 1 of `class_id` (its own class when ""): its race, background, name, things and statuses

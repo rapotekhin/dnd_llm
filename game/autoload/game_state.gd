@@ -679,6 +679,19 @@ func _start_pending_fight() -> void:
 	start_combat(foes, source)
 
 
+## A deed of the engine in a fight made beside the buttons (the dev console's `hit`): its lines into the fight's log, the end
+## checked as after the hero's act, an outcome played on.
+func fight_lines(lines: Array[String]) -> void:
+	if session == null or not CombatRules.active(session):
+		return
+	_refresh()
+	_combat_log(lines)
+	_combat_log(CombatRules.after_player_action(session, Catalog.data))
+	EventBus.state_changed.emit()
+	if not str(session.combat.get("outcome", "")).is_empty():
+		_combat_continue()
+
+
 func _combat_log(lines: Array[String]) -> void:
 	if lines.is_empty() or not CombatRules.active(session):
 		return

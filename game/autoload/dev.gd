@@ -6,12 +6,12 @@ const MESSAGES_KEPT := 50
 ## Every command, for the completion of the first word.
 const COMMANDS: Array[String] = ["help", "backend", "reconnect", "say", "retry", "cancel", "save", "load", "seed", "snapshot", "clear",
 	"room", "rooms", "quests", "items", "npc", "state", "find", "give", "gold", "spawn", "goto", "heal", "god", "slots", "xp", "level",
-	"reset", "class", "spell", "feature", "trait", "resist", "immune", "vulnerable", "cond", "units"]
+	"reset", "class", "spell", "feature", "trait", "resist", "immune", "vulnerable", "cond", "hit", "units"]
 ## The cheats (Cheats): they change the game, each through the engine's own road.
 const CHEATS: Array[String] = ["give", "gold", "spawn", "goto", "heal", "god", "slots", "xp", "level", "reset", "class", "spell",
-	"feature", "trait", "resist", "immune", "vulnerable", "cond"]
+	"feature", "trait", "resist", "immune", "vulnerable", "cond", "hit"]
 ## The cheats that take a unit of the room after `@цель` instead of the hero.
-const UNIT_CHEATS: Array[String] = ["give", "gold", "heal", "resist", "immune", "vulnerable", "cond", "feature", "trait"]
+const UNIT_CHEATS: Array[String] = ["give", "gold", "heal", "resist", "immune", "vulnerable", "cond", "feature", "trait", "hit"]
 ## What a command's argument is: the kind `find` and the completion search (Cheats.KINDS).
 const ARG_KIND := {"give": "item", "spawn": "monster", "goto": "room", "class": "class", "spell": "spell", "feature": "feature",
 	"trait": "trait", "resist": "damage", "immune": "damage", "vulnerable": "damage", "cond": "condition"}
@@ -102,6 +102,7 @@ func run(line: String) -> String:
 				+ "мир: room [id] · rooms · quests · items [поиск] · npc <id|имя> · state\n" \
 				+ "читы: give <вещь> [n] · gold <зм> · spawn <монстр> [n] [ally] · goto <комната> · heal · god · slots · xp <n> · " \
 				+ "level [до] · reset · class <класс> · spell <имя> · feature <имя> · trait <имя> · resist|immune|vulnerable <урон> [off] · cond <состояние> [off]\n" \
+				+ "удар в бою: [@цель] hit <кубики> [тип] [+атака] [adv|dis] [crit] [magic] [silver] [ranged] [@кто бьёт]\n" \
 				+ "на юнита комнаты: @<цель> %s · units — кто здесь\n" % ", ".join(UNIT_CHEATS) \
 				+ "поиск: find <%s> <часть имени> · Tab — дополнить имя" % "|".join(Cheats.KINDS)
 		"units":
@@ -277,6 +278,8 @@ func _cheat(cmd: String, args: PackedStringArray, u: Dictionary = {}) -> String:
 				else "; ".join(Cheats.condition(s, data, who, str(r["id"]), not off))
 			_changed()
 			return to + line
+		"hit":
+			return _hit(s, data, args, u)
 		"feature", "trait":
 			var r := Cheats.resolve(s, data, cmd, " ".join(args))
 			if r.has("reason"):
@@ -291,6 +294,41 @@ func _cheat(cmd: String, args: PackedStringArray, u: Dictionary = {}) -> String:
 			_changed()
 			return "%s%s: %s [%s]" % [to, "способность" if cmd == "feature" else "черта", Cheats.pool(s, data, cmd)[r["id"]].get("name", ""), r["id"]]
 	return "unknown cheat: %s" % cmd
+
+
+## `[@цель] hit <кубики> [тип] [+атака] [adv|dis] [crit] [magic] [silver] [ranged] [@кто]`: one attack roll by the engine's own
+## road (Attack.swing) at the hero or the unit `u`: the striker's and the target's statuses, the AC with cover, a reaction, the
+## defenses, Harm. The striker is the `@` among the words, else the first foe at the hero and the hero at a unit.
+func _hit(s: GameSession, data: Dictionary, args: PackedStringArray, u: Dictionary) -> String:
+	if not CombatRules.active(s):
+		return "hit — только в бою (spawn <монстр>)"
+	if GameState.combat_playing:
+		return "идёт ход врагов — подожди"
+	var words := PackedStringArray()
+	var by := ""
+	for w: String in args:
+		if w.begins_with("@"):
+			var su := Cheats.unit(s, data, w)
+			if su.has("reason"):
+				return str(su["reason"])
+			by = str(su["id"])
+		else:
+			words.append(w)
+	var r := Cheats.strike_spec(s, data, words)
+	if r.has("reason"):
+		return str(r["reason"])
+	var t := CombatRules.player(s) if u.is_empty() else CombatRules.fighter(s, str(u["id"]))
+	if by.is_empty():
+		var foes := CombatRules.enemies(s)
+		by = CombatRules.PLAYER if not u.is_empty() else str(foes[0]) if not foes.is_empty() else ""
+	if by.is_empty() or by == str(t.get("id", "")):
+		return "кто бьёт? @<кто> среди слов (units — кто здесь)"
+	if not Attack.up(s, t):
+		return "цель уже лежит"
+	var lines: Array[String] = []
+	Attack.swing(s, data, CombatRules.fighter(s, by), t, Cheats.blow(r["spec"]), lines)
+	GameState.fight_lines(lines)
+	return "\n".join(lines)
 
 
 ## `spawn <монстр> [n] [ally|foe]`: in a fight they come in at once on their side (CombatRules.add_allies); out of it a

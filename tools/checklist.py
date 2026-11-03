@@ -237,7 +237,9 @@ def spells_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
 
 def defenses_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
     """A row per damage type and defense, then per condition immunity: the commands and who has it by the data."""
-    cols = ["Защита", "id", "Герою", "Юниту", "Монстры с ней", "Вещи с ней", "Черты рас"]
+    cols = ["Защита", "id", "Герою", "Юниту", "Проверить ударом", "Монстры с ней", "Вещи с ней", "Черты рас"]
+    # A blow of fixed dice that always hits critically: 4d1 rolled twice is 8 before the defense.
+    expect = {"resist": 4, "immune": 0, "vulnerable": 16}
     he = data.rules.get("hero_effects", {})
     by_item: dict[str, str] = he.get("item_resist", {})
     by_trait: dict = he.get("trait_resist", {})
@@ -251,7 +253,8 @@ def defenses_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
                 things = [d.get("name", i) for i, d in data.items.items() if set(map(str, d.get("properties", []))) & set(props)]
                 races = [data.traits.get(t, {}).get("name", t) for t, v in by_trait.items() if isinstance(v, list) and dtype in v]
             rows.append({"id": f"{kind}:{dtype}", "Защита": f"{word}: {data.damage_name(dtype)}", "Герою": f"{kind} {dtype}",
-                         "Юниту": f"@<цель> {kind} {dtype}", "Монстры с ней": ", ".join(sorted(mons)), "Вещи с ней": ", ".join(sorted(things)),
+                         "Юниту": f"@<цель> {kind} {dtype}",
+                         "Проверить ударом": f"@<цель> hit 4d1 {dtype} crit → {expect[kind]} урона (без защиты 8)", "Монстры с ней": ", ".join(sorted(mons)), "Вещи с ней": ", ".join(sorted(things)),
                          "Черты рас": ", ".join(races)})
     for cond in data.rules["conditions"]:
         mons = [m.get("name", mid) for mid, m in data.monsters.items() if cond in map(str, m.get("condition_immunities", []))]
@@ -323,7 +326,7 @@ def conditions_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
 
 WIDTHS = {"Описание": 70, "Что делает": 60, "Накладывают заклинания": 35, "Накладывают монстры": 45, "Снимают": 30, "Иммунны": 40,
           "Снять": 24, "Способности": 50, "Заклинания": 45, "Инвентарь": 35, "Защиты": 35, "Комментарий": 40, "Монстры с ней": 50,
-          "Вещи с ней": 35, "Классы": 30, "Команда": 30, "Союзник": 28, "На юнита": 32, "Юниту": 26, "Герою": 22}
+          "Вещи с ней": 35, "Классы": 30, "Команда": 30, "Союзник": 28, "На юнита": 32, "Юниту": 26, "Герою": 22, "Проверить ударом": 40}
 
 
 def old_marks(path: Path) -> dict[tuple[str, str], dict]:

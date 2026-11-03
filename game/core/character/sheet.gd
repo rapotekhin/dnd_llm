@@ -316,8 +316,8 @@ static func defenses(s: GameSession, data: Dictionary, who: Dictionary, dtype: S
 			var text := str(x).to_lower()
 			if text.contains(dtype) and not (text.contains("nonmagical") and magical) and not (text.contains("silvered") and silvered):
 				out[{"immunities": "immune", "resistances": "resist", "vulnerabilities": "vulnerable"}[list]] = str(x)
-	if ConditionRules.resisted(who, dtype):  # the spells on it (v0.7.50.1)
-		out["resist"] = dtype
+	if ConditionRules.resisted(who, dtype):  # the spells on it (v0.7.50.1), by the type's name in the line
+		out["resist"] = str(data["misc"]["damage_types"].get(dtype, dtype))
 	return out
 
 
