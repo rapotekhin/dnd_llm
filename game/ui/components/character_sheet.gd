@@ -511,11 +511,9 @@ func _gear_tab(c: Dictionary) -> void:
 				if not at_why.is_empty():
 					(row.get_child(row.get_child_count() - 1) as Button).tooltip_text = tr(at_why)
 		for t: String in CharacterRules.slots_of(def, Catalog.data):
-			var hand := CharacterRules.HANDS.has(t)
-			var only_spare := hand and CharacterRules.goes_stowed(c, Catalog.data, s.items, id)  # v0.8.4.24: the button says so
-			if not only_spare and str(c["equipped"].get(t, "")) != id:
+			if str(c["equipped"].get(t, "")) != id:
 				_equip_button(row, c, def, id, t, false, busy)
-			if hand and CharacterRules.fits_stowed(c, Catalog.data, s.items, id) and str(CharacterRules.stowed(c).get(t, "")) != id:
+			if CharacterRules.HANDS.has(t) and str(CharacterRules.stowed(c).get(t, "")) != id:  # any weapon, either set (v0.8.4.24.1)
 				_equip_button(row, c, def, id, t, true, busy)
 	var shown := _picked_item if (c.get("inventory", {}) as Dictionary).has(_picked_item) else ""
 	if not shown.is_empty():
@@ -585,39 +583,14 @@ func _belt_cells(details: DetailsPanel, c: Dictionary, busy: bool) -> void:
 		row.add_child(off)
 
 
-## The other weapon set under the hands (v0.8.4.1, as in BG3): its row, what is in it and the swap.
+## The other weapon set under the hands (v0.8.4.1, as in BG3): the same three hands as the doll's, any weapon in them
+## (v0.8.4.24.1), what is in each and the swap.
 func _stowed_cards(parent: Control, details: DetailsPanel, c: Dictionary, busy: bool) -> void:
 	var s := GameState.session
-	var kind := "melee" if CharacterRules.active_kind(c, Catalog.data, s.items) == "ranged" else "ranged"
-	var head := _text(parent, tr("SLOT_STOWED").format({"set": tr("SET_" + kind.to_upper())}), UiTheme.MUTED_LABEL)
+	var head := _text(parent, tr("SLOT_STOWED"), UiTheme.MUTED_LABEL)
 	head.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL - 2)
 	for slot: String in CharacterRules.HANDS:
-		var id := str(CharacterRules.stowed(c).get(slot, ""))
-		if id.is_empty() and slot != "main_hand":
-			continue
-		var card := PanelContainer.new()
-		card.name = "StowedCard_" + slot
-		card.theme_type_variation = UiTheme.CARD
-		parent.add_child(card)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		card.add_child(row)
-		_slot_pick(card, slot, busy, true)  # v0.8.4.24: its own list, as the doll's slots
-		if id.is_empty():
-			var none := _text(row, "—", UiTheme.MUTED_LABEL)
-			none.tooltip_text = tr("STOWED_EMPTY_TIP")
-			none.mouse_filter = Control.MOUSE_FILTER_PASS
-			none.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			_slot_arrow(row, card)
-			continue
-		_item_button(row, details, c, id, ItemRules.display_name(Catalog.data["items"], s.items, id), "Stowed_" + slot)
-		var b := Button.new()
-		b.text = "BTN_UNEQUIP"
-		b.name = "UnequipStowed_" + slot
-		b.disabled = busy
-		b.pressed.connect(GameState.unequip_stowed.bind(slot))
-		row.add_child(b)
-		_slot_arrow(row, card)
+		_slot_card(parent, details, c, slot, busy, true)
 	var why := Acts.one("swap").can(s, Catalog.data, Sheet.HERO)
 	var swap := Button.new()
 	swap.name = "SwapWeapons"
@@ -632,22 +605,18 @@ func _stowed_cards(parent: Control, details: DetailsPanel, c: Dictionary, busy: 
 
 
 ## A click on a slot's card: the list of what can be worn there (v0.8.4.2). What may not be worn now is grey with why.
-## `spare` — a slot of the set put away, only what may lie there; a hand of the doll lists only its own set's things.
+## `spare` — a slot of the set put away: the same things as the doll's hand of that slot (v0.8.4.24.1).
 func _slot_pick(card: PanelContainer, slot: String, busy: bool, spare: bool = false) -> void:
 	var pop := PopupMenu.new()
 	pop.name = "SlotList_" + slot
 	card.add_child(pop)
 	var s := GameState.session
 	var c := s.character
-	var hand := CharacterRules.HANDS.has(slot)
 	var ids: Array[String] = []
 	for id: String in c.get("inventory", {}):
 		if not CharacterRules.slots_of(ItemRules.def_of(Catalog.data["items"], s.items, id), Catalog.data).has(slot):
 			continue
-		if spare:
-			if CharacterRules.fits_stowed(c, Catalog.data, s.items, id) and str(CharacterRules.stowed(c).get(slot, "")) != id:
-				ids.append(id)
-		elif str(c["equipped"].get(slot, "")) != id and not (hand and CharacterRules.goes_stowed(c, Catalog.data, s.items, id)):
+		if str((CharacterRules.stowed(c) if spare else c["equipped"]).get(slot, "")) != id:
 			ids.append(id)
 	for i in ids.size():
 		var why := CharacterRules.can_equip(c, Catalog.data, s.items, ids[i], slot, spare)
@@ -683,10 +652,12 @@ func _slot_arrow(row: HBoxContainer, card: PanelContainer) -> void:
 	row.add_child(b)
 
 
-## A worn slot of the doll: its name, the thing in it (or «—»), «▾» with what fits and «Снять».
-func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: String, busy: bool) -> void:
+## A worn slot of the doll: its name, the thing in it (or «—»), «▾» with what fits and «Снять». `spare` — the same hand
+## of the set put away (v0.8.4.24.1: one card for both sets).
+func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: String, busy: bool, spare: bool = false) -> void:
+	var tag := "Stowed" if spare else "Slot"
 	var card := PanelContainer.new()
-	card.name = "SlotCard_" + slot
+	card.name = tag + "Card_" + slot
 	card.theme_type_variation = UiTheme.CARD
 	parent.add_child(card)
 	var col := VBoxContainer.new()
@@ -697,27 +668,31 @@ func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: Str
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	col.add_child(row)
-	var id := str(c["equipped"].get(slot, ""))
-	var grip := CharacterRules.two_hand_grip(c, Catalog.data, GameState.session.items)
-	_slot_pick(card, slot, busy)
+	var hands: Dictionary = CharacterRules.stowed(c) if spare else c["equipped"]
+	var id := str(hands.get(slot, ""))
+	var grip := not spare and CharacterRules.two_hand_grip(c, Catalog.data, GameState.session.items)
+	_slot_pick(card, slot, busy, spare)
 	if id.is_empty():
-		var main := str(c["equipped"].get("main_hand", ""))
+		var main := str(hands.get("main_hand", ""))
 		var held := slot == "off_hand" and grip
 		var none := _text(row, tr("SLOT_HELD_BY").format({"name": ItemRules.display_name(Catalog.data["items"], GameState.session.items, main)}) if held else "—", UiTheme.MUTED_LABEL)
 		none.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if spare:
+			none.tooltip_text = tr("STOWED_EMPTY_TIP")
+			none.mouse_filter = Control.MOUSE_FILTER_PASS
 		_slot_arrow(row, card)
 		return
 	if slot == "main_hand" and grip:
 		head.text += " · " + tr("SLOT_GRIP_BOTH")
-	_item_button(row, details, c, id, ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), "Slot_" + slot)
+	_item_button(row, details, c, id, ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), ("Stowed_" if spare else "Slot_") + slot)
 	var b := Button.new()
 	b.text = "BTN_UNEQUIP"
-	b.name = "Unequip_" + slot
+	b.name = ("UnequipStowed_" if spare else "Unequip_") + slot
 	b.disabled = busy
-	b.pressed.connect(GameState.unequip.bind(slot))
+	b.pressed.connect((GameState.unequip_stowed if spare else GameState.unequip).bind(slot))
 	row.add_child(b)
 	var w := ItemRules.def_of(Catalog.data["items"], GameState.session.items, id)
-	if slot == "main_hand" and not grip and (w.get("weapon", {}) as Dictionary).has("versatile"):
+	if not spare and slot == "main_hand" and not grip and (w.get("weapon", {}) as Dictionary).has("versatile"):
 		var both := Button.new()  # 5e versatile: the bigger die, the shield and the off hand go to the pack
 		both.name = "BothHands"
 		both.text = "BTN_BOTH_HANDS"

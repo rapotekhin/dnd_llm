@@ -23,7 +23,7 @@ func run() -> void:
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	step("nothing in the other set yet", (find(screen(), "WeaponSetStowed") as Button).disabled)
-	step("a bow goes to its row", gs.equip("longbow", "main_hand").is_empty() and str(c["equipped"]["main_hand"]) == sword and str(CharacterRules.stowed(c)["main_hand"]) == "longbow")
+	step("a bow to the set put away by its own button", gs.equip("longbow", "main_hand", false, true).is_empty() and str(c["equipped"]["main_hand"]) == sword and str(CharacterRules.stowed(c)["main_hand"]) == "longbow")
 	await frames(3)
 	await shot("sets_on_the_panel")
 	var ac := int(c["ac"])

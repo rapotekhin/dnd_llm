@@ -347,20 +347,14 @@ static func stowed(c: Dictionary) -> Dictionary:
 	return c.get("stowed", {})
 
 
-## The row of a thing: a bow, a crossbow, a sling are of the ranged set, the rest, a shield too, of the melee one.
+## The kind of a thing: a bow, a crossbow, a sling are ranged, the rest, a shield too, melee. Only the starting kit
+## is sorted by it (auto_equip); the two sets themselves take any weapon (v0.8.4.24.1).
 static func set_kind(def: Dictionary) -> String:
 	return "ranged" if str(def.get("weapon", {}).get("range", "melee")) == "ranged" else "melee"
 
 
-## The rows a thing may lie in: a thrown weapon (a javelin, a handaxe) in either (v0.8.4.24).
-static func set_kinds(def: Dictionary) -> Array[String]:
-	var kind := set_kind(def)
-	if kind == "melee" and def.has("weapon") and (def.get("properties", []) as Array).has("thrown"):
-		return ["melee", "ranged"] as Array[String]
-	return [kind] as Array[String]
-
-
-static func _hands_kind(hands: Dictionary, data: Dictionary, session_items: Dictionary) -> String:
+## The kind of a set by what it holds ("" — empty hands): for its name on the panel and the sheet.
+static func hands_kind(hands: Dictionary, data: Dictionary, session_items: Dictionary) -> String:
 	for slot: String in HANDS:
 		var id := str(hands.get(slot, ""))
 		if not id.is_empty():
@@ -368,34 +362,9 @@ static func _hands_kind(hands: Dictionary, data: Dictionary, session_items: Dict
 	return ""
 
 
-## The row in the hands: the one laid by a swap or by filling the other row (`wield`, v0.8.4.24: a javelin may lie in
-## either), else by what is held, empty hands — the row the stowed set is not.
-static func active_kind(c: Dictionary, data: Dictionary, session_items: Dictionary) -> String:
-	if not str(c.get("wield", "")).is_empty():
-		return str(c["wield"])
-	var held := _hands_kind(c.get("equipped", {}), data, session_items)
-	if not held.is_empty():
-		return held
-	return "melee" if _hands_kind(stowed(c), data, session_items) != "melee" else "ranged"
-
-
-## This thing belongs to the row that is put away only.
-static func goes_stowed(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> bool:
-	return not set_kinds(ItemRules.def_of(data["items"], session_items, id)).has(active_kind(c, data, session_items))
-
-
-## This thing may lie in the row that is put away.
-static func fits_stowed(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> bool:
-	return set_kinds(ItemRules.def_of(data["items"], session_items, id)).size() > 1 or goes_stowed(c, data, session_items, id)
-
-
-static func other_kind(kind: String) -> String:
-	return "melee" if kind == "ranged" else "ranged"
-
-
 ## "" when the sets can change places, otherwise a reason (localization key).
 static func swap_why(c: Dictionary, data: Dictionary, session_items: Dictionary) -> String:
-	if _hands_kind(stowed(c), data, session_items).is_empty():
+	if hands_kind(stowed(c), data, session_items).is_empty():
 		return "SWAP_EMPTY"
 	for slot: String in HANDS:
 		if ItemRules.held_by_curse(c, data, session_items, str(c.get("equipped", {}).get(slot, ""))):
@@ -403,9 +372,7 @@ static func swap_why(c: Dictionary, data: Dictionary, session_items: Dictionary)
 	return ""
 
 
-static func swap_hands(c: Dictionary, data: Dictionary = {}, session_items: Dictionary = {}) -> void:
-	if not data.is_empty():
-		c["wield"] = other_kind(active_kind(c, data, session_items))
+static func swap_hands(c: Dictionary) -> void:
 	var eq: Dictionary = c.get("equipped", {})
 	var was := stowed(c)
 	var out := {}
@@ -418,7 +385,6 @@ static func swap_hands(c: Dictionary, data: Dictionary = {}, session_items: Dict
 ## Puts a thing into the row put away (can_equip first): a weapon of two hands empties the other hand of that row; the
 ## last copy held in the hands moves over (v0.8.4.24).
 static func put_stowed(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, slot: String) -> void:
-	c["wield"] = active_kind(c, data, session_items)  # the rows stay what they are, a javelin among them
 	if not c.has("stowed"):
 		c["stowed"] = {}
 	var row := stowed(c)
@@ -495,7 +461,7 @@ static func slots_of(def: Dictionary, data: Dictionary) -> Array[String]:
 
 
 ## "" when the character can equip `id` into `slot`, otherwise a reason (localization key).
-## `spare` — into the row put away, for a thing that may lie in either (fits_stowed).
+## `spare` — into the set put away, else into the hands: either set takes any weapon (v0.8.4.24.1).
 static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, slot: String, spare: bool = false) -> String:
 	if int(c.get("inventory", {}).get(id, 0)) <= 0:
 		return "EQUIP_NOT_OWNED"
@@ -505,7 +471,7 @@ static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary
 		return "EQUIP_WRONG_SLOT"
 	if natural == "ring1" and str(c.get("equipped", {}).get("ring1" if slot == "ring2" else "ring2", "")) == id and int(c["inventory"][id]) < 2:
 		return "EQUIP_NOT_OWNED"
-	var eq: Dictionary = stowed(c) if HANDS.has(slot) and (spare or goes_stowed(c, data, session_items, id)) else c.get("equipped", {})
+	var eq: Dictionary = stowed(c) if HANDS.has(slot) and spare else c.get("equipped", {})
 	var profs: Array = c.get("armor_profs", [])
 	match slot:
 		"armor":
@@ -620,10 +586,15 @@ static func auto_equip(c: Dictionary, data: Dictionary) -> void:
 		if str(row.get("main_hand", "")).is_empty():
 			row["main_hand"] = id
 	if str(eq["main_hand"]).is_empty():
-		swap_hands(c, data, {})
+		swap_hands(c)
 	for id: String in c.get("inventory", {}):
-		if slot_for(ItemRules.def_of(data["items"], {}, id)) == "shield" and can_equip(c, data, {}, id, "shield").is_empty():
-			(stowed(c) if goes_stowed(c, data, {}, id) else eq)["shield"] = id
+		if slot_for(ItemRules.def_of(data["items"], {}, id)) != "shield":
+			continue
+		if can_equip(c, data, {}, id, "shield").is_empty():
+			eq["shield"] = id
+			break
+		if can_equip(c, data, {}, id, "shield", true).is_empty():  # a bow in both hands: the shield with the blade
+			stowed(c)["shield"] = id
 			break
 
 

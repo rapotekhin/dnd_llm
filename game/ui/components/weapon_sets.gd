@@ -13,11 +13,10 @@ func _ready() -> void:
 	var s := GameState.session
 	var c := s.character
 	var why := Acts.one("swap").can(s, Catalog.data, Sheet.HERO)
-	var kind := CharacterRules.active_kind(c, Catalog.data, s.items)
-	var held := _button("WeaponSetHeld", _label(c, c.get("equipped", {})), kind)
+	var held := _button("WeaponSetHeld", _label(c, c.get("equipped", {})), CharacterRules.hands_kind(c.get("equipped", {}), Catalog.data, s.items))
 	held.theme_type_variation = UiTheme.ACCENT_BUTTON
 	held.mouse_filter = Control.MOUSE_FILTER_IGNORE  # lit, not a button: disabled would grey it out
-	var other := _button("WeaponSetStowed", _label(c, CharacterRules.stowed(c)), "melee" if kind == "ranged" else "ranged")
+	var other := _button("WeaponSetStowed", _label(c, CharacterRules.stowed(c)), CharacterRules.hands_kind(CharacterRules.stowed(c), Catalog.data, s.items))
 	other.disabled = not why.is_empty()
 	other.tooltip_text = Hotkeys.tip(tr("SWAP_WEAPONS"), "swap_weapons", SaveManager.keys) if why.is_empty() else tr(why)
 	other.pressed.connect(func() -> void:
@@ -30,7 +29,7 @@ func _button(node_name: String, text: String, kind: String) -> Button:
 	var b := Button.new()
 	b.name = node_name
 	b.text = text
-	b.tooltip_text = tr("SET_" + kind.to_upper())
+	b.tooltip_text = tr("SET_" + kind.to_upper()) if not kind.is_empty() else ""  # by what the set holds (v0.8.4.24.1)
 	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	b.focus_mode = Control.FOCUS_NONE
 	b.clip_text = true
