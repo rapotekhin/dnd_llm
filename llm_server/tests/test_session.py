@@ -210,3 +210,62 @@ def test_the_game_sets_the_daily_budget_and_it_survives_a_restart(data_dir):
         ws.receive_json()
     assert make_services(data_dir).budget.limit_usd == 3
 
+
+
+# --- the second line (0.106.0) ---------------------------------------------------
+
+
+def prepare(ws, req_id: str, turn_id: str, frame: str = "[prepare furnish | room hall]\n- candle — Свеча") -> None:
+    request(ws, req_id, "turn.request", {"turn_id": turn_id, "mode": "exploration", "kind": "prepare", "input": frame,
+                                         "background": True})
+
+
+VALIDATED = {"accepted": True, "effect_id": "e-1", "summary": "Обстановка: стол"}
+
+
+def test_a_background_turn_runs_beside_the_players_turn(client):
+    """The player's turn waits on its check while the master furnishes a room ahead: both answer by their turn ids."""
+    with client.websocket_connect("/ws", headers=AUTH) as ws:
+        hello(ws)
+        turn(ws, "g-2", "t-1")
+        check = ws.receive_json()
+        assert check["method"] == "engine.check" and check["params"]["turn_id"] == "t-1"
+        prepare(ws, "g-3", "t-2")
+        validate = ws.receive_json()
+        assert validate["method"] == "engine.validate" and validate["params"]["turn_id"] == "t-2"
+        assert validate["params"]["effect"]["kind"] == "furnish"
+        assert any(p.get("item_id") == "candle" for p in validate["params"]["effect"]["props"])
+        ws.send_json({"jsonrpc": "2.0", "id": validate["id"], "result": VALIDATED})
+        done = ws.receive_json()
+        assert done["id"] == "g-3" and done["result"]["effect_ids"] == ["e-1"]
+        ws.send_json({"jsonrpc": "2.0", "id": check["id"], "result": CHECK_RESULT})
+        assert ws.receive_json()["result"]["turn_id"] == "t-1"
+
+
+def test_the_background_line_has_its_own_limit(client):
+    with client.websocket_connect("/ws", headers=AUTH) as ws:
+        hello(ws)
+        prepare(ws, "g-2", "t-1")
+        first = ws.receive_json()
+        prepare(ws, "g-3", "t-2")
+        second = ws.receive_json()
+        prepare(ws, "g-4", "t-3")
+        busy = ws.receive_json()
+        assert busy["id"] == "g-4" and reason(busy) == "server_busy"
+        assert {first["params"]["turn_id"], second["params"]["turn_id"]} == {"t-1", "t-2"}
+        request(ws, "g-5", "turn.cancel", {"turn_id": "t-1"})
+        replies = {m["id"]: m for m in (ws.receive_json(), ws.receive_json())}
+        assert replies["g-5"]["result"] == {"ok": True} and reason(replies["g-2"]) == "turn_cancelled"
+
+
+def test_the_background_line_keeps_the_end_of_the_daily_limit(data_dir):
+    services = make_services(data_dir)
+    with TestClient(create_app(services.settings, services=services)) as c:
+        services.budget.set_limit(1.0)
+        services.budget.add(0.85)  # 0.15 left of 1.00: under the reserve of 0.2
+        with c.websocket_connect("/ws", headers=AUTH) as ws:
+            hello(ws)
+            prepare(ws, "g-2", "t-1")
+            assert reason(ws.receive_json()) == "budget_exceeded"
+            turn(ws, "g-3", "t-2")  # the player's own turn still goes
+            assert ws.receive_json()["method"] == "engine.check"

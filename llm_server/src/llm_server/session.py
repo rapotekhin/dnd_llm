@@ -110,6 +110,7 @@ class Session:
         self._tasks: set[asyncio.Task[None]] = set()
         self._turn_id: str | None = None
         self._turn_task: asyncio.Task[Any] | None = None
+        self._background: dict[str, asyncio.Task[Any]] = {}  # 0.106.0: the second line, by turn id
 
     # --- main loop -----------------------------------------------------------
 
@@ -139,6 +140,8 @@ class Session:
         self.closed = True
         if self._turn_task:
             self._turn_task.cancel()
+        for task in self._background.values():
+            task.cancel()
         for task in self._tasks:
             task.cancel()
         for fut in self._pending.values():
@@ -263,30 +266,57 @@ class Session:
         )
 
     async def _turn(self, params: TurnRequestParams) -> TurnResult:
-        if self._turn_id is not None:
+        if params.background:
+            return await self._background_turn(params)
+        if self._turn_id is not None or params.turn_id in self._background:
             raise RpcError(ErrorCode.TURN_IN_PROGRESS)
         if not self.slots.try_acquire():
             raise RpcError(ErrorCode.SERVER_BUSY)
         self._turn_id = params.turn_id
         self._turn_task = asyncio.ensure_future(self.turn_handler(self, params))
         try:
-            return await asyncio.wait_for(asyncio.shield(self._turn_task), self.settings.turn_timeout)
-        except TimeoutError:
-            self._turn_task.cancel()
-            raise RpcError(ErrorCode.TURN_TIMEOUT) from None
-        except asyncio.CancelledError:
-            if self._turn_task.cancelled():
-                raise RpcError(ErrorCode.TURN_CANCELLED) from None
-            raise
+            return await self._await_turn(self._turn_task)
         finally:
             self._turn_id = None
             self._turn_task = None
             self.slots.release()
 
+    async def _background_turn(self, params: TurnRequestParams) -> TurnResult:
+        """The second line (0.106.0): the master readies what the hero will meet beside the player's own turn. It takes no
+        server-wide slot, keeps its own small limit and stops while the daily limit is near its end."""
+        if params.turn_id == self._turn_id or params.turn_id in self._background:
+            raise RpcError(ErrorCode.TURN_IN_PROGRESS)
+        if len(self._background) >= self.settings.max_background_turns:
+            raise RpcError(ErrorCode.SERVER_BUSY)
+        if not self.services.budget.keeps(self.settings.background_reserve):
+            raise RpcError(ErrorCode.BUDGET_EXCEEDED, "the rest of the daily limit is kept for the player's turns")
+        task = asyncio.ensure_future(self.turn_handler(self, params))
+        self._background[params.turn_id] = task
+        try:
+            return await self._await_turn(task)
+        finally:
+            self._background.pop(params.turn_id, None)
+
+    async def _await_turn(self, task: asyncio.Task[Any]) -> TurnResult:
+        try:
+            return await asyncio.wait_for(asyncio.shield(task), self.settings.turn_timeout)
+        except TimeoutError:
+            task.cancel()
+            raise RpcError(ErrorCode.TURN_TIMEOUT) from None
+        except asyncio.CancelledError:
+            if task.cancelled():
+                raise RpcError(ErrorCode.TURN_CANCELLED) from None
+            raise
+
     def _cancel(self, params: TurnCancelParams) -> OkResult:
         if self._turn_id == params.turn_id and self._turn_task:
             self._turn_task.cancel()
+        elif params.turn_id in self._background:
+            self._background[params.turn_id].cancel()
         return OkResult()
+
+    def _turn_active(self, turn_id: str | None) -> bool:
+        return turn_id is not None and (turn_id == self._turn_id or turn_id in self._background)
 
     # --- outgoing engine.* calls ---------------------------------------------
 
@@ -294,7 +324,7 @@ class Session:
         """Call Godot from inside the active turn. Raises RpcError(ENGINE_TIMEOUT / ENGINE_ERROR)."""
         if method not in ENGINE_METHODS:
             raise ValueError(f"not an engine method: {method}")
-        if self._turn_id is None:
+        if not self._turn_active(getattr(params, "turn_id", None)):
             raise RuntimeError("engine.* calls are allowed only inside an active turn")
         call_id = f"s-{next(self._ids)}"
         fut: asyncio.Future[Any] = asyncio.get_running_loop().create_future()

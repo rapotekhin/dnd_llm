@@ -323,10 +323,11 @@ static func in_reach(s: GameSession, data: Dictionary, name: String, reach: Stri
 	return WalkRules.distance(hero, at) <= int(cfg(data)["reach"][reach]) and SightRules.line(map, data["layouts"], hero, at)
 
 
-## What the master may name as a place of the room: «очаг [hearth]».
-static func words(s: GameSession, data: Dictionary) -> Array[String]:
-	var map := LayoutRules.map_of(s, data, s.room_id)
-	var index := (map["ids"] as Array).find(s.room_id)
+## What the master may name as a place of the room: «очаг [hearth]»; of another room for a furnishing readied ahead.
+static func words(s: GameSession, data: Dictionary, room := "") -> Array[String]:
+	var here := s.room_id if room.is_empty() else room
+	var map := LayoutRules.map_of(s, data, here)
+	var index := (map["ids"] as Array).find(here)
 	var out: Array[String] = []
 	for m: Dictionary in map["marks"]:
 		var mark := str(m["name"])

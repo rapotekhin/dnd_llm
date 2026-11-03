@@ -33,7 +33,8 @@ from pydantic_ai.models import Model
 from . import REPO_ROOT
 from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER, PINNED
-from .agents import (RETRY_MAX_TOKENS, TurnContext, build_designer_agent, build_turn_agent, is_entry, is_quest_act, settings_for,
+from .agents import (RETRY_MAX_TOKENS, TurnContext, build_designer_agent, build_prepare_agent, build_turn_agent, is_entry, is_prepare, is_quest_act,
+                     prepare_subject, settings_for,
                      system_prompt_for, turn_user_prompt)
 from .protocol import TurnRequestParams, effect_tag
 
@@ -456,7 +457,9 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     if getattr(model, "system", "") == "openrouter":  # the same providers as the game (v0.7.14.4)
         await PICKER.refresh(model.model_name)
     designer = is_quest_act(params)  # v0.7.39.6: the act of a quest is built by the designer, as in turns.py
+    prepare = is_prepare(params)  # v0.8.4.25: the second line readies ahead with its own agent
     agent = (build_designer_agent(model, system_prompt_for(params)) if designer else
+             build_prepare_agent(model, system_prompt_for(params), prepare_subject(params)) if prepare else
              build_turn_agent(model, system_prompt_for(params), entry=is_entry(params)))
     started = time.monotonic()
     billed: list[float] = []  # what OpenRouter charged for each request (v0.7.14.5)
@@ -464,7 +467,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     short = None
     before = RunUsage()
     try:
-        if route and not designer:  # v0.7.20.4: the way of the game — the router, the short prompt, the full one when needed
+        if route and not designer and not prepare:  # v0.7.20.4: the way of the game — the router, the short prompt, the full one when needed
             from .turns import _short_turn
             short, before, o.route = await _short_turn(model, params, turn_user_prompt(params), {})
         if short is not None:
@@ -473,7 +476,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
             try:
                 result = await agent.run(turn_user_prompt(params), deps=ctx)
             except UnexpectedModelBehavior as exc:  # as the game does: once more with room to spare (turns.py)
-                if designer or "token limit" not in str(exc).lower() or engine.checks() or engine.effects():  # searches do not count, as in turns.py
+                if designer or prepare or "token limit" not in str(exc).lower() or engine.checks() or engine.effects():  # searches do not count, as in turns.py
                     raise
                 agent = build_turn_agent(model, system_prompt_for(params), RETRY_MAX_TOKENS, entry=is_entry(params))
                 ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]

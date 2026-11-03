@@ -6,12 +6,15 @@ const TOKEN := "server-token-0123456789"
 
 var server: MockBackend
 var _saved_save_dir: String
+var _prepare_was: bool
 
 
 func before_test() -> void:
 	_saved_save_dir = SaveManager.save_dir
 	SaveManager.save_dir = "user://test_saves"
 	DirAccess.make_dir_recursive_absolute(SaveManager.save_dir)
+	_prepare_was = bool(Catalog.data["rules"]["prepare"]["on"])
+	Catalog.data["rules"]["prepare"]["on"] = false  # the mock master answers one turn at a time: no second line (v0.8.4.25)
 	server = MockBackend.new()
 	assert_int(server.start()).is_greater(0)
 	var cfg := BackendConfig.new()
@@ -23,6 +26,7 @@ func before_test() -> void:
 
 
 func after_test() -> void:
+	Catalog.data["rules"]["prepare"]["on"] = _prepare_was
 	GameState.session = null
 	GameState.busy_turn = ""
 	Backend.client.stop()

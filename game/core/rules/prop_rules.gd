@@ -109,9 +109,9 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 
 ## Checks a `furnish` effect: {"plan": {room, props, add}, "summary"} or {"reason"}. A furnished room takes more only
 ## with a `cause` in the world (v0.7.39.8: a thing brought, built, left) — within the same caps, the room's things
-## counted.
+## counted. `room` — the room it is for when the master furnishes ahead (v0.8.4.25, set by the engine), else here.
 static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
-	var room := s.room_id
+	var room := str(e.get("room", s.room_id)) if e.get("room") != null else s.room_id
 	var cause := str(e.get("cause", "")).strip_edges() if e.get("cause") != null else ""
 	var add := not needs_furnish(s, room)
 	if add and cause.length() < 8:
@@ -124,7 +124,7 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 	var level := str(int(s.character.get("level", 1)))
 	var value_cap := int(cfg(data)["room_value_cap_cp"].get(level, cfg(data)["room_value_cap_cp"]["5"]))
 	var item_cap := int(cfg(data)["item_value_cap_cp"])
-	var here := s.npcs_here(WorldView.new(data["world"]).world, room)
+	var here := owners(s, data, room)
 	var total := 0
 	for p: Dictionary in had:
 		total += int(ItemRules.def_of(data["items"], s.items, str(p.get("item_id", ""))).get("value_cp", 0)) if not str(p.get("item_id", "")).is_empty() else 0
@@ -179,6 +179,17 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 		return {"reason": "ничейное в контейнерах стоит %d мм — больше, чем мастер может дать до долгого отдыха (%d мм); положи меньше или дай им хозяина" % [gift, EffectEngine.budget_left(s, data)]}
 	return {"plan": {"room": room, "props": props, "made": made, "reward": gift, "add": add, "cause": cause},
 		"summary": ("Добавлено в комнату (%s): " % cause if add else "Обстановка: ") + ", ".join(props.map(func(p: Dictionary) -> String: return p["name"]))}
+
+
+## Who may own the room's things: who is here now and who lives or works here though out at this hour (v0.8.4.25: a room
+## furnished ahead or at night still has its innkeeper's chest).
+static func owners(s: GameSession, data: Dictionary, room: String) -> Array[String]:
+	var out: Array[String] = []
+	out.assign(s.npcs_here(data["world"], room))
+	for n: Variant in WorldView.new(data["world"]).room(room).get("npcs", []):
+		if not out.has(str(n)):
+			out.append(str(n))
+	return out
 
 
 ## A thing of the room's furnishing, not the hero's dropped one, a seized one or a trader's wares.

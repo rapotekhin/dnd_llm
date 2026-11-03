@@ -119,6 +119,13 @@ static func waits(s: GameSession, world: Dictionary, quest_id: String) -> bool:
 	return q.has("acts") and s.quests_active.has(quest_id) and int(s.quests_active[quest_id]) >= (q["steps"] as Array).size() 		and int(q.get("built", 0)) < (q["acts"] as Array).size()
 
 
+## A taken quest by acts on the last built step with an act still to build (v0.8.4.25): the next act may be built ahead.
+static func on_last_step(s: GameSession, world: Dictionary, quest_id: String) -> bool:
+	var q := quest(world, quest_id)
+	return q.has("acts") and s.quests_active.has(quest_id) and int(s.quests_active[quest_id]) == (q["steps"] as Array).size() - 1 \
+		and int(q.get("built", 0)) < (q["acts"] as Array).size()
+
+
 static func current(s: GameSession, world: Dictionary, quest_id: String) -> Dictionary:
 	var q := quest(world, quest_id)
 	var i := int(s.quests_active.get(quest_id, -1))

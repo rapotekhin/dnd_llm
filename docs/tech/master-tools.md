@@ -29,7 +29,7 @@
   → правила game/core/…                                 ответ — обратно модели строкой
 ```
 
-Обработчик отвечает только на `turn_id` хода, который сейчас идёт (`GameState._active`); иначе — ошибка `-32041`.
+Обработчик отвечает только на `turn_id` хода, который сейчас идёт (`GameState._active`): хода игрока или фонового хода заготовки (v0.8.4.25). Иначе — ошибка `-32041`.
 
 ## Инструменты агента
 
@@ -211,6 +211,19 @@
 
 Ход по словам игрока бэкенд сначала спрашивает у роутера ([router.py](../../llm_server/src/llm_server/router.py)): хватит ли рассказа. Короткий мастер **не вызывает инструментов** и отвечает [`ShortOutput`](../../llm_server/src/llm_server/router.py): `narration`, `options`, `next_mode` (`social` / `exploration`), `npc_id` или `need_full: true` — тогда ход идёт заново с полным промптом и инструментами. Ходы, которые движок уже решил (`rest`, `deal`, `haggle`, `quest`, `theft`, `law`, `wait`, `trap`, `combat_start`, `combat_round`, `death`, `resume`), идут коротким путём без роутера; `quest_act` — без роутера у сценариста со своим промптом (v0.7.39.6); `enter` — коротким, если комнату не надо обставлять, а если надо — своим промптом входа ([enter.md.j2](../../llm_server/src/llm_server/prompts/enter.md.j2), v0.7.34.3: сцена, обстановка, как писать — без листа героя и правил игры, ~3–4 тыс. символов вместо ~24) с двумя инструментами, `propose_effect` (`furnish`, `note`) и `find_items`; рассуждения модели на этом ходе выключены (v0.7.34.4). Переносная вещь, которой нет в каталоге, — `item` у вещи обстановки (протокол 0.68.0). Выключить: `LLM_SERVER_ROUTER=0`.
 
+## Заготовка заранее (v0.8.4.25)
+
+Пока игрок играет, клиент по второй линии запросов (`background: true`, протокол 0.106.0) просит мастера подготовить то, что герой скоро встретит. Что готовить, решает движок ([PrepareRules.jobs](../../game/core/rules/prepare_rules.gd)). Рамку тоже собирает движок ([PrepareRules.frame](../../game/core/rules/prepare_rules.gd)). Подробности — [master-prefetch.md](../production/master-prefetch.md#сделано-v08425).
+
+| Голова рамки | Агент и инструменты | Что принимается | Когда применяется |
+|---|---|---|---|
+| `[prepare furnish \| room …]` | [build_prepare_agent](../../llm_server/src/llm_server/agents.py), промпт [prepare.md.j2](../../llm_server/src/llm_server/prompts/prepare.md.j2); только `propose_effect` | один `furnish` для этой комнаты (движок добавляет `room`); переносное — из «Кандидатов» рамки ([PrepareRules.candidates](../../game/core/rules/prepare_rules.gd)), до двух своих вещей полем `item`; хозяин — из «Людей комнаты» ([PropRules.owners](../../game/core/rules/prop_rules.gd)) | перед ходом входа в комнату, если она не изменилась (`PrepareRules.fingerprint`); живой ход её уже не обставляет |
+| `[prepare board \| room … \| prop … \| left N]` | тот же агент; `propose_effect`, `find_quests`, `find_npcs`, `find_places`, `lookup` | 1–N `create:quest` с `board_prop_id`; движок проверяет их для комнаты доски (`at`), даже если героя там нет | при чтении доски — без хода мастера ([GameState.read_board](../../game/autoload/game_state.gd)) |
+| `[prepare quest \| giver …]` | тот же | один `create:quest` от этого человека; `offer_text` — его слова, когда герой спросит | кнопка «Есть дело?» на строке человека ([GameState.ask_work](../../game/autoload/game_state.gd)) — без хода мастера |
+| `[quest … \| act N …]` (вид `quest_act`) | сценарист, как обычно | `quest_act` следующего акта, пока герой на последнем шаге текущего (`ahead`, [QuestRules.on_last_step](../../game/core/rules/quest_rules.gd)) | когда задание ждёт акта — вместо хода сценариста ([GameState._build_next_act](../../game/autoload/game_state.gd)) |
+
+Принятое не применяется сразу. [EffectEngine.kept](../../game/core/rules/effect_engine.gd) отдаёт эффекты так, как их предложил мастер, они ложатся в `s.prepared`, а при использовании их заново проверяет `engine.validate` в отдельном ходе. Отказ значит, что мир изменился: тогда работает живой ход. Бэкенд принимает только вид своей заготовки, остальное отклоняет строкой «Отказ: в этой заготовке — только …».
+
 ## Лимиты
 
 | Лимит | Значение | Где |
@@ -225,6 +238,8 @@
 | Магических вещей | 1 до долгого отдыха | `rules.json` `reward_budget.magic_per_rest` |
 | Вещей в обстановке | 10 | `rules.json` `props.max_per_room` |
 | Время за ход | до 720 минут | `rules.json` `time.max_master_minutes` |
+| Фоновых ходов заготовки | 2 сразу на сессию; последние 20 % дневного лимита — только ходам игрока | `rules.json` `prepare.parallel`; `LLM_SERVER_MAX_BACKGROUND`, `LLM_SERVER_BACKGROUND_RESERVE` |
+| Квестов людей заранее | 2 в день, люди в комнате героя и рядом (`quest_depth` 1) | `rules.json` `prepare.quests_per_day` |
 
 ## Нападение на NPC (v0.7.22.16)
 

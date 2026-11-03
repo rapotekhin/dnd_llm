@@ -19,8 +19,9 @@ from pydantic_ai.usage import RunUsage, UsageLimits
 from . import prompts, router
 from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER, PINNED, pinned_for
-from .agents import (RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_designer_agent, build_summary_agent, build_turn_agent, is_entry,
-                     is_quest_act, scene_npc, system_prompt_for, turn_user_prompt)
+from .agents import (RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_designer_agent, build_prepare_agent, build_summary_agent,
+                     build_turn_agent, is_entry, is_prepare, is_quest_act, prepare_head, prepare_subject, scene_npc, system_prompt_for,
+                     turn_user_prompt)
 from .protocol import (
     DcTier,
     OptionCheck,
@@ -28,8 +29,15 @@ from .protocol import (
     ConditionEffect,
     DamageEffect,
     Effect,
+    EngineFindNpcsParams,
+    EngineFindQuestsParams,
     EngineValidateParams,
     EngineValidateResult,
+    CreateQuestEffect,
+    FurnishEffect,
+    PropSpec,
+    QuestAct,
+    QuestNpc,
     ActStep,
     LetterReplyEffect,
     QuestActEffect,
@@ -61,6 +69,8 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         return await _stub_act(session, params, usage)
     if params.kind == "letter":
         return await _stub_letter(session, params, usage)
+    if params.kind == "prepare":
+        return await _stub_prepare(session, params, usage)
     if params.kind in ("deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death", "law"):
         return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
     if params.kind != "action":
@@ -123,6 +133,34 @@ async def _stub_letter(session: Session, params: TurnRequestParams, usage: Usage
             return TurnResult(turn_id=params.turn_id, narration=f"Получил твоё письмо. Ответ: {'да' if answer == 'yes' else 'нет'}.",
                               effect_ids=[v.effect_id], usage=usage)
     return TurnResult(turn_id=params.turn_id, narration="Получил твоё письмо — спасибо, что написал.", usage=usage)
+
+
+_CANDIDATE = re.compile(r"^- (\S+) — ", re.M)
+
+
+async def _stub_prepare(session: Session, params: TurnRequestParams, usage: Usage) -> TurnResult:
+    """The stub of the second line (0.106.0): a table, a bench and the first two candidates of the frame for a room; an easy
+    order with a new giver for a board; an easy quest of the person for a quest."""
+    head = prepare_head(params)
+    effect: Effect
+    if head["subject"] == "furnish":
+        props = [PropSpec(name="Стол", body="table"), PropSpec(name="Скамья", body="bench")]
+        props += [PropSpec(name=f"Вещь {i + 1}", item_id=item) for i, item in enumerate(_CANDIDATE.findall(params.input)[:2])]
+        effect = FurnishEffect(props=props)
+    else:
+        await session.call_engine("engine.find_quests", EngineFindQuestsParams(turn_id=params.turn_id, query="работа"))
+        await session.call_engine("engine.find_npcs", EngineFindNpcsParams(turn_id=params.turn_id, query="заказчик"))
+        board = head["subject"] == "board"
+        effect = CreateQuestEffect(
+            giver="" if board else head.get("giver", ""), board_prop_id=head.get("prop") if board else None,
+            title="Пропавшая коза" if board else "Посылка соседу", description="Нужно помочь.", offer_text="Выручишь — не обижу.",
+            difficulty="easy", acts=[QuestAct(title="Дело", goal="Сделать, о чём просят")],
+            new_npcs=[QuestNpc(key="giver", name="Ольга Козья", role="пастушка", gender="female", faction="brod_folk")] if board else [])
+    v = EngineValidateResult.model_validate(await session.call_engine(
+        "engine.validate", EngineValidateParams(turn_id=params.turn_id, effect=effect)))
+    if not v.accepted or not v.effect_id:
+        return TurnResult(turn_id=params.turn_id, narration=f"Не подготовлено: {v.reason}", usage=usage)
+    return TurnResult(turn_id=params.turn_id, narration="Подготовлено.", effect_ids=[v.effect_id], usage=usage)
 
 
 STUB_EFFECTS: list[Effect | None] = [  # by turn number; the first turns stay plain (protocol tests rely on that)
@@ -214,7 +252,9 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
     system = system_prompt_for(params)
     await _pick_providers(services.model_factory(model))
     designer = is_quest_act(params)
+    prepare = is_prepare(params)
     agent = (build_designer_agent(services.model_factory(model), system) if designer else
+             build_prepare_agent(services.model_factory(model), system, prepare_subject(params)) if prepare else
              build_turn_agent(services.model_factory(model), system, entry=is_entry(params)))
     user_prompt = turn_user_prompt(params)
     ctx = TurnContext(session, params, services.library)
@@ -231,7 +271,7 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
         # Out of output tokens (v0.7.4: the fight start in the burrow failed at 1500): go on from where it stopped
         # with room to spare — the turn's checks and accepted effects stay (v0.7.38.1: a board quest failed so).
         log.warning("turn %s ran out of output tokens, going on with %d", params.turn_id, RETRY_MAX_TOKENS)
-        if not designer:
+        if not designer and not prepare:
             agent = build_turn_agent(services.model_factory(model), system, RETRY_MAX_TOKENS, entry=is_entry(params))
         return await agent.run(None, message_history=messages, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
 
@@ -242,7 +282,7 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
     token = REQUEST_COSTS.set(billed)
     before = RunUsage()  # the router and a short attempt, paid on top of the full run (v0.7.20.4)
     try:
-        if not services.settings.router or designer:
+        if not services.settings.router or designer or prepare:
             raise _NoRouter
         short, before, trace["route"] = await _short_turn(services.model_factory(model), params, user_prompt, trace)
     except _NoRouter:

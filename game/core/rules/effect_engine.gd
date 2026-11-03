@@ -35,6 +35,9 @@ var _rolls: Dictionary = {}
 ## Turns started by the player's own words or ability (v0.7.8): only there a condition may come without a save
 ## (`cause: player` — the hero drank it, lay down to sleep). turn_id → true; GameState marks them.
 var player_turns: Dictionary = {}
+## Turns of the second line (v0.8.4.25, PrepareRules): turn_id → what the engine adds to each effect of it — the room a
+## furnishing is for, `ahead` for an act built before it opens. Their effects are kept, not applied (`kept`).
+var ahead: Dictionary = {}
 
 func mark_searched(turn_id: String) -> void:
 	searched[turn_id] = true
@@ -48,6 +51,7 @@ func discard(turn_id: String) -> void:
 	searched_places.erase(turn_id)
 	_rolls.erase(turn_id)
 	_won_over.erase(turn_id)
+	ahead.erase(turn_id)
 	for id: String in reserves.keys():
 		if reserves[id]["turn_id"] == turn_id:
 			reserves.erase(id)
@@ -107,11 +111,11 @@ func validate(s: GameSession, data: Dictionary, turn_id: String, effect: Diction
 	var pending := _of_turn(turn_id)
 	if pending.size() >= int(rules["turn_limits"]["max_effects"]):
 		return _reject("лимит эффектов на ход исчерпан")
-	var res := _plan(s, data, turn_id, effect, pending)
+	var res := _plan(s, data, turn_id, effect.merged(ahead.get(turn_id, {}), true), pending)
 	if res.has("reason"):
 		return _reject(str(res["reason"]))
 	var id := s.next_effect_id()
-	reserves[id] = {"turn_id": turn_id, "kind": key(effect), "plan": res["plan"], "summary": res["summary"],
+	reserves[id] = {"turn_id": turn_id, "kind": key(effect), "plan": res["plan"], "summary": res["summary"], "raw": effect.duplicate(true),
 		"line": str(res.get("line", res["summary"]))}  # the player's line may say less than the master's summary (v0.7.49.4)
 	var out := {"accepted": true, "effect_id": id, "summary": res["summary"]}
 	if res["plan"].has("new_item_id"):
@@ -137,6 +141,18 @@ func apply(s: GameSession, turn_id: String, ids: Array) -> Array[String]:
 	discard(turn_id)
 	_link_new_owner(s)
 	return lines
+
+
+## The effects of a turn of the second line as the master proposed them, for the listed ids (v0.8.4.25): kept to be
+## checked again when the hero comes; the turn's reserves are burned.
+func kept(turn_id: String, ids: Array) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for id: Variant in ids:
+		var r: Dictionary = reserves.get(str(id), {})
+		if not r.is_empty() and r["turn_id"] == turn_id:
+			out.append(r["raw"])
+	discard(turn_id)
+	return out
 
 
 func _reject(reason: String) -> Dictionary:

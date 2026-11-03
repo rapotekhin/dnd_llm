@@ -637,3 +637,55 @@ def test_engine_refusing_check_values_is_a_refusal_not_a_failed_turn(data_dir):
     msg, _, _ = play(data_dir, scripted(("request_check", {"skill": "perception", "dc_tier": "easy", "reason": "a"}),
                                         ("final", told)), engine)
     assert msg["result"]["narration"].startswith("Отказ движка: unknown skill")
+
+
+def test_a_prepare_turn_readies_only_its_subject_with_its_own_tools(data_dir):
+    # v0.8.4.25 (master-prefetch.md): a furnishing ahead from the engine's candidates — no item search, nothing else
+    seen = {}
+    fn = scripted(
+        ("propose_effect", {"effect": {"kind": "note", "text": "Герой скоро придёт"}}),
+        ("propose_effect", {"effect": {"kind": "furnish", "props": [{"name": "Свеча", "item_id": "candle"}]}}),
+        ("final", {"narration": ""}),
+    )
+
+    async def watched(messages, info):
+        seen["tools"] = sorted(t.name for t in info.function_tools)
+        seen["system"] = "\n".join(str(getattr(p, "content", "")) for m in messages for p in m.parts) + str(getattr(messages[-1], "instructions", "") or "")
+        return await fn(messages, info)
+
+    frame = "[prepare furnish | room brod-square]\nКомната: Брод — Площадь.\nКандидаты (item_id — название, цена):\n- candle — Свеча (1 мм)"
+    msg, calls, _ = play(data_dir, watched, kind="prepare", input=frame, background=True)
+    assert seen["tools"] == ["propose_effect"]
+    assert "готовишь" in seen["system"] and "Обставить комнату" in seen["system"]
+    assert last_tool_text(fn.state["prompts"][1]).startswith("Отказ: в этой заготовке — только furnish")
+    assert [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"] == ["furnish"]
+    assert msg["result"]["effect_ids"] == ["e-1"] and msg["result"]["narration"] == "Подготовлено."
+
+
+def test_a_board_readied_ahead_searches_quests_and_makes_only_quests(data_dir):
+    seen = {}
+    order = {"kind": "create", "what": "quest", "board_prop_id": "p1", "giver": "new:goat", "title": "Коза", "difficulty": "easy",
+             "description": "Ушла коза.", "new_npcs": [{"key": "goat", "name": "Дед Ермил", "role": "пастух", "faction": "brod_folk"}],
+             "acts": [{"title": "Поиски", "goal": "Найти козу"}]}
+    fn = scripted(
+        ("find_quests", {"query": "коза"}),
+        ("propose_effect", {"effect": {"kind": "furnish", "props": [{"name": "Свеча"}]}}),
+        ("propose_effect", {"effect": order}),
+        ("final", lambda m: {"narration": "Заказ на доске.", "effect_ids": [effect_id(m)]}),
+    )
+
+    async def watched(messages, info):
+        seen["tools"] = sorted(t.name for t in info.function_tools)
+        seen["system"] = "\n".join(str(getattr(p, "content", "")) for m in messages for p in m.parts) + str(getattr(messages[-1], "instructions", "") or "")
+        return await fn(messages, info)
+
+    def engine(method, params):
+        return {"quests": [], "open_made": 0, "max_open": 3} if method == "engine.find_quests" else default_engine(method, params)
+
+    msg, calls, _ = play(data_dir, watched, engine=engine, kind="prepare", background=True,
+                         input="[prepare board | room brod-tavern-hall | prop p1 | left 2]\nДоска: «Доска объявлений» [p1].")
+    assert seen["tools"] == ["find_npcs", "find_places", "find_quests", "lookup", "propose_effect"]
+    assert "1–2 заказа" in seen["system"]
+    assert last_tool_text(fn.state["prompts"][2]).startswith("Отказ: в этой заготовке — только create:quest")
+    assert [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"] == ["create"], last_tool_text(fn.state["prompts"][3])
+    assert msg["result"]["effect_ids"] == ["e-1"]
