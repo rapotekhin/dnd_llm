@@ -34,6 +34,12 @@ static func face(h: Dictionary) -> String:
 	return str(of(h).get("name", ""))
 
 
+## A look laid but not named yet: the master names it by the effect `guise`; `dc` — what a viewer's Investigation must
+## beat (a spell's DC, a disguise kit's Deception, v0.8.4.26.4).
+static func blank(dc: int) -> Dictionary:
+	return {"name": "", "faction": "", "dc": dc, "seen": {}}
+
+
 ## Puts a look on: the old one goes.
 static func wear(h: Dictionary, guise: Dictionary, source: Dictionary, ends: Dictionary = {}) -> void:
 	take_off(h)
@@ -58,10 +64,16 @@ static func fools(s: GameSession, data: Dictionary, h: Dictionary, viewer: Strin
 	if str(g.get("name", "")).is_empty():
 		return false
 	var seen: Dictionary = g.get("seen", {})
+	g["seen"] = seen
+	return taken_in(s, data, seen, viewer, int(g.get("dc", 10)), mon)
+
+
+## Whether the `viewer` is taken in by a false thing of `dc` — a look, a forged letter (v0.8.4.26.4): its Investigation
+## once, the answer kept in `seen`.
+static func taken_in(s: GameSession, data: Dictionary, seen: Dictionary, viewer: String, dc: int, mon: String = "") -> bool:
 	if not seen.has(viewer):
 		var who := Sheet.who(s, data, viewer) if mon.is_empty() else {"monster": mon}
-		seen[viewer] = not Roll.check(s, data, who, {"skill": "investigation", "dc": int(g.get("dc", 10))})["ok"]  # Investigation against the look
-		g["seen"] = seen
+		seen[viewer] = not Roll.check(s, data, who, {"skill": "investigation", "dc": dc})["ok"]  # Investigation against the false thing
 	return bool(seen[viewer])
 
 
@@ -72,7 +84,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary, pending: Array
 		return {"reason": "нужен look: как выглядит герой"}
 	var casting := pending.any(func(p: Dictionary) -> bool: return p["kind"] == "cast" and SpellEffects.spec(data, str(p["plan"]["spell_id"])).has("guise"))
 	if (_effect(s.character).is_empty() or has_body(s.character)) and not casting:
-		return {"reason": "чужого облика нет: сначала заклинание (cast «Маскировка») или части `guise` в make"}
+		return {"reason": "чужого облика нет: сначала заклинание (cast «Маскировка»), набор для грима с пояса или части `guise` в make"}
 	var faction := str(e.get("faction", "")) if e.get("faction") != null else ""
 	if not faction.is_empty():
 		if not FactionRules.has(s, data, faction):

@@ -639,13 +639,15 @@ static func meat(data: Dictionary, monster: Dictionary) -> int:
 # --- gathering ----------------------------------------------------------------------------------------------------
 
 
-## The gathering spots of the room: the room tags of rules.craft.gather.
+## The gathering spots of the room: the rows of rules.craft.gather whose room tag (`tag`, the row's key by default) the
+## room has — clay and sand by the river, stone beside the ore (v0.8.4.26.4).
 static func gather_here(s: GameSession, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var g: Dictionary = cfg(data)["gather"]
-	for t: String in SceneRules.tags(s, data["world"], s.room_id):
-		if g.has(str(t)):
-			out.append(str(t))
+	var tags := SceneRules.tags(s, data["world"], s.room_id)
+	for k: String in g:
+		if tags.has(str(g[k].get("tag", k))):
+			out.append(k)
 	return out
 
 

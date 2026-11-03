@@ -193,7 +193,7 @@ static func _effect(s: GameSession, data: Dictionary, spell_id: String, slot: in
 		e["condition"] = str(sp["self_status"])
 		e.merge(MakeRules.fx(s, str(sp["self_status"])))
 	if sp.has("guise"):  # Disguise Self (v0.7.63): the master names the look; the spell's DC is what a viewer must beat
-		e["guise"] = {"name": "", "faction": "", "dc": CombatRules.spell_dc(s), "seen": {}}
+		e["guise"] = Guise.blank(CombatRules.spell_dc(s))
 	if sp.has("resist_auto"):  # Protection from Energy: the type the foes deal most (v0.7.13.2)
 		e["resist"] = (sp.get("resist", []) as Array) + [_likely_type(s, data, sp["resist_auto"])]
 	if sp.has("plus_at_slot"):  # Magic Weapon: +2 from the 4th circle
@@ -563,7 +563,8 @@ static func weapon(c: Dictionary, w: Dictionary, kind: String) -> Dictionary:
 	return out
 
 
-## The extra damage of the hero's spells on a weapon hit at `t`: [{dice, type, name}]; Branding Smite's is spent.
+## The extra damage of the hero's spells on a weapon hit at `t`: [{dice, type, name, save?, dc?}]; Branding Smite's is
+## spent, and so is a poison on the blade of the damage types it takes (`coat.weapons`) after its `hits` (v0.8.4.26.4).
 static func hit_extras(c: Dictionary, t: Dictionary, weapon_type: String) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for e: Dictionary in hero_effects(c, "weapon_extra"):
@@ -575,6 +576,15 @@ static func hit_extras(c: Dictionary, t: Dictionary, weapon_type: String) -> Arr
 		out.append({"dice": str(e["next_dice"]), "type": str(e.get("next_hit", "radiant")), "name": str(e.get("source", {}).get("name", "")),
 			"reveal": true})
 		e.erase("next_dice")  # once (the concentration keeps nothing more)
+	for e: Dictionary in hero_effects(c, "coat"):
+		var co: Dictionary = e["coat"]
+		if not (co.get("weapons", [weapon_type]) as Array).has(weapon_type):
+			continue
+		out.append({"dice": str(co["dice"]), "type": str(co["type"]), "name": str(e.get("source", {}).get("name", "")),
+			"save": str(co.get("save", "")), "dc": int(co.get("dc", 0))})
+		co["hits"] = int(co.get("hits", 1)) - 1
+		if int(co["hits"]) <= 0:
+			ConditionRules.remove_effect(c, int(e.get("uid", -1)))
 	return out
 
 

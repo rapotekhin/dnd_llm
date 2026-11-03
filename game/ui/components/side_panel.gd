@@ -403,7 +403,8 @@ func _rebuild() -> void:
 				var err := GameState.perform()
 				if not err.is_empty():
 					EventBus.message.emit(tr(err))
-			var pf := _button(tr("BTN_PERFORM"), do_perform, can_act)
+			var lute := BackgroundRules.tool_with(c, Catalog.data, "perform")  # v0.8.4.26.4: «Сыграть на лютне»
+			var pf := _button(tr("BTN_PERFORM") if lute.is_empty() else tr("BTN_PERFORM_ON").format({"tool": ItemRules.display_name(Catalog.data["items"], s.items, lute).to_lower()}), do_perform, can_act)
 			pf.name = "PerformButton"
 			pf.disabled = not can_act or not perform_why.is_empty()
 			pf.tooltip_text = tr(perform_why) if not perform_why.is_empty() else tr("PERFORM_TIP")

@@ -103,6 +103,14 @@ EXTRA_PROPERTIES = {"torch": ["light_source"], "lantern": ["light_source"], "lan
                     "candle": ["light_source"], "lamp": ["light_source"], "antitoxin": ["resist_poison"],
                     "holy_water": [], "alchemists_fire_flask": [], "acid_vial": []}
 CONSUMABLES = {"rations", "antitoxin", "holy_water", "alchemists_fire_flask", "acid_vial", "oil_flask"}
+# v0.8.4.26.4: what a kit or a vial of the SRD does on the engine's roads — a healer's kit casts Spare the Dying ten times,
+# a disguise kit lays Disguise Self with its user's Deception as the DC after half an hour, a basic poison coats a blade.
+GEAR_USE: dict[str, dict[str, Any]] = {
+    "healers_kit": {"charges": {"max": 10}, "use": {"spell": "spare_the_dying", "level": 0}},
+    "disguise_kit": {"use": {"spell": "disguise_self", "level": 1, "at_will": True, "check": {"skill": "deception"}, "minutes": 30}},
+    "poison_basic_vial": {"use": {"coat": {"dice": "1d4", "type": "poison", "save": "con", "dc": 10, "weapons": ["slashing", "piercing"], "hits": 1},
+                                  "duration": "minute"}},
+}
 SKIP_GEAR = {"equipment-packs"}
 # Magic items of the SRD the engine knows (v0.6.3): +1 weapons and armor on common bases (the base's block, a +N
 # property), a few wondrous items and a potion. Rarity and value by the DMG; no attunement in this version.
@@ -437,6 +445,7 @@ class Builder:
             d["properties"] = sorted(set(d["properties"]) | set(EXTRA_PROPERTIES.get(id_, [])))
             if id_ in CONSUMABLES:
                 d["item_type"] = "consumable"
+            d.update(GEAR_USE.get(id_, {}))
             out[id_] = {"name": d.pop("name"), **d}
         return out
 

@@ -3424,7 +3424,8 @@ func _engine_check(params: Dictionary) -> Dictionary:
 
 
 ## «Выступить» (v0.7.11): a Performance check on a stage of the pack, once a day; coins and, for an entertainer, a free
-## room tonight; the master narrates the show. "" or a localization key.
+## room tonight; the master narrates the show. The instrument the hero carries goes into the check (v0.8.4.26.4). "" or a
+## localization key.
 func perform() -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
@@ -3433,7 +3434,7 @@ func perform() -> String:
 		return why
 	var text := tr("PERFORM_SAY")
 	_add(GameSession.player_entry(text))
-	var result := _engine_check({"skill": "performance", "dc_tier": str(Catalog.rules()["backgrounds"]["_perform"]["dc_tier"])})
+	var result := _engine_check(BackgroundRules.perform_check(session, Catalog.data))
 	if result.has("error"):
 		return "MSG_MASTER_FAILED"
 	var lines := BackgroundRules.performed(session, Catalog.data, int(result["total"]), bool(result["success"]))

@@ -65,7 +65,7 @@ static func ways_of(data: Dictionary, npc_id: String) -> Array[String]:
 
 
 ## The ways a letter goes by from `poster`: its post; from the hero itself ("") — the spells that carry a word it can
-## cast now (Sending, Animal Messenger, v0.8.4.26.3).
+## cast now (Sending, Animal Messenger, v0.8.4.26.3) and the tools it carries (a forgery kit, v0.8.4.26.4).
 static func ways(s: GameSession, data: Dictionary, poster: String) -> Array[String]:
 	if not poster.is_empty():
 		return ways_of(data, poster)
@@ -74,16 +74,43 @@ static func ways(s: GameSession, data: Dictionary, poster: String) -> Array[Stri
 		return out
 	for w: String in cfg(data)["ways"]:
 		var spell := str(cfg(data)["ways"][w].get("spell", ""))
-		if not spell.is_empty() and not SpellRules.check(s.character, data, spell, 0).has("reason"):
+		var tool := str(cfg(data)["ways"][w].get("tool", ""))
+		if not spell.is_empty() and not SpellRules.check(s.character, data, spell, 0).has("reason") \
+				or not tool.is_empty() and int(s.character.get("inventory", {}).get(tool, 0)) > 0:
 			out.append(w)
 	return out
 
 
-## The way a spell sends a letter by ("" — none).
-static func spell_way(data: Dictionary, spell_id: String) -> String:
+## The way whose `key` (`spell`, `tool`) is `id` ("" — none): the letter a spell or a tool of the sheet writes.
+static func way_by(data: Dictionary, key: String, id: String) -> String:
 	for w: String in cfg(data).get("ways", {}):
-		if str(cfg(data)["ways"][w].get("spell", "")) == spell_id:
+		if str(cfg(data)["ways"][w].get(key, "")) == id:
 			return w
+	return ""
+
+
+## A way where the hero writes in another's name (`forge`): the letter is made at once, nothing is sent.
+static func forged(data: Dictionary, way: String) -> bool:
+	return bool(cfg(data).get("ways", {}).get(way, {}).get("forge", false))
+
+
+## The purposes a letter by `way` may have: the way's own list or all of them.
+static func purposes_of(data: Dictionary, way: String) -> Array[String]:
+	var out: Array[String] = []
+	var own: Array = cfg(data).get("ways", {}).get(way, {}).get("purposes", [])
+	for pid: String in cfg(data).get("purposes", {}):
+		if own.is_empty() or own.has(pid):
+			out.append(pid)
+	return out
+
+
+## "" when a letter of `pid` by `way` may name `to` (a denunciation — the law's people; a forged hand — a person of
+## standing, v0.8.4.26.4), or why not.
+static func to_why(s: GameSession, data: Dictionary, way: String, pid: String, to: String) -> String:
+	if bool(purpose(data, pid).get("law", false)) and not law_people(data).has(to):
+		return "донос пишут страже: %s" % ", ".join(law_people(data).map(func(n: String) -> String: return WorldView.name_of(data, n)))
+	if forged(data, way) and not notable(s, data, to):
+		return "подделывать стоит руку человека с положением: старосты, главы, хозяина места"
 	return ""
 
 
@@ -134,7 +161,7 @@ static func wild(data: Dictionary, loc: String) -> bool:
 static func quote(s: GameSession, data: Dictionary, way: String, to: String) -> Dictionary:
 	var w: Dictionary = cfg(data)["ways"].get(way, {})
 	var path := route(data, _loc(data, s.room_id), npc_loc(s, data, to))
-	if w.is_empty() or path.is_empty():
+	if w.is_empty() or path.is_empty() or forged(data, way):
 		return {}
 	var hops := path.size() - 1
 	var risk := 0
@@ -193,7 +220,7 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 	if not poster.is_empty() and not s.npcs_here(data["world"], s.room_id).has(poster):
 		return "отправить письмо можно только у %s" % WorldView.name_of(data, poster)
 	var p := purpose(data, pid)
-	if p.is_empty():
+	if p.is_empty() or not purposes_of(data, way).has(pid):
 		return "нет такой цели письма"
 	if not recipients(s, data).has(to):
 		return "этому человеку не написать: герой его не знает, или он здесь — скажите сами"
@@ -203,8 +230,11 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 	var most := int(cfg(data)["ways"][way].get("words", 0))
 	if most > 0 and words.split(" ", false).size() > most:
 		return "%s — не больше %d слов" % [cfg(data)["ways"][way]["name"], most]
-	if bool(p.get("law", false)) and not law_people(data).has(to):
-		return "донос пишут страже: %s" % ", ".join(law_people(data).map(func(n: String) -> String: return WorldView.name_of(data, n)))
+	var named := to_why(s, data, way, pid, to)
+	if not named.is_empty():
+		return named
+	if forged(data, way):
+		return ""
 	if str(p.get("does", "")) == "arrest":
 		var about := str(extra.get("about", ""))
 		if about.is_empty() or about == to or data["world"]["npcs"].get(about, {}).is_empty() or Being.dead(s, about):
@@ -221,8 +251,11 @@ static func send_why(s: GameSession, data: Dictionary, poster: String, to: Strin
 	return ""
 
 
-## The hero sends a letter: the coins, the time to write, a letter on its way. Lines.
+## The hero sends a letter: the coins, the time to write, a letter on its way. A forged hand sends nothing: the
+## recommendation is made at once (`forge`). Lines.
 static func send(s: GameSession, data: Dictionary, poster: String, to: String, pid: String, text: String, way: String, extra: Dictionary = {}) -> Array[String]:
+	if forged(data, way):
+		return forge(s, data, to, text, way)
 	var q := quote(s, data, way, to)
 	var w: Dictionary = cfg(data)["ways"][way]
 	var st := _state(s)
@@ -465,13 +498,33 @@ static func answered(s: GameSession, data: Dictionary, id: String, text: String)
 			Being.of(s, str(l["to"]))["at"] = ""  # on the road: nowhere in the world
 			lines.append("%s придёт: «%s», к %d-му дню, и будет ждать до %d-го" % [who, _room_name(data, room), arrive, arrive + int(p["wait_days"])])
 		"recommendation":
-			var def := {"name": "Рекомендация: %s" % who, "item_type": "quest", "weight": 0, "value_cp": 0, "generated": true,
-				"description": "Письмо за подписью и печатью %s: рекомендует героя." % who, "text": str(l["reply"]).left(1000),
-				"recommends": str(l["to"])}
-			var item := ItemRules.generated_id(def)
-			s.items[item] = def
-			ItemRules.found(s.character, data, s.items, item, 1)
-			lines.append("Получено: %s" % def["name"])
+			lines.append("Получено: %s" % _recommendation(s, data, str(l["to"]), str(l["reply"])))
+	return lines
+
+
+## A recommendation of `npc` in the hero's things; `forged_dc` > 0 — a false one, its DC against a reader's
+## Investigation. Its name.
+static func _recommendation(s: GameSession, data: Dictionary, npc: String, text: String, forged_dc: int = 0) -> String:
+	var who := WorldView.name_of(data, npc)
+	var def := {"name": "Рекомендация: %s" % who, "item_type": "quest", "weight": 0, "value_cp": 0, "generated": true,
+		"description": "Письмо за подписью и печатью %s: рекомендует героя." % who, "text": text.left(1000), "recommends": npc}
+	if forged_dc > 0:
+		def["forged"] = forged_dc
+		def["seen"] = {}
+		def["description"] = "Поддельное письмо за подписью %s: рекомендует героя (Сл разоблачения %d)." % [who, forged_dc]
+	var item := ItemRules.generated_id(def)
+	s.items[item] = def
+	ItemRules.found(s.character, data, s.items, item, 1)
+	return str(def["name"])
+
+
+## A recommendation in another's hand (a way with `forge`, v0.8.4.26.4): the hero's check of the way's `skill` with its
+## tool is the forgery's DC; the time of the work passes. Lines.
+static func forge(s: GameSession, data: Dictionary, npc: String, text: String, way: String) -> Array[String]:
+	var w: Dictionary = cfg(data)["ways"][way]
+	var r := Roll.check(s, data, Sheet.HERO, {"what": "Подделка", "skill": str(w.get("skill", "deception")), "tool": str(w["tool"])})
+	var lines: Array[String] = ["Подделано: %s — Сл разоблачения %d" % [_recommendation(s, data, npc, text, int(r["total"])), int(r["total"])]]
+	lines.append_array(TimeRules.advance(s, data, int(w.get("minutes", cfg(data)["write_minutes"]))))
 	return lines
 
 
@@ -626,14 +679,21 @@ static func notable(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 
 
 ## The name of a person whose recommendation the hero carries — one of `from`, or any person of standing when
-## `any_notable`; "" — none.
+## `any_notable`; "" — none. A forged one is read by `from[0]`: its Investigation once (Guise.taken_in), and never
+## by the one whose hand it fakes (v0.8.4.26.4).
 static func recommender(s: GameSession, data: Dictionary, from: Array, any_notable: bool = false) -> String:
 	if not on(data):
 		return ""
 	for id: String in s.character.get("inventory", {}):
-		var by := str(ItemRules.def_of(data["items"], s.items, id).get("recommends", ""))
-		if not by.is_empty() and (from.has(by) or (any_notable and notable(s, data, by))):
-			return WorldView.name_of(data, by)
+		var def := ItemRules.def_of(data["items"], s.items, id)
+		var by := str(def.get("recommends", ""))
+		if by.is_empty() or not (from.has(by) or (any_notable and notable(s, data, by))):
+			continue
+		if int(def.get("forged", 0)) > 0:
+			var reader := str(from[0]) if not from.is_empty() else ""
+			if reader.is_empty() or reader == by or not Guise.taken_in(s, data, def["seen"], reader, int(def["forged"])):
+				continue
+		return WorldView.name_of(data, by)
 	return ""
 
 

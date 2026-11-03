@@ -83,6 +83,7 @@ BAR_PLACE,Место
 BTN_MENU,Меню
 BTN_NEW_GAME,Новая игра
 BTN_PERFORM,Выступить
+BTN_PERFORM_ON,Сыграть: {tool}
 BTN_POCKETS,Карманы: {name}
 BTN_PREPARE,Подготовить заклинания
 BTN_PREP_CONFIRM,Подготовить
@@ -1756,10 +1757,13 @@ JOURNAL_EMPTY_LETTERS,"Писем пока нет: написать можно �
 BTN_LETTER,Письмо
 BTN_LETTER_TIP,"{name} отправит ваше письмо: весточку, просьбу о помощи, донос, просьбу о рекомендации"
 BTN_LETTER_SEND,Отправить
+BTN_LETTER_FORGE,Подделать
+BTN_LETTER_WRITE,Написать письмо
 LETTER_TITLE,Письмо
 LETTER_FROM,{name} — письмо
 LETTER_PURPOSE,Цель
 LETTER_TO,Кому
+LETTER_IN_NAME,От чьего имени
 LETTER_ROOM,Куда прийти
 LETTER_ABOUT,На кого
 LETTER_EVIDENCE,"Улика: {what}"
@@ -1768,7 +1772,6 @@ LETTER_TEXT_HINT,Что вы пишете — своими словами
 LETTER_WAY_CAPTION,Как отправить
 LETTER_WAY,"{way} — {cost}, дней в пути: {days}, риск потери: {risk}%"
 LETTER_NOBODY,"Писать некому: вы ещё ни с кем не знакомы за пределами этого места"
-LETTER_NO_LAW,"Донос пишут страже, а стражи вы ещё не знаете"
 MAP_RUMOR,Слух: {text}
 BOARD_NOTICES,Объявления
 FAITH_TITLE,Святилище

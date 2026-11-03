@@ -85,12 +85,13 @@ static func items(data: Dictionary) -> Dictionary:
 	return data["items"]["catalog"]
 
 
-## Magic by its kind, as tools/checklist.py sorts the two sheets.
+## Magic by its kind, as tools/checklist.py sorts the two sheets: charges or a spell make a thing magic unless it is plain
+## gear (a healer's kit, a disguise kit, v0.8.4.26.4).
 static func is_magic(d: Dictionary) -> bool:
 	var use: Variant = d.get("use")
-	return str(d.get("rarity", "common")) != "common" or _truthy(d.get("attunement")) or _truthy(d.get("charges")) \
-		or _truthy(d.get("caster")) or str(d.get("item_type", "")) == "wondrous" \
-		or (use is Dictionary and _truthy((use as Dictionary).get("spell")))
+	var spelled := _truthy(d.get("charges")) or (use is Dictionary and _truthy((use as Dictionary).get("spell")))
+	return str(d.get("rarity", "common")) != "common" or _truthy(d.get("attunement")) or _truthy(d.get("caster")) \
+		or str(d.get("item_type", "")) == "wondrous" or (spelled and str(d.get("item_type", "")) != "gear")
 
 
 ## A value as Python reads it for truth: tools/checklist.py sorts the sheets so.
@@ -636,7 +637,7 @@ static func _use(data: Dictionary, id: String, use: Dictionary, steps: Array[Str
 			check(steps, NeedRules.value(s, data, "water") >= water, "питьё в блюде", said)
 		if int((use["meal"] as Dictionary).get("temp_hp", 0)) > 0:
 			check(steps, int(c.get("temp_hp", 0)) > 0, "временные хиты", said)
-	if use.has("resist") or use.has("adv_tag") or use.has("check_adv") or use.has("enlarged") or use.has("cure") or use.has("invisible_minutes"):
+	if use.has("cure") or use.has("invisible_minutes") or ConditionRules.BOONS.any(func(k: String) -> bool: return use.has(k)):
 		check(steps, ConditionRules.effects(c).size() > effects or lines.size() > 1, "накладывает эффект", said)
 		if use.has("resist"):
 			for dtype: Variant in (use["resist"] if use["resist"] is Array else [use["resist"]]):
@@ -646,6 +647,27 @@ static func _use(data: Dictionary, id: String, use: Dictionary, steps: Array[Str
 		check(steps, not DiseaseRules.sick(c, ill), "лечит болезнь: %s" % data["rules"]["diseases"]["catalog"][ill]["name"], said)
 	if use.has("poison"):
 		check(steps, _hp(s, data) < hp, "яд ранит", said)
+	if use.has("coat"):  # a poison on the blade: the next hit of its damage types brings its dice with a save
+		var co: Dictionary = use["coat"]
+		var x := SpellEffects.hit_extras(c, {}, str((co["weapons"] as Array)[0]))
+		check(steps, x.any(func(e: Dictionary) -> bool: return str(e.get("save", "")) == str(co["save"])),
+			"яд на оружии: %s %s при попадании, спасбросок Сл %d" % [co["dice"], co["type"], int(co["dc"])], said)
+	if use.has("check"):  # a kit lays its spell's effect with the DC of its user's check
+		check(steps, int(Guise.of(c).get("dc", 0)) > 0, "облик «Маскировки», Сл разоблачения — проверка %s с набором (%d)" % [use["check"].get("skill", ""), int(Guise.of(c).get("dc", 0))], said)
+	if SpellEffects.spec(data, str(use.get("spell", ""))).has("stabilize"):  # a healer's kit: a fallen ally stabilized in a fight
+		var fs := session(data)
+		Gear.give(fs, data, Being.HERO, id, 1)
+		ItemRules.belt_put(fs.character, data, fs.items, id)
+		var a := fight(fs, data, "goblin", false, "ally")
+		a["hp"] = 0
+		a["status"] = "down"
+		var p := CombatRules.player(fs)
+		turn(fs, data, p)
+		var why2 := Acts.one("item_spell").can(fs, data, p, str(a["id"]), {"item": id})
+		if check(steps, why2.is_empty(), "в бою на павшего союзника", why2):
+			Acts.one("item_spell").go(fs, data, p, str(a["id"]), {"item": id})
+			check(steps, bool(CombatRules.saves_of(fs, a).get("stable", false)) and ItemRules.charges_left(fs.character, d, id) == ItemRules.charges_max(d) - 1,
+				"стабилизирован без проверки Медицины, применений: %d из %d" % [ItemRules.charges_left(fs.character, d, id), ItemRules.charges_max(d)], "не стабилизирован")
 	if use.has("recover_slot"):
 		check(steps, said.contains("восстановлена") or said.contains("целы"), "возвращает ячейку", said)
 	if use.has("summon"):
@@ -772,6 +794,26 @@ static func _tool(data: Dictionary, id: String, steps: Array[String]) -> void:
 			recipes += 1
 	if recipes > 0:
 		used = check(steps, true, "ремесло: %d рецептов" % recipes)
+	if bool(t.get("perform", false)):  # an instrument: the show's Performance with it (v0.8.4.26.4)
+		var show := BackgroundRules.perform_check(s, data)
+		used = check(steps, str(show.get("tool", "")) == id and int(BackgroundRules.tool_check(c, data, id, "performance")["bonus"]) > 0,
+			"выступление на сцене: владение в проверке Выступления", "сцена берёт %s" % show.get("tool", "ничего"))
+	for kid: String in ContestRules.kinds(data):
+		var k := ContestRules.kind(data, kid)
+		if str(k.get("tool", "")) == id:
+			used = check(steps, str(ContestRules.hero_params(data, k, true).get("tool", "")) == id, "состязание «%s»: и в игре, и в шулерстве" % k["name"], "не в шулерстве")
+	var way := LetterRules.way_by(data, "tool", id)
+	if not way.is_empty():
+		used = check(steps, LetterRules.ways(s, data, "").has(way) and LetterRules.forged(data, way), "подделка: рекомендация в чужую руку в окне письма", "способа письма нет")
+	if bool(t.get("wayfinder", false)):
+		var wild := ""
+		for rid: String in data["world"]["rooms"]:
+			if not WorldView.new(data["world"]).flag(rid, "lit"):
+				wild = rid
+				break
+		used = check(steps, BackgroundRules.travel_minutes(s, data, 100, wild) < 100, "дорога вне поселений на четверть короче", "дорога та же")
+	if not ItemRules.consumable(data, id, s.items).is_empty():
+		used = true  # the kit's own use is probed by _use
 	if not used:
 		master(steps, "пользоваться — только словами: мастер называет инструмент в проверке, своей кнопки нет")
 
@@ -1013,7 +1055,7 @@ static func _reaction(data: Dictionary, id: String, steps: Array[String]) -> Str
 static func _spell_world(data: Dictionary, id: String, slot: int) -> String:
 	var s := caster_session(data, id)
 	var c := s.character
-	if not LetterRules.spell_way(data, id).is_empty():
+	if not LetterRules.way_by(data, "spell", id).is_empty():
 		return _spell_letter(s, data, id)
 	_prepare_cure(s, data, id)  # something to cure, to know, to fill and to clean (v0.8.4.26.2)
 	ItemRules.found(c, data, s.items, "ring_of_warmth")  # comes unidentified
@@ -1044,7 +1086,7 @@ static func _spell_letter(s: GameSession, data: Dictionary, id: String) -> Strin
 	var to := LetterRules.recipients(s, data)
 	if to.is_empty():
 		return ""
-	var way := LetterRules.spell_way(data, id)
+	var way := LetterRules.way_by(data, "spell", id)
 	var why := LetterRules.send_why(s, data, "", to[0], "ties", "Жив, здоров, иду к вам.", way)
 	return why if not why.is_empty() else "; ".join(LetterRules.send(s, data, "", to[0], "ties", "Жив, здоров, иду к вам.", way)).left(160)
 

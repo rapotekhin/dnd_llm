@@ -29,13 +29,14 @@ static func kind(data: Dictionary, id: String) -> Dictionary:
 	return kinds(data).get(id, {})
 
 
-## The check of a kind as the hero's roll params: {skill | ability | save, dc_tier, tool}.
+## The check of a kind as the hero's roll params: {skill | ability | save, dc_tier, tool}. The gaming set goes into the
+## cheating too (v0.8.4.26.4): who knows the dice knows how they are loaded.
 static func hero_params(data: Dictionary, k: Dictionary, cheat: bool = false) -> Dictionary:
 	var p := {"dc_tier": "medium"}
 	if cheat:
 		p["skill"] = str(k.get("cheat", ""))
-		return p
-	p.merge(k.get("check", {}), true)
+	else:
+		p.merge(k.get("check", {}), true)
 	if not str(k.get("tool", "")).is_empty():
 		p["tool"] = str(k["tool"])
 	return p
@@ -58,7 +59,7 @@ static func npc_bonus(s: GameSession, data: Dictionary, npc_id: String, check: D
 		why = str(check.get("ability", "wis"))
 		bonus = Sheet.ability_mod(s, data, who, why)
 	if not tool.is_empty() and (npc.get("tools", []) as Array).has(tool):
-		bonus += 2 + int(maxf(float(Sheet.template(data, npc).get("cr", 0)), 1.0) - 1.0) / 4
+		bonus += Sheet.prof(s, data, who)
 	return {"bonus": bonus, "why": why}
 
 
@@ -79,7 +80,7 @@ static func odds(s: GameSession, data: Dictionary, npc_id: String, kind_id: Stri
 	var mine := CheckEngine.preview(s, data, p)  # the roll's own spec: the tool, the statuses, the game's difficulty
 	var hero := int(mine.get("bonus", 0))
 	var check: Dictionary = {"skill": str(k.get("cheat_against", "insight"))} if cheat else k.get("npc_check", k.get("check", {}))
-	var npc := int(npc_bonus(s, data, npc_id, check, "" if cheat else str(k.get("tool", "")))["bonus"])
+	var npc := int(npc_bonus(s, data, npc_id, check, str(k.get("tool", "")))["bonus"])
 	return {"hero": hero, "npc": npc, "chance": 0 if int(mine.get("chance", 0)) == 0 else chance(hero, npc)}
 
 
@@ -185,7 +186,7 @@ static func npc_roll(s: GameSession, data: Dictionary, cheat: bool = false) -> D
 	var st := state(s)
 	var k := kind(data, str(st["kind"]))
 	var check: Dictionary = {"skill": str(k.get("cheat_against", "insight"))} if cheat else k.get("npc_check", k.get("check", {}))
-	var b := npc_bonus(s, data, str(st["npc"]), check, "" if cheat else str(k.get("tool", "")))
+	var b := npc_bonus(s, data, str(st["npc"]), check, str(k.get("tool", "")))  # its gaming set catches a cheat too
 	# the round compares totals: a save's statuses count as a check's
 	var spec := {"what": str(k.get("name", "")), "bonus": int(b["bonus"]), ("skill" if check.has("skill") else "ability"): str(b["why"])}
 	var r := Roll.check(s, data, Sheet.who(s, data, str(st["npc"])), spec)

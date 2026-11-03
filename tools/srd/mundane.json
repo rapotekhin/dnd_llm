@@ -82,5 +82,8 @@
 	"pewter_mug": {"name": "Оловянная кружка", "item_type": "gear", "value_cp": 5, "weight": 1, "properties": [], "stack": true},
 	"candle_tallow": {"name": "Сальная свеча", "item_type": "gear", "value_cp": 1, "weight": 0, "properties": ["light_source"], "stack": true},
 	"lint": {"name": "Корпия", "item_type": "gear", "value_cp": 1, "weight": 0, "properties": [], "stack": true, "description": "Нащипанное полотно для ран."},
-	"tag_wooden": {"name": "Бирка", "item_type": "gear", "value_cp": 0, "weight": 0, "properties": [], "stack": true, "description": "Деревянная или кожаная бирка с меткой владельца."}
+	"tag_wooden": {"name": "Бирка", "item_type": "gear", "value_cp": 0, "weight": 0, "properties": [], "stack": true, "description": "Деревянная или кожаная бирка с меткой владельца."},
+	"clay": {"name": "Глина", "item_type": "gear", "value_cp": 1, "weight": 5, "properties": [], "stack": true, "material": true, "description": "Ком сырой речной глины. Гончар лепит из неё посуду и обжигает в очаге."},
+	"stone": {"name": "Камень", "item_type": "gear", "value_cp": 1, "weight": 10, "properties": [], "stack": true, "material": true, "description": "Глыба тёсаного камня из шахты. Каменщик режет из неё точила, ступки и статуэтки."},
+	"boots": {"name": "Сапоги", "item_type": "gear", "value_cp": 100, "weight": 2, "properties": [], "stack": false, "description": "Крепкие кожаные сапоги на каждый день."}
 }

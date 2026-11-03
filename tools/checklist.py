@@ -101,9 +101,9 @@ class Data:
 
 def is_magic(d: dict) -> bool:
     use = d.get("use")
-    return (d.get("rarity", "common") != "common" or bool(d.get("attunement")) or bool(d.get("charges"))
-            or bool(d.get("caster")) or d.get("item_type") in MAGIC_TYPES
-            or (isinstance(use, dict) and bool(use.get("spell"))))
+    spelled = bool(d.get("charges")) or (isinstance(use, dict) and bool(use.get("spell")))
+    return (d.get("rarity", "common") != "common" or bool(d.get("attunement")) or bool(d.get("caster"))
+            or d.get("item_type") in MAGIC_TYPES or (spelled and d.get("item_type") != "gear"))
 
 
 def item_text(d: dict, data: "Data") -> str:

@@ -20,6 +20,8 @@ extends RefCounted
 const ENDS: Array[String] = ["short_rest", "long_rest", "until_removed"]
 const INCAPACITATING: Array[String] = ["unconscious", "paralyzed", "stunned", "incapacitated", "petrified"]
 const ROUNDS_PER_MINUTE := 10
+## What a potion, a poison or a balm leaves on its user for a while (`cure`).
+const BOONS: Array[String] = ["adv_tag", "resist", "check_adv", "enlarged", "coat"]
 
 
 static func known(data: Dictionary, id: String) -> bool:
@@ -610,7 +612,7 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 			if str(e.get("tag", "")).split(",").has(str(tag)):
 				remove_effect(c, int(e.get("uid", -1)))
 				lines.append("снято: %s" % HeroDefense.tag_name(str(tag)))
-	if spec.has("adv_tag") or spec.has("resist") or spec.has("check_adv") or spec.has("enlarged"):
+	if BOONS.any(func(k: String) -> bool: return spec.has(k)):
 		var boon := {"condition": "", "source": source, "ends": ends_for(s, data, str(spec.get("duration", "hour")))}
 		if spec.has("adv_tag"):
 			boon["adv_tag"] = str(spec["adv_tag"])
@@ -620,6 +622,8 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 			boon["check_adv"] = str(spec["check_adv"])
 		if spec.has("enlarged"):  # Potion of Growth: +1d4 weapon damage, advantage on STR checks (v0.7.12)
 			boon["enlarged"] = true
+		if spec.has("coat"):  # a poison on the blade (v0.8.4.26.4): its dice on the next hits, a save against it
+			boon["coat"] = (spec["coat"] as Dictionary).duplicate()
 		add_effect(c, boon)
 		lines.append("%s: %s" % [source.get("name", ""), boon_text(data, boon)])
 	return lines
@@ -636,6 +640,10 @@ static func boon_text(data: Dictionary, e: Dictionary) -> String:
 		parts.append("преимущество на проверки: %s" % TranslationServer.translate("SKILL_" + str(e["check_adv"]).to_upper()))
 	if bool(e.get("enlarged", false)):
 		parts.append("увеличение: +1к4 к урону оружием, преимущество на проверки Силы")
+	if e.has("coat"):
+		var co: Dictionary = e["coat"]
+		parts.append("яд на оружии: %s %s, спасбросок %s Сл %d" % [str(co["dice"]).replace("d", "к"), str(data["misc"]["damage_types"].get(str(co["type"]), co["type"])),
+			CombatRules.ab_name(str(co["save"])), int(co["dc"])])
 	return ", ".join(parts)
 
 

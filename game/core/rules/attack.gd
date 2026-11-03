@@ -467,6 +467,11 @@ static func _extras(s: GameSession, data: Dictionary, f: Dictionary, t: Dictiona
 	for x: Dictionary in SpellEffects.hit_extras(me, t, type):
 		if not up(s, t):
 			break
+		if not str(x.get("save", "")).is_empty():  # a poison on the blade: the struck one's save, nothing on a success
+			var r := Sheet.save(s, data, t, str(x["save"]), int(x["dc"]), str(x["type"]))
+			if bool(r["ok"]):
+				lines.append("%s: спасбросок %s — яд не подействовал" % [x["name"], r["text"]])
+				continue
 		var add := Sheet.taken(s, data, t, str(x["type"]), CombatRules.roll_dice(s.rng, str(x["dice"]), crit), true, false)
 		lines.append("%s: ещё %d (%s)" % [x["name"], add, data["misc"]["damage_types"].get(str(x["type"]), x["type"])])
 		more.call(add, str(x["type"]))

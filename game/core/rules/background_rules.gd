@@ -65,12 +65,23 @@ static func can_forage(s: GameSession, data: Dictionary) -> bool:
 	return not w.flag(s.room_id, "lit")
 
 
-## The minutes of a way for an outlander outside settlements (a quarter less), as they are for the rest.
+## The minutes of a way outside settlements: a quarter less for an outlander, or for one carrying a tool of the way it
+## knows (a navigator's, a cartographer's: `wayfinder` of rules.tools, v0.8.4.26.4); as they are for the rest.
 static func travel_minutes(s: GameSession, data: Dictionary, minutes: int, to: String) -> int:
 	var w := WorldView.new(data["world"])
-	if bool(spec(s.character, data).get("wayfinder", false)) and not w.flag(to, "lit"):
+	var finder := bool(spec(s.character, data).get("wayfinder", false)) or not tool_with(s.character, data, "wayfinder", true).is_empty()
+	if finder and not w.flag(to, "lit"):
 		return int(ceil(minutes * 0.75))
 	return minutes
+
+
+## The check of a show: Performance with the instrument the hero plays (its proficiency adds, v0.8.4.26.4).
+static func perform_check(s: GameSession, data: Dictionary) -> Dictionary:
+	var spec := {"skill": "performance", "dc_tier": str(cfg(data)["_perform"]["dc_tier"])}
+	var tool := tool_with(s.character, data, "perform")
+	if not tool.is_empty():
+		spec["tool"] = tool
+	return spec
 
 
 ## "" when the hero can perform here now (an entertainer's stage, once a day), otherwise a localization key.
@@ -105,6 +116,20 @@ static func performed(s: GameSession, data: Dictionary, total: int, success: boo
 
 static func tool_name(data: Dictionary, id: String) -> String:
 	return str(data["items"]["catalog"].get(id, {}).get("name", id))
+
+
+## The tool the character carries whose row of rules.tools has `key` (an instrument to play — `perform`, one to find the
+## way — `wayfinder`): a proficient one first; with `owned` only a proficient one counts. "" — none (v0.8.4.26.4).
+static func tool_with(c: Dictionary, data: Dictionary, key: String, owned := false) -> String:
+	var any := ""
+	for id: String in c.get("inventory", {}):
+		if not bool(data["rules"]["tools"].get(id, {}).get(key, false)):
+			continue
+		if (c.get("tools", []) as Array).has(id):
+			return id
+		if any.is_empty() and not owned:
+			any = id
+	return any
 
 
 ## What a tool brings to a check: {"bonus": int, "advantage": reason, "auto_fail": reason, "note": text}.

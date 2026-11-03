@@ -158,7 +158,7 @@ func test_a_jewelers_bench_asked_at_home_and_a_ring_made() -> void:
 		"materials": [{"item_id": "silver_bar", "qty": 1}], "output_id": "silver_ring"})
 	assert_bool(bool(rec["accepted"])).override_failure_message(str(rec.get("reason", ""))).is_true()
 	engine.apply(s, "t-2", [rec["effect_id"]])
-	var ring: Array = CraftRules.known(s, data).filter(func(id: String) -> bool: return str(CraftRules.recipe(s, data, id).get("output", "")) == "silver_ring")
+	var ring: Array = CraftRules.known(s, data).filter(func(id: String) -> bool: return str(CraftRules.recipe(s, data, id).get("output", "")) == "silver_ring" and not (data["rules"]["craft"]["recipes"] as Dictionary).has(id))  # the master's, beside the pack's (v0.8.4.26.4)
 	assert_array(ring).has_size(1)
 	assert_str(CraftRules.why_not(s, data, ring[0])).is_empty()
 	CraftRules.start(s, data, ring[0])

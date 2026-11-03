@@ -121,7 +121,7 @@ func test_salvage_gives_half_the_materials() -> void:
 func test_gathering_ore_in_the_mine_spends_the_spot() -> void:
 	var s := _smith()
 	s.room_id = "mine-gallery"
-	assert_array(CraftRules.gather_here(s, data)).is_equal(["ore"])
+	assert_array(CraftRules.gather_here(s, data)).contains(["ore", "stone"])
 	s.room_id = "brod-square"
 	assert_array(CraftRules.gather_here(s, data)).is_empty()
 	s.room_id = "mine-gallery"

@@ -389,7 +389,7 @@ func _cast_row(parent: Control, c: Dictionary, id: String, level: int, can_act: 
 				_conc_armed = id
 				return tr("CONC_SWITCH_AGAIN").format({"old": held})
 			_conc_armed = ""
-			if not LetterRules.spell_way(Catalog.data, id).is_empty():  # Sending: the letter's window, the slot goes with the letter (v0.8.4.26.3)
+			if not LetterRules.way_by(Catalog.data, "spell", id).is_empty():  # Sending: the letter's window, the slot goes with the letter (v0.8.4.26.3)
 				EventBus.letter_requested.emit("")
 				return ""
 			return GameState.cast(id, pick.get_selected_id() if pick.item_count > 0 else 0))
@@ -476,6 +476,10 @@ func _gear_tab(c: Dictionary) -> void:
 		var water := VesselRules.summary(c, Catalog.data, id)  # v0.7.34.6: what each vessel holds
 		_item_button(row, details, c, id, "%s%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else "", " (%s)" % water if not water.is_empty() else ""], "Item_" + id)
 		var fx := ItemRules.consumable(Catalog.data, id, s.items)
+		if not LetterRules.way_by(Catalog.data, "tool", id).is_empty():  # a forgery kit writes in the letter's window (v0.8.4.26.4)
+			_action(row, "Letter_" + id, "BTN_LETTER_WRITE", Backend.is_ready() and not busy, func() -> String:
+				EventBus.letter_requested.emit("")
+				return "")
 		if fx.has("meal"):  # food from the pack; the rest is used from the belt (v0.8.4.24)
 			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
 		elif ItemRules.belt_fits(Catalog.data, s.items, id) and not ItemRules.on_belt(c, Catalog.data, s.items, id):

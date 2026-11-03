@@ -1144,7 +1144,8 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 	# Items.
 	var usable: Array[String] = []
 	for id: String in ItemRules.at_hand(c, data, s.items):  # only the belt's and the worn things are at hand (v0.8.4.24, v0.8.4.26)
-		if not id.is_empty() and not ItemRules.consumable(data, id, s.items).is_empty():
+		var use := ItemRules.consumable(data, id, s.items) if not id.is_empty() else {}
+		if not use.is_empty() and int(use.get("minutes", 0)) == 0:  # work of a while (a disguise) is not for a fight
 			usable.append(id)
 	if not usable.is_empty():
 		var ib := _tab_box("COMBAT_TAB_ITEMS")

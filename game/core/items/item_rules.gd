@@ -677,11 +677,19 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 	var d := def_of(data["items"], session_items, real_id(id))
 	var lines: Array[String] = ["Использовано: %s" % d.get("name", id)]
 	lines.append_array(consume(c, data, session_items, id, rng))
+	if s != null and int(fx.get("minutes", 0)) > 0:  # work of a while: a disguise (v0.8.4.26.4)
+		lines.append_array(TimeRules.advance(s, data, int(fx["minutes"])))
 	if fx.has("throw"):  # out of a fight: thrown at a thing, the master narrates (v0.7.12)
 		lines[0] = "Брошено: %s" % d.get("name", id)
 		return lines
 	if fx.has("spell"):
-		lines.append_array(_spell_use(c, data, session_items, fx, rng, s, who))
+		var own := fx
+		if s != null and fx.has("check"):  # a kit lays the spell's effect, its DC by the user's check with the kit (a disguise, v0.8.4.26.4)
+			var r := Roll.check(s, data, who, {"what": str(d.get("name", id)), "skill": str(fx["check"].get("skill", "deception")), "tool": real_id(id)})
+			own = fx.merged({"dc": int(r["total"])}, true)
+		lines.append_array(_spell_use(c, data, session_items, own, rng, s, who))
+		if own.has("dc") and not Guise.of(Sheet.holder(s, who)).is_empty():
+			Guise.of(Sheet.holder(s, who))["dc"] = int(own["dc"])
 		return lines
 	if s != null and fx.has("summon"):  # v0.8.4.26: a Bag of Tricks, the Pipes of the Sewers — a row of rules.allies.summons
 		lines.append_array(AllyRules.summon_by(s, data, who, str(fx["summon"])))
@@ -721,7 +729,7 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		var before := int(c["hp"])
 		c["hp"] = mini(int(c["max_hp"]), before + amount)
 		lines.append("+%d HP" % (int(c["hp"]) - before))
-	if s != null and (fx.has("adv_tag") or fx.has("resist") or fx.has("check_adv") or fx.has("enlarged") or fx.has("cure")):
+	if s != null and (fx.has("cure") or ConditionRules.BOONS.any(func(k: String) -> bool: return fx.has(k))):
 		lines.append_array(ConditionRules.cure(s, data, fx, {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}, who))
 		return lines
 	for cond: Variant in fx.get("remove", []):

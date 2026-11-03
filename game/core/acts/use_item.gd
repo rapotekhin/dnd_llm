@@ -18,6 +18,8 @@ func cost(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary) -> S
 
 
 func why(s: GameSession, data: Dictionary, f: Dictionary, _to: String, how: Dictionary) -> String:
+	if int(ItemRules.consumable(data, str(how.get("item", "")), s.items).get("minutes", 0)) > 0:
+		return "COMBAT_ITEM_CANT"  # work of a while (a disguise) is not for a fight
 	return ItemRules.can_use(Sheet.holder(s, f), data, s.items, str(how.get("item", "")))
 
 

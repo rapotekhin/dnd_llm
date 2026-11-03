@@ -85,24 +85,23 @@ func _rebuild() -> void:
 	var ways := LetterRules.ways(s, data, poster)
 	if not people.has(_to):
 		_to = people[0]
-	var purposes: Array[String] = []
-	for pid: String in LetterRules.cfg(data)["purposes"]:
-		purposes.append(pid)
-	if not purposes.has(_purpose):
-		_purpose = purposes[0]
 	if not ways.has(_way):
 		_way = ways[0] if not ways.is_empty() else ""
+	var purposes := LetterRules.purposes_of(data, _way)  # a forgery kit writes only a recommendation (v0.8.4.26.4)
+	if not purposes.has(_purpose):
+		_purpose = purposes[0]
 	var p := LetterRules.purpose(data, _purpose)
 	_pick("LetterPurpose", tr("LETTER_PURPOSE"), purposes, _strs(purposes.map(func(id: String) -> String: return str(LetterRules.purpose(data, id)["name"]))),
 		_purpose, func(id: String) -> void: _purpose = id)
 	UiParts.label(_box, str(p.get("hint", "")), UiTheme.MUTED_LABEL).name = "LetterHint"
-	var to_list := people.filter(func(id: String) -> bool: return not bool(p.get("law", false)) or LetterRules.law_people(data).has(id))
+	var to_list := people.filter(func(id: String) -> bool: return LetterRules.to_why(s, data, _way, _purpose, id).is_empty())
 	if to_list.is_empty():
-		UiParts.label(_box, tr("LETTER_NO_LAW"), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, LetterRules.to_why(s, data, _way, _purpose, people[0]), UiTheme.MUTED_LABEL).name = "LetterNoOne"
+		_way_pick(s, data, ways)
 		return
 	if not to_list.has(_to):
 		_to = to_list[0]
-	_pick("LetterTo", tr("LETTER_TO"), to_list, _strs(to_list.map(func(id: String) -> String:
+	_pick("LetterTo", tr("LETTER_IN_NAME") if LetterRules.forged(data, _way) else tr("LETTER_TO"), to_list, _strs(to_list.map(func(id: String) -> String:
 		return "%s — %s" % [w.npc_name(id), WorldView.location_name(data, LetterRules.npc_loc(s, data, id))])), _to,
 		func(id: String) -> void: _to = id)
 	match str(p.get("does", "")):
@@ -136,13 +135,8 @@ func _rebuild() -> void:
 		_text = edit.text
 		_refresh_send())
 	_box.add_child(edit)
-	var way_texts: Array[String] = []
-	for way: String in ways:
-		var q := LetterRules.quote(s, data, way, _to)
-		way_texts.append(tr("LETTER_WAY").format({"way": LetterRules.cfg(data)["ways"][way]["name"], "cost": Money.format(int(q.get("cost", 0))),
-			"days": int(q.get("days", 0)), "risk": int(q.get("risk", 0))}) if not q.is_empty() else str(LetterRules.cfg(data)["ways"][way]["name"]))
-	_pick("LetterWay", tr("LETTER_WAY_CAPTION"), ways, way_texts, _way, func(id: String) -> void: _way = id)
-	_send = add_button(tr("BTN_LETTER_SEND"), func() -> void:
+	_way_pick(s, data, ways)
+	_send = add_button(tr("BTN_LETTER_FORGE") if LetterRules.forged(data, _way) else tr("BTN_LETTER_SEND"), func() -> void:
 		var err := GameState.send_letter(poster, _to, _purpose, _text, _way, _extra())
 		if not err.is_empty():
 			EventBus.message.emit(tr(err))
@@ -150,6 +144,16 @@ func _rebuild() -> void:
 		visible = false, true)
 	_send.name = "LetterSend"
 	_refresh_send()
+
+
+## The way with its price, days and risk (a forged hand has none).
+func _way_pick(s: GameSession, data: Dictionary, ways: Array[String]) -> void:
+	var way_texts: Array[String] = []
+	for way: String in ways:
+		var q := LetterRules.quote(s, data, way, _to)
+		way_texts.append(tr("LETTER_WAY").format({"way": LetterRules.cfg(data)["ways"][way]["name"], "cost": Money.format(int(q.get("cost", 0))),
+			"days": int(q.get("days", 0)), "risk": int(q.get("risk", 0))}) if not q.is_empty() else str(LetterRules.cfg(data)["ways"][way]["name"]))
+	_pick("LetterWay", tr("LETTER_WAY_CAPTION"), ways, way_texts, _way, func(id: String) -> void: _way = id)
 
 
 static func _strs(a: Array) -> Array[String]:

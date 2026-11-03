@@ -3944,7 +3944,7 @@
 	},
 	"craft": {
 		"_doc": "Crafting (v0.7.24, CraftRules): a recipe is data — `tool` (the hero must be proficient and carry it), `station` (a room tag of `stations`, \"\" — anywhere), `hours` of work, `dc` of the craft check (d20 + the tool's ability of `tools` + proficiency + the game's difficulty), `materials` {item: qty} spent at the start, `output` × `qty`. Known: every recipe of a proficient tool without `learn`; a `learn` one — taught for pay (service op teach_recipe), from a carried book (item `teaches`) or made by the master (effect `recipe`). Work goes in shifts of `work_hours`, the progress kept in c.craft; a station in a room with its trader present costs `rent_cp_hour`. The check at the end sets the quality by the margin (`quality`, the last tier whose `from` is reached): the value ×`value`, a stack's qty ×`qty`, the `props` by the item type and the name suffix. `salvage` — an item with a recipe gives `share` of its materials back (floor, at least 1 of the first), `extra` for items without one; `hides` — raw hides from a dead beast by size, into the loot; `gather` — room tags where a button gets raw material (a check; `per_day` times a day per room); `make` — the limits of the master's recipes. Kitchen (v0.7.25): `minutes` instead of `hours`; a `simple` recipe is known to anyone and needs no tool in the pack (the proficiency adds only when proficient); a station's `tags` — the room tags that count, `wild` — anywhere outside a settlement (a campfire); `meat` — raw meat from a dead beast by size; a gather spot's `items` — one of them is found.",
-		"tools": {"smiths_tools": "str", "carpenters_tools": "str", "masons_tools": "str", "leatherworkers_tools": "dex", "woodcarvers_tools": "dex", "weavers_tools": "dex", "tinkers_tools": "dex", "herbalism_kit": "wis", "cooks_utensils": "wis", "alchemists_supplies": "int", "brewers_supplies": "int", "jewelers_tools": "dex"},
+		"tools": {"smiths_tools": "str", "carpenters_tools": "str", "masons_tools": "str", "leatherworkers_tools": "dex", "woodcarvers_tools": "dex", "weavers_tools": "dex", "tinkers_tools": "dex", "herbalism_kit": "wis", "cooks_utensils": "wis", "alchemists_supplies": "int", "brewers_supplies": "int", "jewelers_tools": "dex", "poisoners_kit": "int", "calligraphers_supplies": "dex", "cobblers_tools": "dex", "glassblowers_tools": "int", "cartographers_tools": "int", "painters_supplies": "wis", "potters_tools": "dex"},
 		"stations": {
 			"forge": {"name": "Горн и наковальня", "rent_cp_hour": 10},
 			"workbench": {"name": "Верстак", "rent_cp_hour": 5},
@@ -3971,7 +3971,10 @@
 			"ore": {"name": "Добыть руду", "item": "iron_ore", "qty": [1, 3], "skill": "athletics", "tool": "", "dc": 10, "minutes": 120, "per_day": 2},
 			"herbs": {"name": "Собрать травы", "item": "herbs", "qty": [1, 4], "skill": "survival", "tool": "herbalism_kit", "dc": 10, "minutes": 60, "per_day": 2},
 			"timber": {"name": "Заготовить древесину", "item": "timber", "qty": [1, 2], "skill": "athletics", "tool": "", "dc": 8, "minutes": 120, "per_day": 3},
-			"forage": {"name": "Собрать грибы и ягоды", "items": ["mushrooms", "berries"], "qty": [1, 3], "skill": "survival", "tool": "", "dc": 10, "minutes": 60, "per_day": 2}
+			"forage": {"name": "Собрать грибы и ягоды", "items": ["mushrooms", "berries"], "qty": [1, 3], "skill": "survival", "tool": "", "dc": 10, "minutes": 60, "per_day": 2},
+			"clay": {"name": "Накопать глины", "tag": "fish", "item": "clay", "qty": [1, 3], "skill": "athletics", "tool": "", "dc": 8, "minutes": 60, "per_day": 2},
+			"sand": {"name": "Набрать песка", "tag": "fish", "item": "little_bag_of_sand", "qty": [1, 3], "skill": "athletics", "tool": "", "dc": 5, "minutes": 30, "per_day": 2},
+			"stone": {"name": "Наломать камня", "tag": "ore", "item": "stone", "qty": [1, 2], "skill": "athletics", "tool": "masons_tools", "dc": 10, "minutes": 120, "per_day": 2}
 		},
 		"make": {"_doc": "v0.7.39.4: any item may get a recipe — the work pays what the materials do not, by 5e (5 gp a day of 8 hours): hours = max(the master's, (the output's value − the materials') / labor_cp_hour), up to hours[1]; `skills` — the «Ремесло» skills a recipe of this tool and item asks (the first match), as the pack's.", "hours": [1, 3000], "dc_tiers": ["very_easy", "easy", "medium", "hard"], "materials_max": 4, "qty_max": 20, "labor_cp_hour": 62,
 			"skills": [
@@ -4020,7 +4023,33 @@
 			"stew": {"tool": "cooks_utensils", "simple": true, "station": "fire", "minutes": 60, "dc": 5, "materials": {"grain": 1, "vegetables": 1}, "output": "stew", "qty": 2},
 			"hunters_stew": {"tool": "cooks_utensils", "station": "fire", "minutes": 90, "dc": 12, "materials": {"raw_meat": 2, "vegetables": 1, "spices": 1}, "output": "hunters_stew", "qty": 2},
 			"mushroom_soup": {"tool": "cooks_utensils", "station": "fire", "minutes": 60, "dc": 13, "materials": {"mushrooms": 2, "herbs": 1}, "output": "mushroom_soup", "qty": 2},
-			"jerky": {"tool": "cooks_utensils", "station": "fire", "minutes": 120, "dc": 10, "materials": {"raw_meat": 2, "grain": 1}, "output": "rations", "qty": 2, "name": "Завялить мясо в пайки"}
+			"jerky": {"tool": "cooks_utensils", "station": "fire", "minutes": 120, "dc": 10, "materials": {"raw_meat": 2, "grain": 1}, "output": "rations", "qty": 2, "name": "Завялить мясо в пайки"},
+			"ale": {"tool": "brewers_supplies", "station": "hearth", "hours": 4, "dc": 10, "materials": {"grain": 2}, "output": "ale", "qty": 20, "name": "Сварить эль"},
+			"berry_wine": {"tool": "brewers_supplies", "station": "hearth", "hours": 4, "dc": 12, "materials": {"berries": 4, "bottle_glass": 1}, "output": "bottle_wine", "qty": 1, "name": "Поставить ягодное вино"},
+			"prayer_book": {"tool": "calligraphers_supplies", "station": "", "hours": 8, "dc": 10, "materials": {"parchment_one_sheet": 4, "leather": 1}, "output": "prayer_book", "qty": 1},
+			"book": {"tool": "calligraphers_supplies", "station": "", "hours": 24, "dc": 13, "materials": {"parchment_one_sheet": 8, "leather": 1, "ink_1_ounce_bottle": 1}, "output": "book", "qty": 1},
+			"boots": {"tool": "cobblers_tools", "station": "", "hours": 4, "dc": 10, "materials": {"leather": 1}, "output": "boots", "qty": 1},
+			"vial": {"tool": "glassblowers_tools", "station": "forge", "hours": 2, "dc": 10, "materials": {"little_bag_of_sand": 1}, "output": "vial", "qty": 2},
+			"bottle_glass": {"tool": "glassblowers_tools", "station": "forge", "hours": 2, "dc": 12, "materials": {"little_bag_of_sand": 2}, "output": "bottle_glass", "qty": 1},
+			"silver_ring": {"tool": "jewelers_tools", "station": "", "hours": 8, "dc": 13, "materials": {"silver_bar": 1}, "output": "silver_ring", "qty": 1},
+			"amulet": {"tool": "jewelers_tools", "station": "", "hours": 2, "dc": 10, "materials": {"silver_bar": 1}, "output": "amulet", "qty": 1},
+			"whetstone": {"tool": "masons_tools", "station": "", "hours": 1, "dc": 5, "materials": {"stone": 1}, "output": "whetstone", "qty": 4},
+			"mortar_pestle": {"tool": "masons_tools", "station": "", "hours": 2, "dc": 10, "materials": {"stone": 1}, "output": "mortar_pestle", "qty": 1},
+			"figurine": {"tool": "masons_tools", "station": "", "hours": 4, "dc": 12, "materials": {"stone": 1}, "output": "figurine", "qty": 1, "name": "Вырезать статуэтку"},
+			"map_local": {"tool": "cartographers_tools", "station": "", "hours": 2, "dc": 10, "materials": {"parchment_one_sheet": 1}, "output": "map_local", "qty": 1, "name": "Начертить карту округи"},
+			"portrait": {"tool": "painters_supplies", "station": "", "hours": 4, "dc": 12, "materials": {"cloth_bolt": 1}, "output": "portrait", "qty": 1, "name": "Написать портрет"},
+			"cup_clay": {"tool": "potters_tools", "station": "hearth", "hours": 1, "dc": 5, "materials": {"clay": 1}, "output": "cup_clay", "qty": 4},
+			"plate_clay": {"tool": "potters_tools", "station": "hearth", "hours": 1, "dc": 5, "materials": {"clay": 1}, "output": "plate_clay", "qty": 2},
+			"jug_or_pitcher": {"tool": "potters_tools", "station": "hearth", "hours": 2, "dc": 10, "materials": {"clay": 2}, "output": "jug_or_pitcher", "qty": 1},
+			"oil_lamp_clay": {"tool": "potters_tools", "station": "hearth", "hours": 1, "dc": 8, "materials": {"clay": 1}, "output": "oil_lamp_clay", "qty": 2},
+			"lamp": {"tool": "tinkers_tools", "station": "", "hours": 2, "dc": 10, "materials": {"iron_bar": 1}, "output": "lamp", "qty": 1},
+			"tinderbox": {"tool": "tinkers_tools", "station": "", "hours": 2, "dc": 10, "materials": {"iron_bar": 1}, "output": "tinderbox", "qty": 1},
+			"lantern": {"tool": "tinkers_tools", "station": "", "hours": 8, "dc": 13, "materials": {"iron_bar": 1, "bottle_glass": 1}, "output": "lantern", "qty": 1},
+			"cloth_bolt": {"tool": "weavers_tools", "station": "", "hours": 2, "dc": 8, "materials": {"yarn": 4}, "output": "cloth_bolt", "qty": 1, "name": "Соткать холст"},
+			"blanket": {"tool": "weavers_tools", "station": "", "hours": 2, "dc": 8, "materials": {"cloth_bolt": 1}, "output": "blanket", "qty": 1},
+			"clothes_common": {"tool": "weavers_tools", "station": "", "hours": 4, "dc": 10, "materials": {"cloth_bolt": 1}, "output": "clothes_common", "qty": 1},
+			"towel": {"tool": "weavers_tools", "station": "", "hours": 1, "dc": 5, "materials": {"cloth_bolt": 1}, "output": "towel", "qty": 4},
+			"poison_basic": {"tool": "poisoners_kit", "station": "", "hours": 16, "dc": 15, "materials": {"herbs": 4, "vial": 1}, "output": "poison_basic_vial", "qty": 1, "name": "Сварить яд"}
 		}
 	},
 	"needs": {
@@ -4259,7 +4288,7 @@
 		}
 	},
 	"tools": {
-		"_doc": "Tools in checks (v0.7.11, BackgroundRules.tool_check): the master's check names `tool`; the hero proficient with it and carrying it adds the proficiency bonus, or gets advantage when also proficient in a skill of `skills` (XGtE); `required` — without the tool the check fails (a lock without thieves' tools).",
+		"_doc": "Tools in checks (v0.7.11, BackgroundRules.tool_check): the master's check names `tool`; the hero proficient with it and carrying it adds the proficiency bonus, or gets advantage when also proficient in a skill of `skills` (XGtE); `required` — without the tool the check fails (a lock without thieves' tools). v0.8.4.26.4: `perform` — an instrument played on a stage (its proficiency in the show's Performance, BackgroundRules.perform_check); `wayfinder` — carried and known, the way outside settlements a quarter shorter, as an outlander's. A kit's use is the item's own (`use`: the healer's — Spare the Dying with charges, the disguise — Disguise Self with the kit's Deception as the DC); a gaming set goes into a contest (rules.contests), a forgery kit — a way of rules.letters, the artisan's tools — the recipes of rules.craft.",
 		"thieves_tools": {
 			"skills": [
 				"sleight_of_hand",
@@ -4300,13 +4329,15 @@
 		"navigators_tools": {
 			"skills": [
 				"survival"
-			]
+			],
+			"wayfinder": true
 		},
 		"cartographers_tools": {
 			"skills": [
 				"survival",
 				"history"
-			]
+			],
+			"wayfinder": true
 		},
 		"smiths_tools": {
 			"skills": [
@@ -4353,52 +4384,62 @@
 		"lute": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		},
 		"flute": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		},
 		"lyre": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		},
 		"drum": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		},
 		"bagpipes": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		},
 		"horn": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		},
 		"pan_flute": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		},
 		"shawm": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		},
 		"viol": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		},
 		"dulcimer": {
 			"skills": [
 				"performance"
-			]
+			],
+			"perform": true
 		}
 	},
 	"item_rules": {
@@ -4990,12 +5031,13 @@
 		"make": {"forbids": ["murder", "assault", "pickpocket", "burglary", "robbery", "smuggling", "poaching", "debt", "false_report", "rob_dead", "check:deception", "check:intimidation", "theft", "crime"]}
 	},
 	"letters": {
-		"_doc": "Letters (v0.7.48, LetterRules): the hero writes to a met NPC at a person with `post` (the ways it sends by). A way: base_cp + per_hop_cp × hops of the map's roads; days = max(min_days, hops × days_per_hop), the reply comes back as long again (the same location — the next day); lose_pct per wild location on the route (no law), at most risk_max_pct: a lost letter lies with its text (lost_item) in a room of the first wild place. A purpose: `does` — what the engine does (closeness — bond points once in cooldown_days; ally — the NPC walks to the hero's place in days_per_hop per hop, waits wait_days and joins at the hero's coming; arrest — the law's guard reads a denunciation: evidence (an item with `evidence`, a told secret with `crime_of`) puts the NPC under guard in arrest_days for jail_days, no evidence on a guilty one — no case, an innocent one — the hero's crime false_report; recommendation — a letter item with `recommends` from a person of standing: notable_tags, an office's chief, a school's head, a site's owner); `choice` — the master answers `letter_reply` yes or no by the engine's verdict; min_bond / family / mentor / law — who can do it. recommend.waives — office requirements a recommendation stands for; family — the spouse worries after silence_days away from home with no letter, every every_days a bond loss.",
+		"_doc": "Letters (v0.7.48, LetterRules): the hero writes to a met NPC at a person with `post` (the ways it sends by). A way: base_cp + per_hop_cp × hops of the map's roads; days = max(min_days, hops × days_per_hop), the reply comes back as long again (the same location — the next day); lose_pct per wild location on the route (no law), at most risk_max_pct: a lost letter lies with its text (lost_item) in a room of the first wild place. A purpose: `does` — what the engine does (closeness — bond points once in cooldown_days; ally — the NPC walks to the hero's place in days_per_hop per hop, waits wait_days and joins at the hero's coming; arrest — the law's guard reads a denunciation: evidence (an item with `evidence`, a told secret with `crime_of`) puts the NPC under guard in arrest_days for jail_days, no evidence on a guilty one — no case, an innocent one — the hero's crime false_report; recommendation — a letter item with `recommends` from a person of standing: notable_tags, an office's chief, a school's head, a site's owner); `choice` — the master answers `letter_reply` yes or no by the engine's verdict; min_bond / family / mentor / law — who can do it. recommend.waives — office requirements a recommendation stands for; family — the spouse worries after silence_days away from home with no letter, every every_days a bond loss. The hero's own ways (the sheet's button, no post): `spell` — cast when sent (v0.8.4.26.3); `tool` — carried; with `forge` the letter is made at once in the hand of a person of standing (`purposes`), the hero's `skill` check with the tool is its DC against a reader's Investigation (v0.8.4.26.4).",
 		"ways": {
 			"post": {"name": "почтой", "base_cp": 10, "per_hop_cp": 10, "days_per_hop": 2, "min_days": 1, "lose_pct": 15},
 			"courier": {"name": "с гонцом", "base_cp": 100, "per_hop_cp": 50, "days_per_hop": 1, "min_days": 0, "lose_pct": 5},
 			"sending": {"name": "Посланием", "spell": "sending", "base_cp": 0, "per_hop_cp": 0, "days_per_hop": 0, "min_days": 0, "lose_pct": 0, "reply_days": 0, "words": 25},
-			"animal_messenger": {"name": "со зверьком-посланцем", "spell": "animal_messenger", "base_cp": 0, "per_hop_cp": 0, "days_per_hop": 1, "min_days": 1, "lose_pct": 0}
+			"animal_messenger": {"name": "со зверьком-посланцем", "spell": "animal_messenger", "base_cp": 0, "per_hop_cp": 0, "days_per_hop": 1, "min_days": 1, "lose_pct": 0},
+			"forgery_kit": {"name": "подделка (набор для подделки)", "tool": "forgery_kit", "forge": true, "purposes": ["recommend"], "skill": "deception", "minutes": 60}
 		},
 		"purposes": {
 			"ties": {"name": "весточка", "hint": "письмо близким и знакомым: близость растёт, семья не тревожится", "does": "closeness", "bond": 4, "cooldown_days": 7},
