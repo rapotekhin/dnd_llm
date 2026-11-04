@@ -50,9 +50,9 @@ func test_one_vessel_holds_one_liquid() -> void:
 	var jug := _of("jug_or_pitcher")
 	var milk := Thing.nth(s.character, "jug_or_pitcher", jug["i"])
 	milk.merge({"liquid": "milk", "pints": 2.0})
-	assert_str(LiquidRules.pour_why(_of("waterskin"), _of("jug_or_pitcher"))).is_equal("LIQUID_OTHER")
-	assert_str(LiquidRules.pour_why(_of("waterskin"), _of("ale"))).is_equal("LIQUID_FULL")
-	assert_str(LiquidRules.pour_why(_of("waterskin"), _of("waterskin"))).is_equal("LIQUID_SAME")
+	assert_str(LiquidRules.pour_why(s.character, data, _of("waterskin"), _of("jug_or_pitcher"))).is_equal("LIQUID_OTHER")
+	assert_str(LiquidRules.pour_why(s.character, data, _of("waterskin"), _of("ale"))).is_equal("LIQUID_FULL")
+	assert_str(LiquidRules.pour_why(s.character, data, _of("waterskin"), _of("waterskin"))).is_equal("LIQUID_SAME")
 
 
 func test_a_bottle_drunk_from_keeps_the_rest() -> void:

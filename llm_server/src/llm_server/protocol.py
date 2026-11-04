@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.107.0"
+PROTOCOL_VERSION = "0.108.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -217,7 +217,7 @@ class SceneProp(_In):
     container: str = ""  # 0.28.0: a container — its kind («сундук», «шкаф»); its contents below
     locked: bool = False  # 0.28.0: locked — a key, thieves' tools or force (effect unlock)
     contents: str = ""  # 0.28.0: «Кинжал ×2 [dagger], Свеча [candle]» — what lies inside
-    source: str = ""  # 0.70.0: water | foul_water — water is drawn here
+    source: str = ""  # 0.70.0: water | foul_water — water is drawn here; 0.108.0: any liquid id (wine, oil…)
     near: str = ""  # 0.104.0: how far from the hero, in words
 
 
@@ -724,7 +724,9 @@ class PropSpec(_Out):
     contents: Annotated[list[ContentSpec], AfterValidator(lambda v: v[:10])] = Field(default_factory=list)
     lock: Literal["simple", "good", "masterwork"] | None = None  # 0.28.0: locked, and how well
     key: str | None = None  # 0.28.0: the item_id of the key that opens it
-    source: Literal["water", "foul_water"] | None = None  # 0.70.0: water can be drawn here (a well, a stream, a river)
+    # 0.70.0: water can be drawn here (a well, a stream, a river); 0.108.0: any liquid id of the engine — wine from a
+    # barrel, oil from a vat (checked by the engine)
+    source: str | None = None
     body: str | None = None  # 0.99.0: what it does on the map: table, bench, cabinet, barrel, chest, pillar, statue, tree, boulder, curtain
     near: str | None = None  # 0.104.0: where on the map: a place of scene.spots or an npc_id of the scene; no squares
 
@@ -1117,10 +1119,18 @@ class QuestActEffect(_Out):
 class FillEffect(_Out):
     """The hero draws water into the vessels it carries (0.70.0): a waterskin, a flask, a jug, a bucket; `item_id` —
     one kind only, empty — all. The engine checks the water here (the room's tag, a thing with `source`, a well or a
-    stream of the room) and fills each to its volume."""
+    stream of the room) and fills each to its volume.
+
+    0.108.0: any liquid by its id. `action` draw — `liquid` (water by default) from a thing of the room with that
+    `source` into the hero's vessels that take it; pour_out — the vessel `item_id` poured out on the ground; splash —
+    its liquid on the thing `prop_id` of the room, or on the hero without it (water puts a fire out, oil burns).
+    """
 
     kind: Literal["fill"] = "fill"
     item_id: str | None = None
+    liquid: str | None = None  # 0.108.0: water, foul_water, ale, wine, milk, oil, alchemists_fire, acid, holy_water, poison
+    action: Literal["draw", "pour_out", "splash"] = "draw"  # 0.108.0
+    prop_id: str | None = None  # 0.108.0: splash — the thing of the room splashed
 
 
 class PropStateEffect(_Out):

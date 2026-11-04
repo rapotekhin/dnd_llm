@@ -395,7 +395,10 @@ func test_how_far_the_hero_sees_by_its_light() -> void:
 	assert_int(SightRules.reach(s, data)).is_equal(int(cfg["blind"]))
 	s.character["inventory"]["torch"] = 1
 	assert_int(SightRules.reach(s, data)).is_equal(int(cfg["lights"]["torch"]))
+	LiquidRules.drain(s.character)
 	s.character["inventory"]["lantern"] = 1
+	assert_int(SightRules.reach(s, data)).is_equal(int(cfg["lights"]["torch"]))  # no oil in it (v0.8.4.28.3)
+	Thing.nth(s.character, "lantern", 0).merge({"liquid": "oil", "pints": 1.0})
 	assert_int(SightRules.reach(s, data)).is_equal(int(cfg["lights"]["lantern"]))
 	s.character["inventory"].erase("torch")
 	s.character["inventory"].erase("lantern")

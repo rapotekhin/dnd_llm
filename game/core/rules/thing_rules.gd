@@ -175,10 +175,24 @@ static func apply(s: GameSession, data: Dictionary, q: Dictionary) -> Array[Stri
 				lay(s, p, str(other), int(cfg(data)["status_minutes"]), str(q["cause"]))
 	if int(q["damage"]) > 0 and bool(hurt(data, p, d, int(q["damage"]), str(q["type"]))["broke"]):
 		lines.append_array(ruin(s, data, str(q["room"]), p, "broken"))
-	var owner := str(p.get("owner", ""))
-	if WatchRules.sees_hero(s, data, owner):
-		lines.append_array(TheftRules.react(s, data, owner))
+	lines.append_array(_seen(s, data, p))
 	return lines
+
+
+## The hero splashes a thing of the room with `lid` from its vessel (the master's `fill` splash, v0.8.4.28.3). Lines.
+static func splash(s: GameSession, data: Dictionary, room: String, prop: String, lid: String) -> Array[String]:
+	var p := PropRules.find(s, room, prop)
+	if p.is_empty():
+		return []
+	var lines := LiquidRules.coat(s, data, p, lid, LiquidRules.name_of(data, lid))
+	lines.append_array(_seen(s, data, p))
+	return lines
+
+
+## Its owner sees what the hero did to its thing: the reaction to a caught theft.
+static func _seen(s: GameSession, data: Dictionary, p: Dictionary) -> Array[String]:
+	var owner := str(p.get("owner", ""))
+	return TheftRules.react(s, data, owner) if WatchRules.sees_hero(s, data, owner) else [] as Array[String]
 
 
 ## The thing is broken or burnt: what was in it falls out. Lines.

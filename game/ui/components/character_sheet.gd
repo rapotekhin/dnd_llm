@@ -421,7 +421,15 @@ func _liquid_buttons(row: Control, c: Dictionary, id: String, busy: bool) -> voi
 	if LiquidRules.drink_why(data, lv).is_empty():
 		_action(row, "Drink_" + id, "BTN_LIQUID_DRINK", not busy, GameState.liquid_act.bind("drink", key))
 	var targets := LiquidRules.pour_targets(c, data, lv)
-	if not targets.is_empty():
+	var skill := LiquidRules.needs_why(c, data, str(lv["liquid"]))
+	if not skill.is_empty():  # poured only with its tool (v0.8.4.28.3): greyed, the reason on hover
+		var b := Button.new()
+		b.name = "Pour_" + id
+		b.text = "BTN_LIQUID_POUR"
+		b.disabled = true
+		b.tooltip_text = "%s: %s" % [tr(skill), BackgroundRules.tool_name(data, LiquidRules.needs(data, str(lv["liquid"])))]
+		row.add_child(b)
+	elif not targets.is_empty():
 		var mb := MenuButton.new()
 		mb.name = "Pour_" + id
 		mb.text = "BTN_LIQUID_POUR"

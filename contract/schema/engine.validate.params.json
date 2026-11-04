@@ -2115,8 +2115,18 @@
     },
     "FillEffect": {
       "additionalProperties": false,
-      "description": "The hero draws water into the vessels it carries (0.70.0): a waterskin, a flask, a jug, a bucket; `item_id` —\none kind only, empty — all. The engine checks the water here (the room's tag, a thing with `source`, a well or a\nstream of the room) and fills each to its volume.",
+      "description": "The hero draws water into the vessels it carries (0.70.0): a waterskin, a flask, a jug, a bucket; `item_id` —\none kind only, empty — all. The engine checks the water here (the room's tag, a thing with `source`, a well or a\nstream of the room) and fills each to its volume.\n\n0.108.0: any liquid by its id. `action` draw — `liquid` (water by default) from a thing of the room with that\n`source` into the hero's vessels that take it; pour_out — the vessel `item_id` poured out on the ground; splash —\nits liquid on the thing `prop_id` of the room, or on the hero without it (water puts a fire out, oil burns).",
       "properties": {
+        "action": {
+          "default": "draw",
+          "enum": [
+            "draw",
+            "pour_out",
+            "splash"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
         "item_id": {
           "anyOf": [
             {
@@ -2134,6 +2144,30 @@
           "default": "fill",
           "title": "Kind",
           "type": "string"
+        },
+        "liquid": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Liquid"
+        },
+        "prop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prop Id"
         }
       },
       "title": "FillEffect",
@@ -4602,10 +4636,6 @@
         "source": {
           "anyOf": [
             {
-              "enum": [
-                "water",
-                "foul_water"
-              ],
               "type": "string"
             },
             {

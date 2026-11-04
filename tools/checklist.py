@@ -466,6 +466,43 @@ def damage_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
     return "Типы урона", cols, rows
 
 
+def liquid_text(k: dict) -> dict[str, str]:
+    """What a row of rules.liquids says, cell by cell."""
+    drink = k.get("drink", {})
+    coat = k.get("coat", {})
+    puddle = k.get("puddle", {})
+    throw = k.get("throw", {})
+    return {
+        "Выпить": ", ".join(w for w, on in (("утоляет жажду", "water" in drink), ("сытит", "food" in drink), ("пьянит", "drunk" in drink),
+                                             ("риск болезни", "disease" in drink)) if on) if drink else "не пьют",
+        "Бросить": (("урон " + " ".join(map(str, throw["damage"])) if throw.get("damage") else "без урона")
+                    + (" по " + ", ".join(throw["types"]) if throw.get("types") else "")) if throw else "",
+        "Облить": ", ".join(w for w, on in ((f"огонь +{coat.get('fire_plus')}", "fire_plus" in coat), (f"горит {coat.get('burns')}", "burns" in coat),
+                                             ("гасит огонь", coat.get("douses"))) if on) if coat else "",
+        "Лужа": "клетка горит" if puddle.get("fire") else ", ".join(w for w, on in (("скользко", puddle.get("cond") == "prone"), ("горит", puddle.get("burns")),
+                                                                                ("гасит огонь", puddle.get("douses"))) if on) if puddle else "",
+    }
+
+
+def liquids_sheet(data: Data) -> tuple[str, list[str], list[dict]]:
+    """A row per liquid (rules.liquids): its ready thing, how to pour it (and with which tool), drink, throw, coat and spill."""
+    cfg = data.rules["liquids"]
+    cols = ["Жидкость", "id", "Готовая вещь", "Сосуды", "Налить", "Выпить", "Бросить", "Облить", "Лужа", "Клинок"]
+    rows = []
+    for lid, k in cfg["kinds"].items():
+        vessels = [data.item_name(v) for v, spec in cfg["vessels"].items() if not spec.get("only") or lid in spec["only"]]
+        item = k.get("item", "")
+        need = k.get("needs", "")
+        give = f"give {item}" if item else "give jug_or_pitcher, у источника: «набираю»"
+        pour = f"{give}\ngive jug_or_pitcher\nлист → «Перелить»" + (f"\nбез «{data.item_name(need)}» серо; tool {need} + give {need}" if need else "")
+        blade = k.get("blade", {})
+        rows.append({"id": lid, "Жидкость": k.get("name", lid),
+                     "Готовая вещь": f"{data.item_name(item)} ({data.item_name(k['vessel'])}, {k['pints']} пинт)" if item else "",
+                     "Сосуды": ", ".join(vessels), "Налить": pour, **liquid_text(k),
+                     "Клинок": f"{blade.get('dice')} {blade.get('type')}, спасбросок {blade.get('save')} Сл {blade.get('dc')}" if blade else ""})
+    return "Жидкости", cols, rows
+
+
 def creature_conditions(data: Data) -> list[str]:
     """What `cond` lays (Cheats.conditions): the rules' conditions and the spells' statuses, not a thing's nor an exhaustion step."""
     effects = data.rules.get("condition_effects", {})
@@ -570,7 +607,7 @@ def build(data: Data, path: Path, run: dict | None = None) -> dict[str, int]:
     bold = Font(bold=True)
     head_fill = PatternFill("solid", fgColor="DDD5C4")
     for title, cols, rows in (items_sheet(data, False), items_sheet(data, True), monsters_sheet(data), abilities_sheet(data),
-                              spells_sheet(data), conditions_sheet(data), defenses_sheet(data), damage_sheet(data)):
+                              spells_sheet(data), conditions_sheet(data), defenses_sheet(data), damage_sheet(data), liquids_sheet(data)):
         ws = wb.create_sheet(title)
         all_cols = cols + AUTO + MARKS
         auto = run.get(title, {})

@@ -199,7 +199,7 @@ func _table() -> Dictionary:
 		"approach": {"rule": MapSpots.plan, "apply": MapSpots.apply, "no_fight": true},
 		"flag": {"plan": _plan_flag, "do": _do_flag},
 		"equip": {"rule": _plan_equip, "do": _do_equip},
-		"fill": {"plan": _plan_fill, "do": _do_fill},
+		"fill": {"rule": LiquidRules.plan_fill, "apply": LiquidRules.apply_fill},
 		"start_combat": {"plan": _plan_start_combat, "do": _do_start_combat},
 		"advance_time": {"plan": _plan_advance_time, "do": _do_advance_time, "no_fight": true},
 		"rumor": {"plan": _plan_rumor, "apply": RumorRules.apply},
@@ -616,17 +616,6 @@ func _plan_create_npc(s: GameSession, data: Dictionary, turn_id: String, e: Dict
 
 func _plan_drop_item(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	return ContainerRules.plan_drop(s, data, str(e.get("item_id", "")), int(e.get("qty", 1)))
-
-
-func _plan_fill(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
-	var only := str(e.get("item_id", "")) if e.get("item_id") != null else ""
-	var why := NeedRules.can_fill(s, data, only)
-	if not why.is_empty():
-		return {"reason": {"NEED_NO_SKIN": "у героя нет такой ёмкости (бурдюк, фляга, кувшин, ведро)", "NEED_NO_SOURCE":
-			"здесь нет воды: ни тега комнаты, ни вещи-источника (колодец, ручей, река — вещь обстановки с source)",
-			"NEED_SKIN_FULL": "ёмкости уже полны"}.get(why, why)}
-	return {"plan": {"only": only}, "summary": "Набрать воды: %s" % ", ".join(LiquidRules.to_fill(s.character, data, NeedRules.foul_here(s, data), only)
-		.map(func(v: Dictionary) -> String: return ItemRules.display_name(data["items"], s.items, v["id"])))}
 
 
 func _plan_advance_time(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
@@ -1343,11 +1332,6 @@ func _do_put_in(s: GameSession, plan: Dictionary) -> void:
 
 func _do_drop_item(s: GameSession, plan: Dictionary) -> void:
 	ContainerRules.apply_drop(s, _data, plan)
-
-
-func _do_fill(s: GameSession, plan: Dictionary) -> void:
-	_extra_lines.append_array(NeedRules.fill(s, _data, str(plan["only"])))
-	_extra_lines.append_array(TimeRules.advance(s, _data, int(NeedRules.cfg(_data)["water"]["fill_minutes"])))
 
 
 func _do_create_npc(s: GameSession, plan: Dictionary) -> void:

@@ -5,7 +5,9 @@ extends RefCounted
 ## one liquid on its copy (Thing: {liquid, pints}); a plain copy is empty. A ready thing of the catalog is a vessel with its
 ## liquid — the row's `item` in its `vessel` (oil in a flask, ale in a cup): poured out or drunk it leaves its vessel, and
 ## that vessel filled to the brim with that liquid is the thing again. Anybody pours and drinks alike: `c` is a holder in
-## the hero's form (Sheet.things), `who` the one who drinks. The hero's vessels marked `full` start full of water.
+## the hero's form (Sheet.things), `who` the one who drinks. A holder's vessels marked `full` start full of that liquid.
+## v0.8.4.28.3: a liquid that `needs` a tool is poured only by one proficient with it and carrying it; a vessel takes only
+## the liquids of its `only` (a lamp only oil); a light of `burns_hours` lights the way only with that in it and burns it.
 
 const WATER := "water"
 const FOUL := "foul_water"
@@ -64,7 +66,8 @@ static func carried(c: Dictionary, data: Dictionary) -> Array[Dictionary]:
 				continue
 			var v: Dictionary = list[i] if i < list.size() else {}
 			var p := minf(float(v.get("pints", 0.0)), cap)
-			out.append({"id": id, "i": i, "liquid": str(v.get("liquid", WATER)) if p > 0.0 else "", "pints": p, "cap": cap, "ready": false})
+			out.append({"id": id, "i": i, "liquid": str(v.get("liquid", WATER)) if p > 0.0 else "", "pints": p, "cap": cap, "ready": false,
+				"only": cfg(data)["vessels"].get(id, {}).get("only", [])})
 	return out
 
 
@@ -127,6 +130,109 @@ static func fill(c: Dictionary, data: Dictionary, foul: bool, only := "") -> voi
 		_put(c, v, float(v["cap"]), FOUL if foul else WATER)
 
 
+## A thing of this room `lid` is drawn from (a barrel of wine, a vat of oil — the furnishing's `source`); {} — none.
+static func source_of(s: GameSession, lid: String) -> Dictionary:
+	for p: Dictionary in PropRules.room_props(s, s.room_id):
+		if str(p.get("source", "")) == lid:
+			return p
+	return {}
+
+
+## The vessels `lid` drawn from a source would go into (only that id): taking it, empty or of it, not full.
+static func to_draw(c: Dictionary, data: Dictionary, lid: String, only := "") -> Array[Dictionary]:
+	return carried(c, data).filter(func(v: Dictionary) -> bool:
+		return not bool(v["ready"]) and takes(v, lid) and (only.is_empty() or v["id"] == only) and float(v["pints"]) < float(v["cap"]) \
+			and (float(v["pints"]) <= 0.0 or v["liquid"] == lid))
+
+
+## Fills those vessels with `lid` to the brim; one filled as a ready thing's vessel becomes that thing. Lines.
+static func draw(c: Dictionary, data: Dictionary, lid: String, only := "", session_items: Dictionary = {}) -> Array[String]:
+	var list := to_draw(c, data, lid, only)
+	list.reverse()  # a vessel that becomes a thing leaves its stack: the later copies first
+	var out: Array[String] = []
+	for v: Dictionary in list:
+		_put(c, v, float(v["cap"]), lid)
+		out.append("%s: %s %s пинт" % [_label(data, session_items, v), name_of(data, lid), num(v["cap"])])
+		_brim(c, data, v)
+	return out
+
+
+# --- the master's `fill` (0.70.0; v0.8.4.28.3: any liquid, draw, pour out, splash) ----------------------------
+
+
+## The master's `fill`: `action` draw (default) — `liquid` (water by default) from a source here into the vessels
+## (`item_id` — one kind); pour_out — the vessel `item_id` poured out; splash — its liquid on a thing of the room
+## (`prop_id`) or on the hero. {plan, summary} or {reason}.
+static func plan_fill(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
+	var c := s.character
+	var only := str(e.get("item_id", "")) if e.get("item_id") != null else ""
+	var lid := str(e.get("liquid", "")) if e.get("liquid") != null else ""
+	var action := str(e.get("action", "draw")) if e.get("action") != null else "draw"
+	if not lid.is_empty() and kind(data, lid).is_empty():
+		return {"reason": "нет такой жидкости: %s; есть %s" % [lid, ", ".join(cfg(data)["kinds"].keys())]}
+	if action != "draw":
+		var v := first(c, data, only)
+		if only.is_empty() or v.is_empty():
+			return {"reason": "у героя нет сосуда %s — item_id сосуда героя" % only}
+		if float(v["pints"]) <= 0.0:
+			return {"reason": "%s пуст" % _label(data, s.items, v)}
+		if action == "pour_out":
+			return {"plan": {"action": action, "key": key_of(v)}, "summary": "Вылить: %s" % line(data, s.items, v)}
+		if (kind(data, str(v["liquid"])).get("coat", {}) as Dictionary).is_empty():
+			return {"reason": "%s ничем не ложится на облитое" % name_of(data, str(v["liquid"]))}
+		var prop := str(e.get("prop_id", "")) if e.get("prop_id") != null else ""
+		var p := PropRules.find(s, s.room_id, prop) if not prop.is_empty() else {}
+		if not prop.is_empty() and p.is_empty():
+			return {"reason": "в комнате нет вещи %s" % prop}
+		return {"plan": {"action": action, "key": key_of(v), "prop": prop, "room": s.room_id},
+			"summary": "Облить %s: %s" % ["героя" if prop.is_empty() else str(p.get("name", prop)), name_of(data, str(v["liquid"]))]}
+	if lid.is_empty() or lid in [WATER, FOUL]:
+		var why := NeedRules.can_fill(s, data, only)
+		if not why.is_empty():
+			return {"reason": {"NEED_NO_SKIN": "у героя нет такой ёмкости (бурдюк, фляга, кувшин, ведро)", "NEED_NO_SOURCE":
+				"здесь нет воды: ни тега комнаты, ни вещи-источника (колодец, ручей, река — вещь обстановки с source)",
+				"NEED_SKIN_FULL": "ёмкости уже полны"}.get(why, why)}
+		return {"plan": {"action": action, "liquid": "", "only": only}, "summary": "Набрать воды: %s" % ", ".join(to_fill(c, data, NeedRules.foul_here(s, data), only)
+			.map(func(v: Dictionary) -> String: return ItemRules.display_name(data["items"], s.items, v["id"])))}
+	var src := source_of(s, lid)
+	if src.is_empty():
+		return {"reason": "здесь неоткуда набрать: %s — нет вещи обстановки с source %s" % [name_of(data, lid), lid]}
+	var owner := str(src.get("owner", ""))
+	if not owner.is_empty():
+		return {"reason": "%s — чьё-то (%s): купить у хозяина или взять с его позволения" % [str(src.get("name", "")), WorldView.name_of(data, owner)]}
+	if not needs_why(c, data, lid).is_empty():
+		return {"reason": "переливать %s может только тот, кто владеет и при себе имеет: %s" % [name_of(data, lid), BackgroundRules.tool_name(data, needs(data, lid))]}
+	var list := to_draw(c, data, lid, only)
+	if list.is_empty():
+		return {"reason": "у героя нет сосуда, куда войдёт %s (пустого или с тем же, не полного)" % name_of(data, lid)}
+	return {"plan": {"action": action, "liquid": lid, "only": only}, "summary": "Набрать: %s в %s" % [name_of(data, lid),
+		", ".join(list.map(func(v: Dictionary) -> String: return _label(data, s.items, v)))]}
+
+
+static func apply_fill(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
+	var c := s.character
+	var lines: Array[String] = []
+	match str(plan["action"]):
+		"pour_out":
+			return pour_out(c, data, by_key(c, data, str(plan["key"])), s.items)
+		"splash":
+			var v := by_key(c, data, str(plan["key"]))
+			var lid := str(v["liquid"])
+			if str(plan["prop"]).is_empty():
+				lines.append_array(coat(s, data, c, lid, name_of(data, lid)))
+			else:
+				lines.append_array(ThingRules.splash(s, data, str(plan["room"]), str(plan["prop"]), lid))
+			lines.append_array(pour_out(c, data, v, s.items))
+			return lines
+	if str(plan["liquid"]).is_empty():
+		lines.append_array(NeedRules.fill(s, data, str(plan["only"])))
+	else:
+		lines.append("Набрано")
+		lines.append_array(draw(c, data, str(plan["liquid"]), str(plan["only"]), s.items))
+	lines.append_array(TimeRules.advance(s, data, int(NeedRules.cfg(data)["water"]["fill_minutes"])))
+	return lines
+
+
 ## Foul water in the vessels turns clean (Purify Food and Drink, v0.8.4.26.2). Lines.
 static func clean(c: Dictionary, data: Dictionary) -> Array[String]:
 	var n := 0
@@ -156,14 +262,19 @@ static func take(c: Dictionary, data: Dictionary, want: float) -> Dictionary:
 # --- pour, pour out, drink ----------------------------------------------------------------------------
 
 
-## Why `a` cannot go into `b`: "" or a localization key.
-static func pour_why(a: Dictionary, b: Dictionary) -> String:
+## Why the holder `c` cannot pour `a` into `b`: "" or a localization key.
+static func pour_why(c: Dictionary, data: Dictionary, a: Dictionary, b: Dictionary) -> String:
 	if a.is_empty() or b.is_empty():
 		return "LIQUID_GONE"
 	if key_of(a) == key_of(b):
 		return "LIQUID_SAME"
 	if float(a["pints"]) <= 0.0:
 		return "LIQUID_EMPTY"
+	var skill := needs_why(c, data, str(a["liquid"]))
+	if not skill.is_empty():
+		return skill
+	if not takes(b, str(a["liquid"])):
+		return "LIQUID_NOT_FOR"
 	if bool(b["ready"]) or float(b["pints"]) >= float(b["cap"]):
 		return "LIQUID_FULL"
 	if float(b["pints"]) > 0.0 and b["liquid"] != a["liquid"]:
@@ -171,9 +282,30 @@ static func pour_why(a: Dictionary, b: Dictionary) -> String:
 	return ""
 
 
+## Why `c` may not pour `lid` from vessel to vessel (v0.8.4.28.3): its `needs` tool not mastered or not carried. "" — it may.
+static func needs_why(c: Dictionary, data: Dictionary, lid: String) -> String:
+	var tool := str(kind(data, lid).get("needs", ""))
+	if tool.is_empty():
+		return ""
+	if not CraftRules.proficient(c, tool):
+		return "LIQUID_NEEDS"
+	return "" if int(c.get("inventory", {}).get(tool, 0)) > 0 else "LIQUID_NEEDS_KIT"
+
+
+## The tool `lid` needs to be poured, "" — none.
+static func needs(data: Dictionary, lid: String) -> String:
+	return str(kind(data, lid).get("needs", ""))
+
+
+## The vessel copy `b` takes `lid`: its `only`, if it has one.
+static func takes(b: Dictionary, lid: String) -> bool:
+	var only: Array = b.get("only", [])
+	return only.is_empty() or only.has(lid)
+
+
 ## What `a` may be poured into: the other vessels with room for its liquid.
 static func pour_targets(c: Dictionary, data: Dictionary, a: Dictionary) -> Array[Dictionary]:
-	return carried(c, data).filter(func(b: Dictionary) -> bool: return pour_why(a, b).is_empty())
+	return carried(c, data).filter(func(b: Dictionary) -> bool: return pour_why(c, data, a, b).is_empty())
 
 
 ## Pours `a` into `b` as much as goes in. Lines.
@@ -267,6 +399,62 @@ static func _hops(s: GameSession, data: Dictionary, who: Dictionary, pts: float)
 	if bool(ConditionRules.effects(h).any(func(x: Dictionary) -> bool: return bool(x.get("drunk", false)))):
 		lines.append("%s пьянеет" % str(Sheet.holder(s, who).get("name", "")))
 	return lines
+
+
+# --- a light of oil, a used vial (v0.8.4.28.3) ----------------------------------------------------------
+
+
+## A light that needs no fuel, or one of `burns_hours` with some of its liquid in a copy: it lights the way.
+static func fuelled(c: Dictionary, data: Dictionary, id: String) -> bool:
+	return not cfg(data)["vessels"].get(id, {}).has("burns_hours") or not _fuel(c, data, id).is_empty()
+
+
+## The first copy of a light `id` with its fuel in it; {} — none.
+static func _fuel(c: Dictionary, data: Dictionary, id: String) -> Dictionary:
+	for v: Dictionary in carried(c, data):
+		if v["id"] == id and float(v["pints"]) > 0.0 and takes(v, str(v["liquid"])):
+			return v
+	return {}
+
+
+## The hook of time: the lights of oil on the hero's belt burn while they light an unlit place — the whole volume in
+## `burns_hours`; not while it slept. Lines.
+static func burn(s: GameSession, data: Dictionary) -> Array[String]:
+	var c := s.character
+	var now := TimeRules.abs_minute(s)
+	var mins := now - int(c.get("lamps_at", now))
+	c["lamps_at"] = now
+	var lines: Array[String] = []
+	if mins <= 0 or s.rested_at == now or not TimeRules.unlit(s, data):
+		return lines
+	var seen: Array[String] = []
+	for id: String in ItemRules.belt(c, data, s.items):
+		var spec: Dictionary = cfg(data)["vessels"].get(id, {})
+		if seen.has(id):  # one lamp in two cells is one lamp
+			continue
+		seen.append(id)
+		var v := _fuel(c, data, id) if spec.has("burns_hours") else {}
+		if v.is_empty():
+			continue
+		var left := maxf(0.0, float(v["pints"]) - float(v["cap"]) * mins / (60.0 * float(spec["burns_hours"])))
+		_put(c, v, left, str(v["liquid"]))
+		if left <= 0.0:
+			lines.append("%s: %s выгорело" % [_label(data, s.items, v), name_of(data, str(v["liquid"]))])
+	return lines
+
+
+## What a vial of a liquid with `blade` does used from the belt: its coat on the blade for a minute; {} — none.
+static func blade_of(data: Dictionary, id: String) -> Dictionary:
+	var r := ready(data, id)
+	if r.is_empty() or not kind(data, str(r["liquid"])).has("blade"):
+		return {}
+	return {"coat": kind(data, str(r["liquid"]))["blade"], "duration": "minute"}
+
+
+## One ready thing `id` used up (a vial of poison on a blade): its vessel is left, empty.
+static func empty_one(c: Dictionary, data: Dictionary, id: String) -> void:
+	var r := ready(data, id)
+	_unready(c, data, {"id": id, "liquid": r["liquid"]}, 0.0)
 
 
 # --- coated -----------------------------------------------------------------------------------------
@@ -376,7 +564,7 @@ static func _label(data: Dictionary, session_items: Dictionary, v: Dictionary) -
 
 
 static func _watery(data: Dictionary, v: Dictionary) -> bool:
-	return float(v["pints"]) <= 0.0 or bool(kind(data, str(v["liquid"])).get("quench", false))
+	return takes(v, WATER) and (float(v["pints"]) <= 0.0 or bool(kind(data, str(v["liquid"])).get("quench", false)))
 
 
 static func _quenching(c: Dictionary, data: Dictionary) -> Array[Dictionary]:
@@ -419,18 +607,19 @@ static func _unready(c: Dictionary, data: Dictionary, a: Dictionary, left: float
 	Thing.add(c, str(ready(data, str(a["id"]))["vessel"]), 1, [st])
 
 
-## The hero's vessels the first time they are looked at: those marked `full` hold water.
+## A holder's vessels the first time they are looked at: those marked `full` hold that liquid (water, a lamp's oil).
 static func _pour(c: Dictionary, data: Dictionary) -> void:
 	if bool(c.get("poured", false)):
 		return
 	c["poured"] = true
 	for id: String in c.get("inventory", {}):
-		if not bool(cfg(data)["vessels"].get(id, {}).get("full", false)):
+		var full := str(cfg(data)["vessels"].get(id, {}).get("full", ""))
+		if full.is_empty():
 			continue
 		for i in int(c["inventory"][id]):
 			var st := Thing.nth(c, id, i)
 			st["pints"] = holds(data, id)
-			st["liquid"] = WATER
+			st["liquid"] = full
 
 
 ## Every vessel empty.

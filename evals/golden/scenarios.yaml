@@ -628,6 +628,44 @@ scenarios:
     rubric:
       - "Мастер проводит fill (все ёмкости или каждую) и описывает, как герой набирает воду из ручья; воду не выдаёт предметом"
 
+  - id: draw_wine_from_barrel
+    title: "Нацедить вина из ничьей бочки — fill с liquid"
+    category: world
+    extends: tavern
+    mode: exploration
+    input: "Нацеживаю вина из бочки в пустую бутылку."
+    snapshot:
+      scene:
+        room_id: mill-cellar
+        name: "Подвал мельницы"
+        description: "Сырой подвал, мешки с мукой, у стены бочка."
+        npcs: []
+        props:
+          - {prop_id: p1, name: "Бочка вина", description: "Початая бочка с краником, ничья", source: wine}
+      character:
+        inventory: [{item_id: bottle_glass, name: "Стеклянная бутылка (пусто)", qty: 1}]
+    expect:
+      effects: {required_kinds_any: [fill], field_in: {liquid: [wine]}, forbidden_kinds: [move_item:world>hero]}
+    rubric:
+      - "Мастер проводит fill с liquid wine (в бутылку или во все сосуды) и описывает, как герой цедит вино; вино не выдаёт предметом"
+
+  - id: splash_water_on_burning_table
+    title: "Плеснуть водой на горящий стол — fill со splash"
+    category: world
+    extends: tavern
+    mode: exploration
+    input: "Выплёскиваю воду из бурдюка на горящий стол!"
+    snapshot:
+      scene:
+        props:
+          - {prop_id: p1, name: "Стол", description: "Дубовый стол у окна, горит (горит)", state: ""}
+      character:
+        inventory: [{item_id: waterskin, name: "Бурдюк (вода 4/4)", qty: 1}]
+    expect:
+      effects: {required_kinds_any: [fill], field_in: {action: [splash]}}
+    rubric:
+      - "Мастер проводит fill с action splash, item_id waterskin и prop_id p1 и описывает, как вода гасит пламя"
+
   - id: no_water_no_fill
     title: "Набрать воды там, где её нет — без fill"
     category: world

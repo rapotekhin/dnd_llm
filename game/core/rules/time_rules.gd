@@ -109,6 +109,7 @@ static func registry() -> Array[Dictionary]:
 			{"id": "follower_meals", "run": FollowRules.meals},  # followers eat from the hero's things (v0.7.39.1)
 			{"id": "diseases", "run": DiseaseRules.tick},  # hunger and thirst past their grace (v0.7.23)
 			{"id": "food", "run": FoodRules.tick},  # food spoils (v0.7.25)
+			{"id": "lamps", "run": LiquidRules.burn},  # a lamp's oil burns while it lights the dark (v0.8.4.28.3)
 			{"id": "family", "run": FamilyRules.tick},  # births, growth, the help into the till before its tax (v0.7.32)
 			{"id": "orgs", "run": OrgRules.tick},  # unpaid cuts, the own band's income (v0.7.33)
 			{"id": "offices", "run": OfficeRules.tick},  # wages, inquiries, absence, towns (v0.7.34)

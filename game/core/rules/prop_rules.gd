@@ -176,7 +176,7 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			return {"reason": "хозяин %s — не NPC этой комнаты" % owner}
 		var prop := {"name": str(spec["name"]).strip_edges().left(60), "description": str(spec.get("description", "")).left(240),
 			"item_id": item, "owner": owner, "text": str(spec.get("text", "")).left(800), "state": ""}
-		if str(spec.get("source", "")) in ["water", "foul_water"]:  # water is drawn here (v0.7.34.6)
+		if spec.get("source") != null and LiquidRules.kind(data, str(spec["source"])).size() > 0:  # drawn here: water (v0.7.34.6), any liquid (v0.8.4.28.3)
 			prop["source"] = str(spec["source"])
 		if spec.get("near") != null and not str(spec["near"]).is_empty():  # where on the map: a mark or a person (v0.8.2)
 			prop["near"] = str(spec["near"])

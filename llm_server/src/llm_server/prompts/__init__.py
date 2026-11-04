@@ -121,7 +121,7 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
                ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "grant:cure", "shift:reputation")),
     "goals": ("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", ()),
     "equip": ("надеть, снять, раздеться (`equip`)", ("equip",)),
-    "water": ("набрать воды в бурдюк, флягу, кувшин, ведро из колодца, ручья, реки (`fill`)", ("fill",)),
+    "water": ("набрать воды в бурдюк, флягу, кувшин, ведро из колодца, ручья, реки; нацедить вина, масла; вылить, облить водой или маслом (`fill`)", ("fill",)),
     "invisible": ("невидимый герой", ()),
     "people": ("новый человек (`create:npc`)", ("create:npc",)),
     "quests": ("новое задание: NPC просит о помощи, игрок ищет работу (`create:quest`)", ("create:quest",)),
@@ -158,7 +158,8 @@ TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
 
 # Topics of a scene, not of a conversation: out of the index while the hero talks (still readable by `rules`).
 SCENE_TOPICS = {"places", "containers", "doors", "equip", "tools", "invisible"}
-WATER_WORDS = re.compile(r"вод[аыуе]|набра|набер|наполн|зачерп|бурдюк|фляг|кувшин|ведр", re.IGNORECASE)
+WATER_WORDS = re.compile(r"вод[аыуе]|набра|набер|наполн|зачерп|бурдюк|фляг|кувшин|ведр|нацед|налить|налью|вылить|вылью|выливаю|облить|оболью|обливаю|плесн|плещу|"
+                         r"масл[оау]|вина|вино", re.IGNORECASE)  # v0.8.4.28.3: any liquid
 BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
 MOUNT_WORDS = re.compile(r"конь|коня|кобыл|лошад|мул|осл|верблюд|вьюк|навьюч|телег|фургон|повозк|запряч|упряж|верхом|скакун|аренд|напрокат",
                          re.IGNORECASE)  # v0.7.42

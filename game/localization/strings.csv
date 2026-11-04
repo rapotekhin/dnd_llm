@@ -128,6 +128,9 @@ LIQUID_EMPTY,Там пусто
 LIQUID_FULL,Сосуд полон
 LIQUID_OTHER,"В сосуде другая жидкость, сначала вылейте её"
 LIQUID_NOT_DRINK,Это не пьют
+LIQUID_NOT_FOR,Этот сосуд не для такой жидкости
+LIQUID_NEEDS,"Переливать это умеет только тот, кто владеет нужным набором"
+LIQUID_NEEDS_KIT,"Для этого нужен набор при себе"
 BTN_WAIT,Ждать…
 CC_BACKGROUND_SKILLS,Навыки: {skills}.
 CC_CANTRIPS,Заговоры — выберите {n}:

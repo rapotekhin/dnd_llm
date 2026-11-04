@@ -29,15 +29,16 @@ static func dark_sight(s: GameSession, data: Dictionary, who: Dictionary = Sheet
 
 ## Squares the light it carries reaches, 0 — none: a status's `light` (the Light spell — `true`, its squares by
 ## `rules.sight.lights`; a creature's own glow — a number of squares, v0.8.4.27.6) or the best light source on its belt
-## (v0.8.4.24: one in the pack is not lit).
+## (v0.8.4.24: one in the pack is not lit; v0.8.4.28.3: a lamp without oil is dark — LiquidRules.fuelled).
 static func light(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
 	var lights: Dictionary = cfg(data)["lights"]
 	var best := 0
 	for e: Dictionary in ItemRules.born_effects(data, Sheet.holder(s, who)):
 		if e.has("light"):
 			best = maxi(best, int(lights["light"]) if e["light"] is bool else int(e["light"]))
-	for id: String in ItemRules.belt(Sheet.things(s, data, who), data, s.items):
-		if not id.is_empty() and (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source"):
+	var c := Sheet.things(s, data, who)
+	for id: String in ItemRules.belt(c, data, s.items):
+		if not id.is_empty() and (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source") 				and LiquidRules.fuelled(c, data, id):
 			best = maxi(best, int(lights.get(id, lights["light"])))
 	return best
 

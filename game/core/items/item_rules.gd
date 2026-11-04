@@ -381,6 +381,9 @@ static func consume(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 		return []
 	if charges_max(def_of(data["items"], session_items, id)) > 0:
 		return spend_charge(c, data, session_items, id, rng)
+	if not LiquidRules.blade_of(data, id).is_empty():  # its vial is left (v0.8.4.28.3)
+		LiquidRules.empty_one(c, data, id)
+		return []
 	remove(c, id)
 	return []
 
@@ -437,7 +440,7 @@ static func wear(c: Dictionary, data: Dictionary, session_items: Dictionary) -> 
 	var lit := belt(c, data, session_items)
 	for id: String in CharacterRules.working_ids(c, data, session_items):
 		var d := def_of(data["items"], session_items, id)
-		if not (d.get("wear") is Dictionary) or ((d.get("properties", []) as Array).has("light_source") and not lit.has(id)):
+		if not (d.get("wear") is Dictionary) or ((d.get("properties", []) as Array).has("light_source") and not (lit.has(id) and LiquidRules.fuelled(c, data, id))):
 			continue
 		var e := wear_spec(c, data, d)
 		e.merge({"condition": "", "ends": {}, "source": {"kind": WORN, "id": real_id(id), "name": str(d.get("name", ""))}})
@@ -681,6 +684,9 @@ static func consumable(data: Dictionary, id: String, session_items: Dictionary =
 	var flask := LiquidRules.throw_of(data, id)  # a flask is thrown by its liquid (v0.8.4.28.2)
 	if not flask.is_empty():
 		return {"throw": flask}
+	var blade := LiquidRules.blade_of(data, id)  # a vial of poison coats a blade by its liquid (v0.8.4.28.3)
+	if not blade.is_empty():
+		return blade
 	if session_items.has(id):
 		return session_items[id].get("use", {})
 	return data["items"]["catalog"].get(id, {}).get("use", {})  # potions, scrolls, wands, the pearl (v0.7.12)

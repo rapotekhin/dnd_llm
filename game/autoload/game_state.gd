@@ -1589,7 +1589,7 @@ func liquid_act(what: String, key: String, to: String = "") -> String:
 			return lines],
 		"pour_out": [func() -> String: return "LIQUID_GONE" if a.is_empty() else "LIQUID_EMPTY" if float(a["pints"]) <= 0.0 else "",
 			LiquidRules.pour_out.bind(c, data, a, s.items)],
-		"pour": [func() -> String: return LiquidRules.pour_why(a, LiquidRules.by_key(c, data, to)),
+		"pour": [func() -> String: return LiquidRules.pour_why(c, data, a, LiquidRules.by_key(c, data, to)),
 			func() -> Array: return LiquidRules.pour(c, data, a, LiquidRules.by_key(c, data, to), s.items)],
 	})
 

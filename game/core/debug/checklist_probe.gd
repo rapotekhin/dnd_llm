@@ -20,7 +20,7 @@ const MARKS := {"✗": BUG, "○": GAP, "◇": MASTER, "✓": OK}
 const WORST: Array[String] = [BUG, GAP, MASTER, OK, PLAIN]
 ## The sheets of the checklist this checks, in its order.
 const SHEETS: Array[String] = ["Обычные предметы", "Магические предметы", "Монстры", "Способности", "Заклинания", "Состояния",
-	"Сопротивления и иммунитеты", "Типы урона"]
+	"Сопротивления и иммунитеты", "Типы урона", "Жидкости"]
 ## The probe of damage: 8 before a defense, then what each leaves (as tools/checklist.py says it).
 const PROBE := 8
 const LEFT := {"": 8, "resist": 4, "immune": 0, "vulnerable": 16}
@@ -79,6 +79,9 @@ static func sheet_rows(data: Dictionary, sheet: String) -> Dictionary:
 		"Типы урона":
 			for dtype: String in data["misc"]["damage_types"]:
 				out[dtype] = damage_type(data, dtype)
+		"Жидкости":
+			for lid: String in LiquidRules.cfg(data)["kinds"]:
+				out[lid] = liquid(data, lid)
 	return out
 
 
@@ -804,10 +807,83 @@ static func _vessel(data: Dictionary, id: String, steps: Array[String]) -> void:
 	check(steps, LiquidRules.holds(data, id) > 0.0, "вмещает %s пинт" % LiquidRules.num(LiquidRules.holds(data, id)))
 	LiquidRules.drain(s.character)
 	s.room_id = "brod-square"  # a well
+	var only: Array = LiquidRules.cfg(data)["vessels"].get(id, {}).get("only", [])
+	if not only.is_empty() and not only.has(LiquidRules.WATER):  # a lamp: only its oil (v0.8.4.28.3)
+		check(steps, LiquidRules.to_fill(s.character, data, false).is_empty(), "воду не берёт: только %s" % ", ".join(only.map(func(l: String) -> String: return LiquidRules.name_of(data, l))))
+		if LiquidRules.cfg(data)["vessels"][id].has("burns_hours"):
+			check(steps, not LiquidRules.fuelled(s.character, data, id), "пустой не светит")
+			Thing.nth(s.character, id, 0).merge({"liquid": str(only[0]), "pints": LiquidRules.holds(data, id)})
+			check(steps, LiquidRules.fuelled(s.character, data, id), "с маслом светит %d ч" % int(LiquidRules.cfg(data)["vessels"][id]["burns_hours"]))
+		return
 	var why := NeedRules.can_fill(s, data)
 	if why.is_empty():
 		NeedRules.fill(s, data)
 	check(steps, LiquidRules.pints(s.character, data) > 0.0, "наполняется водой", why)
+
+
+## A liquid of rules.liquids (v0.8.4.28.3): poured into a vessel that takes it — by one with its tool if it `needs` one —,
+## drunk or not, thrown, laid on one splashed with it, and what fire does to that; spilt on a square.
+static func liquid(data: Dictionary, lid: String) -> Dictionary:
+	var steps: Array[String] = []
+	var s := session(data)
+	var c := s.character
+	c["inventory"].clear()
+	c["tools"] = []
+	LiquidRules.drain(c)
+	var k := LiquidRules.kind(data, lid)
+	var from := str(k.get("item", "jug_or_pitcher"))
+	Gear.give(s, data, Being.HERO, from, 1)
+	if not k.has("item"):
+		Thing.nth(c, from, 0).merge({"liquid": lid, "pints": 2.0})
+	var into := ""
+	for id: String in LiquidRules.cfg(data)["vessels"]:
+		if id != from and LiquidRules.takes({"only": LiquidRules.cfg(data)["vessels"][id].get("only", [])}, lid) and id != str(k.get("vessel", "")):
+			into = id
+			break
+	Gear.give(s, data, Being.HERO, into, 1)
+	var a := LiquidRules.first(c, data, from)
+	var b := LiquidRules.first(c, data, into)
+	var tool := LiquidRules.needs(data, lid)
+	if not tool.is_empty():
+		check(steps, LiquidRules.pour_why(c, data, a, b) == "LIQUID_NEEDS", "без набора не перелить: %s" % BackgroundRules.tool_name(data, tool), LiquidRules.pour_why(c, data, a, b))
+		c["tools"] = [tool]
+		Gear.give(s, data, Being.HERO, tool, 1)
+	var why := LiquidRules.pour_why(c, data, a, b)
+	if why.is_empty():
+		LiquidRules.pour(c, data, a, b)
+	check(steps, str(LiquidRules.first(c, data, into).get("liquid", "")) == lid, "переливается: %s → %s" % [from, into], why)
+	if k.has("drink"):
+		NeedRules.set_value(s, data, "water", 10.0)
+		var said := LiquidRules.drink(s, data, Sheet.HERO, LiquidRules.first(c, data, into))
+		check(steps, NeedRules.value(s, data, "water") > 10.0 or not k["drink"].has("water"), "пьётся", " · ".join(said))
+	else:
+		check(steps, LiquidRules.drink_why(data, LiquidRules.first(c, data, into)) == "LIQUID_NOT_DRINK", "это не пьют")
+	if k.has("throw"):
+		check(steps, str(ItemRules.consumable(data, from).get("throw", {}).get("liquid", "")) == lid, "бросается склянкой: %s" % from)
+	if k.has("blade"):
+		check(steps, ItemRules.consumable(data, from).has("coat"), "смазывает клинок: %s" % from)
+	var g := fight(s, data, "goblin")
+	if k.has("coat"):
+		LiquidRules.coat(s, data, g, lid, LiquidRules.name_of(data, lid))
+		check(steps, str(LiquidRules.coat_on(s, g).get("liquid", "")) == lid, "облитый: %s" % LiquidRules.name_of(data, lid))
+		var co: Dictionary = k["coat"]
+		if co.has("fire_plus"):
+			g["hp"] = 100
+			var lines: Array[String] = []
+			Harm.typed(s, data, g, 1, "fire", lines, "огонь", false)
+			check(steps, int(g["hp"]) <= 100 - 1 - int(co["fire_plus"]), "огонь сильнее на %d" % int(co["fire_plus"]), 100 - int(g["hp"]))
+		if co.has("burns"):
+			check(steps, LiquidRules.burning(s, g) == str(co["burns"]), "горит %s, пока не собьют" % co["burns"])
+		if bool(co.get("douses", false)):
+			check(steps, LiquidRules.douses(s, g), "гасит огонь, не загорается")
+	if k.has("puddle"):
+		var at := FightGrid.cell(g) + Vector2i(1, 0)
+		var lines: Array[String] = []
+		FightField.splash(s, data, at, {"liquid": lid}, LiquidRules.name_of(data, lid), lines)
+		var pool: bool = (s.combat["fires"] as Dictionary).has(FightGrid.tag(at)) if bool(k["puddle"].get("fire", false)) \
+			else SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return str(z["spell"]) == "puddle:" + lid)
+		check(steps, pool, "пролито на клетку: %s" % ("клетка горит" if bool(k["puddle"].get("fire", false)) else "лужа"), " · ".join(lines))
+	return result(steps)
 
 
 ## A ready thing of a liquid (v0.8.4.28): a vessel with its liquid — drunk if it is a drink, poured out into its vessel.

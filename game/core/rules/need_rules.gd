@@ -170,7 +170,7 @@ static func water_here(s: GameSession, data: Dictionary) -> bool:
 	var words: Array = cfg(data).get("water_words", [])
 	for p: Dictionary in PropRules.room_props(s, s.room_id):
 		var name := str(p.get("name", "")).to_lower()
-		if p.has("source") or words.any(func(w: Variant) -> bool: return name.contains(str(w))):
+		if str(p.get("source", "")) in [LiquidRules.WATER, LiquidRules.FOUL] or words.any(func(w: Variant) -> bool: return name.contains(str(w))):
 			return true
 	return false
 

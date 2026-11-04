@@ -9,7 +9,8 @@ openpyxl = pytest.importorskip("openpyxl")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import checklist  # noqa: E402
 
-SHEETS = ["Обычные предметы", "Магические предметы", "Монстры", "Способности", "Заклинания", "Состояния", "Сопротивления и иммунитеты", "Типы урона"]
+SHEETS = ["Обычные предметы", "Магические предметы", "Монстры", "Способности", "Заклинания", "Состояния", "Сопротивления и иммунитеты", "Типы урона",
+          "Жидкости"]
 
 
 @pytest.fixture(scope="module")
@@ -51,6 +52,10 @@ def test_every_kind_has_its_sheet_with_a_command_per_row(tmp_path: Path, data: "
     assert all(r["Проверено"] is False and r["Есть баг"] is False for r in _rows(out, "Монстры"))
     assert plain["chain_mail"]["Автотест"] in checklist.AUTO_FILL and "КД 16" in plain["chain_mail"]["Автотест: что проверено"]
     assert {r["Автотест"] for r in _rows(out, "Состояния")} == {"работает"}
+    liquids = {r["id"]: r for r in _rows(out, "Жидкости")}
+    assert set(liquids) == set(data.rules["liquids"]["kinds"]) and "Алхимические принадлежности" in liquids["acid"]["Налить"]
+    assert liquids["oil"]["Облить"] == "огонь +5" and "Лампа" in liquids["oil"]["Сосуды"] and "Лампа" not in liquids["water"]["Сосуды"]
+    assert {r["Автотест"] for r in _rows(out, "Жидкости")} == {"работает"}
 
 
 def test_a_mark_typed_as_a_formula_is_read_as_the_author_meant() -> None:
