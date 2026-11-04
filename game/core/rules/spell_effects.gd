@@ -210,6 +210,8 @@ static func _effect(s: GameSession, data: Dictionary, spell_id: String, slot: in
 			if int(ab.get(id, 10)) > int(ab.get(best, 10)):
 				best = id
 		e["ability_adv"] = best
+	if sp.has("retort") and (sp["retort"] as Dictionary).has("per_slot"):  # Armor of Agathys: more cold by the slot (v0.8.4.27.6)
+		e["retort"] = (sp["retort"] as Dictionary).merged({"dice": str(int(sp["retort"]["dice"]) + int(sp["retort"]["per_slot"]) * slot_up)}, true)
 	if sp.has("max_hp_plus"):  # Aid: the maximum and the hit points up
 		e["max_hp"] = int(sp["max_hp_plus"]) + int(sp.get("per_slot", 0)) * slot_up
 	if str(sp.get("temp_hp", "")) == "MOD":  # Heroism: the caster's modifier, each turn
@@ -410,6 +412,14 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 		parts.append("преимущество на спасброски: %s" % HeroDefense.tag_name(sp["adv_tag"]))
 	if sp.has("temp_hp"):
 		parts.append("временные хиты каждый ход")
+	if sp.get("light") is float or sp.get("light") is int:  # a creature's own glow (v0.8.4.27.6)
+		parts.append("светится на %d фт" % (int(sp["light"]) * 5))
+	if sp.get("retort") is Dictionary:
+		parts.append("кто ударит вблизи%s, получает %s (%s)%s" % [" или схватит" if bool(sp["retort"].get("touch", false)) else "",
+			str(sp["retort"]["dice"]).replace("d", "к"), str(data["misc"]["damage_types"].get(str(sp["retort"]["type"]), sp["retort"]["type"])),
+			", пока есть временные хиты" if bool(sp["retort"].get("while_temp", false)) else ""])
+	if bool(sp.get("averts", false)):
+		parts.append("не смотрит на тех, чей взгляд опасен")
 	return ", ".join(parts)
 
 
@@ -1030,10 +1040,10 @@ static func bites(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary
 	return not (friend and (bool(z.get("spares_friends", false)) or not bool(CombatRules.cfg(data)["friendly_fire"]["on"])))
 
 
-## A zone works on `f` (v0.8.4.27.1): an aura only while its owner stands, on those of its `types`, who see it (`sees`), and
-## not on one that saved against it (`spare_saved`).
+## A zone works on `f` (v0.8.4.27.1): an aura only while its owner stands and never on the owner itself (v0.8.4.27.6: a
+## ghast's stench), on those of its `types`, who see it (`sees`), and not on one that saved against it (`spare_saved`).
 static func _reaches(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary) -> bool:
-	if not z.has("types") and not z.has("sees") and not z.has("spared"):
+	if not z.has("types") and not z.has("sees") and not z.has("spared") and not bool(z.get("follow", false)):
 		return true
 	var owner := CombatRules.fighter(s, str(z.get("by", CombatRules.PLAYER)))
 	if owner.is_empty() or str(f.get("id")) == str(owner.get("id")) or not Sheet.is_hero(owner) and str(owner.get("status")) != "active":

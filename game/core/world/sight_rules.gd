@@ -27,11 +27,15 @@ static func dark_sight(s: GameSession, data: Dictionary, who: Dictionary = Sheet
 	return own
 
 
-## Squares the light it carries reaches, 0 — none: the Light spell or the best light source on its belt (v0.8.4.24: one
-## in the pack is not lit).
+## Squares the light it carries reaches, 0 — none: a status's `light` (the Light spell — `true`, its squares by
+## `rules.sight.lights`; a creature's own glow — a number of squares, v0.8.4.27.6) or the best light source on its belt
+## (v0.8.4.24: one in the pack is not lit).
 static func light(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
 	var lights: Dictionary = cfg(data)["lights"]
-	var best := int(lights["light"]) if _spell(Sheet.holder(s, who), "light") else 0
+	var best := 0
+	for e: Dictionary in ItemRules.born_effects(data, Sheet.holder(s, who)):
+		if e.has("light"):
+			best = maxi(best, int(lights["light"]) if e["light"] is bool else int(e["light"]))
 	for id: String in ItemRules.belt(Sheet.things(s, data, who), data, s.items):
 		if not id.is_empty() and (ItemRules.def_of(data["items"], s.items, id).get("properties", []) as Array).has("light_source"):
 			best = maxi(best, int(lights.get(id, lights["light"])))
@@ -42,9 +46,16 @@ static func _spell(h: Dictionary, key: String) -> bool:
 	return (h.get("effects", []) as Array).any(func(e: Dictionary) -> bool: return e.has(key))
 
 
-## It carries a light in the dark and needs it: it shows from afar.
+## It carries a light in the dark and needs it, or it glows by itself whatever it sees by (an azer, a magmin, v0.8.4.27.6):
+## it shows from afar.
 static func lit(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> bool:
-	return TimeRules.unlit(s, data) and dark_sight(s, data, who) == 0 and light(s, data, who) > 0
+	return TimeRules.unlit(s, data) and light(s, data, who) > 0 and (dark_sight(s, data, who) == 0 or glows(s, data, who))
+
+
+## It glows by its own trait (a number of `light`), not by a thing or a spell it may put out.
+static func glows(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> bool:
+	return ItemRules.born_effects(data, Sheet.holder(s, who)).any(func(e: Dictionary) -> bool:
+		return e.has("light") and not e["light"] is bool and str(e.get("source", {}).get("kind", "")) == ItemRules.BORN)
 
 
 ## Why it stands in the dark: no light of the place and none shown. "" — lit. A darkvision does not light anyone.

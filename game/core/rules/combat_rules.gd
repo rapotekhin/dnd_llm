@@ -855,7 +855,10 @@ static func _add_condition(s: GameSession, data: Dictionary, f: Dictionary, cond
 	elif hero and cond != "prone":
 		e["ends"] = {"rest": "short"}
 	if not str(timer.get("save", "")).is_empty():
-		e["save"] = {"ability": str(timer["save"]), "dc": int(timer.get("dc", 10)), "tag": str(timer.get("tag", "magic")), "repeat": true}
+		e["save"] = {"ability": str(timer["save"]), "dc": int(timer.get("dc", 10)), "tag": str(timer.get("tag", "magic")), "repeat": true,
+			"once": bool(timer.get("once", false))}
+		if timer.has("escalate"):  # one failed repeat save makes it worse: a basilisk's stone (v0.8.4.27.6), as a cockatrice's
+			e["escalate"] = timer["escalate"]
 	if bool(timer.get("wake", false)):
 		e["wake"] = true
 	if timer.has("item"):
@@ -1649,6 +1652,7 @@ static func tussle(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 	var c := contest(s, data, f, "athletics", t, ["athletics", "acrobatics"])
 	var won := bool(c["won"])
 	lines.append("%s %s %s: Атлетика %d против %d — %s" % [me.get("name", ""), what, it.get("name", ""), int(c["mine"]), int(c["theirs"]), "успех" if won else "не выходит"])
+	Harm.retort(s, data, f, t, true, lines)  # a hand on a hot body (Heated Body, v0.8.4.27.6)
 	if won and not cond.is_empty() and immune_to(data, t, cond):
 		lines.append("%s: на него это не действует" % it.get("name", ""))
 		return false

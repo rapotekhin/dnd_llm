@@ -348,6 +348,8 @@ static func pierces(s: GameSession, data: Dictionary, a: Dictionary, z: Dictiona
 ## Why `a` does not see `b` whatever the walls: blind, or a veil on the line, from inside it too. "" — sees.
 static func veiled(s: GameSession, data: Dictionary, a: Dictionary, b: Dictionary) -> String:
 	var far := dist(a, b)
+	if ConditionRules.does(Sheet.holder(s, a), data, "averts") and ItemRules.born(data, Sheet.holder(s, b), "gaze"):
+		return "отводит взгляд"  # a basilisk's gaze (v0.8.4.27.6): it does not see the one it looks away from
 	if blind(s, a):
 		if int(senses(s, data, a).get("blindsight", -1)) < far:
 			return "ослеплён"

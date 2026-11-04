@@ -406,14 +406,16 @@ static func land(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 	if not bool(ctx["hit"]):
 		lines.append(line + " — промах")
 		CombatRules.fx(s, str(t["id"]), "dodge")
-	elif pieces.is_empty():
-		lines.append(line + " — попадание")
 	else:
 		var notes: Array = ctx["notes"]
-		lines.append(line + (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg, ", ".join(ctx["types"]), (", " + ", ".join(notes)) if not notes.is_empty() else ""])
-		if crit:
+		lines.append(line + (" — попадание" if pieces.is_empty() else (" — КРИТ! " if crit else " — попадание, ") + "%d (%s)%s" % [dmg,
+			", ".join(ctx["types"]), (", " + ", ".join(notes)) if not notes.is_empty() else ""]))
+		if not shot(f, t, b):  # before the damage lands: Armor of Agathys counts the hit points it had (v0.8.4.27.6)
+			Harm.retort(s, data, f, t, false, lines)
+		if crit and not pieces.is_empty():
 			CombatRules.fx(s, str(t["id"]), "crit")
-		Harm.take(s, data, t, dmg, lines, str(pieces[0]["type"]), crit, Sheet.is_hero(f))
+		if not pieces.is_empty():
+			Harm.take(s, data, t, dmg, lines, str(pieces[0]["type"]), crit, Sheet.is_hero(f))
 	if str(s.combat.get("outcome", "")) == "dead":
 		return
 	if bool(ctx["hit"]):

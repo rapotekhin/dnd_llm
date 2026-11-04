@@ -237,6 +237,7 @@ COMBAT_MOVE,➜ Движение: {n}
 COMBAT_NONE,Боя нет
 COMBAT_NOT_HELD,Вас никто не держит
 COMBAT_NOT_PRONE,Вы и так на ногах
+COMBAT_NO_GAZE,Ни у кого рядом нет опасного взгляда
 COMBAT_NOT_YOUR_TURN,Сейчас не ваш ход
 COMBAT_NO_ACTION,Действие этого хода уже потрачено
 COMBAT_NO_AMMO,Нет боеприпасов

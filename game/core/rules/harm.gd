@@ -25,21 +25,6 @@ static func words(data: Dictionary, dtype: String, note: String) -> String:
 
 
 ## `dmg` to `who`; `by_hero` — the hero's blow (a nonlethal one only knocks out). Lines into `lines`.
-## Damage Transfer (a cloaker, v0.8.4.27.5): while it holds one grappled, it takes half of the damage (rounded down) and the
-## other half goes to that one. What it keeps.
-static func _transfer(s: GameSession, data: Dictionary, f: Dictionary, dmg: int, dtype: String, lines: Array[String]) -> int:
-	var name := ItemRules.born_name(data, Sheet.holder(s, f), "transfer_held")
-	if name.is_empty():
-		return dmg
-	var held := CombatRules.held_of(s, f)
-	if held.is_empty():
-		return dmg
-	var kept := dmg / 2
-	lines.append("%s: %s — %d на %s" % [f.get("name", ""), name, dmg - kept, Sheet.holder(s, held[0]).get("name", "")])
-	take(s, data, held[0], dmg - kept, lines, dtype, false, false)
-	return kept
-
-
 static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, lines: Array[String], dtype: String = "", crit: bool = false, by_hero: bool = true) -> void:
 	var hero := Sheet.is_hero(who)
 	var fight := CombatRules.active(s) and (hero or who.has("status"))
@@ -120,6 +105,38 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	FeatureRules.on_kill(s, data, lines)
 	MonsterRules.release(s, data, who, lines)
 	MonsterRules.death_burst(s, data, who, lines)
+
+
+## Damage Transfer (a cloaker, v0.8.4.27.5): while it holds one grappled, it takes half of the damage (rounded down) and the
+## other half goes to that one. What it keeps.
+static func _transfer(s: GameSession, data: Dictionary, f: Dictionary, dmg: int, dtype: String, lines: Array[String]) -> int:
+	var name := ItemRules.born_name(data, Sheet.holder(s, f), "transfer_held")
+	if name.is_empty():
+		return dmg
+	var held := CombatRules.held_of(s, f)
+	if held.is_empty():
+		return dmg
+	var kept := dmg / 2
+	lines.append("%s: %s — %d на %s" % [f.get("name", ""), name, dmg - kept, Sheet.holder(s, held[0]).get("name", "")])
+	take(s, data, held[0], dmg - kept, lines, dtype, false, false)
+	return kept
+
+## Damage back at one who hits it with a melee attack from beside it (v0.8.4.27.6): a status's `retort` {dice, type} — Heated
+## Body of an azer, Armor of Agathys while its temporary hit points last (`while_temp`), a Fire Shield after; `touch` — a
+## grapple or a shove counts too. Lines.
+static func retort(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, touch: bool, lines: Array[String]) -> void:
+	if FightGrid.dist(f, t) > 1:
+		return
+	var me := Sheet.holder(s, t)
+	for e: Dictionary in ItemRules.born_effects(data, me):
+		var r: Variant = e.get("retort")
+		if not r is Dictionary or touch and not bool(r.get("touch", false)) or bool(r.get("while_temp", false)) and int(me.get("temp_hp", 0)) <= 0:
+			continue
+		if not Attack.up(s, f):
+			return
+		typed(s, data, f, CombatRules.roll_dice(s.rng, str(r["dice"])), str(r["type"]), lines,
+			"%s: %s — −{hp} HP ({words})" % [e.get("source", {}).get("name", ""), Sheet.holder(s, f).get("name", "")], false, Sheet.is_hero(t))
+
 
 
 ## Warding Bond (v0.8.4.26.3): the one who laid the bond takes the same damage; the bond is gone once it lies at 0 HP.

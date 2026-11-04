@@ -825,7 +825,8 @@
 						"dice": "1d6",
 						"type": "fire"
 					}
-				}
+				},
+				"into": "actions"
 			},
 			{
 				"id": "illumination",
@@ -2300,7 +2301,8 @@
 			{
 				"id": "brute",
 				"name": "Грубая сила",
-				"desc": "Когда бугбир попадает рукопашным оружием, оно наносит один дополнительный кубик урона (учтён в атаке)."
+				"desc": "Когда бугбир попадает рукопашным оружием, оно наносит один дополнительный кубик урона (учтён в атаке).",
+				"into": "actions"
 			},
 			{
 				"id": "surprise_attack",
@@ -14541,16 +14543,16 @@
 						"type": "piercing"
 					}
 				],
-				"to_hit": 4,
-				"kind": "melee",
-				"reach": 0,
-				"name": "Укусы",
 				"bloodied": [
 					{
 						"dice": "1d4",
 						"type": "piercing"
 					}
-				]
+				],
+				"to_hit": 4,
+				"kind": "melee",
+				"reach": 0,
+				"name": "Укусы"
 			}
 		],
 		"multiattack": [],
@@ -14631,16 +14633,16 @@
 						"type": "piercing"
 					}
 				],
-				"to_hit": 3,
-				"kind": "melee",
-				"reach": 0,
-				"name": "Укусы",
 				"bloodied": [
 					{
 						"dice": "2d4",
 						"type": "piercing"
 					}
-				]
+				],
+				"to_hit": 3,
+				"kind": "melee",
+				"reach": 0,
+				"name": "Укусы"
 			}
 		],
 		"multiattack": [],
@@ -14711,17 +14713,17 @@
 						"type": "piercing"
 					}
 				],
-				"to_hit": 3,
-				"kind": "melee",
-				"reach": 0,
-				"master_effect": "паралич при 0 HP от роя — мастер",
-				"name": "Укусы",
 				"bloodied": [
 					{
 						"dice": "2d4",
 						"type": "piercing"
 					}
-				]
+				],
+				"to_hit": 3,
+				"kind": "melee",
+				"reach": 0,
+				"master_effect": "паралич при 0 HP от роя — мастер",
+				"name": "Укусы"
 			}
 		],
 		"multiattack": [],
@@ -14792,16 +14794,16 @@
 						"type": "piercing"
 					}
 				],
-				"to_hit": 3,
-				"kind": "melee",
-				"reach": 0,
-				"name": "Укусы",
 				"bloodied": [
 					{
 						"dice": "2d4",
 						"type": "piercing"
 					}
-				]
+				],
+				"to_hit": 3,
+				"kind": "melee",
+				"reach": 0,
+				"name": "Укусы"
 			}
 		],
 		"multiattack": [],
@@ -14872,6 +14874,12 @@
 						"type": "piercing"
 					}
 				],
+				"bloodied": [
+					{
+						"dice": "1d6",
+						"type": "piercing"
+					}
+				],
 				"to_hit": 6,
 				"kind": "melee",
 				"reach": 0,
@@ -14886,13 +14894,7 @@
 						"half": true
 					}
 				},
-				"name": "Укусы",
-				"bloodied": [
-					{
-						"dice": "1d6",
-						"type": "piercing"
-					}
-				]
+				"name": "Укусы"
 			}
 		],
 		"multiattack": [],
@@ -14963,16 +14965,16 @@
 						"type": "piercing"
 					}
 				],
-				"to_hit": 5,
-				"kind": "melee",
-				"reach": 0,
-				"name": "Укусы",
 				"bloodied": [
 					{
 						"dice": "2d6",
 						"type": "piercing"
 					}
-				]
+				],
+				"to_hit": 5,
+				"kind": "melee",
+				"reach": 0,
+				"name": "Укусы"
 			}
 		],
 		"multiattack": [],
@@ -15053,16 +15055,16 @@
 						"type": "piercing"
 					}
 				],
-				"to_hit": 2,
-				"kind": "melee",
-				"reach": 0,
-				"name": "Укусы",
 				"bloodied": [
 					{
 						"dice": "1d6",
 						"type": "piercing"
 					}
-				]
+				],
+				"to_hit": 2,
+				"kind": "melee",
+				"reach": 0,
+				"name": "Укусы"
 			}
 		],
 		"multiattack": [],
@@ -15138,16 +15140,16 @@
 						"type": "piercing"
 					}
 				],
-				"to_hit": 4,
-				"kind": "melee",
-				"reach": 5,
-				"name": "Клювы",
 				"bloodied": [
 					{
 						"dice": "1d6",
 						"type": "piercing"
 					}
-				]
+				],
+				"to_hit": 4,
+				"kind": "melee",
+				"reach": 5,
+				"name": "Клювы"
 			}
 		],
 		"multiattack": [],
@@ -15217,16 +15219,16 @@
 						"type": "piercing"
 					}
 				],
-				"to_hit": 3,
-				"kind": "melee",
-				"reach": 0,
-				"name": "Укусы",
 				"bloodied": [
 					{
 						"dice": "2d4",
 						"type": "piercing"
 					}
-				]
+				],
+				"to_hit": 3,
+				"kind": "melee",
+				"reach": 0,
+				"name": "Укусы"
 			}
 		],
 		"multiattack": [],
@@ -15312,16 +15314,16 @@
 						"type": "piercing"
 					}
 				],
-				"to_hit": 3,
-				"kind": "melee",
-				"reach": 0,
-				"name": "Укусы",
 				"bloodied": [
 					{
 						"dice": "2d4",
 						"type": "piercing"
 					}
-				]
+				],
+				"to_hit": 3,
+				"kind": "melee",
+				"reach": 0,
+				"name": "Укусы"
 			}
 		],
 		"multiattack": [],

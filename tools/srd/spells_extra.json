@@ -1,0 +1,20 @@
+{
+	"_doc": "Spells beyond the SRD 5.1 the author put into the game (v0.8.4.27.6), in the form of game/data/srd/spells.json; tools/srd_import.py build adds them after the SRD's. What a spell does is its row of rules.json spell_effects, as for any other.",
+	"armor_of_agathys": {
+		"name": "Броня Агатиса",
+		"name_en": "Armor of Agathys",
+		"level": 1,
+		"school": "Ограждение",
+		"school_id": "abjuration",
+		"casting_time": "1 действие",
+		"range": "На себя",
+		"duration": "1 час",
+		"components": ["V", "S", "M"],
+		"concentration": false,
+		"ritual": false,
+		"classes": ["warlock"],
+		"subclasses": [],
+		"desc": "Вас окутывает призрачный иней: вы получаете 5 временных хитов на время действия. Пока они у вас есть, существо, которое попадает по вам рукопашной атакой, получает 5 урона холодом. На более высоких уровнях: за каждый уровень ячейки выше 1-го временные хиты и урон холодом растут на 5.",
+		"range_ft": 0
+	}
+}

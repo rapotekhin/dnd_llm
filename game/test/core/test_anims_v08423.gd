@@ -22,7 +22,7 @@ func test_every_srd_spell_has_a_delivery_as_in_the_catalog() -> void:
 		assert_str(str(data["anims"]["kinds"].get(k, {}).get("group", ""))).override_failure_message(id + " → " + k).is_equal("spell")
 		count[k] = int(count.get(k, 0)) + 1
 	# docs/design/systems/combat-animations.md, appendix
-	var want := {"bolt": 7, "beam": 5, "burst": 8, "cone": 4, "line": 2, "nova": 6, "zone": 16, "touch": 37, "sigil": 25, "aura": 35,
+	var want := {"bolt": 7, "beam": 5, "burst": 8, "cone": 4, "line": 2, "nova": 6, "zone": 16, "touch": 37, "sigil": 25, "aura": 36,
 		"summon": 11, "teleport": 2}
 	for k: String in want:
 		assert_int(int(count.get(k, 0))).override_failure_message("%s: %d" % [k, int(count.get(k, 0))]).is_equal(int(want[k]))

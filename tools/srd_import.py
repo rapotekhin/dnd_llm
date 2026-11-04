@@ -216,7 +216,7 @@ RESIST_POTIONS = {"fire": "огня", "cold": "холода", "poison": "яда"
 # critical hit becomes a normal one.
 SPECIAL_ARMOR_BASES = ["chain_shirt", "scale_mail", "breastplate", "half_plate_armor", "chain_mail", "splint_armor", "plate_armor"]
 # Spell scrolls (DMG): the spells the engine resolves, circles 0-2; DC and attack by the circle.
-SCROLL_EXTRA = ["identify"]
+SCROLL_EXTRA = ["identify", "web", "entangle"]  # web and entangle are zones of spell_effects since v0.8.4.27.3
 SKIP_CATEGORIES = {"mounts-and-vehicles"}
 WEAPON_PROPERTIES = {"finesse", "light", "heavy", "two-handed", "versatile", "thrown", "reach", "ammunition"}
 WEAPON_PROF_ALIASES = {"hand-crossbows": "crossbow-hand", "light-crossbows": "crossbow-light",
@@ -723,6 +723,8 @@ class Builder:
                     trait["effect"] = fx
                 if t.get("spellcasting"):  # read into the template's `spellcasting` (monster_spells), v0.8.4.27.1
                     trait["into"] = "spellcasting"
+                elif "included in the attack" in t.get("desc", "").lower():  # its damage is in the actions already (v0.8.4.27.6)
+                    trait["into"] = "actions"
                 seen = re.search(r"successful DC (\d+) \w+ \(([\w ]+)\) check", t.get("desc", ""))
                 if seen:  # told apart by a check (Mimicry: Insight), v0.8.4.27.2 — CheckEngine.trait_dc
                     trait["check"] = {"skill": seen.group(2).lower().replace(" ", "_"), "dc": int(seen.group(1))}
@@ -1079,6 +1081,8 @@ def build() -> None:
     races = b.races()
     classes = b.classes()
     spells = b.spells()
+    extra = json.loads((ROOT / "tools" / "srd" / "spells_extra.json").read_text(encoding="utf-8"))  # beyond the SRD by the author (v0.8.4.27.6)
+    spells.update({k: v for k, v in extra.items() if not k.startswith("_")})
     items.update(b.scrolls(spells, json.loads((ROOT / "game" / "data" / "rules.json").read_text(encoding="utf-8"))))
     data = {
         "races.json": races,
