@@ -179,6 +179,7 @@ Never print or log keys from `.env`.
 - Game text, prompts, lore — Russian. Code identifiers and code comments — English.
 - LLM output is always Pydantic-typed (`llm_server/src/llm_server/protocol.py`); don't parse free text. New agents use **Pydantic AI**.
 - The engine decides, the LLM narrates (ADR-0008): any change of the world goes through an engine call (`engine.check`, `engine.validate` of an effect) or a deterministic button of the client. Experience is never an LLM effect: only combat and pack quests (`XpRules`).
+- Minimum duplication of code and of mechanics. Before writing a rule, a helper or a window part, look for one that already does it (the table «Where to add things» below, `docs/design/concepts.md`) and reuse it, widening it with a parameter or a row of data when it falls short. Never a second copy beside it: no parallel road for the hero and for NPCs, no `player_*` beside `_enemy_*`, no private reader of an item or a spell beside the rule's own, no mechanic that lives only in the master's words when the engine has a road for it. A bug seen again means one shared place for it, not another local fix; when two copies are found, merge them into one and remove the other.
 
 ## Where to add things
 
