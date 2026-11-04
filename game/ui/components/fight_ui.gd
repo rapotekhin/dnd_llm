@@ -374,8 +374,6 @@ func _over(s: GameSession) -> Dictionary:
 	var out := {}
 	for key: String in s.combat.get("cleared", {}):
 		out[FightGrid.y_x(key)] = UiTheme.TILES["."]
-	for key: String in s.combat.get("oil", {}):
-		out[FightGrid.y_x(key)] = UiTheme.TILES["o"]
 	for key: String in s.combat.get("blocks", {}):
 		out[FightGrid.y_x(key)] = UiTheme.TILES["B"]
 	for key: String in s.combat.get("doors", {}):

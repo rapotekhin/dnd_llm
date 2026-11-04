@@ -1127,14 +1127,15 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 			var dmg := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, str(fx["damage"][0])))
 			lines.append("%s: %d (%s)" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 			Harm.take(s, data, t, dmg, lines, dtype)
-	if fx.has("burning"):
-		FightField.kindle(s, data, FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
-	if fx.has("burning") and Attack.up(s, t):
-		t["burning"] = str(fx["burning"])
-		lines.append("%s горит" % t["name"])
-	if fx.has("oiled") and Attack.up(s, t):
-		t["oiled"] = int(fx["oiled"])
-		lines.append("%s облит маслом — огонь возьмёт его сильнее" % t["name"])
+	if fx.has("liquid") and Attack.up(s, t):  # what lies on it after: oil, alchemist's fire, water (v0.8.4.28.2)
+		var lid := str(fx["liquid"])
+		var holder := Sheet.holder(s, t)
+		lines.append_array(LiquidRules.coat(s, data, holder, lid, name))
+		if not LiquidRules.burning(s, holder).is_empty():
+			FightField.kindle(s, data, FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
+			lines.append("%s горит" % t["name"])
+		elif LiquidRules.fire_plus(s, holder) > 0:
+			lines.append("%s облит: %s — огонь возьмёт его сильнее" % [t["name"], LiquidRules.name_of(data, lid)])
 	if fx.has("condition") and Attack.up(s, t):
 		if SIZES.find(str(Sheet.template(data, t).get("size", "medium"))) > SIZES.find(str(fx.get("max_size", "large"))):
 			lines.append("%s слишком велик для сети" % t["name"])
@@ -1989,15 +1990,19 @@ static func _gives_up(s: GameSession, data: Dictionary, f: Dictionary, lines: Ar
 	return true
 
 
-## Alchemist's fire (v0.7.12) on anybody: it burns at the start of its turn until a DEX save DC 10 puts it out.
+## A burning coat (alchemist's fire, v0.7.12; a liquid's `coat.burns` since v0.8.4.28.2) on anybody: it burns at the start
+## of its turn until a save of its `put_out` puts it out.
 static func _fire(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	if not f.has("burning") or not Attack.up(s, f):
+	var h := Sheet.holder(s, f)
+	var dice := LiquidRules.burning(s, h)
+	if dice.is_empty() or not Attack.up(s, f):
 		return
-	var burn := Sheet.taken(s, data, f, "fire", roll_dice(s.rng, str(f["burning"])))
+	var out: Dictionary = LiquidRules.coat_on(s, h).get("put_out", {"ability": "dex", "dc": 10})
+	var burn := Sheet.taken(s, data, f, "fire", roll_dice(s.rng, dice))
 	lines.append("%s горит: %d (огонь)" % [f["name"], burn])
 	Harm.take(s, data, f, burn, lines, "fire")
-	if Attack.up(s, f) and Sheet.saved(s, data, f, "dex", 10):
-		f.erase("burning")
+	if Attack.up(s, f) and Sheet.saved(s, data, f, str(out["ability"]), int(out["dc"])):
+		LiquidRules.uncoat(h)
 		lines.append("%s сбивает пламя" % f["name"])
 
 

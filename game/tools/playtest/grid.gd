@@ -114,7 +114,10 @@ func _fire(s: GameSession, data: Dictionary) -> void:
 	await frames(2)
 	var at := _stop(s, data)
 	await click_cell(at)
-	step("oil on the square", (s.combat.get("oil", {}) as Dictionary).has(FightGrid.tag(at)))
+	step("oil on the square", SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return str(z["spell"]) == "puddle:oil" and (z["cells"] as Array).has(FightGrid.tag(at))))
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	await shot("oil")
 	var lines: Array[String] = []
 	FightField.kindle(s, data, [at] as Array[Vector2i], lines)
 	node("EventBus").state_changed.emit()

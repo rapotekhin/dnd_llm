@@ -153,6 +153,15 @@ static func zones_on(s: GameSession, f: Dictionary) -> Array[String]:
 	return out
 
 
+## The zones on one square, by name.
+static func zones_on_cell(s: GameSession, at: Vector2i) -> Array[String]:
+	var out: Array[String] = []
+	for z: Dictionary in SpellEffects.zone_view(s, data()):
+		if (z["cells"] as Array).has(at):
+			out.append(str(z["name"]))
+	return out
+
+
 ## The zones slow a fighter down where it stands.
 static func slowed(s: GameSession, f: Dictionary) -> bool:
 	return FightGrid.slow_cells(s, data(), f).has(FightGrid.cell(f))

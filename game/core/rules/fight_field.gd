@@ -104,7 +104,7 @@ static func _ends(m: Dictionary, d: Dictionary) -> Array[String]:
 
 ## The keys of a row a zone takes as they are: what a failed save does, what it hides, who it spares, whom it touches.
 const ZONE_KEYS: Array[String] = ["cond", "fail", "tag", "obscure", "veil", "silence", "retch", "block_ranged", "spares_friends", "for",
-	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel"]
+	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel", "douses", "tile"]
 
 
 ## A zone of the field by its row: one record for the ground, strewn things, the fire, a spell's zone and a trait's aura
@@ -177,8 +177,8 @@ static func hero_stands(s: GameSession, data: Dictionary) -> void:
 static func stepped(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> bool:
 	var g := FightGrid.grid(s, data)
 	var bits := FightGrid.flags_at(g, FightGrid.cell(f))
-	if bits & FightGrid.WET != 0 and f.has("burning"):
-		f.erase("burning")
+	if douses_at(s, data, FightGrid.cell(f)) and not LiquidRules.burning(s, Sheet.holder(s, f)).is_empty():
+		LiquidRules.uncoat(Sheet.holder(s, f))
 		lines.append("%s гасит пламя в воде" % f["name"])
 	var hero := str(f.get("id")) == CombatRules.PLAYER
 	var flying := CombatRules.airborne(s, data, f)
@@ -431,12 +431,18 @@ static func _ruin(s: GameSession, data: Dictionary, at: Vector2i, lines: Array[S
 # --- fire ----------------------------------------------------------------------------------------------------
 
 
+## Water on the square: the map's or a puddle (v0.8.4.28.2) — no fire there, and one walking in is put out.
+static func douses_at(s: GameSession, data: Dictionary, at: Vector2i) -> bool:
+	var key := FightGrid.tag(at)
+	return FightGrid.flags_at(FightGrid.grid(s, data), at) & FightGrid.WET != 0 		or SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return bool(z.get("douses", false)) and (z.get("cells", []) as Array).has(key))
+
+
 static func _burnable(s: GameSession, data: Dictionary, at: Vector2i) -> bool:
 	var key := FightGrid.tag(at)
-	if (s.combat.get("oil", {}) as Dictionary).has(key):
-		return true
+	if douses_at(s, data, at):
+		return false
 	if SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return bool(z.get("burns", false)) and (z.get("cells", []) as Array).has(key)):
-		return true  # a web, Entangle's plants (v0.8.4.27.3)
+		return true  # oil, a web, Entangle's plants (v0.8.4.27.3)
 	var b: Dictionary = (s.combat.get("blocks", {}) as Dictionary).get(key, {})
 	if not b.is_empty():
 		return bool(ThingRules.material(data, {"material": b["made_of"]}).get("burns", false))
@@ -461,27 +467,39 @@ static func kindle(s: GameSession, data: Dictionary, cells: Array[Vector2i], lin
 static func _light(s: GameSession, at: Vector2i) -> void:
 	var key := FightGrid.tag(at)
 	s.combat["fires"][key] = int(s.combat["round"])
-	(s.combat.get("oil", {}) as Dictionary).erase(key)
-	for z: Dictionary in SpellEffects.zones(s):  # what burns of a zone is gone with the fire
+	for z: Dictionary in SpellEffects.zones(s).duplicate():  # what burns of a zone is gone with the fire, all of it — the zone too
 		if bool(z.get("burns", false)):
 			(z.get("cells", []) as Array).erase(key)
+			if (z.get("cells", []) as Array).is_empty() and (z.get("shape", {}) as Dictionary).is_empty():
+				SpellEffects.zones(s).erase(z)
 
 
-## A flask broken on a square: oil lies there, alchemist's fire burns at once.
+## A flask broken on a square: its liquid's `puddle` (v0.8.4.28.2) — a zone of the ground (oil to slip on and burn, water
+## that puts the fire out), or alchemist's fire that burns at once.
 static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionary, name: String, lines: Array[String], side := "player") -> void:
 	if fx.has("strew"):
 		strew(s, data, at, str(fx["strew"]), side, lines)
 		return
-	if fx.has("burning"):
+	var lid := str(fx.get("liquid", ""))
+	var p: Dictionary = LiquidRules.kind(data, lid).get("puddle", {})
+	if p.is_empty():
+		return
+	var key := FightGrid.tag(at)
+	if bool(p.get("fire", false)):
+		if douses_at(s, data, at):
+			lines.append("%s: шипит в воде и гаснет" % name)
+			return
 		_light(s, at)
 		_sync_fire(s, data)
 		lines.append("%s: клетка в огне" % name)
 		return
-	if not s.combat.has("oil"):
-		s.combat["oil"] = {}
-	s.combat["oil"][FightGrid.tag(at)] = true
-	lines.append("%s: масло растекается по клетке" % name)
-	if (s.combat["fires"] as Dictionary).has(FightGrid.tag(at)):
+	if bool(p.get("douses", false)) and (s.combat["fires"] as Dictionary).has(key):
+		(s.combat["fires"] as Dictionary).erase(key)
+		_sync_fire(s, data)
+		lines.append("%s: огонь на клетке погас" % name)
+	SpellEffects.add_zone(s, zone_of("puddle:" + lid, p.merged({"side": side, "on": p.get("on", [])}), FightGrid.pack_cells([at] as Array[Vector2i])))
+	lines.append("%s: %s растекается по клетке" % [name, LiquidRules.name_of(data, lid)])
+	if (s.combat["fires"] as Dictionary).has(key):
 		kindle(s, data, [at] as Array[Vector2i], lines)
 
 
@@ -688,7 +706,9 @@ static func leave(s: GameSession, data: Dictionary, lines: Array[String]) -> voi
 	var p := CombatRules.player(s)
 	FightGrid.put(p, came)
 	s.combat.erase("cleared")
-	s.combat.erase("oil")
+	for z: Dictionary in SpellEffects.zones(s).duplicate():  # what was poured stays in the room it was poured in
+		if str(z["spell"]).begins_with("puddle:"):
+			SpellEffects.zones(s).erase(z)
 	lay(s, data)
 	var bounds: Array = cfg(data)["pursuit_rounds"]
 	var list: Array = []

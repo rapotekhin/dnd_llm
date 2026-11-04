@@ -55,8 +55,9 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 			continue
 		var r := CombatRules.dice_range(str(fx["damage"][0]))
 		var power := (r[0] + r[1]) / 2.0
-		if fx.has("burning"):
-			var b := CombatRules.dice_range(str(fx["burning"]))
+		var burns := str(LiquidRules.kind(data, str(fx.get("liquid", ""))).get("coat", {}).get("burns", ""))
+		if not burns.is_empty():  # alchemist's fire burns on after
+			var b := CombatRules.dice_range(burns)
 			power += (b[0] + b[1]) / 2.0
 		for t: Dictionary in targets:
 			if not (fx.get("types", []) as Array).is_empty() and not (fx["types"] as Array).has(str(Sheet.template(data, t).get("type", ""))):

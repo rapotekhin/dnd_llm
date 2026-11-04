@@ -2775,30 +2775,26 @@
 	},
 	"belt": {"_doc": "The belt under the doll (v0.8.4.24, as in Pathfinder): its cells hold the things at hand — only they are drunk, read, thrown, and a light there lights the way (ItemRules.belt).", "size": 5},
 	"liquids": {
-		"_doc": "v0.8.4.28, LiquidRules: one row per liquid. `drink` — what a portion (`portion` pints) gives: `water` (thirst as that much water), `food` (camp food units a pint), `drunk` (hops a pint), `disease` (a row of rules.diseases); no `drink` — not drunk. `quench` — the thirst's water: drunk from the vessels by «Попить», drawn at a source. `item` in its `vessel` with `pints` — the ready thing of the catalog it makes. `lb_per_pint` — the weight of a pint (`lb_per_pint` here by default). `vessels` — pints a vessel holds, `weight` — what the catalog counts in it sold full, `full` — a new hero's start full of water. `drunk` — the hops: each point sobers in `minutes_per_point`; past `base` + the `ability` modifier the drinker has `condition` until it sobers to that again (the author, 2026-11-04).",
+		"_doc": "v0.8.4.28, LiquidRules: one row per liquid. `drink` — what a portion (`portion` pints) gives: `water` (thirst as that much water), `food` (camp food units a pint), `drunk` (hops a pint), `disease` (a row of rules.diseases); no `drink` — not drunk. `quench` — the thirst's water: drunk from the vessels by «Попить», drawn at a source. `item` in its `vessel` with `pints` — the ready thing of the catalog it makes. `lb_per_pint` — the weight of a pint (`lb_per_pint` here by default). `vessels` — pints a vessel holds, `weight` — what the catalog counts in it sold full, `full` — a new hero's start full of water. `throw` — a flask of it thrown (as `consumables`), the target `coat`ed on a hit; `coat` — what lies on one splashed with it (any holder, the status `coated`): `douses` (puts out a fire, the thing will not catch), `fire_plus` (the next fire damage +N, a thing catches), `burns` dice at the start of its turn until `put_out` (a save), `minutes` it lasts; `puddle` — the liquid poured on a square: a zone of the field by `rules.combat.grid.strewn`'s words (`burns` — fire takes it and lights the square, `douses` — puts out the fire there and on who walks in, `tile` — its colour), or `fire` — the square burns at once (v0.8.4.28.2). `drunk` — the hops: each point sobers in `minutes_per_point`; past `base` + the `ability` modifier the drinker has `condition` until it sobers to that again (the author, 2026-11-04).",
 		"portion": 1,
 		"lb_per_pint": 1,
 		"drunk": {"name": "Опьянение", "hops": "Хмель", "condition": "poisoned", "base": 2, "ability": "con", "minutes_per_point": 60},
 		"vessels": {"waterskin": {"pints": 4, "weight": 1, "full": true}, "flask_or_tankard": {"pints": 1, "full": true}, "empty_flask": {"pints": 1, "full": true}, "bottle_glass": {"pints": 1.5, "full": true}, "jug_or_pitcher": {"pints": 8, "full": true}, "bucket": {"pints": 24, "full": true}, "barrel": {"pints": 320, "full": true}, "cup_clay": {"pints": 1}, "pewter_mug": {"pints": 1}, "teacup": {"pints": 0.5}, "bowl_wooden": {"pints": 1}, "pot_iron": {"pints": 8}, "kettle": {"pints": 8}, "chalice": {"pints": 1}, "vial": {"pints": 0.25}},
 		"kinds": {
-			"water": {"name": "вода", "drink": {"water": 1}, "quench": true},
-			"foul_water": {"name": "гнилая вода", "drink": {"water": 1, "disease": "foul_water"}, "quench": true},
+			"water": {"name": "вода", "drink": {"water": 1}, "quench": true, "coat": {"douses": true, "minutes": 60}, "puddle": {"name": "Лужа", "douses": true, "tile": "~"}},
+			"foul_water": {"name": "гнилая вода", "drink": {"water": 1, "disease": "foul_water"}, "quench": true, "coat": {"douses": true, "minutes": 60}, "puddle": {"name": "Лужа", "douses": true, "tile": "~"}},
 			"ale": {"name": "эль", "drink": {"water": 1, "drunk": 1}, "item": "ale", "vessel": "cup_clay", "pints": 1},
 			"wine": {"name": "вино", "drink": {"water": 0.5, "drunk": 2}, "item": "bottle_wine", "vessel": "bottle_glass", "pints": 1.5},
 			"milk": {"name": "молоко", "drink": {"water": 1, "food": 0.5}, "item": "goat_milk", "vessel": "jug_or_pitcher", "pints": 2},
-			"oil": {"name": "масло", "item": "oil_flask", "vessel": "empty_flask", "pints": 1},
-			"alchemists_fire": {"name": "алхимический огонь", "item": "alchemists_fire_flask", "vessel": "empty_flask", "pints": 1},
-			"acid": {"name": "кислота", "item": "acid_vial", "vessel": "vial", "pints": 0.25},
-			"holy_water": {"name": "святая вода", "item": "holy_water", "vessel": "empty_flask", "pints": 1},
+			"oil": {"name": "масло", "item": "oil_flask", "vessel": "empty_flask", "pints": 1, "throw": {"range": 20, "improvised": true}, "coat": {"fire_plus": 5, "minutes": 1}, "puddle": {"name": "Масло", "save": "dex", "dc": 10, "tag": "", "on": ["enter"], "cond": "prone", "burns": true, "tile": "o"}},
+			"alchemists_fire": {"name": "алхимический огонь", "item": "alchemists_fire_flask", "vessel": "empty_flask", "pints": 1, "throw": {"range": 20, "improvised": true, "damage": ["1d4", "fire"]}, "coat": {"burns": "1d4", "put_out": {"ability": "dex", "dc": 10}}, "puddle": {"fire": true}},
+			"acid": {"name": "кислота", "item": "acid_vial", "vessel": "vial", "pints": 0.25, "throw": {"range": 20, "improvised": true, "damage": ["2d6", "acid"]}},
+			"holy_water": {"name": "святая вода", "item": "holy_water", "vessel": "empty_flask", "pints": 1, "throw": {"range": 20, "improvised": true, "damage": ["2d6", "radiant"], "types": ["undead", "fiend"]}},
 			"poison": {"name": "яд", "item": "poison_basic_vial", "vessel": "vial", "pints": 0.25}
 		}
 	},
 	"consumables": {
-		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions]. Thrown in a fight (v0.7.12, the «Предметы» tab, PHB): `throw` — a ranged attack (improvised: no proficiency; range ft) and on a hit `damage` [dice, type] (only to `types` when given), `burning` dice at the start of the foe's turn until a DEX save DC 10 puts it out, `oiled` — the next fire damage to the foe +N, `condition` with an escape (a STR save each turn, `escape_dc`) on foes up to `max_size`; `strew` — only on a square, a row of `rules.combat.grid.strewn` (caltrops, ball bearings, v0.8.4.27). A catalog item may carry its own `use` (potions, the ointment, scrolls, wands).",
-		"alchemists_fire_flask": {"throw": {"range": 20, "improvised": true, "damage": ["1d4", "fire"], "burning": "1d4"}},
-		"acid_vial": {"throw": {"range": 20, "improvised": true, "damage": ["2d6", "acid"]}},
-		"holy_water": {"throw": {"range": 20, "improvised": true, "damage": ["2d6", "radiant"], "types": ["undead", "fiend"]}},
-		"oil_flask": {"throw": {"range": 20, "improvised": true, "oiled": 5}},
+		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions]. Thrown in a fight (v0.7.12, the «Предметы» tab, PHB): `throw` — a ranged attack (improvised: no proficiency; range ft) and on a hit `damage` [dice, type] (only to `types` when given), `condition` with an escape (a STR save each turn, `escape_dc`) on foes up to `max_size`; `strew` — only on a square, a row of `rules.combat.grid.strewn` (caltrops, ball bearings, v0.8.4.27). A catalog item may carry its own `use` (potions, the ointment, scrolls, wands). A flask of a liquid is thrown by its liquid's `throw` (rules.liquids, v0.8.4.28.2).",
 		"berries": {"meal": {}},
 		"apples": {"meal": {}},
 		"cheese": {"meal": {}},
@@ -2834,8 +2830,9 @@
 	"condition_effects": {
 		"_doc": "What a status does (SRD; v0.7.8, v0.7.63), one table for the hero, a fighter and any record. To checks: checks | skills {id} | saves {ability} | senses {sight, hearing}: disadvantage | auto_fail; a sense comes with the master's check. To attacks: attack — its own attack rolls, attacked — rolls against it, attacked_near / attacked_far — by the distance: advantage | disadvantage; attack_why, attacked_why — the words of the hint; crit_near — a hit from next to it is critical. no_move — speed 0; no_threat — it does not spoil a shot next to it; resist_all — half of every damage. Who cannot act — ConditionRules.INCAPACITATING. A status the master built has the same keys in its own `mods`. A status the spells of the engine lay has its own `name` here: it is not one of the 5e conditions the master picks from.",
 		"burning": {"on": ["thing"], "name": "горит"},
-		"oiled": {"on": ["thing"], "name": "облито маслом"},
-		"wet": {"on": ["thing"], "name": "мокрое"},
+		"oiled": {"on": ["thing"], "name": "облито маслом", "liquid": "oil"},
+		"wet": {"on": ["thing"], "name": "мокрое", "liquid": "water"},
+		"coated": {"name": "облит"},
 		"glowing": {"on": ["thing"], "name": "светится"},
 		"arcane_lock": {"on": ["thing"], "name": "запечатано чарами"},
 		"knocked": {"on": ["thing"], "name": "замок молчит"},
@@ -3111,7 +3108,7 @@
 		"mark_words": {"hearth": "очаг", "counter": "стойка", "bed": "кровать", "bench": "верстак", "water": "вода", "stone": "камень", "forge": "горн", "millstone": "жёрнов", "anvil": "наковальня", "vein": "жила", "desk": "стол", "stall": "прилавок", "stage": "сцена", "camp": "стоянка", "altar": "алтарь", "ring": "круг", "cell": "клетка"}
 	},
 	"things": {
-		"_doc": "v0.7.65, ThingRules: the body of any thing, a door too. AC by the material, HP by size (by weight, `up_to` lb) and frailty (DMG); a door has its own `door_hp`. `immune` — damage types that do nothing to a thing. `by_type` — the material of a catalog item by its type. Fire lasts burn_minutes, catches what stands beside it after spread_minutes, a thing wet for wet_minutes does not burn. master_damage — the most the master's words do to a thing at once; status_minutes — how long a status it lays stays. bodies: what a thing does on the map (v0.8): cells, blocks (path, sight, shots), cover (half, three_quarters, full), made_of.",
+		"_doc": "v0.7.65, ThingRules: the body of any thing, a door too. AC by the material, HP by size (by weight, `up_to` lb) and frailty (DMG); a door has its own `door_hp`. `immune` — damage types that do nothing to a thing. `by_type` — the material of a catalog item by its type. Fire lasts burn_minutes, catches what stands beside it after spread_minutes, a wet thing does not burn (the coat of water, rules.liquids, v0.8.4.28.2). master_damage — the most the master's words do to a thing at once; status_minutes — how long a status it lays stays. bodies: what a thing does on the map (v0.8): cells, blocks (path, sight, shots), cover (half, three_quarters, full), made_of.",
 		"materials": {
 		 "wood": {
 		  "name": "дерево",
@@ -3202,7 +3199,6 @@
 		],
 		"burn_minutes": 10,
 		"spread_minutes": 5,
-		"wet_minutes": 60,
 		"master_damage": 40,
 		"status_minutes": 60,
 		"bodies": {

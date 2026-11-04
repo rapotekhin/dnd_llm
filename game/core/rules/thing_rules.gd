@@ -87,12 +87,12 @@ static func lies_on_things(data: Dictionary, id: String) -> bool:
 
 
 static func burns(s: GameSession, data: Dictionary, st: Dictionary, d: Dictionary) -> bool:
-	return bool(material(data, d).get("burns", false)) or has(s, st, "oiled")
+	return bool(material(data, d).get("burns", false)) or LiquidRules.fire_plus(s, st) > 0
 
 
 ## Sets the thing on fire: "" or why it will not catch.
 static func ignite(s: GameSession, data: Dictionary, st: Dictionary, d: Dictionary, cause: String) -> String:
-	if has(s, st, "wet"):
+	if LiquidRules.douses(s, st):
 		return "мокрое не горит"
 	if not burns(s, data, st, d):
 		return "%s не горит" % str(material(data, d).get("name", "это"))
@@ -101,11 +101,9 @@ static func ignite(s: GameSession, data: Dictionary, st: Dictionary, d: Dictiona
 	return ""
 
 
-## Water on the thing: the fire goes out, the thing is wet for a while.
+## Water on the thing: the fire goes out, the thing is wet for a while (the coat of water, v0.8.4.28.2).
 static func douse(s: GameSession, data: Dictionary, st: Dictionary) -> void:
-	lift(st, "burning")
-	lift(st, "oiled")
-	lay(s, st, "wet", int(cfg(data)["wet_minutes"]), "вода")
+	LiquidRules.coat(s, data, st, LiquidRules.WATER, "вода")
 
 
 ## The numbers of a lock: Sleight of Hand to pick it, Athletics to force it.
@@ -150,7 +148,7 @@ static func plan(s: GameSession, data: Dictionary, p: Dictionary, e: Dictionary)
 		if not lies_on_things(data, status):
 			return {"reason": "на вещь ложатся: %s" % ", ".join((data["rules"]["condition_effects"] as Dictionary).keys().filter(func(k: String) -> bool: return lies_on_things(data, k)))}
 		if status == "burning" and not has(s, p, "burning"):
-			var why := "мокрое не горит" if has(s, p, "wet") else ("" if burns(s, data, p, d) else "%s не горит" % str(material(data, d).get("name", "это")))
+			var why := "мокрое не горит" if LiquidRules.douses(s, p) else ("" if burns(s, data, p, d) else "%s не горит" % str(material(data, d).get("name", "это")))
 			if not why.is_empty():
 				return {"reason": why}
 	return {"plan": {"room": s.room_id, "prop": p["id"], "status": status, "damage": amount, "type": str(e.get("damage_type", "")) if e.get("damage_type") != null else "", "cause": cause},
@@ -169,10 +167,12 @@ static func apply(s: GameSession, data: Dictionary, q: Dictionary) -> Array[Stri
 			pass
 		"burning":
 			ignite(s, data, p, d, str(q["cause"]))
-		"wet":
-			douse(s, data, p)
 		var other:
-			lay(s, p, str(other), int(cfg(data)["status_minutes"]), str(q["cause"]))
+			var lid := str(data["rules"]["condition_effects"].get(str(other), {}).get("liquid", ""))
+			if not lid.is_empty():  # «wet», «oiled»: the coat of its liquid (v0.8.4.28.2)
+				LiquidRules.coat(s, data, p, lid, str(q["cause"]))
+			else:
+				lay(s, p, str(other), int(cfg(data)["status_minutes"]), str(q["cause"]))
 	if int(q["damage"]) > 0 and bool(hurt(data, p, d, int(q["damage"]), str(q["type"]))["broke"]):
 		lines.append_array(ruin(s, data, str(q["room"]), p, "broken"))
 	var owner := str(p.get("owner", ""))
@@ -260,7 +260,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 
 static func _spread(s: GameSession, data: Dictionary, list: Array, from: Dictionary, cause: String) -> void:
 	for o: Dictionary in list:
-		if o != from and not str(o.get("state", "")) in ["taken", "burned"] and not has(s, o, "wet"):
+		if o != from and not str(o.get("state", "")) in ["taken", "burned"] and not LiquidRules.douses(s, o):
 			ignite(s, data, o, spec(data, s, o), cause)
 
 

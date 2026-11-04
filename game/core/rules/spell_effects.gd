@@ -669,7 +669,7 @@ static func add_zone(s: GameSession, z: Dictionary) -> void:
 static func zone_view(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for z: Dictionary in zones(s):
-		out.append({"name": str(z["name"]), "cells": FightGrid.zone_cells(s, data, z), "hurts": harmful(z)})
+		out.append({"name": str(z["name"]), "cells": FightGrid.zone_cells(s, data, z), "hurts": harmful(z), "tile": str(z.get("tile", ""))})
 	return out
 
 

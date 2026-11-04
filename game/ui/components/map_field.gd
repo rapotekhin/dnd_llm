@@ -394,6 +394,12 @@ func _draw_fight_squares(t: float) -> void:
 		_tint(at, over[at], t)
 	for z: Dictionary in zones:
 		var tint := Color(UiTheme.BAD if bool(z["hurts"]) else UiTheme.WARN, 0.26)
+		var tile := str(z.get("tile", ""))
+		if UiTheme.TILES.has(tile):  # a puddle in its liquid's colour (v0.8.4.28.2), as the oil was before
+			for at: Vector2i in z["cells"]:
+				_tint(at, UiTheme.TILES[tile], t)
+			if not bool(z["hurts"]):
+				continue
 		for at: Vector2i in z["cells"]:
 			_tint(at, tint, t)
 	for at: Variant in routes:

@@ -140,8 +140,8 @@ func test_oil_catches_and_burns_who_stands_there_then_goes_out() -> void:
 	_field(s)
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var at := FightGrid.cell(foe)
-	FightField.splash(s, data, at, {"oiled": 5}, "Масло", [] as Array[String])
-	assert_bool(s.combat["oil"].has(FightGrid.tag(at))).is_true()
+	FightField.splash(s, data, at, {"liquid": "oil"}, "Масло", [] as Array[String])
+	assert_array(TestUtils.zones_on_cell(s, at)).contains(["Масло"])
 	var lines: Array[String] = []
 	FightField.kindle(s, data, [at] as Array[Vector2i], lines)
 	assert_array(lines).contains(["Огонь занимается"])
@@ -161,8 +161,8 @@ func test_bare_ground_does_not_catch_and_fire_goes_over_oil() -> void:
 	var lines: Array[String] = []
 	FightField.kindle(s, data, [at] as Array[Vector2i], lines)
 	assert_array(lines).is_empty()
-	FightField.splash(s, data, at, {"oiled": 5}, "Масло", lines)
-	FightField.splash(s, data, at + Vector2i(1, 0), {"oiled": 5}, "Масло", lines)
+	FightField.splash(s, data, at, {"liquid": "oil"}, "Масло", lines)
+	FightField.splash(s, data, at + Vector2i(1, 0), {"liquid": "oil"}, "Масло", lines)
 	FightField.kindle(s, data, [at] as Array[Vector2i], lines)
 	assert_bool(s.combat["fires"].has(FightGrid.tag(at + Vector2i(1, 0)))).is_false()
 	FightField.fire_round(s, data, lines)
@@ -179,7 +179,7 @@ func test_a_fire_bolt_lights_the_oil_under_a_foe() -> void:
 	_field(s)
 	var id: String = CombatRules.enemies(s)[0]
 	var foe := CombatRules.fighter(s, id)
-	FightField.splash(s, data, FightGrid.cell(foe), {"oiled": 5}, "Масло", [] as Array[String])
+	FightField.splash(s, data, FightGrid.cell(foe), {"liquid": "oil"}, "Масло", [] as Array[String])
 	Acts.one("cast").go(s, data, CombatRules.player(s), id, {"spell": "fire_bolt", "slot": 0})
 	assert_bool(s.combat["fires"].has(FightGrid.tag(FightGrid.cell(foe)))).is_true()
 
@@ -192,7 +192,7 @@ func test_a_flask_goes_on_a_square() -> void:
 	var aim := FightGrid.aim_id(at)
 	assert_str(Acts.one("throw").can(s, data, CombatRules.player(s), aim, {"item": "oil_flask"})).is_empty()
 	Acts.one("throw").go(s, data, CombatRules.player(s), aim, {"item": "oil_flask"})
-	assert_bool(s.combat["oil"].has(FightGrid.tag(at))).is_true()
+	assert_array(TestUtils.zones_on_cell(s, at)).contains(["Масло"])
 	assert_int(int(s.character["inventory"].get("oil_flask", 0))).is_equal(0)
 
 

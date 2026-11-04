@@ -745,13 +745,13 @@ static func _throw(s: GameSession, data: Dictionary, id: String, use: Dictionary
 	for i in 8:
 		turn(s, data, hero)
 		said = " ".join(act.go(s, data, hero, str(t["id"]), how))
-		if int(t["hp"]) < 999 or t.has("oiled") or ConditionRules.has(t, str(use["throw"].get("condition", "-"))):
+		if int(t["hp"]) < 999 or not LiquidRules.coat_on(s, t).is_empty() or ConditionRules.has(t, str(use["throw"].get("condition", "-"))):
 			break
 	var th: Dictionary = use["throw"]
 	if th.has("damage"):
 		check(steps, int(t["hp"]) < 999, "попадание: урон %s %s" % th["damage"], said.left(160))
-	if th.has("oiled"):
-		check(steps, t.has("oiled"), "цель облита маслом", said.left(160))
+	if LiquidRules.kind(data, str(th.get("liquid", ""))).has("coat"):  # what lies on it after (v0.8.4.28.2)
+		check(steps, str(LiquidRules.coat_on(s, t).get("liquid", "")) == str(th["liquid"]), "цель облита: %s" % LiquidRules.name_of(data, str(th["liquid"])), said.left(160))
 	if th.has("condition"):
 		check(steps, ConditionRules.has(t, str(th["condition"])), "цель: %s" % ConditionRules.name_of(data, str(th["condition"])), said.left(160))
 
@@ -1150,7 +1150,7 @@ static func _world_now(s: GameSession, data: Dictionary, g: Dictionary) -> Dicti
 
 
 ## Flags a spell leaves on a fighter beside its statuses: a mark, a hex, a sanctuary, a cover of fire.
-const FLAGS: Array[String] = ["marked", "hexed", "sanctuary", "oiled", "outlined", "hidden", "frightened_by", "turned", "charmed_by"]
+const FLAGS: Array[String] = ["marked", "hexed", "sanctuary", "outlined", "hidden", "frightened_by", "turned", "charmed_by"]
 
 
 static func _fx_names(data: Dictionary, h: Dictionary) -> Array:

@@ -31,6 +31,8 @@ static func holds(data: Dictionary, id: String) -> float:
 ## The liquid of a ready thing: {liquid, vessel, pints} — the liquid's own `item`, else the thing's `liquid` {kind, vessel,
 ## pints} (a cask of wine of the pack); {} — not one.
 static func ready(data: Dictionary, id: String) -> Dictionary:
+	if id.is_empty():
+		return {}
 	for lid: String in cfg(data)["kinds"]:
 		var k: Dictionary = cfg(data)["kinds"][lid]
 		if str(k.get("item", "")) == id:
@@ -265,6 +267,70 @@ static func _hops(s: GameSession, data: Dictionary, who: Dictionary, pts: float)
 	if bool(ConditionRules.effects(h).any(func(x: Dictionary) -> bool: return bool(x.get("drunk", false)))):
 		lines.append("%s пьянеет" % str(Sheet.holder(s, who).get("name", "")))
 	return lines
+
+
+# --- coated -----------------------------------------------------------------------------------------
+# One status `coated` with its liquid on any holder: a fighter's sheet or record, a thing of a room (v0.8.4.28.2). It
+# carries the keys of the liquid's `coat`: `douses`, `fire_plus`, `burns` with `put_out`.
+
+
+## The live coat on `h`: the status, {} — none.
+static func coat_on(s: GameSession, h: Dictionary) -> Dictionary:
+	var t := ConditionRules.now(s)
+	for e: Dictionary in ConditionRules.effects_of(h, "coated"):
+		if not e.get("ends", {}).has("at") or int(e["ends"]["at"]) > t:
+			return e
+	return {}
+
+
+## `h` is splashed with `lid`: its `coat` replaces what was on it; water puts out a fire. Lines.
+static func coat(s: GameSession, data: Dictionary, h: Dictionary, lid: String, cause: String) -> Array[String]:
+	var k: Dictionary = kind(data, lid).get("coat", {})
+	if k.is_empty():
+		return []
+	var lines: Array[String] = []
+	var was := coat_on(s, h)
+	if bool(k.get("douses", false)):
+		if was.has("burns") and h.has("name"):
+			lines.append("%s: пламя погасло" % h["name"])
+		ConditionRules.remove(h, "burning")  # a thing's fire
+	ConditionRules.remove(h, "coated")
+	var e := {"condition": "coated", "liquid": lid, "ends": {"at": ConditionRules.now(s) + int(k["minutes"]) * ConditionRules.ROUNDS_PER_MINUTE} if k.has("minutes") else {},
+		"source": {"kind": "liquid", "id": lid, "name": cause}}
+	for key: String in ["douses", "fire_plus", "burns", "put_out"]:
+		if k.has(key):
+			e[key] = k[key]
+	ConditionRules.add_effect(h, e)
+	return lines
+
+
+## What fire adds to `h` now: oil on it (the coat goes with it).
+static func fire_plus(s: GameSession, h: Dictionary) -> int:
+	return int(coat_on(s, h).get("fire_plus", 0))
+
+
+## Water on `h`: no fire takes it.
+static func douses(s: GameSession, h: Dictionary) -> bool:
+	return bool(coat_on(s, h).get("douses", false))
+
+
+## The dice it burns with at the start of its turn, "" — it does not burn.
+static func burning(s: GameSession, h: Dictionary) -> String:
+	return str(coat_on(s, h).get("burns", ""))
+
+
+## The coat goes (it burnt off, was put out, washed off).
+static func uncoat(h: Dictionary) -> void:
+	ConditionRules.remove(h, "coated")
+
+
+## A thrown flask of a liquid: its liquid's `throw` with the liquid named and whether it spills on a square; {} — none.
+static func throw_of(data: Dictionary, id: String) -> Dictionary:
+	var r := ready(data, id)
+	if r.is_empty() or not kind(data, str(r["liquid"])).has("throw"):
+		return {}
+	var k := kind(data, str(r["liquid"]))
+	return (k["throw"] as Dictionary).merged({"liquid": r["liquid"], "spills": k.has("puddle")})
 
 
 # --- text -----------------------------------------------------------------------------------------

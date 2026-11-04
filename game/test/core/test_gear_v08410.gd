@@ -136,7 +136,7 @@ func test_fire_burns_the_hero_as_it_burns_a_foe() -> void:
 	var s := _hero()
 	_foe(s, {"monster": "bandit"})
 	var p := CombatRules.player(s)
-	p["burning"] = "1d4"
+	LiquidRules.coat(s, data, s.character, "alchemists_fire", "Алхимический огонь")
 	var hp := int(s.character["hp"])
 	var lines: Array[String] = []
 	CombatRules._fire(s, data, p, lines)

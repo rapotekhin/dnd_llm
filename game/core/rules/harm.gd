@@ -34,9 +34,9 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 		FightField.din(s, data, dtype)  # a thunderous blow carries farther
 	if dmg <= 0:
 		return
-	if dtype == "fire" and f.has("oiled"):  # oil on it catches (v0.7.12)
-		var more := Sheet.taken(s, data, who, "fire", int(f["oiled"]))
-		f.erase("oiled")
+	if dtype == "fire" and LiquidRules.fire_plus(s, me) > 0:  # oil on it catches (v0.7.12; a coat since v0.8.4.28.2)
+		var more := Sheet.taken(s, data, who, "fire", LiquidRules.fire_plus(s, me))
+		LiquidRules.uncoat(me)
 		dmg += more
 		lines.append("%s: масло вспыхивает, ещё %d" % [me.get("name", ""), more])
 	if fight:

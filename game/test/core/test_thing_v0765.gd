@@ -192,7 +192,7 @@ func test_oil_makes_iron_burn() -> void:
 	var st := {}
 	var d := {"made_of": "iron"}
 	assert_bool(ThingRules.burns(s, data, st, d)).is_false()
-	ThingRules.lay(s, st, "oiled", 60, "масло")
+	LiquidRules.coat(s, data, st, "oil", "масло")
 	assert_bool(ThingRules.burns(s, data, st, d)).is_true()
 
 
