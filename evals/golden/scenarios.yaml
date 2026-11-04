@@ -952,9 +952,9 @@ scenarios:
     input: "Обыскиваю курган вождя: что положили с ним в могилу?"
     snapshot:
       scene:
-        room: {id: room_barrow, name: "Курган вождя", description: "Каменная камера, кости на ложе, у изголовья — истёртый рог на ремне."}
+        room: {id: room_barrow, name: "Курган вождя", description: "Каменная камера, кости на ложе под истлевшими шкурами, черепки погребальной посуды."}
         npcs: []
-        hooks: [{id: hook_barrow_horn, text: "рог вождя волчьего племени: кто в него трубит, к тому приходят два волка и бьются за него час", dc: 13}]
+        hooks: [{id: hook_barrow_horn, text: "под шкурами у ложа спрятан рог вождя волчьего племени: кто в него трубит, к тому приходят два волка и бьются за него час", dc: 13}]
       character: {level: 4}
     engine:
       check: {d20: [15], bonus: 4, total: 19, dc: 13, success: true, nat: null, blocked: false}
