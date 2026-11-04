@@ -690,3 +690,11 @@ def test_a_board_readied_ahead_searches_quests_and_makes_only_quests(data_dir):
     assert last_tool_text(fn.state["prompts"][2]).startswith("Отказ: в этой заготовке — только create:quest")
     assert [c["params"]["effect"]["kind"] for c in calls if c["method"] == "engine.validate"] == ["create"], last_tool_text(fn.state["prompts"][3])
     assert msg["result"]["effect_ids"] == ["e-1"]
+
+
+def test_summary_has_room_to_reason_before_its_answer():
+    # The author's trace, 2026-10-27: DeepSeek reasoned the whole 400 tokens away and a summary came back empty.
+    from llm_server.agents import SUMMARY_MAX_TOKENS, build_summary_agent
+
+    agent = build_summary_agent(FunctionModel(lambda messages, info: ModelResponse(parts=[])), "dialogue")
+    assert agent.model_settings["max_tokens"] == SUMMARY_MAX_TOKENS >= 2000

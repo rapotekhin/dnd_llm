@@ -679,8 +679,13 @@ def build_prepare_agent(model: Model, system: str, subject: str) -> Agent[TurnCo
     return agent
 
 
+# A summary is 2–4 sentences, but DeepSeek reasons first: 400 ran out before the answer (the author's trace, 2026-10-27).
+SUMMARY_MAX_TOKENS = 2000
+
+
 def build_summary_agent(model: Model, kind: str) -> Agent[None, SummaryOutput]:
-    return Agent(model, output_type=SummaryOutput, retries=2, model_settings=settings_for(model, {"temperature": 0.3, "max_tokens": 400}),
+    return Agent(model, output_type=SummaryOutput, retries=2,
+                 model_settings=settings_for(model, {"temperature": 0.3, "max_tokens": SUMMARY_MAX_TOKENS}),
                  instructions="Ты пишешь краткие записи по-русски для памяти мастера игры.", name=f"summary_{kind}")
 
 
