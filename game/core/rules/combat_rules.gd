@@ -1106,6 +1106,8 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 	if FightGrid.is_aim(target_id):
 		var splashed: Array[String] = []
 		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed, str(f.get("side", "player")))
+		if fx.has("effect"):
+			LiquidRules.burst(s, data, f, FightGrid.aim_of(target_id), fx, name, splashed)
 		return splashed
 	var t := fighter(s, target_id)
 	var dex := Sheet.ability_mod(s, data, f, "dex")
@@ -1136,6 +1138,8 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 			lines.append("%s горит" % t["name"])
 		elif LiquidRules.fire_plus(s, holder) > 0:
 			lines.append("%s облит: %s — огонь возьмёт его сильнее" % [t["name"], LiquidRules.name_of(data, lid)])
+	if fx.has("effect"):  # a made liquid (v0.8.4.28.5): its area around the one struck
+		LiquidRules.burst(s, data, f, FightGrid.cell(t), fx, name, lines)
 	if fx.has("condition") and Attack.up(s, t):
 		if SIZES.find(str(Sheet.template(data, t).get("size", "medium"))) > SIZES.find(str(fx.get("max_size", "large"))):
 			lines.append("%s слишком велик для сети" % t["name"])

@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.108.0"
+PROTOCOL_VERSION = "0.109.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1215,10 +1215,12 @@ class MakeEffect(_Out):
     item_id «new:book:<key>». 0.98.0: a spell and an ability with charges of the action's parts (rules.make.act): the
     engine sets the circle, it is not asked. What the parts do not cover is not made: say so in the story, fill
     `missing_concept`. 0.102.0: `learn` — a caster works a spell out alone and knows it at once, no teacher and no quest;
-    the engine allows a circle at least two under the hero's highest (rules.make.self_taught)."""
+    the engine allows a circle at least two under the hero's highest (rules.make.self_taught). 0.109.0: a liquid of
+    parts (rules.make.liquid) — drunk, on a blade or thrown with its area; its ready thing in its vessel is given as
+    `move_item:world>hero` item_id «new:<key>»."""
 
     kind: Literal["make"] = "make"
-    what: Literal["status", "skill", "trait", "spell", "ability", "property"]
+    what: Literal["status", "skill", "trait", "spell", "ability", "property", "liquid"]
     key: str = Field(min_length=2, max_length=30)
     name: str = Field(min_length=2, max_length=40)
     text: str = Field(min_length=5, max_length=300)  # what it does, for the player's card

@@ -2547,6 +2547,22 @@
 			]
 		},
 		"trait_mult": 2,
+		"liquid": {
+			"_doc": "v0.8.4.28.5, MakeRules._liquid: a liquid of parts — a row of rules.liquids.kinds and its ready thing in its vessel, both of this game. How it is used: drunk (quench — the thirst's water, drunk — hops a pint, food — camp food a pint), on a blade (blade: a coat for the next hit of slashing or piercing) or thrown (throw: a flask at a foe or a square, the area — a square of `area` cells, 1 by default). What it does on a blade or a throw is the effect of a monster's attack (MonsterRules.apply_effect): damage (d6 × amount of a type), save (an ability, its DC as the amount; none — the tier's), lay (a status on a failed save), also (one more while that lasts), lasts, wake (ends when hurt — a sleep). The sum of the costs × mult is the tier of rules.make.tiers: the hero's level it asks; a liquid is used once, so it costs less than a status. dc_cost — a point for each `per` of DC over `from`. vessel — a vessel of rules.liquids.vessels, by default the way's; the price is cp_per_point a point, a drink drink_cp_pint a pint. needs — the tool to pour it from vessel to vessel.",
+			"parts": {
+				"quench": {"cost": 0}, "drunk": {"number": [1, 10], "cost": 0}, "food": {"number": [1, 4], "cost": 1},
+				"blade": {"cost": 0}, "throw": {"cost": 0},
+				"damage": {"of": "damage", "number": [1, 10], "cost": 1},
+				"save": {"values": ["str", "dex", "con", "int", "wis", "cha"], "number": [8, 20], "cost": 0},
+				"lay": {"of": "condition", "cost": 0}, "also": {"of": "condition", "cost": 0},
+				"lasts": {"values": ["round", "minute", "ten_minutes", "hour"], "costs": {"minute": 1, "ten_minutes": 2, "hour": 3}},
+				"wake": {"cost": -1}, "area": {"number": [1, 5], "cost": 1}, "vessel": {"of": "vessel", "cost": 0}
+			},
+			"mult": 0.5, "dc_cost": {"from": 12, "per": 2}, "cp_per_point": 3000, "drink_cp_pint": 20,
+			"vessels": {"drink": "bottle_glass", "blade": "vial", "throw": "empty_flask"},
+			"needs": {"blade": "poisoners_kit", "throw": "alchemists_supplies"},
+			"blade": {"weapons": ["slashing", "piercing"], "hits": 1}, "throw": {"range": 20, "improvised": true}
+		},
 		"self_taught": {
 			"_doc": "What a hero works out alone, no teacher and no quest (v0.7.70.2, make with learn): a spell of a circle at least below_top under the hero's highest.",
 			"spell": {"below_top": 2}

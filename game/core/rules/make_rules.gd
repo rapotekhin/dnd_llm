@@ -14,9 +14,11 @@ extends RefCounted
 ## course, a book, a scroll (`new:scroll:<key>`), a quest's reward.
 ## v0.7.65: a property of a thing, of the tokens the engine reads (rules.make.property); it is priced by those tokens, and
 ## the artificer who learned it lays it on a thing (the template `imbue`), or the master's own item carries it.
+## v0.8.4.28.5: a liquid of parts (rules.make.liquid) — a row of rules.liquids.kinds and its ready thing in its vessel under
+## the same id, given as `new:<key>`; drunk, on a blade or thrown by the roads of any liquid, its effect a monster's attack's.
 
 const PREFIX := "gen_"
-const IDS := {"status": "st", "skill": "sk", "trait": "tr", "spell": "sp", "ability": "ab", "property": "pr"}
+const IDS := {"status": "st", "skill": "sk", "trait": "tr", "spell": "sp", "ability": "ab", "property": "pr", "liquid": "lq"}
 const ACTS: Array[String] = ["spell", "ability"]
 
 
@@ -42,6 +44,10 @@ static func install(data: Dictionary, gen: Dictionary) -> void:
 		for id: String in (tables[name] as Dictionary).keys():
 			if id.begins_with(PREFIX):
 				(tables[name] as Dictionary).erase(id)
+	for pool: Dictionary in [rules["liquids"]["kinds"], data["items"]["catalog"]]:
+		for id: String in pool.keys():
+			if id.begins_with(PREFIX):
+				pool.erase(id)
 	var engine: Array = rules["combat"]["engine_spells"]
 	rules["combat"]["engine_spells"] = engine.filter(func(id: Variant) -> bool: return not str(id).begins_with(PREFIX))
 	var made: Dictionary = gen.get("made", {})
@@ -59,6 +65,10 @@ static func _put(data: Dictionary, id: String, def: Dictionary) -> void:
 			data["items"]["built"] = {}
 		data["items"]["built"][id] = {"tokens": def["tokens"], "name": str(def["name"])}
 		data["items"]["properties"][id] = int(def["points"])
+		return
+	if str(def["what"]) == "liquid":
+		rules["liquids"]["kinds"][id] = def["row"]
+		data["items"]["catalog"][id] = def["item"]
 		return
 	if ACTS.has(str(def["what"])):
 		var tables := _tables(data)
@@ -289,6 +299,12 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary, pending: Array
 			return built
 		def.merge(built)
 		summary = "Новое свойство: «%s» (%d очк., %s)" % [name, int(def["points"]), def["rarity"]]
+	elif what == "liquid":
+		var built := _liquid(s, data, id, name, text, e.get("parts", []), pending)
+		if built.has("reason"):
+			return built
+		def.merge(built)
+		summary = "Новая жидкость: «%s» (%d очк., %s)" % [name, int(def["points"]), def["tier"]]
 	elif ACTS.has(what):
 		var built := _acted(s, data, what, id, name, text, e, pending)
 		if built.has("reason"):
@@ -527,6 +543,111 @@ static func _acted(s: GameSession, data: Dictionary, what: String, id: String, n
 		if target != "self":
 			act["spell_targets"] = {"side": "friend", "n": 1}
 	return {"act": act, "points": points, "tier": tier_name, "circle": circle, "dc": dc, "harm": dmg > 0 or harm}
+
+
+## A liquid of parts: {row, item, points, tier} or {reason}. The row is read by LiquidRules like any other; on a blade and
+## thrown its `effect` is a monster's attack's (MonsterRules.apply_effect).
+static func _liquid(s: GameSession, data: Dictionary, id: String, name: String, text: String, parts: Variant, pending: Array[Dictionary]) -> Dictionary:
+	var cf: Dictionary = cfg(data)["liquid"]
+	var table: Dictionary = cf["parts"]
+	if not (parts is Array) or (parts as Array).is_empty():
+		return {"reason": "нужны parts: из чего собрана жидкость; есть: %s" % ", ".join(table.keys())}
+	var got := {}
+	var points := 0
+	for p: Variant in parts:
+		var part := str((p as Dictionary).get("part", ""))
+		if not table.has(part):
+			return {"reason": "части %s нет; есть: %s" % [part, ", ".join(table.keys())]}
+		var value := str(p.get("value", "")) if p.get("value") != null else ""
+		var amount := int(p.get("amount", 0)) if p.get("amount") != null else 0
+		if part in ["lay", "also"]:
+			value = resolve(pending, value)
+		var why := _valid(data, table[part], part, value, amount)
+		if not why.is_empty():
+			return {"reason": why}
+		got[part] = {"value": value, "amount": amount}
+		points += (amount - 1) * int(table[part]["cost"]) if part == "area" else _cost(table[part], amount, value)
+	var val := func(part: String) -> String: return str(got.get(part, {}).get("value", ""))
+	var num := func(part: String) -> int: return int(got.get(part, {}).get("amount", 0))
+	var drinks := got.has("quench") or got.has("drunk") or got.has("food")
+	var way := "blade" if got.has("blade") else ("throw" if got.has("throw") else "")
+	if got.has("blade") and got.has("throw"):
+		return {"reason": "жидкость идёт либо на клинок (blade), либо в бросок (throw)"}
+	if not drinks and way.is_empty():
+		return {"reason": "как ею пользуются: пьют (quench, drunk, food), на клинок (blade) или бросают (throw)"}
+	var acts := got.has("damage") or got.has("lay")
+	if acts and way.is_empty():
+		return {"reason": "урон и статус — у клинка (blade) или броска (throw); выпитое действует только питьём"}
+	if not way.is_empty() and not acts:
+		return {"reason": "%s без действия: нужны damage или lay" % way}
+	if (got.has("also") or got.has("lasts") or got.has("wake")) and not got.has("lay"):
+		return {"reason": "also, lasts и wake — у статуса lay"}
+	if got.has("area") and way != "throw":
+		return {"reason": "область (area) — только у броска"}
+	var effect := {}
+	if got.has("lay"):
+		for st: String in [val.call("lay"), val.call("also")]:
+			if st.is_empty():
+				continue
+			var c := _lay_cost(data, st)
+			if c < 0:
+				return {"reason": "статус %s жидкостью не ложится" % st}
+			points += c
+		effect["condition"] = val.call("lay")
+		if got.has("also"):
+			effect["also"] = val.call("also")
+		if got.has("lasts"):
+			effect["duration"] = val.call("lasts")
+		if got.has("wake"):
+			effect["wake"] = true
+	if got.has("damage"):
+		effect["damage"] = {"dice": "%dd6" % num.call("damage"), "type": val.call("damage")}
+	var dcf: Dictionary = cf["dc_cost"]
+	if got.has("save"):
+		points += maxi(0, num.call("save") - int(dcf["from"])) / int(dcf["per"])
+	points = ceili(points * float(cf["mult"]))
+	var t := tier(data, points)
+	if t.is_empty():
+		return {"reason": "%d очков — движок так сильно не собирает" % points}
+	var level := int(s.character.get("level", 1))
+	if level < int(t["level"]):
+		return {"reason": "«%s» — %s: %d очков, это от %d уровня героя, а герой %d" % [name, t["name"], points, int(t["level"]), level]}
+	if acts and (got.has("lay") or got.has("save")):
+		effect["save"] = {"ability": val.call("save") if got.has("save") else "con",
+			"dc": num.call("save") if got.has("save") else int(data["rules"]["dc_tiers"][str(t["dc"])])}
+	var vessel: String = val.call("vessel") if got.has("vessel") else str(cf["vessels"][way if not way.is_empty() else "drink"])
+	if LiquidRules.holds(data, vessel) <= 0.0 or not data["items"]["catalog"].has(vessel):
+		return {"reason": "vessel — сосуд из rules.liquids.vessels: %s" % ", ".join((LiquidRules.cfg(data)["vessels"] as Dictionary).keys())}
+	var pints := LiquidRules.holds(data, vessel)
+	var row := {"name": name, "made": true, "item": id, "vessel": vessel, "pints": pints}
+	if drinks:
+		var drink := {}
+		if got.has("quench"):
+			drink["water"] = 1
+			row["quench"] = true
+		if got.has("drunk"):
+			drink["drunk"] = num.call("drunk")
+		if got.has("food"):
+			drink["food"] = num.call("food")
+		row["drink"] = drink
+	if way == "blade":
+		row["blade"] = (cf["blade"] as Dictionary).merged({"effect": effect})
+	elif way == "throw":
+		row["throw"] = (cf["throw"] as Dictionary).merged({"effect": effect, "area": maxi(1, num.call("area"))})
+	if not way.is_empty():
+		row["needs"] = str(cf["needs"][way])
+	var told := MonsterRules.effect_text(data, {"effect": effect}) if not effect.is_empty() else ""
+	var lb := float(data["items"]["catalog"][vessel].get("weight", 0)) + pints * float(LiquidRules.cfg(data).get("lb_per_pint", 1))
+	var item := {"name": name, "item_type": "consumable" if way == "throw" else "gear", "weight": snappedf(lb, 0.1), "properties": [],
+		"stack": true, "value_cp": maxi(points * int(cf["cp_per_point"]), ceili(pints * int(cf["drink_cp_pint"]))),
+		"description": text + ((" " + _way_text(way, row, told)) if not way.is_empty() else ""), "made": true}
+	return {"row": row, "item": item, "points": points, "tier": str(t["name"]), "dc": int(effect.get("save", {}).get("dc", 0))}
+
+
+static func _way_text(way: String, row: Dictionary, told: String) -> String:
+	if way == "blade":
+		return "Смазать клинок (рубящий или колющий): при попадании — %s." % told
+	return "Бросить на 20 фт: %s, область %d×%d клеток." % [told, int(row["throw"]["area"]), int(row["throw"]["area"])]
 
 
 ## What a status laid by an action costs: a made one its points, one of 5e by the table; -1 — it cannot be laid.

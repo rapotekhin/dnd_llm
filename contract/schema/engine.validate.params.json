@@ -2937,7 +2937,7 @@
     },
     "MakeEffect": {
       "additionalProperties": false,
-      "description": "The master builds what neither the data nor 5e has (0.97.0): a status or a passive trait of `parts`, a skill of\nan `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the\nhero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a\ntrait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `move_item:world>hero`\nitem_id «new:book:<key>». 0.98.0: a spell and an ability with charges of the action's parts (rules.make.act): the\nengine sets the circle, it is not asked. What the parts do not cover is not made: say so in the story, fill\n`missing_concept`. 0.102.0: `learn` — a caster works a spell out alone and knows it at once, no teacher and no quest;\nthe engine allows a circle at least two under the hero's highest (rules.make.self_taught).",
+      "description": "The master builds what neither the data nor 5e has (0.97.0): a status or a passive trait of `parts`, a skill of\nan `ability`. The engine prices the parts: the sum gives the tier, the hero's level and the DC; too strong for the\nhero is refused. It does not reach the hero by itself: a status is laid by `condition` with «new:<key>», a skill or a\ntrait is taught by `course` (teach_id «new:<key>», teach_kind skill | trait) or by a `book`, given with `move_item:world>hero`\nitem_id «new:book:<key>». 0.98.0: a spell and an ability with charges of the action's parts (rules.make.act): the\nengine sets the circle, it is not asked. What the parts do not cover is not made: say so in the story, fill\n`missing_concept`. 0.102.0: `learn` — a caster works a spell out alone and knows it at once, no teacher and no quest;\nthe engine allows a circle at least two under the hero's highest (rules.make.self_taught). 0.109.0: a liquid of\nparts (rules.make.liquid) — drunk, on a blade or thrown with its area; its ready thing in its vessel is given as\n`move_item:world>hero` item_id «new:<key>».",
       "properties": {
         "ability": {
           "anyOf": [
@@ -3029,7 +3029,8 @@
             "trait",
             "spell",
             "ability",
-            "property"
+            "property",
+            "liquid"
           ],
           "title": "What",
           "type": "string"

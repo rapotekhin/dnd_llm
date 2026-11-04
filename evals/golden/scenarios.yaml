@@ -4347,6 +4347,32 @@ scenarios:
       - "Мастер собирает статус эффектом make с what status и частями из списка, не выдумывает новых слов"
       - "Кладёт его condition с new:<key> и причиной, со спасброском или cause player: вода вредная, герой пьёт сам"
 
+  - id: make_liquid_whisky_of_the_innkeeper
+    title: "Виски, которого нет в данных: жидкость из частей make и бутылка герою через new:<key>"
+    category: concepts
+    extends: tavern
+    mode: trade
+    snapshot:
+      scene:
+        room: {id: room_tavern_hall, name: "Зал таверны «Хромой Ворон»",
+               description: "Низкий закопчённый зал. За стойкой Горм хвалится своим торфяным виски: гонит сам, крепкий, валит с ног с одной бутылки."}
+      trade:
+        npc_id: npc_innkeeper
+        purse_cp: 2000
+        stock:
+          - {item_id: ale, name: "Кружка эля", qty: 10, price_cp: 4}
+          - {item_id: bottle_wine, name: "Бутылка вина", qty: 3, price_cp: 20}
+    input: "Горм, продай мне бутылку твоего торфяного виски, вот серебрушка."
+    engine:
+      validate:
+        - {kind: make, status: accept, summary: "Новая жидкость: «Торфяной виски» (0 очк., слабое)"}
+        - {kind: create:stock, status: accept, summary: "На полке у Горма: Торфяной виски ×1"}
+    expect:
+      effects: {required_kinds_any: [make], field_in: {what: [liquid]}}
+    rubric:
+      - "Мастер собирает виски эффектом make с what liquid и частью drunk (хмель), без лишних частей вроде blade или throw"
+      - "Бутылку ставит на полку Горма create:stock с item_id new:<key> этого make (или отдаёт move_item:world>hero с ним), а не своей вещью item без жидкости"
+
   - id: make_skill_through_a_teacher
     title: "Редкое умение наставника: новый навык идёт через course, а не подарком"
     category: concepts

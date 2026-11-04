@@ -162,9 +162,15 @@ static func add(c: Dictionary, id: String, until: String = "long_rest") -> void:
 ## Lifts a condition from every source.
 static func remove(c: Dictionary, id: String) -> void:
 	var list := effects(c)
+	var gone: Array[Dictionary] = []
 	for e: Dictionary in list.duplicate():
 		if str(e.get("condition", "")) == id:
 			list.erase(e)
+			gone.append(e)
+	for e: Dictionary in gone:  # and what lasts only with it (blinded while poisoned, v0.8.4.28.5), as remove_effect does
+		for o: Dictionary in list.duplicate():
+			if str(o.get("with", "")) == id and str(o.get("by", "")) == str(e.get("by", "")):
+				list.erase(o)
 	_sync(c)
 
 
@@ -670,8 +676,11 @@ static func boon_text(data: Dictionary, e: Dictionary) -> String:
 		parts.append("увеличение: +1к4 к урону оружием, преимущество на проверки Силы")
 	if e.has("coat"):
 		var co: Dictionary = e["coat"]
-		parts.append("яд на оружии: %s %s, спасбросок %s Сл %d" % [str(co["dice"]).replace("d", "к"), str(data["misc"]["damage_types"].get(str(co["type"]), co["type"])),
-			CombatRules.ab_name(str(co["save"])), int(co["dc"])])
+		if co.has("dice"):
+			parts.append("яд на оружии: %s %s, спасбросок %s Сл %d" % [str(co["dice"]).replace("d", "к"), str(data["misc"]["damage_types"].get(str(co["type"]), co["type"])),
+				CombatRules.ab_name(str(co["save"])), int(co["dc"])])
+		if co.has("effect"):  # a made liquid's (v0.8.4.28.5)
+			parts.append("на оружии: %s" % MonsterRules.effect_text(data, {"effect": co["effect"]}))
 	return ", ".join(parts)
 
 

@@ -162,7 +162,7 @@ func _reject(reason: String) -> Dictionary:
 ## `new:<key>` of this turn's `make` stands for its id wherever a thing is named (v0.7.63).
 func _made_ids(e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var out := e.duplicate()
-	for k: String in ["condition", "teach_id", "item_id", "reward_item_id"]:
+	for k: String in ["condition", "teach_id", "item_id", "reward_item_id", "liquid"]:
 		if out.get(k) is String:
 			out[k] = MakeRules.resolve(pending, out[k])
 	return out

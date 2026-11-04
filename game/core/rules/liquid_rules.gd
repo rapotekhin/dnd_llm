@@ -518,7 +518,20 @@ static func throw_of(data: Dictionary, id: String) -> Dictionary:
 	if r.is_empty() or not kind(data, str(r["liquid"])).has("throw"):
 		return {}
 	var k := kind(data, str(r["liquid"]))
-	return (k["throw"] as Dictionary).merged({"liquid": r["liquid"], "spills": k.has("puddle")})
+	return (k["throw"] as Dictionary).merged({"liquid": r["liquid"], "spills": k.has("puddle") or (k["throw"] as Dictionary).has("area")})
+
+
+## A thrown liquid's `effect` on every fighter in its area — a square of `area` cells around `at` (v0.8.4.28.5): each its
+## save, as a monster's attack's effect (MonsterRules.apply_effect). Lines.
+static func burst(s: GameSession, data: Dictionary, f: Dictionary, at: Vector2i, fx: Dictionary, name: String, lines: Array[String]) -> void:
+	var n := maxi(1, int(fx.get("area", 1)))
+	var cells := FightGrid.area(s, data, {"type": "cube", "size": n * int(FightGrid.cfg(data)["ft"])}, at, at, false)
+	if not cells.has(at):
+		cells.append(at)
+	for id: String in s.combat.get("order", []):
+		var t := CombatRules.fighter(s, id)
+		if str(t.get("status")) == "active" and FightGrid.in_cells(t, cells):
+			MonsterRules.apply_effect(s, data, f, t, {"name": name, "effect": fx["effect"]}, 0, lines)
 
 
 # --- text -----------------------------------------------------------------------------------------

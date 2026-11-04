@@ -516,6 +516,10 @@ static func _extras(s: GameSession, data: Dictionary, f: Dictionary, t: Dictiona
 			if bool(r["ok"]):
 				lines.append("%s: спасбросок %s — яд не подействовал" % [x["name"], r["text"]])
 				continue
+		if not (x.get("effect", {}) as Dictionary).is_empty():  # a made liquid on the blade (v0.8.4.28.5): a monster's attack's effect
+			MonsterRules.apply_effect(s, data, f, t, {"name": x["name"], "effect": x["effect"]}, 0, lines)
+		if str(x["dice"]).is_empty():
+			continue
 		var add := Sheet.taken(s, data, t, str(x["type"]), CombatRules.roll_dice(s.rng, str(x["dice"]), crit), true, false)
 		lines.append("%s: ещё %d (%s)" % [x["name"], add, data["misc"]["damage_types"].get(str(x["type"]), x["type"])])
 		more.call(add, str(x["type"]))

@@ -601,8 +601,8 @@ static func hit_extras(c: Dictionary, t: Dictionary, weapon_type: String) -> Arr
 		var co: Dictionary = e["coat"]
 		if not (co.get("weapons", [weapon_type]) as Array).has(weapon_type):
 			continue
-		out.append({"dice": str(co["dice"]), "type": str(co["type"]), "name": str(e.get("source", {}).get("name", "")),
-			"save": str(co.get("save", "")), "dc": int(co.get("dc", 0))})
+		out.append({"dice": str(co.get("dice", "")), "type": str(co.get("type", "poison")), "name": str(e.get("source", {}).get("name", "")),
+			"save": str(co.get("save", "")), "dc": int(co.get("dc", 0)), "effect": co.get("effect", {})})
 		co["hits"] = int(co.get("hits", 1)) - 1
 		if int(co["hits"]) <= 0:
 			ConditionRules.remove_effect(c, int(e.get("uid", -1)))
