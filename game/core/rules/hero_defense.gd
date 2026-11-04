@@ -6,7 +6,8 @@ extends RefCounted
 ## gnome — magic against INT / WIS / CHA) and effects (antitoxin); immunity of an elf to magical sleep. What a blow does
 ## next is `Harm` (v0.8.4.13). Tables — rules.hero_effects.
 
-const TAG_NAMES := {"poison": "яд", "charm": "очарование", "fear": "страх", "magic": "магия", "sleep": "сон", "disease": "болезнь"}
+const TAG_NAMES := {"poison": "яд", "charm": "очарование", "fear": "страх", "magic": "магия", "sleep": "сон", "disease": "болезнь",
+	"paralysis": "паралич", "prone": "падение"}
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -15,6 +16,20 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 static func tag_name(tag: String) -> String:
 	return str(TAG_NAMES.get(tag, tag))
+
+
+## The tags of a save against these statuses (rules.hero_effects.cond_tags, v0.8.4.27.4): charmed — charm, prone — prone…
+## `more` — the save's own tags before them («magic»). One string for Sheet.save: «charm,magic».
+static func cond_tags(data: Dictionary, conds: Array, more: Array = []) -> String:
+	var out: Array[String] = []
+	var table: Dictionary = cfg(data)["cond_tags"]
+	for c: Variant in conds:
+		if table.has(str(c)) and not out.has(str(table[c])):
+			out.append(str(table[c]))
+	for t: Variant in more:
+		if not str(t).is_empty() and not out.has(str(t)):
+			out.append(str(t))
+	return ",".join(out)
 
 
 ## A damage type id by its id or Russian name («огонь», «fire»); "" when unknown.

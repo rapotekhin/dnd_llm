@@ -183,7 +183,7 @@ static func breath(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 
 static func _saves(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, a: Dictionary, lines: Array[String]) -> void:
 	var sv: Dictionary = a["save"]
-	var tag := MonsterRules.tag_of(a.get("effect", {}), a)
+	var tag := MonsterRules.tag_of(data, a.get("effect", {}), a)
 	if tag.is_empty() and (a["damage"] as Array).any(func(d: Dictionary) -> bool: return str(d.get("type", "")) == "poison"):
 		tag = "poison"
 	var r := Sheet.save(s, data, t, str(sv["ability"]), int(sv["dc"]), tag)

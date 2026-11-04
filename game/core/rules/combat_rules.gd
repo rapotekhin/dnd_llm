@@ -915,14 +915,8 @@ static func _cast_condition(s: GameSession, data: Dictionary, spell_id: String, 
 
 
 ## What a save against a spell of conditions is against: «charm,magic», for the traits that resist it.
-static func _spell_tag(spell_id: String, conds: Array) -> String:
-	var tags: Array[String] = ["magic"]
-	if spell_id == "charm_person":
-		tags.append("fighting")  # 5e: advantage when you or your companions are fighting it (v0.7.13)
-	for pair: Array in [["charmed", "charm"], ["frightened", "fear"], ["unconscious", "sleep"], ["paralyzed", "paralysis"]]:
-		if conds.has(pair[0]):
-			tags.push_front(str(pair[1]))
-	return ",".join(PackedStringArray(tags))
+static func _spell_tag(data: Dictionary, spell_id: String, conds: Array) -> String:
+	return HeroDefense.cond_tags(data, conds, ["magic", "fighting"] if spell_id == "charm_person" else ["magic"])  # 5e: advantage when fought (v0.7.13)
 
 
 ## The spell's conditions try one target: a word of Command, what keeps them off, the save. Lines into `lines`.
@@ -932,7 +926,7 @@ static func _condition_on(s: GameSession, data: Dictionary, spell_id: String, sp
 	var word := MonsterRules._command_word(s, spec, t)
 	var conds: Array = word.get("conditions", spec["conditions"])
 	var said := " — «%s»" % word["word"] if not word.is_empty() else ""
-	var tag := _spell_tag(spell_id, conds)
+	var tag := _spell_tag(data, spell_id, conds)
 	var no := _resists(s, data, t, spec, conds, tag)
 	if not no.is_empty():
 		lines.append("%s: на %s не действует%s" % [name, t["name"], "" if no == "-" else " — " + no])
@@ -2428,7 +2422,7 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 			var pr := dice_range(str(cspec["pool"]))
 			return {"pool": true, "min": pr[0], "max": pr[1], "condition": conds, "chance": 100, "adv": [], "dis": []}
 		var sab := str(sp["save"]["ability"])
-		var held := Roll.chance_of(s, data, t, {"save": sab, "dc": spell_dc(s), "tag": _spell_tag(spell_id, cspec["conditions"])})
+		var held := Roll.chance_of(s, data, t, {"save": sab, "dc": spell_dc(s), "tag": _spell_tag(data, spell_id, cspec["conditions"])})
 		return {"save": true, "condition": conds, "chance": 100 - held, "adv": [], "dis": [], "immune": not _can_be(data, t, cspec)}
 	var c := s.character
 	var level := int(c.get("level", 1))

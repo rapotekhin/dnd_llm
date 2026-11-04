@@ -462,8 +462,20 @@ static func born_rows(c: Dictionary, data: Dictionary, m: Dictionary) -> Diction
 ## Some feature or trait of `who` lays `key` for good — read off its template when it holds no statuses (a head of an
 ## encounter not yet in a fight).
 static func born(data: Dictionary, who: Dictionary, key: String) -> bool:
+	return born_effects(data, who).any(func(e: Dictionary) -> bool: return e.has(key) and str(e.get("source", {}).get("kind", "")) == BORN)
+
+
+## What its features and traits lay, as statuses: those it holds, or — when it holds none of them yet (a head of an
+## encounter at a meeting) — the rows of its template in their form (v0.8.4.27.4). Read as `ConditionRules.effects`.
+static func born_effects(data: Dictionary, who: Dictionary) -> Array:
+	var held := ConditionRules.effects(who)
+	if held.any(func(e: Dictionary) -> bool: return str(e.get("source", {}).get("kind", "")) == BORN):
+		return held
+	var out: Array = held.duplicate()
 	var rows := born_rows(who, data, Sheet.template(data, who))
-	return rows.values().any(func(r: Dictionary) -> bool: return (r["row"] as Dictionary).has(key))
+	for fid: String in rows:
+		out.append((rows[fid]["row"] as Dictionary).merged({"source": {"kind": BORN, "id": fid, "name": str(rows[fid]["name"])}}))
+	return out
 
 
 # --- what a found thing may be (v0.7.12) -----------------------------------------------------------

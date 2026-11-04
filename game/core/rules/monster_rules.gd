@@ -121,23 +121,14 @@ static func works_on(s: GameSession, data: Dictionary, t: Dictionary, fx: Dictio
 	return not CombatRules.immune_to(data, t, str(fx.get("condition", "")))
 
 
-static func tag_of(fx: Dictionary, a: Dictionary) -> String:
+static func tag_of(data: Dictionary, fx: Dictionary, a: Dictionary) -> String:
 	if fx.has("tag"):
 		return str(fx["tag"])
-	var cond := str(fx.get("condition", ""))
-	var tags: Array[String] = []
-	if cond == "poisoned" or str(fx.get("damage", {}).get("type", "")) == "poison" \
+	var conds := [str(fx.get("condition", ""))]
+	if str(fx.get("damage", {}).get("type", "")) == "poison" \
 			or (a.get("damage", []) as Array).any(func(d: Dictionary) -> bool: return str(d.get("type", "")) == "poison") and fx.has("save"):
-		tags.append("poison")
-	if cond == "charmed":
-		tags.append("charm")
-	if cond == "frightened":
-		tags.append("fear")
-	if cond == "unconscious":
-		tags.append("sleep")
-	if bool(fx.get("magic", false)):
-		tags.append("magic")
-	return ",".join(tags)
+		conds.push_front("poisoned")
+	return HeroDefense.cond_tags(data, conds, ["magic"] if bool(fx.get("magic", false)) else [])
 
 
 ## What a hit (or a failed save of a save action) brings to `t` besides the damage. `dealt` — the damage of the hit (life
@@ -153,7 +144,7 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 		if fx.has("condition"):
 			lines.append("%s: на %s это не действует" % [a["name"], me.get("name", "")])
 		return
-	var tag := tag_of(fx, a)
+	var tag := tag_of(data, fx, a)
 	var failed := true
 	var margin := 0
 	var save_at := -1
@@ -223,12 +214,12 @@ static func _lay(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 	var e := {"condition": cond, "source": _source(f, a), "by": str(f["id"]),
 		"ends": ConditionRules.ends_for(s, data, duration) if not duration.is_empty() else {}}
 	if bool(fx.get("repeat", false)) and fx.has("save"):
-		e["save"] = {"ability": str(fx["save"]["ability"]), "dc": int(fx["save"]["dc"]), "tag": tag_of(fx, a), "repeat": true,
+		e["save"] = {"ability": str(fx["save"]["ability"]), "dc": int(fx["save"]["dc"]), "tag": tag_of(data, fx, a), "repeat": true,
 			"once": bool(fx.get("repeat_once", false))}
 		if fx.has("escalate"):
 			e["escalate"] = fx["escalate"]
 	elif bool(fx.get("repeat", false)) and str(a.get("kind")) == "save":
-		e["save"] = {"ability": str(a["save"]["ability"]), "dc": int(a["save"]["dc"]), "tag": tag_of(fx, a), "repeat": true}
+		e["save"] = {"ability": str(a["save"]["ability"]), "dc": int(a["save"]["dc"]), "tag": tag_of(data, fx, a), "repeat": true}
 	if fx.has("escape_dc"):
 		e["escape_dc"] = int(fx["escape_dc"])
 	if bool(fx.get("wake", false)):

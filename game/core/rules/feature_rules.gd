@@ -257,7 +257,7 @@ static func _open_hand(s: GameSession, data: Dictionary, f: Dictionary, t: Dicti
 	var it := str(Sheet.holder(s, t).get("name", ""))
 	match how:
 		"topple":
-			var ok := Sheet.saved(s, data, t, "dex", dc)
+			var ok := Sheet.saved(s, data, t, "dex", dc, HeroDefense.cond_tags(data, ["prone"]))
 			if not ok and not CombatRules.immune_to(data, t, "prone"):
 				CombatRules._hold(t, "prone")
 			lines.append("Открытая ладонь: %s — Лов против Сл %d — %s" % [it, dc, "устоял" if ok else "сбит с ног"])

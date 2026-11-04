@@ -862,7 +862,7 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 	var lines: Array[String] = []
 	if str(f.get("status")) != "active" or str(z["save"]).is_empty():
 		return lines
-	var ok := Sheet.saved(s, data, f, str(z["save"]), int(z["dc"]), str(z.get("tag", "magic")))
+	var ok := Sheet.saved(s, data, f, str(z["save"]), int(z["dc"]), HeroDefense.cond_tags(data, [str(z.get("cond", ""))], [str(z.get("tag", "magic"))]))
 	if ok:
 		lines.append("%s: %s — спасбросок %s успех" % [z["name"], f["name"], CombatRules.ab_name(str(z["save"]))])
 		if bool(z.get("spare_saved", false)):  # Horrific Appearance: one who saved is not afraid of it again

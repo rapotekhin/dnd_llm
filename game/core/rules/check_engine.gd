@@ -38,10 +38,11 @@ static func situation(s: GameSession, data: Dictionary, who: Dictionary, spec: D
 			if Sheet.raging(s, who):
 				adv.append("ярость")
 	var ab := str(data["rules"]["skills"].get(skill, spec.get("ability", "")))
-	for e: Dictionary in ConditionRules.effects(me):
+	for e: Dictionary in ItemRules.born_effects(data, me):
 		if str(e.get("ability_adv", "")) == ab and not ab.is_empty():  # Enhance Ability (v0.7.13.3)
 			_add(adv, str(e.get("source", {}).get("name", "")))
-		if not skill.is_empty() and (str(e.get("check_adv", "")) == skill or (bool(e.get("enlarged", false)) and skill == "athletics")):
+		if not skill.is_empty() and (str(e.get("check_adv", "")) == skill or (bool(e.get("enlarged", false)) and skill == "athletics")) \
+				and Cond.holds(s, e, data):  # Stone Camouflage: only where it is rocky (v0.8.4.27.4)
 			_add(adv, str(e.get("source", {}).get("name", "зелье")))
 	if Sheet.is_hero(who):
 		_add(adv, PetRules.helper(s, data, skill))  # v0.7.43: a dog's nose, a hawk's eye — the hero's pets
