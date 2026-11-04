@@ -202,7 +202,7 @@ def compose(spec: ImageModel, params: ImageParams, prompt: str, negative: str) -
     neg = ", ".join(x for x in (_tags(neg), "" if params.negative_only else _tags(negative)) if x)
     if adult:
         neg = _without(neg, NSFW_NEG)
-    return joined, ", ".join(x for x in (neg) if x)
+    return joined, neg
 
 
 def _without(text: str, tags: tuple[str, ...]) -> str:
