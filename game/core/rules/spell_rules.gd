@@ -141,6 +141,11 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 
 
 ## A spell cast over minutes (Prayer of Healing, rituals): not in a fight (v0.7.13).
+## A spell only the master tells, by words (rules.spellcasting.by_master, v0.8.4.28.4): no road of the engine.
+static func by_master(data: Dictionary, spell_id: String) -> bool:
+	return (data["rules"]["spellcasting"].get("by_master", []) as Array).has(spell_id)
+
+
 static func long_cast(sp: Dictionary) -> bool:
 	var t := str(sp.get("casting_time", ""))
 	return t.contains("мин") or t.contains("час")

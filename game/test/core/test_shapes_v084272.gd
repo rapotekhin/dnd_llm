@@ -71,12 +71,6 @@ func test_the_way_back_is_offered_once() -> void:
 	assert_array(forms).contains_exactly_in_any_order(["human", ""])
 
 
-func test_a_doppelganger_has_no_forms_on_the_field() -> void:
-	var s := ChecklistProbe.session(data)
-	var f := ChecklistProbe.fight(s, data, "doppelganger")
-	assert_bool(Acts.one("shape").shown(s, data, f)).is_false()
-
-
 func test_mimicry_is_told_by_insight_against_its_own_dc() -> void:
 	var s := ChecklistProbe.session(data)
 	ChecklistProbe.fight(s, data, "raven")

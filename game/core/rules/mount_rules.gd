@@ -2,7 +2,7 @@ class_name MountRules
 extends RefCounted
 ## Mounts, pack animals and vehicles (roadmap v0.7.42). A beast of the hero (PropertyRules: a creature of the room,
 ## `tame`, owned by the hero) with `pack` carries a pack — `cr["pack"]` {item_id: qty}, its capacity by 5e: Strength
-## × 15 × the size's multiplier (`burden` — a size larger); what lies in it does not weigh on the hero. A vehicle
+## × 15 × the size's multiplier (a size larger for a template with the trait `burden_trait`); what lies in it does not weigh on the hero. A vehicle
 ## (rules.mounts.vehicles) is hitched to a beast that pulls enough (`pull`) and goes with it: `cr["cart"]` {vehicle,
 ## contents}. Both are containers of the room while the beast stands here: «pack:<id>», «cart:<id>» (ContainerRules).
 ## Where a beast cannot go (an indoor room without `stable` / `mounts`, `no_mounts`, a terrain of no_mount_terrains;
@@ -34,7 +34,7 @@ static func capacity(data: Dictionary, cr: Dictionary) -> float:
 		return 0.0
 	var m: Dictionary = data["monsters"].get(str(cr["monster"]), {})
 	var size := str(m.get("size", "medium"))
-	if bool(a.get("burden", false)):
+	if (m.get("traits", []) as Array).any(func(t: Dictionary) -> bool: return str(t.get("id", "")) == str(cfg(data)["burden_trait"])):
 		size = str(cfg(data)["size_up"].get(size, size))
 	return float(m.get("abilities", {}).get("str", 10)) * 15.0 * float(cfg(data)["size_mult"].get(size, 1))
 

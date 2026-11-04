@@ -26,6 +26,7 @@ func _hit_until(s: GameSession, f: Dictionary, t: Dictionary, b: Dictionary, lin
 
 
 func test_a_creature_glows_by_its_trait() -> void:
+	data["monsters"]["will_o_wisp"] = TestUtils.uncut("monsters", "will_o_wisp")  # out of the game (v0.8.4.28.4); its road stays
 	var s := ChecklistProbe.session(data)
 	var azer := ChecklistProbe.fight(s, data, "azer")
 	assert_int(SightRules.light(s, data, azer)).is_equal(4)
@@ -128,6 +129,7 @@ func test_an_ally_averts_its_eyes_by_itself() -> void:
 
 
 func test_a_ghast_s_stench_poisons_those_beside_but_not_the_ghast() -> void:
+	data["monsters"]["ghast"] = TestUtils.uncut("monsters", "ghast")  # out of the game (v0.8.4.28.4); its road stays
 	var s := ChecklistProbe.session(data)
 	var ghast := ChecklistProbe.fight(s, data, "ghast")
 	var z := _aura(s, "stench")

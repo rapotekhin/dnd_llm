@@ -59,6 +59,7 @@ func test_a_web_walker_is_neither_held_nor_slowed() -> void:
 
 
 func test_a_spider_comes_into_the_fight_among_its_webs() -> void:
+	data["monsters"]["phase_spider"] = TestUtils.uncut("monsters", "phase_spider")  # out of the game (v0.8.4.28.4); its road stays
 	var s := ChecklistProbe.session(data)
 	var f := ChecklistProbe.fight(s, data, "giant_wolf_spider", true)
 	var webs := SpellEffects.zones(s).filter(func(z: Dictionary) -> bool: return str(z["spell"]) == "web")

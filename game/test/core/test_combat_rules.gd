@@ -36,7 +36,7 @@ func _fight(s: GameSession, foes: Array) -> void:
 
 
 func test_monsters_come_from_the_srd_with_russian_names() -> void:
-	assert_int(data["monsters"].size()).is_greater(150)
+	assert_int(data["monsters"].size()).is_greater(140)  # less what is out of the game (rules.off)
 	var g: Dictionary = data["monsters"]["goblin"]
 	assert_str(g["name"]).is_equal("Гоблин")
 	assert_int(int(g["ac"])).is_equal(15)

@@ -259,6 +259,7 @@ func test_darkvision_does_not_pierce_magical_darkness() -> void:
 
 
 func test_senses_of_monsters_by_the_srd() -> void:
+	data["monsters"]["bat"] = TestUtils.uncut("monsters", "bat")  # out of the game (v0.8.4.28.4); its road stays
 	var s := _hero("fighter_aira")
 	var foes := _ordered(_fight(s, [{"monster": "bat", "col": 1}, {"monster": "imp", "col": 2}, {"monster": "goblin", "col": 2}]), ["bat", "imp", "goblin"])
 	var hero := CombatRules.player(s)
@@ -369,6 +370,7 @@ func test_a_blind_foe_shoots_but_does_not_catch_the_hero() -> void:
 
 
 func test_blindsight_works_in_spite_of_blindness() -> void:
+	data["monsters"]["bat"] = TestUtils.uncut("monsters", "bat")  # out of the game (v0.8.4.28.4); its road stays
 	var s := _hero("fighter_aira")
 	var f := _fight(s, [{"monster": "bat", "col": 1}])[0]
 	(f["conditions"] as Array).append("blinded")

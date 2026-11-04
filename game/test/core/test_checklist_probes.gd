@@ -73,7 +73,7 @@ func test_a_row_is_its_worst_step() -> void:
 func test_a_monster_immune_to_a_condition_never_gets_it() -> void:
 	var data := TestUtils.data()
 	var s := TestUtils.new_session()
-	var m := ChecklistProbe.fight(s, data, "animated_armor")
+	var m := ChecklistProbe.fight(s, data, "skeleton")
 	ConditionRules.impose(s, data, {"condition": "poisoned", "ends": {}, "source": {"kind": "dev", "name": "проба"}}, m)
 	assert_bool(ConditionRules.has(m, "poisoned")).is_false()
 	var g := ChecklistProbe.fight(TestUtils.new_session(), data, "goblin")

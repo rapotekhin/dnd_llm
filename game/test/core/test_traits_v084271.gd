@@ -72,6 +72,7 @@ func test_false_appearance_hides_a_head_with_no_roll() -> void:
 
 
 func test_horrific_appearance_frightens_a_humanoid_who_sees_the_hag() -> void:
+	data["monsters"]["sea_hag"] = TestUtils.uncut("monsters", "sea_hag")  # out of the game (v0.8.4.28.4); its road stays
 	var s := _hero()
 	var hag := ChecklistProbe.fight(s, data, "sea_hag")
 	var aura: Array = SpellEffects.zones(s).filter(func(z: Dictionary) -> bool: return str(z["spell"]) == "aura:horrific_appearance")
@@ -90,6 +91,7 @@ func test_horrific_appearance_frightens_a_humanoid_who_sees_the_hag() -> void:
 
 
 func test_horrific_appearance_spares_a_beast_and_one_who_saved() -> void:
+	data["monsters"]["sea_hag"] = TestUtils.uncut("monsters", "sea_hag")  # out of the game (v0.8.4.28.4); its road stays
 	var s := _hero()
 	ChecklistProbe.fight(s, data, "sea_hag")
 	var z: Dictionary = SpellEffects.zones(s).filter(func(x: Dictionary) -> bool: return str(x["spell"]) == "aura:horrific_appearance")[0]

@@ -39,10 +39,9 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 ## Whether the spell goes at `to` now, whatever gives it — a slot, a template, a scroll or a wand.
 func target_why(s: GameSession, data: Dictionary, f: Dictionary, to: String, spell: String) -> String:
 	var sp: Dictionary = data["spells"][spell]
-	if SpellRules.long_cast(sp):
-		return "COMBAT_SPELL_TOO_LONG"  # v0.7.13: minutes to cast — not in a fight (Prayer of Healing)
-	if SpellEffects.spec(data, spell).has("reaction"):
-		return "COMBAT_REACTION_SPELL"  # Shield, Counterspell: cast in the window of a foe's turn (v0.7.13.7)
+	var never := not_now(data, spell)
+	if not never.is_empty():
+		return never
 	if (sp.get("components", []) as Array).has("V") and SpellEffects.silenced(s, data, f):
 		return "COMBAT_SILENCED"  # v0.7.13.6
 	if FightGrid.is_aim(to):  # a square, for what covers an area
@@ -98,6 +97,16 @@ func _countered(s: GameSession, data: Dictionary, f: Dictionary, to: String, how
 	return pol == "always" and SpellEffects.counter(s, data, f, spell, circle, lines)
 
 
+## Why a spell is never a turn's act, whoever casts it: minutes to cast (Prayer of Healing, v0.7.13), a reaction cast
+## in the window of a foe's turn (Shield, v0.7.13.7), the master's words alone (Minor Illusion, v0.8.4.28.4).
+static func not_now(data: Dictionary, spell: String) -> String:
+	if SpellRules.long_cast(data["spells"][spell]):
+		return "COMBAT_SPELL_TOO_LONG"
+	if SpellEffects.spec(data, spell).has("reaction"):
+		return "COMBAT_REACTION_SPELL"
+	return "COMBAT_SPELL_BY_MASTER" if SpellRules.by_master(data, spell) else ""
+
+
 func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dictionary]) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if Sheet.is_hero(f) or SpellEffects.silenced(s, data, f):
@@ -107,7 +116,7 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 		var spell := str(o["id"])
 		var sp: Dictionary = data["spells"][spell]
 		var how := {"spell": spell, "slot": int(o["slot"]), "per_day": bool(o.get("per_day", false))}
-		if SpellRules.long_cast(sp) or SpellEffects.spec(data, spell).has("reaction") or (held and bool(sp.get("concentration", false))):
+		if not not_now(data, spell).is_empty() or (held and bool(sp.get("concentration", false))):
 			continue
 		if CombatRules.short_of(f, cost(s, data, f, how), 1).is_empty():
 			out.append_array(_ways(s, data, f, how, targets))

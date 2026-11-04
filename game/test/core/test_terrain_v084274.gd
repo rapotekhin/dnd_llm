@@ -16,6 +16,7 @@ func _stealth_adv(s: GameSession, who: Dictionary) -> Array:
 
 
 func test_a_grimlock_hides_better_among_stones() -> void:
+	data["monsters"]["grimlock"] = TestUtils.uncut("monsters", "grimlock")  # out of the game (v0.8.4.28.4); its road stays
 	var s := ChecklistProbe.session(data)
 	var head := {"monster": "grimlock", "name": "Гримлок"}  # a head at a meeting: no statuses yet
 	s.room_id = "mine-gallery"

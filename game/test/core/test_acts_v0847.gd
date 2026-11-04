@@ -200,6 +200,7 @@ func test_a_new_row_of_the_moves_is_a_way_for_everybody() -> void:
 
 
 func test_swimming_goes_only_on_water_for_one_with_no_land_speed() -> void:
+	data["monsters"]["reef_shark"] = TestUtils.uncut("monsters", "reef_shark")  # out of the game (v0.8.4.28.4); its road stays
 	var fish: Dictionary = data["monsters"]["reef_shark"]
 	assert_int(int(fish["speed"])).is_equal(0)
 	assert_int(Move.feet_of(data, fish)).is_equal(int(fish["swim"]))

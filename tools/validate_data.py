@@ -200,11 +200,12 @@ def load(path: Path) -> dict:
 def known() -> dict[str, set[str]]:
     races = load(DATA / "srd" / "races.json")
     classes = load(DATA / "srd" / "classes.json")
+    off = load(DATA / "rules.json").get("off", {})  # v0.8.4.28.4: out of the game, as Catalog.cut takes them out
     return {
         "races": set(races["races"]), "subraces": set(races["subraces"]), "classes": set(classes["classes"]),
         "subclasses": set(classes["subclasses"]), "backgrounds": set(load(DATA / "srd" / "backgrounds.json")),
-        "items": set(load(DATA / "items.json")["catalog"]),
-        "monsters": set(load(DATA / "srd" / "monsters.json")),
+        "items": set(load(DATA / "items.json")["catalog"]) - set(off.get("items", [])),
+        "monsters": set(load(DATA / "srd" / "monsters.json")) - set(off.get("monsters", [])),
         "languages": set(load(DATA / "srd" / "misc.json")["languages"]) | set(load(DATA / "rules.json")["languages"]["secret"]),
         "spells": set(load(DATA / "srd" / "spells.json")),
     }

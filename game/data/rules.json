@@ -1,4 +1,10 @@
 {
+	"off": {
+		"_doc": "Вне игры (v0.8.4.28.4, Catalog.cut): записи остаются в данных, но движок их не читает — их нельзя дать, продать, призвать, встретить или выбрать. Вещи, монстры и умения, у которых нет механики (чек-лист: «нет механики» или только слова мастера). Пакет мира с такой ссылкой не проходит проверку.",
+		"items": ["climbers_kit"],
+		"monsters": ["animated_armor", "bat", "black_dragon_wyrmling", "bronze_dragon_wyrmling", "crab", "crocodile", "darkmantle", "doppelganger", "dryad", "flying_sword", "gelatinous_cube", "ghast", "giant_bat", "giant_crab", "giant_frog", "giant_octopus", "giant_sea_horse", "giant_toad", "gibbering_mouther", "gold_dragon_wyrmling", "gray_ooze", "green_dragon_wyrmling", "green_hag", "grimlock", "homunculus", "hunter_shark", "killer_whale", "lemure", "lion", "lizardfolk", "manticore", "merfolk", "merrow", "mimic", "minotaur", "nightmare", "ochre_jelly", "octopus", "phase_spider", "plesiosaurus", "pseudodragon", "quipper", "reef_shark", "rug_of_smothering", "rust_monster", "sahuagin", "sea_hag", "shadow", "specter", "swarm_of_bats", "swarm_of_quippers", "will_o_wisp"],
+		"features": ["eldritch_invocation_eyes_of_the_rune_keeper", "eldritch_invocation_gaze_of_two_minds"]
+	},
 	"dc_tiers": {
 		"very_easy": 5,
 		"easy": 10,
@@ -420,7 +426,7 @@
 		"animals": {
 			"riding_horse": {"price_cp": 7500, "feed_cp_day": 5, "travel_mult": 0.5, "text": "Верхом дорога между местами вдвое короче", "pack": true, "pull": 1},
 			"draft_horse": {"price_cp": 5000, "feed_cp_day": 5, "travel_mult": 0.75, "text": "Дорога на четверть короче", "pack": true, "pull": 2},
-			"mule": {"price_cp": 800, "feed_cp_day": 5, "travel_mult": 0.75, "text": "Дорога на четверть короче", "pack": true, "pull": 1, "burden": true},
+			"mule": {"price_cp": 800, "feed_cp_day": 5, "travel_mult": 0.75, "text": "Дорога на четверть короче", "pack": true, "pull": 1},
 			"mastiff": {"price_cp": 2500, "feed_cp_day": 2, "fights": true, "text": "Идёт с вами — и в бой", "anywhere": true},
 			"goat": {"price_cp": 100, "feed_cp_day": 2, "produce": {"goat_milk": 1}, "text": "Даёт молоко у вас дома"}
 		},
@@ -1546,6 +1552,8 @@
 		}
 	},
 	"spellcasting": {
+		"_by_master": "Заклинания только через диалог с мастером (v0.8.4.28.4, SpellRules.by_master): у движка для них нет дороги, в бою не творятся, в описании сказано об этом.",
+		"by_master": ["augury", "druidcraft", "illusory_script", "magic_mouth", "major_image", "message", "minor_illusion", "prestidigitation", "silent_image", "speak_with_dead", "speak_with_plants", "thaumaturgy"],
 		"spellbook_start": 6,
 		"spellbook_per_level": 2,
 		"prepared_level_divisor": {
@@ -5020,8 +5028,9 @@
 		"make": {"per_day": 2}
 	},
 	"mounts": {
-		"_doc": "Ездовые и вьючные (v0.7.42, MountRules). Животное героя с `pack` (property.animals) несёт вьюк: ёмкость по 5e — Сила × 15 × size_mult размера (burden — на размер больше), вещи вьюка не в весе героя. Повозка (vehicles) запрягается в животное с `pull` не меньше своего и едет с ним: свой контейнер `capacity_lb`. Куда нельзя: комната под крышей (indoor) без метки `stable` / `mounts`, метка `no_mounts`, местность из no_mount_terrains без `mounts`; повозка — ещё и только по местности cart_terrains или с меткой `road`. Животное, что не прошло, ждёт у входа и снова идёт с героем, когда он вернётся. Без присмотра вне своего места: корма нет (голод → уходит через property.starve_days), и каждый день steal_pct_day — уведут вместе с вьюком. Аренда у барышника — rent_pct_day цены в день на rent_days, по сроку животное уходит к хозяину; продажа своего — sell_pct цены. make — что мастер может поставить барышнику (`stock` с `animal`): зверь SRD этих размеров и CR, цена по размеру, путь по скорости.",
+		"_doc": "Ездовые и вьючные (v0.7.42, MountRules). Животное героя с `pack` (property.animals) несёт вьюк: ёмкость по 5e — Сила × 15 × size_mult размера (у шаблона с чертой burden_trait — на размер больше), вещи вьюка не в весе героя. Повозка (vehicles) запрягается в животное с `pull` не меньше своего и едет с ним: свой контейнер `capacity_lb`. Куда нельзя: комната под крышей (indoor) без метки `stable` / `mounts`, метка `no_mounts`, местность из no_mount_terrains без `mounts`; повозка — ещё и только по местности cart_terrains или с меткой `road`. Животное, что не прошло, ждёт у входа и снова идёт с героем, когда он вернётся. Без присмотра вне своего места: корма нет (голод → уходит через property.starve_days), и каждый день steal_pct_day — уведут вместе с вьюком. Аренда у барышника — rent_pct_day цены в день на rent_days, по сроку животное уходит к хозяину; продажа своего — sell_pct цены. make — что мастер может поставить барышнику (`stock` с `animal`): зверь SRD этих размеров и CR, цена по размеру, путь по скорости.",
 		"size_mult": {"tiny": 0.25, "small": 0.5, "medium": 1, "large": 2, "huge": 4, "gargantuan": 8},
+		"burden_trait": "beast_of_burden",
 		"size_up": {"tiny": "small", "small": "medium", "medium": "large", "large": "huge", "huge": "gargantuan"},
 		"vehicles": {
 			"cart": {"name": "Телега", "capacity_lb": 800, "pull": 1, "price_cp": 1500},

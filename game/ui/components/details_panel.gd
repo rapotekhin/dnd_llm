@@ -185,6 +185,8 @@ static func spell_text(data: Dictionary, id: String, slot: int = 0) -> String:
 		s.get("duration", ""), (" · " + TranslationServer.translate("DETAILS_CONCENTRATION")) if bool(s.get("concentration", false)) else ""]]
 	if not str(s.get("desc", "")).is_empty():
 		lines.append(str(s["desc"]))
+	if SpellRules.by_master(data, id):
+		lines.append(TranslationServer.translate("DETAILS_BY_MASTER"))
 	var grown := SpellRules.at_slot(data, id, slot)  # v0.7.22.19: what the chosen slot gives
 	if not grown.is_empty():
 		lines.append(grown)

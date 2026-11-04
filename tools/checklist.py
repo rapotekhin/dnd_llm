@@ -73,10 +73,15 @@ class Data:
         self.traits = races["traits"]
         self.misc = load(srd / "misc.json")
         self.rules = load(DATA / "rules.json")
+        off = self.rules.get("off", {})  # v0.8.4.28.4: out of the game, as Catalog.cut takes them out
+        for gone in off.get("monsters", []):
+            self.monsters.pop(gone, None)
+        for gone in off.get("features", []):
+            self.features.pop(gone, None)
         pack = load(DATA / "worlds" / world / "pack.json")
         own = load(DATA / "worlds" / world / "world.json").get("items", {})
         catalog = load(DATA / "items.json")["catalog"]
-        for gone in pack.get("rules", {}).get("items_exclude", []):
+        for gone in pack.get("rules", {}).get("items_exclude", []) + off.get("items", []):
             catalog.pop(gone, None)
         self.items = {k: dict(v, source="SRD") for k, v in catalog.items()}
         self.items.update({k: dict(v, source="пакет " + world) for k, v in own.items()})  # WorldPack.apply_rules

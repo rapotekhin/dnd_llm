@@ -69,6 +69,7 @@ func test_the_import_keeps_the_effects() -> void:
 
 
 func test_a_flying_sword_moves_by_its_fly() -> void:  # SRD: speed 0 ft, fly 50 ft (hover) — v0.7.49.3
+	data["monsters"]["flying_sword"] = TestUtils.uncut("monsters", "flying_sword")  # out of the game (v0.8.4.28.4); its road stays
 	var sword: Dictionary = data["monsters"]["flying_sword"]
 	assert_int(Move.feet_of(data, sword)).is_equal(50)
 	assert_str(Move.text(data, sword)).is_equal("0 фт, полёт 50 фт")
@@ -146,6 +147,7 @@ func test_spider_poison_that_drops_the_hero_leaves_them_paralysed_and_stable() -
 
 
 func test_life_drain_lowers_the_maximum_until_a_long_rest() -> void:
+	data["monsters"]["specter"] = TestUtils.uncut("monsters", "specter")  # out of the game (v0.8.4.28.4); its road stays
 	var s := _session()
 	var f := _fight(s, "specter")
 	_weak(s)
@@ -254,6 +256,7 @@ func test_magic_weapons_pierce_resistance_to_nonmagical_attacks() -> void:
 
 
 func test_immune_foes_cannot_be_shoved_down() -> void:
+	data["monsters"]["ochre_jelly"] = TestUtils.uncut("monsters", "ochre_jelly")  # out of the game (v0.8.4.28.4); its road stays
 	var s := _session()
 	var f := _fight(s, "ochre_jelly")
 	assert_bool(CombatRules.immune_to(data, f, "prone")).is_true()

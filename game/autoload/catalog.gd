@@ -38,7 +38,27 @@ static func load_all() -> Dictionary:
 	var out := {}
 	for key: String in FILES:
 		out[key] = load_json(FILES[key])
+	cut(out)
 	return out
+
+
+## What the engine does not read (v0.8.4.28.4): `rules.off` names items, monsters and class features kept in the data
+## but out of the game — none has a mechanic. They leave the base here, before any pack, so nothing gives, sells,
+## summons, meets or offers them, and a pack that names one fails its check.
+static func cut(out: Dictionary) -> void:
+	var off: Dictionary = out["rules"].get("off", {})
+	for id: Variant in off.get("items", []):
+		out["items"]["catalog"].erase(str(id))
+	for id: Variant in off.get("monsters", []):
+		out["monsters"].erase(str(id))
+	var gone: Array = off.get("features", [])
+	var features: Dictionary = out["classes"]["features"]
+	for id: Variant in gone:
+		features.erase(str(id))
+	for f: Dictionary in features.values():
+		var opts: Variant = f.get("options", {})
+		if opts is Dictionary and opts.has("from"):
+			opts["from"] = (opts["from"] as Array).filter(func(x: Variant) -> bool: return not gone.has(x))
 
 
 static func load_json(path: String) -> Dictionary:

@@ -1109,7 +1109,9 @@ static func spell(data: Dictionary, id: String) -> Dictionary:
 	var fx := SpellEffects.spec(data, id)
 	var slot := maxi(1, int(sp.get("level", 0))) if int(sp.get("level", 0)) > 0 else 0
 	var in_fight := ""
-	if fx.has("reaction"):
+	if SpellRules.by_master(data, id):
+		steps.append("· в бою не колдуется: только через диалог с мастером")
+	elif fx.has("reaction"):
 		in_fight = _reaction(data, id, steps)
 	elif SpellRules.long_cast(sp):
 		steps.append("· в бою не колдуется: время накладывания — минуты")
@@ -1121,8 +1123,10 @@ static func spell(data: Dictionary, id: String) -> Dictionary:
 	elif in_fight.is_empty():
 		if CombatRules.is_engine_spell(data, id) or not ActionRules.way(data, id, true).is_empty():
 			check(steps, false, "движок знает заклинание, но проба ничего не изменила")
+		elif SpellRules.by_master(data, id):
+			master(steps, "только через диалог с мастером (rules.spellcasting.by_master), так и сказано в описании")
 		else:
-			master(steps, "движок не считает: в бою и вне боя — рассказ мастера по описанию")
+			check(steps, false, "движок не считает, а в rules.spellcasting.by_master его нет")
 	else:
 		steps.append("· вне боя — рассказ мастера")
 	return result(steps)
@@ -1480,7 +1484,7 @@ static func _monster_spells(data: Dictionary, mid: String, steps: Array[String])
 	var can: Array = MonsterRules.castable(data, f).map(func(o: Dictionary) -> String: return str(o["id"]))
 	var missing := listed.filter(func(id: String) -> bool: return not data["spells"].has(id))
 	if not missing.is_empty():
-		gap(steps, "заклинаний нет в игре: %s" % ", ".join(missing))
+		steps.append("· заклинаний нет в игре, у него их нет: %s" % ", ".join(missing))
 	check(steps, not can.is_empty(), "колдует в бою: %d из %d" % [can.size(), listed.size()], "ничего")
 	var worked: Array[String] = []
 	var idle: Array[String] = []

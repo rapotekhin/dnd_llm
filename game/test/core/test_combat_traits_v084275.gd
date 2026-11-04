@@ -67,6 +67,7 @@ func test_steadfast_while_an_ally_is_seen_near() -> void:
 
 
 func test_a_grappler_strikes_the_held_with_advantage() -> void:
+	data["monsters"]["mimic"] = TestUtils.uncut("monsters", "mimic")  # out of the game (v0.8.4.28.4); its trait's road stays
 	var s := ChecklistProbe.session(data)
 	var mimic := _fight(s, [{"monster": "mimic", "x": 41, "y": 30}])[0]
 	var p := CombatRules.player(s)
@@ -143,6 +144,7 @@ func test_a_template_caster_spends_and_rests_its_slots() -> void:
 
 
 func test_damage_transfer_hurts_the_held() -> void:
+	data["monsters"]["rug_of_smothering"] = TestUtils.uncut("monsters", "rug_of_smothering")  # out of the game (v0.8.4.28.4); its road stays
 	var s := ChecklistProbe.session(data)
 	var rug := _fight(s, [{"monster": "rug_of_smothering", "x": 41, "y": 30}])[0]
 	rug["hp"] = 100

@@ -293,6 +293,7 @@ COMBAT_RECKLESS_LATE,Безрассудно — только до первой �
 COMBAT_ROUND,Раунд {n}
 COMBAT_SILENCED,В Тишине не произнести заклинание
 COMBAT_SPELL_TOO_LONG,Это заклинание творят минутами — не в бою
+COMBAT_SPELL_BY_MASTER,Это заклинание — только через диалог с мастером
 COMBAT_SURPRISED,Застигнут врасплох
 COMBAT_TAB_COMMON,Общие
 COMBAT_TAB_FEATURES,Умения
@@ -330,6 +331,7 @@ DEATH_WHO,"{name} — {race}, {class}, {level} уровень"
 DETAILS_CANTRIP,Заговор
 DETAILS_CIRCLE,{n} круг
 DETAILS_CONCENTRATION,концентрация
+DETAILS_BY_MASTER,Только через диалог с мастером: опишите словами, что делаете, и мастер расскажет, что вышло. Кнопки в бою у этого заклинания нет.
 DETAILS_HINT,Наведите — здесь появится описание; закрепить его — замок в углу или правая кнопка мыши
 DETAILS_PIN,Закрепить
 DETAILS_PIN_TIP,"Закрепить это описание: наведение на другое его не сменит"

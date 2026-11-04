@@ -30,6 +30,12 @@ static func base() -> Dictionary:
 	return preload("res://autoload/catalog.gd").load_all()
 
 
+## A record out of the game (rules.off, v0.8.4.28.4) as its file keeps it: a test of a road that stays in the engine.
+static func uncut(kind: String, id: String) -> Dictionary:
+	var raw: Dictionary = preload("res://autoload/catalog.gd").load_json(preload("res://autoload/catalog.gd").FILES[kind])
+	return raw.get(id, {})
+
+
 ## The start pack's first ready-made character (Айра, fighter 1).
 static func preset_choices() -> Dictionary:
 	return CharacterBuilder.preset_choices(data()["presets"][0])
