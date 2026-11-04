@@ -92,6 +92,8 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 func _fits(s: GameSession, data: Dictionary, f: Dictionary, w: Dictionary) -> bool:
 	if w.has("below") and float(f.get("hp", 0)) >= float(w["below"]) * float(f.get("max_hp", 1)):
 		return false
+	if bool(w.get("near", false)) and _beside(s, f).is_empty():
+		return false
 	if not w.has("foes"):
 		return true
 	for one: String in CombatRules.foes_of(s, f):

@@ -64,6 +64,7 @@ static func give_class(data: Dictionary, f: Dictionary, spec: Dictionary) -> voi
 		f["features"] = feats
 		if not m.has("spellcasting"):
 			f["slots_max"] = CharacterRules.slots_max(f, data)
+	MonsterRules.own_slots(data, f)
 	var word := str(npc.get("race", "")).to_lower()
 	for id: String in data["races"]["races"]:
 		if not word.is_empty() and str(data["races"]["races"][id].get("name", "")).to_lower() == word:
@@ -395,7 +396,7 @@ static func _holds(c: Dictionary, data: Dictionary, a: Dictionary) -> bool:
 			return false
 	if a.has("stock") and not Stock.owned(c, data).has(str(a["stock"])):
 		return false
-	return not a.has("trait") or CharacterRules.has_trait(c, str(a["trait"]))
+	return not a.has("trait") or MonsterRules.has_trait(data, c, str(a["trait"]))
 
 
 ## What the act takes when it is taken: a row with `spend` false and a spell going on pay by themselves.
@@ -524,6 +525,8 @@ static func _do(s: GameSession, data: Dictionary, f: Dictionary, fx: Dictionary,
 		"status":  # One with Shadows (v0.8.4.26.1)
 			var st: Dictionary = (fx["status"] as Dictionary).duplicate(true)
 			st["source"] = {"kind": "feature", "name": str(fx.get("name", ""))}
+			if str(st.get("ends", {}).get("turn", "")) == "self":  # until its next turn (Divine Eminence, v0.8.4.27.5)
+				st["ends"] = {"turn": str(f["id"])}
 			lines.append_array(ConditionRules.impose(s, data, st, f))
 		"dash":
 			var e := CombatRules.points(s, data, f)

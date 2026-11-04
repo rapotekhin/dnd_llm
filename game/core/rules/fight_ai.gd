@@ -322,6 +322,11 @@ static func flee(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[S
 ## Walks up to `t` and no more: a helper's turn. True when it stands beside.
 static func go_to(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, lines: Array[String]) -> bool:
 	first(s, data, f, lines)
+	return step_to(s, data, f, t, lines)
+
+
+## It walks what its points give as near to `t` as it can (Rampage's half a speed, v0.8.4.27.5). Whether it touches `t` then.
+static func step_to(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, lines: Array[String]) -> bool:
 	if not FightGrid.touching(f, t):
 		var routes := Move.routes(s, data, f)
 		var best := FightGrid.cell(f)

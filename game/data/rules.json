@@ -2660,6 +2660,7 @@
 				"cure_disease": 5
 			}
 		},
+		"divine_eminence": {"traits": ["divine_eminence"], "max": {"slot_any": true}, "recharge": "long", "combat_cost": "never"},
 		"primeval_awareness": {"features": ["primeval_awareness"], "max": {"slot_any": true}, "recharge": "long", "combat_cost": "never",
 			"on_use": {"sense": {"types": ["aberration", "celestial", "dragon", "elemental", "fey", "fiend", "undead"], "depth": 2}}},
 		"divine_sense": {
@@ -2981,11 +2982,23 @@
 		"mimic": {"of": ["mimic"], "forms": {"object": {"name": "предмет", "wear": {"still": true}}}}
 	},
 	"feature_wear": {
-		"_doc": "What a feature or a trait lays for good, in the words of a worn thing's `wear` (v0.8.4.26.1, ItemRules.wear: \"walk\" — the walking speed, an ability — its modifier): climb_speed, jump_ft (a running jump's feet, core/acts/jump.gd)… v0.8.4.27.1: a monster template's trait too (ItemRules.wear reads its `traits`); `share` — its square holds no one for another and none for it (FightGrid.bodies, the 5e swarm), `no_heal` — no hit points back and no temporary ones (Harm.heal, Harm.shield), `still` — it looks like a thing while it stands still: unseen at a meeting with no roll, and a room of only such springs like an ambush (EncounterRules._hide), `aura` — a zone of the field that follows it (FightField.auras: `ft`, `on`, `save`, `dc`, `tag`, `cond`, `for` {rounds, save, dc, tag} — the status's time and its repeated save, `types`, `sees`, `spare_saved`). v0.8.4.27.3: `walks_web` — a zone whose `pass` names it does not hold or slow it, `feels_web` — knows who touches the zone whose `feel` names it while it touches it too (FightField.feels), `lays` — a row of rules.combat.grid.strewn laid around it as a fight begins (FightField.lay). v0.8.4.27.4: `adv_tag` — advantage on a save of that tag (Sure-Footed: `prone`, rules.hero_effects.cond_tags), `check_adv` — advantage on the skill, with `when` in the language of Cond where it holds (Stone Camouflage: a rocky terrain).",
+		"_doc": "What a feature or a trait lays for good, in the words of a worn thing's `wear` (v0.8.4.26.1, ItemRules.wear: \"walk\" — the walking speed, an ability — its modifier): climb_speed, jump_ft (a running jump's feet, core/acts/jump.gd)… v0.8.4.27.1: a monster template's trait too (ItemRules.wear reads its `traits`); `share` — its square holds no one for another and none for it (FightGrid.bodies, the 5e swarm), `no_heal` — no hit points back and no temporary ones (Harm.heal, Harm.shield), `still` — it looks like a thing while it stands still: unseen at a meeting with no roll, and a room of only such springs like an ambush (EncounterRules._hide), `aura` — a zone of the field that follows it (FightField.auras: `ft`, `on`, `save`, `dc`, `tag`, `cond`, `for` {rounds, save, dc, tag} — the status's time and its repeated save, `types`, `sees`, `spare_saved`). v0.8.4.27.3: `walks_web` — a zone whose `pass` names it does not hold or slow it, `feels_web` — knows who touches the zone whose `feel` names it while it touches it too (FightField.feels), `lays` — a row of rules.combat.grid.strewn laid around it as a fight begins (FightField.lay). v0.8.4.27.4: `adv_tag` — advantage on a save of that tag (Sure-Footed: `prone`, rules.hero_effects.cond_tags), `check_adv` — advantage on the skill, with `when` in the language of Cond where it holds (Stone Camouflage: a rocky terrain). v0.8.4.27.5: `adv_tag` is a list, `abilities` — only on saves of these (Gnome Cunning); the race traits and the monster traits that give advantage on saves are rows here (the old trait_saves and MonsterRules.save_advantage), `immune` with `near_ally` — not while it sees an ally within these squares (Steadfast, SpellEffects.immune), `adv_vs_held` — advantage on attacks at one it grapples (Grappler, Attack.mods), `transfer_held` — half the damage it takes goes to the one it grapples (Damage Transfer, Harm.take), `rampage` — a kill with a melee blow on its turn gives a bonus move of half its speed and a bite (Attack.follow_up).",
 		"second_story_work": {"climb_speed": "walk", "jump_ft": "dex"},
 		"swarm": {"share": true, "no_heal": true},
 		"web_walker": {"walks_web": true},
-		"sure_footed": {"adv_tag": "prone"},
+		"sure_footed": {"adv_tag": ["prone"]},
+		"dwarven_resilience": {"adv_tag": ["poison"]},
+		"fey_ancestry": {"adv_tag": ["charm"]},
+		"brave": {"adv_tag": ["fear"]},
+		"gnome_cunning": {"adv_tag": ["magic"], "abilities": ["int", "wis", "cha"]},
+		"magic_resistance": {"adv_tag": ["magic"]},
+		"duergar_resilience": {"adv_tag": ["magic", "charm", "paralysis", "poison"]},
+		"dark_devotion": {"adv_tag": ["charm", "fear"]},
+		"two_headed": {"check_adv": "perception", "adv_tag": ["blind", "charm", "deaf", "fear", "stun", "sleep"]},
+		"steadfast": {"immune": ["frightened"], "near_ally": 6},
+		"grappler": {"adv_vs_held": true},
+		"damage_transfer": {"transfer_held": true},
+		"rampage": {"rampage": true},
 		"stone_camouflage": {"check_adv": "stealth", "when": {"terrain": ["mountain", "underdark"]}},
 		"snow_camouflage": {"check_adv": "stealth", "when": {"any": [{"weather": ["snow"]}, {"terrain": ["arctic"]}]}},
 		"web_sense": {"feels_web": true, "lays": {"ground": "web", "around": 3, "share": 0.3}},
@@ -3769,8 +3782,8 @@
 			"keep_most": 8,
 			"acts": {"frenzy": 4, "dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100, "escape": 6, "help": 0.5, "grapple": 2, "shove": 3, "shape": 2},
 			"items": {"_doc": "What a thing is worth to the AI (core/acts/use_item.gd, v0.8.4.10): a healing one is taken `when` (first — before it walks) under `heal_below` of its HP. A flask is thrown for its damage, a scroll is weighed as its spell.", "when": "first", "heal_below": 0.5},
-			"features": {"_doc": "What a feature is worth to the AI (core/acts/feature.gd): `when` first or last — taken for its bonus or free action before it walks or when all is done; `power` — an act beside its blows; `below` — only under this share of its HP; `foes` — only with a foe of these types within 30 ft.",
-				"rage": {"when": "first"}, "reckless": {"when": "first"}, "action_surge": {"when": "first"}, "second_wind": {"when": "first", "below": 0.5},
+			"features": {"_doc": "What a feature is worth to the AI (core/acts/feature.gd): `when` first or last — taken for its bonus or free action before it walks or when all is done; `power` — an act beside its blows; `below` — only under this share of its HP; `foes` — only with a foe of these types within 30 ft; `near` — only with a foe beside it (Divine Eminence, v0.8.4.27.5).",
+				"rage": {"when": "first"}, "divine_eminence": {"when": "first", "near": true}, "reckless": {"when": "first"}, "action_surge": {"when": "first"}, "second_wind": {"when": "first", "below": 0.5},
 				"flurry_topple": {"when": "last"}, "flurry": {"when": "last"}, "martial_strike": {"when": "last"}, "patient_defense": {"when": "last", "below": 0.5},
 				"stunning": {"power": 8}, "turn_undead": {"power": 10, "foes": ["undead"]}, "turn_unholy": {"power": 10, "foes": ["undead", "fiend"]},
 				"preserve_life": {"power": 10, "below": 0.5}, "sacred_weapon": {"power": 3}, "wild_shape": {"power": 6}, "breath": {"power": 7}},
@@ -4105,23 +4118,8 @@
 			"eight_hours": 4800,
 			"day": 14400
 		},
-		"save_tags": ["poison", "charm", "fear", "magic", "sleep", "disease", "paralysis", "prone"],
-		"cond_tags": {"_doc": "A save against a status carries that status's tag (v0.8.4.27.4, HeroDefense.cond_tags): what a trait's or a status's `adv_tag` answers — Fey Ancestry the charm, Brave the fear, Sure-Footed the fall.", "poisoned": "poison", "charmed": "charm", "frightened": "fear", "unconscious": "sleep", "paralyzed": "paralysis", "prone": "prone"},
-		"trait_saves": {
-			"dwarven_resilience": {
-				"tags": ["poison"]
-			},
-			"fey_ancestry": {
-				"tags": ["charm"]
-			},
-			"brave": {
-				"tags": ["fear"]
-			},
-			"gnome_cunning": {
-				"tags": ["magic"],
-				"abilities": ["int", "wis", "cha"]
-			}
-		},
+		"save_tags": ["poison", "charm", "fear", "magic", "sleep", "disease", "paralysis", "prone", "blind", "deaf", "stun"],
+		"cond_tags": {"_doc": "A save against a status carries that status's tag (v0.8.4.27.4, HeroDefense.cond_tags): what a trait's or a status's `adv_tag` answers — Fey Ancestry the charm, Brave the fear, Sure-Footed the fall.", "poisoned": "poison", "charmed": "charm", "frightened": "fear", "unconscious": "sleep", "paralyzed": "paralysis", "prone": "prone", "blinded": "blind", "deafened": "deaf", "stunned": "stun"},
 		"trait_immune": {
 			"fey_ancestry": {
 				"tag": "sleep",
@@ -4496,6 +4494,17 @@
 		}
 	},
 	"feature_actions": {
+		"divine_eminence": {
+			"name": "Божественное превосходство",
+			"cost": "bonus",
+			"trait": "divine_eminence",
+			"tip": "Бонусным действием за ячейку: удары оружием до конца хода с 3к6 излучения",
+			"pay": {"id": "divine_eminence", "n": 1},
+			"effects": [
+				{"kind": "status", "status": {"condition": "", "weapon_extra": ["3d6", "radiant"], "ends": {"turn": "self"}}, "name": "Божественное превосходство"},
+				{"kind": "line", "text": "%s: оружие сияет божественным светом"}
+			]
+		},
 		"_doc": "The actions of features in a fight (v0.7.64, FeatureRules): name, cost (action, bonus, free), target (a foe in reach), aims (laid on a square as an area, FeatureRules.aim_cells: the button aims it as an area spell, v0.8.4.24), tip; who has it: features (all of them), stock (a resource owned), trait; pay {id, n}: the resource it needs, spent unless check_only; after_attack — after the Attack action; dark — only in the dark (SightRules.in_dark); effects, each by kind: strike {profile, times, opts}, stance {key} on the fighter, dash, status {status, name} — a status laid on itself (`ends.move` — until it moves, ConditionRules.on_move), turn {types, destroy — the features that destroy the weak by the class table's destroy_undead_cr (v0.8.4.26.1)}, heal_half, for {key, rounds}, line {text}; hook — what stays code (FeatureRules._hook); spend false — the hook spends by itself.",
 		"reckless": {
 			"name": "Безрассудная атака",

@@ -295,7 +295,9 @@ static func saved(s: GameSession, data: Dictionary, who: Dictionary, ab: String,
 static func _advantages(s: GameSession, data: Dictionary, who: Dictionary, ab: String, tag: String) -> Array[String]:
 	var me := holder(s, who)
 	var out := HeroDefense.save_advantages(me, data, ab, tag, raging(s, who))
-	if MonsterRules.save_advantage(data, me, ab, Array(tag.split(",", false))) or (not is_hero(who) and SpellEffects.boon_save_adv(who, ab)):
+	if tag.split(",", false).has("fighting"):  # Charm Person on a foe in a fight (v0.7.13)
+		out.append("в бою")
+	if not is_hero(who) and SpellEffects.boon_save_adv(who, ab):
 		out.append("черта")
 	return out
 

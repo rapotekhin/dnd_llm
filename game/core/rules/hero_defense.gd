@@ -7,15 +7,23 @@ extends RefCounted
 ## next is `Harm` (v0.8.4.13). Tables — rules.hero_effects.
 
 const TAG_NAMES := {"poison": "яд", "charm": "очарование", "fear": "страх", "magic": "магия", "sleep": "сон", "disease": "болезнь",
-	"paralysis": "паралич", "prone": "падение"}
+	"paralysis": "паралич", "prone": "падение", "blind": "слепота", "deaf": "глухота", "stun": "оглушение"}
 
 
 static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["hero_effects"]
 
 
-static func tag_name(tag: String) -> String:
+static func tag_name(tag: Variant) -> String:
+	if tag is Array:
+		return ", ".join((tag as Array).map(func(x: Variant) -> String: return tag_name(str(x))))
 	return str(TAG_NAMES.get(tag, tag))
+
+
+## The tags a status gives advantage on saves against: its `adv_tag`, one or a list (v0.8.4.27.5).
+static func adv_tags(e: Dictionary) -> Array:
+	var t: Variant = e.get("adv_tag", [])
+	return (t as Array) if t is Array else [str(t)]
 
 
 ## The tags of a save against these statuses (rules.hero_effects.cond_tags, v0.8.4.27.4): charmed — charm, prone — prone…
@@ -76,8 +84,9 @@ static func resistances(s: GameSession, data: Dictionary, who: Dictionary = Shee
 	return out
 
 
-## Why the hero has advantage on a save of `ability` against `tag` now (race traits, effects; v0.7.10: Danger Sense
-## on DEX saves, Rage on STR).
+## Why anybody has advantage on a save of `ability` against `tag` now (v0.7.10: Danger Sense on DEX saves, Rage on STR);
+## a race's or a monster's trait is a status of `rules.feature_wear` with its `adv_tag` and `abilities`, read with any
+## other status's (v0.8.4.27.5).
 static func save_advantages(c: Dictionary, data: Dictionary, ability: String, tag: String, raging: bool = false) -> Array[String]:
 	var out: Array[String] = []
 	if ability == "dex" and CharacterRules.has_feature(c, "danger_sense") \
@@ -91,16 +100,11 @@ static func save_advantages(c: Dictionary, data: Dictionary, ability: String, ta
 	if tag.is_empty():
 		return out
 	var tags := tag.split(",")  # a save against several things at once: «charm,magic» (v0.7.9)
-	var traits: Dictionary = data["races"]["traits"]
-	var table: Dictionary = cfg(data)["trait_saves"]
-	for t: String in table:
-		var spec: Dictionary = table[t]
-		if CharacterRules.has_trait(c, t) and (spec["tags"] as Array).any(func(x: Variant) -> bool: return tags.has(str(x))) \
-				and (not spec.has("abilities") or (spec["abilities"] as Array).has(ability)):
-			out.append(str(traits.get(t, {}).get("name", t)))
-	for e: Dictionary in ConditionRules.effects(c):
-		if tags.has(str(e.get("adv_tag", ""))) and not out.has(str(e.get("source", {}).get("name", ""))):
-			out.append(str(e.get("source", {}).get("name", "")))
+	for e: Dictionary in ItemRules.born_effects(data, c):
+		var name := str(e.get("source", {}).get("name", ""))
+		if adv_tags(e).any(func(x: Variant) -> bool: return tags.has(str(x))) and not out.has(name) \
+				and (not e.has("abilities") or (e["abilities"] as Array).has(ability)):
+			out.append(name)
 	return out
 
 
@@ -108,7 +112,7 @@ static func save_advantages(c: Dictionary, data: Dictionary, ability: String, ta
 ## Health and a Periapt of Health against disease (v0.7.10, v0.7.12); "" when none. Anybody's (v0.8.4.15).
 static func immune(s: GameSession, data: Dictionary, who: Dictionary, cond: String, tag: String) -> String:
 	var c := Sheet.holder(s, who)
-	var by_spell := SpellEffects.immune(c, cond)  # Heroism (v0.7.13.1)
+	var by_spell := SpellEffects.immune(s, data, who, cond)  # Heroism (v0.7.13.1), Steadfast (v0.8.4.27.5)
 	if not by_spell.is_empty():
 		return by_spell
 	if tag.split(",").has("disease") and CharacterRules.has_feature(c, "divine_health"):

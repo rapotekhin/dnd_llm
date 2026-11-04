@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 var data: Dictionary
 
 ## Who has each row of rules.feature_actions: a new row with no line here fails the first test.
-const WHO := {"reckless": {"class": "barbarian", "level": 2}, "martial_strike": {"class": "monk", "level": 5, "subclass": "open_hand"},
+const WHO := {"divine_eminence": {"monster": "priest"}, "reckless": {"class": "barbarian", "level": 2}, "martial_strike": {"class": "monk", "level": 5, "subclass": "open_hand"},
 	"flurry": {"class": "monk", "level": 5, "subclass": "open_hand"}, "flurry_topple": {"class": "monk", "level": 5, "subclass": "open_hand"},
 	"flurry_push": {"class": "monk", "level": 5, "subclass": "open_hand"}, "flurry_stagger": {"class": "monk", "level": 5, "subclass": "open_hand"},
 	"patient_defense": {"class": "monk", "level": 5, "subclass": "open_hand"}, "step_disengage": {"class": "monk", "level": 5, "subclass": "open_hand"},
@@ -31,7 +31,7 @@ func _hero(preset: String = "wizard_yalika") -> GameSession:
 	return s
 
 
-## A fighter of `row`'s class of the template beside the hero, a goblin of its side.
+## A fighter of `row`'s class of the template (or of its own `monster`) beside the hero, a goblin of its side.
 func _foe(s: GameSession, row: Dictionary, monster: String = "commoner") -> Dictionary:
 	var spec := row.duplicate()
 	spec.merge({"monster": monster, "name": "Боец", "col": 2})

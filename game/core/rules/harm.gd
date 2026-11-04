@@ -25,6 +25,21 @@ static func words(data: Dictionary, dtype: String, note: String) -> String:
 
 
 ## `dmg` to `who`; `by_hero` — the hero's blow (a nonlethal one only knocks out). Lines into `lines`.
+## Damage Transfer (a cloaker, v0.8.4.27.5): while it holds one grappled, it takes half of the damage (rounded down) and the
+## other half goes to that one. What it keeps.
+static func _transfer(s: GameSession, data: Dictionary, f: Dictionary, dmg: int, dtype: String, lines: Array[String]) -> int:
+	var name := ItemRules.born_name(data, Sheet.holder(s, f), "transfer_held")
+	if name.is_empty():
+		return dmg
+	var held := CombatRules.held_of(s, f)
+	if held.is_empty():
+		return dmg
+	var kept := dmg / 2
+	lines.append("%s: %s — %d на %s" % [f.get("name", ""), name, dmg - kept, Sheet.holder(s, held[0]).get("name", "")])
+	take(s, data, held[0], dmg - kept, lines, dtype, false, false)
+	return kept
+
+
 static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, lines: Array[String], dtype: String = "", crit: bool = false, by_hero: bool = true) -> void:
 	var hero := Sheet.is_hero(who)
 	var fight := CombatRules.active(s) and (hero or who.has("status"))
@@ -42,6 +57,8 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	if fight:
 		f["rage_kept"] = true
 	dmg = absorb(me, dmg, lines)
+	if fight:
+		dmg = _transfer(s, data, f, dmg, dtype, lines)
 	dmg = FeatureRules.hurt_shape(s, data, dmg, lines, who)  # a beast form takes it first
 	if dmg <= 0:
 		return

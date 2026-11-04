@@ -462,7 +462,15 @@ static func born_rows(c: Dictionary, data: Dictionary, m: Dictionary) -> Diction
 ## Some feature or trait of `who` lays `key` for good — read off its template when it holds no statuses (a head of an
 ## encounter not yet in a fight).
 static func born(data: Dictionary, who: Dictionary, key: String) -> bool:
-	return born_effects(data, who).any(func(e: Dictionary) -> bool: return e.has(key) and str(e.get("source", {}).get("kind", "")) == BORN)
+	return not born_name(data, who, key).is_empty()
+
+
+## The name of its feature or trait that lays `key` for good, "" when none (v0.8.4.27.5: Grappler, Rampage).
+static func born_name(data: Dictionary, who: Dictionary, key: String) -> String:
+	for e: Dictionary in born_effects(data, who):
+		if e.has(key) and str(e.get("source", {}).get("kind", "")) == BORN:
+			return str(e["source"].get("name", key))
+	return ""
 
 
 ## What its features and traits lay, as statuses: those it holds, or — when it holds none of them yet (a head of an

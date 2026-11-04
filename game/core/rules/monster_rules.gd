@@ -298,6 +298,9 @@ static func attack_mods(s: GameSession, data: Dictionary, f: Dictionary, t: Dict
 		adv.append("засадник")
 	if (has_trait(data, f, "sunlight_sensitivity") or has_trait(data, f, "sunlight_weakness")) and sunlit(s, data):
 		dis.append("солнце")
+	var grappler := ItemRules.born_name(data, Sheet.holder(s, f), "adv_vs_held")  # Grappler (v0.8.4.27.5)
+	if not grappler.is_empty() and CombatRules.held_by(s, f, t):
+		adv.append(grappler.to_lower())
 	return {"adv": adv, "dis": dis}
 
 
@@ -370,25 +373,6 @@ static func death_burst(s: GameSession, data: Dictionary, t: Dictionary, lines: 
 		apply_effect(s, data, t, o, {"name": str(db["name"]), "effect": db.get("effect", {}), "damage": []}, 0, lines)
 
 
-## Saving throw advantages of a monster's traits: magic resistance (spells), dark devotion and fey ancestry (charm,
-## fear), gnome cunning (INT / WIS / CHA against magic), brave (fear), duergar resilience. `tags` — what the save is
-## against (magic, charm, fear, sleep, paralysis, poison).
-static func save_advantage(data: Dictionary, f: Dictionary, ability: String, tags: Array) -> bool:
-	if tags.has("fighting"):  # Charm Person on a foe in a fight (v0.7.13)
-		return true
-	if tags.has("magic") and (has_trait(data, f, "magic_resistance") or has_trait(data, f, "duergar_resilience")):
-		return true
-	if (tags.has("charm") or tags.has("fear")) and has_trait(data, f, "dark_devotion"):
-		return true
-	if tags.has("charm") and has_trait(data, f, "fey_ancestry"):
-		return true
-	if tags.has("magic") and ability in ["int", "wis", "cha"] and has_trait(data, f, "gnome_cunning"):
-		return true
-	if tags.has("fear") and has_trait(data, f, "brave"):
-		return true
-	return (tags.has("charm") or tags.has("paralysis") or tags.has("poison")) and has_trait(data, f, "duergar_resilience")
-
-
 ## Immune to a magical sleep (fey ancestry).
 static func sleep_immune(data: Dictionary, f: Dictionary) -> bool:
 	return has_trait(data, f, "fey_ancestry")
@@ -403,8 +387,7 @@ static func castable(data: Dictionary, f: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if sc.is_empty():
 		return out
-	if not f.has("slots"):
-		f["slots"] = (sc.get("slots", {}) as Dictionary).duplicate()
+	own_slots(data, f)
 	for x: Dictionary in sc["spells"]:
 		var id := str(x["id"])
 		if not data["spells"].has(id):
@@ -418,17 +401,25 @@ static func castable(data: Dictionary, f: Dictionary) -> Array[Dictionary]:
 			out.append({"id": id, "slot": 0})
 			continue
 		for k in range(lv, 6):
-			if int(f["slots"].get(str(k), 0)) > 0:
+			if SpellRules.slots_left(f, k) > 0:
 				out.append({"id": id, "slot": k})
 				break
 	return out
+
+
+## The spell slots of its template on the one road of slots (v0.8.4.27.5): `slots_max` by circle as the hero's, spent through
+## Stock — kept on its record after the fight, back with its long rest, paying for Divine Eminence. Laid once.
+static func own_slots(data: Dictionary, f: Dictionary) -> void:
+	var by: Dictionary = Sheet.template(data, f).get("spellcasting", {}).get("slots", {})
+	if not f.has("slots_max") and not by.is_empty():
+		f["slots_max"] = range(1, 6).map(func(n: int) -> int: return int(by.get(str(n), 0)))
 
 
 ## It pays for a spell by what `castable` said.
 static func pay_spell(f: Dictionary, spell: String, how: Dictionary) -> void:
 	var slot := int(how.get("slot", 0))
 	if slot > 0:
-		f["slots"][str(slot)] = int(f["slots"][str(slot)]) - 1
+		Stock.spend(f, "slot_%d" % slot)
 	if bool(how.get("per_day", false)):
 		var used: Dictionary = f.get("used", {})
 		used["spell:" + spell] = int(used.get("spell:" + spell, 0)) + 1

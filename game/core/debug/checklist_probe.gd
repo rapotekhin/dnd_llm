@@ -310,7 +310,8 @@ static func _roles(data: Dictionary, id: String, d: Dictionary, steps: Array[Str
 		var sold: Array[String] = []
 		for k: String in data["rules"]:
 			var at := _path_of(data["rules"][k], id, k)
-			if not k.begins_with("_") and not at.is_empty() and not WORDS_NOT_THINGS.any(func(w: String) -> bool: return at.begins_with(w)):
+			if not k.begins_with("_") and not at.is_empty() and not at.contains(".adv_tag") \
+					and not WORDS_NOT_THINGS.any(func(w: String) -> bool: return at.begins_with(w)):
 				(sold if TRADE_ONLY.has(k) else keys).append(at)
 		if not keys.is_empty():
 			n += 1

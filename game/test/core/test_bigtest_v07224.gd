@@ -86,7 +86,7 @@ func test_the_foe_card_shows_its_slots() -> void:
 	var s := _hero("fighter_aira")
 	var f := _fight(s, [{"monster": "cult_fanatic", "col": 0}])[0]
 	Knows.add(s, Knows.MONSTER, "cult_fanatic")
-	f["slots"] = {"1": 1, "2": 3}
+	Stock.spend(f, "slot_1", 3)
 	assert_str(CombatRules.monster_card(s, data, f)).contains("Ячейки: 1 круг 1/4")
 
 

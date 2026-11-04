@@ -182,9 +182,9 @@ func test_traits_of_monsters() -> void:
 	var s := _session()
 	var wolf := _fight(s, "wolf", 2)
 	assert_int(Sheet.passive(s, data, wolf)).is_equal(int(data["monsters"]["wolf"]["passive_perception"]) + 5)
-	assert_bool(MonsterRules.save_advantage(data, {"monster": "bearded_devil"}, "wis", ["magic"])).is_true()
-	assert_bool(MonsterRules.save_advantage(data, {"monster": "cultist"}, "wis", ["charm", "magic"])).is_true()
-	assert_bool(MonsterRules.save_advantage(data, {"monster": "wolf"}, "wis", ["magic"])).is_false()
+	assert_array(HeroDefense.save_advantages({"monster": "bearded_devil"}, data, "wis", "magic")).is_not_empty()
+	assert_array(HeroDefense.save_advantages({"monster": "cultist"}, data, "wis", "charm,magic")).is_not_empty()
+	assert_array(HeroDefense.save_advantages({"monster": "wolf"}, data, "wis", "magic")).is_empty()
 	var boar := {"id": "e9", "monster": "boar", "name": "Кабан", "hp": 5, "max_hp": 11}
 	assert_bool(Harm.survives(s, data, boar, 6, "slashing", false, [] as Array[String])).is_true()
 	assert_bool(Harm.survives(s, data, boar, 6, "slashing", false, [] as Array[String])).is_false()  # once
@@ -219,7 +219,7 @@ func test_a_fanatic_holds_the_hero_until_it_loses_concentration() -> void:
 	lines.append_array(Acts.one("cast").go(s, data, f, CombatRules.PLAYER, how))
 	assert_bool(ConditionRules.has(s.character, "paralyzed")).is_true()
 	assert_str(str(f["concentration"])).is_equal("hold_person")
-	assert_int(int(f["slots"]["2"])).is_equal(int(data["monsters"]["cult_fanatic"]["spellcasting"]["slots"]["2"]) - 1)
+	assert_int(SpellRules.slots_left(f, 2)).is_equal(int(data["monsters"]["cult_fanatic"]["spellcasting"]["slots"]["2"]) - 1)
 	MonsterRules.release(s, data, f, lines)
 	assert_bool(ConditionRules.has(s.character, "paralyzed")).is_false()
 

@@ -241,7 +241,7 @@ func test_prayer_of_healing_is_not_for_a_fight() -> void:
 func test_charm_person_save_has_advantage_in_a_fight() -> void:
 	var s := _hero("bard_yas")
 	var f := _fight(s, [{"monster": "bandit", "col": 1}])[0]
-	assert_bool(MonsterRules.save_advantage(data, f, "wis", ["magic", "charm", "fighting"])).is_true()
+	assert_array(Sheet.save(s, data, f, "wis", 10, "magic,charm,fighting")["adv"]).contains(["в бою"])
 
 
 # --- out of a fight ---------------------------------------------------------------------------------------

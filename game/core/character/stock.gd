@@ -27,6 +27,8 @@ static func owned(c: Dictionary, data: Dictionary) -> Array[String]:
 			if CharacterRules.has_feature(c, str(f)):
 				out.append(id)
 				break
+		if not out.has(id) and (all[id].get("traits", []) as Array).any(func(t: Variant) -> bool: return MonsterRules.has_trait(data, c, str(t))):
+			out.append(id)  # a monster's trait: a priest's Divine Eminence (v0.8.4.27.5)
 	return out
 
 

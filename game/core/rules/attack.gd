@@ -425,11 +425,8 @@ static func land(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 			var pounce := MonsterRules.charge_prone(s, data, f, t, ctx["prone"], lines)
 			MonsterRules.apply_effect(s, data, f, t, a, dmg, lines)
 			if pounce:  # a pounce: one bite at the prone one as a bonus action
-				for x: Dictionary in Sheet.template(data, f)["actions"]:
-					if str(x.get("name_en", "")) == "Bite" and str(x.get("kind")) == "melee":
-						lines.append("%s кусает упавшего" % f["name"])
-						swing(s, data, f, t, of_action(data, f, x), lines)
-						break
+				follow_up(s, data, f, t, "%s кусает упавшего", lines)
+		_rampage(s, data, f, t, b, lines)
 	if int(ctx.get("rebuke", 0)) > 0 and str(f.get("status")) == "active":  # Hellish Rebuke (v0.7.13.7)
 		SpellEffects.rebuke(s, data, f, str(ctx.get("rebuke_spell", "hellish_rebuke")), int(ctx["rebuke"]), lines)
 	if dmg > 0 and str(f.get("status")) == "active":
@@ -437,6 +434,50 @@ static func land(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 	if bool(ctx.get("counter", false)) and str(f.get("status")) == "active" and up(s, t):
 		lines.append("%s: Убийца великанов — удар в ответ" % Sheet.holder(s, t).get("name", ""))
 		swing(s, data, t, f, blade(s, data, t).merged({"opts": {"no_horde": true}}, true), lines)
+
+
+## One bite at `t` for its bonus action (a pounce at the one it threw down, Rampage after a kill; v0.8.4.27.5): the melee Bite
+## of its template, the bonus point paid. Whether it bit.
+static func follow_up(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, line: String, lines: Array[String]) -> bool:
+	var bite := bite_of(data, f)
+	if bite.is_empty() or int(CombatRules.points(s, data, f).get("bonus", 0)) < 1 or not up(s, f) or not up(s, t) or not FightGrid.touching(f, t):
+		return false
+	CombatRules.pay(f, "bonus")
+	lines.append(line % f["name"])
+	swing(s, data, f, t, of_action(data, f, bite), lines)
+	return true
+
+
+## The melee Bite of its template, {} when it has none.
+static func bite_of(data: Dictionary, f: Dictionary) -> Dictionary:
+	for x: Dictionary in Sheet.template(data, f).get("actions", []):
+		if str(x.get("name_en", "")) == "Bite" and str(x.get("kind")) == "melee":
+			return x
+	return {}
+
+
+## Rampage (v0.8.4.27.5): a melee blow on its own turn brought `t` down — for its bonus action it walks half its speed to the
+## nearest foe still up and bites it.
+static func _rampage(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, b: Dictionary, lines: Array[String]) -> void:
+	if up(s, t) or shot(f, t, b) or CombatRules.current(s) != str(f.get("id")) or bite_of(data, f).is_empty() \
+			or int(CombatRules.points(s, data, f).get("bonus", 0)) < 1:
+		return
+	var name := ItemRules.born_name(data, Sheet.holder(s, f), "rampage")
+	var next := {}
+	for id: String in CombatRules.foes_of(s, f):
+		var o := CombatRules.fighter(s, id)
+		if up(s, o) and (next.is_empty() or FightGrid.dist(f, o) < FightGrid.dist(f, next)):
+			next = o
+	if name.is_empty() or next.is_empty():
+		return
+	lines.append("%s: %s" % [f["name"], name])
+	var e := CombatRules.points(s, data, f)
+	var walk := int(e["move"])
+	e["move"] = Move.steps(s, data, f) / 2
+	FightAI.step_to(s, data, f, next, lines)
+	e["move"] = walk
+	if not follow_up(s, data, f, next, "%s кусает", lines):
+		CombatRules.pay(f, "bonus")
 
 
 ## What the class of `f` adds to a weapon's hit: Sneak Attack spent, its extra dice, what comes after the hit.

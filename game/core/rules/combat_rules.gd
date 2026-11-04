@@ -955,13 +955,13 @@ static func _condition_on(s: GameSession, data: Dictionary, spell_id: String, sp
 
 ## What keeps the conditions off `t`: "" none, «-» — it cannot get them, or what protects it.
 static func _resists(s: GameSession, data: Dictionary, t: Dictionary, spec: Dictionary, conds: Array, tag: String) -> String:
-	if not Sheet.is_hero(t):
-		return "" if _can_be(data, t, spec) else "-"
-	for cond: String in conds:
-		var why := HeroDefense.immune(s, data, Sheet.HERO, cond, tag)
+	if not Sheet.is_hero(t) and not _can_be(data, t, spec):
+		return "-"
+	for cond: String in conds:  # Heroism, Steadfast, an elf and magical sleep: anybody's (v0.8.4.27.5)
+		var why := HeroDefense.immune(s, data, t, cond, tag)
 		if not why.is_empty():
 			return why
-	return "" if int(s.character["abilities"].get("int", 10)) >= int(spec.get("min_int", 0)) else "-"
+	return "" if not Sheet.is_hero(t) or int(s.character["abilities"].get("int", 10)) >= int(spec.get("min_int", 0)) else "-"
 
 
 ## Whether a foe can get the spell's conditions: creature types (`types`, `immune_types`), condition immunities,
@@ -1687,6 +1687,21 @@ static func _hold(f: Dictionary, cond: String, by: String = "") -> void:
 		ConditionRules.add_effect(f, e)
 	if cond == "invisible":
 		FightGrid.keep_seen(f)
+
+
+## Grappled by `f` now: Grappler strikes it with advantage, Damage Transfer puts half its hurt on it (v0.8.4.27.5).
+static func held_by(s: GameSession, f: Dictionary, t: Dictionary) -> bool:
+	return ConditionRules.effects_of(Sheet.holder(s, t), "grappled").any(func(e: Dictionary) -> bool: return str(e.get("by", "")) == str(f.get("id")))
+
+
+## The fighters `f` holds grappled now, up ones only.
+static func held_of(s: GameSession, f: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for id: String in s.combat.get("fighters", []):
+		var t := fighter(s, id)
+		if id != str(f.get("id")) and not t.is_empty() and Attack.up(s, t) and held_by(s, f, t):
+			out.append(t)
+	return out
 
 
 ## `r` can strike one who leaves it (5e, v0.7.7): its reaction is unspent this round, it can act (not incapacitated, paralysed,
@@ -2502,8 +2517,8 @@ static func monster_card(s: GameSession, data: Dictionary, f: Dictionary) -> Str
 		lines.append("Заклинания (Сл %d): %s" % [int(sc.get("dc", 10)), ", ".join(names)])
 		var full: Dictionary = sc.get("slots", {})
 		if not full.is_empty():  # what is left of its slots (big test #21, v0.7.22.4)
-			var left: Dictionary = f.get("slots", full)
-			lines.append("Ячейки: " + " · ".join(full.keys().map(func(k: Variant) -> String: return "%s круг %d/%d" % [k, int(left.get(k, 0)), int(full[k])])))
+			lines.append("Ячейки: " + " · ".join(full.keys().map(func(k: Variant) -> String:
+				return "%s круг %d/%d" % [k, SpellRules.slots_left(f, int(k)) if f.has("slots_max") else int(full[k]), int(full[k])])))
 	for r: Dictionary in m.get("reactions", []):
 		if r.has("ac"):
 			lines.append("Реакция: парирование (+%d КД против удара вплотную)" % int(r["ac"]))

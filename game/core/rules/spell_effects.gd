@@ -404,7 +404,10 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 	if str(sp.get("reveal", "")) == "magic":
 		parts.append("чувствует магию рядом")
 	if sp.has("immune"):
-		parts.append("не испугать")
+		parts.append("не бывает: %s%s" % [", ".join((sp["immune"] as Array).map(func(x: Variant) -> String: return ConditionRules.name_of(data, str(x)).to_lower())),
+			" — пока видит союзника рядом" if sp.has("near_ally") else ""])
+	if sp.has("adv_tag"):  # a trait's own (v0.8.4.27.5)
+		parts.append("преимущество на спасброски: %s" % HeroDefense.tag_name(sp["adv_tag"]))
 	if sp.has("temp_hp"):
 		parts.append("временные хиты каждый ход")
 	return ", ".join(parts)
@@ -449,12 +452,25 @@ static func has_next_attack_adv(c: Dictionary) -> bool:
 	return ConditionRules.effects(c).any(func(e: Dictionary) -> bool: return bool(e.get("next_attack_adv", false)))
 
 
-## A condition an effect of a spell keeps away (Heroism — frightened): its name, or "".
-static func immune(c: Dictionary, cond: String) -> String:
-	for e: Dictionary in ConditionRules.effects(c):
-		if (e.get("immune", []) as Array).has(cond):
+## A condition a status keeps away (Heroism — frightened; a trait's own, v0.8.4.27.5: Steadfast while it sees an ally
+## within `near_ally` squares): its name, or "".
+static func immune(s: GameSession, data: Dictionary, who: Dictionary, cond: String) -> String:
+	for e: Dictionary in ItemRules.born_effects(data, Sheet.holder(s, who)):
+		if (e.get("immune", []) as Array).has(cond) and (not e.has("near_ally") or ally_seen(s, data, who, int(e["near_ally"]))):
 			return str(e.get("source", {}).get("name", ""))
 	return ""
+
+
+## In a fight it sees one of its side up within `squares`.
+static func ally_seen(s: GameSession, data: Dictionary, who: Dictionary, squares: int) -> bool:
+	if not CombatRules.active(s):
+		return false
+	var f := CombatRules.player(s) if Sheet.is_hero(who) else who
+	for id: String in CombatRules.friends_of(s, f):
+		var o := CombatRules.fighter(s, id)
+		if id != str(f.get("id")) and not o.is_empty() and Attack.up(s, o) and FightGrid.dist(f, o) <= squares and FightGrid.sees(s, data, f, o):
+			return true
+	return false
 
 
 ## The start of its turn: Heroism gives its temporary hit points again. Lines.

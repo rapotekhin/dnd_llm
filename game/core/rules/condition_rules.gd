@@ -207,6 +207,8 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Diction
 	var lines: Array[String] = []
 	if not hero and CombatRules.immune_to(data, who, cond):  # its template's condition immunities, whatever lays it
 		return lines
+	if not hero and not HeroDefense.immune(s, data, who, cond, str(e.get("save", {}).get("tag", ""))).is_empty():
+		return lines  # what a status keeps away (Heroism, Steadfast; v0.8.4.27.5) — the hero's callers tell why themselves
 	if cond == "exhaustion" and (hero or who.has("id")):  # a level of the one scale, whoever takes it (v0.8.4.11)
 		return add_exhaustion(s, data, 1, str(e.get("source", {}).get("name", "")), str(who.get("id", Being.HERO)))
 	add_effect(c, e.merged(MakeRules.fx(s, cond)))
@@ -659,7 +661,7 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 static func boon_text(data: Dictionary, e: Dictionary) -> String:
 	var parts: Array[String] = []
 	if e.has("adv_tag"):
-		parts.append("преимущество на спасброски: %s" % HeroDefense.tag_name(str(e["adv_tag"])))
+		parts.append("преимущество на спасброски: %s" % HeroDefense.tag_name(e["adv_tag"]))
 	for t: Variant in e.get("resist", []):
 		parts.append("сопротивление: %s" % str(data["misc"]["damage_types"].get(str(t), t)))
 	if e.has("check_adv"):

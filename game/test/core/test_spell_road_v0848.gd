@@ -112,8 +112,8 @@ func test_every_caster_of_the_base_plays_by_the_one_list() -> void:
 			if not CombatRules.active(s) or s.combat.has("pending"):
 				break
 		assert_bool(lines.is_empty()).override_failure_message(id).is_false()
-		for k: String in f.get("slots", {}):
-			assert_int(int(f["slots"][k])).override_failure_message(id).is_greater_equal(0)
+		for k: int in range(1, 6):
+			assert_int(SpellRules.slots_left(f, k)).override_failure_message(id).is_greater_equal(0)
 
 
 func test_a_foe_shields_a_friend_as_the_hero_does() -> void:
@@ -202,12 +202,12 @@ func test_a_mage_shields_itself_from_a_hit() -> void:
 	var f := _fight(s, "mage")
 	TestUtils.beside(s, f)
 	var left := int(MonsterRules.castable(data, f).filter(func(o: Dictionary) -> bool: return str(o["id"]) == "shield")[0]["slot"])
-	var was := int(f["slots"][str(left)])
+	var was := SpellRules.slots_left(f, left)
 	var ac := CombatRules.ac_of(f)
 	var lines: Array[String] = []
 	assert_bool(Acts.react(s, data, f, "hit", {"foe": CombatRules.PLAYER, "total": ac + 2, "melee": true}, lines)).is_true()
 	assert_int(CombatRules.ac_of(f)).is_equal(ac + 5)
-	assert_int(int(f["slots"][str(left)])).is_equal(was - 1)
+	assert_int(SpellRules.slots_left(f, left)).is_equal(was - 1)
 	assert_bool(bool(f["reacted"])).is_true()
 	ConditionRules.turn_comes(f, str(f["id"]))  # its own turn comes
 	assert_int(CombatRules.ac_of(f)).is_equal(ac)
