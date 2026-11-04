@@ -23,18 +23,27 @@ static func name_of(data: Dictionary, lid: String) -> String:
 	return str(kind(data, lid).get("name", lid))
 
 
-## Pints a vessel holds; 0 — not a vessel.
+## Pints a vessel holds: its row of `vessels`, else the thing's own `holds` (a pack's cask); 0 — not a vessel.
 static func holds(data: Dictionary, id: String) -> float:
-	return float(cfg(data)["vessels"].get(id, {}).get("pints", 0.0))
+	return float(cfg(data)["vessels"].get(id, {}).get("pints", _def(data, id).get("holds", 0.0)))
 
 
-## The liquid of a ready thing: {liquid, vessel, pints}; {} — not one.
+## The liquid of a ready thing: {liquid, vessel, pints} — the liquid's own `item`, else the thing's `liquid` {kind, vessel,
+## pints} (a cask of wine of the pack); {} — not one.
 static func ready(data: Dictionary, id: String) -> Dictionary:
 	for lid: String in cfg(data)["kinds"]:
 		var k: Dictionary = cfg(data)["kinds"][lid]
 		if str(k.get("item", "")) == id:
 			return {"liquid": lid, "vessel": str(k["vessel"]), "pints": float(k["pints"])}
+	var own: Variant = _def(data, id).get("liquid")
+	if own is Dictionary and kind(data, str(own.get("kind", ""))).size() > 0:
+		return {"liquid": str(own["kind"]), "vessel": str(own["vessel"]), "pints": float(own["pints"])}
 	return {}
+
+
+## A thing of the catalog or of the pack.
+static func _def(data: Dictionary, id: String) -> Dictionary:
+	return data["items"]["catalog"].get(id, data.get("world", {}).get("items", {}).get(id, {}))
 
 
 ## Every vessel and ready thing carried, one per copy: [{id, i, liquid, pints, cap, ready}]; an empty one has liquid "".
@@ -96,7 +105,7 @@ static func extra_weight(c: Dictionary, data: Dictionary, session_items: Diction
 		if bool(v["ready"]):
 			continue
 		total += float(v["pints"]) * float(kind(data, str(v["liquid"])).get("lb_per_pint", cfg(data)["lb_per_pint"]))
-		var spec: Dictionary = cfg(data)["vessels"][v["id"]]
+		var spec: Dictionary = cfg(data)["vessels"].get(v["id"], {})
 		if spec.has("weight"):
 			total += float(spec["weight"]) - float(ItemRules.def_of(data["items"], session_items, v["id"]).get("weight", 0))
 	return total

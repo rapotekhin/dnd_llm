@@ -234,7 +234,7 @@ static func item(data: Dictionary, id: String) -> Dictionary:
 	if data["rules"]["hero_effects"]["camp"]["food"].has(id) and not use.has("meal"):
 		mech += 1
 		_food(data, id, steps)
-	if LiquidRules.cfg(data)["vessels"].has(id):
+	if LiquidRules.holds(data, id) > 0.0:
 		mech += 1
 		_vessel(data, id, steps)
 	if not LiquidRules.ready(data, id).is_empty():
@@ -801,8 +801,7 @@ static func _vessel(data: Dictionary, id: String, steps: Array[String]) -> void:
 	var s := session(data)
 	s.character["inventory"].clear()
 	Gear.give(s, data, Being.HERO, id, 1)
-	var pints := float(LiquidRules.cfg(data)["vessels"][id]["pints"])
-	check(steps, is_equal_approx(LiquidRules.holds(data, id), pints), "вмещает %s пинт воды" % pints, LiquidRules.holds(data, id))
+	check(steps, LiquidRules.holds(data, id) > 0.0, "вмещает %s пинт" % LiquidRules.num(LiquidRules.holds(data, id)))
 	LiquidRules.drain(s.character)
 	s.room_id = "brod-square"  # a well
 	var why := NeedRules.can_fill(s, data)

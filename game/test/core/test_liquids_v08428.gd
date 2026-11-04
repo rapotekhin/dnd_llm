@@ -92,3 +92,11 @@ func test_a_guard_drinks_on_the_same_road() -> void:
 		LiquidRules.drink(gs, data, guard, LiquidRules.first(guard, data, "ale"))
 	assert_bool(ConditionRules.has(guard, "poisoned")).is_true()
 	assert_int(int(guard["inventory"]["cup_clay"])).is_equal(4)
+
+
+func test_a_pack_s_cask_holds_its_own_wine() -> void:
+	s.character["inventory"] = {"contraband_cask": 1}
+	assert_str(str(_of("contraband_cask")["liquid"])).is_equal("wine")
+	LiquidRules.drink(s, data, Sheet.HERO, _of("contraband_cask"))
+	assert_bool(s.character["inventory"].has("contraband_cask")).is_false()
+	assert_str(LiquidRules.summary(s.character, data, "empty_cask")).is_equal("вино 15/16")

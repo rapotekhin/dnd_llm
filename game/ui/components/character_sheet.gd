@@ -412,7 +412,7 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 
 
 ## What is in a vessel or a ready thing (v0.8.4.28): drink it, pour it out, pour it into another vessel of the list.
-func _liquid_buttons(row: HBoxContainer, c: Dictionary, id: String, busy: bool) -> void:
+func _liquid_buttons(row: Control, c: Dictionary, id: String, busy: bool) -> void:
 	var data := Catalog.data
 	var lv := LiquidRules.first(c, data, id)
 	if lv.is_empty() or float(lv["pints"]) <= 0.0:
@@ -502,15 +502,23 @@ func _gear_tab(c: Dictionary) -> void:
 		box.add_child(row)
 		var qty := int(c["inventory"][id])
 		var water := LiquidRules.summary(c, Catalog.data, id)  # v0.7.34.6: what each vessel holds
-		_item_button(row, details, c, id, "%s%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else "", " (%s)" % water if not water.is_empty() else ""], "Item_" + id)
+		(_item_button(row, details, c, id, "%s%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else "", " (%s)" % water if not water.is_empty() else ""], "Item_" + id) as Button).size_flags_stretch_ratio = 2.0
+		var acts := HFlowContainer.new()  # the buttons wrap under one another: a row never widens the window
+		acts.name = "Acts_" + id
+		acts.alignment = FlowContainer.ALIGNMENT_END
+		acts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		acts.size_flags_stretch_ratio = 3.0
+		acts.add_theme_constant_override("h_separation", 8)
+		acts.add_theme_constant_override("v_separation", 6)
+		row.add_child(acts)
 		var fx := ItemRules.consumable(Catalog.data, id, s.items)
-		_liquid_buttons(row, c, id, busy)
+		_liquid_buttons(acts, c, id, busy)
 		if not LetterRules.way_by(Catalog.data, "tool", id).is_empty():  # a forgery kit writes in the letter's window (v0.8.4.26.4)
-			_action(row, "Letter_" + id, "BTN_LETTER_WRITE", Backend.is_ready() and not busy, func() -> String:
+			_action(acts, "Letter_" + id, "BTN_LETTER_WRITE", Backend.is_ready() and not busy, func() -> String:
 				EventBus.letter_requested.emit("")
 				return "")
 		if fx.has("meal"):  # food from the pack; the rest is used from the belt (v0.8.4.24)
-			_action(row, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
+			_action(acts, "UseItem_" + id, "BTN_USE", Backend.is_ready() and not busy, GameState.use_item.bind(id))
 		elif ItemRules.belt_fits(Catalog.data, s.items, id) and not ItemRules.on_belt(c, Catalog.data, s.items, id):
 			var bw := ItemRules.belt_why(c, Catalog.data, s.items, id)
 			var bb := Button.new()
@@ -522,12 +530,12 @@ func _gear_tab(c: Dictionary) -> void:
 				var err := GameState.belt_put(id)
 				if not err.is_empty():
 					EventBus.message.emit(tr(err)))
-			row.add_child(bb)
+			acts.add_child(bb)
 		var free := ContainerRules.droppable(s, Catalog.data, id)  # big test #10 (v0.7.22.2)
 		if free > 0:
-			_drop_button(row, id, 1, "Drop_" + id, "BTN_DROP", busy)
+			_drop_button(acts, id, 1, "Drop_" + id, "BTN_DROP", busy)
 			if free > 1:
-				_drop_button(row, id, free, "DropAll_" + id, "BTN_DROP_ALL", busy)
+				_drop_button(acts, id, free, "DropAll_" + id, "BTN_DROP_ALL", busy)
 		if ItemRules.needs_attunement(def):  # v0.7.12
 			if ItemRules.attuned(c).has(id):
 				var un := Button.new()
@@ -542,17 +550,17 @@ func _gear_tab(c: Dictionary) -> void:
 					var err := GameState.unattune(id)
 					if not err.is_empty():
 						EventBus.message.emit(tr(err)))
-				row.add_child(un)
+				acts.add_child(un)
 			else:
 				var at_why := ItemRules.can_attune(c, Catalog.data, s.items, id)
-				_action(row, "Attune_" + id, "BTN_ATTUNE", not busy and at_why.is_empty(), GameState.attune.bind(id))
+				_action(acts, "Attune_" + id, "BTN_ATTUNE", not busy and at_why.is_empty(), GameState.attune.bind(id))
 				if not at_why.is_empty():
-					(row.get_child(row.get_child_count() - 1) as Button).tooltip_text = tr(at_why)
+					(acts.get_child(acts.get_child_count() - 1) as Button).tooltip_text = tr(at_why)
 		for t: String in CharacterRules.slots_of(def, Catalog.data):
 			if str(c["equipped"].get(t, "")) != id:
-				_equip_button(row, c, def, id, t, false, busy)
+				_equip_button(acts, c, def, id, t, false, busy)
 			if CharacterRules.HANDS.has(t) and str(CharacterRules.stowed(c).get(t, "")) != id:  # any weapon, either set (v0.8.4.24.1)
-				_equip_button(row, c, def, id, t, true, busy)
+				_equip_button(acts, c, def, id, t, true, busy)
 	var shown := _picked_item if (c.get("inventory", {}) as Dictionary).has(_picked_item) else ""
 	if not shown.is_empty():
 		details.show_text(ItemRules.display_name(items, s.items, shown), DetailsPanel.item_text(c, Catalog.data, s.items, shown))

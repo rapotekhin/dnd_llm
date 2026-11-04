@@ -159,6 +159,8 @@
 							"properties": {"$ref": "#/$defs/strings"},
 							"stack": {"type": "boolean"},
 							"spoils_days": {"type": "integer", "minimum": 1},
+							"holds": {"type": "number", "exclusiveMinimum": 0},
+							"liquid": {"type": "object", "required": ["kind", "vessel", "pints"], "properties": {"kind": {"type": "string"}, "vessel": {"type": "string"}, "pints": {"type": "number", "exclusiveMinimum": 0}}, "additionalProperties": false},
 							"food": {"type": "integer", "minimum": 1},
 							"use": {"type": "object"},
 							"teaches": {"$ref": "#/$defs/strings"}
