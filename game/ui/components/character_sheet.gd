@@ -411,6 +411,34 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 	parent.add_child(b)
 
 
+## What is in a vessel or a ready thing (v0.8.4.28): drink it, pour it out, pour it into another vessel of the list.
+func _liquid_buttons(row: HBoxContainer, c: Dictionary, id: String, busy: bool) -> void:
+	var data := Catalog.data
+	var lv := LiquidRules.first(c, data, id)
+	if lv.is_empty() or float(lv["pints"]) <= 0.0:
+		return
+	var key := LiquidRules.key_of(lv)
+	if LiquidRules.drink_why(data, lv).is_empty():
+		_action(row, "Drink_" + id, "BTN_LIQUID_DRINK", not busy, GameState.liquid_act.bind("drink", key))
+	var targets := LiquidRules.pour_targets(c, data, lv)
+	if not targets.is_empty():
+		var mb := MenuButton.new()
+		mb.name = "Pour_" + id
+		mb.text = "BTN_LIQUID_POUR"
+		mb.disabled = busy
+		mb.flat = false
+		for t: Dictionary in targets:
+			mb.get_popup().add_item(LiquidRules.line(data, GameState.session.items, t))
+		mb.get_popup().id_pressed.connect(func(i: int) -> void:
+			var err := GameState.liquid_act("pour", key, LiquidRules.key_of(targets[i]))
+			if err.is_empty():
+				visible = false
+			else:
+				EventBus.message.emit(tr(err)))
+		row.add_child(mb)
+	_action(row, "PourOut_" + id, "BTN_LIQUID_POUR_OUT", not busy, GameState.liquid_act.bind("pour_out", key))
+
+
 ## A feature, a trait or a spell as one line: its text is in the description panel (hover; the right button pins it).
 func _entry(parent: Control, title: String, body: String, short_title: String = "") -> Button:
 	var b := Button.new()
@@ -473,9 +501,10 @@ func _gear_tab(c: Dictionary) -> void:
 		row.add_theme_constant_override("separation", 12)
 		box.add_child(row)
 		var qty := int(c["inventory"][id])
-		var water := VesselRules.summary(c, Catalog.data, id)  # v0.7.34.6: what each vessel holds
+		var water := LiquidRules.summary(c, Catalog.data, id)  # v0.7.34.6: what each vessel holds
 		_item_button(row, details, c, id, "%s%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else "", " (%s)" % water if not water.is_empty() else ""], "Item_" + id)
 		var fx := ItemRules.consumable(Catalog.data, id, s.items)
+		_liquid_buttons(row, c, id, busy)
 		if not LetterRules.way_by(Catalog.data, "tool", id).is_empty():  # a forgery kit writes in the letter's window (v0.8.4.26.4)
 			_action(row, "Letter_" + id, "BTN_LETTER_WRITE", Backend.is_ready() and not busy, func() -> String:
 				EventBus.letter_requested.emit("")

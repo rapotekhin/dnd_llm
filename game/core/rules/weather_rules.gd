@@ -201,7 +201,7 @@ static func guard(s: GameSession, data: Dictionary, exposure: String, fire: bool
 				if fire:
 					return "костёр"
 			"water":
-				if VesselRules.pints(c, data) >= 1.0 or NeedRules.water_here(s, data):
+				if LiquidRules.pints(c, data) >= 1.0 or NeedRules.water_here(s, data):
 					return "вода"
 			"resist":
 				var r := str(ex.get("resist", ""))

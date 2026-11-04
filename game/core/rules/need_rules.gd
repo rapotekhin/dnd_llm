@@ -3,7 +3,7 @@ extends RefCounted
 ## Needs of the hero (roadmap v0.7.23, rules.needs): food and water empty over the game clock from the last meal or
 ## drink, sleep is read from the hours awake. A low need is a stage (a chip, a line for the master, hampered saves);
 ## an empty one past its grace days gives a level of exhaustion each day. Kept in c["needs"]:
-## {food: {level, at}, water: {level, at}, done: {need: exhaustion levels given}}; the water carried — VesselRules.
+## {food: {level, at}, water: {level, at}, done: {need: exhaustion levels given}}; the water carried — LiquidRules.
 
 const KINDS: Array[String] = ["food", "water", "sleep"]
 
@@ -152,11 +152,11 @@ static func eat(s: GameSession, data: Dictionary) -> Array[String]:
 
 ## Pints the hero's vessels hold in all (v0.7.34.6).
 static func capacity(c: Dictionary, data: Dictionary) -> float:
-	return VesselRules.room(c, data) + VesselRules.pints(c, data)
+	return LiquidRules.room(c, data) + LiquidRules.pints(c, data)
 
 
 static func drinks(s: GameSession, data: Dictionary) -> float:
-	return VesselRules.pints(s.character, data)
+	return LiquidRules.pints(s.character, data)
 
 
 ## Water here: the room's tag `water` or `foul_water`, a thing of the room with `source` (v0.7.34.6, the master's
@@ -206,7 +206,7 @@ static func can_drink(s: GameSession, data: Dictionary) -> String:
 static func drink(s: GameSession, data: Dictionary) -> Array[String]:
 	var here := water_here(s, data)
 	var r := _sip(s, data, 75.0, here)
-	var lines: Array[String] = ["Напился" + ("" if here else " из ёмкостей (осталось %s пинт)" % VesselRules.num(drinks(s, data)))]
+	var lines: Array[String] = ["Напился" + ("" if here else " из ёмкостей (осталось %s пинт)" % LiquidRules.num(drinks(s, data)))]
 	lines.append("Вода %d/100" % roundi(value(s, data, "water")))
 	if bool(r["foul"]):
 		lines.append_array(_foul_drink(s, data))
@@ -221,27 +221,27 @@ static func _sip(s: GameSession, data: Dictionary, upto: float, here: bool) -> D
 		set_value(s, data, "water", minf(100.0, v + ceilf(maxf(0.0, upto - v) / float(w["drink"])) * float(w["drink"])))
 		return {"foul": foul_here(s, data)}
 	var per_pint := float(w["drink"]) / float(w.get("drink_pints", 2))
-	var got := VesselRules.take(s.character, data, maxf(0.0, upto - v) / per_pint)
+	var got := LiquidRules.take(s.character, data, maxf(0.0, upto - v) / per_pint)
 	set_value(s, data, "water", v + float(got["pints"]) * per_pint)
 	return {"foul": bool(got["foul"])}
 
 
 ## `only` — one kind of vessel (the master's `fill` with an item_id).
 static func can_fill(s: GameSession, data: Dictionary, only := "") -> String:
-	if VesselRules.carried(s.character, data).filter(func(v: Dictionary) -> bool: return only.is_empty() or v["id"] == only).is_empty():
+	if LiquidRules.carried(s.character, data).filter(func(v: Dictionary) -> bool: return not bool(v["ready"]) and (only.is_empty() or v["id"] == only)).is_empty():
 		return "NEED_NO_SKIN"
 	if not water_here(s, data):
 		return "NEED_NO_SOURCE"
-	if VesselRules.to_fill(s.character, data, foul_here(s, data), only).is_empty():
+	if LiquidRules.to_fill(s.character, data, foul_here(s, data), only).is_empty():
 		return "NEED_SKIN_FULL"
 	return ""
 
 
 static func fill(s: GameSession, data: Dictionary, only := "") -> Array[String]:
 	var foul := foul_here(s, data)
-	VesselRules.fill(s.character, data, foul, only)
+	LiquidRules.fill(s.character, data, foul, only)
 	var lines: Array[String] = ["Набрал воды" + (" — гнилой" if foul else "")]
-	lines.append_array(VesselRules.lines(s.character, data, s.items, only))
+	lines.append_array(LiquidRules.lines(s.character, data, s.items, only))
 	return lines
 
 

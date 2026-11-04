@@ -64,15 +64,15 @@ func test_feather_fall_takes_the_whole_fall_for_a_slot() -> void:
 func test_create_water_fills_and_purify_cleans() -> void:
 	var s := _caster("create_or_destroy_water")
 	var c := s.character
-	VesselRules.drain(c)
+	LiquidRules.drain(c)
 	_cast(s, "create_or_destroy_water")
-	assert_float(VesselRules.pints(c, data)).is_greater(0.0)
-	VesselRules.drain(c)
-	VesselRules.fill(c, data, true)
-	assert_bool(VesselRules.carried(c, data).any(func(v: Dictionary) -> bool: return bool(v["foul"]))).is_true()
+	assert_float(LiquidRules.pints(c, data)).is_greater(0.0)
+	LiquidRules.drain(c)
+	LiquidRules.fill(c, data, true)
+	assert_bool(LiquidRules.carried(c, data).any(func(v: Dictionary) -> bool: return v["liquid"] == LiquidRules.FOUL)).is_true()
 	StudyRules.learn_spell(c, "purify_food_and_drink")
 	_cast(s, "purify_food_and_drink")
-	assert_bool(VesselRules.carried(c, data).any(func(v: Dictionary) -> bool: return bool(v["foul"]))).is_false()
+	assert_bool(LiquidRules.carried(c, data).any(func(v: Dictionary) -> bool: return v["liquid"] == LiquidRules.FOUL)).is_false()
 
 
 func test_detect_poison_and_disease_names_what_incubates() -> void:

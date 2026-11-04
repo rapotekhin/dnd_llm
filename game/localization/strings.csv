@@ -119,6 +119,15 @@ BTN_TRAVEL,"Идти сюда · шагов {steps}, {min} мин"
 BTN_UNATTUNE,Снять настройку
 BTN_UNEQUIP,Снять
 BTN_USE,Использовать
+BTN_LIQUID_DRINK,Выпить
+BTN_LIQUID_POUR,Перелить
+BTN_LIQUID_POUR_OUT,Вылить
+LIQUID_GONE,Этого сосуда уже нет
+LIQUID_SAME,Нельзя перелить в тот же сосуд
+LIQUID_EMPTY,Там пусто
+LIQUID_FULL,Сосуд полон
+LIQUID_OTHER,"В сосуде другая жидкость, сначала вылейте её"
+LIQUID_NOT_DRINK,Это не пьют
 BTN_WAIT,Ждать…
 CC_BACKGROUND_SKILLS,Навыки: {skills}.
 CC_CANTRIPS,Заговоры — выберите {n}:

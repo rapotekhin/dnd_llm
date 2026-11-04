@@ -557,7 +557,7 @@ static func carried_weight(c: Dictionary, data: Dictionary, session_items: Dicti
 	var total := 0.0
 	for id: String in c.get("inventory", {}):
 		total += float(ItemRules.def_of(data["items"], session_items, id).get("weight", 0)) * int(c["inventory"][id])
-	return total + ContainerRules.bags_weight(c, data, session_items) + VesselRules.extra_weight(c, data, session_items)  # bags, water
+	return total + ContainerRules.bags_weight(c, data, session_items) + LiquidRules.extra_weight(c, data, session_items)  # bags, water
 
 
 ## Carrying capacity (PHB): Strength × rules.carry.per_str pounds.

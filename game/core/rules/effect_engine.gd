@@ -625,7 +625,7 @@ func _plan_fill(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 		return {"reason": {"NEED_NO_SKIN": "у героя нет такой ёмкости (бурдюк, фляга, кувшин, ведро)", "NEED_NO_SOURCE":
 			"здесь нет воды: ни тега комнаты, ни вещи-источника (колодец, ручей, река — вещь обстановки с source)",
 			"NEED_SKIN_FULL": "ёмкости уже полны"}.get(why, why)}
-	return {"plan": {"only": only}, "summary": "Набрать воды: %s" % ", ".join(VesselRules.to_fill(s.character, data, NeedRules.foul_here(s, data), only)
+	return {"plan": {"only": only}, "summary": "Набрать воды: %s" % ", ".join(LiquidRules.to_fill(s.character, data, NeedRules.foul_here(s, data), only)
 		.map(func(v: Dictionary) -> String: return ItemRules.display_name(data["items"], s.items, v["id"])))}
 
 

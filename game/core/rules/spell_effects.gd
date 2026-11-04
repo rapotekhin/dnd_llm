@@ -1316,10 +1316,10 @@ static func world_spell(s: GameSession, data: Dictionary, spell_id: String) -> A
 				lines.append("незримый глаз видит «%s»: %s" % [WorldView.new(world).room(at[0]).get("name", at[0]), PetRules.seen(s, data, at[0])])
 	match str(sp.get("water", "")):
 		"fill":  # Create Water: every vessel full of clean water
-			VesselRules.fill(s.character, data, false)
-			lines.append_array(VesselRules.lines(s.character, data, s.items))
+			LiquidRules.fill(s.character, data, false)
+			lines.append_array(LiquidRules.lines(s.character, data, s.items))
 		"clean":  # Purify Food and Drink: the water clean, the food fresh again
-			lines.append_array(VesselRules.clean(s.character, data))
+			lines.append_array(LiquidRules.clean(s.character, data))
 			lines.append_array(FoodRules.freshen(s, data))
 	if bool(sp.get("mend", false)):  # Mending (v0.8.4.26.3): one break made whole
 		lines.append_array(ThingRules.mend(s, data, room))

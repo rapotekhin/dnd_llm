@@ -2774,6 +2774,25 @@
 		"short_rests_per_day": 2
 	},
 	"belt": {"_doc": "The belt under the doll (v0.8.4.24, as in Pathfinder): its cells hold the things at hand — only they are drunk, read, thrown, and a light there lights the way (ItemRules.belt).", "size": 5},
+	"liquids": {
+		"_doc": "v0.8.4.28, LiquidRules: one row per liquid. `drink` — what a portion (`portion` pints) gives: `water` (thirst as that much water), `food` (camp food units a pint), `drunk` (hops a pint), `disease` (a row of rules.diseases); no `drink` — not drunk. `quench` — the thirst's water: drunk from the vessels by «Попить», drawn at a source. `item` in its `vessel` with `pints` — the ready thing of the catalog it makes. `lb_per_pint` — the weight of a pint (`lb_per_pint` here by default). `vessels` — pints a vessel holds, `weight` — what the catalog counts in it sold full, `full` — a new hero's start full of water. `drunk` — the hops: each point sobers in `minutes_per_point`; past `base` + the `ability` modifier the drinker has `condition` until it sobers to that again (the author, 2026-11-04).",
+		"portion": 1,
+		"lb_per_pint": 1,
+		"drunk": {"name": "Опьянение", "hops": "Хмель", "condition": "poisoned", "base": 2, "ability": "con", "minutes_per_point": 60},
+		"vessels": {"waterskin": {"pints": 4, "weight": 1, "full": true}, "flask_or_tankard": {"pints": 1, "full": true}, "empty_flask": {"pints": 1, "full": true}, "bottle_glass": {"pints": 1.5, "full": true}, "jug_or_pitcher": {"pints": 8, "full": true}, "bucket": {"pints": 24, "full": true}, "barrel": {"pints": 320, "full": true}, "cup_clay": {"pints": 1}, "pewter_mug": {"pints": 1}, "teacup": {"pints": 0.5}, "bowl_wooden": {"pints": 1}, "pot_iron": {"pints": 8}, "kettle": {"pints": 8}, "chalice": {"pints": 1}, "vial": {"pints": 0.25}},
+		"kinds": {
+			"water": {"name": "вода", "drink": {"water": 1}, "quench": true},
+			"foul_water": {"name": "гнилая вода", "drink": {"water": 1, "disease": "foul_water"}, "quench": true},
+			"ale": {"name": "эль", "drink": {"water": 1, "drunk": 1}, "item": "ale", "vessel": "cup_clay", "pints": 1},
+			"wine": {"name": "вино", "drink": {"water": 0.5, "drunk": 2}, "item": "bottle_wine", "vessel": "bottle_glass", "pints": 1.5},
+			"milk": {"name": "молоко", "drink": {"water": 1, "food": 0.5}, "item": "goat_milk", "vessel": "jug_or_pitcher", "pints": 2},
+			"oil": {"name": "масло", "item": "oil_flask", "vessel": "empty_flask", "pints": 1},
+			"alchemists_fire": {"name": "алхимический огонь", "item": "alchemists_fire_flask", "vessel": "empty_flask", "pints": 1},
+			"acid": {"name": "кислота", "item": "acid_vial", "vessel": "vial", "pints": 0.25},
+			"holy_water": {"name": "святая вода", "item": "holy_water", "vessel": "empty_flask", "pints": 1},
+			"poison": {"name": "яд", "item": "poison_basic_vial", "vessel": "vial", "pints": 0.25}
+		}
+	},
 	"consumables": {
 		"_doc": "Items the engine applies when used (v0.6.0): heal [count, sides, bonus], remove [conditions]. Thrown in a fight (v0.7.12, the «Предметы» tab, PHB): `throw` — a ranged attack (improvised: no proficiency; range ft) and on a hit `damage` [dice, type] (only to `types` when given), `burning` dice at the start of the foe's turn until a DEX save DC 10 puts it out, `oiled` — the next fire damage to the foe +N, `condition` with an escape (a STR save each turn, `escape_dc`) on foes up to `max_size`; `strew` — only on a square, a row of `rules.combat.grid.strewn` (caltrops, ball bearings, v0.8.4.27). A catalog item may carry its own `use` (potions, the ointment, scrolls, wands).",
 		"alchemists_fire_flask": {"throw": {"range": 20, "improvised": true, "damage": ["1d4", "fire"], "burning": "1d4"}},
@@ -2786,7 +2805,6 @@
 		"dried_fish": {"meal": {}},
 		"roast_meat": {"meal": {}},
 		"stew": {"meal": {"water": 20}},
-		"goat_milk": {"meal": {"water": 30}},
 		"hunters_stew": {"meal": {"water": 20, "temp_hp": 5}},
 		"mushroom_soup": {"meal": {"water": 20}, "adv_tag": "poison", "duration": "eight_hours"},
 		"spoiled_food": {"meal": {}},
@@ -4103,7 +4121,7 @@
 			{"below": 20, "chip": "Очень голоден", "line": "очень голоден — слабеет", "saves": {"con": "disadvantage"}},
 			{"below": 1, "chip": "Голодает", "line": "голодает", "saves": {"con": "disadvantage"}}
 		]},
-		"water": {"name": "Вода", "hours": 24, "drink": 50, "grace_days": "1", "drink_minutes": 5, "fill_minutes": 10, "drink_pints": 2, "lb_per_pint": 1, "vessels": {"waterskin": {"pints": 4, "weight": 1}, "flask_or_tankard": {"pints": 1}, "empty_flask": {"pints": 1}, "bottle_glass": {"pints": 1.5}, "jug_or_pitcher": {"pints": 8}, "bucket": {"pints": 24}, "barrel": {"pints": 320}}, "stages": [
+		"water": {"name": "Вода", "hours": 24, "drink": 50, "grace_days": "1", "drink_minutes": 5, "fill_minutes": 10, "drink_pints": 2, "stages": [
 			{"below": 50, "chip": "Хочет пить", "line": "хочет пить"},
 			{"below": 20, "chip": "Мучит жажда", "line": "мучит жажда", "saves": {"con": "disadvantage"}},
 			{"below": 1, "chip": "Обезвожен", "line": "обезвожен", "saves": {"con": "disadvantage"}}
@@ -4181,7 +4199,6 @@
 			"goodberry": 1,
 				"rations": 2,
 				"bread": 1,
-				"goat_milk": 1,
 				"berries": 1,
 				"apples": 1,
 				"cheese": 1,

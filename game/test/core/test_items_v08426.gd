@@ -118,7 +118,7 @@ func test_a_decanter_pours_water_anywhere() -> void:
 	var c := s.character
 	c["inventory"].clear()
 	Gear.give(s, data, Being.HERO, "waterskin", 1)
-	VesselRules.drain(c)
+	LiquidRules.drain(c)
 	var dry := NeedRules.water_here(s, data)
 	Gear.give(s, data, Being.HERO, "decanter_of_endless_water", 1)
 	CharacterRules.refresh(c, data, s.items)

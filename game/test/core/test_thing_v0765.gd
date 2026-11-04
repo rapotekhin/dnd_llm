@@ -67,17 +67,17 @@ func test_water_goes_with_its_vessel() -> void:
 	_chest(s)
 	ContainerRules.apply_put(s, data, {"room": s.room_id, "into": "p1", "item_id": "waterskin", "qty": 1})
 	ContainerRules.apply_take(s, data, {"room": s.room_id, "from": "p1", "item_id": "waterskin", "qty": 1, "owner": ""})
-	assert_str(VesselRules.summary(s.character, data, "waterskin")).is_equal("вода 3/4")
+	assert_str(LiquidRules.summary(s.character, data, "waterskin")).is_equal("вода 3/4")
 
 
 func test_a_new_heros_vessels_are_full_and_a_dropped_one_keeps_its_water() -> void:
 	var s := _hero()
 	s.character["inventory"]["waterskin"] = 1
-	assert_float(VesselRules.pints(s.character, data)).is_equal_approx(4.0, 0.01)
+	assert_float(LiquidRules.pints(s.character, data)).is_equal_approx(4.0, 0.01)
 	ContainerRules.apply_drop(s, data, {"room": s.room_id, "item_id": "waterskin", "qty": 1})
 	var p: Dictionary = s.props[s.room_id][-1]
 	PropRules.apply_take(s, data, {"room": s.room_id, "prop": str(p["id"]), "owner": ""})
-	assert_float(VesselRules.pints(s.character, data)).is_equal_approx(4.0, 0.01)
+	assert_float(LiquidRules.pints(s.character, data)).is_equal_approx(4.0, 0.01)
 
 
 func test_food_ages_in_a_bag_as_in_the_pack() -> void:

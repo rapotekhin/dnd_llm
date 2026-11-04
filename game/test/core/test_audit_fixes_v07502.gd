@@ -188,7 +188,7 @@ func test_water_goes_with_its_vessel() -> void:
 	s.character["inventory"].erase("waterskin")
 	CharacterRules.refresh(s.character, data, s.items)
 	s.character["inventory"]["waterskin"] = 1
-	assert_float(VesselRules.pints(s.character, data)).is_equal(0.0)
+	assert_float(LiquidRules.pints(s.character, data)).is_equal(0.0)
 
 
 func test_identifying_keeps_the_mark_of_a_theft() -> void:

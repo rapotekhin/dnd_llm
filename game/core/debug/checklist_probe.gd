@@ -234,9 +234,12 @@ static func item(data: Dictionary, id: String) -> Dictionary:
 	if data["rules"]["hero_effects"]["camp"]["food"].has(id) and not use.has("meal"):
 		mech += 1
 		_food(data, id, steps)
-	if data["rules"]["needs"]["water"]["vessels"].has(id):
+	if LiquidRules.cfg(data)["vessels"].has(id):
 		mech += 1
 		_vessel(data, id, steps)
+	if not LiquidRules.ready(data, id).is_empty():
+		mech += 1
+		_liquid(data, id, steps)
 	if data["rules"]["sight"]["lights"].has(id):
 		mech += 1
 		_light(data, id, steps)
@@ -798,12 +801,39 @@ static func _vessel(data: Dictionary, id: String, steps: Array[String]) -> void:
 	var s := session(data)
 	s.character["inventory"].clear()
 	Gear.give(s, data, Being.HERO, id, 1)
-	var pints := float(data["rules"]["needs"]["water"]["vessels"][id]["pints"])
-	check(steps, is_equal_approx(VesselRules.holds(data, id), pints), "вмещает %s пинт воды" % pints, VesselRules.holds(data, id))
+	var pints := float(LiquidRules.cfg(data)["vessels"][id]["pints"])
+	check(steps, is_equal_approx(LiquidRules.holds(data, id), pints), "вмещает %s пинт воды" % pints, LiquidRules.holds(data, id))
+	LiquidRules.drain(s.character)
+	s.room_id = "brod-square"  # a well
 	var why := NeedRules.can_fill(s, data)
 	if why.is_empty():
 		NeedRules.fill(s, data)
-	check(steps, VesselRules.pints(s.character, data) > 0.0, "наполняется водой", why)
+	check(steps, LiquidRules.pints(s.character, data) > 0.0, "наполняется водой", why)
+
+
+## A ready thing of a liquid (v0.8.4.28): a vessel with its liquid — drunk if it is a drink, poured out into its vessel.
+static func _liquid(data: Dictionary, id: String, steps: Array[String]) -> void:
+	var s := session(data)
+	var c := s.character
+	c["inventory"].clear()
+	Gear.give(s, data, Being.HERO, id, 2)
+	var r := LiquidRules.ready(data, id)
+	var k := LiquidRules.kind(data, str(r["liquid"]))
+	check(steps, LiquidRules.first(c, data, id)["liquid"] == r["liquid"], "%s в сосуде: %s" % [LiquidRules.name_of(data, str(r["liquid"])), r["vessel"]])
+	if k.has("drink"):
+		NeedRules.set_value(s, data, "water", 10.0)
+		NeedRules.set_value(s, data, "food", 10.0)
+		var said := LiquidRules.drink(s, data, Sheet.HERO, LiquidRules.first(c, data, id))
+		check(steps, Gear.count(s, data, Being.HERO, id) == 1 and Gear.count(s, data, Being.HERO, str(r["vessel"])) == 1, "выпито, сосуд остался", " · ".join(said))
+		if k["drink"].has("water"):
+			check(steps, NeedRules.value(s, data, "water") > 10.0, "утоляет жажду", NeedRules.value(s, data, "water"))
+		if k["drink"].has("food"):
+			check(steps, NeedRules.value(s, data, "food") > 10.0, "немного сытит", NeedRules.value(s, data, "food"))
+	else:
+		check(steps, LiquidRules.drink_why(data, LiquidRules.first(c, data, id)) == "LIQUID_NOT_DRINK", "это не пьют")
+	var before := Gear.count(s, data, Being.HERO, str(r["vessel"]))
+	LiquidRules.pour_out(c, data, LiquidRules.first(c, data, id))
+	check(steps, Gear.count(s, data, Being.HERO, str(r["vessel"])) == before + 1, "вылито, остался сосуд")
 
 
 ## A light: lit on the belt.
@@ -1200,7 +1230,7 @@ static func _spell_world(data: Dictionary, id: String, slot: int) -> String:
 		return _spell_letter(s, data, id)
 	_prepare_cure(s, data, id)  # something to cure, to know, to fill and to clean (v0.8.4.26.2)
 	ItemRules.found(c, data, s.items, "ring_of_warmth")  # comes unidentified
-	VesselRules.drain(c)
+	LiquidRules.drain(c)
 	var chk := SpellRules.check(c, data, id, slot)
 	if chk.has("reason"):
 		return ""

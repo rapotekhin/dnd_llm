@@ -1573,6 +1573,27 @@ func need_act(act: String) -> String:
 	return ""
 
 
+## A liquid in a vessel or a ready thing (v0.8.4.28): drink a portion, pour it out, pour it into another vessel. `key` and
+## `to` — copies as LiquidRules.key_of names them. "" or a localization key.
+func liquid_act(what: String, key: String, to: String = "") -> String:
+	if not _out_of_fight():
+		return "NEED_BUSY"
+	var data := Catalog.data
+	var s := session
+	var c := s.character
+	var a := LiquidRules.by_key(c, data, key)
+	return _act(what, {
+		"drink": [LiquidRules.drink_why.bind(data, a), func() -> Array:
+			var lines: Array = LiquidRules.drink(s, data, Sheet.HERO, a)
+			lines.append_array(TimeRules.advance(s, data, int(NeedRules.cfg(data)["water"]["drink_minutes"])))
+			return lines],
+		"pour_out": [func() -> String: return "LIQUID_GONE" if a.is_empty() else "LIQUID_EMPTY" if float(a["pints"]) <= 0.0 else "",
+			LiquidRules.pour_out.bind(c, data, a, s.items)],
+		"pour": [func() -> String: return LiquidRules.pour_why(a, LiquidRules.by_key(c, data, to)),
+			func() -> Array: return LiquidRules.pour(c, data, a, LiquidRules.by_key(c, data, to), s.items)],
+	})
+
+
 ## Crafting (v0.7.24): the acts go without the master, the time passes by the engine. "" or a localization key.
 func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
 	if not _at_leisure():

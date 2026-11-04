@@ -29,7 +29,7 @@ func run() -> void:
 	TimeRules.advance(s, data, 14 * 60)
 	s.character["inventory"]["rations"] = 2
 	s.character["inventory"]["waterskin"] = 1
-	VesselRules.drain(s.character)
+	LiquidRules.drain(s.character)
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var shown := NeedRules.shown(s, data).map(func(n: Dictionary) -> String: return str(n["chip"]))
@@ -90,6 +90,38 @@ func run() -> void:
 		var line: Label = find(sheet, "SheetNeeds")
 		step("the needs on the sheet", line != null and line.text.contains("Еда"), line.text if line != null else "")
 		await shot("sheet")
+		sheet.visible = false
+		# v0.8.4.28: a mug of ale on the sheet is drunk and leaves its cup; a bottle of wine poured into the empty cup
+		s.character["inventory"]["ale"] = 1
+		s.character["inventory"]["bottle_wine"] = 1
+		sheet.call("open")
+		(sheet.find_children("*", "TabContainer", true, false)[0] as TabContainer).current_tab = 2
+		await frames(4)
+		for sc: ScrollContainer in sheet.find_children("*", "ScrollContainer", true, false):
+			if sc.is_visible_in_tree():
+				sc.scroll_vertical = 100000
+		await frames(3)
+		var sip: Button = find(sheet, "Drink_ale")
+		step("the ale has «Выпить»; the wine no «Перелить» with no empty vessel", sip != null and find(sheet, "Pour_bottle_wine") == null)
+		await shot("liquids")
+		if sip != null:
+			await press(sip)
+			await frames(3)
+		step("the ale drunk, its cup left", not s.character["inventory"].has("ale") and int(s.character["inventory"].get("cup_clay", 0)) == 1)
+		sheet.call("open")
+		await frames(4)
+		var pour2: MenuButton = find(sheet, "Pour_bottle_wine")
+		var cup := -1
+		if pour2 != null:
+			for i in pour2.get_popup().item_count:
+				if pour2.get_popup().get_item_text(i).begins_with("Глиняная кружка"):
+					cup = i
+		if step("the cup among the targets", cup >= 0):
+			pour2.get_popup().id_pressed.emit(pour2.get_popup().get_item_id(cup))
+			await frames(3)
+		step("wine in the cup, the rest in the bottle", LiquidRules.summary(s.character, data, "cup_clay") == "вино 1/1" \
+			and LiquidRules.summary(s.character, data, "bottle_glass") == "вино 0.5/1.5",
+			"%s · %s" % [LiquidRules.summary(s.character, data, "cup_clay"), LiquidRules.summary(s.character, data, "bottle_glass")])
 		sheet.visible = false
 
 	gs.set_needs(false)
