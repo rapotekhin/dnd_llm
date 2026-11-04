@@ -11,20 +11,20 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["allies"]
 
 
-## A row of rules.allies.summons by a spell's or a thing's id; a thing the master made carries its own row in its
-## `use.summon`, read off the game's things (`s`, v0.8.4.28.7).
-static func summon_spec(data: Dictionary, spell_id: String, s: GameSession = null) -> Dictionary:
+## A row of rules.allies.summons by a spell's or a thing's id (`ItemRules.summon_key`); a thing the master made carries
+## its own row in its `use.summon`, read off the game's things (`items` — `s.items`, v0.8.4.28.7).
+static func summon_spec(data: Dictionary, spell_id: String, items: Dictionary = {}) -> Dictionary:
 	var row: Dictionary = cfg(data)["summons"].get(spell_id, {})
-	if row.is_empty() and s != null:
-		var own: Variant = s.items.get(spell_id, {}).get("use", {}).get("summon")
+	if row.is_empty():
+		var own: Variant = items.get(spell_id, {}).get("use", {}).get("summon")
 		if own is Dictionary:
 			return own
 	return row
 
 
 ## The name of what calls: a spell, or a thing whose row it is (v0.8.4.26: a Bag of Tricks; a thing of the game, v0.8.4.28.7).
-static func source_name(data: Dictionary, key: String, s: GameSession = null) -> String:
-	var d: Dictionary = data["spells"].get(key, data["items"]["catalog"].get(key, s.items.get(key, {}) if s != null else {}))
+static func source_name(data: Dictionary, key: String, items: Dictionary = {}) -> String:
+	var d: Dictionary = data["spells"].get(key, data["items"]["catalog"].get(key, items.get(key, {})))
 	return str(d.get("name", key))
 
 
@@ -96,7 +96,7 @@ static func summon_specs(s: GameSession) -> Array:
 
 ## The spell calls its creatures: they go with the hero (and the fight, when there is one). Lines.
 static func summon(s: GameSession, data: Dictionary, spell_id: String) -> Array[String]:
-	var sp := summon_spec(data, spell_id, s)
+	var sp := summon_spec(data, spell_id, s.items)
 	var mon := monster_of(s, sp)
 	var m: Dictionary = data["monsters"].get(mon, {})
 	if m.is_empty():
@@ -154,7 +154,7 @@ static func _carrier(s: GameSession, data: Dictionary, spell_id: String, sp: Dic
 		if str(cr.get("spell", "")) == spell_id:
 			_end_carrier(s, data, cr)
 	var now := TimeRules.abs_minute(s)
-	var name := source_name(data, spell_id, s)
+	var name := source_name(data, spell_id, s.items)
 	var c := {"name": name, "monster": str(sp["monster"]), "state": PropertyRules.TAME, "bound": false, "led": true, "owner": OwnerRules.HERO,
 		"since": now, "hp": int(m["hp"]), "max_hp": int(m["hp"]), "xp_given": true, "fed_day": s.day, "spell": spell_id, "until": now + int(sp["minutes"])}
 	if sp.has("carries_lb"):
@@ -273,5 +273,5 @@ static func summon_lines(s: GameSession, data: Dictionary) -> Array[String]:
 	var now := TimeRules.abs_minute(s)
 	for m: Dictionary in called(s):
 		var left := "до конца концентрации" if bool(m["concentration"]) else _left_text(int(m["until"]) - now) if int(m["until"]) >= 0 else "пока не отпустят"
-		out.append("%s (%s, %s)" % [m["name"], source_name(data, str(m["spell"]), s), left])
+		out.append("%s (%s, %s)" % [m["name"], source_name(data, str(m["spell"]), s.items), left])
 	return out

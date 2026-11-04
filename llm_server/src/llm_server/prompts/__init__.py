@@ -186,7 +186,7 @@ BANK_WORDS = re.compile(r"ссуд|заём|заем|займ|в долг|зал
 UNDERWORLD_WORDS = re.compile(r"взлом|обчист|ограб|обнес|контрабанд|скупщик|краден|вынести|вынесу|кассу", re.IGNORECASE)  # v0.7.70.1
 CRAFT_WORDS = re.compile(r"выков|скую|скова|кую |смастер|сработаю|выточ|сошью|рецепт", re.IGNORECASE)  # v0.7.70.2
 # v0.8.4.28.7: a search where something is hidden — what is found is given as a new thing (wear, summon, use)
-FIND_WORDS = re.compile(r"обыск|обшар|ищу|искать|поиск|пошар|роюсь|рыться|перерыва|разгреб|разгреба|вороша|что тут|что здесь|что внутри|"
+FIND_WORDS = re.compile(r"обыск|обшар|ищу|искать|поиск|пошар|роюсь|рыться|перерыва|разгреб|вороша|что тут|что здесь|что внутри|"
                         r"натаскал|положили|спрятан|клад|сокровищ", re.IGNORECASE)
 JOB_WORDS = re.compile(r"работ|наймусь|нанять|найми|вышибал|устроиться", re.IGNORECASE)  # v0.7.70.1
 

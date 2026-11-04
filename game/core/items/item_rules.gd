@@ -69,6 +69,12 @@ static func unknown_name(items_data: Dictionary, d: Dictionary) -> String:
 	return look.left(1).to_upper() + look.substr(1) + str(items_data.get("unknown_suffix", ", свойства неизвестны"))
 
 
+## The key a thing's `use.summon` is read by (AllyRules.summon_spec): the row's name in rules.allies.summons, or the thing's
+## own id when it carries its row (a thing the master made, v0.8.4.28.7).
+static func summon_key(id: String, fx: Dictionary) -> String:
+	return real_id(id) if fx.get("summon") is Dictionary else str(fx.get("summon", ""))
+
+
 static func real_id(id: String) -> String:
 	return id.trim_prefix(UNKNOWN)
 
@@ -815,8 +821,7 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 			Guise.of(Sheet.holder(s, who))["dc"] = int(own["dc"])
 		return lines
 	if s != null and fx.has("summon"):  # v0.8.4.26: a Bag of Tricks, the Pipes of the Sewers — a row of rules.allies.summons
-		# v0.8.4.28.7: a thing the master made carries its own row, keyed by the thing (AllyRules.summon_spec)
-		lines.append_array(AllyRules.summon_by(s, data, who, real_id(id) if fx["summon"] is Dictionary else str(fx["summon"])))
+		lines.append_array(AllyRules.summon_by(s, data, who, summon_key(id, fx)))
 		return lines
 	if fx.has("recover_slot"):
 		for lv in range(mini(int(fx["recover_slot"]), 5), 0, -1):
