@@ -130,11 +130,11 @@ func test_the_hold_survives_a_save() -> void:
 
 
 func test_magic_without_mechanics_is_refused() -> void:
-	var r := ItemRules.check_generated(data["items"], {"name": "Якорь Светлой Матери", "item_type": "wondrous", "rarity": "uncommon",
+	var r := ItemRules.check_generated(data, {"name": "Якорь Светлой Матери", "item_type": "wondrous", "rarity": "uncommon",
 		"value_cp": 0, "properties": [], "description": "Свойства неизвестны."}, 4)
 	assert_bool(bool(r["ok"])).is_false()
 	assert_str(str(r["reason"])).contains("без механики")
-	r = ItemRules.check_generated(data["items"], {"name": "Камешек", "item_type": "gear", "rarity": "common", "value_cp": 0, "properties": []}, 4)
+	r = ItemRules.check_generated(data, {"name": "Камешек", "item_type": "gear", "rarity": "common", "value_cp": 0, "properties": []}, 4)
 	assert_bool(bool(r["ok"])).is_true()
 
 

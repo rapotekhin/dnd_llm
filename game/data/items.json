@@ -138,7 +138,40 @@
 			}
 		},
 		"resist": 2,
-		"check_adv": 0
+		"check_adv": 0,
+		"summon": {
+			"_doc": "v0.8.4.28.7: a thing the master makes that calls creatures (`use.summon`: monster or pick, count, minutes). Points = base + the CR of all it calls rounded up (the strongest of `pick`); once (a consumable) is `once` cheaper. count_max, minutes_max — what one use may call.",
+			"base": 1,
+			"once": -1,
+			"count_max": 8,
+			"minutes_max": 1440
+		}
+	},
+	"wear_points": {
+		"_doc": "v0.8.4.28.7: what a thing the master makes lays while it works (`wear`), in the words of a spell's effect, read by ItemRules.wear like a catalog thing's: points of rarity per word; speed — feet 5–60 or \"walk\" (the wearer's walking speed), flag — true; with — what the word brings along (a flight is `flying`). A new word is a row here that the spell's own rules already read.",
+		"swim_speed": {
+			"points": 2,
+			"value": "speed"
+		},
+		"climb_speed": {
+			"points": 2,
+			"value": "speed"
+		},
+		"water_walk": {
+			"points": 2,
+			"value": "speed"
+		},
+		"fly_speed": {
+			"points": 3,
+			"value": "speed",
+			"with": {
+				"flying": true
+			}
+		},
+		"see_invisible": {
+			"points": 3,
+			"value": "flag"
+		}
 	},
 	"catalog": {
 		"abacus": {

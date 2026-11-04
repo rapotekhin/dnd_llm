@@ -67,3 +67,17 @@ def test_a_thing_moves_only_by_a_real_way() -> None:
 
 def test_the_ways_of_a_thing_are_the_engine_s_rows() -> None:
     assert {f"move_item:{p}" for p in MOVE_PAIRS} == {r for r in _rows() if r.startswith("move_item:")}
+
+
+def test_a_made_thing_carries_what_it_lays_while_worn_and_what_it_calls():
+    """0.110.0: `wear` in the engine's words, `use.summon` in the shape of its summons; the engine prices both."""
+    e = MoveItemEffect.model_validate({"source": "world", "target": "hero", "item": {**ITEM, "item_type": "wondrous", "rarity": "uncommon",
+                                       "wear": {"fly_speed": "walk", "see_invisible": True},
+                                       "use": {"summon": {"monster": "wolf", "count": 2, "minutes": 60}, "charges": 2}}})
+    dumped = e.model_dump(mode="json")["item"]
+    assert dumped["wear"] == {"fly_speed": "walk", "see_invisible": True}
+    assert dumped["use"]["summon"]["monster"] == "wolf" and dumped["use"]["summon"]["count"] == 2
+    with pytest.raises(ValidationError):
+        MoveItemEffect.model_validate({"source": "world", "target": "hero", "item": {**ITEM, "use": {"summon": {"monster": "wolf", "count": 30}}}})
+    topic = (Path(prompts.__file__).parent / "topics" / "items.md.j2").read_text(encoding="utf-8")
+    assert "`summon`" in topic and "`wear`" in topic

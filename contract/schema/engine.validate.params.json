@@ -2384,6 +2384,31 @@
           "minimum": 0,
           "title": "Value Cp",
           "type": "integer"
+        },
+        "wear": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wear"
         }
       },
       "required": [
@@ -2395,9 +2420,50 @@
       "title": "GeneratedItem",
       "type": "object"
     },
+    "GeneratedSummon": {
+      "additionalProperties": false,
+      "description": "Creatures a generated thing calls (0.110.0), in the shape of the engine's summons: an SRD `monster` or a `pick` of\nthem (one by the dice), `count`, for `minutes`. The engine prices it by their CR.",
+      "properties": {
+        "count": {
+          "default": 1,
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "minutes": {
+          "default": 60,
+          "maximum": 1440,
+          "minimum": 1,
+          "title": "Minutes",
+          "type": "integer"
+        },
+        "monster": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Monster"
+        },
+        "pick": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Pick",
+          "type": "array"
+        }
+      },
+      "title": "GeneratedSummon",
+      "type": "object"
+    },
     "GeneratedUse": {
       "additionalProperties": false,
-      "description": "What a generated thing does when used (0.27.0), one of: a `spell` of the engine's book (with `charges` — a\nwand that regains them at dawn; without — a scroll, once), `heal` light / medium / strong, `resist` a damage\ntype for an hour, `check_adv` — advantage on a skill for an hour (potions, once). The engine prices it in rarity.",
+      "description": "What a generated thing does when used (0.27.0), one of: a `spell` of the engine's book (with `charges` — a\nwand that regains them at dawn; without — a scroll, once), `heal` light / medium / strong, `resist` a damage\ntype for an hour, `check_adv` — advantage on a skill for an hour (potions, once), `summon` — creatures it calls\n(0.110.0, with `charges` or once). The engine prices it in rarity.",
       "properties": {
         "charges": {
           "anyOf": [
@@ -2479,6 +2545,17 @@
           ],
           "default": null,
           "title": "Spell"
+        },
+        "summon": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedSummon"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "title": "GeneratedUse",

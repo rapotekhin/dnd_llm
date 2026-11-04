@@ -606,6 +606,7 @@
 | Способность с зарядами | `make {what: ability, ability, parts: …, uses, recharge}` → `course {teach_kind: ability}` или книга; работает и у воина: Сл по своей характеристике |
 | Вещь и рецепт, которых нет в данных | `recipe {output, …}` — сразу выучен; с `book`, `key` — книга для награды; `course {teach_kind: recipe, recipe}` — у мастера этого ремесла |
 | Жидкость, которой нет в данных | `make {what: liquid, parts}` → `move_item:world>hero` с `item_id: "new:<key>"` или `fill {liquid: "new:<key>"}` из бочки | виски (`drunk`), яд дроу (`blade`, `lay: unconscious`, `wake`, `save con 13`), злоба (`throw`, `lay: poisoned`, `also: blinded`, `lasts: hour`, `save con 15`, `area`); уровень героя по ярусу (v0.8.4.28.5) |
+| Вещь, которая даёт полёт или плавание, пока надета, или призывает существ | `move_item:world>hero` с новой вещью: `item.wear` {`fly_speed`: 40}, `item.use.summon` {`monster`: "wolf", `count`: 2, `minutes`: 60} с `charges` | плащ из перьев гарпии, рог вождя волков; редкость по очкам `wear_points` и CR призванных, тот же предел уровня и «одна магическая вещь до долгого отдыха» (v0.8.4.28.7) |
 | Свойство вещи | `make {what: property, parts}` → вещь с `properties: ["new:<key>"]`, или `book` и `move_item:world>hero new:book:<key>`, или `course {teach_kind: recipe, teach_id: "new:<key>"}`; герой накладывает в окне ремесла |
 | Части не покрывают замысел | отказ в истории и `missing_concept`; `make` не подменяет его другим |
 

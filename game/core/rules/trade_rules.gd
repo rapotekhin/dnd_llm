@@ -660,7 +660,7 @@ static func make_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Di
 		var gen: Variant = spec.get("item")
 		if not (gen is Dictionary):
 			return {"reason": "нужен item_id (вещь каталога, find_items) или item (новая вещь)"}
-		var chk := ItemRules.check_generated(data["items"], gen, int(s.character.get("level", 1)), data.get("spells", {}))
+		var chk := ItemRules.check_generated(data, gen, int(s.character.get("level", 1)))
 		if not bool(chk["ok"]):
 			return {"reason": str(chk["reason"])}
 		item = chk["def"]

@@ -177,7 +177,7 @@ static func plan_npc(s: GameSession, data: Dictionary, spec: Dictionary, searche
 		for g: Variant in spec.get("stock_new", []) if spec.get("stock_new") is Array else []:
 			if not (g is Dictionary):
 				continue
-			var chk := ItemRules.check_generated(data["items"], g, int(s.character.get("level", 1)), data.get("spells", {}))
+			var chk := ItemRules.check_generated(data, g, int(s.character.get("level", 1)))
 			if not bool(chk["ok"]):
 				notes.append("не взят новый товар «%s»: %s" % [g.get("name", ""), chk["reason"]])
 				continue

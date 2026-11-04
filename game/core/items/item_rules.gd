@@ -566,8 +566,10 @@ static func generated_id(item: Dictionary) -> String:
 	return "gen_" + ("%s|%s|%s" % [item.get("name", ""), item.get("base", ""), ",".join(props)]).md5_text().left(10)
 
 
-## {"ok": true, "def": normalized definition} or {"ok": false, "reason": text for the master}.
-static func check_generated(items_data: Dictionary, item: Dictionary, level: int, spells: Dictionary = {}) -> Dictionary:
+## {"ok": true, "def": normalized definition} or {"ok": false, "reason": text for the master}. What it lays while it works
+## (`wear`, v0.8.4.28.7) and what it calls (`use.summon`) are priced as its properties are.
+static func check_generated(data: Dictionary, item: Dictionary, level: int) -> Dictionary:
+	var items_data: Dictionary = data["items"]
 	var costs: Dictionary = items_data["properties"]
 	var points := 0
 	for p: Variant in item.get("properties", []):
@@ -577,10 +579,14 @@ static func check_generated(items_data: Dictionary, item: Dictionary, level: int
 	var base := str(item.get("base", ""))
 	if not base.is_empty() and not items_data["catalog"].has(base):
 		return {"ok": false, "reason": "базового предмета %s нет в каталоге" % base}
-	var use := _generated_use(items_data, item, spells)  # v0.7.18: what the thing does when used
+	var use := _generated_use(data, item)  # v0.7.18: what the thing does when used
 	if use.has("reason"):
 		return {"ok": false, "reason": use["reason"]}
 	points += int(use.get("points", 0))
+	var wear := _generated_wear(items_data, item)  # v0.8.4.28.7: what it lays while it works
+	if wear.has("reason"):
+		return {"ok": false, "reason": wear["reason"]}
+	points += int(wear.get("points", 0))
 	if points == 0 and not str(item.get("rarity", "common")) in ["common", ""]:  # big test #16 (v0.7.22.2)
 		return {"ok": false, "reason": ("магическая вещь (%s) без механики станет простой безделушкой — движок не опознает её и ничего ей не даст. " +
 			"Дай ей свойства (`properties` из словаря движка) или `use` (заряды заклинания, зелье), либо возьми готовую магическую вещь " +
@@ -598,6 +604,8 @@ static func check_generated(items_data: Dictionary, item: Dictionary, level: int
 		def["text"] = str(item["text"]).strip_edges().left(1000)
 	if not str(item.get("evidence", "")).is_empty():  # a letter or a ledger that shows an NPC's crime (v0.7.48, LetterRules)
 		def["evidence"] = str(item["evidence"])
+	if not (wear.get("wear", {}) as Dictionary).is_empty():
+		def["wear"] = wear["wear"]
 	if use.has("use"):
 		def["use"] = use["use"]
 		if use.has("charges"):
@@ -609,10 +617,65 @@ static func check_generated(items_data: Dictionary, item: Dictionary, level: int
 	return {"ok": true, "def": def}
 
 
+## The `wear` of a generated thing (v0.8.4.28.7): the words of items.json `wear_points`, each a speed (feet or "walk")
+## or a flag, with what the word brings along. {} — none; {reason}; or {wear, points}.
+static func _generated_wear(items_data: Dictionary, item: Dictionary) -> Dictionary:
+	var w: Variant = item.get("wear")
+	if w == null or not (w is Dictionary) or (w as Dictionary).is_empty():
+		return {}
+	var table: Dictionary = items_data["wear_points"]
+	var words := table.keys().filter(func(k: Variant) -> bool: return not str(k).begins_with("_"))
+	var out := {"wear": {}, "points": 0}
+	for k: String in w:
+		if not table.has(k) or k.begins_with("_"):
+			return {"reason": "wear: %s движок не читает; есть: %s" % [k, ", ".join(words)]}
+		var row: Dictionary = table[k]
+		var v: Variant = w[k]
+		if str(row["value"]) == "speed":
+			if str(v) == "walk":
+				v = "walk"
+			elif (v is int or v is float) and int(v) >= 5 and int(v) <= 60:
+				v = int(v)
+			else:
+				return {"reason": "wear.%s — скорость в футах 5–60 или \"walk\" (скорость ходьбы)" % k}
+		else:
+			v = true
+		out["wear"][k] = v
+		out["wear"].merge(row.get("with", {}), true)
+		out["points"] = int(out["points"]) + int(row["points"])
+	return out
+
+
+## What a generated `use.summon` calls (v0.8.4.28.7): a row in the shape of rules.allies.summons — an SRD `monster` or a
+## `pick` of them, `count`, `minutes` — and its points: base + the CR of all it calls, rounded up (the strongest of a pick).
+## {reason} or {row, points}.
+static func _summon_row(data: Dictionary, u: Dictionary, once: bool) -> Dictionary:
+	var cost: Dictionary = data["items"]["use_points"]["summon"]
+	var pick: Array = (u.get("pick", []) if u.get("pick") is Array else []).map(func(x: Variant) -> String: return str(x))
+	var monster := str(u.get("monster", "")) if u.get("monster") != null else ""
+	if pick.is_empty() and monster.is_empty():
+		return {"reason": "use.summon: monster (id шаблона SRD) или pick — из кого выбрать"}
+	var cr := 0.0
+	for m: String in (pick if not pick.is_empty() else [monster]):
+		if not data["monsters"].has(m):  # a monster out of the game (rules.off) is not loaded either
+			return {"reason": "use.summon: существа %s нет в бестиарии движка (find_monster)" % m}
+		cr = maxf(cr, float(data["monsters"][m].get("cr", 0)))
+	var count := clampi(int(u.get("count", 1)) if u.get("count") != null else 1, 1, int(cost["count_max"]))
+	var minutes := clampi(int(u.get("minutes", 60)) if u.get("minutes") != null else 60, 1, int(cost["minutes_max"]))
+	var row := {"count": count, "minutes": minutes}
+	if pick.is_empty():
+		row["monster"] = monster
+	else:
+		row["pick"] = pick
+	return {"row": row, "points": maxi(0, int(cost["base"]) + ceili(cr * count) + (int(cost["once"]) if once else 0))}
+
+
 ## The `use` of a generated thing (v0.7.18, by the catalog's own shapes): a spell of the engine's book with charges
-## (a wand) or once (a scroll), healing, a resistance or an advantage once (a potion). {} — none; {reason}; or
-## {use, charges?, look?, points}. Points by items.json `use_points`.
-static func _generated_use(items_data: Dictionary, item: Dictionary, spells: Dictionary) -> Dictionary:
+## (a wand) or once (a scroll), healing, a resistance or an advantage once (a potion), creatures it calls (v0.8.4.28.7,
+## with charges or once). {} — none; {reason}; or {use, charges?, look?, points}. Points by items.json `use_points`.
+static func _generated_use(data: Dictionary, item: Dictionary) -> Dictionary:
+	var items_data: Dictionary = data["items"]
+	var spells: Dictionary = data.get("spells", {})
 	var u: Variant = item.get("use")
 	if u == null or not (u is Dictionary) or (u as Dictionary).is_empty():
 		return {}
@@ -651,11 +714,17 @@ static func _generated_use(items_data: Dictionary, item: Dictionary, spells: Dic
 		out["use"] = {"check_adv": str(u["check_adv"]), "duration": "hour"}
 		out["points"] = int(cost["check_adv"])
 		out["look"] = "зелье"
+	elif u.get("summon") is Dictionary:
+		var sm := _summon_row(data, u["summon"], once)
+		if sm.has("reason"):
+			return sm
+		out["use"] = {"summon": sm["row"]}
+		out["points"] = int(sm["points"])
 	else:
-		return {"reason": "use: spell, heal, resist или check_adv"}
+		return {"reason": "use: spell, heal, resist, check_adv или summon"}
 	if not once:
-		if not out["use"].has("spell"):
-			return {"reason": "заряды — только у предмета с заклинанием (жезл); зелья и свитки одноразовые"}
+		if not out["use"].has("spell") and not out["use"].has("summon"):
+			return {"reason": "заряды — только у предмета с заклинанием (жезл) или с призывом; зелья и свитки одноразовые"}
 		var most := int(cost["charges_max"])
 		if charges > most:
 			return {"reason": "зарядов не больше %d" % most}
@@ -746,7 +815,8 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 			Guise.of(Sheet.holder(s, who))["dc"] = int(own["dc"])
 		return lines
 	if s != null and fx.has("summon"):  # v0.8.4.26: a Bag of Tricks, the Pipes of the Sewers — a row of rules.allies.summons
-		lines.append_array(AllyRules.summon_by(s, data, who, str(fx["summon"])))
+		# v0.8.4.28.7: a thing the master made carries its own row, keyed by the thing (AllyRules.summon_spec)
+		lines.append_array(AllyRules.summon_by(s, data, who, real_id(id) if fx["summon"] is Dictionary else str(fx["summon"])))
 		return lines
 	if fx.has("recover_slot"):
 		for lv in range(mini(int(fx["recover_slot"]), 5), 0, -1):

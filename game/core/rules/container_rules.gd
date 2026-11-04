@@ -120,7 +120,7 @@ static func plan_spec(s: GameSession, data: Dictionary, spec: Dictionary) -> Dic
 		var qty := clampi(int(c.get("qty", 1)) if c.get("qty") != null else 1, 1, 99)
 		var id := str(c.get("item_id", "")) if c.get("item_id") != null else ""
 		if c.get("item") != null and c["item"] is Dictionary:
-			var chk := ItemRules.check_generated(data["items"], c["item"], int(s.character.get("level", 1)), data.get("spells", {}))
+			var chk := ItemRules.check_generated(data, c["item"], int(s.character.get("level", 1)))
 			if not bool(chk["ok"]):
 				return {"reason": "вещь в %s: %s" % [kind_name(data, k), chk["reason"]]}
 			id = ItemRules.generated_id(chk["def"])

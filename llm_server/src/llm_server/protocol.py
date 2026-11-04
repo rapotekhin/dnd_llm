@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.109.0"
+PROTOCOL_VERSION = "0.110.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -597,10 +597,21 @@ ItemProperty = Literal[
 ]
 
 
+class GeneratedSummon(_Out):
+    """Creatures a generated thing calls (0.110.0), in the shape of the engine's summons: an SRD `monster` or a `pick` of
+    them (one by the dice), `count`, for `minutes`. The engine prices it by their CR."""
+
+    monster: str | None = None
+    pick: list[str] = Field(default_factory=list)
+    count: int = Field(default=1, ge=1, le=8)
+    minutes: int = Field(default=60, ge=1, le=1440)
+
+
 class GeneratedUse(_Out):
     """What a generated thing does when used (0.27.0), one of: a `spell` of the engine's book (with `charges` — a
     wand that regains them at dawn; without — a scroll, once), `heal` light / medium / strong, `resist` a damage
-    type for an hour, `check_adv` — advantage on a skill for an hour (potions, once). The engine prices it in rarity."""
+    type for an hour, `check_adv` — advantage on a skill for an hour (potions, once), `summon` — creatures it calls
+    (0.110.0, with `charges` or once). The engine prices it in rarity."""
 
     spell: str | None = None
     level: int | None = Field(default=None, ge=0, le=3)
@@ -608,6 +619,7 @@ class GeneratedUse(_Out):
     heal: Literal["light", "medium", "strong"] | None = None
     resist: str | None = None
     check_adv: str | None = None
+    summon: GeneratedSummon | None = None
 
 
 class GeneratedItem(_Out):
@@ -619,6 +631,9 @@ class GeneratedItem(_Out):
     properties: list[ItemProperty] = Field(default_factory=list)
     description: str = ""
     use: GeneratedUse | None = None  # 0.27.0: a wand, a scroll, a potion
+    # 0.110.0: what it lays while it works, the engine's words (items.json wear_points): swim_speed, climb_speed,
+    # water_walk, fly_speed — feet 5–60 or "walk"; see_invisible — true
+    wear: dict[str, int | str | bool] | None = None
     text: str = ""  # 0.27.0: what is written in it — a letter, a diary, an inscription (a thing without mechanics is fine)
     evidence: str | None = None  # 0.92.0: the npc_id whose crime this thing shows (a smuggler's tally, an intercepted letter)
 

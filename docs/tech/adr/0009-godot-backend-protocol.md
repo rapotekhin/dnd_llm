@@ -206,6 +206,10 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 120. Протокол 0.110.0 (v0.8.4.28.7)
+
+У новой вещи мастера (`move_item.item`, `stock_new`, `quest_item.item` — одна схема `GeneratedItem`) два новых поля. `wear` — что вещь кладёт, пока работает, словами движка (`items.json wear_points`): `swim_speed`, `climb_speed`, `water_walk`, `fly_speed` — футы 5–60 или `"walk"`, `see_invisible` — `true`. `use.summon` — кого вещь призывает: `monster` (шаблон SRD) или `pick`, `count`, `minutes`; с `charges` или один раз. Цену и редкость считает движок, как у свойств.
+
 ### 119. Протокол 0.109.0 (v0.8.4.28.5)
 
 У `make` появился вид `liquid`: жидкость из частей (`rules.make.liquid`). Как ею пользуются: пьют (`quench`, `drunk`, `food`), мажут клинок (`blade`) или бросают (`throw`, с областью `area`). Что делает клинок или бросок: `damage`, `save` (характеристика, Сл — amount), `lay`, `also` (ещё один статус, пока длится первый), `lasts`, `wake` (сон до удара); сосуд — `vessel`. Цену и уровень считает движок. Готовая вещь в сосуде получает тот же id и отдаётся `move_item:world>hero` с `item_id: "new:<key>"`. Поле `liquid` эффекта `fill` тоже принимает `new:<key>`.

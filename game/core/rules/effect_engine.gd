@@ -1064,7 +1064,7 @@ func _plan_give(s: GameSession, items: Dictionary, rules: Dictionary, turn_id: S
 	if e.get("item") is Dictionary:
 		if not searched.has(turn_id):
 			return {"reason": "сначала найди похожие предметы через find_items"}
-		var chk := ItemRules.check_generated(items, MakeRules.resolved_item(e["item"], pending), level, _data.get("spells", {}))
+		var chk := ItemRules.check_generated(_data, MakeRules.resolved_item(e["item"], pending), level)
 		if not bool(chk["ok"]):
 			return {"reason": chk["reason"]}
 		new_def = chk["def"]

@@ -357,7 +357,7 @@ func test_the_masters_own_item_carries_a_built_property() -> void:
 	MakeRules.apply(s, data, plan["plan"])
 	var pending: Array[Dictionary] = [{"kind": "make", "plan": plan["plan"]}]
 	var item := MakeRules.resolved_item({"name": "Ледяной стилет", "base": "dagger", "item_type": "weapon", "properties": ["new:frost"], "description": "х"}, pending)
-	var chk := ItemRules.check_generated(data["items"], item, 5, data["spells"])
+	var chk := ItemRules.check_generated(data, item, 5)
 	assert_bool(bool(chk["ok"])).override_failure_message(str(chk)).is_true()
 	assert_str(str(chk["def"]["rarity"])).is_equal("uncommon")
 

@@ -924,6 +924,48 @@ scenarios:
     rubric:
       - "После успешного обыска герой находит настоящую магическую вещь — из каталога (find_items) или новую со свойствами, а не безделушку «свойства неизвестны» без механики"
 
+  - id: magic_find_made_flying_cloak
+    title: "Мастер делает вещь, которая даёт полёт, пока надета (wear, v0.8.4.28.7)"
+    category: items
+    extends: tavern
+    input: "Обыскиваю гнездо гарпий на скале: что они натаскали сюда?"
+    snapshot:
+      scene:
+        room: {id: room_harpy_nest, name: "Гнездо гарпий", description: "Ворох перьев, костей и тряпья на уступе скалы; ветер треплет обрывок тёмной ткани."}
+        npcs: []
+        hooks: [{id: hook_nest_cloak, text: "в ворохе — плащ из перьев гарпии; в нём осталась сила их полёта: надевший летает", dc: 13}]
+      character: {level: 4}
+    engine:
+      check: {d20: [16], bonus: 4, total: 20, dc: 13, success: true, nat: null, blocked: false}
+      find_items:
+        - {id: cloak_of_protection, name: "Плащ защиты", base: null, rarity: uncommon}
+    expect:
+      check: {required: true, skill_in: [investigation, perception]}
+      effects: {required_kinds_any: [move_item:world>hero], required_fields: [item.wear.fly_speed]}
+    rubric:
+      - "Найденный плащ из перьев — новая вещь мастера с `wear.fly_speed`: полёт, пока надет; не плащ защиты каталога и не безделушка без механики"
+
+  - id: magic_find_made_summoning_horn
+    title: "Мастер делает вещь, которая призывает существ (use.summon, v0.8.4.28.7)"
+    category: items
+    extends: tavern
+    input: "Обыскиваю курган вождя: что положили с ним в могилу?"
+    snapshot:
+      scene:
+        room: {id: room_barrow, name: "Курган вождя", description: "Каменная камера, кости на ложе, у изголовья — истёртый рог на ремне."}
+        npcs: []
+        hooks: [{id: hook_barrow_horn, text: "рог вождя волчьего племени: кто в него трубит, к тому приходят два волка и бьются за него час", dc: 13}]
+      character: {level: 4}
+    engine:
+      check: {d20: [15], bonus: 4, total: 19, dc: 13, success: true, nat: null, blocked: false}
+      find_items:
+        - {id: horn_of_blasting, name: "Рог взрыва", base: null, rarity: rare}
+    expect:
+      check: {required: true, skill_in: [investigation, perception]}
+      effects: {required_kinds_any: [move_item:world>hero], required_fields: [item.use.summon]}
+    rubric:
+      - "Найденный рог — новая вещь мастера с `use.summon` (волки, их число и время), с зарядами или на один раз; не рог из каталога и не безделушка"
+
   - id: content_veil_respected
     title: "Границы контента: вуаль на пытки"
     category: style

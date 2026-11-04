@@ -158,7 +158,7 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			continue  # the pack's own board is there already: not a second one
 		var item := str(spec.get("item_id", "")) if spec.get("item_id") != null else ""
 		if spec.get("item") != null and spec["item"] is Dictionary:  # a portable thing the catalog lacks (v0.7.34.4)
-			var chk := ItemRules.check_generated(data["items"], spec["item"], int(s.character.get("level", 1)), data.get("spells", {}))
+			var chk := ItemRules.check_generated(data, spec["item"], int(s.character.get("level", 1)))
 			if not bool(chk["ok"]):
 				return {"reason": "%s: %s" % [spec["name"], chk["reason"]]}
 			item = ItemRules.generated_id(chk["def"])

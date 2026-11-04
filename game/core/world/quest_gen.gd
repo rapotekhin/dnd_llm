@@ -731,7 +731,7 @@ static func _plan_item(s: GameSession, data: Dictionary, qi: Dictionary, content
 	var id := _str(qi, "item_id")
 	var def := {}
 	if qi.get("item") is Dictionary:
-		var chk := ItemRules.check_generated(data["items"], qi["item"], _level(s), data.get("spells", {}))
+		var chk := ItemRules.check_generated(data, qi["item"], _level(s))
 		if not bool(chk["ok"]):
 			return {"reason": "вещь %s: %s" % [key, chk["reason"]]}
 		def = chk["def"]

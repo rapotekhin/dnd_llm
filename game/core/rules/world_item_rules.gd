@@ -21,7 +21,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var item := str(e.get("item_id", "")) if e.get("item_id") != null else ""
 	var made := {}
 	if op == "give" and item.is_empty() and e.get("item") is Dictionary:
-		var chk := ItemRules.check_generated(data["items"], e["item"], int(s.character.get("level", 1)), data.get("spells", {}))
+		var chk := ItemRules.check_generated(data, e["item"], int(s.character.get("level", 1)))
 		if not bool(chk["ok"]):
 			return {"reason": str(chk["reason"])}
 		item = ItemRules.generated_id(chk["def"])

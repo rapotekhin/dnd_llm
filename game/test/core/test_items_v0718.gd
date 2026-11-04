@@ -11,7 +11,7 @@ func before_test() -> void:
 
 
 func _check(item: Dictionary, level := 1) -> Dictionary:
-	return ItemRules.check_generated(data["items"], item, level, data["spells"])
+	return ItemRules.check_generated(data, item, level)
 
 
 func test_a_wand_of_a_spell_with_charges() -> void:

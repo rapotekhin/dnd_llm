@@ -758,7 +758,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 		var gen: Variant = spec.get("output")
 		if not (gen is Dictionary):
 			return {"reason": "нужен output_id (вещь каталога) или output (новая вещь)"}
-		var chk := ItemRules.check_generated(data["items"], gen, int(s.character.get("level", 1)), data.get("spells", {}))
+		var chk := ItemRules.check_generated(data, gen, int(s.character.get("level", 1)))
 		if not bool(chk["ok"]):
 			return {"reason": str(chk["reason"])}
 		item = chk["def"]

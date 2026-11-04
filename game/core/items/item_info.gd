@@ -139,7 +139,7 @@ static func use_line(data: Dictionary, id: String, session_items: Dictionary = {
 		var sp: Dictionary = data["spells"].get(str(fx["spell"]), {})
 		parts.append(_t("ITEM_USE_SPELL").format({"spell": sp.get("name", fx["spell"]), "n": int(fx.get("level", 1))}))
 	if fx.has("summon"):  # v0.8.4.26: a row of the summons
-		var sp := AllyRules.summon_spec(data, str(fx["summon"]))
+		var sp: Dictionary = fx["summon"] if fx["summon"] is Dictionary else AllyRules.summon_spec(data, str(fx["summon"]))  # a made thing's own row (v0.8.4.28.7)
 		var who: Array = (sp.get("pick", [sp.get("monster", "")]) as Array).map(func(m: Variant) -> String: return str(data["monsters"].get(str(m), {}).get("name", m)))
 		parts.append(_t("ITEM_USE_SUMMON").format({"who": " или ".join(who)}))
 	if bool(fx.get("at_will", false)):

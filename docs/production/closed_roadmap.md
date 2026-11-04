@@ -1976,7 +1976,7 @@ B27 (наррация vs состояние) решается в v0.6.0 эффе
   - `philter_of_love` — очарование самого выпившего;
   - `amulet_of_proof_against_detection_and_location`, `ring_of_mind_shielding` — статус «не обнаружить» (v0.8.4.27)
 - Остаются у мастера: `deck_of_illusions`, `immovable_rod`, `rope_of_climbing`, `dust_of_dryness`
-- Мастер пока не создаёт вещь с `wear` или `use.summon`: это понятие ещё не входит в его инструмент вещей (`ItemRules` проверка силы)
+- Мастер пока не создаёт вещь с `wear` или `use.summon`: это понятие ещё не входит в его инструмент вещей (`ItemRules` проверка силы). Закрыто в v0.8.4.28.7: `wear` и `use.summon` у новой вещи мастера, цена по `items.json wear_points` и `use_points.summon`
 
 **Способности на готовых механиках — v0.8.4.26.1: 47 из 49 стали «работает»**
 
