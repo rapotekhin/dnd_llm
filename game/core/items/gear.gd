@@ -108,8 +108,7 @@ static func count(s: GameSession, data: Dictionary, id: String, item: String) ->
 ## A thing into its hands; armour or a shield is put on when it wears none.
 static func give(s: GameSession, data: Dictionary, id: String, item: String, qty: int = 1) -> void:
 	var c := of(s, data, id)
-	var inv: Dictionary = c["inventory"]
-	inv[item] = int(inv.get(item, 0)) + qty
+	ItemRules.add(c, item, qty)
 	var slot := _slot(ItemRules.def_of(data["items"], s.items, item))
 	var worn_now: Dictionary = c.get("equipped", {})
 	if not slot.is_empty() and str(worn_now.get(slot, "")).is_empty():

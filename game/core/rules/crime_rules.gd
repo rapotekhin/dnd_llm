@@ -384,10 +384,11 @@ static func wanted_at(s: GameSession, data: Dictionary, room_id: String, doer: S
 	return wanted_of(s, doer).has(WorldView.new(data["world"]).location_id(room_id))
 
 
-## An NPC who turns the wanted hero away (traders do not trade, givers give nothing).
-static func shunned_by(s: GameSession, data: Dictionary, npc_id: String) -> bool:
+## An NPC who turns the wanted away (traders do not trade, givers give nothing); `who` — anybody, the hero by default.
+## Every service asks it through `SocialRules.service_why`.
+static func shunned_by(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> bool:
 	var loc := ReputationRules.home_of(data, npc_id)
-	return s.wanted.has(loc) and not BondRules.close(s, data, npc_id)  # v0.7.31: a close friend serves the wanted
+	return wanted_of(s, who).has(loc) and not (who == Being.HERO and BondRules.close(s, data, npc_id))  # v0.7.31: a close friend serves the wanted
 
 
 ## The guard holds the hero in this room: a guard NPC of the law is here, or a patrol finds the hero after

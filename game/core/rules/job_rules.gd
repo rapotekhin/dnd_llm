@@ -111,8 +111,9 @@ static func hire_why(s: GameSession, data: Dictionary, id: String, who: String =
 		return "JOB_HIRED"
 	if not employer_here(s, data, id, who):
 		return "JOB_EMPLOYER_AWAY"
-	if (who == Being.HERO and SocialRules.refuses(s, data, str(job(s, data, id)["employer"]))):
-		return "TALK_REFUSED"
+	var refused := SocialRules.service_why(s, data, str(job(s, data, id)["employer"]), who)
+	if not refused.is_empty():
+		return refused
 	if requirements(s, data, id, who).any(func(r: Dictionary) -> bool: return not bool(r["ok"])):
 		return "JOB_REQUIREMENTS"
 	var tried: Dictionary = Life.of(s, who, data).get("jobs_tried", {})
@@ -135,7 +136,8 @@ static func hire_auto(s: GameSession, data: Dictionary, who: String = Being.HERO
 static func hire_chance(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
 	if hire_auto(s, data, who):
 		return 100
-	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(cfg(data)["hire"]["skill"]), "dc": hire_dc(s, data, id)})
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(cfg(data)["hire"]["skill"]), "dc": hire_dc(s, data, id),
+		"target_id": str(job(s, data, id).get("employer", ""))})
 
 
 ## The interview (hire_why first). Lines.
@@ -146,7 +148,7 @@ static func hire(s: GameSession, data: Dictionary, id: String, who: String = Bei
 	if hire_auto(s, data, who):
 		lines.append("%s: берут без расспросов — добрая слава" % name)
 	else:
-		var r := EncounterRules.roll(s, data, str(cfg(data)["hire"]["skill"]), hire_dc(s, data, id), false, who)
+		var r := EncounterRules.roll(s, data, str(cfg(data)["hire"]["skill"]), hire_dc(s, data, id), false, who, str(job(s, data, id).get("employer", "")))
 		lines.append("%s: %s" % [name, r["line"]])
 		if not bool(r["ok"]):
 			if not (c.get("jobs_tried") is Dictionary):
@@ -216,6 +218,24 @@ static func shift_chance(s: GameSession, data: Dictionary, id: String, who: Stri
 	return Roll.chance_of(s, data, Sheet.who(s, data, who), shift_spec(s, data, id, who))
 
 
+## The check of a shift of one's own (v0.8.4.29: a place, a stall — one spec for the roll and the chance it shows): `skill`
+## against `dc` with the outcomes of `rules.jobs.outcomes`.
+static func work_spec(data: Dictionary, what: String, skill: String, dc_: int) -> Dictionary:
+	return {"what": what, "label": CraftRules.tr_skill(data, skill), "skill": skill, "dc": dc_, "ladder": cfg(data)["outcomes"]}
+
+
+## What a shift's outcome `o` pays of `base` (v0.8.4.29: a job, a place, a stall alike): {pay, tips}; `tips_weight` — how
+## much the tips weigh there (a stall's buyers twice); «Работа» may raise the tips.
+static func earned(c: Dictionary, data: Dictionary, base: int, o: Dictionary, tips_weight: float = 1.0) -> Dictionary:
+	return {"pay": roundi(base * float(o.get("pay", 1.0))),
+		"tips": roundi(base * float(o.get("tips", 0.0)) * tips_weight * float(DevelopmentRules.effect(c, data, "work", "tips_mult", 1.0)))}
+
+
+## The «Работа» experience of a shift's outcome.
+static func work_xp(c: Dictionary, data: Dictionary, outcome: String) -> Array[String]:
+	return DevelopmentRules.add_xp(c, data, "work", int((DevelopmentRules.direction(data, "work").get("sources", {}) as Dictionary).get(outcome, 0)))
+
+
 ## What a shift broken off pays (v0.8.4.17: a job, a place and a counter alike): its share by the minutes worked, with no
 ## check.
 static func broken_off(full_pay: int, minutes: int, full: int) -> int:
@@ -237,8 +257,9 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int, wh
 		return {"lines": lines, "event": "", "fight": []}
 	var a := Activity.attempt(s, data, shift_spec(s, data, id, who), who)
 	var o: Dictionary = a["step"]
-	var got := roundi(pay(s, data, id, -1, who) * float(o.get("pay", 1.0)))
-	var tips := roundi(pay(s, data, id, -1, who) * float(o.get("tips", 0.0)) * float(DevelopmentRules.effect(c, data, "work", "tips_mult", 1.0)))
+	var e := earned(c, data, pay(s, data, id, -1, who), o)
+	var got := int(e["pay"])
+	var tips := int(e["tips"])
 	Ledger.add(s, got + tips, "job:shift", who)
 	st["shifts"] = int(st.get("shifts", 0)) + 1
 	lines.append(str(a["line"]))
@@ -249,7 +270,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int, wh
 			s.shift_attitude(employer, int(o["attitude"]), data)
 		lines.append("%s недоволен" % employer_name(s, data, id))
 	var dev := DevelopmentRules.direction(data, "work").get("sources", {}) as Dictionary
-	lines.append_array(DevelopmentRules.add_xp(c, data, "work", int(dev.get(str(o["id"]), 0))))
+	lines.append_array(work_xp(c, data, str(o["id"])))
 	if bool(o.get("good", false)):
 		st["good"] = int(st.get("good", 0)) + 1
 		if int(st["good"]) >= promote_after(s, data, who) and int(st["rank"]) < top_rank(data):

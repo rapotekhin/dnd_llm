@@ -137,8 +137,9 @@ static func _base_why(s: GameSession, data: Dictionary, id: String, who: String 
 	var st: Dictionary = view(Life.of(s, who, data)).get(id, {})
 	if st.has("removed_day") and s.day - int(st["removed_day"]) < int(cfg(data)["reapply_days"]):
 		return "OFFICE_REMOVED"
-	if not str(d.get("chief", "")).is_empty() and (who == Being.HERO and SocialRules.refuses(s, data, str(d["chief"]))):
-		return "TALK_REFUSED"
+	var refused := SocialRules.service_why(s, data, str(d.get("chief", "")), who)
+	if not refused.is_empty():
+		return refused
 	return ""
 
 
@@ -169,7 +170,7 @@ static func appoint_chance(s: GameSession, data: Dictionary, id: String, who: St
 	var iv := interview(data, id)
 	if iv.is_empty():
 		return 100
-	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(iv["skill"]), "dc": int(iv["dc"])})
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(iv["skill"]), "dc": int(iv["dc"]), "target_id": str(def(data, id).get("chief", ""))})
 
 
 ## Asked for the office at its chief (appoint_why first). Lines.
@@ -177,7 +178,7 @@ static func appoint(s: GameSession, data: Dictionary, id: String, who: String = 
 	var lines: Array[String] = []
 	var iv := interview(data, id)
 	if not iv.is_empty():
-		var r := EncounterRules.roll(s, data, str(iv["skill"]), int(iv["dc"]), false, who)
+		var r := EncounterRules.roll(s, data, str(iv["skill"]), int(iv["dc"]), false, who, str(def(data, id).get("chief", "")))
 		lines.append("%s: %s" % [name_of(data, id), r["line"]])
 		if not bool(r["ok"]):
 			_st(Life.of(s, who, data), id)["interview_day"] = s.day

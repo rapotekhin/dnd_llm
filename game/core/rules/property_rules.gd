@@ -60,6 +60,36 @@ static func owned(c: Dictionary, id: String) -> bool:
 	return state(c).has(id)
 
 
+## Pays `cp` for the place `id` of `who` (v0.8.4.29: the one road of «из кассы места, потом из кошелька» — wages, the tax,
+## a beast's feed, the family's bread): the place's till, its stall's (ShopRules.from_till), then the purse when `purse` and it
+## holds the rest. `whole` — nothing is taken unless all of it can be paid. What is left unpaid (0 — paid).
+static func pay_from_till(s: GameSession, data: Dictionary, id: String, cp: int, reason: String, who: String = Being.HERO,
+		purse: bool = true, whole: bool = false) -> int:
+	var c := Life.of(s, who, data)
+	var st: Dictionary = state(c).get(id, {})
+	var tills := int(st.get("cash", 0)) + ShopRules.till(c, id)
+	if whole and tills < cp and (not purse or Ledger.balance(s, who) < cp - tills):
+		return cp
+	var n := mini(cp, int(st.get("cash", 0)))
+	if n > 0:
+		st["cash"] = int(st["cash"]) - n
+	var rest := cp - n
+	rest -= ShopRules.from_till(c, id, rest)
+	if rest > 0 and purse and Ledger.balance(s, who) >= rest:
+		Ledger.add(s, -rest, reason, who)
+		rest = 0
+	return rest
+
+
+## Coins earned by the place `id` of `who` go into its till; with no such place — into the purse.
+static func to_till(s: GameSession, data: Dictionary, id: String, cp: int, reason: String, who: String = Being.HERO) -> void:
+	var st: Dictionary = state(Life.of(s, who, data)).get(id, {})
+	if st.is_empty():
+		Ledger.add(s, cp, reason, who)
+	else:
+		st["cash"] = int(st.get("cash", 0)) + cp
+
+
 static func kind_id(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> String:
 	var st: Dictionary = state(Life.of(s, who, data)).get(id, {})
 	return str(st.get("kind", prop(s, data, id).get("kind", "house")))
@@ -206,8 +236,9 @@ static func buy_why(s: GameSession, data: Dictionary, id: String, who: String = 
 		return "PROPERTY_OWNED"
 	if not _present(s, data, seller(s, data, id), who):
 		return "PROPERTY_SELLER_AWAY"
-	if (who == Being.HERO and SocialRules.refuses(s, data, seller(s, data, id))):
-		return "TALK_REFUSED"
+	var refused := SocialRules.service_why(s, data, seller(s, data, id), who)
+	if not refused.is_empty():
+		return refused
 	if Ledger.balance(s, who) < price(s, data, id):
 		return "PROPERTY_NO_MONEY"
 	return ""
@@ -344,12 +375,8 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int, who: St
 	for h: Dictionary in staff(s, id, who):
 		wages += int(cf["serfs"]["feed_cp_day"]) if bool(h.get("serf", false)) else int(h.get("wage", 0))
 	if wages > 0:
-		var from_till := mini(wages, int(st["cash"]))
-		st["cash"] = int(st["cash"]) - from_till
-		var rest := wages - from_till
-		if rest > 0 and Ledger.balance(s, who) >= rest:
-			Ledger.add(s, -rest, "property:day", who)
-		elif rest > 0:  # the hired go, the last hired first, until the rest is paid
+		var rest := pay_from_till(s, data, id, wages, "property:day", who)
+		if rest > 0:  # the hired go, the last hired first, until the rest is paid
 			for h: Dictionary in staff(s, id, who).duplicate():
 				if rest <= 0:
 					break
@@ -362,11 +389,9 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int, who: St
 		if day - int(st.get("tax_day", day)) >= int(cf["tax"]["every_days"]):
 			st["tax_day"] = day
 			var t := tax(s, data, id)
-			var from_till := mini(t, int(st["cash"]))
-			st["cash"] = int(st["cash"]) - from_till
-			from_till += ShopRules.from_till(c, id, t - from_till)
-			if from_till < t:
-				Ledger.owe(s, "tax:" + id, "tax", t - from_till, "registry", who)
+			var unpaid := pay_from_till(s, data, id, t, "property:tax", who, false)
+			if unpaid > 0:
+				Ledger.owe(s, "tax:" + id, "tax", unpaid, "registry", who)
 				lines.append("%s: налог %s не уплачен — долг ратуше %s" % [name_of(s, data, id), Money.format(t), Money.format(Ledger.owed(s, "tax:" + id, who))])
 			if Ledger.owed(s, "tax:" + id, who) >= t * int(cf["tax"]["seize_weeks"]):
 				lines.append_array(_lose(s, data, id, "ратуша забрала его за долги по налогу", who))
@@ -480,8 +505,12 @@ static func shift_dc(data: Dictionary) -> int:
 	return int(data["rules"]["dc_tiers"]["medium"])
 
 
+static func shift_spec(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Dictionary:
+	return JobRules.work_spec(data, name_of(s, data, id), str(kind(s, data, id, who).get("skill", "athletics")), shift_dc(data))
+
+
 static func shift_chance(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
-	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(kind(s, data, id, who).get("skill", "athletics")), "dc": shift_dc(data)})
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), shift_spec(s, data, id, who))
 
 
 ## The hero's own shift in the place (the time passed): the day's income × the outcome, straight to the purse.
@@ -495,13 +524,13 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int, wh
 		var part := JobRules.broken_off(day, minutes, full)
 		Ledger.add(s, part, "property:shift", who)
 		return ["Работа прервана: %s" % Money.format(part)]
-	var skill := str(kind(s, data, id, who).get("skill", "athletics"))
-	var a := Activity.attempt(s, data, {"what": name_of(s, data, id), "label": CraftRules.tr_skill(data, skill), "skill": skill, "dc": shift_dc(data),
-		"ladder": JobRules.cfg(data)["outcomes"]}, who)
-	var o: Dictionary = a["step"]
-	var got := roundi(day * (float(o.get("pay", 1.0)) + float(o.get("tips", 0.0))))
+	var a := Activity.attempt(s, data, shift_spec(s, data, id, who), who)
+	var e := JobRules.earned(c, data, day, a["step"])
+	var got := int(e["pay"]) + int(e["tips"])
 	Ledger.add(s, got, "property:shift", who)
-	return [str(a["line"]), "Выручка: %s" % Money.format(got)]
+	var lines: Array[String] = [str(a["line"]), "Выручка: %s" % Money.format(got)]
+	lines.append_array(JobRules.work_xp(c, data, str(a["step"]["id"])))
+	return lines
 
 
 static func repair_cost(s: GameSession, data: Dictionary, id: String, points: float) -> int:
@@ -759,7 +788,7 @@ static func upgrade(s: GameSession, data: Dictionary, id: String, up: String, wh
 	if days <= 0:
 		return _apply_upgrade(s, data, id, up, who)
 	(state(Life.of(s, who, data))[id]["pending"] as Array).append(Progress.by_day(s.day + days).merged({"up": up}))
-	return ["%s: заказано «%s» за %s — готово через %s" % [name_of(s, data, id), u["name"], Money.format(int(u["price_cp"])), _days(days)]]
+	return ["%s: заказано «%s» за %s — готово через %s" % [name_of(s, data, id), u["name"], Money.format(int(u["price_cp"])), CalendarRules.days_count(days)]]
 
 
 static func _apply_upgrade(s: GameSession, data: Dictionary, id: String, up: String, who: String = Being.HERO) -> Array[String]:
@@ -802,7 +831,7 @@ static func build(s: GameSession, data: Dictionary, id: String, b: String, who: 
 	var bc: Dictionary = cfg(data)["build"][b]
 	Ledger.add(s, -int(bc["price_cp"]), "property:build", who)
 	state(Life.of(s, who, data))[id]["building"] = Progress.by_day(s.day + int(bc["days"])).merged({"id": b})
-	return ["%s: заложено «%s» за %s — плотники управятся за %s" % [name_of(s, data, id), bc["name"], Money.format(int(bc["price_cp"])), _days(int(bc["days"]))]]
+	return ["%s: заложено «%s» за %s — плотники управятся за %s" % [name_of(s, data, id), bc["name"], Money.format(int(bc["price_cp"])), CalendarRules.days_count(int(bc["days"]))]]
 
 
 ## The building stands: its rooms in the land's site, the place of its kind. Lines.
@@ -919,12 +948,17 @@ static func rent_why(s: GameSession, data: Dictionary, npc_id: String, k: String
 		return "SHOP_NO_SPOT"
 	if not (rent["days"] as Array).any(func(d: Variant) -> bool: return int(d) == days):
 		return "SHOP_NO_SERVICE"
-	return "SHOP_NO_MONEY" if Ledger.balance(s, who) < days * int(rent["cp_day"]) else ""
+	return "SHOP_NO_MONEY" if Ledger.balance(s, who) < rent_cost(data, k, days) else ""
+
+
+## What a rented spot of kind `k` costs for `days`.
+static func rent_cost(data: Dictionary, k: String, days: int) -> int:
+	return days * int(kind_cfg(data, k)["rent"]["cp_day"])
 
 
 static func rent(s: GameSession, data: Dictionary, _npc_id: String, k: String, days: int, who: String = Being.HERO) -> Array[String]:
 	var loc := WorldView.new(data["world"]).location_id(Life.room(s, data, who))
-	var cost := days * int(kind_cfg(data, k)["rent"]["cp_day"])
+	var cost := rent_cost(data, k, days)
 	Ledger.add(s, -cost, "property:rent", who)
 	var id := rented(s, data, k, loc, who)
 	if id.is_empty():
@@ -934,10 +968,6 @@ static func rent(s: GameSession, data: Dictionary, _npc_id: String, k: String, d
 	var st: Dictionary = state(Life.of(s, who, data))[id]
 	st["rent_day"] = maxi(int(st["rent_day"]), s.day - 1) + days
 	return ["%s — снято до дня %d, %s" % [name_of(s, data, id), int(st["rent_day"]), Money.format(cost)]]
-
-
-static func _days(n: int) -> String:
-	return "%d %s" % [n, "день" if n % 10 == 1 and n % 100 != 11 else "дня" if n % 10 in [2, 3, 4] and not n % 100 in [12, 13, 14] else "дней"]
 
 
 # --- animals --------------------------------------------------------------------------------------------------------
@@ -962,8 +992,9 @@ static func animal_why(s: GameSession, data: Dictionary, npc_id: String, monster
 		return "PROPERTY_NO_ANIMAL"
 	if not _present(s, data, npc_id, who):
 		return "PROPERTY_SELLER_AWAY"
-	if (who == Being.HERO and SocialRules.refuses(s, data, npc_id)):
-		return "TALK_REFUSED"
+	var refused := SocialRules.service_why(s, data, npc_id, who)
+	if not refused.is_empty():
+		return refused
 	if Ledger.balance(s, who) < int(animal_cfg(data, monster)["price_cp"]):
 		return "PROPERTY_NO_MONEY"
 	return ""
@@ -1014,11 +1045,7 @@ static func _animals(s: GameSession, data: Dictionary, who: String = Being.HERO)
 			var st: Dictionary = state(Life.of(s, who, data)).get(pid, {})
 			if PetRules.eat(s, data, cr):  # v0.7.43: a pet beside the hero eats of his things first
 				pass
-			elif not pid.is_empty() and int(st.get("cash", 0)) >= feed:
-				st["cash"] = int(st["cash"]) - feed
-			elif Ledger.balance(s, who) >= feed and MountRules.fed_by_purse(s, data, cr):  # v0.7.42: left alone — no feed
-				Ledger.add(s, -feed, "property:animals", who)
-			else:
+			elif pay_from_till(s, data, pid, feed, "property:animals", who, MountRules.fed_by_purse(s, data, cr), true) > 0:  # v0.7.42: left alone — no feed
 				cr["hungry"] = int(cr.get("hungry", 0)) + 1
 				continue
 			cr["hungry"] = 0
@@ -1402,7 +1429,7 @@ static func apply_asked(s: GameSession, data: Dictionary, plan: Dictionary) -> A
 	var u: Dictionary = plan["def"]
 	ObjectRules.note(s, str(prop(s, data, str(plan["place"])).get("site", "")), "можно заказать «%s»" % u["name"])
 	return ["%s: можно заказать «%s» за %s, работы — %s (кнопка в окне «Имущество»)" % [name_of(s, data, str(plan["place"])), u["name"],
-		Money.format(int(u["price_cp"])), _days(int(u["days"]))]]
+		Money.format(int(u["price_cp"])), CalendarRules.days_count(int(u["days"]))]]
 
 
 ## What the place's upgrades bring each working day: {item: qty} (`produce` × `produce_pct`).

@@ -80,7 +80,7 @@ func _org_block(s: GameSession, data: Dictionary, id: String) -> void:
 		for m: String in OrgRules.members(s, data, id):
 			names.append(WorldView.name_of(data, m))
 		UiParts.label(_box, tr("ORG_MEMBERS").format({"names": ", ".join(names) if not names.is_empty() else "—",
-			"income": Money.format(names.size() * int(OrgRules.cfg(data)["member_income_cp"]))})).name = "OrgMembers"
+			"income": Money.format(OrgRules.income_day(s, data, id))})).name = "OrgMembers"
 		UiParts.label(_box, tr("ORG_RECRUIT_HINT").format({"at": int(OrgRules.cfg(data)["recruit_bond"])}), UiTheme.MUTED_LABEL)
 		return
 	UiParts.label(_box, tr("ORG_HEAD").format({"name": OrgRules.head_name(s, data, id)}), UiTheme.MUTED_LABEL)

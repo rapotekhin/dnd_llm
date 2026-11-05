@@ -1000,7 +1000,7 @@ BTN_CRIME_TALK_TIP,"Проверка Убеждения, Обмана или З�
 BTN_CRIME_BRIBE_TIP,"Взятка страже: отпустят, но розыск останется — вина не искуплена"
 CRIME_TRIED,Этот способ уже не сработал — попробуйте другой
 BTN_SEARCH_BODY,Обыскать: {name}
-SHOP_CLOSED_WANTED,Вы в розыске — здесь вам ничего не продадут
+SHOP_CLOSED_WANTED,Вы в розыске — здесь вас не обслужат
 JOURNAL_FAILED,провалено
 JOURNAL_TAB_CHRONICLE,Хроника
 JOURNAL_EMPTY_CHRONICLE,Здесь появятся события: бои, находки, сделки, раны

@@ -273,11 +273,7 @@ static func send(s: GameSession, data: Dictionary, poster: String, to: String, p
 		var item := _evidence_item(s, data, str(l["about"]))
 		if not item.is_empty():
 			l["evidence"] = item
-			var left := int(s.character["inventory"].get(item, 0)) - 1
-			if left > 0:
-				s.character["inventory"][item] = left
-			else:
-				s.character["inventory"].erase(item)
+			ItemRules.remove(s.character, item)
 			lines.append("К письму приложено: %s" % ItemRules.display_name(data["items"], s.items, item))
 	st["list"][str(l["id"])] = l
 	lines.push_front("Письмо → %s (%s) отправлено %s%s — дойдёт к %d-му дню, ответ — не раньше %d-го" % [WorldView.name_of(data, to),

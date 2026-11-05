@@ -98,7 +98,7 @@ static func _why_bank(s: GameSession, data: Dictionary, npc_id: String, service:
 		return "BANK_NO_SERVICE"
 	if not _present(s, data, npc_id, who):
 		return "BANK_NOT_HERE"
-	return ""
+	return SocialRules.service_why(s, data, npc_id, who)
 
 
 # --- deposits -------------------------------------------------------------------------------------------------------
@@ -174,14 +174,14 @@ static func collaterals(s: GameSession, data: Dictionary, npc_id: String, who: S
 		for id: String in PropertyRules.state(Life.of(s, who, data)):
 			var st: Dictionary = PropertyRules.state(Life.of(s, who, data))[id]
 			if bool(st.get("deed", false)) and str(st.get("pledged", "")).is_empty():
-				var v := roundi(PropertyRules.price(s, data, id) * clampf(float(st.get("cond", 100)), 0.0, 100.0) / 100.0)
-				out.append({"kind": "property", "id": id, "name": PropertyRules.name_of(s, data, id), "value": v, "max": roundi(v * int(ltv["property"]) / 100.0)})
+				var v := Price.share(PropertyRules.price(s, data, id), clampf(float(st.get("cond", 100)), 0.0, 100.0))
+				out.append({"kind": "property", "id": id, "name": PropertyRules.name_of(s, data, id), "value": v, "max": Price.share(v, float(ltv["property"]))})
 	for id: String in (Life.of(s, who, data).get("inventory", {}) as Dictionary).keys():
-		if TradeRules.sellable(s, str(id), data) <= 0:
+		if TradeRules.sellable(s, str(id), data, who) <= 0:
 			continue
 		var v := int(ItemRules.def_of(data["items"], s.items, str(id)).get("value_cp", 0))
 		if v >= int(cfg(data)["loan"]["item_min_cp"]):
-			out.append({"kind": "item", "id": str(id), "name": ItemRules.display_name(data["items"], s.items, str(id)), "value": v, "max": roundi(v * int(ltv["item"]) / 100.0)})
+			out.append({"kind": "item", "id": str(id), "name": ItemRules.display_name(data["items"], s.items, str(id)), "value": v, "max": Price.share(v, float(ltv["item"]))})
 	return out
 
 
@@ -218,10 +218,7 @@ static func loan(s: GameSession, data: Dictionary, npc_id: String, ckind: String
 	if ckind == "property":
 		PropertyRules.state(Life.of(s, who, data))[cid]["pledged"] = str(k["id"])
 	else:
-		var inv: Dictionary = Life.of(s, who, data)["inventory"]
-		inv[cid] = int(inv.get(cid, 0)) - 1
-		if int(inv[cid]) <= 0:
-			inv.erase(cid)
+		ItemRules.remove(Life.of(s, who, data), cid)
 	Ledger.add(s, amount, "bank:loan", who)
 	return ["%s: кредит %s под залог — %s, %s, вернуть до дня %d" % [WorldView.name_of(data, npc_id), Money.format(amount), o["name"],
 		rate_text(float(k["rate"])), int(k["due"])]]
@@ -295,7 +292,7 @@ static func vault_why(s: GameSession, data: Dictionary, npc_id: String, dir: Str
 			return "BANK_NO_MONEY"
 		return ""
 	if dir == "in":
-		return "" if TradeRules.sellable(s, item_id, data) > 0 else "BANK_NO_ITEM"
+		return "" if TradeRules.sellable(s, item_id, data, who) > 0 else "BANK_NO_ITEM"
 	return "" if int((v["contents"] as Dictionary).get(item_id, 0)) > 0 else "BANK_NO_ITEM"
 
 

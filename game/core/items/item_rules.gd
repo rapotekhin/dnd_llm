@@ -97,9 +97,15 @@ static func found(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	var key := id
 	if not id.begins_with(UNKNOWN) and needs_identify(def_of(data["items"], session_items, id)):
 		key = UNKNOWN + id
+	return add(c, key, qty)
+
+
+## `qty` of a thing known for what it is into anybody's things (v0.8.4.29: the one road of «+N»): bought, made, a prize or a
+## parcel named by who gives it. Returns its id. A thing found is `found`, a thing gone is `remove`.
+static func add(c: Dictionary, id: String, qty: int = 1) -> String:
 	var inv: Dictionary = c["inventory"]
-	inv[key] = int(inv.get(key, 0)) + qty
-	return key
+	inv[id] = int(inv.get(id, 0)) + qty
+	return id
 
 
 ## The trade tags of an item (v0.7.17.1, demand): its item_type, magic, scroll, tool and the item's own `tags`.

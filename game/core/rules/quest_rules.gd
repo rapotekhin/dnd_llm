@@ -98,7 +98,7 @@ static func accept(s: GameSession, data: Dictionary, quest_id: String) -> Array[
 	var lines: Array[String] = ["Новое задание: %s" % q["title"], "Цель: %s" % first]
 	var given: Dictionary = q.get("offer_items", {})  # what the giver hands over (v0.6.5: the letter, the writ)
 	for id: String in given:
-		s.character["inventory"][id] = int(s.character["inventory"].get(id, 0)) + int(given[id])
+		ItemRules.add(s.character, id, int(given[id]))
 		lines.append("Получено: %s" % ItemRules.display_name(data["items"], s.items, id))
 	lines.append_array(advance(s, data))
 	QuestGen.board_taken(s, data, q)
@@ -311,10 +311,7 @@ static func talk(s: GameSession, data: Dictionary, quest_id: String) -> Array[St
 
 
 static func _hand_over(s: GameSession, data: Dictionary, item: String, lines: Array[String], verb: String, qty: int = 1) -> void:
-	var inv: Dictionary = s.character["inventory"]
-	inv[item] = int(inv.get(item, 0)) - qty
-	if int(inv[item]) <= 0:
-		inv.erase(item)
+	ItemRules.remove(s.character, item, qty)
 	lines.append("%s: %s%s" % [verb, ItemRules.display_name(data["items"], s.items, item), " ×%d" % qty if qty > 1 else ""])
 
 
@@ -374,7 +371,7 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 		lines.append("+" + Money.format(cp))
 	var items: Dictionary = r.get("items", {})
 	for id: String in items:
-		c["inventory"][id] = int(c["inventory"].get(id, 0)) + int(items[id])
+		ItemRules.add(c, id, int(items[id]))  # the giver names its reward, as the arena's prize
 		lines.append("Получено: %s%s" % [ItemRules.display_name(data["items"], s.items, id), " ×%d" % int(items[id]) if int(items[id]) > 1 else ""])
 	var att: Dictionary = r.get("attitude", {})
 	var world := WorldView.new(data["world"])

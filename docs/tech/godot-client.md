@@ -162,7 +162,7 @@ game/
 
 - **Что работает сейчас:** один список `CharacterRules.working`, с настройкой. `Sheet.things`, `Sheet.working`, `Sheet.props` и `Sheet.prop` отвечают для любого: у героя свойства лежат в кэше листа, у остальных их считают по тому, что у них есть.
 - **КД и удар по вещам:** `CharacterRules.gear_ac` — общий для героя и `Gear.ac`. Удар новым оружием NPC — это `CombatRules.weapon_profile` его листа.
-- **Убрать вещь** — `ItemRules.remove` у любого держателя.
+- **Убрать вещь** — `ItemRules.remove` у любого держателя. **Добавить** — `ItemRules.add` (известная: куплена, сделана, названа дающим) или `ItemRules.found` (найденная волшебная приходит неопознанной), v0.8.4.29. Что можно отдать — `TradeRules.sellable(…, who)`.
 - **Числа:** `Sheet.max_hp`, `Sheet.speed` с истощением, `Sheet.ability`, `Sheet.prof`; `Sheet.own` — запись для изменений. Хиты за уровень — `CharacterRules.hp_step`.
 - **Реакции:** `SpellEffects.guard` и `SpellEffects.countered` — для героя и NPC.
 
@@ -173,6 +173,13 @@ game/
 - **Живая встреча** — `EncounterRules.live(s, data, room)`: не пройдена и не в мире.
 - **Можно ли уйти** — `WayRules.leave_why`: стража, плен, перегруз, закрытый проход, найденная ловушка.
 - **Имя NPC** — `WorldView.npc_name`, `WorldView.name_of`.
+
+Деньги и услуги (v0.8.4.29):
+
+- **Отказ в услуге** — одна `SocialRules.service_why(s, data, npc, who)`: враждебен к герою, `who` в розыске там, где NPC живёт (`CrimeRules.shunned_by`, близкий друг обслуживает), осквернитель святыни. Её спрашивают услуги торговца, банк, опт, наём, должность, место, учёба.
+- **Касса места** — `PropertyRules.pay_from_till(s, data, id, cp, reason, who, purse, whole)`: касса места, потом касса его прилавка (`ShopRules.till` / `from_till`), потом кошелёк. Так платят жалованье, налог (без кошелька — долг), корм зверя (`whole`), хлеб семьи. Доход места — `PropertyRules.to_till` (нет места — в кошелёк).
+- **Смена своего дела** — проверка `JobRules.work_spec` (одна спека для броска и шанса места и прилавка), оплата исхода `JobRules.earned` (чаевые с весом и множителем «Работы»), опыт «Работы» `JobRules.work_xp`. Социальная проверка у нанимателя, главы или директора идёт с его `target_id` (`EncounterRules.roll(…, target)`).
+- **«21 день»** — `CalendarRules.days_count`.
 - **Кто видел** — `WatchRules.eyes`: внутри и невидимость (`pierces`), и Скрытность против пассивной Внимательности. Вызов не проверяет это сам.
 
 Время (v0.8.4.17):

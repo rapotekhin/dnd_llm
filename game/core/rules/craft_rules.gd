@@ -610,10 +610,9 @@ static func salvage(s: GameSession, data: Dictionary, item_id: String) -> Array[
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
 	var magic := magic_dust(s, data, item_id) > 0
 	ItemRules.remove(s.character, item_id)
-	var inv: Dictionary = s.character["inventory"]
 	var parts: Array[String] = []
 	for m: String in got:
-		inv[m] = int(inv.get(m, 0)) + int(got[m])
+		ItemRules.add(s.character, m, int(got[m]))
 		parts.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, m), int(got[m])])
 	CharacterRules.refresh(s.character, data, s.items)
 	var lines: Array[String] = ["Разобрано: %s → %s" % [name, ", ".join(parts)]]
@@ -696,8 +695,7 @@ static func gather(s: GameSession, data: Dictionary, tag: String) -> Array[Strin
 	var qty := s.rng.randi_range(int(g["qty"][0]), int(g["qty"][1]))
 	var pool: Array = g.get("items", [g.get("item", "")])
 	var item := str(pool[s.rng.randi_range(0, pool.size() - 1)])
-	var inv: Dictionary = s.character["inventory"]
-	inv[item] = int(inv.get(item, 0)) + qty
+	ItemRules.add(s.character, item, qty)
 	CharacterRules.refresh(s.character, data, s.items)
 	lines.append("Добыто: %s ×%d" % [ItemRules.display_name(data["items"], s.items, item), qty])
 	return lines

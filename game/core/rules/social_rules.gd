@@ -171,6 +171,20 @@ static func refuses(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 		or FactionRules.shuns(s, data, npc_id)  # v0.7.31; v0.7.50
 
 
+## Why `npc_id` serves `who` nothing (v0.8.4.29: the one refusal of every service — the trade's services, the bank, a supplier,
+## a job, an office, a place, a course): hostile to the hero, `who` wanted where it lives, a desecrator of its god. A key or "".
+static func service_why(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> String:
+	if npc_id.is_empty():
+		return ""
+	if who == Being.HERO and refuses(s, data, npc_id):
+		return "TALK_REFUSED"
+	if CrimeRules.shunned_by(s, data, npc_id, who):
+		return "SHOP_CLOSED_WANTED"
+	if who == Being.HERO and not FaithRules.refuses(s, data, npc_id).is_empty():
+		return "FAITH_REFUSED"
+	return ""
+
+
 ## The NPC offers help by itself (attitude at eager_at or above).
 static func eager(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 	return s.attitude(npc_id) >= int(cfg(data)["thresholds"]["eager_at"])

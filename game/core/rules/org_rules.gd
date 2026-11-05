@@ -403,6 +403,11 @@ static func found(s: GameSession, data: Dictionary, name: String, place: String)
 		"Зовите друзей в братство — кнопка «В братство» у NPC"]
 
 
+## What the members of one's own brotherhood `id` bring a day into the till of its den.
+static func income_day(s: GameSession, data: Dictionary, id: String) -> int:
+	return members(s, data, id).size() * int(cfg(data)["member_income_cp"])
+
+
 static func members(s: GameSession, data: Dictionary, id: String) -> Array[String]:
 	var out: Array[String] = []
 	for m: Variant in def(s, data, id).get("members", []):
@@ -469,7 +474,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 				(d["members"] as Array).erase(m)
 				lines.append("%s схвачен стражей на деле и уходит из братства «%s»" % [WorldView.name_of(data, m), d["name"]])
 				continue
-			owned[place]["cash"] = int(owned[place].get("cash", 0)) + int(cfg(data)["member_income_cp"])
+			PropertyRules.to_till(s, data, place, int(cfg(data)["member_income_cp"]), "org:income")
 	return lines
 
 

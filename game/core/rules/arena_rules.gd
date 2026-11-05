@@ -37,6 +37,11 @@ static func rule(data: Dictionary, sid: String) -> String:
 	return r if (cfg(data)["rules"] as Dictionary).has(r) else "yield"
 
 
+## The prize of a bout of rank `rank` at the arena `sid`: the rank's prize by the arena's rule (`prize_pct`).
+static func prize_of(data: Dictionary, sid: String, rank: int) -> int:
+	return Price.share(int(ranks(data)[rank]["prize_cp"]), float(rule_cfg(data, sid).get("prize_pct", 100)))
+
+
 static func rule_cfg(data: Dictionary, sid: String) -> Dictionary:
 	return cfg(data)["rules"][rule(data, sid)]
 
@@ -358,7 +363,7 @@ static func after_bout(s: GameSession, data: Dictionary, a: Dictionary, won: boo
 		ObjectRules.note(s, sid, "%s проиграл бой: %s" % [s.character.get("name", ""), a.get("foe", "")])
 		return lines
 	var i := int(a.get("rank", 0))
-	var prize := Price.share(int(ranks(data)[i]["prize_cp"]), float(rc.get("prize_pct", 100)))
+	var prize := prize_of(data, sid, i)
 	Ledger.add(s, prize, "arena:after_bout")
 	lines.append("Победа на арене: приз %s" % Money.format(prize))
 	if int(a.get("bet", 0)) > 0:
@@ -622,8 +627,7 @@ static func _tourney_after(s: GameSession, data: Dictionary, a: Dictionary, won:
 	lines.append("Победитель турнира «%s»! Приз %s" % [t.get("name", ""), Money.format(cp)])
 	var item := str(t.get("prize_item", ""))
 	if not item.is_empty() and data["items"]["catalog"].has(item):
-		var inv: Dictionary = s.character["inventory"]  # the prize is named: no identifying
-		inv[item] = int(inv.get(item, 0)) + 1
+		ItemRules.add(s.character, item)  # the prize is named: no identifying
 		lines.append("Награда чемпиона: %s" % ItemRules.display_name(data["items"], s.items, item))
 	var loc := WorldView.new(data["world"]).location_id(s.room_id)
 	lines.append_array(ReputationRules.add(s, data, loc, int(cfg(data)["fame"]["champion"]), "чемпион турнира"))

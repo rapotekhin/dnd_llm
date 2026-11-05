@@ -269,9 +269,10 @@ static func parley_dc(data: Dictionary, enemies: Array, hard: bool) -> int:
 
 
 ## A roll of `who`'s skill against `dc` (the hero's with the game's difficulty). {total, ok, line}.
-static func roll(s: GameSession, data: Dictionary, skill: String, dc: int, dis: bool = false, who: String = Being.HERO) -> Dictionary:
+## `target` — who is talked to (v0.8.4.29): its tongue and its charms count as in any social check.
+static func roll(s: GameSession, data: Dictionary, skill: String, dc: int, dis: bool = false, who: String = Being.HERO, target: String = "") -> Dictionary:
 	var skill_name := TranslationServer.translate("SKILL_" + skill.to_upper())
-	var r := Roll.check(s, data, Sheet.who(s, data, who), {"what": skill_name, "skill": skill, "dc": dc, "dis": dis})
+	var r := Roll.check(s, data, Sheet.who(s, data, who), {"what": skill_name, "skill": skill, "dc": dc, "dis": dis, "target_id": target})
 	var total := int(r["total"])
 	var ok := bool(r["ok"])
 	return {"total": total, "ok": ok, "line": "%s %d против Сл %d%s — %s" % [skill_name, total, dc, " (помеха: без общего языка — жесты и оружие)" if dis else "", "успех" if ok else "провал"]}

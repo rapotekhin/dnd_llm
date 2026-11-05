@@ -495,7 +495,7 @@ func _plan_upgrade(s: GameSession, data: Dictionary, turn_id: String, e: Diction
 	if up.has("reason"):
 		return {"reason": up["reason"]}
 	return {"plan": up, "summary": "Улучшение для «%s»: %s — %s, %s работы" % [PropertyRules.name_of(s, data, str(up["place"])), up["def"]["name"],
-		Money.format(int(up["def"]["price_cp"])), PropertyRules._days(int(up["def"]["days"]))]}
+		Money.format(int(up["def"]["price_cp"])), CalendarRules.days_count(int(up["def"]["days"]))]}
 
 
 func _plan_course(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:

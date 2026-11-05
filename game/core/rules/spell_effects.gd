@@ -143,7 +143,7 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	if sp.has("make"):  # Goodberry, Create Food and Water
 		var made: Array[String] = []
 		for id: String in sp["make"]:
-			c["inventory"][id] = int(c["inventory"].get(id, 0)) + int(sp["make"][id])
+			ItemRules.add(c, id, int(sp["make"][id]))
 			made.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), int(sp["make"][id])])
 		return ["Сотворено: " + ", ".join(made)]
 	for e: Dictionary in ConditionRules.effects(c).duplicate():  # cast again: the new one replaces the old

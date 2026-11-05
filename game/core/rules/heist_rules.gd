@@ -308,7 +308,7 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 			"seized":
 				var cargo: Dictionary = d.get("cargo", {})
 				for item: String in cargo:
-					_lose(c, item, int(cargo[item]))
+					ItemRules.remove(c, item, int(cargo[item]))
 				lines.append("Груз нашли и забрали")
 				lines.append_array(_crime(s, data, id))
 			_:
@@ -328,7 +328,7 @@ static func act(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 		lines.append("Добыча: %s" % Money.format(got))
 	var cargo: Dictionary = d.get("cargo", {})
 	for item: String in cargo:
-		_lose(c, item, int(cargo[item]))
+		ItemRules.remove(c, item, int(cargo[item]))
 	var items: Dictionary = d.get("items", {})
 	var owner := str(d.get("victim", "")) if bool(k.get("mark_owner", false)) else ""
 	for item: String in items:
@@ -370,15 +370,6 @@ static func _crime(s: GameSession, data: Dictionary, id: String) -> Array[String
 	var world := WorldView.new(data["world"])
 	var loc := str(d.get("law_location", world.location_id(str(d["target"]))))
 	return CrimeRules.on_job(s, data, str(kind(data, str(d["kind"]))["crime"]), str(d.get("victim", "")), str(d["target"]), loc)
-
-
-static func _lose(c: Dictionary, item: String, qty: int) -> void:
-	var inv: Dictionary = c["inventory"]
-	var left := int(inv.get(item, 0)) - qty
-	if left > 0:
-		inv[item] = left
-	else:
-		inv.erase(item)
 
 
 # --- the master's `heist` -----------------------------------------------------------------------------------------

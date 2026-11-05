@@ -303,8 +303,9 @@ static func tag_words(data: Dictionary, tags: Array[String]) -> String:
 
 
 ## How many of an item the player can sell: owned minus what is worn or wielded.
-static func sellable(s: GameSession, item_id: String, data: Dictionary = {}) -> int:
-	var c := s.character
+## What `who` may part with of a thing (v0.8.4.29: anybody's, the hero by default): not cursed onto it, not worn, no full bag.
+static func sellable(s: GameSession, item_id: String, data: Dictionary = {}, who: String = Being.HERO) -> int:
+	var c := Life.of(s, who, data)
 	if not data.is_empty() and ItemRules.held_by_curse(c, data, s.items, item_id):
 		return 0  # a cursed thing does not leave the hero (v0.7.12)
 	var worn := CharacterRules.held_copies(c, item_id)
@@ -375,7 +376,7 @@ static func execute(s: GameSession, data: Dictionary, npc_id: String, cart: Dict
 		lines.append("Куплено: %s%s — %s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else "",
 			Money.format(buy_price(s, data, npc_id, id) * qty)])
 		stock[id] = int(stock[id]) - qty
-		inv[id] = int(inv.get(id, 0)) + qty
+		ItemRules.add(s.character, id, qty)
 	for id: String in sell:
 		var qty := int(sell[id])
 		if qty <= 0:
@@ -385,11 +386,7 @@ static func execute(s: GameSession, data: Dictionary, npc_id: String, cart: Dict
 		stock[ItemRules.real_id(id)] = int(stock.get(ItemRules.real_id(id), 0)) + qty  # the trader knows what it is (v0.7.12)
 		var sold: Dictionary = m["sold"]  # the market fills (v0.7.17.1)
 		sold[ItemRules.real_id(id)] = int(sold.get(ItemRules.real_id(id), 0)) + qty
-		var left := int(inv[id]) - qty
-		if left > 0:
-			inv[id] = left
-		else:
-			inv.erase(id)
+		ItemRules.remove(s.character, id, qty)
 	var net := int(q["net_cp"])
 	Ledger.add(s, -net, "trade:execute")
 	Gear.pay(s, data, npc_id, net)
@@ -530,14 +527,10 @@ static func services(s: GameSession, data: Dictionary, npc_id: String) -> Array[
 		if def.is_empty():
 			continue
 		var cost := BondRules.service_cost(s, data, npc_id, int(def["cost_cp"]))  # v0.7.31
-		var why := ""
-		if CrimeRules.shunned_by(s, data, npc_id):  # v0.7.22.18 (#30): a murderer gets no service either
-			why = "SHOP_CLOSED_WANTED"
-		elif not FaithRules.refuses(s, data, npc_id).is_empty():  # v0.7.49: a desecrator
-			why = "FAITH_REFUSED"
-		elif Ledger.balance(s) < cost:
+		var why := SocialRules.service_why(s, data, npc_id)  # v0.7.22.18 (#30), v0.7.49: the wanted, a desecrator
+		if why.is_empty() and Ledger.balance(s) < cost:
 			why = "TRADE_ERR_NO_COINS"
-		elif targets(s, data, str(id)).is_empty():
+		elif why.is_empty() and targets(s, data, str(id)).is_empty():
 			var sick := str(def.get("op", "")) == "cure_disease" and not DiseaseRules.curable(s, data, "magic").is_empty()
 			why = "SERVICE_HERBS_CANNOT" if sick else "SERVICE_NOTHING"
 			if str(def.get("op", "")) == "teach_recipe":
@@ -623,8 +616,7 @@ static func buy_service(s: GameSession, data: Dictionary, npc_id: String, id: St
 				"description": str(base.get("description", "")), "generated": true}
 			var new_id := ItemRules.generated_id(def)
 			s.items[new_id] = def
-			var inv: Dictionary = c["inventory"]
-			inv[new_id] = int(inv.get(new_id, 0)) + 1
+			ItemRules.add(c, new_id)
 			var eq: Dictionary = c.get("equipped", {})
 			var slot_of := ""
 			for slot: String in eq:

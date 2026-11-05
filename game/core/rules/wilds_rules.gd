@@ -164,8 +164,7 @@ static func _predator(s: GameSession, data: Dictionary) -> String:
 static func _give(s: GameSession, data: Dictionary, got: Dictionary, item: String, qty: int) -> void:
 	if qty <= 0 or not data["items"]["catalog"].has(item):
 		return
-	var inv: Dictionary = s.character["inventory"]
-	inv[item] = int(inv.get(item, 0)) + qty
+	ItemRules.add(s.character, item, qty)
 	got[item] = int(got.get(item, 0)) + qty
 
 

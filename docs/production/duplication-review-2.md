@@ -25,6 +25,8 @@
 
 ## A. Вещь уходит мимо `ItemRules.remove` / `found` (высокая)
 
+**Исправлено в 0.8.4.29:** списание — `ItemRules.remove`, добавление — новый `ItemRules.add` (или `found`), `sellable(…, who)`. Награда квеста и вещи дающего остаются опознанными: их называет тот, кто даёт, как приз арены.
+
 - **Канон:** `ItemRules.remove` (`item_rules.gd:400`) снимает вещь с рук, пояса, набора и настройки и подрезает копии через `Thing.trim`.
 - **Ручное `inv[id] - 1`:**
   - продажа — `trade_rules.gd:388`;
@@ -139,6 +141,8 @@
 
 ## H. Отказ в услуге (высокая)
 
+**Исправлено в 0.8.4.29:** `SocialRules.service_why` — у всех услуг, `shunned_by` читает `wanted_of(who)`.
+
 - **Кто чем отказывает:**
   - `SocialRules.refuses` (`social_rules.gd:169`) — 11 мест;
   - `CrimeRules.shunned_by` (:388) — только торговля и кража, и читает `s.wanted` напрямую, а не `wanted_of`;
@@ -212,6 +216,8 @@
 - **Одно место:** `TimeRules.in_hours`, `today` / `count`, `missed`, `day_of`; `Harm.heal`.
 
 ## L. Деньги, смены, занятия (средняя)
+
+**Исправлено в 0.8.4.29:** `PropertyRules.pay_from_till` / `to_till`, `JobRules.work_spec` / `earned` / `work_xp` (у своего места теперь и опыт «Работы»), `target_id` у собеседования, должности и экзамена (выборы — у схода, без цели), `ArenaRules.prize_of`, `PropertyRules.rent_cost`, `OrgRules.income_day`, `Price.share` в банке, `CalendarRules.days_count`.
 
 - **«Сначала из кассы места, потом из кошелька» — пять копий:**
   - жалованье — `property_rules.gd:347`;

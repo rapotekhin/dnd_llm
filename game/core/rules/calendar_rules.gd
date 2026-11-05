@@ -174,6 +174,11 @@ static func days_word(left: int) -> String:
 	return "последний день" if left <= 1 else "ещё %d %s" % [left, days_noun(left)]
 
 
+## «21 день», «3 дня», «12 дней».
+static func days_count(n: int) -> String:
+	return "%d %s" % [n, days_noun(n)]
+
+
 static func days_noun(n: int) -> String:
 	var m := n % 100
 	if m >= 11 and m <= 14:

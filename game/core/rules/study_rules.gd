@@ -265,8 +265,9 @@ static func exam_why(s: GameSession, data: Dictionary, sid: String, who: String 
 		return "STUDY_BANNED"
 	if not here(s, data, str(sc.get("head", "")), who):
 		return "STUDY_TEACHER_AWAY"
-	if (who == Being.HERO and SocialRules.refuses(s, data, str(sc["head"]))):
-		return "TALK_REFUSED"
+	var refused := SocialRules.service_why(s, data, str(sc["head"]), who)
+	if not refused.is_empty():
+		return refused
 	var tried: Dictionary = view(Life.of(s, who, data))["tried"]
 	if tried.has(sid) and s.day - int(tried[sid]) < int(cfg(data)["exam"]["retry_days"]):
 		return "STUDY_TRIED"
@@ -277,7 +278,7 @@ static func exam_chance(s: GameSession, data: Dictionary, sid: String, who: Stri
 	var ex: Dictionary = school(data, sid).get("exam", {})
 	if ex.is_empty():
 		return 100
-	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(ex["skill"]), "dc": int(ex["dc"])})
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(ex["skill"]), "dc": int(ex["dc"]), "target_id": str(school(data, sid).get("head", ""))})
 
 
 ## The entrance exam (exam_why first). Lines.
@@ -290,7 +291,7 @@ static func exam(s: GameSession, data: Dictionary, sid: String, who: String = Be
 	if not ex.is_empty() and not rec.is_empty():
 		lines.append("%s — без экзамена: рекомендация %s" % [sc["name"], rec])
 	elif not ex.is_empty():
-		var r := Roll.check(s, data, Sheet.who(s, data, who), {"what": "%s — экзамен" % sc["name"], "skill": str(ex["skill"]), "dc": int(ex["dc"])})
+		var r := Roll.check(s, data, Sheet.who(s, data, who), {"what": "%s — экзамен" % sc["name"], "skill": str(ex["skill"]), "dc": int(ex["dc"]), "target_id": str(sc.get("head", ""))})
 		var total := int(r["total"])
 		margin = int(r["margin"])
 		lines.append("%s — экзамен: %s %d против Сл %d — %s" % [sc["name"], CraftRules.tr_skill(data, str(ex["skill"])), total, int(ex["dc"]),
@@ -366,8 +367,9 @@ static func enroll_why(s: GameSession, data: Dictionary, id: String, who: String
 	var head := str(school(data, sid).get("head", ""))
 	if not here(s, data, teacher, who) and (head.is_empty() or not here(s, data, head, who)):
 		return "STUDY_TEACHER_AWAY"
-	if (who == Being.HERO and SocialRules.refuses(s, data, teacher if here(s, data, teacher, who) else head)):
-		return "TALK_REFUSED"
+	var refused := SocialRules.service_why(s, data, teacher if here(s, data, teacher, who) else head, who)
+	if not refused.is_empty():
+		return refused
 	if _banned(s, sid, who):
 		return "STUDY_BANNED"
 	if not admitted(Life.of(s, who, data), sid):

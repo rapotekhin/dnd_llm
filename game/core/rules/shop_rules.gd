@@ -32,6 +32,10 @@ static func venue(c: Dictionary, vid: String) -> Dictionary:
 
 
 ## Takes up to `sum` out of a venue's till (the tax of its place). What was taken.
+static func till(c: Dictionary, vid: String) -> int:
+	return int(_part(c, "venues").get(vid, {}).get("cash", 0))
+
+
 static func from_till(c: Dictionary, vid: String, sum: int) -> int:
 	var v: Dictionary = _part(c, "venues").get(vid, {})
 	var n := mini(sum, int(v.get("cash", 0)))
@@ -124,7 +128,7 @@ static func put_why(s: GameSession, data: Dictionary, vid: String, item_id: Stri
 	var why := _reach(s, data, vid, who)
 	if not why.is_empty():
 		return why
-	if TradeRules.sellable(s, item_id, data) <= 0 or value(s, data, item_id) <= 0:
+	if TradeRules.sellable(s, item_id, data, who) <= 0 or value(s, data, item_id) <= 0:
 		return "SHOP_NO_ITEM"
 	if bool(kind_cfg(s, data, vid, who).get("tavern", false)) and not is_food(data, item_id):
 		return "SHOP_TAVERN_FOOD"
@@ -132,11 +136,7 @@ static func put_why(s: GameSession, data: Dictionary, vid: String, item_id: Stri
 
 
 static func put(s: GameSession, data: Dictionary, vid: String, item_id: String, qty: int, who: String = Being.HERO) -> Array[String]:
-	var n := mini(qty, TradeRules.sellable(s, item_id, data))
-	var inv: Dictionary = Life.of(s, who, data)["inventory"]
-	inv[item_id] = int(inv[item_id]) - n
-	if int(inv[item_id]) <= 0:
-		inv.erase(item_id)
+	var n := ItemRules.remove(Life.of(s, who, data), item_id, mini(qty, TradeRules.sellable(s, item_id, data, who)))
 	var v := venue(Life.of(s, who, data), vid)
 	if int(v["last_day"]) == 0:
 		v["last_day"] = s.day
@@ -323,8 +323,12 @@ static func shift_dc(data: Dictionary) -> int:
 	return int(data["rules"]["dc_tiers"][str(cfg(data)["shift"]["dc_tier"])])
 
 
+static func shift_spec(s: GameSession, data: Dictionary, vid: String) -> Dictionary:
+	return JobRules.work_spec(data, name_of(s, data, vid), str(cfg(data)["shift"]["skill"]), shift_dc(data))
+
+
 static func shift_chance(s: GameSession, data: Dictionary, who: String = Being.HERO) -> int:
-	return Roll.chance_of(s, data, Sheet.who(s, data, who), {"skill": str(cfg(data)["shift"]["skill"]), "dc": shift_dc(data)})
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), shift_spec(s, data, ""))
 
 
 ## The hero behind the counter (the time passed): a check, its outcome × the shift's buyers, the takings to the purse.
@@ -338,11 +342,9 @@ static func shift(s: GameSession, data: Dictionary, vid: String, minutes: int, w
 		base = JobRules.broken_off(base, minutes, shift_hours(data) * 60)
 		lines.append("Торговля прервана")
 	else:
-		var skill := str(sc["skill"])
-		var a := Activity.attempt(s, data, {"what": name_of(s, data, vid), "label": CraftRules.tr_skill(data, skill), "skill": skill, "dc": shift_dc(data),
-			"ladder": JobRules.cfg(data)["outcomes"]}, who)
-		var o: Dictionary = a["step"]
-		base = roundi(base * (float(o.get("pay", 1.0)) + float(o.get("tips", 0.0)) * 2.0))
+		var a := Activity.attempt(s, data, shift_spec(s, data, vid), who)
+		var e := JobRules.earned(c, data, base, a["step"], 2.0)
+		base = int(e["pay"]) + int(e["tips"])
 		lines.append(str(a["line"]))
 	var r := sell_round(s, data, vid, base, who)
 	var loc := loc_of(s, data, vid)
@@ -403,7 +405,7 @@ static func tick_of(s: GameSession, data: Dictionary, who: String) -> Array[Stri
 		if days > 0:
 			v["last"] = {"day": s.day, "sold": sold, "cash": kept}
 			if kept > 0:
-				lines.append("%s: продано за %s — %s; выручка %s в кассе" % [name_of(s, data, vid), _days_text(days), _sold_text(s, data, sold) if not sold.is_empty() else "ночлег", Money.format(kept)])
+				lines.append("%s: продано за %s — %s; выручка %s в кассе" % [name_of(s, data, vid), "день" if days == 1 else CalendarRules.days_count(days), _sold_text(s, data, sold) if not sold.is_empty() else "ночлег", Money.format(kept)])
 	return lines
 
 
@@ -416,10 +418,6 @@ static func _fine_till(s: GameSession, data: Dictionary, vid: String, who: Strin
 	var fine := mini(int(ch["fine_cp"]), int(v["cash"]))
 	v["cash"] = int(v["cash"]) - fine
 	return ["%s: стража взяла штраф за торговлю без грамоты — %s" % [name_of(s, data, vid), Money.format(fine)]] if fine > 0 else []
-
-
-static func _days_text(n: int) -> String:
-	return "день" if n == 1 else "%d %s" % [n, "дня" if n % 10 in [2, 3, 4] and not n % 100 in [12, 13, 14] else "дней"]
 
 
 # --- the registry: the charter and the stalls -----------------------------------------------------------------------
@@ -491,6 +489,9 @@ static func wholesale_why(s: GameSession, data: Dictionary, npc_id: String, item
 		return "SHOP_NO_SERVICE"
 	if not s.npcs_here(data["world"], Life.room(s, data, who)).has(npc_id):
 		return "SHOP_NOT_HERE"
+	var refused := SocialRules.service_why(s, data, npc_id, who)
+	if not refused.is_empty():
+		return refused
 	if not has_charter(s, WorldView.new(data["world"]).location_id(Life.room(s, data, who)), who):
 		return "SHOP_NEED_CHARTER"
 	return "SHOP_NO_MONEY" if Ledger.balance(s, who) < wholesale_price(s, data, npc_id, item_id) * lot(data) else ""

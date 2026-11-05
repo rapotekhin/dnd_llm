@@ -86,7 +86,7 @@ func _bout(s: GameSession, data: Dictionary, gold: int) -> void:
 	var opp := ArenaRules.opponent(s, data, _site)
 	var m: Dictionary = data["monsters"][str(opp["monster"])]
 	var o := ArenaRules.hero_odds(s, data, _site, str(opp["monster"]), int(opp["hp"]))
-	var prize := int(int(ArenaRules.ranks(data)[int(opp["rank"])]["prize_cp"]) * int(ArenaRules.rule_cfg(data, _site).get("prize_pct", 100)) / 100)
+	var prize := ArenaRules.prize_of(data, _site, int(opp["rank"]))
 	_head(tr("ARENA_BOUT_HEAD"))
 	UiParts.label(_box, tr("ARENA_OPPONENT").format({"name": str(opp["name"]), "hp": int(opp["hp"]), "ac": int(m["ac"]), "prize": Money.format(prize)})).name = "ArenaOpponent"
 	var est := tr("ARENA_ODDS").format({"house": roundi(float(o["house"]) * 100), "mult": "%.2f" % float(o["mult"])})

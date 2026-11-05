@@ -302,21 +302,12 @@ static func _day(s: GameSession, data: Dictionary, day: int) -> Array[String]:
 		f["home"] = ""
 		f["home_room"] = ""
 		lines.append("Семье негде жить — дом потерян")
-	var till: Dictionary = owned.get(str(f.get("home", "")), {})
-	var c := s.character
-	if till.is_empty():
-		Ledger.add(s, help(s, data), "family:day")
-	else:
-		till["cash"] = int(till.get("cash", 0)) + help(s, data)
+	var home := str(f.get("home", ""))
+	PropertyRules.to_till(s, data, home, help(s, data), "family:day")
 	var need := upkeep(s, data)
 	if need <= 0:
 		return lines
-	var from_till := mini(need, int(till.get("cash", 0))) if not till.is_empty() else 0
-	if from_till > 0:
-		till["cash"] = int(till["cash"]) - from_till
-	var rest := need - from_till
-	if rest <= Ledger.balance(s):
-		Ledger.add(s, -rest, "family:day")
+	if PropertyRules.pay_from_till(s, data, home, need, "family:day") <= 0:
 		f["hungry"] = 0
 		return lines
 	f["hungry"] = int(f.get("hungry", 0)) + 1

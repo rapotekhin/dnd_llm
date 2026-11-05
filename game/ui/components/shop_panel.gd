@@ -141,7 +141,7 @@ func _registry(s: GameSession, data: Dictionary) -> void:
 	stall.add_theme_constant_override("separation", 10)
 	_box.add_child(stall)
 	for d: Variant in rent["days"]:
-		UiParts.act_button(stall, "StallRent_%d" % int(d), tr("BTN_SHOP_RENT").format({"days": tr("BANK_DAYS").format({"n": int(d)}), "money": Money.format(int(d) * int(rent["cp_day"]))}),
+		UiParts.act_button(stall, "StallRent_%d" % int(d), tr("BTN_SHOP_RENT").format({"days": tr("BANK_DAYS").format({"n": int(d)}), "money": Money.format(PropertyRules.rent_cost(data, "stall", int(d)))}),
 			PropertyRules.rent_why(s, data, _id, "stall", int(d)), _act("rent", _id, "stall", int(d)))
 
 
