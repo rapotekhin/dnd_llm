@@ -122,6 +122,25 @@ static func mods(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 	return {"adv": adv, "dis": dis, "crit": bool(by_status["crit"])}
 
 
+## The AC the blow of `f` meets: the target's own with the cover between them (v0.8.4.29.3: the roll and the window alike).
+static func ac_against(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary) -> int:
+	t["cover"] = CombatRules.cover_of(s, data, f, t)
+	var ac := Sheet.ac(s, t)
+	t.erase("cover")
+	return ac
+
+
+## What the window says of the blow before the click (v0.8.4.29.3): the same reasons, cover and least critical die as the roll.
+## {chance (%), adv: [reasons], dis: [reasons]}.
+static func odds(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, b: Dictionary) -> Dictionary:
+	var m := mods(s, data, f, t, b)
+	(m["adv"] as Array).append_array(b.get("adv", []))
+	(m["dis"] as Array).append_array(b.get("dis", []))
+	var chance := Roll.chance(int(b.get("to_hit", 0)), ac_against(s, data, f, t), not (m["adv"] as Array).is_empty(), not (m["dis"] as Array).is_empty(),
+		int(b.get("crit_min", 20)))
+	return {"chance": chance, "adv": m["adv"], "dis": m["dis"]}
+
+
 ## The whole of its action at `t`: Multiattack when it has one for this kind of action. A window of the hero's reaction leaves the
 ## rest of the blows in `resume_plan`.
 static func full(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, act: Dictionary, lines: Array[String]) -> void:
@@ -186,19 +205,17 @@ static func _saves(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 	var tag := MonsterRules.tag_of(data, a.get("effect", {}), a)
 	if tag.is_empty() and (a["damage"] as Array).any(func(d: Dictionary) -> bool: return str(d.get("type", "")) == "poison"):
 		tag = "poison"
-	var r := Sheet.save(s, data, t, str(sv["ability"]), int(sv["dc"]), tag)
-	var ok := bool(r["ok"])
+	var pieces: Array = []
+	for d: Dictionary in a["damage"]:
+		pieces.append({"n": CombatRules.roll_dice(s.rng, str(d["dice"])), "type": str(d.get("type", ""))})
+	var sh := Harm.save_half(s, data, t, str(sv["ability"]), int(sv["dc"]), pieces, {"tag": tag, "half": str(sv["success"]) == "half", "from": FightGrid.cell(f)})
+	var r: Dictionary = sh["save"]
+	var ok := bool(sh["ok"])
 	AnimRules.outcome(s, t, "resist" if ok else "debuff" if (a["damage"] as Array).is_empty() else "impact",
 		str(a["damage"][0].get("type", "")) if not (a["damage"] as Array).is_empty() else "debuff")
-	var dmg := 0
+	var dmg := int(sh["damage"])
 	var notes: Array[String] = []
-	for d: Dictionary in a["damage"]:
-		var part := CombatRules.roll_dice(s.rng, str(d["dice"]))
-		part = part / 2 if ok and str(sv["success"]) == "half" else (0 if ok else part)
-		var adj := Sheet.damage(s, data, t, str(d.get("type", "")), part)
-		dmg += int(adj["damage"])
-		if not str(adj["note"]).is_empty() and not notes.has(str(adj["note"])):
-			notes.append(str(adj["note"]))
+	notes.assign(sh["notes"])
 	var name := str(Sheet.holder(s, t).get("name", ""))
 	if (a["damage"] as Array).is_empty():
 		lines.append("%s — %s по %s: спасбросок %s" % [f["name"], a["name"], name, r["text"]])
@@ -286,9 +303,7 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	ConditionRules.remove(it, "guided")  # Guiding Bolt's light goes with the first attack roll (v0.7.13)
 	var die := SpellEffects.die(s, me, "attack")  # Bless, Bane (v0.7.13.1)
 	var to_hit := int(b.get("to_hit", 0)) + int(die["bonus"])
-	t["cover"] = CombatRules.cover_of(s, data, f, t)
-	var ac := Sheet.ac(s, t)
-	t.erase("cover")
+	var ac := ac_against(s, data, f, t)
 	var total := nat + to_hit
 	var crit_min := int(b.get("crit_min", 20))
 	var hit := nat >= crit_min or (nat != 1 and total >= ac)
@@ -369,7 +384,7 @@ static func _damage(s: GameSession, data: Dictionary, f: Dictionary, t: Dictiona
 		notes.append_array(extra["notes"])
 	for i in pieces.size():
 		var p: Dictionary = pieces[i]
-		var part := CombatRules._roll_gwf(s.rng, str(p["dice"]), crit) if bool(b.get("gwf", false)) else CombatRules.roll_dice(s.rng, str(p["dice"]), crit)
+		var part := CombatRules.roll_dice(s.rng, str(p["dice"]), crit, 0, 2 if bool(b.get("gwf", false)) else 0)
 		var text := str(p["dice"]).replace("d", "к")
 		if i == 0:
 			part = maxi(1, part + int(b.get("bonus", 0)))

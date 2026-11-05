@@ -156,12 +156,13 @@ func _rebuild() -> void:
 			any = true
 			var q := TradeRules.buy_quote(s, data, _npc, id) if side == "buy" else TradeRules.sell_quote(s, data, _npc, id)
 			var price := int(q["cp"])
+			var line_cp := price * qty if side == "buy" else TradeRules.sell_total(s, data, _npc, id, qty)  # the deal's own sum (v0.8.4.29.3)
 			var row := HBoxContainer.new()
 			rows.add_child(row)
 			var l := _label(row, false)
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			l.text = "%s%s — %s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else "", Money.format(price * qty)]
+			l.text = "%s%s — %s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else "", Money.format(line_cp)]
 			l.mouse_filter = Control.MOUSE_FILTER_STOP
 			l.tooltip_text = Price.text(q, price)  # why the price is what it is (v0.7.60)
 			var minus := Button.new()

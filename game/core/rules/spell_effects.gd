@@ -101,6 +101,21 @@ const WORLD: Array[String] = ["reveal", "knock", "water", "mend", "repose", "gly
 
 
 ## What the spells on a fighter give, by a key of its statuses: the first value (`fallback` — none).
+## How many darts or rays a spell lets fly at this slot and caster level (rules.combat.multi): one for any other (v0.8.4.29.3: the
+## cast, its window and the AI read it alike).
+static func count(data: Dictionary, spell_id: String, slot: int, level: int) -> int:
+	var multi: Dictionary = CombatRules.cfg(data)["multi"].get(spell_id, {})
+	var n := 1
+	if multi.has("base"):
+		var sp: Dictionary = data["spells"].get(spell_id, {})
+		n = int(multi["base"]) + int(multi.get("per_slot", 0)) * maxi(0, slot - maxi(1, int(sp.get("level", 1))))
+	elif multi.has("by_level"):
+		for k: String in multi["by_level"]:
+			if level >= int(k):
+				n = int(multi["by_level"][k])
+	return n
+
+
 static func boon(f: Dictionary, key: String, fallback: Variant = null) -> Variant:
 	for e: Dictionary in f.get("effects", []):
 		if e.has(key):
@@ -870,11 +885,9 @@ static func _save_hit(s: GameSession, data: Dictionary, name: String, dtype: Str
 	var lines: Array[String] = []
 	if str(f.get("status")) != "active":
 		return lines
-	var dmg := CombatRules.roll_dice(s.rng, dice)
-	var ok := not save.is_empty() and Sheet.saved(s, data, f, save, dc, "magic")
-	if ok:
-		dmg = dmg / 2 if half else 0
-	dmg = Sheet.taken(s, data, f, dtype, dmg)
+	var sh := Harm.save_half(s, data, f, save, dc, [{"n": CombatRules.roll_dice(s.rng, dice), "type": dtype}], {"tag": "magic", "half": half})
+	var ok := bool(sh["ok"])
+	var dmg := int(sh["damage"])
 	lines.append("%s: %s — %s%d (%s)" % [name, f["name"], ("спасбросок %s %s, " % [CombatRules.ab_name(save), "успех" if ok else "провал"]) if not save.is_empty() else "",
 		dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 	if dmg > 0:

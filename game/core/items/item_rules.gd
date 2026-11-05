@@ -426,7 +426,7 @@ static func wear_spec(c: Dictionary, data: Dictionary, d: Dictionary) -> Diction
 	var spec: Dictionary = d.get("wear", {})
 	for k: String in spec:
 		var v: Variant = spec[k]
-		out[k] = walk_of(c, data) if str(v) == "walk" else maxi(0, CharacterRules.mod(int(c.get("abilities", {}).get(str(v), 10)))) \
+		out[k] = walk_of(c, data) if str(v) == "walk" else maxi(0, CharacterRules.mod(CharacterRules.ability(c, str(v)))) \
 			if (data["rules"]["saves"] as Array).has(str(v)) else v  # an ability: its modifier (Second-Story Work's jump)
 	return out
 
@@ -852,16 +852,13 @@ static func use(c: Dictionary, data: Dictionary, session_items: Dictionary, id: 
 		return lines
 	if s != null and fx.has("invisible_minutes"):
 		var minutes := CombatRules.roll_dice(rng, str(fx["invisible_minutes"]))
-		ConditionRules.add_effect(c, {"condition": "invisible", "ends": {"at": ConditionRules.now(s) + minutes * 10},
+		ConditionRules.add_effect(Sheet.holder(s, who), {"condition": "invisible", "ends": {"at": ConditionRules.now(s) + minutes * ConditionRules.ROUNDS_PER_MINUTE},
 			"source": {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}})
 		lines.append("невидимость на %d мин" % minutes)
 		return lines
 	if fx.has("heal"):
-		var h: Array = fx["heal"]
-		var amount := int(h[2])
-		for i in int(h[0]):
-			amount += rng.randi_range(1, int(h[1]))
-		lines.append("+%d HP" % Harm.heal(data, c, amount))
+		var amount := CombatRules.roll_dice(rng, CombatRules.dice_of(fx["heal"], int(c.get("level", 1))))
+		lines.append("+%d HP" % (Harm.mend(s, data, who, amount) if s != null else Harm.heal(data, c, amount)))
 	if s != null and (fx.has("cure") or ConditionRules.BOONS.any(func(k: String) -> bool: return fx.has(k))):
 		lines.append_array(ConditionRules.cure(s, data, fx, {"kind": "item", "id": real_id(id), "name": str(d.get("name", ""))}, who))
 		return lines
@@ -893,7 +890,7 @@ static func _spell_use(c: Dictionary, data: Dictionary, session_items: Dictionar
 	elif sp_id == "identify":
 		landed = identify(c, data, session_items)
 	else:
-		landed = SpellRules.heal_self(c, data, sp_id, level, rng)
+		landed = SpellRules.heal_self(c, data, sp_id, level, rng, s)
 	if sp_id == "identify" and landed.is_empty():
 		landed.append("неопознанных вещей нет")
 	if sp_id != "identify" and not sp.has("heal_at_slot"):

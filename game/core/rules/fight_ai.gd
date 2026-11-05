@@ -45,8 +45,7 @@ static func _targets(s: GameSession, f: Dictionary) -> Array[Dictionary]:
 static func avg(a: Dictionary) -> float:
 	var total := 0.0
 	for d: Dictionary in a.get("damage", []):
-		var r := CombatRules.dice_range(str(d["dice"]))
-		total += (r[0] + r[1]) / 2.0
+		total += CombatRules.dice_avg(str(d["dice"]))
 	return total
 
 

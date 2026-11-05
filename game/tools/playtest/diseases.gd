@@ -26,7 +26,7 @@ func run() -> void:
 	step("a save against the pilgrim's fever", _chat_has(s, "Зараза от Тодор"), _last_effects(s))
 	await shot("pilgrim")
 
-	DiseaseRules.cure_all(s.character)
+	DiseaseRules.cure_all(s.character, data)
 	DiseaseRules.contract(s, data, "cackle_fever")
 	TimeRules.advance(s, data, 25 * 60)
 	s.minute = 12 * 60

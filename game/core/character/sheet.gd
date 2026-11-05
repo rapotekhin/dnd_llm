@@ -155,6 +155,11 @@ static func ability(s: GameSession, data: Dictionary, who: Dictionary, id: Strin
 	return int(of(s, data, who)["abilities"].get(id, 10))
 
 
+## The DC of what it lays by `ab` (v0.8.4.29.3, one place): 8 + its proficiency + the modifier — a spell's, ki, a breath, a channel.
+static func dc(s: GameSession, data: Dictionary, who: Dictionary, ab: String) -> int:
+	return 8 + prof(s, data, who) + ability_mod(s, data, who, ab)
+
+
 ## Its proficiency bonus.
 static func prof(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 	return int(of(s, data, who).get("prof_bonus", 2))

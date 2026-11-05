@@ -53,18 +53,15 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 		var fx: Dictionary = ItemRules.consumable(data, item, s.items).get("throw", {})
 		if not fx.has("damage") and not fx.has("effect"):
 			continue
-		var r := CombatRules.dice_range(str(fx["damage"][0])) if fx.has("damage") else [0, 0]
-		var power := (r[0] + r[1]) / 2.0
+		var power := CombatRules.dice_avg(str(fx["damage"][0])) if fx.has("damage") else 0.0
 		var fx_on: Dictionary = fx.get("effect", {})  # a made liquid (v0.8.4.28.5): its damage and the price of its status
 		if fx_on.has("damage"):
-			var d := CombatRules.dice_range(str(fx_on["damage"]["dice"]))
-			power += (d[0] + d[1]) / 2.0
+			power += CombatRules.dice_avg(str(fx_on["damage"]["dice"]))
 		if fx_on.has("condition"):
 			power += maxf(0.0, float(MakeRules._lay_cost(data, str(fx_on["condition"]))))
 		var burns := str(LiquidRules.kind(data, str(fx.get("liquid", ""))).get("coat", {}).get("burns", ""))
 		if not burns.is_empty():  # alchemist's fire burns on after
-			var b := CombatRules.dice_range(burns)
-			power += (b[0] + b[1]) / 2.0
+			power += CombatRules.dice_avg(burns)
 		for t: Dictionary in targets:
 			if not (fx.get("types", []) as Array).is_empty() and not (fx["types"] as Array).has(str(Sheet.template(data, t).get("type", ""))):
 				continue

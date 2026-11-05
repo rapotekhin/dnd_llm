@@ -333,6 +333,9 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, how: String, li
 			if bool(r["ok"]):
 				_break_door(s, data, at, d)
 				lines.append("%s выбивает дверь" % c["name"])
+				var doer := Being.HERO if Sheet.is_hero(f) else str(f.get("npc_id", ""))
+				if not doer.is_empty():  # a door forced before eyes, in a fight too: witnesses and trespass (v0.8.4.29.3)
+					lines.append_array(WayRules.forced(s, data, ends[0], ends[1], doer))
 			else:
 				lines.append("Дверь выдержала: %d против Сл %d" % [int(r["total"]), _door_dc(s, data, at, d)])
 	FightGrid.changed(s)
@@ -401,21 +404,17 @@ static func _lift(s: GameSession, data: Dictionary, at: Vector2i) -> void:
 static func _smash_block(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	var at := block_near(s, f)
 	var b: Dictionary = s.combat["blocks"][FightGrid.tag(at)]
-	var w := Attack.blade(s, data, f)
-	var ac := ThingRules.ac(data, {"material": b["made_of"]})
-	var r := Roll.check(s, data, f, {"what": "Удар по вещи", "parts": WayRules._hit_parts(w), "bonus": w["to_hit"], "dc": ac})
+	var mat := {"material": b["made_of"]}
+	var r := ThingRules.blow(s, data, f, mat, "Удар по вещи")  # the door's road: its threshold too (v0.8.4.29.3)
 	if not bool(r["ok"]):
-		lines.append("%s: удар по вещи — %d против КД %d, без толку" % [w["name"], int(r["total"]), ac])
+		lines.append("%s: удар по вещи — %d против КД %d, без толку" % [r["name"], int(r["total"]), int(r["ac"])])
 		return
-	var dmg := int(w.get("bonus", 0))
-	for piece: Dictionary in w["pieces"]:
-		dmg += CombatRules.roll_dice(s.rng, str(piece["dice"]), int(r["nat"]) == 20)
-	dmg = maxi(1, dmg)
+	var dmg := ThingRules.takes(data, mat, int(r["damage"]))
 	b["hp"] = int(b["hp"]) - dmg
 	if int(b["hp"]) > 0:
-		lines.append("%s: %d урона по вещи — %s ещё цел(а)" % [w["name"], dmg, b["name"]])
+		lines.append("%s: %d урона по вещи — %s ещё цел(а)" % [r["name"], dmg, b["name"]])
 		return
-	lines.append("%s: %d урона — %s разбит(а)" % [w["name"], dmg, b["name"]])
+	lines.append("%s: %d урона — %s разбит(а)" % [r["name"], dmg, b["name"]])
 	_ruin(s, data, at, lines)
 
 

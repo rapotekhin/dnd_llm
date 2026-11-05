@@ -205,7 +205,7 @@ static func after_hit(s: GameSession, data: Dictionary, f: Dictionary, b: Dictio
 		return
 	if bool(opts.get("stunning", false)) and Stock.left(c, data, "ki") > 0:
 		Stock.use(c, data, "ki", 1, s.rng)
-		var dc := ki_dc(c, data)
+		var dc := ki_dc(s, data, f)
 		var ok := Sheet.saved(s, data, t, "con", dc)
 		lines.append("Оглушающий удар: %s — спасбросок Тел против Сл %d — %s" % [it, dc, "устоял" if ok else "ошеломлён"])
 		if not ok and not CombatRules.immune_to(data, t, "stunned"):
@@ -226,8 +226,8 @@ static func after_hit(s: GameSession, data: Dictionary, f: Dictionary, b: Dictio
 			lines.append_array(_smite(s, data, t, int(smite_slots(c)[0]), crit, f))
 
 
-static func ki_dc(c: Dictionary, data: Dictionary) -> int:
-	return 8 + CharacterRules.prof_bonus(c, data) + ab_mod(c, "wis")
+static func ki_dc(s: GameSession, data: Dictionary, f: Dictionary) -> int:
+	return Sheet.dc(s, data, f, "wis")
 
 
 static func smite_slots(c: Dictionary) -> Array[int]:
@@ -254,7 +254,7 @@ static func _smite(s: GameSession, data: Dictionary, t: Dictionary, slot: int, c
 
 
 static func _open_hand(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, how: String, lines: Array[String]) -> void:
-	var dc := ki_dc(Sheet.holder(s, f), data)
+	var dc := ki_dc(s, data, f)
 	var it := str(Sheet.holder(s, t).get("name", ""))
 	match how:
 		"topple":
@@ -380,7 +380,7 @@ static func actions(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HE
 			continue
 		var a: Dictionary = table[id]
 		if _holds(c, data, a):
-			add.call(id, str(a["name"]), str(a["cost"]), bool(a.get("target", false)), breath_text(c, data) if id == "breath" else str(a.get("tip", "")))
+			add.call(id, str(a["name"]), str(a["cost"]), bool(a.get("target", false)), breath_text(s, data, who) if id == "breath" else str(a.get("tip", "")))
 	return out
 
 
@@ -591,7 +591,7 @@ static func _hook(s: GameSession, data: Dictionary, f: Dictionary, id: String, t
 ## minute; a cleric's Destroy Undead kills the weak ones. Lines.
 static func _turn(s: GameSession, data: Dictionary, f: Dictionary, types: Array, destroy: bool) -> Array[String]:
 	var c := Sheet.holder(s, f)
-	var dc := int(c.get("spell_dc", 8 + CharacterRules.prof_bonus(c, data) + ab_mod(c, "wis")))
+	var dc := int(c.get("spell_dc", Sheet.dc(s, data, f, "wis")))
 	var destroy_cr := float(CharacterRules.level_row(c, data).get("class_specific", {}).get("destroy_undead_cr", 0)) if destroy else 0.0
 	var lines: Array[String] = []
 	var any := false
@@ -835,10 +835,16 @@ static func breath_shape(c: Dictionary, data: Dictionary) -> String:
 	return "cone"
 
 
-static func breath_text(c: Dictionary, data: Dictionary) -> String:
+static func breath_text(s: GameSession, data: Dictionary, f: Dictionary) -> String:
+	var c := Sheet.holder(s, f)
 	return "%s, %s; спасбросок %s Сл %d; раз за короткий отдых" % [
 		"линия 30 фт" if breath_shape(c, data) == "line" else "конус 15 фт", data["misc"]["damage_types"].get(breath_type(c, data), ""),
-		"Тел" if breath_type(c, data) in ["cold", "poison"] else "Лов", 8 + ab_mod(c, "con") + CharacterRules.prof_bonus(c, data)]
+		CombatRules.ab_name(breath_save(c, data)), Sheet.dc(s, data, f, "con")]
+
+
+## The save against the dragonborn's breath: CON against cold and poison, DEX otherwise.
+static func breath_save(c: Dictionary, data: Dictionary) -> String:
+	return "con" if breath_type(c, data) in ["cold", "poison"] else "dex"
 
 
 ## The shape of the dragonborn's breath by 5e.
@@ -889,16 +895,17 @@ static func _breath(s: GameSession, data: Dictionary, f: Dictionary, target_id: 
 	var c := Sheet.holder(s, f)
 	c["breath_used"] = true
 	var dtype := breath_type(c, data)
-	var ab := "con" if dtype in ["cold", "poison"] else "dex"
-	var dc := 8 + ab_mod(c, "con") + CharacterRules.prof_bonus(c, data)
+	var ab := breath_save(c, data)
+	var dc := Sheet.dc(s, data, f, "con")
 	var dice := "%dd6" % (2 if level(c) < 6 else 3)
 	var cells := breath_cells(s, data, f, target_id)
 	AnimRules.emit(s, {"by": str(f["id"]), "act": "cast", "anim": breath_shape(c, data), "dtype": dtype, "result": "hit", "cells": FightGrid.pack_cells(cells)})
 	var full := CombatRules.roll_dice(s.rng, dice)
 	var lines: Array[String] = ["%s выдыхает %s (%s)" % [c.get("name", ""), data["misc"]["damage_types"].get(dtype, dtype), dice.replace("d", "к")]]
 	for t: Dictionary in breath_caught(s, data, f, target_id):
-		var ok := Sheet.saved(s, data, t, ab, dc)
-		var dmg := Sheet.taken(s, data, t, dtype, full / 2 if ok else full)
+		var sh := Harm.save_half(s, data, t, ab, dc, [{"n": full, "type": dtype}], {"from": FightGrid.cell(f)})
+		var ok := bool(sh["ok"])
+		var dmg := int(sh["damage"])
 		AnimRules.outcome(s, t, "impact" if dmg > 0 else "resist", dtype)
 		lines.append("%s: %s против Сл %d — %s, %d" % [Sheet.holder(s, t).get("name", ""), CombatRules.ab_name(ab), dc, "успех" if ok else "провал", dmg])
 		if Sheet.is_hero(f):

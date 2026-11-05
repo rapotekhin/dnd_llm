@@ -166,19 +166,26 @@ static func health_key(f: Dictionary) -> String:
 
 ## The most a dice expression can give (Beacon of Hope's healing, v0.7.13.2).
 static func max_dice(expr: String, mod: int = 0) -> int:
-	var total := 0
-	for p: String in expr.replace(" ", "").replace("MOD", str(mod)).replace("-", "+-").split("+", false):
-		if p.contains("d"):
-			total += (int(p.get_slice("d", 0)) if not p.get_slice("d", 0).is_empty() else 1) * int(p.get_slice("d", 1))
-		else:
-			total += int(p)
-	return total
+	return dice_range(expr, mod)[1]
 
 
-## "2d6+3" (or "1d8+MOD" with `mod`) → total; a critical doubles the dice.
-static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = false, mod: int = 0) -> int:
+## A heal of an item or a resource as an array [dice, sides, plus or "level"] → a dice expression for `roll_dice`.
+static func dice_of(h: Array, level: int = 1) -> String:
+	var plus := level if str(h[2]) == "level" else int(h[2])
+	return "%dd%d%s" % [int(h[0]), int(h[1]), ("+%d" % plus) if plus > 0 else ("%d" % plus) if plus < 0 else ""]
+
+
+## The mean of a dice expression (the AI's worth, the arena's estimate).
+static func dice_avg(expr: String, mod: int = 0) -> float:
+	var r := dice_range(expr, mod)
+	return (r[0] + r[1]) / 2.0
+
+
+## "2d6+3" (or "1d8+MOD" with `mod`) → total; a critical doubles the dice; a die of `reroll` or less is rolled once more (Great
+## Weapon Fighting: 2).
+static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = false, mod: int = 0, reroll: int = 0) -> int:
 	if expr.begins_with("E"):  # Empowered Spell: two rolls, the better (v0.7.10)
-		return maxi(roll_dice(rng, expr.substr(1), crit, mod), roll_dice(rng, expr.substr(1), crit, mod))
+		return maxi(roll_dice(rng, expr.substr(1), crit, mod, reroll), roll_dice(rng, expr.substr(1), crit, mod, reroll))
 	var e := expr.replace(" ", "").replace("MOD", str(mod))
 	var total := 0
 	var parts := e.replace("-", "+-").split("+", false)
@@ -187,7 +194,8 @@ static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = fal
 			var n := int(p.get_slice("d", 0)) if not p.get_slice("d", 0).is_empty() else 1
 			var sides := int(p.get_slice("d", 1))
 			for i in n * (2 if crit else 1):
-				total += rng.randi_range(1, sides)
+				var r := rng.randi_range(1, sides)
+				total += rng.randi_range(1, sides) if r <= reroll else r
 		else:
 			total += int(p)
 	return total
@@ -640,8 +648,7 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	var ranged := str(w.get("range", "melee")) == "ranged"
 	var monk := not martial.is_empty() and FeatureRules.monk_weapon(def) and not ranged
 	var mod := dex_mod if ranged else (maxi(str_mod, dex_mod) if props.has("finesse") or monk else str_mod)
-	var profs: Array = c.get("weapon_profs", [])
-	var proficient := profs.has(str(w.get("category", ""))) or profs.has(weapon_id) or (FeatureRules.pact_blade(c) and not ranged)
+	var proficient := weapon_proficient(c, w, weapon_id) or (FeatureRules.pact_blade(c) and not ranged)
 	var to_hit := mod + (prof if proficient else 0)
 	var hit_parts: Array[Dictionary] = [RollParts.part(RollParts.ability_name("dex" if mod == dex_mod and mod != str_mod else "str"), mod)]
 	RollParts.add(hit_parts, "владение оружием", prof if proficient else 0)
@@ -682,6 +689,13 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 
 
 ## The hero's bare hands (the monk's Martial Arts die).
+## Whether `c` is proficient with the weapon of `def` (v0.8.4.29.3, one place): its category or itself among its proficiencies; a
+## template with no list knows the weapons it carries.
+static func weapon_proficient(c: Dictionary, def: Dictionary, weapon_id: String) -> bool:
+	var profs: Array = c.get("weapon_profs", ["simple", "martial"] if not c.has("class") else [])
+	return profs.has(str(def.get("category", ""))) or profs.has(weapon_id)
+
+
 static func unarmed_profile(c: Dictionary, data: Dictionary) -> Dictionary:
 	if Guise.has_body(c):
 		return FeatureRules.shape_profile(c, data)
@@ -756,20 +770,6 @@ static func tip_for(s: GameSession, text: String) -> String:
 
 
 ## Great Weapon Fighting: damage dice of 1 or 2 are rolled again, once.
-static func _roll_gwf(rng: RandomNumberGenerator, expr: String, crit: bool) -> int:
-	var total := 0
-	for p: String in expr.replace(" ", "").replace("-", "+-").split("+", false):
-		if p.contains("d"):
-			var n := int(p.get_slice("d", 0)) if not p.get_slice("d", 0).is_empty() else 1
-			var sides := int(p.get_slice("d", 1))
-			for i in n * (2 if crit else 1):
-				var r := rng.randi_range(1, sides)
-				total += rng.randi_range(1, sides) if r <= 2 else r
-		else:
-			total += int(p)
-	return total
-
-
 ## A moment of the fight for the screen to show (v0.7.22.14, CombatFx): what HP and states do not tell — a miss
 ## dodged, a critical hit. {who: fighter id or PLAYER, kind}; the screen takes them and clears the list.
 static func fx(s: GameSession, who: String, kind: String) -> void:
@@ -960,18 +960,22 @@ static func _condition_on(s: GameSession, data: Dictionary, spell_id: String, sp
 
 ## What keeps the conditions off `t`: "" none, «-» — it cannot get them, or what protects it.
 static func _resists(s: GameSession, data: Dictionary, t: Dictionary, spec: Dictionary, conds: Array, tag: String) -> String:
-	if not Sheet.is_hero(t) and not _can_be(data, t, spec):
+	if not _can_be(s, data, t, spec):
 		return "-"
 	for cond: String in conds:  # Heroism, Steadfast, an elf and magical sleep: anybody's (v0.8.4.27.5)
 		var why := HeroDefense.immune(s, data, t, cond, tag)
 		if not why.is_empty():
 			return why
-	return "" if not Sheet.is_hero(t) or int(s.character["abilities"].get("int", 10)) >= int(spec.get("min_int", 0)) else "-"
+	return ""
 
 
 ## Whether a foe can get the spell's conditions: creature types (`types`, `immune_types`), condition immunities,
 ## a minimum Intelligence (Hideous Laughter).
-static func _can_be(data: Dictionary, t: Dictionary, spec: Dictionary) -> bool:
+static func _can_be(s: GameSession, data: Dictionary, t: Dictionary, spec: Dictionary) -> bool:
+	if Sheet.ability(s, data, t, "int") < int(spec.get("min_int", 0)):  # anybody's by its sheet (v0.8.4.29.3)
+		return false
+	if Sheet.is_hero(t):
+		return true
 	var m := Sheet.template(data, t)
 	var kind := str(m.get("type", ""))
 	if spec.has("types") and not (spec["types"] as Array).has(kind):
@@ -983,9 +987,7 @@ static func _can_be(data: Dictionary, t: Dictionary, spec: Dictionary) -> bool:
 			return false
 	if spec.has("immune_condition") and (m.get("condition_immunities", []) as Array).has(str(spec["immune_condition"])):
 		return false
-	if (spec["conditions"] as Array).has("unconscious") and MonsterRules.sleep_immune(data, t):
-		return false
-	return int(m["abilities"].get("int", 10)) >= int(spec.get("min_int", 0))
+	return not ((spec["conditions"] as Array).has("unconscious") and MonsterRules.sleep_immune(data, t))
 
 
 ## A concentration ended: what the spell of `by` left on anyone goes, its zones and its creatures.
@@ -1113,9 +1115,8 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 		return splashed
 	var t := fighter(s, target_id)
 	var dex := Sheet.ability_mod(s, data, f, "dex")
-	var profs: Array = c.get("weapon_profs", ["martial"])  # a template knows the weapons it carries
-	var proficient := bool(fx.get("weapon", false)) and (profs.has("martial") or profs.has(item_id))
-	var to_hit := dex + (int(Sheet.of(s, data, f).get("prof_bonus", 2)) if proficient else 0)
+	var proficient := bool(fx.get("weapon", false)) and weapon_proficient(c, ItemRules.def_of(data["items"], s.items, ItemRules.real_id(item_id)), ItemRules.real_id(item_id))
+	var to_hit := dex + (Sheet.prof(s, data, f) if proficient else 0)
 	var near := int(fx.get("range", 20))
 	var blow := {"name": name, "to_hit": to_hit, "pieces": [], "melee": false, "range": [near, 60 if bool(fx.get("improvised", false)) else near], "str_based": false}
 	var lines: Array[String] = []
@@ -1194,13 +1195,7 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 	if sp.has("area"):
 		targets = area_targets(s, data, sp, t)
 	var multi: Dictionary = cfg(data)["multi"].get(spell_id, {})
-	var count := 1
-	if multi.has("base"):
-		count = int(multi["base"]) + int(multi.get("per_slot", 0)) * maxi(0, slot - maxi(1, int(sp["level"])))
-	elif multi.has("by_level"):
-		for k: String in multi["by_level"]:
-			if level >= int(k):
-				count = int(multi["by_level"][k])
+	var count := SpellEffects.count(data, spell_id, slot, level)
 	var dtype := str(sp.get("damage_type", ""))
 	var name := str(sp["name"])
 	if by_hero and count > 1 and not sp.has("area") and bool(cfg(data).get("volley_one_by_one", false)):
@@ -1219,11 +1214,12 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 					continue
 				var save_ab := str(sp["save"]["ability"])
 				var dc := spell_dc(s)
-				if save_ab == "dex" and sp.has("area"):
-					tg["cover"] = mini(int(FightGrid.cfg(data)["cover"]["three_quarters"]), FightGrid.cover_at(s, data, _area_origin(s, data, sp, t), FightGrid.cell(tg)))
-				var ok := Sheet.saved(s, data, tg, save_ab, dc, "magic", str(s.combat.get("meta_now", "")) == "heightened_spell")
-				tg.erase("cover")
-				var dmg := Sheet.taken(s, data, tg, dtype, dmg_full / 2 if ok and str(sp["save"]["success"]) == "half" else (0 if ok else dmg_full))
+				var opts := {"tag": "magic", "half": str(sp["save"]["success"]) == "half", "dis": str(s.combat.get("meta_now", "")) == "heightened_spell"}
+				if sp.has("area"):
+					opts["from"] = _area_origin(s, data, sp, t)
+				var sh := Harm.save_half(s, data, tg, save_ab, dc, [{"n": dmg_full, "type": dtype}], opts)
+				var ok := bool(sh["ok"])
+				var dmg := int(sh["damage"])
 				AnimRules.outcome(s, tg, "impact" if dmg > 0 else "resist", dtype)
 				lines.append("%s: %s — спасбросок %s против Сл %d %s, %d (%s)" % [name, tg["name"], ab_name(save_ab),
 					dc, "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
@@ -1249,12 +1245,7 @@ static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int,
 		Harm.take(s, data, t, dmg, lines, dtype, false, by_hero)
 		return
 	# v0.7.13: a spell attack has the advantages and disadvantages of any attack (prone, hidden, guided, dark…)
-	var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
-	var blow := Attack.of_spell(name, spell_attack(s), _empowered(s, dice), agonizing, dtype, str(sp["attack"]) == "melee", int(sp.get("range_ft", 5)))
-	blow["spell"] = spell_id  # its look is the spell's delivery (v0.8.4.23)
-	if spell_id == "shocking_grasp" and _metal_armor(s, data, t):
-		blow["adv"] = ["металлический доспех"]
-	var sres := Attack.swing(s, data, me, t, blow, lines)
+	var sres := Attack.swing(s, data, me, t, spell_blow(s, data, spell_id, _empowered(s, dice), me, t), lines)
 	ActionRules.riders(s, data, spell_id, slot, t, bool(sres["hit"]), lines)
 	var repel := bool(sres["hit"]) and spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_repelling_blast")
 	if repel and str(t.get("status")) == "active" and SIZES.find(Sheet.size(s, data, t)) <= 3:
@@ -1262,32 +1253,33 @@ static func _bolt(s: GameSession, data: Dictionary, spell_id: String, slot: int,
 		lines.append("Отталкивающий заряд: %s отброшен на 10 фт" % t["name"])
 
 
+## The blow of a spell attack of `me` at `t` (v0.8.4.29.3: the roll and the window build it alike): Agonizing Blast, Shocking Grasp
+## on metal.
+static func spell_blow(s: GameSession, data: Dictionary, spell_id: String, dice: String, me: Dictionary, t: Dictionary) -> Dictionary:
+	var sp: Dictionary = data["spells"][spell_id]
+	var c := Sheet.holder(s, me)
+	var agonizing := maxi(0, FeatureRules.ab_mod(c, "cha")) if spell_id == "eldritch_blast" and FeatureRules.has(c, "eldritch_invocation_agonizing_blast") else 0
+	var blow := Attack.of_spell(str(sp["name"]), spell_attack(s), dice, agonizing, str(sp.get("damage_type", "")), str(sp["attack"]) == "melee", int(sp.get("range_ft", 5)))
+	blow["spell"] = spell_id  # its look is the spell's delivery (v0.8.4.23)
+	if spell_id == "shocking_grasp" and _metal_armor(s, data, t):
+		blow["adv"] = ["металлический доспех"]
+	return blow
+
+
 ## What a healing spell gives at this slot, by the caster's numbers.
 static func heal_roll(s: GameSession, data: Dictionary, spell_id: String, slot: int) -> int:
 	var me := caster(s)
-	var c := Sheet.holder(s, me)
-	var ab := Sheet.ability_mod(s, data, me, spell_ability(s))
-	var heal_expr := str(data["spells"][spell_id]["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
-	var points := max_dice(heal_expr, ab) if SpellEffects.max_heal(c) else roll_dice(s.rng, heal_expr, false, ab)
-	if FeatureRules.has(c, "disciple_of_life") and slot > 0:
-		points += 2 + slot  # Disciple of Life
-	return points
+	return SpellRules.heal_points(data, Sheet.holder(s, me), spell_id, slot, Sheet.ability_mod(s, data, me, spell_ability(s)), s.rng)
 
 
 ## A healing spell lands on anyone in the fight: one who lay at 0 HP is back in it.
 static func heal(s: GameSession, data: Dictionary, spell_id: String, slot: int, t: Dictionary, lines: Array[String]) -> void:
 	var it := Sheet.holder(s, t)
 	var before := int(it["hp"])
-	if Harm.heal(data, it, heal_roll(s, data, spell_id, slot)) <= 0 and ConditionRules.does(it, data, "no_heal"):  # Chill Touch, a swarm
+	if Harm.mend(s, data, t, heal_roll(s, data, spell_id, slot)) <= 0 and ConditionRules.does(it, data, "no_heal"):  # Chill Touch, a swarm
 		lines.append("%s: раны не затягиваются" % t["name"])
 		return
 	AnimRules.outcome(s, t, "heal")
-	if not Sheet.is_hero(t):
-		t["status"] = "active"
-		t.erase("death_saves")
-	elif before <= 0 and int(it["hp"]) > 0:
-		ConditionRules.remove(it, "unconscious")
-		s.combat["death_saves"] = {"ok": 0, "fail": 0}
 	lines.append("+%d HP" % (int(it["hp"]) - before) if Sheet.is_hero(t) and Sheet.is_hero(caster(s)) else "%s: +%d HP" % [t["name"], int(it["hp"]) - before])
 
 
@@ -2434,7 +2426,7 @@ static func attack_preview(s: GameSession, data: Dictionary, target_id: String, 
 	if t.is_empty():
 		return {}
 	var w := weapon_profile(c, data, s.items, "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", "")), offhand)
-	var mods := Attack.mods(s, data, player(s), t, Attack.of_weapon(w))
+	var mods := Attack.odds(s, data, player(s), t, Attack.of_weapon(w))  # the roll's own reasons and cover (v0.8.4.29.3)
 	var adv := not (mods["adv"] as Array).is_empty()
 	var dis := not (mods["dis"] as Array).is_empty()
 	var r := dice_range(str(w["dice"]))
@@ -2443,7 +2435,7 @@ static func attack_preview(s: GameSession, data: Dictionary, target_id: String, 
 	var sr: Array[int] = [0, 0]
 	if not sneak.is_empty():
 		sr = dice_range(sneak)
-	return {"chance": hit_chance(int(w["to_hit"]), ac_of(t), adv, dis), "min": maxi(1, r[0] + bonus) + sr[0],
+	return {"chance": int(mods["chance"]), "min": maxi(1, r[0] + bonus) + sr[0],
 		"max": maxi(1, r[1] + bonus) + sr[1], "adv": mods["adv"], "dis": mods["dis"], "sneak": not sneak.is_empty()}
 
 
@@ -2462,33 +2454,15 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 			return {"pool": true, "min": pr[0], "max": pr[1], "condition": conds, "chance": 100, "adv": [], "dis": []}
 		var sab := str(sp["save"]["ability"])
 		var held := Roll.chance_of(s, data, t, {"save": sab, "dc": spell_dc(s), "tag": _spell_tag(data, spell_id, cspec["conditions"])})
-		return {"save": true, "condition": conds, "chance": 100 - held, "adv": [], "dis": [], "immune": not _can_be(data, t, cspec)}
-	var c := s.character
-	var level := int(c.get("level", 1))
-	var r := dice_range(_spell_dice(sp, maxi(slot, int(sp.get("level", 0))), level))
-	var multi: Dictionary = cfg(data)["multi"].get(spell_id, {})
-	var count := 1
-	if multi.has("base"):
-		count = int(multi["base"]) + int(multi.get("per_slot", 0)) * maxi(0, slot - maxi(1, int(sp["level"])))
-	elif multi.has("by_level"):
-		for k: String in multi["by_level"]:
-			if level >= int(k):
-				count = int(multi["by_level"][k])
-	var out := {"min": r[0], "max": r[1], "count": count, "adv": [], "dis": [], "save": false, "half": false, "chance": 100}
-	if bool(multi.get("auto_hit", false)):
+		return {"save": true, "condition": conds, "chance": 100 - held, "adv": [], "dis": [], "immune": not _can_be(s, data, t, cspec)}
+	var level := caster_level(s)
+	var dice := _spell_dice(sp, maxi(slot, int(sp.get("level", 0))), level)
+	var r := dice_range(dice)
+	var out := {"min": r[0], "max": r[1], "count": SpellEffects.count(data, spell_id, slot, level), "adv": [], "dis": [], "save": false, "half": false, "chance": 100}
+	if bool(cfg(data)["multi"].get(spell_id, {}).get("auto_hit", false)):
 		return out
-	if sp.has("attack"):
-		var adv: Array[String] = []
-		if bool(player(s).get("hidden", false)):
-			adv.append("вы спрятаны")
-		var dis: Array[String] = []
-		if str(sp["attack"]) == "ranged" and _foe_beside(s, data, player(s)):
-			dis.append("враг вплотную")
-		if bool(t.get("dodging", false)):
-			dis.append("цель уклоняется")
-		out["adv"] = adv
-		out["dis"] = dis
-		out["chance"] = hit_chance(spell_attack(s), ac_of(t) + cover_of(s, data, player(s), t), not adv.is_empty(), not dis.is_empty())
+	if sp.has("attack"):  # the roll's own blow, reasons and cover (v0.8.4.29.3)
+		out.merge(Attack.odds(s, data, player(s), t, spell_blow(s, data, spell_id, dice, player(s), t)), true)
 	elif sp.has("save"):
 		out["save"] = true
 		out["half"] = str(sp["save"]["success"]) == "half"

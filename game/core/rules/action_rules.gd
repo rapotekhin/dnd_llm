@@ -145,9 +145,7 @@ static func numbers(s: GameSession, data: Dictionary, id: String, f: Dictionary 
 	var ab := str(data["spells"].get(id, {}).get("ability", ""))
 	if ab.is_empty():
 		return {}
-	var m := Sheet.ability_mod(s, data, f, ab)
-	var prof := Sheet.prof(s, data, f)
-	return {"dc": 8 + prof + m, "attack": prof + m, "ability": ab}
+	return {"dc": Sheet.dc(s, data, f, ab), "attack": Sheet.prof(s, data, f) + Sheet.ability_mod(s, data, f, ab), "ability": ab}
 
 
 ## What `f` casts with: its numbers by the template, the thing's in `by`, and it named.

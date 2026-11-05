@@ -1300,8 +1300,9 @@ func _arrest(s: GameSession, can_act: bool) -> void:
 	var specs := [["pay", tr("BTN_CRIME_PAY").format({"cost": Money.format(CrimeRules.fine(s, Catalog.data, loc))}), ""],
 		["stocks", tr("BTN_CRIME_STOCKS").format({"days": CrimeRules.stocks_days(s, Catalog.data, loc), "name": CrimeRules.sentence(s, Catalog.data, loc)["name"]}), tr("BTN_CRIME_STOCKS_TIP")],
 		["resist", tr("BTN_CRIME_RESIST"), tr("BTN_CRIME_RESIST_TIP")]]
-	var dc := int(Catalog.rules()["dc_tiers"][CrimeRules.talk_tier(s, Catalog.data, loc)])  # v0.7.22.2: as in BG3
-	for how: String in CrimeRules.TALK:
+	var tier := CrimeRules.talk_tier(s, Catalog.data, loc)  # v0.7.22.2: as in BG3
+	for how: String in CrimeRules.TALK:  # the DC of the roll's own spec: the listener's template may set it (v0.8.4.29.3)
+		var dc := int(CheckEngine.preview(s, Catalog.data, {"skill": CrimeRules.TALK[how], "dc_tier": tier}).get("dc", 0))
 		specs.append([how, tr("BTN_CRIME_" + how.to_upper()).format({"dc": dc}), tr("BTN_CRIME_TALK_TIP")])
 	specs.append(["bribe", tr("BTN_CRIME_BRIBE").format({"cost": Money.format(CrimeRules.bribe(s, Catalog.data, loc))}), tr("BTN_CRIME_BRIBE_TIP")])
 	for spec: Array in specs:

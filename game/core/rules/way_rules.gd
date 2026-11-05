@@ -383,18 +383,16 @@ static func hurt(s: GameSession, data: Dictionary, a: String, b: String, damage:
 	return false
 
 
-## A blow of the weapon in hand at the door: an attack against the material's AC, damage off its HP. Lines.
-static func hit(s: GameSession, data: Dictionary, a: String, b: String) -> Array[String]:
-	var c := s.character
-	var mat := ThingRules.material(data, def(data, a, b))
-	var w := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
-	var r := Roll.hero(s, data, {"what": "Удар по двери", "parts": _hit_parts(w), "bonus": w["to_hit"], "dc": ThingRules.ac_of(mat)})
+## A blow of the weapon in hand at the door: an attack against the material's AC, damage off its HP (ThingRules.blow, the hero's
+## or anybody's). Lines.
+static func hit(s: GameSession, data: Dictionary, a: String, b: String, who: Dictionary = Sheet.HERO) -> Array[String]:
+	var r := ThingRules.blow(s, data, who, def(data, a, b), "Удар по двери")
 	if not bool(r["ok"]):
-		return ["%s: удар по двери — %d против КД %d, без толку" % [w["name"], int(r["total"]), ThingRules.ac_of(mat)]]
-	var dmg := maxi(1, CombatRules.roll_dice(s.rng, str(w["dice"]), int(r["nat"]) == 20) + int(w["bonus"]))
+		return ["%s: удар по двери — %d против КД %d, без толку" % [r["name"], int(r["total"]), int(r["ac"])]]
+	var dmg := int(r["damage"])
 	if hurt(s, data, a, b, dmg):
-		return ["%s: %d урона — %s" % [w["name"], dmg, break_line(data, a, b).to_lower()]]
-	return ["%s: %d урона — осталось %d из %d" % [w["name"], dmg, hp(s, data, a, b), max_hp(data, def(data, a, b))]]
+		return ["%s: %d урона — %s" % [r["name"], dmg, break_line(data, a, b).to_lower()]]
+	return ["%s: %d урона — осталось %d из %d" % [r["name"], dmg, hp(s, data, a, b), max_hp(data, def(data, a, b))]]
 
 
 ## What is said when the leaf breaks.
@@ -465,12 +463,6 @@ static func forced(s: GameSession, data: Dictionary, a: String, b: String, doer:
 	var lines: Array[String] = ["Видели: " + ", ".join(seen.map(func(id: String) -> String: return WorldView.name_of(data, id)))]  # v0.7.39.2
 	lines.append_array(CrimeRules.on_trespass(s, data, victim(s, data, a, b, doer), b, seen, doer))
 	return lines
-
-
-static func _hit_parts(w: Dictionary) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	out.assign(w.get("hit_parts", []))
-	return out
 
 
 # --- the master's way -------------------------------------------------------------------------------------------

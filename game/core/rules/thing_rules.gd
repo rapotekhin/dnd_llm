@@ -56,10 +56,33 @@ static func hp(data: Dictionary, st: Dictionary, d: Dictionary) -> int:
 
 ## A blow: poison and the mind do nothing to a thing, a threshold stops what is less. {took, broke}.
 static func hurt(data: Dictionary, st: Dictionary, d: Dictionary, amount: int, dtype: String = "") -> Dictionary:
-	if (cfg(data)["immune"] as Array).has(dtype) or amount < int(material(data, d).get("threshold", 0)):
+	amount = takes(data, d, amount, dtype)
+	if amount <= 0:
 		return {"took": 0, "broke": false}
 	st["dmg"] = int(st.get("dmg", 0)) + amount
 	return {"took": amount, "broke": hp(data, st, d) <= 0}
+
+
+## What a thing of `d` takes of `amount`: nothing for a type things shrug off or below its material's threshold.
+static func takes(data: Dictionary, d: Dictionary, amount: int, dtype: String = "") -> int:
+	return 0 if (cfg(data)["immune"] as Array).has(dtype) or amount < int(material(data, d).get("threshold", 0)) else amount
+
+
+## A blow of `who` at a thing of `d` (v0.8.4.29.3, one road for a door and a thing of a fight): the weapon at arm's length against
+## the material's AC, all its dice (doubled on a 20) and its bonus. {ok, total, ac, damage, name}.
+static func blow(s: GameSession, data: Dictionary, who: Dictionary, d: Dictionary, what: String) -> Dictionary:
+	var w := Attack.blade(s, data, who)
+	var ac := ac_of(material(data, d))
+	var parts: Array[Dictionary] = []
+	parts.assign(w.get("hit_parts", []))
+	var r := Roll.check(s, data, who, {"what": what, "parts": parts, "bonus": int(w.get("to_hit", 0)), "dc": ac})
+	var out := {"ok": bool(r["ok"]), "total": int(r["total"]), "ac": ac, "damage": 0, "name": str(w.get("name", ""))}
+	if bool(r["ok"]):
+		var dmg := int(w.get("bonus", 0))
+		for piece: Dictionary in w.get("pieces", []):
+			dmg += CombatRules.roll_dice(s.rng, str(piece["dice"]), int(r["nat"]) == 20)
+		out["damage"] = maxi(1, dmg)
+	return out
 
 
 ## Whether a status lies on the thing and has not run out.

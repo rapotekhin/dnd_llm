@@ -53,11 +53,11 @@ static func margin(nat: int, total: int, dc: int, crit: int = CRIT_MARGIN) -> in
 	return crit if nat == 20 else -crit if nat == 1 else total - dc
 
 
-## The chance in percent of passing `dc` with `bonus`.
-static func chance(bonus: int, dc: int, adv: bool = false, dis: bool = false) -> int:
+## The chance in percent of passing `dc` with `bonus`; `crit_min` — the least die that hits whatever the AC (a Champion's 19).
+static func chance(bonus: int, dc: int, adv: bool = false, dis: bool = false, crit_min: int = 20) -> int:
 	var wins := 0
 	for nat in range(1, 21):
-		if succeeds(nat, nat + bonus, dc):
+		if nat >= crit_min or succeeds(nat, nat + bonus, dc):
 			wins += 1
 	var p := wins / 20.0
 	if adv and not dis:

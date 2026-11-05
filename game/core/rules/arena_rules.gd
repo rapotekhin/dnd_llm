@@ -168,12 +168,11 @@ static func _spec(f: Dictionary) -> Dictionary:
 
 
 static func _avg(expr: String) -> float:
-	var d := CombatRules.dice_range(expr)
-	return (d[0] + d[1]) / 2.0
+	return CombatRules.dice_avg(expr)
 
 
 static func _hit_p(to_hit: int, ac: int) -> float:
-	return clampf((21.0 - (ac - to_hit)) / 20.0, 0.05, 0.95)
+	return Roll.chance(to_hit, ac) / 100.0  # the roll's own chance (v0.8.4.29.3)
 
 
 ## The melee attacks of a template's full turn, as the combat AI makes them (Multiattack of melee actions).

@@ -121,6 +121,11 @@ static func tame_why(s: GameSession, data: Dictionary, cid: String) -> String:
 	return ""
 
 
+## The taming check of `cr` (v0.8.4.29.3: the roll and the window read it alike); `given` — a treat of its taste, advantage.
+static func spec(data: Dictionary, cr: Dictionary, given: bool = false) -> Dictionary:
+	return {"what": "Приручение", "skill": str(cfg(data)["skill"]), "dc": dc(data, cr), "adv_why": "угощение" if given else ""}
+
+
 ## The taming roll (tame_why first; the caller passes the minutes). `food` — a thing of its taste given (advantage).
 ## {lines, ok}.
 static func tame(s: GameSession, data: Dictionary, cid: String, food: String) -> Dictionary:
@@ -130,7 +135,7 @@ static func tame(s: GameSession, data: Dictionary, cid: String, food: String) ->
 	if given:
 		ItemRules.remove(s.character, food)
 	var d := dc(data, cr)
-	var r := Roll.hero(s, data, {"what": "Приручение", "skill": skill, "dc": d, "adv_why": "угощение" if given else ""})
+	var r := Roll.hero(s, data, spec(data, cr, given))
 	var nat := int(r["nat"])
 	var b := int(r["bonus"])
 	var ok := bool(r["ok"])

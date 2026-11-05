@@ -154,6 +154,51 @@ static func _share(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, 
 		take(s, data, warder, dmg, lines, dtype)
 
 
+## A save against damage of anybody (v0.8.4.29.3: one road for a spell's area, a zone, a monster's breath or gaze and a
+## dragonborn's breath): the cover between `from` (a cell, opts) and it on a DEX save, the save, half on success (`half`, true by
+## default) or nothing, each piece of `pieces` ([{n, type}]) through its defenses. No save when `ab` is "" (a zone with none).
+## opts: tag, half, from, dis. {ok, damage, notes: [..], save: Sheet.save's result or {}}.
+static func save_half(s: GameSession, data: Dictionary, who: Dictionary, ab: String, dc: int, pieces: Array, opts: Dictionary = {}) -> Dictionary:
+	var r := {}
+	var ok := false
+	if not ab.is_empty():
+		if ab == "dex" and opts.has("from") and who.has("x"):
+			who["cover"] = mini(int(FightGrid.cfg(data)["cover"]["three_quarters"]), FightGrid.cover_at(s, data, opts["from"], FightGrid.cell(who)))
+		r = Sheet.save(s, data, who, ab, dc, str(opts.get("tag", "")), bool(opts.get("dis", false)))
+		who.erase("cover")
+		ok = bool(r["ok"])
+	var dmg := 0
+	var notes: Array[String] = []
+	for p: Dictionary in pieces:
+		var part := int(p["n"])
+		part = part / 2 if ok and bool(opts.get("half", true)) else (0 if ok else part)
+		var adj := Sheet.damage(s, data, who, str(p.get("type", "")), part)
+		dmg += int(adj["damage"])
+		if not str(adj["note"]).is_empty() and not notes.has(str(adj["note"])):
+			notes.append(str(adj["note"]))
+	return {"ok": ok, "damage": dmg, "notes": notes, "save": r}
+
+
+## Hit points back to anybody with what comes of them (v0.8.4.29.3, one road for a spell, a potion, Lay on Hands): `heal`, and
+## one who lay at 0 HP gets up — the hero wakes with its death saves gone, a fighter who fell or was knocked out stands again.
+## What it got.
+static func mend(s: GameSession, data: Dictionary, who: Dictionary, n: int) -> int:
+	var me := Sheet.holder(s, who)
+	var before := int(me.get("hp", 0))
+	var got := heal(data, me, n)
+	if got <= 0:
+		return got
+	if Sheet.is_hero(who) or is_same(me, s.character):
+		if before <= 0:
+			ConditionRules.remove(me, "unconscious")
+			if CombatRules.active(s):
+				s.combat["death_saves"] = {"ok": 0, "fail": 0}
+	elif str(who.get("status", "")) in ["down", "unconscious"]:
+		who["status"] = "active"
+		who.erase("death_saves")
+	return got
+
+
 ## Hit points back to anybody (v0.8.4.27.1): up to `top` (its maximum by default) on `body` (its own record by default; a
 ## beast's form keeps its own). One that may not regain them (a swarm's `no_heal`) gets none. What it got.
 static func heal(data: Dictionary, me: Dictionary, n: int, top := -1, body: Dictionary = {}) -> int:

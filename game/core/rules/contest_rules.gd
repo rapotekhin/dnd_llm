@@ -63,12 +63,22 @@ static func npc_bonus(s: GameSession, data: Dictionary, npc_id: String, check: D
 	return {"bonus": bonus, "why": why}
 
 
-## The hero's chance to take a round, percent: d20 + `hero` above d20 + `npc` (a tie takes nobody).
+## The hero's total of a round against the NPC's `foe` (v0.8.4.29.3, one place): house rule (ADR-0008 §2) — a natural 20 wins, a
+## natural 1 or an automatic failure loses; the round is the hero's when the total is above `foe` (a tie takes nobody).
+static func settled(nat: int, total: int, foe: int, failed: bool = false) -> int:
+	if nat == 20:
+		return maxi(total, foe + 1)
+	if nat == 1 or failed:
+		return mini(total, foe - 1)
+	return total
+
+
+## The hero's chance to take a round, percent: d20 + `hero` above d20 + `npc`, by `settled`.
 static func chance(hero: int, npc: int) -> int:
 	var won := 0
 	for a in range(1, 21):
 		for b in range(1, 21):
-			if a == 20 or (a != 1 and a + hero > b + npc):
+			if settled(a, a + hero, b + npc) > b + npc:
 				won += 1
 	return roundi(won / 4.0)
 

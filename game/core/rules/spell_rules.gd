@@ -132,7 +132,7 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 	if session != null and on_self and SpellEffects.self_spell(data, spell_id):  # v0.7.13.1: Bless, Guidance, Heroism…
 		lines.append_array(SpellEffects.apply_self(session, data, spell_id, slot))
 	if session != null and on_self and not CombatRules.active(session):  # v0.7.13: the engine heals out of a fight too
-		lines.append_array(heal_self(c, data, spell_id, slot, session.rng))
+		lines.append_array(heal_self(c, data, spell_id, slot, session.rng, session))
 	if session != null and on_self:
 		var cure: Dictionary = data["rules"]["hero_effects"]["spell_cures"].get(spell_id, {})
 		if not cure.is_empty():
@@ -151,17 +151,24 @@ static func long_cast(sp: Dictionary) -> bool:
 	return t.contains("мин") or t.contains("час")
 
 
+## What a healing spell of a caster `c` gives at this slot (v0.8.4.29.3, one count for a fight and out of it): its dice with
+## `mod`, all of them for Supreme Healing, Disciple of Life on top.
+static func heal_points(data: Dictionary, c: Dictionary, spell_id: String, slot: int, mod: int, rng: RandomNumberGenerator) -> int:
+	var expr := str(data["spells"][spell_id]["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
+	var points := CombatRules.max_dice(expr, mod) if SpellEffects.max_heal(c) else CombatRules.roll_dice(rng, expr, false, mod)
+	if CharacterRules.has_feature(c, "disciple_of_life") and slot > 0:
+		points += 2 + slot
+	return points
+
+
 ## Healing the hero out of a fight (v0.7.13): a healing spell cast on themselves rolls its dice (Disciple of Life too).
-static func heal_self(c: Dictionary, data: Dictionary, spell_id: String, slot: int, rng: RandomNumberGenerator) -> Array[String]:
+static func heal_self(c: Dictionary, data: Dictionary, spell_id: String, slot: int, rng: RandomNumberGenerator, s: GameSession = null) -> Array[String]:
 	var sp: Dictionary = data["spells"].get(spell_id, {})
 	if not sp.has("heal_at_slot"):
 		return []
 	var ab := CharacterRules.mod(CharacterRules.ability(c, str(sp.get("ability", c.get("spell_ability", "wis")))))
-	var expr := str(sp["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
-	var heal := CombatRules.max_dice(expr, ab) if SpellEffects.max_heal(c) else CombatRules.roll_dice(rng, expr, false, ab)
-	if CharacterRules.has_feature(c, "disciple_of_life") and slot > 0:
-		heal += 2 + slot
-	return ["+%d HP" % Harm.heal(data, c, heal)]
+	var points := heal_points(data, c, spell_id, slot, ab, rng)
+	return ["+%d HP" % (Harm.mend(s, data, Sheet.HERO if is_same(c, s.character) else c, points) if s != null else Harm.heal(data, c, points))]
 
 
 static func s_name(data: Dictionary, spell_id: String) -> String:

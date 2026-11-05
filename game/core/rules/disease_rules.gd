@@ -228,12 +228,14 @@ static func cure(s: GameSession, data: Dictionary, power: String, who: String = 
 	return lines
 
 
-## Magic without the session (Lay on Hands from Stock): every disease goes. Whether there was one.
-static func cure_all(c: Dictionary) -> bool:
+## Magic without the session (Lay on Hands from Stock): every disease goes, the hit points it took come back. Whether there was one.
+static func cure_all(c: Dictionary, data: Dictionary) -> bool:
 	var had := not active(c).is_empty() or not incubating(c).is_empty()
 	for id: String in active(c):
 		_drop(c, id)
 	c["diseases"] = []
+	if had and c.has("class"):  # the hero's sheet counts its maximum again, as `cure` does
+		CharacterRules.refresh(c, data, {})
 	return had
 
 

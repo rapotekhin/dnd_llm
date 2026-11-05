@@ -147,18 +147,15 @@ static func use(c: Dictionary, data: Dictionary, id: String, amount: int, rng: R
 	var on_use: Dictionary = table(data)[id].get("on_use", {})
 	var heal := 0
 	if on_use.has("heal"):
-		var h: Array = on_use["heal"]
-		heal = int(c.get("level", 1)) if str(h[2]) == "level" else int(h[2])
-		for i in int(h[0]):
-			heal += rng.randi_range(1, int(h[1]))
+		heal = CombatRules.roll_dice(rng, CombatRules.dice_of(on_use["heal"], int(c.get("level", 1))))
 	elif bool(on_use.get("heal_amount", false)):
 		heal = amount
 		var cost := int(on_use.get("cure_disease", 0))  # Lay on Hands: 5 points cure a disease first (v0.7.23.1)
-		if cost > 0 and amount >= cost and DiseaseRules.cure_all(c):
+		if cost > 0 and amount >= cost and DiseaseRules.cure_all(c, data):
 			heal -= cost
 			lines.append("болезнь исцелена")
 	if heal > 0:
-		lines.append("+%d HP" % Harm.heal(data, c, heal))
+		lines.append("+%d HP" % (Harm.mend(s, data, Sheet.HERO if is_same(c, s.character) else c, heal) if s != null else Harm.heal(data, c, heal)))
 	if bool(on_use.get("inspire", false)):  # a solo bard inspires themself (house rule, ADR-0010 §6в, v0.7.10)
 		var die := int(CharacterRules.level_row(c, data).get("class_specific", {}).get("bardic_inspiration_die", 6))
 		for e: Dictionary in ConditionRules.effects(c).duplicate():

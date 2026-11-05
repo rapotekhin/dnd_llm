@@ -258,17 +258,14 @@ func _damage(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary, t
 	var slot := int(how.get("slot", 0))
 	var r := CombatRules.dice_range(CombatRules._spell_dice(sp, maxi(slot, int(sp.get("level", 0))), MonsterRules._caster_level(data, f)))
 	var multi: Dictionary = CombatRules.cfg(data)["multi"].get(spell, {})
-	var n := int(multi.get("base", 1)) + int(multi.get("per_slot", 0)) * maxi(0, slot - maxi(1, int(sp["level"])))
-	for k: String in multi.get("by_level", {}):
-		if MonsterRules._caster_level(data, f) >= int(k):
-			n = int(multi["by_level"][k])
+	var n := SpellEffects.count(data, spell, slot, MonsterRules._caster_level(data, f))
 	var attack := int(ActionRules.scope(s, data, f, spell)["attack"])
 	for t: Dictionary in targets:
 		var chance := float(w["hit"])
 		if bool(multi.get("auto_hit", false)):
 			chance = 1.0
 		elif sp.has("attack"):
-			chance = clampf((21.0 + attack - Sheet.ac(s, t)) / 20.0, 0.05, 0.95)
+			chance = Roll.chance(attack, Attack.ac_against(s, data, f, t)) / 100.0  # the roll's own chance, cover too (v0.8.4.29.3)
 		var part := Sheet.taken(s, data, t, str(sp.get("damage_type", "")), 100) / 100.0
 		var worth := (r[0] + r[1]) / 2.0 * n * chance * part * scale - float(w["slot"]) * slot
 		if worth > 0.0:

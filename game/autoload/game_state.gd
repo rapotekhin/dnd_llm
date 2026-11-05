@@ -1297,11 +1297,7 @@ func contest_round(cheat: bool) -> String:
 	var result := CheckEngine.card(session, Catalog.data, params)
 	if result.has("error"):
 		return str(result["error"])
-	var total := int(result["total"])
-	if int(result["nat"]) == 20:
-		total = maxi(total, int(foe["total"]) + 1)  # house rule (ADR-0008 §2): a natural 20 wins, a natural 1 loses
-	elif int(result["nat"]) == 1 or result.has("auto_fail_reason"):
-		total = mini(total, int(foe["total"]) - 1)
+	var total := ContestRules.settled(int(result["nat"]), int(result["total"]), int(foe["total"]), result.has("auto_fail_reason"))
 	result["success"] = total > int(foe["total"])
 	_add(GameSession.check_entry(params, result))
 	var lines := ContestRules.round(session, Catalog.data, total, int(foe["total"]), cheat)

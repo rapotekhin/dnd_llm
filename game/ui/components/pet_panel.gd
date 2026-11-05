@@ -64,7 +64,7 @@ func _rebuild() -> void:
 		var k := PetRules.kind(data, str(cr["monster"]))
 		UiParts.label(_box, tr("PET_WILL_GIVE").format({"what": k.get("text", "")}))
 		var skill := str(PetRules.cfg(data)["skill"])
-		var b := int(Roll.odds(s, data, Sheet.HERO, {"skill": skill, "dc": PetRules.dc(data, cr)})["bonus"])
+		var b := int(Roll.odds(s, data, Sheet.HERO, PetRules.spec(data, cr))["bonus"])
 		UiParts.label(_box, tr("PET_TAME_CHECK").format({"skill": CraftRules.tr_skill(data, skill), "bonus": "%+d" % b, "dc": PetRules.dc(data, cr)}), UiTheme.MUTED_LABEL).name = "PetTameCheck"
 		var eats: Array = k.get("eats", [])
 		UiParts.label(_box, tr("PET_EATS").format({"what": ", ".join(eats.map(func(t: Variant) -> String: return str(PetRules.cfg(data)["tastes"].get(str(t), {}).get("name", t))))}), UiTheme.MUTED_LABEL)
