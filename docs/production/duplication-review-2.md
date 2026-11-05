@@ -162,6 +162,8 @@
 
 ## I. Тело персонажа: скорость, КД, отдых, еда, вода (средняя)
 
+**Исправлено в 0.8.4.29.4:** `CharacterRules.walk` — одна скорость героя и любого; `unarmored_ac` у листа героя и `Gear.ac`; `Rest.short` и для героя, `Rest.hit_die` с костью класса и Периаптом у любого, `Rest.song` для всей компании; `FoodRules.portions` и `eat_one` — одна трапеза; `NeedRules.hunger` — один голод спутника и зверя; `LiquidRules.nourish` / `sickness` для «Попить» и «Выпить». **Осталось:** порог голода питомца (`PetRules.starve_days`) и спутника (`hungry_days`) — свои числа данных, «Попить» берёт из ёмкостей по-прежнему через `LiquidRules.take`.
+
 - **Скорость и КД:**
   - `CharacterRules.speed` / `armor_class` (:256, :101);
   - `Sheet.speed` (`sheet.gd:188`) / `Gear.ac` (`gear.gd:241`).

@@ -114,6 +114,21 @@ static func food_items(c: Dictionary, data: Dictionary) -> Dictionary:
 	return out
 
 
+## One hunger of anybody fed by the day (v0.8.4.29.4: a follower, a beast, a pet): for each day past `rec[key]` (its last meal,
+## by `step` of the same clock as `now`) `eat` (Callable() -> bool) is asked; a meal sets the hungry days to 0, none adds one and
+## `missed` (Callable()) is told. The hungry days now (`rec.hungry`).
+static func hunger(rec: Dictionary, key: String, now: int, step: int, eat: Callable, missed: Callable = Callable()) -> int:
+	while now - int(rec.get(key, now)) >= step:
+		rec[key] = int(rec.get(key, now)) + step
+		if eat.call():
+			rec["hungry"] = 0
+		else:
+			rec["hungry"] = int(rec.get("hungry", 0)) + 1
+			if missed.is_valid():
+				missed.call()
+	return int(rec.get("hungry", 0))
+
+
 ## "" when eating now does good, else a localization key.
 static func can_eat(s: GameSession, data: Dictionary) -> String:
 	if food_items(s.character, data).is_empty():
@@ -127,26 +142,20 @@ static func can_eat(s: GameSession, data: Dictionary) -> String:
 static func eat(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
 	var have := food_items(c, data)
-	var ids: Array = have.keys()
-	var foul: Dictionary = data["rules"].get("diseases", {}).get("foul_food", {})
-	var key := func(id: Variant) -> int:  # foul food last (v0.7.23.1), what spoils first (v0.7.25)
-		return int(foul.has(id)) * 1000 + int(FoodRules.spoils_days(data, s.items, str(id)) <= 0) * 100 + int(have[id])
-	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return key.call(a) < key.call(b))
 	var v := value(s, data, "food")
 	var eaten: Array[String] = []
-	for id: Variant in ids:
+	var after: Array[String] = []
+	for id: Variant in FoodRules.portions(s, data, c):  # what spoils first, foul food last (v0.8.4.29.4: one order)
+		var n := 0
 		while v < 75.0 and int(c["inventory"].get(id, 0)) > 0:
 			v += float(have[id]) * float(cfg(data)["food"]["points"])
 			ItemRules.remove(c, str(id))
 			eaten.append(ItemRules.display_name(data["items"], s.items, str(id)))
-	set_value(s, data, "food", v)
+			n += 1
+		if n > 0:  # the one meal: its food, a dish's water, temporary HP and boon once a kind, foul food's disease (v0.7.25)
+			after.append_array(FoodRules.eat_one(s, data, str(id), Sheet.HERO, n, false))
 	var lines: Array[String] = ["Поел: " + ", ".join(eaten), "Еда %d/100" % roundi(value(s, data, "food"))]
-	for id: Variant in ids:  # a dish's water, temporary HP and boon, once a kind (v0.7.25)
-		if eaten.has(ItemRules.display_name(data["items"], s.items, str(id))):
-			lines.append_array(FoodRules.meal(s, data, str(id)))
-	for id: Variant in ids:
-		if foul.has(id) and eaten.has(ItemRules.display_name(data["items"], s.items, str(id))):
-			lines.append_array(DiseaseRules.expose(s, data, str(foul[id]["disease"]), int(foul[id]["dc"]), "Дурная еда"))
+	lines.append_array(after)
 	return lines
 
 
@@ -188,10 +197,7 @@ static func foul_here(s: GameSession, data: Dictionary) -> bool:
 
 
 static func _foul_drink(s: GameSession, data: Dictionary) -> Array[String]:
-	var fw: Dictionary = data["rules"].get("diseases", {}).get("foul_water", {})
-	if fw.is_empty():
-		return []
-	return DiseaseRules.expose(s, data, str(fw["disease"]), int(fw["dc"]), "Гнилая вода")
+	return LiquidRules.sickness(s, data, Sheet.HERO, LiquidRules.FOUL)  # the liquid's own disease (v0.8.4.29.4)
 
 
 static func can_drink(s: GameSession, data: Dictionary) -> String:
@@ -220,10 +226,15 @@ static func _sip(s: GameSession, data: Dictionary, upto: float, here: bool) -> D
 	if here:
 		set_value(s, data, "water", minf(100.0, v + ceilf(maxf(0.0, upto - v) / float(w["drink"])) * float(w["drink"])))
 		return {"foul": foul_here(s, data)}
-	var per_pint := float(w["drink"]) / float(w.get("drink_pints", 2))
-	var got := LiquidRules.take(s.character, data, maxf(0.0, upto - v) / per_pint)
-	set_value(s, data, "water", v + float(got["pints"]) * per_pint)
+	var got := LiquidRules.take(s.character, data, maxf(0.0, upto - v) / per_pint(data))
+	LiquidRules.nourish(s, data, Sheet.HERO, float(got["pints"]), {"water": 1})
 	return {"foul": bool(got["foul"])}
+
+
+## The water one pint of a drink gives the need (rules.needs.water: a drink of `drink_pints`).
+static func per_pint(data: Dictionary) -> float:
+	var w: Dictionary = cfg(data)["water"]
+	return float(w["drink"]) / float(w.get("drink_pints", 2))
 
 
 ## `only` — one kind of vessel (the master's `fill` with an item_id).

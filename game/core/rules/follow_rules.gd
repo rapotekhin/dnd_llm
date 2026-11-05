@@ -74,40 +74,36 @@ static func meals(s: GameSession, data: Dictionary) -> Array[String]:
 			Being.of(s, id)["fed"] = {"at": now, "hungry": 0}
 		var rec: Dictionary = Being.of(s, id)["fed"]
 		var name := str(world.npc(id).get("name", WorldView.name_of(data, id)))
-		while now - int(rec["at"]) >= 1440 and Being.follows(s, id):
-			var bag := Gear.of(s, data, id)  # its own food first, then the hero's (v0.8.4.11)
+		var eat := func() -> bool:  # a portion a day: its own food first, then the hero's (v0.8.4.11)
+			if not Being.follows(s, id):
+				return false
+			var bag := Gear.of(s, data, id)
 			var food := _portion(s, data, bag)
 			if food.is_empty():
 				bag = s.character
 				food = _portion(s, data, bag)
-			if not food.is_empty():
-				ItemRules.remove(bag, food)
-				rec["at"] = now
-				rec["hungry"] = 0
-				lines.append("%s поел: %s" % [name, ItemRules.display_name(data["items"], s.items, food)])
-				break
-			rec["at"] = int(rec["at"]) + 1440
-			rec["hungry"] = int(rec["hungry"]) + 1
+			if food.is_empty():
+				return false
+			ItemRules.remove(bag, food)
+			lines.append("%s поел: %s" % [name, ItemRules.display_name(data["items"], s.items, food)])
+			return true
+		var missed := func() -> void:
+			if not Being.follows(s, id):
+				return
 			s.shift_attitude(id, -1, data)
 			if int(rec["hungry"]) >= int(cfg(data).get("hungry_days", 2)):
 				apply(s, {"follow_npc": id, "on": false, "room": ""})
 				lines.append("%s ушёл домой: %d дня без еды" % [name, int(rec["hungry"])])
 			else:
 				lines.append("%s голоден — у героя нечем поделиться" % name)
+		NeedRules.hunger(rec, "at", now, 1440, eat, missed)  # the one hunger of anybody by the day (v0.8.4.29.4)
 	return lines
 
 
 ## The portion a follower eats: of the hero's food, what spoils first and is cheapest; foul food last.
 static func _portion(s: GameSession, data: Dictionary, c: Dictionary) -> String:
-	var have := NeedRules.food_items(c, data)
-	if have.is_empty():
-		return ""
-	var foul: Dictionary = data["rules"].get("diseases", {}).get("foul_food", {})
-	var ids: Array = have.keys()
-	var key := func(id: Variant) -> int:
-		return int(foul.has(id)) * 1000 + int(FoodRules.spoils_days(data, s.items, str(id)) <= 0) * 100 + int(have[id])
-	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return key.call(a) < key.call(b))
-	return str(ids[0])
+	var ids := FoodRules.portions(s, data, c)  # the hero's own order (v0.8.4.29.4)
+	return "" if ids.is_empty() else str(ids[0])
 
 
 ## A long rest fed and watered the followers with the hero (the author's answer): their day starts again.

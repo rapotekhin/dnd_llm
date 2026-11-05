@@ -242,16 +242,20 @@ static func ac(s: GameSession, data: Dictionary, tid: String, c: Dictionary) -> 
 	var was: Dictionary = start(data, tid)["equipped"]
 	var now: Dictionary = c.get("equipped", {})
 	var extra := CharacterRules.gear_ac(c, data, s.items)
+	var ab: Dictionary = m.get("abilities", {})
+	var dex := CharacterRules.mod(int(ab.get("dex", 10)))
+	var bare := 0  # a class's Unarmored Defense of a person who wears none (v0.8.4.29.4)
+	if _on(now, "armor").is_empty():
+		bare = CharacterRules.unarmored_ac(c, dex, CharacterRules.mod(int(ab.get("con", 10))), CharacterRules.mod(int(ab.get("wis", 10))), not _on(now, "shield").is_empty())
 	if _on(was, "armor") == _on(now, "armor") and _on(was, "shield") == _on(now, "shield"):
-		return int(m["ac"]) + extra
-	var dex := CharacterRules.mod(int(m.get("abilities", {}).get("dex", 10)))
+		return maxi(int(m["ac"]), bare + _shield(s, data, now)) + extra
 	var base := int(m["ac"]) - _shield(s, data, was)
 	if not _on(was, "armor").is_empty():
 		base = 10 + dex
 	if not _on(now, "armor").is_empty():
 		var armor: Dictionary = ItemRules.def_of(data["items"], s.items, _on(now, "armor")).get("armor", {})
 		base = maxi(base, CharacterRules.armored(armor, dex) + (1 if CharacterRules.style(c, "defense") else 0))
-	return base + _shield(s, data, now) + extra
+	return maxi(base, bare) + _shield(s, data, now) + extra
 
 
 static func _on(worn_now: Dictionary, slot: String) -> String:

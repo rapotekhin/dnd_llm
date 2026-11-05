@@ -107,15 +107,23 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 	var ac := 10 + dex
 	if not armor.is_empty():
 		ac = armored(armor, dex) + (1 if style(c, "defense") else 0)
-	elif has_feature(c, "barbarian_unarmored_defense"):
-		ac = 10 + dex + mod(ability(c, "con"))
-	elif has_feature(c, "monk_unarmored_defense") and shield.is_empty():
-		ac = 10 + dex + mod(ability(c, "wis"))
-	elif has_feature(c, "draconic_resilience") or has_feature(c, "eldritch_invocation_armor_of_shadows"):
-		ac = 13 + dex  # Armor of Shadows: mage armor at will (v0.7.10)
+	else:
+		ac = maxi(ac, unarmored_ac(c, dex, mod(ability(c, "con")), mod(ability(c, "wis")), not shield.is_empty()))
 	if not shield.is_empty():
 		ac += int(shield.get("base", 2))
 	return SpellEffects.armor_class(c, ac + gear_ac(c, data, session_items), armor.is_empty(), dex)  # Mage Armor, Shield of Faith, Barkskin (v0.7.13.2)
+
+
+## The AC a class or a feature gives without armour, anybody's (v0.8.4.29.4: the hero's sheet and Gear.ac): Unarmored Defense of a
+## barbarian (CON) or of a monk without a shield (WIS), Draconic Resilience and Armor of Shadows (mage armour at will). 0 — none.
+static func unarmored_ac(c: Dictionary, dex: int, con: int, wis: int, shielded: bool) -> int:
+	if has_feature(c, "barbarian_unarmored_defense"):
+		return 10 + dex + con
+	if has_feature(c, "monk_unarmored_defense") and not shielded:
+		return 10 + dex + wis
+	if has_feature(c, "draconic_resilience") or has_feature(c, "eldritch_invocation_armor_of_shadows"):
+		return 13 + dex
+	return 0
 
 
 ## What its things add to the AC, anybody's (v0.8.4.15, Gear.ac too): +N armour and shields (v0.6.3), poor workmanship,
@@ -257,27 +265,32 @@ static func speed(c: Dictionary, data: Dictionary) -> int:
 	if Guise.has_body(c):
 		return Move.feet_of(data, data["monsters"].get(str(Guise.body(c)["monster"]), {}))
 	var race: Dictionary = data["races"]["races"].get(str(c.get("race", "")), {})
+	return walk(c, c, data, {}, int(race.get("speed", 30)), ability(c, "str"), c.get("item_props", []))
+
+
+## The walking feet of anybody from the `feet` its body gives (v0.8.4.29.4, one count for the hero's sheet and `Sheet.speed`):
+## a class's Unarmored Movement and Fast Movement, Boots of Striding (`props`), Longstrider and a status's own feet (caltrops),
+## Fly, Haste, heavy armour without its Strength; exhaustion 2 — half, 5 — 0, and what holds it in place — 0. `me` — its
+## statuses, class and features; `gear` — what it wears.
+static func walk(me: Dictionary, gear: Dictionary, data: Dictionary, items: Dictionary, feet: int, strength: int, props: Array) -> int:
+	var armor := item_def(gear, data, items, "armor")
 	var bonus := 0
-	var spec: Dictionary = level_row(c, data).get("class_specific", {})
-	if item_def(c, data, {}, "armor").is_empty() and item_def(c, data, {}, "shield").is_empty():
-		bonus = int(spec.get("unarmored_movement", 0))
-	var feet := int(race.get("speed", 30)) + bonus
-	if item_prop(c, "speed_30"):  # Boots of Striding and Springing (v0.7.12)
+	if armor.is_empty() and item_def(gear, data, items, "shield").is_empty():
+		bonus = int(level_row(me, data).get("class_specific", {}).get("unarmored_movement", 0))
+	feet += bonus
+	if props.has("speed_30"):  # Boots of Striding and Springing (v0.7.12)
 		feet = maxi(feet, 30 + bonus)
-	for e: Dictionary in SpellEffects.hero_effects(c, "speed_plus"):  # Longstrider (v0.7.13.3)
-		feet += int(e["speed_plus"])
-	feet = maxi(feet, Move.status_feet(data, c))  # Fly: 60 feet in the air (v0.7.63)
-	if SpellEffects.has(c, "speed_x2"):  # Haste
+	feet = maxi(feet, Move.status_feet(data, me))  # Fly: 60 feet in the air (v0.7.63)
+	if SpellEffects.has(me, "speed_x2"):  # Haste
 		feet *= 2
-	if has_feature(c, "fast_movement") and str(item_def(c, data, {}, "armor").get("armor", {}).get("category", "")) != "heavy":
+	if has_feature(me, "fast_movement") and str(armor.get("armor", {}).get("category", "")) != "heavy":
 		feet += 10  # the barbarian's Fast Movement
-	feet -= armor_slow(item_def(c, data, {}, "armor"), ability(c, "str"), str(c.get("race", "")), data)
-	feet += ConditionRules.sum(c, "speed", false)  # a status's own feet: caltrops (v0.8.4.27)
-	# v0.7.8: grappled and restrained — 0; exhaustion 5 — 0, 2 — half (5e).
-	var exhaustion := int(c.get("exhaustion", 0))
-	if exhaustion >= 5 or ConditionRules.does(c, data, "no_move"):
+	feet -= armor_slow(armor, strength, str(me.get("race", "")), data)
+	feet += ConditionRules.sum(me, "speed")  # Longstrider's `speed_plus` (v0.7.13.3), a status's own feet: caltrops (v0.8.4.27)
+	var tired := ConditionRules.exhaustion(me)
+	if tired >= 5 or ConditionRules.does(me, data, "no_move"):
 		return 0
-	return feet / 2 if exhaustion >= 2 else feet
+	return feet / 2 if tired >= 2 else feet
 
 
 ## Armour worn without its Strength (5e): −`slow_ft` feet of `rules.item_rules.str_short`; a race of `free_races` walks

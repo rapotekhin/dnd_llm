@@ -114,7 +114,7 @@ func _short_rest(s: GameSession, c: Dictionary, data: Dictionary) -> void:
 	title.text = tr("SHORT_REST_TITLE")
 	_text(tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}))
 	var left := ExplorationRules.hit_dice_left(c)
-	var die := int(ExplorationRules.hit_die(c, data)["die"])
+	var die := int(Rest.hit_die(s, data, Sheet.HERO)["die"])
 	if int(c["hp"]) >= int(c["max_hp"]):
 		dice = 0
 		_text(tr("SHORT_REST_FULL"), UiTheme.MUTED_LABEL)
@@ -133,7 +133,7 @@ func _short_rest(s: GameSession, c: Dictionary, data: Dictionary) -> void:
 		count.text = str(dice)
 		row.add_child(count)
 		row.add_child(_step_button("DicePlus", "+", dice >= left, func() -> void: dice = mini(left, dice + 1)))
-		var expect := ExplorationRules.short_rest_expect(c, data, dice)
+		var expect := ExplorationRules.short_rest_expect(s, data, dice)
 		var heal := Label.new()
 		heal.name = "DiceHeal"
 		heal.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED

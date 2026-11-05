@@ -93,13 +93,26 @@ static func meal(s: GameSession, data: Dictionary, id: String, who: Dictionary =
 
 
 ## A dish eaten by «Использовать»: the hero's food points, then the meal of whoever ate it. Lines.
-static func eat_one(s: GameSession, data: Dictionary, id: String, who: Dictionary = Sheet.HERO) -> Array[String]:
+## The order portions of `c`'s food are eaten in (v0.8.4.29.4, one key for the hero's «Поесть» and a follower's meal): what
+## spoils first, then the cheapest; foul food last.
+static func portions(s: GameSession, data: Dictionary, c: Dictionary) -> Array:
+	var have := NeedRules.food_items(c, data)
+	var foul: Dictionary = data["rules"].get("diseases", {}).get("foul_food", {})
+	var ids: Array = have.keys()
+	var key := func(id: Variant) -> int:
+		return int(foul.has(id)) * 1000 + int(spoils_days(data, s.items, str(id)) <= 0) * 100 + int(have[id])
+	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return key.call(a) < key.call(b))
+	return ids
+
+
+static func eat_one(s: GameSession, data: Dictionary, id: String, who: Dictionary = Sheet.HERO, portions: int = 1, tell := true) -> Array[String]:
 	var lines: Array[String] = []
 	var food: Dictionary = data["rules"]["hero_effects"]["camp"]["food"]
 	if NeedRules.on(s) and food.has(id) and Sheet.is_hero(who):
-		var v := NeedRules.value(s, data, "food") + float(food[id]) * float(NeedRules.cfg(data)["food"]["points"])
+		var v := NeedRules.value(s, data, "food") + float(food[id]) * float(NeedRules.cfg(data)["food"]["points"]) * portions
 		NeedRules.set_value(s, data, "food", v)
-		lines.append("Еда %d/100" % roundi(NeedRules.value(s, data, "food")))
+		if tell:
+			lines.append("Еда %d/100" % roundi(NeedRules.value(s, data, "food")))
 	lines.append_array(meal(s, data, id, who))
 	var foul: Dictionary = data["rules"].get("diseases", {}).get("foul_food", {})
 	if foul.has(id):

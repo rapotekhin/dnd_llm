@@ -1039,21 +1039,18 @@ static func _animals(s: GameSession, data: Dictionary, who: String = Being.HERO)
 		var pid := at(s, data, room)
 		if not owned(Life.of(s, who, data), pid):
 			pid = ""
-		while int(cr.get("fed_day", s.day)) < s.day:
-			cr["fed_day"] = int(cr.get("fed_day", s.day)) + 1
+		var eat := func() -> bool:  # the day's feed: a pet beside the hero of his things (v0.7.43), else paid (v0.7.42)
 			var feed := roundi(int(a.get("feed_cp_day", 0)) * (_gives(s, data, pid, "feed_mult", 1.0, who) if not pid.is_empty() else 1.0))
-			var st: Dictionary = state(Life.of(s, who, data)).get(pid, {})
-			if PetRules.eat(s, data, cr):  # v0.7.43: a pet beside the hero eats of his things first
-				pass
-			elif pay_from_till(s, data, pid, feed, "property:animals", who, MountRules.fed_by_purse(s, data, cr), true) > 0:  # v0.7.42: left alone — no feed
-				cr["hungry"] = int(cr.get("hungry", 0)) + 1
-				continue
-			cr["hungry"] = 0
+			if not PetRules.eat(s, data, cr) and pay_from_till(s, data, pid, feed, "property:animals", who, MountRules.fed_by_purse(s, data, cr), true) > 0:
+				return false  # left alone — no feed
 			if not pid.is_empty():
+				var st: Dictionary = state(Life.of(s, who, data)).get(pid, {})
 				var stock: Dictionary = st.get("stock", {})
 				for item: String in a.get("produce", {}):
 					stock[item] = int(stock.get(item, 0)) + int(a["produce"][item])
 				st["stock"] = stock
+			return true
+		NeedRules.hunger(cr, "fed_day", s.day, 1, eat)  # the one hunger of anybody by the day (v0.8.4.29.4)
 		if int(cr.get("hungry", 0)) >= PetRules.starve_days(data, cr):  # v0.7.43: a close pet bears longer
 			lines.append("%s убежал — его не кормили" % cr["name"])
 			remove_creature(s, str(cr["id"]))

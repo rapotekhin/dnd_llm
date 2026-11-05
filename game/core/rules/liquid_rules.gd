@@ -353,21 +353,35 @@ static func drink(s: GameSession, data: Dictionary, who: Dictionary, a: Dictiona
 	else:
 		_put(c, a, float(a["pints"]) - amount, lid)
 	var lines: Array[String] = ["%s: выпито — %s %s пинт" % [str(Sheet.holder(s, who).get("name", "")), name_of(data, lid), num(amount)]]
-	if Sheet.is_hero(who) and NeedRules.on(s):  # needs are the hero's alone
-		var w: Dictionary = NeedRules.cfg(data)["water"]
-		if d.has("water"):
-			NeedRules.set_value(s, data, "water", NeedRules.value(s, data, "water") + amount * float(d["water"]) * float(w["drink"]) / float(w.get("drink_pints", 2)))
-			lines.append("Вода %d/100" % roundi(NeedRules.value(s, data, "water")))
-		if d.has("food"):
-			NeedRules.set_value(s, data, "food", NeedRules.value(s, data, "food") + amount * float(d["food"]) * float(NeedRules.cfg(data)["food"]["points"]))
-			lines.append("Еда %d/100" % roundi(NeedRules.value(s, data, "food")))
-	if d.has("disease"):
-		var dz: Dictionary = data["rules"].get("diseases", {}).get(str(d["disease"]), {})
-		if not dz.is_empty():
-			lines.append_array(DiseaseRules.expose(s, data, str(dz["disease"]), int(dz["dc"]), name_of(data, lid).capitalize(), str(who.get("id", Being.HERO))))
+	lines.append_array(nourish(s, data, who, amount, d))
+	lines.append_array(sickness(s, data, who, lid))
 	if d.has("drunk"):
 		lines.append_array(_hops(s, data, who, amount * float(d["drunk"])))
 	return lines
+
+
+## What `pints` of a drink of `d` (a liquid's `drink`) give the hero's needs (v0.8.4.29.4, one count for «Попить» and a drink):
+## water by NeedRules.per_pint, food by the food points. Needs are the hero's alone. Lines.
+static func nourish(s: GameSession, data: Dictionary, who: Dictionary, pints: float, d: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	if not Sheet.is_hero(who) or not NeedRules.on(s) or pints <= 0.0:
+		return lines
+	if d.has("water"):
+		NeedRules.set_value(s, data, "water", NeedRules.value(s, data, "water") + pints * float(d["water"]) * NeedRules.per_pint(data))
+		lines.append("Вода %d/100" % roundi(NeedRules.value(s, data, "water")))
+	if d.has("food"):
+		NeedRules.set_value(s, data, "food", NeedRules.value(s, data, "food") + pints * float(d["food"]) * float(NeedRules.cfg(data)["food"]["points"]))
+		lines.append("Еда %d/100" % roundi(NeedRules.value(s, data, "food")))
+	return lines
+
+
+## The disease a liquid carries (its `drink.disease`, a row of rules.diseases: foul water) caught by who drinks it. Lines.
+static func sickness(s: GameSession, data: Dictionary, who: Dictionary, lid: String) -> Array[String]:
+	var dz: Dictionary = data["rules"].get("diseases", {}).get(str(kind(data, lid).get("drink", {}).get("disease", "")), {})
+	if dz.is_empty():
+		return []
+	var what := name_of(data, lid)
+	return DiseaseRules.expose(s, data, str(dz["disease"]), int(dz["dc"]), what.left(1).to_upper() + what.substr(1), str(who.get("id", Being.HERO)))  # «Гнилая вода»
 
 
 ## Ale and wine (the author, 2026-11-04): hops in points, each sobering in `minutes_per_point`; past 2 + its CON

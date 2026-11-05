@@ -428,14 +428,10 @@ static func can_short_rest(s: GameSession, data: Dictionary) -> String:
 
 
 ## What one hit die of the hero heals: {die, con, mult} (Periapt of Wound Closure: twice as much, v0.7.12).
-static func hit_die(c: Dictionary, data: Dictionary) -> Dictionary:
-	return {"die": int(CharacterRules.class_def(c, data).get("hit_die", 8)), "con": CharacterRules.mod(CharacterRules.ability(c, "con")),
-		"mult": 2 if CharacterRules.item_prop(c, "wound_closure") else 1}
-
-
 ## The HP `dice` hit dice are likely to give back now (the short rest window): their mean, no more than the wounds.
-static func short_rest_expect(c: Dictionary, data: Dictionary, dice: int) -> int:
-	var hd := hit_die(c, data)
+static func short_rest_expect(s: GameSession, data: Dictionary, dice: int) -> int:
+	var c := s.character
+	var hd := Rest.hit_die(s, data, Sheet.HERO)
 	return mini(int(c["max_hp"]) - int(c["hp"]), roundi(dice * maxf(0.0, int(hd["die"]) / 2.0 + 0.5 + int(hd["con"])) * int(hd["mult"])))
 
 
@@ -445,25 +441,10 @@ static func short_rest(s: GameSession, data: Dictionary, dice: int, rng: RandomN
 	var c := s.character
 	var lines: Array[String] = ["Короткий отдых"]
 	var n := clampi(dice, 0, hit_dice_left(c))
-	if n > 0:
-		var hd := hit_die(c, data)
-		var die := int(hd["die"])
-		var healed := 0
-		for i in n:
-			healed += maxi(0, rng.randi_range(1, die) + int(hd["con"]))
-		healed *= int(hd["mult"])
-		Stock.spend(c, "hit_dice", n)
-		lines.append("кости хитов: %d (к%d) — +%d HP" % [n, die, Harm.heal(data, c, healed)])
-		for f: Variant in c.get("features", []):  # Song of Rest (v0.7.10)
-			if str(f).begins_with("song_of_rest"):
-				var song := rng.randi_range(1, int(CharacterRules.level_row(c, data).get("class_specific", {}).get("song_of_rest_die", 6)))
-				lines.append("Песнь отдыха: +%d HP" % Harm.heal(data, c, song))
-				break
 	var pact := Stock.recharge(c, data, "slot_1") == "short"
-	Stock.recharge_all(c, data, "short")
+	lines.append_array(Rest.short(s, data, Being.HERO, n, Rest.song(s, data)))  # the one rest of anybody (v0.8.4.29.4)
 	if pact:
 		lines.append("ячейки договора восстановлены")
-	lines.append_array(Rest.ends(c, data, "short", true))
 	lines.append_array(Rest.company(s, data, "short", maxi(1, n)))
 	lines.append_array(ItemRules.identify(c, data, s.items))  # an hour with the things names them (v0.7.12)
 	s.short_rests += 1
