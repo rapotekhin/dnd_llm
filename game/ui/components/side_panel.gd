@@ -128,6 +128,8 @@ func menu(box: Container, ref: String) -> bool:
 				_line(CreatureRules.text(cr, Catalog.data), false)
 				_creature_acts(s, cr, can_act)
 				ok = true
+	elif ref.begins_with("foe:"):
+		ok = _foe_menu(s, id, can_act)
 	elif ref.begins_with("body:"):
 		ok = _body_menu(box, s, id, can_act)
 	elif ref.begins_with("station:"):
@@ -138,6 +140,35 @@ func menu(box: Container, ref: String) -> bool:
 		ok = _trap_menu(box, s, ref.trim_prefix("trap:"), can_act)
 	_content = column
 	return ok
+
+
+## A foe seen before the fight (v0.8.4.30, the author's feedback): its name and card, then the blow, a look and the spells
+## aimed at it.
+func _foe_menu(s: GameSession, id: String, can_act: bool) -> bool:
+	for e: Dictionary in GameState.foes_here():
+		if EncounterRules.foe_id(e) != id:
+			continue
+		_line(str(e.get("name", e.get("monster", ""))), false)
+		var mx := int(e.get("max_hp", Sheet.template(Catalog.data, e).get("hp", 0)))
+		var card := CombatRules.monster_card(s, Catalog.data, e.merged({"hp": int(e.get("hp", mx)), "max_hp": mx}))
+		if not card.is_empty():
+			_line(card, true)
+		var acts := _acts("FoeActs_" + id)
+		var word := bool(EncounterRules.lurking(s, s.room_id).get("word", false))
+		_flow(acts, tr("BTN_FOE_ATTACK"), _near("foe:" + id, "touch", _try.bind(GameState.encounter_attack)), can_act, "FoeAttack_" + id,
+			tr("BTN_FOE_ATTACK_WORD_TIP") if word else "")
+		var looked := CombatRules.known(s, e) or bool(Being.view(s, id).get("looked", false))
+		_flow(acts, tr("BTN_FOE_INSPECT"), _try.bind(GameState.inspect_foe.bind(id)), can_act and not looked, "FoeInspect_" + id, tr("BTN_FOE_INSPECT_TIP"))
+		_spell_acts(acts, id, can_act)
+		return true
+	return false
+
+
+## The spells the hero may aim at `target` out of a fight, a button each: cast at once (v0.8.4.30).
+func _spell_acts(acts: Container, target: String, can_act: bool) -> void:
+	for ch: Dictionary in GameState.spells_at(target):
+		_flow(acts, "✦ " + str(ch["name"]), _try.bind(GameState.cast_at.bind(str(ch["id"]), target)), can_act, "CastAt_%s_%s" % [ch["id"], target],
+			tr("BTN_CAST_AT_TIP"))
 
 
 ## The body of a person on the map (v0.8.4.4): what can be done with it.
@@ -472,7 +503,7 @@ func _rebuild() -> void:
 
 ## The hero's life as a bar under the line of numbers.
 func _hp_bar(c: Dictionary) -> void:
-	var bar := UiParts.hp_bar(int(c["hp"]), int(c["max_hp"]), 10.0, 2)
+	var bar := UiParts.hp_line(int(c["hp"]), int(c["max_hp"]), int(c.get("temp_hp", 0)), 10.0, 2)  # temporary hits in blue (v0.8.4.30)
 	bar.name = "HeroBar"
 	_content.add_child(bar)
 
@@ -556,6 +587,7 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 		_flow(acts, tr("BTN_ASK_WORK"), _try.bind(GameState.ask_work.bind(id)), can_act, "AskWork_" + id, tr("BTN_ASK_WORK_TIP").format({"name": n.get("name", id)}))
 	if not LetterRules.ways_of(Catalog.data, id).is_empty():  # v0.7.48: a person with a post sends letters
 		_flow(acts, tr("BTN_LETTER"), letter_requested.emit.bind(id), can_act, "Letter_" + id, tr("BTN_LETTER_TIP").format({"name": n.get("name", id)}))
+	_spell_acts(acts, id, can_act)  # v0.8.4.30: a spell aimed at it, as in BG3
 	var arena_site := ArenaRules.of_manager(Catalog.data, id)  # v0.7.45
 	if not arena_site.is_empty():
 		_flow(acts, tr("BTN_ARENA"), arena_requested.emit.bind(arena_site), can_act, "Arena_" + id, tr("BTN_ARENA_TIP").format({"name": ArenaRules.site_name(Catalog.data, arena_site)}))
@@ -770,7 +802,8 @@ func _needs(s: GameSession, can_act: bool) -> void:
 	if specs.is_empty():
 		return
 	for spec: Array in specs:
-		var b := _row_button(_bar.page(ActionBar.PLACE), tr(spec[1]), _need.bind(spec[2]), can_act)
+		# which vessel: «Набрать воды» asks with a menu of those that take water here (v0.8.4.30, the author's feedback)
+		var b := _row_button(_bar.page(ActionBar.PLACE), tr(spec[1]), _fill_menu if spec[2] == "fill" else _need.bind(spec[2]), can_act)
 		b.name = spec[0]
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
@@ -1004,6 +1037,31 @@ func _property_row(s: GameSession) -> void:
 	b.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	b.tooltip_text = tr("BTN_PROPERTY_TIP")
+
+
+## «Набрать воды»: one kind of vessel fills at once; more — a menu of each kind and «all of them».
+func _fill_menu() -> void:
+	var s := GameState.session
+	var data := Catalog.data
+	var ids: Array[String] = []
+	for v: Dictionary in LiquidRules.to_fill(s.character, data, NeedRules.foul_here(s, data)):
+		if not ids.has(str(v["id"])):
+			ids.append(str(v["id"]))
+	if ids.size() <= 1:
+		_need("fill")
+		return
+	var pop := PopupMenu.new()
+	pop.name = "FillMenu"
+	add_child(pop)
+	pop.add_item(tr("FILL_ALL"), 0)
+	for i in ids.size():
+		pop.add_item(" · ".join(LiquidRules.lines(s.character, data, s.items, ids[i])), i + 1)
+	pop.id_pressed.connect(func(i: int) -> void:
+		var err := GameState.need_act("fill", "" if i == 0 else ids[i - 1])
+		if not err.is_empty():
+			EventBus.message.emit(tr(err)))
+	pop.popup_hide.connect(pop.queue_free)
+	pop.popup(Rect2i(Vector2i(get_global_mouse_position()), Vector2i.ZERO))
 
 
 func _need(act: String) -> void:

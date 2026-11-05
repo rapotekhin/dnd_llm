@@ -49,7 +49,7 @@ func _rebuild() -> void:
 	var owner := str(p.get("owner", ""))
 	var meta := tr("CONTAINER_LOAD").format({"w": _num(ContainerRules.weight(data, s.items, contents)), "cap": _num(cap)})
 	if not owner.is_empty():
-		meta += " · " + tr("CONTAINER_OWNER").format({"name": GameState.world().npc(owner).get("name", owner)})
+		meta += " · " + tr("CONTAINER_OWNER").format({"name": OwnerRules.name_of(s, data, owner)})
 	_box.add_child(UiParts.label(null, meta, UiTheme.MUTED_LABEL))
 	if is_bag:  # leave it here with what is in it
 		var drop_row := HBoxContainer.new()

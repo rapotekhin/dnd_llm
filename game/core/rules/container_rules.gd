@@ -525,4 +525,4 @@ static func pick_up(s: GameSession, data: Dictionary, item_id: String, p: Dictio
 	for id: String in contents.keys():
 		var n := int(contents[id])
 		Thing.move(p, to, id, n)
-		Thing.stamp(to, id, n, "owner", str(p.get("owner", ""))) if not str(p.get("owner", "")).is_empty() else null
+		Thing.stamp(to, id, n, "owner", str(p.get("owner", ""))) if OwnerRules.claims(str(p.get("owner", ""))) else null

@@ -40,7 +40,14 @@ var way: Array[Vector2i] = []  ## the path under the mouse
 var blast: Dictionary = {}  ## the squares of the area under the mouse
 var lit: Dictionary = {}  ## the squares of a choice (a shove's side, a jump)
 var over: Dictionary = {}  ## what a fight changed on the map: {square: Color}
-var zones: Array[Dictionary] = []  ## SpellEffects.zone_view
+var zones: Array[Dictionary] = []:  ## SpellEffects.zone_view
+	set(v):
+		zones = v
+		_flicker = v.any(func(z: Dictionary) -> bool: return bool(z.get("look", {}).get("moves", false)))
+		if _flicker:
+			set_process(true)
+var _flicker := false  ## a zone whose look moves: the map is drawn each frame (v0.8.4.30)
+var _clock := 0.0
 
 var _tile := BASE_TILE
 var _corner := Vector2.ZERO  ## where the map's corner is on the field
@@ -120,14 +127,14 @@ func walk(steps: Array[Vector2i]) -> void:
 		arrived.emit()
 		return
 	_follow = _may_follow()
-	set_process(not _path.is_empty())
+	set_process(not _path.is_empty() or _flicker)
 	if _path.is_empty():
 		arrived.emit()
 
 
 func stop() -> void:
 	_path.clear()
-	set_process(not _moves.is_empty())
+	set_process(not _moves.is_empty() or _flicker)
 
 
 ## The bodies walk the squares of what happened (FightField.take_moves), one by one on their own.
@@ -140,7 +147,7 @@ func play(moves: Array) -> void:
 		for tag: Variant in m["path"]:
 			left.append(Vector2(FightGrid.y_x(str(tag))))
 		_moves[str(m["who"])] = left
-	set_process(not _moves.is_empty() or not _path.is_empty())
+	set_process(not _moves.is_empty() or not _path.is_empty() or _flicker)
 
 
 func _walk_bodies(delta: float) -> void:
@@ -157,10 +164,13 @@ func _walk_bodies(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	_clock += delta
+	if _flicker:
+		queue_redraw()
 	if not _moves.is_empty():
 		_walk_bodies(delta)
 	if _path.is_empty():
-		set_process(not _moves.is_empty())
+		set_process(not _moves.is_empty() or _flicker)
 		return
 	var next := Vector2(_path[0])
 	_pos = _pos.move_toward(next, SPEED * delta)
@@ -174,7 +184,7 @@ func _process(delta: float) -> void:
 		var reached: Vector2i = _path.pop_front()
 		stepped.emit(reached)
 		if _path.is_empty():
-			set_process(not _moves.is_empty())
+			set_process(not _moves.is_empty() or _flicker)
 			arrived.emit()
 
 
@@ -402,6 +412,11 @@ func _draw_fight_squares(t: float) -> void:
 				continue
 		for at: Vector2i in z["cells"]:
 			_tint(at, tint, t)
+	for z: Dictionary in zones:  # the sprite of a surface over its tint (v0.8.4.30)
+		var look: Dictionary = z.get("look", {})
+		if not look.is_empty():
+			for at: Vector2i in z["cells"]:
+				SurfaceArt.draw(self, Rect2(_corner + Vector2(at) * t, Vector2(t, t)), look, _clock, at)
 	for at: Variant in routes:
 		_tint(at, Color(UiTheme.ACCENT, 0.16), t)
 	for at: Variant in reach:

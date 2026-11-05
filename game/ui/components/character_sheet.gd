@@ -216,9 +216,8 @@ func _stats_tab(c: Dictionary) -> void:
 		if hand == "off_hand" and wid.is_empty():
 			continue
 		var w := CombatRules.weapon_profile(c, d, GameState.session.items, wid, hand == "off_hand")
-		var b := int(w["bonus"])
 		_text(box, tr("SHEET_ATTACK").format({"name": w["name"], "hit": "%+d" % int(w["to_hit"]),
-			"dmg": str(w["dice"]).replace("d", tr("DICE_D")) + (("%+d" % b) if b != 0 else "")}))
+			"dmg": ItemInfo.damage(d, GameState.session.items, w)}))  # with what its properties add (v0.8.4.30)
 	if NeedRules.on(GameState.session):  # v0.7.23: the needs with their stage
 		var parts: Array[String] = []
 		for need: String in NeedRules.KINDS:

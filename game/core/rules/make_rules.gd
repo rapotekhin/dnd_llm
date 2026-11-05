@@ -26,6 +26,25 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["make"]
 
 
+## What the words of a made spell or thing promise and its numbers lack (v0.8.4.30, the author's feedback: «Огненный
+## удар» told of fire and dealt none): "" or a reason for the master. A sentence that speaks of damage and names a type by
+## one of the stems of rules.make.told; `types` are the damage types its numbers deal.
+static func told_damage(data: Dictionary, text: String, types: Array) -> String:
+	var cf: Dictionary = cfg(data)["told"]
+	var missing: Array[String] = []
+	for sentence: String in text.to_lower().replace("!", ".").replace("?", ".").replace(";", ".").split("."):
+		if not (cf["damage"] as Array).any(func(w: String) -> bool: return sentence.contains(w)):
+			continue
+		for t: String in cf["types"]:
+			if not types.has(t) and not missing.has(t) and (cf["types"][t] as Array).any(func(w: String) -> bool: return sentence.contains(w)):
+				missing.append(t)
+	if missing.is_empty():
+		return ""
+	var names := missing.map(func(t: String) -> String: return str(data["misc"]["damage_types"][t]))
+	return "в описании урон (%s), а в числах его нет: добавь его частью или свойством (%s) или убери из описания" % [
+		", ".join(names), ", ".join(missing.map(func(t: String) -> String: return t + "_damage"))]
+
+
 ## What was made in this game goes into the game's rules; what another game made leaves them.
 static func install(data: Dictionary, gen: Dictionary) -> void:
 	var rules: Dictionary = data["rules"]
@@ -467,6 +486,9 @@ static func _acted(s: GameSession, data: Dictionary, what: String, id: String, n
 	if rank.is_empty():
 		var top: Dictionary = (cf["circles"] as Array)[-1]
 		return {"reason": "%d очков — движок так сильно не собирает (предел %d)" % [points, int(top["points"])]}
+	var told := told_damage(data, text, [val.call("damage", "force")] if dmg > 0 else [])
+	if not told.is_empty():
+		return {"reason": told}
 	var circle := int(rank["circle"])
 	if circle == 0 and (heal > 0 or not lay.is_empty() or cast == "reaction"):
 		circle = 1

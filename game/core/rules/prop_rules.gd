@@ -217,6 +217,9 @@ static func owners(s: GameSession, data: Dictionary, room: String) -> Array[Stri
 	for n: Variant in WorldView.new(data["world"]).room(room).get("npcs", []):
 		if not out.has(str(n)):
 			out.append(str(n))
+	var enc := EncounterRules.live(s, data, room)
+	if not enc.is_empty():  # the foes of the place own what is in their lair (v0.8.4.30)
+		out.append(OwnerRules.FOES + str(enc["id"]))
 	return out
 
 
@@ -277,7 +280,7 @@ static func take_all_plan(s: GameSession, data: Dictionary) -> Dictionary:
 	if EncounterRules.captive(s):
 		return {"take": take, "left": left}
 	for p: Dictionary in room_props(s, s.room_id):
-		if str(p.get("item_id", "")).is_empty() or not str(p.get("owner", "")).is_empty() or not (p.get("contents", {}) as Dictionary).is_empty():
+		if str(p.get("item_id", "")).is_empty() or OwnerRules.claims(str(p.get("owner", ""))) or not (p.get("contents", {}) as Dictionary).is_empty():
 			continue
 		var w := float(ItemRules.def_of(data["items"], s.items, str(p["item_id"])).get("weight", 0))
 		if weight + w > cap:

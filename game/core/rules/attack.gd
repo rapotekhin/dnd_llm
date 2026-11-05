@@ -308,7 +308,8 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	var crit_min := int(b.get("crit_min", 20))
 	var hit := nat >= crit_min or (nat != 1 and total >= ac)
 	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
-	var line := "%s — %s по %s: %d%s%d = %d против КД %d%s%s" % [me.get("name", ""), b["name"], it.get("name", ""), nat, " + " if to_hit >= 0 else " − ", absi(to_hit), total, ac, mark,
+	var thrown := " (бросок)" if bool(b.get("melee", false)) and shot(f, t, b) else ""  # a spear thrown, not thrust (v0.8.4.30)
+	var line := "%s — %s%s по %s: %d%s%d = %d против КД %d%s%s" % [me.get("name", ""), b["name"], thrown, it.get("name", ""), nat, " + " if to_hit >= 0 else " − ", absi(to_hit), total, ac, mark,
 		(" [%s]" % die["note"]) if not str(die["note"]).is_empty() else ""]
 	var parts: Array[Dictionary] = []  # the hover of the line (v0.7.49.4, the author's finding)
 	parts.assign(b.get("hit_parts", []))
@@ -542,11 +543,10 @@ static func _extras(s: GameSession, data: Dictionary, f: Dictionary, t: Dictiona
 			ConditionRules.remove(it, "invisible")
 			lines.append("%s светится — невидимость спадает" % it.get("name", ""))
 	var def := ItemRules.def_of(data["items"], s.items, str(b.get("id", "")))
-	var dice := str(ItemRules.cfg(data)["element_dice"])
-	for p: Variant in def.get("properties", []):
-		var dtype := str(p).trim_suffix("_damage")
-		if str(p).ends_with("_damage") and data["misc"]["damage_types"].has(dtype) and up(s, t):
-			var add := Sheet.taken(s, data, t, dtype, CombatRules.roll_dice(s.rng, dice, crit))
+	for el: Dictionary in ItemRules.elements(data, def):
+		if up(s, t):
+			var dtype := str(el["type"])
+			var add := Sheet.taken(s, data, t, dtype, CombatRules.roll_dice(s.rng, str(el["dice"]), crit))
 			lines.append("%s: ещё %d (%s)" % [def.get("name", ""), add, data["misc"]["damage_types"][dtype]])
 			more.call(add, dtype)
 	if ConditionRules.effects(me).any(func(e: Dictionary) -> bool: return bool(e.get("enlarged", false))) and up(s, t):

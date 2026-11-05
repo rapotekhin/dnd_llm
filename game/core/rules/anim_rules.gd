@@ -47,6 +47,25 @@ static func of_spell(data: Dictionary, id: String) -> String:
 	return "aura"
 
 
+## How a zone of the field looks on its squares (v0.8.4.30): {kind, colour (#hex), moves, texture} of anims.json `surfaces`,
+## by the zone's id before «:», its damage type or its tile; {} — a plain tint.
+static func surface(data: Dictionary, z: Dictionary) -> Dictionary:
+	var c: Dictionary = cfg(data).get("surfaces", {})
+	if c.is_empty():
+		return {}
+	var kind := str(c["spells"].get(str(z.get("spell", "")).get_slice(":", 0), ""))
+	if kind.is_empty():
+		kind = str(c["types"].get(str(z.get("type", "")), ""))
+	if kind.is_empty() and not str(z.get("tile", "")).is_empty():
+		kind = str(c["tile"])
+	if kind.is_empty() or not (c["kinds"] as Dictionary).has(kind):
+		return {}
+	var row: Dictionary = c["kinds"][kind]
+	var colour := str(row["colour"])
+	return {"kind": kind, "colour": colour if colour.begins_with("#") else str(cfg(data)["palette"].get(colour, "#ffffff")),
+		"moves": bool(row.get("moves", false)), "texture": str(row.get("texture", ""))}
+
+
 ## The colour key of a spell: its damage, a heal, else magic.
 static func spell_colour(data: Dictionary, id: String) -> String:
 	var sp: Dictionary = data["spells"].get(id, {})

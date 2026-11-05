@@ -90,6 +90,33 @@ static func fold_rolls(block: VBoxContainer, folded: bool) -> void:
 
 
 ## An HP bar: green, yellow, red by the share left (Б2).
+## The HP bar with the temporary hit points as a blue piece of their own after it, in proportion (v0.8.4.30: one bar for
+## the side panel, the hero's portrait and a foe's card, in a fight and out of it).
+static func hp_line(value: int, most: int, temp: int, height: float = 14.0, corner: int = 3) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 2)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bar := hp_bar(value, most, height, corner)
+	bar.name = "Hp"
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.size_flags_stretch_ratio = maxf(1.0, most)
+	row.add_child(bar)
+	if temp > 0:
+		var tb := ProgressBar.new()
+		tb.name = "TempHp"
+		tb.max_value = 1
+		tb.value = 1
+		tb.show_percentage = false
+		tb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tb.custom_minimum_size = Vector2(0, height)
+		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tb.size_flags_stretch_ratio = float(temp)
+		tb.add_theme_stylebox_override("fill", UiTheme.box(UiTheme.TEMP_HP, UiTheme.TEMP_HP, 0, 0, corner))
+		tb.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, corner))
+		row.add_child(tb)
+	return row
+
+
 static func hp_bar(value: int, most: int, height: float = 14.0, corner: int = 3) -> ProgressBar:
 	var bar := ProgressBar.new()
 	bar.max_value = maxi(1, most)

@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
 ## The master readies ahead (v0.8.4.25, master-prefetch.md): the rooms around by the map's ways, the engine's candidates
 ## for a furnishing, the jobs in order, an effect kept as proposed and checked again when it is used — a furnishing on
-## entering, a board's orders, a person's quest, the next act on the last step of the current one.
+## entering, a board's orders, a person's quest, the next act on the last step of the current one; the first act of an
+## offered quest before it is taken (v0.8.4.30).
 
 var data: Dictionary
 var s: GameSession
@@ -176,6 +177,8 @@ func test_the_next_act_is_built_ahead_on_the_last_step_and_laid_when_it_opens() 
 	assert_array(one).is_not_empty()
 	var two := {"kind": "quest_act", "quest_id": id, "act": 2, "encounters": [{"key": "pack", "room": "pushcha-edge", "kind": "ambush", "enemies": [{"monster": "wolf", "count": 1}]}],
 		"steps": [{"text": "Расспросить Миру снова", "kind": "talk", "target": "npc_serving"}, {"text": "Отбиться от волков", "kind": "fight", "target": "pack"}]}
+	assert_array(PrepareRules.jobs(s, data).filter(func(j: Dictionary) -> bool: return j["kind"] == "act")).has_size(1)  # v0.8.4.30: early
+	data["rules"]["prepare"]["act_steps"] = 1  # only on the last step, as in v0.8.4.25
 	assert_array(PrepareRules.jobs(s, data).filter(func(j: Dictionary) -> bool: return j["kind"] == "act")).is_empty()
 	s.quests_active[id] = 1  # on the last step of the first act
 	var job: Dictionary = PrepareRules.jobs(s, data)[0]
@@ -190,6 +193,28 @@ func test_the_next_act_is_built_ahead_on_the_last_step_and_laid_when_it_opens() 
 	_lay([PrepareRules.act_of(s, id, 2)])
 	assert_int(int(QuestRules.quest(data["world"], id)["built"])).is_equal(2)
 	assert_array(QuestRules.awaiting(s, data["world"])).is_empty()
+
+
+func test_an_offered_quest_has_its_first_act_readied_before_it_is_taken() -> void:
+	fx.searched_quests["t-q"] = true
+	var r := fx.validate(s, data, "t-q", {"kind": "create", "what": "quest", "giver": "npc_innkeeper", "title": "Крысы в погребе",
+		"difficulty": "easy", "description": "Крысы грызут мешки.", "offer_text": "Разберётесь?", "acts": [{"title": "Погреб", "goal": "Выгнать крыс"}]})
+	fx.apply(s, "t-q", [r["effect_id"]])
+	var id := str(s.generated["quests"].keys()[0])
+	assert_bool(QuestRules.ahead(s, data["world"], id)).is_true()  # offered, no act yet
+	var job: Dictionary = PrepareRules.jobs(s, data).filter(func(j: Dictionary) -> bool: return j["kind"] == "act")[0]
+	assert_dict(job).is_equal({"kind": "act", "key": id + ":1", "quest": id})
+	_ready_ahead(job, [{"kind": "quest_act", "quest_id": id, "act": 1, "steps": [{"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"}]}])
+	assert_int(int(QuestRules.quest(data["world"], id).get("built", 0))).is_equal(0)  # kept, not built
+	assert_array(PrepareRules.jobs(s, data).filter(func(j: Dictionary) -> bool: return j["kind"] == "act")).is_empty()  # kept already
+	QuestRules.accept(s, data, id)
+	assert_array(QuestRules.awaiting(s, data["world"])).contains([id])
+	_lay([PrepareRules.act_of(s, id, 1)])
+	assert_int(int(QuestRules.quest(data["world"], id)["built"])).is_equal(1)
+	assert_str(str(QuestRules.current(s, data["world"], id).get("text", ""))).is_equal("Расспросить Миру")
+	s.quests_failed.append(id)
+	s.quests_active.erase(id)
+	assert_bool(QuestRules.ahead(s, data["world"], id)).is_false()
 
 
 func test_what_is_readied_is_kept_in_a_save() -> void:

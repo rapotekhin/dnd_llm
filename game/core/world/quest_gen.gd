@@ -331,6 +331,7 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String) -> Str
 	out.append("Задание «%s» — %s. %s" % [q["title"], d["name"], q.get("description", "")])
 	if not giver.is_empty():
 		out.append("Заказчик: %s [%s], %s." % [world.npc_name(giver), giver, world.room(ReputationRules.home_room(data, giver)).get("name", "")])
+		out.append_array(person_past(s, data, giver))
 	else:
 		out.append("Своё дело героя, без заказчика.")
 	if not str(q.get("villain", "")).is_empty():
@@ -396,6 +397,25 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String) -> Str
 	return "\n".join(out)
 
 
+## What a person brings to a quest of its own (v0.8.4.30, the author's feedback): what it remembers of the hero and the
+## quests it gave or stood in, with what the hero did there — so a new one goes on from what happened, not against it.
+static func person_past(s: GameSession, data: Dictionary, npc: String) -> Array[String]:
+	var out: Array[String] = []
+	var mem := s.memory_of(npc, int(data["rules"].get("social", {}).get("memory_in_snapshot", 8)))
+	if not mem.is_empty():
+		out.append("Помнит о герое: " + "; ".join(mem))
+	var quests: Dictionary = data["world"].get("quests", {})
+	for qid: String in quests:
+		var q: Dictionary = quests[qid]
+		var gave := str(q.get("giver", "")) == npc
+		if not gave and not JSON.stringify(q.get("steps", [])).contains('"%s"' % npc):
+			continue
+		var state := "выполнено" if s.quests_done.has(qid) else "провалено" if s.quests_failed.has(qid) else "взято" if s.quests_active.has(qid) else "предложено"
+		var done := QuestRules.history(s, data["world"], qid)
+		out.append("%s «%s» (%s)%s" % ["Его задание" if gave else "Был в задании", q.get("title", qid), state, (": " + " ".join(done)) if not done.is_empty() else ""])
+	return out
+
+
 ## How many steps act `n` may have (v0.7.49.1): an act before the last leaves one step for each act after it within the
 ## difficulty's total; the last act finishes the quest and may go past the total: what is left of it, but at least
 ## act_max.last_steps (the earlier acts spent it all — the ending still needs its steps), never past act_max.steps.
@@ -422,7 +442,7 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	if q.is_empty() or not q.has("acts"):
 		return {"reason": "нет задания по актам %s" % qid}
 	var n := int(q.get("built", 0))
-	var ahead := bool(spec.get("ahead", false)) and QuestRules.on_last_step(s, data["world"], qid)  # v0.8.4.25: built ahead, kept
+	var ahead := bool(spec.get("ahead", false)) and QuestRules.ahead(s, data["world"], qid)  # v0.8.4.25: built ahead, kept
 	if not QuestRules.awaiting(s, data["world"]).has(qid) and not ahead:
 		return {"reason": "у «%s» сейчас нечего собирать: задание не взято или акт %d уже есть" % [q["title"], n]}
 	if spec.get("act") != null and int(spec["act"]) != n + 1:

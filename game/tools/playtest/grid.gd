@@ -123,6 +123,7 @@ func _fire(s: GameSession, data: Dictionary) -> void:
 	node("EventBus").state_changed.emit()
 	await frames(4)
 	step("the oil burns as a zone", SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return str(z["spell"]) == "fire"))
+	step("the fire is drawn as flames", SpellEffects.zone_view(s, data).any(func(z: Dictionary) -> bool: return str(z["look"].get("kind", "")) == "flames"))  # v0.8.4.30
 	await shot("fire")
 
 

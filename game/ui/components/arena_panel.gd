@@ -77,10 +77,23 @@ func _rebuild() -> void:
 		UiParts.label(_box, tr("ARENA_RANK").format({"rank": ArenaRules.rank_name(data, int(r["rank"])), "wins": int(r.get("wins", 0)),
 			"losses": int(r.get("losses", 0))})).name = "ArenaRank"
 		_bout(s, data, gold)
+	_ladder(s, data)
 	_tourney(s, data)
 	_card(s, data, gold)
 	UiParts.label(_box, tr("CONTEST_GOLD").format({"money": Money.format(gold)}), UiTheme.MUTED_LABEL)
 
+
+
+## What a rank gives (v0.8.4.30): a line per rank, the hero's own marked, and what fame is.
+func _ladder(s: GameSession, data: Dictionary) -> void:
+	UiParts.heading(_box, tr("ARENA_LADDER_HEAD")).name = "ArenaLadder"
+	for row: Dictionary in ArenaRules.ladder(s, data, _site):
+		var next := tr("ARENA_LADDER_TOP") if int(row["wins"]) == 0 else tr("ARENA_LADDER_NEXT").format({"n": int(row["wins"]), "done": int(row["done"])}) if bool(row["now"]) 			else tr("ARENA_LADDER_WINS").format({"n": int(row["wins"])})
+		var l := UiParts.label(_box, tr("ARENA_LADDER_ROW").format({"mark": "▸ " if bool(row["now"]) else "", "rank": row["name"],
+			"prize": Money.format(int(row["prize_cp"])), "fame": int(row["fame"]), "next": next}), "" if bool(row["now"]) else UiTheme.MUTED_LABEL)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var fame: Dictionary = ArenaRules.cfg(data)["fame"]
+	UiParts.label(_box, tr("ARENA_FAME").format({"up": int(fame["rank_up"]), "champion": int(fame["champion"])}), UiTheme.MUTED_LABEL).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 func _bout(s: GameSession, data: Dictionary, gold: int) -> void:
 	var opp := ArenaRules.opponent(s, data, _site)

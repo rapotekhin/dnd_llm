@@ -59,6 +59,27 @@ func run() -> void:
 	await frames(4)
 	step("a sword at 10%", CraftRules.progress(c) == 10, "%d%%" % CraftRules.progress(c))
 	await shot("sword_in_hand")
+	win.visible = false  # v0.8.4.30: the journal's «Рецепты» lists what the hero can make
+	await press(find(screen(), "JournalButton"))
+	var rtab: Button = find(screen(), "JournalTab_recipes")
+	if step("the recipes tab", rtab != null):
+		await press(rtab)
+		await frames(3)
+		var rbox: Node = rtab.get_parent().get_parent()
+		for b: Node in rbox.find_children("*", "Button", true, false):  # the tools' groups are folded: open them
+			if (b as Button).text.begins_with("▸ "):
+				await press(b as Button)
+				await frames(2)
+				break
+		rbox = find(screen(), "JournalTab_recipes").get_parent().get_parent()
+		var rtext := " ".join(rbox.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text))
+		step("the dagger among the recipes", rtext.contains(ItemRules.display_name(data["items"], s.items, "dagger")), rtext.left(200))
+		await shot("journal_recipes")
+		node("EventBus").navigate.emit("game", {})
+		await frames(4)
+		await press(find(screen(), "CraftButton"))
+		await frames(4)
+		win = find(screen(), "CraftView")
 
 	if daggers.size() == 1:
 		var dagger := str(daggers[0])

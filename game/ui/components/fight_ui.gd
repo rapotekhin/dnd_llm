@@ -41,11 +41,11 @@ var _act_sub := ""
 var _pop: PopupMenu  # a foe's menu
 var _pop_acts: Array[Dictionary] = []  # what its lines do
 var _second := {}  # {act, to}: the next click picks a square of the act
-var _tab := 0
+var _tab := ""  # the open tab by its title: a new turn keeps it however the tabs changed (v0.8.4.30)
+var _redrawing := false
 var _on := false
 var _parts: Array[Control] = []  # shown only in a fight
 var _peace: Array[Control] = []  # hidden in a fight
-const TEMP_HP := Color("#6f9fc8")
 var _cast_circle := 0  # v0.7.22.19 (#19): the slot circle the player picked; 0 — the lowest that fits
 
 
@@ -89,7 +89,9 @@ func setup(screen: Control) -> void:
 	_portrait = UiScenes.need(screen, "%Portrait")
 	_economy = UiScenes.need(screen, "%Economy")
 	_tabs = UiScenes.need(screen, "%Tabs")
-	_tabs.tab_changed.connect(func(t: int) -> void: _tab = t)
+	_tabs.tab_changed.connect(func(t: int) -> void:
+		if not _redrawing and _tabs.get_tab_control(t) != null:
+			_tab = _tabs.get_tab_title(t))
 	_hint = UiScenes.need(screen, "%Hint")
 	_hint.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 	end_turn = UiScenes.need(screen, "%EndTurnButton")
@@ -840,7 +842,7 @@ func _foe_row(s: GameSession, data: Dictionary, id: String, f: Dictionary, me: b
 		conds.append(tr("COMBAT_FOE_SURPRISED"))
 	card.text = "%s\n%s" % [f["name"], tr(CombatRules.health_key(f))]
 	if str(f.get("status")) == "active":
-		var fbar := UiParts.hp_bar(int(f["hp"]), int(f["max_hp"]), 8.0)
+		var fbar := UiParts.hp_line(int(f["hp"]), int(f["max_hp"]), int(f.get("temp_hp", 0)), 8.0)
 		fbar.name = "FoeHp"
 		card.add_child(fbar)
 		fbar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -904,25 +906,9 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 	name_l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	name_l.theme_type_variation = UiTheme.HEADING
 	_portrait.add_child(name_l)
-	var bars := HBoxContainer.new()
+	var bars := UiParts.hp_line(int(c["hp"]), int(c["max_hp"]), int(c.get("temp_hp", 0)))
 	bars.name = "HeroHp"
-	bars.add_theme_constant_override("separation", 2)
 	_portrait.add_child(bars)
-	var bar := UiParts.hp_bar(int(c["hp"]), int(c["max_hp"]))
-	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.size_flags_stretch_ratio = maxf(1.0, int(c["max_hp"]))
-	bars.add_child(bar)
-	if int(c.get("temp_hp", 0)) > 0:  # the temporary hits: a blue piece of their own
-		var tb := ProgressBar.new()
-		tb.name = "TempHp"
-		tb.max_value = 1
-		tb.value = 1
-		tb.show_percentage = false
-		tb.custom_minimum_size = Vector2(0, 14)
-		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tb.size_flags_stretch_ratio = float(c["temp_hp"])
-		tb.add_theme_stylebox_override("fill", UiTheme.box(TEMP_HP, TEMP_HP, 0, 0, 3))
-		bars.add_child(tb)
 	_line(_portrait, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}) \
 		+ ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""))
 	if Guise.has_body(c):  # v0.7.10
@@ -974,6 +960,7 @@ func _line(parent: Control, text: String) -> Label:
 
 func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 	_acts.clear()
+	_redrawing = true  # removing the pages switches the tab: the player's pick is kept by its title
 	var e := CombatRules.economy(s)
 	_clear(_economy)
 	if ArenaRules.watching(s):  # v0.8.4.5: from the fence nothing is in the hero's hands
@@ -983,6 +970,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		note.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		note.text = tr("COMBAT_WATCHING").format({"name": str(s.combat["arena"]["pick"])})
 		_tab_box("COMBAT_TAB_WATCH").add_child(note)
+		_redrawing = false
 		return
 	for spec: Array in [["EcoAction", "● " + tr("COMBAT_ACTION"), int(e.get("action", 0)) + int(e.get("attacks", 0))],
 			["EcoBonus", "▲ " + tr("COMBAT_BONUS"), int(e.get("bonus", 0))],
@@ -1175,7 +1163,12 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 	for act: Act in Acts.on_tab(s, data, hero, "common"):
 		for row: Dictionary in act.buttons(s, data, hero):
 			_act_button(g, act, row, me)
-	_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
+	var keep := 0
+	for i in _tabs.get_tab_count():
+		if _tabs.get_tab_title(i) == _tab:
+			keep = i
+	_tabs.current_tab = keep
+	_redrawing = false
 
 
 ## The button of a spell of the hero or of a thing (v0.8.4.29.6, one maker for the Spells and the Items tab): no target — a press
@@ -1417,5 +1410,14 @@ func _draw_results(s: GameSession, data: Dictionary) -> void:
 		_line(_results_box, tr("COMBAT_XP").format({"xp": int(s.combat["xp"])}))
 	if outcome == "victory":
 		_line(_results_box, tr("COMBAT_ON_BODIES"))
-	var go := _results.add_button("BTN_CONTINUE", func() -> void: GameState.finish_combat(), true)
+	var shot := 0
+	for id: String in CombatRules.player(s).get("ammo_spent", {}):
+		shot += int(CombatRules.player(s)["ammo_spent"][id])
+	var gather := CheckBox.new()  # v0.8.4.30: the spent shots picked up as the fight ends, by the player's choice
+	gather.name = "GatherAmmo"
+	gather.text = tr("COMBAT_GATHER_AMMO").format({"n": shot, "pct": roundi(float(ItemRules.cfg(data)["recover"]) * 100.0)})
+	gather.button_pressed = true
+	gather.visible = shot > 0 and outcome in ["victory", "truce"]
+	_results_box.add_child(gather)
+	var go := _results.add_button("BTN_CONTINUE", func() -> void: GameState.finish_combat(gather.visible and gather.button_pressed), true)
 	go.name = "FinishCombat"

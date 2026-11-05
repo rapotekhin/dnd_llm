@@ -125,7 +125,7 @@ static func opponent(s: GameSession, data: Dictionary, sid: String, at_rank: int
 	var want := _even(data, r)
 	var ac := int(s.character.get("ac", 10))
 	var best := {}
-	for id: Variant in _shuffled(ranks(data)[i]["foes"], r):
+	for id: Variant in _shuffled(pool(s, data, i), r):
 		var m: Dictionary = data["monsters"][str(id)]
 		var ra := float(s.character["max_hp"]) * hero_dpr(s, data, int(m["ac"]))
 		var dpr := monster_dpr(data, str(id), ac)
@@ -134,6 +134,23 @@ static func opponent(s: GameSession, data: Dictionary, sid: String, at_rank: int
 		if best.is_empty() or off < float(best["off"]) - 0.01:
 			best = {"monster": str(id), "hp": hp, "off": off}
 	return {"monster": str(best["monster"]), "hp": int(best["hp"]), "name": fighter_name(data, str(best["monster"]), _nick(data, r)), "rank": i}
+
+
+## The templates a bout of rank `i` is made of for this hero (v0.8.4.30): of a CR by the rank and the hero's level,
+## the `near` closest; none — the rank's own `foes`.
+static func pool(s: GameSession, data: Dictionary, i: int) -> Array:
+	var p: Dictionary = cfg(data)["pool"]
+	var want := maxf(float(p["min_cr"]), float(ranks(data)[i].get("cr_per_level", 0.0)) * int(s.character.get("level", 1)))
+	var fit: Array = []
+	for id: String in data["monsters"]:
+		var m: Dictionary = data["monsters"][id]
+		if (p["types"] as Array).has(str(m.get("type", ""))) and (p["sizes"] as Array).has(str(m.get("size", ""))) 				and int(m.get("fly", 0)) == 0 and float(m.get("cr", 0)) <= want and float(m.get("cr", 0)) >= want * 0.5 and not attacks(data, id).is_empty():
+			fit.append(id)
+	fit.sort_custom(func(a: String, b: String) -> bool:
+		var da := absf(float(data["monsters"][a]["cr"]) - want)
+		var db := absf(float(data["monsters"][b]["cr"]) - want)
+		return da < db or (da == db and a < b))
+	return fit.slice(0, int(p["near"])) if not fit.is_empty() else ranks(data)[i]["foes"]
 
 
 static func _shuffled(list: Array, r: RandomNumberGenerator) -> Array:
@@ -381,6 +398,22 @@ static func after_bout(s: GameSession, data: Dictionary, a: Dictionary, won: boo
 	lines.append_array(ReputationRules.add(s, data, loc, pts, "победы на арене"))
 	ObjectRules.note(s, sid, "%s победил: %s" % [s.character.get("name", ""), a.get("foe", "")])
 	return lines
+
+
+## What each rank gives at the arena `sid` (v0.8.4.30, the author's feedback): [{name, prize_cp, fame, wins, now, done}]
+## — the prize of a win by the arena's rule, the fame a win brings, the wins that lift it (0 — the top), the hero's rank
+## and its wins at it. The numbers are after_bout's own.
+static func ladder(s: GameSession, data: Dictionary, sid: String) -> Array[Dictionary]:
+	var fame: Dictionary = cfg(data)["fame"]
+	var r := rec(s, sid)
+	var out: Array[Dictionary] = []
+	for i in ranks(data).size():
+		var row: Dictionary = ranks(data)[i]
+		var now := enlisted(s, sid) and int(r.get("rank", 0)) == i
+		out.append({"name": str(row["name"]), "prize_cp": prize_of(data, sid, i), "wins": int(row.get("wins", 0)) if i < ranks(data).size() - 1 else 0,
+			"fame": Price.share(int(fame["win"]), float(rule_cfg(data, sid).get("fame_pct", 100))), "now": now,
+			"done": int(r.get("rank_wins", 0)) if now else 0})
+	return out
 
 
 # --- bets on the bouts of others ----------------------------------------------------------------------------------

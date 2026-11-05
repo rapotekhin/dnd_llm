@@ -40,6 +40,7 @@ func run() -> void:
 	var opp: Label = find(win, "ArenaOpponent")
 	var odds: Label = find(win, "ArenaOdds")
 	step("the opponent and the odds", opp != null and odds != null and odds.text.contains("%"), "%s | %s" % [opp.text if opp != null else "", odds.text if odds != null else ""])
+	step("the ranks explained: prize and fame", find(win, "ArenaLadder") != null)  # v0.8.4.30
 	var spin: SpinBox = find(win, "ArenaBetSelf")
 	spin.value = 1.0
 	await frames(2)

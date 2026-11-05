@@ -172,7 +172,7 @@ func test_a_dead_monster_leaves_all_its_gear_and_without_it_has_fists() -> void:
 	var ammo: Dictionary = ItemRules.cfg(data)["ammo"]
 	for id: String in data["monsters"]:
 		var m: Dictionary = data["monsters"][id]
-		var left := CombatRules.spoils(data, {"monster": id, "status": "dead"})
+		var left := CombatRules.spoils(data, {"monster": id, "status": "dead"}, RandomNumberGenerator.new())
 		for item: Variant in m["equipment"]:
 			assert_int(int(left.get(str(item), 0))).override_failure_message("%s: %s" % [id, item]).is_greater(0)
 			if ammo.has(str(item)):

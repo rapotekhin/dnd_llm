@@ -58,10 +58,15 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 		var at := _seeded(spots, taken, "%d|%s" % [s.game_seed, id])
 		taken[at] = true
 		out.append(_token("body:" + id, "body", id, str(b["name"]), at))
+	var walls := {}  # the squares of things that bar the way (a fight makes them blocks, FightField)
+	var ways := _ways_in(map, s.room_id)
 	for p: Dictionary in PropRules.room_props(s, s.room_id):
 		if not _shown(data, p):
 			continue
 		var at := _prop_cell(s, data, map, spots, taken, out, p)
+		if (ThingRules.body(data, p).get("blocks", []) as Array).has("path"):
+			at = _off_the_way(cells, spots, ways, walls, taken, at)
+			walls[at] = true
 		taken[at] = true
 		out.append(_token("prop:" + str(p["id"]), "prop", str(p["id"]), str(p["name"]), at))
 	return out
@@ -261,6 +266,45 @@ static func _clear(map: Dictionary, lib: Dictionary, cells: Array[Vector2i]) -> 
 	var out: Array[Vector2i] = cells.filter(func(at: Vector2i) -> bool:
 		return not ways.has(at) and not bool(lib["cells"].get(str(rows[at.y])[at.x], {}).get("keep_free", false)))
 	return out if not out.is_empty() else cells
+
+
+## A thing that bars the way never cuts one door or way out of the room from another (v0.8.4.30, the author's
+## feedback: only the doorways and the squares before them were kept free). `at` if the ways stay joined, else the
+## nearest free square that keeps them so; none — `at`.
+static func _off_the_way(cells: Array[Vector2i], spots: Array[Vector2i], ways: Array[Vector2i], walls: Dictionary, taken: Dictionary, at: Vector2i) -> Vector2i:
+	if ways.size() < 2 or _joined(cells, ways, walls, at) or not _joined(cells, ways, walls, Vector2i(-1, -1)):  # already cut: not by this thing
+		return at
+	var order := spots.filter(func(c: Vector2i) -> bool: return not taken.has(c) and c != at)
+	order.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return WalkRules.distance(a, at) < WalkRules.distance(b, at))
+	for c: Vector2i in order:
+		if _joined(cells, ways, walls, c):
+			return c
+	return at
+
+
+## Every way of the room reached from the first over its free squares, with `walls` and `extra` barred.
+static func _joined(cells: Array[Vector2i], ways: Array[Vector2i], walls: Dictionary, extra: Vector2i) -> bool:
+	var open := {}
+	for c: Vector2i in cells:
+		open[c] = true
+	for c: Vector2i in ways:
+		open[c] = true
+	for c: Variant in walls:
+		open.erase(c)
+	open.erase(extra)
+	if not open.has(ways[0]):
+		return false
+	var seen := {ways[0]: true}
+	var front: Array[Vector2i] = [ways[0]]
+	while not front.is_empty():
+		var c: Vector2i = front.pop_back()
+		for dx in [-1, 0, 1]:
+			for dy in [-1, 0, 1]:
+				var n := c + Vector2i(dx, dy)
+				if open.has(n) and not seen.has(n):
+					seen[n] = true
+					front.append(n)
+	return ways.all(func(w: Vector2i) -> bool: return seen.has(w))
 
 
 static func _seeded(cells: Array[Vector2i], taken: Dictionary, key: String) -> Vector2i:

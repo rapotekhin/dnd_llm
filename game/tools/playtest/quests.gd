@@ -71,6 +71,8 @@ func run() -> void:
 	step("the quest is done and paid by the table", s.quests_done.has(qid) and int(s.character["gold_cp"]) - gold == 500,
 		"%s, +%d" % [s.quests_done, int(s.character["gold_cp"]) - gold])
 	await shot("done")
+	step("the quest told in the hero's diary", await wait_until(func() -> bool: return not str(s.summaries.get(QuestRules.STORY + qid, "")).is_empty(), 30.0),
+		str(s.summaries.get(QuestRules.STORY + qid, "")).left(160))  # v0.8.4.30: the stub master joins the events
 	await press(find(game, "JournalButton"))
 	await frames(5)
 	await shot("journal")

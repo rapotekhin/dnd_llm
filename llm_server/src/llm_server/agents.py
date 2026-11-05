@@ -152,7 +152,7 @@ class TurnOutput(BaseModel):
 
 
 class SummaryOutput(BaseModel):
-    summary: str = Field(description="2–4 предложения.")
+    summary: str = Field(description="2–4 предложения; запись дневника о задании — до 6.")
 
 
 @dataclass

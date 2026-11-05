@@ -35,11 +35,4 @@ func why(s: GameSession, _data: Dictionary, f: Dictionary, to: String, _how: Dic
 
 
 func run(s: GameSession, data: Dictionary, _f: Dictionary, to: String, _how: Dictionary) -> Array[String]:
-	var t := CombatRules.fighter(s, to)
-	var skill := CombatRules.lore_skill(data, t)
-	var dc := CombatRules.lore_dc(data, t)
-	var r := Roll.hero(s, data, {"what": "Присмотреться", "skill": skill, "dc": dc, "target_id": str(t["id"])})  # Favored Enemy by its type
-	if bool(r["ok"]):
-		Knows.add(s, Knows.MONSTER, str(t["monster"]))
-	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], t["name"], TranslationServer.translate("SKILL_" + skill.to_upper()),
-		int(r["total"]), dc, "теперь ясно, на что способны такие враги" if bool(r["ok"]) else "ничего толкового"]]
+	return CombatRules.look_over(s, data, CombatRules.fighter(s, to))

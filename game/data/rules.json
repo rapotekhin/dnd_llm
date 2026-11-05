@@ -2169,6 +2169,12 @@
 		"no_kinds": ["beasts", "undead"]
 	},
 	"make": {
+		"told": {
+			"_doc": "v0.8.4.30, the author's feedback: a made spell or thing whose words promise damage of a type its numbers lack is refused. A sentence with `damage` and one of a type's stems names that type",
+			"damage": ["урон", "ранит", "обжиг", "жжёт", "жжет"],
+			"types": {"fire": ["огн", "огон", "пламен"], "cold": ["холод", "мороз", "стуж", "льд", "лёд"], "lightning": ["молни", "электр"], "acid": ["кислот"],
+				"poison": ["ядом", "ядов", "отрав"], "thunder": ["гром", "звуков"], "necrotic": ["некрот"], "radiant": ["сияни", "излучени"], "psychic": ["психи"], "force": ["силов"]}
+		},
 		"property": {
 			"_doc": "v0.7.65: a property of a thing, built of the tokens the engine already reads. token — the property it adds (%d its amount, %s its value), its price is its row in items.json properties; on — what it goes on (weapon, armor; none — anything). The sum gives the rarity, the rarity asks a level of the hero and sets the artificer's hours, dust and DC.",
 			"parts": {
@@ -3605,8 +3611,9 @@
 		}
 	},
 	"prepare": {
-		"_doc": "The master readies ahead (v0.8.4.25, the author's decision of 2026-11-02, PrepareRules): a room's furnishing, a board's orders, a quest of a person around and the next act of a taken quest, on a second line of requests beside the player's own turn. `depth` — the rooms readied around the hero by the map's ways (2: neighbours and theirs); `parallel` — the background turns at once; `candidates` — the catalog things the engine offers for a room instead of a search: `everyday` for any room, then those of its kind, role and tags, then the goods of a trader who lives there, cut to the count by the game's seed; `quests_per_day` — people around readied with a quest each day, within `quest_depth` rooms of the hero.",
+		"_doc": "The master readies ahead (v0.8.4.25, the author's decision of 2026-11-02, PrepareRules): a room's furnishing, a board's orders, a quest of a person around and the next act of a taken quest, on a second line of requests beside the player's own turn. `depth` — the rooms readied around the hero by the map's ways (2: neighbours and theirs); `parallel` — the background turns at once; `candidates` — the catalog things the engine offers for a room instead of a search: `everyday` for any room, then those of its kind, role and tags, then the goods of a trader who lives there, cut to the count by the game's seed; `quests_per_day` — people around readied with a quest each day, within `quest_depth` rooms of the hero; `act_steps` — a taken quest's next act is readied when this many of its built steps or fewer are left (v0.8.4.30: early, so the hero never waits; an offered one's first act is readied before it is taken).",
 		"on": true,
+		"act_steps": 99,
 		"depth": 2,
 		"parallel": 16,
 		"candidates": 40,
@@ -4033,6 +4040,7 @@
 			"fire": {"name": "Огонь", "tags": ["hearth"], "wild": true, "rent_cp_hour": 0}
 		},
 		"work_hours": [1, 8],
+		"max_exhaustion": 3, "_max_exhaustion": "v0.8.4.30, the author's feedback: no work begun or gone on from this level of exhaustion (5e: 3 — disadvantage on attacks and saves); a sleep and a meal bring it down",
 		"quality": [
 			{"id": "poor", "from": -99, "name": "грубая работа", "value": 0.5, "qty": 0.5, "props": {"weapon": ["crude"], "armor": ["crude"]}},
 			{"id": "normal", "from": -4, "name": "", "value": 1.0, "qty": 1.0},
@@ -5209,14 +5217,15 @@
 			"death": {"name": "до смерти", "text": "кровавая яма: сдаться нельзя, упавшего добивают; приз и слава вдвое", "prize_pct": 200, "fame_pct": 200}
 		},
 		"ranks": [
-			{"name": "Новичок", "foes": ["bandit", "tribal_warrior", "guard"], "prize_cp": 300, "wins": 2},
-			{"name": "Боец", "foes": ["thug", "orc", "scout", "gnoll"], "prize_cp": 1000, "wins": 3},
-			{"name": "Рубака", "foes": ["bugbear", "berserker", "bandit_captain"], "prize_cp": 2500, "wins": 3},
-			{"name": "Ветеран", "foes": ["veteran", "knight", "ogre"], "prize_cp": 6000, "wins": 0}
+			{"name": "Новичок", "foes": ["bandit", "tribal_warrior", "guard"], "cr_per_level": 0.125, "prize_cp": 300, "wins": 2},
+			{"name": "Боец", "foes": ["thug", "orc", "scout", "gnoll"], "cr_per_level": 0.25, "prize_cp": 1000, "wins": 3},
+			{"name": "Рубака", "foes": ["bugbear", "berserker", "bandit_captain"], "cr_per_level": 0.4, "prize_cp": 2500, "wins": 3},
+			{"name": "Ветеран", "foes": ["veteran", "knight", "ogre"], "cr_per_level": 0.6, "prize_cp": 6000, "wins": 0}
 		],
 		"bet": {"min_cp": 50, "max_cp_level": 2000, "house_pct": 10, "noise_pct": 15, "max_mult": 5.0},
 		"insight": {"skill": "insight", "dc": 13},
 		"card_ranks": [0, 1, 2],
+		"pool": {"_doc": "v0.8.4.30, the author's feedback: the opponent by the hero's level, not a fixed list — a template of `types` and `sizes`, walking only, of a CR of the rank's `cr_per_level` × the hero's level (from `min_cr`; at level 5 the ranks meet the old lists: CR 1/2, 1, 2, 3); the `near` closest by CR are tried and the one made most even is taken; none — the rank's `foes`", "types": ["humanoid", "beast", "giant", "monstrosity"], "sizes": ["small", "medium", "large"], "min_cr": 0.125, "near": 6},
 		"sim_rounds": 30,
 		"even": {"band": 0.08, "hp_min": 0.6, "hp_max": 2.0},
 		"ring": {"apart": 3, "side": 6, "crowd": 12},

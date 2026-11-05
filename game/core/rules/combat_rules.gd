@@ -279,7 +279,7 @@ static func _opening(s: GameSession, source: Dictionary) -> Array[String]:
 		return []
 	for id: String in enemies(s):
 		var f := fighter(s, id)
-		if str(f.get("npc_id", "")) == npc:
+		if str(f.get("npc_id", "")) == npc or id == npc:  # a person, or a foe's own record (v0.8.4.30)
 			var order: Array = s.combat["order"]
 			order.erase(PLAYER)
 			order.push_front(PLAYER)
@@ -290,10 +290,10 @@ static func _opening(s: GameSession, source: Dictionary) -> Array[String]:
 	return []
 
 
-## The fighter of an NPC of the scene, "" if not in the fight.
+## The fighter of an NPC of the scene or of a foe's record (v0.8.4.30), "" if not in the fight.
 static func fighter_of_npc(s: GameSession, npc_id: String) -> String:
 	for id: String in enemies(s):
-		if str(fighter(s, id).get("npc_id", "")) == npc_id:
+		if str(fighter(s, id).get("npc_id", "")) == npc_id or id == npc_id:
 			return id
 	return ""
 
@@ -2248,7 +2248,7 @@ static func results(s: GameSession, data: Dictionary) -> void:
 
 
 ## What a beaten foe has on it, {item: qty}: what it has (Gear) and half of what it shot; of a dead one also the hide and the meat.
-static func spoils(data: Dictionary, f: Dictionary) -> Dictionary:
+static func spoils(data: Dictionary, f: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
 	var out := {}
 	var m := Sheet.template(data, f)
 	var state := str(f["status"])
@@ -2259,7 +2259,7 @@ static func spoils(data: Dictionary, f: Dictionary) -> Dictionary:
 	if not state in ["dead", "surrendered", "unconscious"]:
 		return out
 	var has: Dictionary = f.get("inventory", Gear.start(data, Sheet.template_id(data, f))["inventory"])  # what it has now (v0.8.4.10)
-	for got: Dictionary in [has, Gear.shot_back(data, f)]:
+	for got: Dictionary in [has, Gear.shot_back(data, f, rng)]:
 		for item: String in got:
 			out[item] = int(out.get(item, 0)) + int(got[item])
 	return out
@@ -2482,6 +2482,18 @@ static func lore_skill(data: Dictionary, f: Dictionary) -> String:
 ## DC to know a creature: 10 + its challenge (rounded up).
 static func lore_dc(data: Dictionary, f: Dictionary) -> int:
 	return int(cfg(data)["lore_base_dc"]) + int(ceil(float(Sheet.template(data, f).get("cr", 0))))
+
+
+## The hero looks a creature over (the act «Осмотреть» in a fight, a foe's menu before it, v0.8.4.30): a knowledge check by
+## its kind; a success opens the kind's numbers for good.
+static func look_over(s: GameSession, data: Dictionary, t: Dictionary) -> Array[String]:
+	var skill := lore_skill(data, t)
+	var dc := lore_dc(data, t)
+	var r := Roll.hero(s, data, {"what": "Присмотреться", "skill": skill, "dc": dc, "target_id": str(t.get("id", ""))})  # Favored Enemy by its type
+	if bool(r["ok"]):
+		Knows.add(s, Knows.MONSTER, str(t["monster"]))
+	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], t.get("name", ""), TranslationServer.translate("SKILL_" + skill.to_upper()),
+		int(r["total"]), dc, "теперь ясно, на что способны такие враги" if bool(r["ok"]) else "ничего толкового"]]
 
 
 static func known(s: GameSession, f: Dictionary) -> bool:

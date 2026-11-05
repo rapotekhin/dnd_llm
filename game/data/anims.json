@@ -1003,6 +1003,28 @@
 		"flurry_stagger": "",
 		"stunning": ""
 	},
+	"surfaces": {
+		"_doc": "How a zone of the field looks on its squares (v0.8.4.30, the author's feedback: fire and the other surfaces drawn plainer than they matter). A zone's look is the row of its `spell` id (before «:», so every puddle and aura of a kind shares one), else of its damage `type`, else `tile` for a puddle of a liquid; `kinds` — the drawing of a look: `colour` a key of `palette` or #hex, `moves` — drawn anew each frame, `texture` — a picture of the square that replaces the stub (ui/anims/surface_art.gd).",
+		"spells": {"fire": "flames", "web": "web", "caltrops": "spikes", "ball_bearings": "beads", "grease": "gloss", "puddle": "gloss", "entangle": "vines", "spike_growth": "spikes",
+			"fog_cloud": "haze", "darkness": "dark", "stinking_cloud": "haze", "sleet_storm": "frost", "moonbeam": "glow", "spirit_guardians": "glow", "silence": "ripple",
+			"wind_wall": "ripple", "faerie_fire": "glow", "magic_circle": "glow", "call_lightning": "glow", "hazard": "bubbles", "daylight": "glow", "flaming_sphere": "flames"},
+		"types": {"fire": "flames", "cold": "frost", "acid": "bubbles", "poison": "haze", "radiant": "glow", "necrotic": "dark", "lightning": "glow", "thunder": "ripple", "force": "glow", "psychic": "ripple"},
+		"tile": "gloss",
+		"kinds": {
+			"flames": {"colour": "fire", "moves": true, "texture": ""},
+			"web": {"colour": "#e8e4dc", "moves": false, "texture": ""},
+			"spikes": {"colour": "steel", "moves": false, "texture": ""},
+			"beads": {"colour": "steel", "moves": false, "texture": ""},
+			"gloss": {"colour": "#ffffff", "moves": false, "texture": ""},
+			"vines": {"colour": "#5f9a3c", "moves": false, "texture": ""},
+			"haze": {"colour": "#c9c9c0", "moves": true, "texture": ""},
+			"dark": {"colour": "#0b0a10", "moves": false, "texture": ""},
+			"frost": {"colour": "cold", "moves": false, "texture": ""},
+			"glow": {"colour": "radiant", "moves": true, "texture": ""},
+			"ripple": {"colour": "thunder", "moves": true, "texture": ""},
+			"bubbles": {"colour": "acid", "moves": true, "texture": ""}
+		}
+	},
 	"palette": {
 		"fire": "#ff8a2a",
 		"cold": "#7fd4ff",

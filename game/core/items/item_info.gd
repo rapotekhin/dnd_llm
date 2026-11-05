@@ -70,6 +70,7 @@ static func kind_line(data: Dictionary, def: Dictionary) -> String:
 		var plus := ItemRules.plus(def, ["magic_plus"])
 		if plus > 0:
 			dmg = "%s +%d" % [dmg, plus]
+		dmg += _elements(data, def)
 		var parts: Array[String] = [kind, dmg.strip_edges()]
 		if w.has("versatile"):
 			parts.append(_t("ITEM_VERSATILE").format({"dice": _dice(str(w["versatile"]))}))
@@ -189,8 +190,8 @@ static func compare(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 	var probe := c.duplicate(true)
 	probe["equipped"]["main_hand"] = id
 	var neu := CombatRules.weapon_profile(probe, data, session_items, id)
-	return TranslationServer.translate("ITEM_CMP_WEAPON").format({"hit": _signed(int(neu["to_hit"])), "dmg": _dmg(neu),
-		"hit_now": _signed(int(cur["to_hit"])), "dmg_now": _dmg(cur)})
+	return TranslationServer.translate("ITEM_CMP_WEAPON").format({"hit": _signed(int(neu["to_hit"])), "dmg": damage(data, session_items, neu),
+		"hit_now": _signed(int(cur["to_hit"])), "dmg_now": damage(data, session_items, cur)})
 
 
 static func _t(key: String) -> String:
@@ -200,6 +201,20 @@ static func _t(key: String) -> String:
 static func _dmg(w: Dictionary) -> String:
 	var b := int(w["bonus"])
 	return "%s%s" % [_dice(str(w["dice"])), ("+%d" % b) if b > 0 else (str(b) if b < 0 else "")]
+
+
+## A weapon's whole damage by its profile: «1к4+2 колющий + 1к6 огонь» (v0.8.4.30, the author's feedback: the fire of an
+## elemental blade was told only in its description).
+static func damage(data: Dictionary, session_items: Dictionary, w: Dictionary) -> String:
+	var main := "%s %s" % [_dmg(w), str(data["misc"]["damage_types"].get(str(w.get("type", "")), ""))]
+	return main.strip_edges() + _elements(data, ItemRules.def_of(data["items"], session_items, str(w.get("id", ""))))
+
+
+static func _elements(data: Dictionary, def: Dictionary) -> String:
+	var out := ""
+	for el: Dictionary in ItemRules.elements(data, def):
+		out += " + %s %s" % [_dice(str(el["dice"])), data["misc"]["damage_types"][el["type"]]]
+	return out
 
 
 static func _dice(d: String) -> String:

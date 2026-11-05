@@ -49,6 +49,7 @@ BTN_CHARACTER_SHEET,Лист персонажа
 BTN_CLEAR_CART,Очистить
 BTN_CLOSE,Закрыть
 BTN_COLLECT_AMMO,Собрать стрелы ({n})
+COMBAT_GATHER_AMMO,"Собрать стрелы: выпущено {n}, каждая цела с шансом {pct}%, минута"
 BTN_CONNECTION_SETTINGS,Настройки связи
 BTN_CONTINUE,Продолжить
 BTN_DEAL,Заключить сделку
@@ -1138,7 +1139,8 @@ BTN_EAT_TIP,"Съесть из припасов, сначала то, что д�
 BTN_DRINK,Попить
 BTN_DRINK_TIP,"Напиться из источника здесь или из бурдюка; 5 минут"
 BTN_FILL_WATER,Набрать воды
-BTN_FILL_WATER_TIP,"Наполнить бурдюки, фляги и кувшины здесь; 10 минут"
+BTN_FILL_WATER_TIP,"Наполнить бурдюки, фляги и кувшины здесь, все или один по выбору; 10 минут"
+FILL_ALL,Все сосуды
 NEED_BUSY,Сейчас не до того
 NEED_NO_FOOD,"Нечего есть: нужны паёк, хлеб или ягоды"
 NEED_NOT_HUNGRY,Вы не голодны
@@ -1192,6 +1194,7 @@ CRAFT_NO_STATION,Здесь нет нужного места для работы
 CRAFT_NO_MATERIALS,Не хватает сырья
 CRAFT_NO_PROJECT,Нет начатой работы
 CRAFT_NO_RENT,Нечем заплатить за место
+CRAFT_TOO_TIRED,"Слишком измотан для работы: сначала отдых и еда"
 CRAFT_NO_SALVAGE,Это не разобрать: сними вещь или выбери другую
 SERVICE_LEARNED,Этот рецепт ты уже знаешь
 SERVICE_NO_TOOL_PROF,Сначала нужно владеть инструментом этого ремесла
@@ -1650,6 +1653,7 @@ OBJECT_HOURS,"Открыто {hours}"
 OBJECT_PRIVATE,Частное место
 OBJECT_FACTS,"Было: {list}"
 QUEST_ACT_BUILDING,Мастер готовит продолжение задания…
+QUEST_ACT_AHEAD,Мастер готовит продолжение задания — можно играть дальше
 QUEST_DIFFICULTY_LINE,"Сложность: {name} · актов: {acts}"
 CONFIRM_QUEST_DEADLY_TITLE,Взять «{title}»?
 CONFIRM_QUEST_DEADLY,"Почти невозможное задание: бои на пределе сил героя, главарь в финале. Герой может погибнуть."
@@ -1727,6 +1731,11 @@ EXIT_SHUT,не пройти
 SIDE_WEATHER_ROOF," (вы под крышей)"
 SIDE_FESTIVAL_IN,через {in} {days}
 JOURNAL_TAB_CALENDAR,Календарь
+JOURNAL_TAB_RECIPES,Рецепты
+JOURNAL_EMPTY_RECIPES,Вы пока не знаете ни одного рецепта: их дают владение инструментом, уроки и книги
+JOURNAL_RECIPES_NO_TOOL,Без инструмента
+JOURNAL_WHERE,Где: {where}
+JOURNAL_STORY,Из дневника: {text}
 JOURNAL_TODAY,Сегодня: {date}
 JOURNAL_FESTIVALS,Праздники впереди
 JOURNAL_MONTHS,Месяцы года
@@ -1737,6 +1746,12 @@ ARENA_ENLIST_HINT,"Запись в бойцы стоит {fee}: бой в ден
 BTN_ARENA_ENLIST,Записаться в бойцы
 ARENA_RANK,"Ваш ранг: {rank} · побед {wins}, поражений {losses}"
 ARENA_BOUT_HEAD,Ваш бой сегодня
+ARENA_LADDER_HEAD,Ранги арены
+ARENA_LADDER_ROW,"{mark}{rank}: приз за победу {prize}, слава +{fame}; {next}"
+ARENA_LADDER_NEXT,"до следующего ранга {done} из {n} побед"
+ARENA_LADDER_WINS,"следующий ранг — после {n} побед"
+ARENA_LADDER_TOP,высший ранг
+ARENA_FAME,"Слава — репутация в этом поселении: +{up} за новый ранг, +{champion} за победу в турнире. Чем выше ранг, тем сильнее соперник, он подбирается по вашему уровню"
 ARENA_OPPONENT,"Соперник: {name} — {hp} ОЗ, КД {ac}; приз за победу {prize}"
 ARENA_ODDS,"Распорядитель даёт вам {house}% — ставка на себя ×{mult}"
 ARENA_ODDS_TRUE,"(на ваш глаз — {p}%)"
@@ -1882,3 +1897,10 @@ BELT_USE_TIP,В бою и вне его используются только в
 BTN_EQUIP_STOWED,В запасной набор
 BTN_EQUIP_STOWED_OFF,В запасной набор: вторая рука
 STOWED_EMPTY_TIP,Пусто. Оружие этого набора кладётся сюда кнопкой «В запасной набор» в снаряжении
+BTN_FOE_ATTACK,Атаковать
+BTN_FOE_ATTACK_WORD_TIP,Они ждут слов — удар начнёт бой
+BTN_FOE_INSPECT,Осмотреть
+BTN_FOE_INSPECT_TIP,"Проверка знаний по виду врага (Природа, Религия, Магия, Проницательность), один раз. Успех открывает хиты, КД, атаки и сопротивления таких врагов насовсем"
+FOE_LOOKED,Вы уже присматривались к нему
+BTN_CAST_AT_TIP,"Заклинание в цель сразу: враждебное начнёт бой и ляжет первым ударом"
+SPELL_NOT_READY,Это заклинание сейчас не сотворить

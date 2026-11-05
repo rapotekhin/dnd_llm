@@ -215,7 +215,7 @@ func _travel_button(info: VBoxContainer, room_id: String) -> void:
 
 
 ## Journal tabs (v0.6.6, playtest-1): quests, places, conversations, finds; inside — groups by location that fold.
-const TABS: Array[String] = ["quests", "places", "people", "factions", "found", "rumors", "letters", "chronicle", "calendar"]
+const TABS: Array[String] = ["quests", "places", "people", "factions", "found", "recipes", "rumors", "letters", "chronicle", "calendar"]
 var _tab := "quests"
 var _folded := {}
 var _person_open := ""  # v0.7.22.21 (#18): the person whose card is open in the people tab
@@ -309,6 +309,15 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 					line += "\n      " + h
 				if not str(q.get("step", "")).is_empty():
 					line += "\n      " + tr("JOURNAL_STEP").format({"step": q["step"]})
+					var where := WorldMap.step_rooms(s, Catalog.data, str(q["id"])).map(func(r: String) -> String:  # v0.8.4.30: where to go now
+						return "%s (%s)" % [w.room(r).get("name", r), w.location(w.location_id(r)).get("name", "")])
+					if not where.is_empty():
+						line += "
+      " + tr("JOURNAL_WHERE").format({"where": ", ".join(where)})
+				var story := str(s.summaries.get(QuestRules.STORY + str(q["id"]), ""))
+				if not story.is_empty():  # v0.8.4.30: the hero's own account of it
+					line += "
+      " + tr("JOURNAL_STORY").format({"text": story})
 				if bool(q.get("failed", false)):  # v0.7.14: its NPC died
 					done.append("✗ %s — %s" % [q["title"], tr("JOURNAL_FAILED")])
 					continue
@@ -398,6 +407,20 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 			return RumorRules.groups(s, Catalog.data)
 		"letters":  # v0.7.48: the helpers on their way, what we wait for, the answers, the lost
 			return LetterRules.groups(s, Catalog.data)
+		"recipes":  # v0.8.4.30: what the hero knows how to make, by its tool
+			var by_tool := {}
+			for id: String in CraftRules.known(s, Catalog.data):
+				var r := CraftRules.recipe(s, Catalog.data, id)
+				var tool := CraftRules.tool_of(r)
+				var head := ItemRules.display_name(Catalog.data["items"], s.items, tool) if not tool.is_empty() and not CraftRules.simple(r) else tr("JOURNAL_RECIPES_NO_TOOL")
+				var list: Array = by_tool.get(head, [])
+				list.append("%s — %s" % [CraftRules.recipe_name(s, Catalog.data, id), TimeRules.span(CraftRules.minutes_of(r))])
+				by_tool[head] = list
+			for head: String in by_tool:
+				var lines: Array[String] = []
+				lines.assign(by_tool[head])
+				lines.sort()
+				out.append({"title": head, "lines": lines, "folded": true})
 		"calendar":  # v0.7.44: today, the festivals on and ahead, the months of the year
 			if not CalendarRules.on(w.world):
 				return out

@@ -34,6 +34,17 @@ func run() -> void:
 	var attack: Button = find(screen(), "Encounter_attack")
 	step("the attack-by-surprise button", attack != null and not attack.disabled)
 	step("the wolves cannot be talked to", find(screen(), "Encounter_persuasion") != null and find(screen(), "Encounter_persuasion").disabled)
+	var foes: Array = gs.foes_here()  # v0.8.4.30: a foe's menu before the fight — the blow, a look
+	if step("the foes seen before the fight", not foes.is_empty(), str(foes)):
+		var fid := EncounterRules.foe_id(foes[0])
+		screen()._show_menu("foe:" + fid)
+		await frames(3)
+		step("the foe's menu: attack and look", find(screen(), "FoeAttack_" + fid) != null and find(screen(), "FoeInspect_" + fid) != null)
+		await shot("foe_menu")
+		await press(find(screen(), "FoeInspect_" + fid))
+		await frames(3)
+		step("looked over before the fight", JSON.stringify(s.chat.slice(maxi(0, s.chat.size() - 3))).contains("присматривается") and s.mode != GameSession.MODE_COMBAT)
+		screen()._close_menu()
 	await shot("unseen")
 	if attack != null:
 		await press(attack)

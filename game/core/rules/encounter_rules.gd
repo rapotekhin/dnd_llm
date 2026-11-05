@@ -77,7 +77,7 @@ static func meet(s: GameSession, data: Dictionary, room_id: String, from: String
 		FactionRules.meet(s, data, FactionRules.of_foe(data, enc, e))
 	if FactionRules.word_out(s, data, room_id, enc):  # v0.7.50.1: they heard of the hero: strike first, or talk
 		s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from, "word": true}
-		return {"lurk": true, "stealth": -1, "line": "Они уже слышали о вас и ждут, что вы скажете: %s" % _names(enc)}
+		return {"lurk": true, "stealth": -1, "line": "Они уже слышали о вас и ждут, что вы скажете: %s" % names(enc)}
 	s.lurking[room_id] = {"encounter": str(enc["id"]), "from": from, "seen": false}
 	var hidden := _hide(s, data, made, bool(enc.get("ambush", false)))
 	if bool(enc.get("ambush", false)) or not hidden.is_empty():
@@ -190,7 +190,7 @@ static func heads(s: GameSession, data: Dictionary, room_id: String, enc: Dictio
 	return out
 
 
-static func _names(enc: Dictionary) -> String:
+static func names(enc: Dictionary) -> String:
 	return ", ".join((enc["enemies"] as Array).map(func(e: Dictionary) -> String: return str(e.get("name", e["monster"]))))
 
 

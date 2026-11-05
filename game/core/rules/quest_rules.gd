@@ -16,6 +16,8 @@ extends RefCounted
 ## built step it waits for the next act (`awaiting`), the designer's turn builds it; `needs` holds any step.
 
 
+const STORY := "quest:"  # s.summaries: a quest told in the hero's words for the journal (v0.8.4.30)
+
 static func stepped(world: Dictionary) -> Dictionary:
 	var out := {}
 	var all: Dictionary = world.get("quests", {})
@@ -119,11 +121,15 @@ static func waits(s: GameSession, world: Dictionary, quest_id: String) -> bool:
 	return q.has("acts") and s.quests_active.has(quest_id) and int(s.quests_active[quest_id]) >= (q["steps"] as Array).size() 		and int(q.get("built", 0)) < (q["acts"] as Array).size()
 
 
-## A taken quest by acts on the last built step with an act still to build (v0.8.4.25): the next act may be built ahead.
-static func on_last_step(s: GameSession, world: Dictionary, quest_id: String) -> bool:
+## The next act of a quest by acts may be built ahead (v0.8.4.25, v0.8.4.30): a taken one with `steps` or fewer built
+## steps left before it (0 — the quest waits for it), or one offered and not taken yet, for its first act.
+static func ahead(s: GameSession, world: Dictionary, quest_id: String, steps := 1000) -> bool:
 	var q := quest(world, quest_id)
-	return q.has("acts") and s.quests_active.has(quest_id) and int(s.quests_active[quest_id]) == (q["steps"] as Array).size() - 1 \
-		and int(q.get("built", 0)) < (q["acts"] as Array).size()
+	if not q.has("acts") or int(q.get("built", 0)) >= (q["acts"] as Array).size():
+		return false
+	if s.quests_active.has(quest_id):
+		return (q["steps"] as Array).size() - int(s.quests_active[quest_id]) <= steps
+	return int(q.get("built", 0)) == 0 and not s.quests_done.has(quest_id) and not s.quests_failed.has(quest_id)
 
 
 static func current(s: GameSession, world: Dictionary, quest_id: String) -> Dictionary:
@@ -157,7 +163,10 @@ static func advance(s: GameSession, data: Dictionary) -> Array[String]:
 		while s.quests_active.has(id) and guard < 20:
 			guard += 1
 			var step := current(s, data["world"], id)
-			if step.is_empty() or _by_button(step["when"]):
+			if step.is_empty():
+				break
+			lines.append_array(_let_in(s, data, id, step))
+			if _by_button(step["when"]):
 				break
 			lines.append_array(_announce_parts(s, data["world"], id, step))
 			var all_done: bool = step["when"].has("all") and (s.quest_parts.get(id, []) as Array).size() >= (step["when"]["all"] as Array).size()
@@ -166,6 +175,20 @@ static func advance(s: GameSession, data: Dictionary) -> Array[String]:
 			if step["when"].has("item"):
 				_hand_over(s, data, str(step["when"]["item"]), lines, "Оставлено", int(step["when"].get("qty", 1)))
 			lines.append_array(_complete_step(s, data, id))
+	return lines
+
+
+## The giver lets the hero into its own private place the step leads to (v0.8.4.30, the author's feedback: a quest
+## behind the giver's door asked a separate request with a check). One grant per site, through SiteRules.grant.
+static func _let_in(s: GameSession, data: Dictionary, quest_id: String, step: Dictionary) -> Array[String]:
+	var giver := str(quest(data["world"], quest_id).get("giver", ""))
+	var lines: Array[String] = []
+	if giver.is_empty():
+		return lines
+	var world := WorldView.new(data["world"])
+	for room: String in WorldMap.step_targets(s, data, step["when"]):
+		if SiteRules.unwelcome(s, data, room) == giver:
+			lines.append_array(SiteRules.grant(s, data, giver, world.site_id(room)))
 	return lines
 
 

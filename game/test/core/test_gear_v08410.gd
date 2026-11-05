@@ -71,7 +71,7 @@ func test_a_hurt_foe_drinks_its_potion_and_it_is_not_on_its_body() -> void:
 	assert_int(int(f["hp"])).is_greater(5)
 	assert_int(int(f["inventory"].get("healing_potion", 0))).is_equal(0)
 	f["status"] = "dead"
-	assert_bool(CombatRules.spoils(data, f).has("healing_potion")).is_false()
+	assert_bool(CombatRules.spoils(data, f, RandomNumberGenerator.new()).has("healing_potion")).is_false()
 
 
 func test_a_foe_spends_its_bolts_and_without_them_has_no_bow() -> void:
@@ -84,7 +84,7 @@ func test_a_foe_spends_its_bolts_and_without_them_has_no_bow() -> void:
 	assert_int(int(f["ammo_spent"]["crossbow_bolt"])).is_equal(1)
 	assert_bool((Sheet.template(data, f)["actions"] as Array).any(func(a: Dictionary) -> bool: return str(a.get("item", "")) == "crossbow_light")).is_false()
 	f["status"] = "dead"
-	assert_int(int(CombatRules.spoils(data, f).get("crossbow_light", 0))).is_equal(1)  # the bow is still on it
+	assert_int(int(CombatRules.spoils(data, f, RandomNumberGenerator.new()).get("crossbow_light", 0))).is_equal(1)  # the bow is still on it
 
 
 func test_what_it_has_makes_its_blows_and_its_ac() -> void:

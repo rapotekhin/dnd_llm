@@ -9,6 +9,7 @@ extends RefCounted
 ## go, a thing its owner gives up to the hero.
 
 const HERO := "hero"
+const FOES := "enc:"  # «enc:<encounter id>»: the foes of an encounter own a thing of their lair (v0.8.4.30)
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -20,8 +21,23 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 ## The hero took `qty` of `item_id` that belongs to `owner` (an NPC id; "" — nobody's, nothing to mark).
 static func mark(s: GameSession, item_id: String, qty: int, owner: String) -> void:
-	if not owner.is_empty() and owner != HERO:
+	if claims(owner):
 		Thing.stamp(s.character, item_id, qty, "owner", owner)
+
+
+## An owner whose thing stays its own in the hero's hands: a person; the hero's own, nobody's or the foes' — taken
+## from a lair it is the hero's spoil, no theft (v0.8.4.30).
+static func claims(owner: String) -> bool:
+	return not owner.is_empty() and owner != HERO and not owner.begins_with(FOES)
+
+
+## The owner's name for a window or a frame: a person's, or the foes of an encounter by their names.
+static func name_of(s: GameSession, data: Dictionary, owner: String) -> String:
+	if owner.begins_with(FOES):
+		var id := owner.substr(FOES.length())
+		var enc: Dictionary = SceneRules.room(s, data["world"], EncounterRules.room_of(s, data, id)).get("encounter", {})
+		return EncounterRules.names(enc) if str(enc.get("id", "")) == id else id
+	return WorldView.name_of(data, owner)
 
 
 ## Back in its owner's container a thing is simply returned.

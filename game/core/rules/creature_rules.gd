@@ -69,7 +69,7 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String, treas
 		var f := CombatRules.fighter(s, fid)
 		var state := str(f.get("status", ""))
 		var npc := str(f.get("npc_id", ""))
-		var gear := CombatRules.spoils(data, f)
+		var gear := CombatRules.spoils(data, f, s.rng)
 		var person := not npc.is_empty()  # a person's things go back to its record with the fight's end (Gear.back)
 		if only_dead and state != DEAD:
 			continue

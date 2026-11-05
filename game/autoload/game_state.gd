@@ -40,6 +40,7 @@ var _opening: Dictionary = {}
 var _ahead: Dictionary = {}
 var _ahead_stop := -1
 var _ahead_n := 0  # its own ids, b-N: the session's turn counter counts the player's turns only
+var _act_told: Dictionary = {}  # «the master builds the next act» said once per act (v0.8.4.30)
 
 
 func has_session() -> bool:
@@ -448,21 +449,26 @@ func unattune(item_id: String) -> String:
 	return ""
 
 
-## «Собрать стрелы» after a fight (v0.7.12): half the spent ammunition, a minute, here only. "" or a key.
+## «Собрать стрелы» after a fight (v0.7.12): each spent shot found by its chance (v0.8.4.30), a minute, here only. "" or a key.
 func collect_ammo() -> String:
 	if not _idle():
 		return "EQUIP_BUSY"
 	var left: Dictionary = session.character.get("ammo_left", {})
 	if left.is_empty() or str(left.get("room", "")) != session.room_id or CombatRules.active(session):
 		return "AMMO_NOTHING"
-	var lines: Array[String] = []
-	for id: String in left["items"]:
-		Gear.stow_ammo(session, Catalog.data, session.character, id, int(left["items"][id]))
-		lines.append("Собрано: %s ×%d" % [ItemRules.display_name(Catalog.data["items"], session.items, id), int(left["items"][id])])
-	session.character.erase("ammo_left")
-	lines.append_array(TimeRules.advance(session, Catalog.data, int(ItemRules.cfg(Catalog.data)["collect_minutes"])))
-	_effect_lines(lines, true)
+	_effect_lines(_gather_ammo(session), true)
 	return ""
+
+
+func _gather_ammo(s: GameSession) -> Array[String]:
+	var left: Dictionary = s.character.get("ammo_left", {})
+	var lines: Array[String] = []
+	for id: String in left.get("items", {}):
+		Gear.stow_ammo(s, Catalog.data, s.character, id, int(left["items"][id]))
+		lines.append("Собрано: %s ×%d" % [ItemRules.display_name(Catalog.data["items"], s.items, id), int(left["items"][id])])
+	s.character.erase("ammo_left")
+	lines.append_array(TimeRules.advance(s, Catalog.data, int(ItemRules.cfg(Catalog.data)["collect_minutes"])))
+	return lines
 
 
 ## A trader's service (v0.7.12; data since v0.7.16): an enchant takes the main hand when it fits, else the first. "" or a key.
@@ -1449,8 +1455,9 @@ func _treasure() -> Dictionary:
 	return {}
 
 
-## The player leaves the results: the world remembers the fight, back to the game.
-func finish_combat() -> void:
+## The player leaves the results: the world remembers the fight, back to the game. `gather` — «Собрать стрелы» ticked in
+## the results (v0.8.4.30): what was found of the spent shots goes back at once.
+func finish_combat(gather := false) -> void:
 	if session == null or not CombatRules.active(session) or is_busy():
 		return
 	var s := session
@@ -1460,7 +1467,7 @@ func finish_combat() -> void:
 	var lines: Array[String] = [tr("COMBAT_OUTCOME_" + outcome.to_upper())]
 	if outcome in ["victory", "truce"]:
 		var back := {}  # v0.7.12: half the spent arrows can be picked up here
-		back = Gear.shot_back(Catalog.data, CombatRules.player(s))
+		back = Gear.shot_back(Catalog.data, CombatRules.player(s), s.rng)
 		if not back.is_empty():
 			s.character["ammo_left"] = {"room": s.room_id, "items": back}
 		if int(s.combat.get("xp", 0)) > 0:
@@ -1514,6 +1521,8 @@ func finish_combat() -> void:
 	lines.append_array(TimeRules.advance(s, Catalog.data, minutes))  # the rounds of the fight on the clock (v0.7.8)
 	if frenzied:
 		lines.append_array(ConditionRules.add_exhaustion(s, Catalog.data, 1, "неистовство"))
+	if gather and str(s.character.get("ammo_left", {}).get("room", "")) == s.room_id:
+		lines.append_array(_gather_ammo(s))
 	s.mode = GameSession.MODE_EXPLORATION
 	lines.append_array(CrimeRules.check_arrest(s, Catalog.data))  # a murder before the guard's eyes (v0.7.14)
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
@@ -1542,7 +1551,7 @@ func _lock_roll(how: String, dc: int, target: String) -> Dictionary:
 
 ## Eat, drink, fill the waterskins (v0.7.23): the engine's own acts, no master's turn; they take a few minutes.
 ## "" or a localization key.
-func need_act(act: String) -> String:
+func need_act(act: String, only := "") -> String:
 	if not _out_of_fight():
 		return "NEED_BUSY"
 	var data := Catalog.data
@@ -1553,7 +1562,7 @@ func need_act(act: String) -> String:
 	return _act(act, {  # one road of a window's button (v0.8.4.29.6)
 		"eat": [NeedRules.can_eat.bind(session, data), func() -> Array[String]: return timed.call(NeedRules.eat(session, data), int(cfg["food"]["eat_minutes"]))],
 		"drink": [NeedRules.can_drink.bind(session, data), func() -> Array[String]: return timed.call(NeedRules.drink(session, data), int(cfg["water"]["drink_minutes"]))],
-		"fill": [NeedRules.can_fill.bind(session, data), func() -> Array[String]: return timed.call(NeedRules.fill(session, data), int(cfg["water"]["fill_minutes"]))],
+		"fill": [NeedRules.can_fill.bind(session, data, only), func() -> Array[String]: return timed.call(NeedRules.fill(session, data, only), int(cfg["water"]["fill_minutes"]))],
 	}, "NEED_BUSY")
 
 
@@ -1951,6 +1960,7 @@ func start(s: GameSession) -> void:
 	effects = EffectEngine.new()
 	_ahead = {}
 	_ahead_stop = -1
+	_act_told = {}
 	EventBus.session_started.emit()
 	_prepare.call_deferred()
 
@@ -2076,7 +2086,9 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 			if not text.is_empty():
 				_add(GameSession.player_entry(text))
 				_log("Игрок: " + text)
-			return attack_npc(target, op).is_empty()
+			if session.npcs_here(world().world, session.room_id).has(target):
+				return attack_npc(target, op).is_empty()
+			return encounter_attack(true, op).is_empty()  # v0.8.4.30: at a foe seen before the fight
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
 	_forced = {}
@@ -2173,6 +2185,7 @@ func _enter_ready(lines: Array[String]) -> bool:
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
 	_maybe_summarize_location()
+	_maybe_tell_quests()
 	_prepare()
 	_after_turn(s, "enter")
 	return true
@@ -2390,6 +2403,7 @@ func accept_quest(quest_id: String) -> String:
 		return why
 	var q := QuestRules.quest(Catalog.data["world"], quest_id)
 	var lines := QuestRules.accept(session, Catalog.data, quest_id)
+	lines.append_array(_lay_acts(session))  # v0.8.4.30: its first act readied while it hung on offer
 	_refresh()
 	_effect_lines(lines)
 	_request("quest", "%s даёт игроку задание «%s». %s %s" % [world().npc(str(q["giver"])).get("name", ""), q["title"],
@@ -2438,6 +2452,7 @@ func take_board_all(orders: Array) -> String:
 		titles.append(str(QuestRules.quest(Catalog.data["world"], str(qid))["title"]))
 	if titles.is_empty():
 		return "QUEST_TOO_MANY"
+	lines.append_array(_lay_acts(session))
 	_refresh()
 	_effect_lines(lines)
 	_request("quest", "Игрок срывает с доски листки заказов: %s. %s" % [", ".join(titles), " ".join(lines)])
@@ -2501,7 +2516,8 @@ func crime_answer(how: String) -> String:
 
 
 ## The foes lurking unaware (v0.7.22.12): attack them by surprise (or, `surprise` false, they saw the hero). "" or a key.
-func encounter_attack(surprise: bool = true) -> String:
+## `opening` — a spell already spent at one of them (v0.8.4.30): the engine resolves it as the first blow.
+func encounter_attack(surprise: bool = true, opening: Dictionary = {}) -> String:
 	if not _idle():
 		return "WAIT_BUSY"
 	var lk := EncounterRules.lurking(session, session.room_id)
@@ -2514,8 +2530,65 @@ func encounter_attack(surprise: bool = true) -> String:
 	if surprise and hid:
 		src["stealth_total"] = 99  # nobody saw the hero: all caught off guard
 		src["from_hiding"] = true
+	if not opening.is_empty():
+		src["opening"] = opening.merged({"unaware": surprise and hid}, true)
 	start_combat(enc["enemies"], EncounterRules.source(enc, str(lk.get("from", "")), src))
 	return ""
+
+
+## The foes of the room the hero sees, before a fight (v0.8.4.30): [{id, name, monster…}] — their records.
+func foes_here() -> Array:
+	if session == null or CombatRules.active(session) or not EncounterRules.sighted(session, session.room_id):
+		return []
+	return (EncounterRules.lurking_encounter(session, Catalog.data, session.room_id).get("enemies", []) as Array) 		.filter(func(e: Dictionary) -> bool: return not Being.dead(session, EncounterRules.foe_id(e)))
+
+
+## Who a pinned thing may aim at out of a fight (v0.8.4.30): the people here, then the foes seen. [{id, name, foe}]
+func attach_targets() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if session == null:
+		return out
+	for id: String in session.npcs_here(world().world, session.room_id):
+		out.append({"id": id, "name": world().npc_name(id), "foe": false})
+	for e: Dictionary in foes_here():
+		out.append({"id": EncounterRules.foe_id(e), "name": str(e.get("name", e.get("monster", ""))), "foe": true})
+	return out
+
+
+## «Осмотреть» a foe before the fight (v0.8.4.30, the author's feedback): the same knowledge check as in a fight, once a
+## foe. "" or a key.
+func inspect_foe(id: String) -> String:
+	if not _out_of_fight():
+		return "WAIT_BUSY"
+	for e: Dictionary in foes_here():
+		if EncounterRules.foe_id(e) != id:
+			continue
+		if CombatRules.known(session, e):
+			return "COMBAT_ALREADY_KNOWN"
+		if bool(Being.view(session, id).get("looked", false)):
+			return "FOE_LOOKED"
+		Being.of(session, id)["looked"] = true
+		_effect_lines(CombatRules.look_over(session, Catalog.data, e), true)
+		return ""
+	return "CREATURE_NONE"
+
+
+## A thing pinned with a target, from a person's or a foe's menu (v0.8.4.30): the spell aimed at it, sent at once — a
+## hostile one starts the fight with it as the first blow, another is cast as from the sheet. "" or a key.
+func cast_at(spell_id: String, target: String) -> String:
+	if not _master_ready() or session.mode == GameSession.MODE_COMBAT:
+		return "WAIT_BUSY"
+	for ch: Dictionary in attach_choices():
+		if str(ch["kind"]) == "spell" and str(ch["id"]) == spell_id and not bool(ch["off"]):
+			attached = {"kind": "spell", "id": spell_id, "slot": int(ch["slots"][0]) if not (ch["slots"] as Array).is_empty() else 0, "target": target}
+			return "" if submit("") else "WAIT_BUSY"
+	return "SPELL_NOT_READY"
+
+
+## The spells the hero may aim at `target` out of a fight now: a hostile one at anybody, a charm at a person.
+func spells_at(target: String) -> Array[Dictionary]:
+	var foe := not session.npcs_here(world().world, session.room_id).has(target)
+	return attach_choices().filter(func(ch: Dictionary) -> bool: return str(ch["kind"]) == "spell" and not bool(ch["off"]) 		and (CombatRules.hostile_spell(Catalog.data, str(ch["id"])) or not foe and bool(SpellEffects.spec(Catalog.data, str(ch["id"])).get("npc_save", false))))
 
 
 ## Talking to the lurking foes before a fight (v0.7.22.12): one roll; a truce, they go, or the fight. "" or a key.
@@ -2674,7 +2747,7 @@ func _quest_progress() -> void:
 ## hurts or holds (CombatRules.hostile_spell). Charms, heals and words stay a master's turn.
 func _hostile_attach(what: Dictionary) -> bool:
 	var target := str(what.get("target", ""))
-	if target.is_empty() or not session.npcs_here(world().world, session.room_id).has(target):
+	if target.is_empty() or not attach_targets().any(func(t: Dictionary) -> bool: return str(t["id"]) == target):
 		return false
 	match str(what.get("kind", "")):
 		"spell":
@@ -3004,6 +3077,7 @@ func _request(kind: String, input: String) -> void:
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
 	_maybe_summarize_location()
+	_maybe_tell_quests()
 	_prepare()
 	if follow_up != "combat":
 		_opening = {}
@@ -3031,22 +3105,36 @@ func _after_turn(s: GameSession, kind: String) -> void:
 	_answer_letter(s, kind)
 
 
-## A taken quest waits for its next act (v0.7.39.6): the designer's turn builds it after the turn that opened it; a
-## failed build is tried again after the next turn, not in a loop.
+## A taken quest waits for its next act (v0.7.39.6). One readied ahead is laid at once; one not ready yet is built on the
+## second line while the game goes on (v0.8.4.30) and laid when it comes. Only when the second line is shut for the day
+## the designer's turn builds it here, after the turn that opened it; a failed build is tried again after the next turn.
 func _build_next_act(s: GameSession) -> bool:
+	var lines := _lay_acts(s)
+	if not lines.is_empty():
+		_effect_lines(lines, true)
 	var waiting := QuestRules.awaiting(s, Catalog.data["world"])
-	if waiting.is_empty() or is_busy():
+	if waiting.is_empty() or is_busy() or not Backend.is_ready():
 		return false
-	var built := int(QuestRules.quest(Catalog.data["world"], waiting[0]).get("built", 0))
-	var lines := _lay_prepared(s, [PrepareRules.act_of(s, waiting[0], built + 1)])
-	if not lines.is_empty():  # v0.8.4.25: built ahead and still fits the world — no designer's turn
-		_effect_lines(lines)
-		return _build_next_act(s)
-	if not Backend.is_ready():
+	if _ahead_stop != s.day and PrepareRules.on(Catalog.data):
+		for qid: String in waiting:
+			var key := "%s:%d" % [qid, int(QuestRules.quest(Catalog.data["world"], qid).get("built", 0)) + 1]
+			if not _act_told.has(key):
+				_act_told[key] = true
+				_add(GameSession.system_entry("QUEST_ACT_AHEAD"))
+		_prepare()
 		return false
 	_add(GameSession.system_entry("QUEST_ACT_BUILDING"))
 	_request("quest_act", QuestGen.act_frame(s, Catalog.data, waiting[0]))
 	return true
+
+
+## The acts readied ahead for the taken quests that wait for them, checked again and laid: their lines.
+func _lay_acts(s: GameSession) -> Array[String]:
+	var out: Array[String] = []
+	for qid: String in QuestRules.awaiting(s, Catalog.data["world"]):
+		var built := int(QuestRules.quest(Catalog.data["world"], qid).get("built", 0))
+		out.append_array(_lay_prepared(s, [PrepareRules.act_of(s, qid, built + 1)]))
+	return out
 
 
 ## «Есть дело?» at a person (v0.8.4.25): the quest it readied ahead, checked again, offered in its own words without a
@@ -3134,6 +3222,8 @@ func _prepare_one(s: GameSession, job: Dictionary) -> void:
 		return
 	PrepareRules.keep(s, Catalog.data, job, effects.kept(turn_id, call.result.get("effect_ids", [])), str(call.result.get("narration", "")))
 	_log("Заготовка %s %s: %s" % [job["kind"], job["key"], str(call.result.get("narration", ""))])
+	if not is_busy() and s.mode != GameSession.MODE_COMBAT and job["kind"] == "act":
+		_build_next_act(s)  # v0.8.4.30: a quest waiting for this act goes on now; else the next turn lays it
 	if not is_busy():
 		_prepare()
 
@@ -3299,6 +3389,39 @@ func _maybe_summarize_location() -> void:
 	var events := session.location_log.duplicate()
 	session.location_log.clear()
 	_summarize("location", str(world().location(loc).get("name", loc)), "location:" + loc, events)
+
+
+## The hero's diary of a quest (v0.8.4.30, the author's feedback): steps done since its last entry — the master rewrites
+## the account in the hero's words with them and the chronicle since, beside the turn like a summary.
+func _maybe_tell_quests() -> void:
+	var s := session
+	if s == null or not Backend.is_ready():
+		return
+	var w: Dictionary = Catalog.data["world"]
+	var ids: Array = s.quests_active.keys() + s.quests_done + s.quests_failed
+	for qid: String in ids:
+		var q := QuestRules.quest(w, qid)
+		var done := QuestRules.history(s, w, qid)
+		var n := done.size() + (1 if s.quests_done.has(qid) or s.quests_failed.has(qid) else 0)
+		var mark := QuestRules.STORY + qid + "#"
+		var was := str(s.summaries.get(mark, "0|0")).split("|")
+		if q.is_empty() or done.is_empty() or n <= int(was[0]):
+			continue
+		var events: Array[String] = []
+		if int(was[0]) == 0 and not str(q.get("giver", "")).is_empty():
+			events.append("Задание дал %s: %s" % [world().npc_name(str(q["giver"])), q.get("description", "")])
+		events.append_array(done.slice(int(was[0])))
+		var since := int(was[1])
+		if since == 0:  # the first entry: the chronicle from the quest's first line in it
+			var first := s.chronicle.filter(func(f: Dictionary) -> bool: return str(f["text"]).contains("«%s»" % q.get("title", "")))
+			since = int(first[0]["at"]) - 1 if not first.is_empty() else TimeRules.abs_minute(s)
+		for f: Dictionary in s.chronicle:
+			if int(f["at"]) > since:
+				events.append(str(f["text"]))
+		if s.quests_done.has(qid) or s.quests_failed.has(qid):
+			events.append("Задание %s." % ("выполнено" if s.quests_done.has(qid) else "провалено"))
+		s.summaries[mark] = "%d|%d" % [n, TimeRules.abs_minute(s)]
+		_summarize("quest", str(q.get("title", qid)), QuestRules.STORY + qid, events.slice(maxi(0, events.size() - 24)))
 
 
 ## The brush (v0.7.35): the last event's image — drawn once, opened again afterwards. Beside a turn, like a summary.

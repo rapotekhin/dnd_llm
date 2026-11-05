@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.110.0"
+PROTOCOL_VERSION = "0.111.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -530,7 +530,7 @@ class OkResult(_Out):
 
 
 class SummaryParams(_In):
-    kind: Literal["location", "dialogue", "npc_memory"]
+    kind: Literal["location", "dialogue", "npc_memory", "quest"]  # quest: the hero's journal account of it (0.111.0)
     subject_id: str
     previous: str = ""
     events: list[str] = Field(min_length=1)

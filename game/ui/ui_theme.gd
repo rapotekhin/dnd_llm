@@ -10,6 +10,7 @@ const PANEL_RAISED := Color("#2b231c")
 const BORDER := Color("#4a3d2f")
 const TEXT := Color("#e8dcc6")
 const MUTED := Color("#9a8f7e")
+const TEMP_HP := Color("#6f9fc8")  # temporary hit points: a blue piece beside the HP bar
 const ACCENT := Color("#c9a45c")
 const ACCENT_BRIGHT := Color("#e6c47e")
 const OK := Color("#8fb36f")

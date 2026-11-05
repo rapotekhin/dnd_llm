@@ -12,7 +12,8 @@
       "enum": [
         "location",
         "dialogue",
-        "npc_memory"
+        "npc_memory",
+        "quest"
       ],
       "title": "Kind",
       "type": "string"

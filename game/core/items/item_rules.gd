@@ -515,6 +515,17 @@ static func rarity_ok(data: Dictionary, d: Dictionary, level: int) -> String:
 
 
 ## The sum of «+N» properties of an item ("magic_plus1", "ac_plus2"…) for the given prefixes.
+## The damage a weapon's own properties add to each hit (fire_damage — +1d6 fire, v0.7.12): [{dice, type}]. One list for the
+## blow and for every line that tells the weapon's damage (v0.8.4.30).
+static func elements(data: Dictionary, def: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for p: Variant in def.get("properties", []):
+		var dtype := str(p).trim_suffix("_damage")
+		if str(p).ends_with("_damage") and data["misc"]["damage_types"].has(dtype):
+			out.append({"dice": str(cfg(data)["element_dice"]), "type": dtype})
+	return out
+
+
 static func plus(def: Dictionary, prefixes: Array) -> int:
 	var n := 0
 	for p: Variant in def.get("properties", []):
@@ -611,6 +622,12 @@ static func check_generated(data: Dictionary, item: Dictionary, level: int) -> D
 	if wear.has("reason"):
 		return {"ok": false, "reason": wear["reason"]}
 	points += int(wear.get("points", 0))
+	var dealt: Array = elements(data, item).map(func(el: Dictionary) -> String: return str(el["type"]))
+	var base_def: Dictionary = items_data["catalog"].get(base, {})
+	dealt.append(str(base_def.get("weapon", {}).get("damage_type", "")))
+	var told := MakeRules.told_damage(data, "%s. %s" % [item.get("name", ""), item.get("description", "")], dealt)
+	if not told.is_empty():  # v0.8.4.30: the card must deal what the words promise
+		return {"ok": false, "reason": told}
 	if points == 0 and not str(item.get("rarity", "common")) in ["common", ""]:  # big test #16 (v0.7.22.2)
 		return {"ok": false, "reason": ("магическая вещь (%s) без механики станет простой безделушкой — движок не опознает её и ничего ей не даст. " +
 			"Дай ей свойства (`properties` из словаря движка) или `use` (заряды заклинания, зелье), либо возьми готовую магическую вещь " +

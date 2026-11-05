@@ -343,6 +343,8 @@ static func why_not(s: GameSession, data: Dictionary, id: String) -> String:
 		return "CRAFT_UNKNOWN"
 	if not project(s.character).is_empty():
 		return "CRAFT_BUSY"
+	if tired(s, data):
+		return "CRAFT_TOO_TIRED"
 	if not skills_missing(s.character, data, r).is_empty():
 		return "CRAFT_NO_SKILL"
 	if needs_tool(r) and not BackgroundRules.has_tool(s.character, tool_of(r)):
@@ -352,6 +354,11 @@ static func why_not(s: GameSession, data: Dictionary, id: String) -> String:
 	if not missing(s, r).is_empty():
 		return "CRAFT_NO_MATERIALS"
 	return ""
+
+
+## Too worn to work at a craft: exhaustion of rules.craft.max_exhaustion or more (v0.8.4.30).
+static func tired(s: GameSession, data: Dictionary) -> bool:
+	return ConditionRules.exhaustion(s.character) >= int(cfg(data).get("max_exhaustion", 99))
 
 
 static func project(c: Dictionary) -> Dictionary:
@@ -382,6 +389,8 @@ static func can_work(s: GameSession, data: Dictionary) -> String:
 	var p := project(s.character)
 	if p.is_empty():
 		return "CRAFT_NO_PROJECT"
+	if tired(s, data):
+		return "CRAFT_TOO_TIRED"
 	var r := recipe(s, data, str(p["recipe"]))
 	if needs_tool(r) and not BackgroundRules.has_tool(s.character, tool_of(r)):
 		return "CRAFT_NO_TOOL"

@@ -3,7 +3,8 @@ extends RefCounted
 ## The master readies ahead (v0.8.4.25, the author's decision of 2026-11-02, docs/production/master-prefetch.md): while the
 ## player plays, a second line of requests asks the master for what the hero will meet soon — the furnishing of the rooms
 ## within `depth` of the map's ways, the orders of a board, a quest of a person around (given only when the player asks)
-## and the next act of a taken quest once the hero is on the last step of the current one. A readied effect is kept in
+## and the next act of a quest: the first of an offered one, the next of a taken one within rules.prepare.act_steps steps
+## (v0.8.4.30), built on this line also when the quest already waits for it, so the game goes on meanwhile. A readied effect is kept in
 ## s.prepared as the master proposed it and checked by the engine again when it is used, so a world that changed meanwhile
 ## refuses it and the live turn does the work as before. Numbers in rules.prepare.
 
@@ -62,8 +63,10 @@ static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Di
 		return out
 	var c := cfg(data)
 	var world: Dictionary = data["world"]
-	for qid: String in s.quests_active:
-		if QuestRules.on_last_step(s, world, qid):
+	var made: Array = s.quests_active.keys()  # the taken first, then the offered ones for their first act
+	made.append_array(WorldGen.generated(s).get("quests", {}).keys().filter(func(q: String) -> bool: return not s.quests_active.has(q)))
+	for qid: String in made:
+		if QuestRules.ahead(s, world, qid, int(c.get("act_steps", 1000))):
 			var key := "%s:%d" % [qid, int(QuestRules.quest(world, qid).get("built", 0)) + 1]
 			if not part(s, ACTS).has(key) and not busy.has("act:" + key):
 				out.append({"kind": "act", "key": key, "quest": qid})
@@ -183,6 +186,10 @@ static func frame(s: GameSession, data: Dictionary, job: Dictionary) -> String:
 			for k: String in ["personality", "description"]:
 				if not str(n.get(k, "")).is_empty():
 					lines.append(str(n[k]))
+			lines.append_array(QuestGen.person_past(s, data, npc))  # v0.8.4.30: a new quest goes on from what happened
+			var facts := s.chronicle_tail(data["world"], 8)
+			if not facts.is_empty():
+				lines.append("Летопись (последнее): " + "; ".join(facts))
 			var hooks: Array = v.room(room).get("hooks", [])
 			if not hooks.is_empty():
 				lines.append("Зацепки места: %s" % "; ".join(hooks))
@@ -193,7 +200,8 @@ static func _people(s: GameSession, data: Dictionary, ids: Array) -> String:
 	if ids.is_empty():
 		return "никого"
 	var v := WorldView.new(data["world"])
-	return ", ".join(ids.map(func(id: Variant) -> String: return "%s [%s], %s" % [v.npc_name(str(id)), id, v.npc(str(id)).get("role", "")]))
+	return ", ".join(ids.map(func(id: Variant) -> String: return "%s [%s], %s" % [OwnerRules.name_of(s, data, str(id)), id,
+		"враги этого места" if str(id).begins_with(OwnerRules.FOES) else v.npc(str(id)).get("role", "")]))
 
 
 ## The engine adds to each effect of a job's turn: the room a furnishing is for, the room of a board or a giver, `ahead`

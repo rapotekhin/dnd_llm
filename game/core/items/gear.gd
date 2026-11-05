@@ -325,10 +325,14 @@ static func stow_ammo(s: GameSession, data: Dictionary, holder: Dictionary, ammo
 
 
 ## What may be picked up of what it shot: {ammo: qty}.
-static func shot_back(data: Dictionary, f: Dictionary) -> Dictionary:
+static func shot_back(data: Dictionary, f: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
 	var out := {}
+	var chance := float(ItemRules.cfg(data)["recover"])
 	for ammo: String in f.get("ammo_spent", {}):
-		var n := int(floor(int(f["ammo_spent"][ammo]) * float(ItemRules.cfg(data)["recover"])))
+		var n := 0
+		for i in int(f["ammo_spent"][ammo]):  # each shot whole or broken on its own (v0.8.4.30, the author's feedback)
+			if rng.randf() < chance:
+				n += 1
 		if n > 0:
 			out[ammo] = n
 	return out

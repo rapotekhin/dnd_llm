@@ -476,9 +476,8 @@ func _touch(ref: String) -> void:
 		_approach(ref, "touch", _show_menu.bind(ref))
 	elif thing:
 		_approach(ref, "touch", _side.use_thing.bind(ref))
-	elif ref.begins_with("foe:"):  # a foe at hand is struck; they who wait for words stay at the panel
-		if not bool(EncounterRules.lurking(GameState.session, GameState.session.room_id).get("word", false)):
-			_approach(ref, "touch", GameState.encounter_attack)
+	elif ref.begins_with("foe:"):  # v0.8.4.30: its menu — the blow, a look, a spell aimed at it
+		_show_menu(ref)
 	else:
 		_approach(ref, "touch" if ref.begins_with("station:") else "talk", _show_menu.bind(ref))
 
@@ -801,14 +800,14 @@ func _check_chip() -> void:
 
 
 ## The boxes of the targets of a pinned spell: the hero and the NPCs here, no more than `limit` ticked.
-func _attach_boxes(npcs: Array, limit: int) -> void:
+func _attach_boxes(npcs: Array, limit: int, names: Dictionary) -> void:
 	var a := GameState.attached
 	var picked: Array = a.get("targets", [])
 	for id: String in [GameState.SELF_TARGET] + npcs:
 		var box := CheckBox.new()
 		box.name = "AttachPick_" + id
 		box.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		box.text = tr("ATTACH_SELF") if id == GameState.SELF_TARGET else str(GameState.world().npc(id).get("name", id))
+		box.text = tr("ATTACH_SELF") if id == GameState.SELF_TARGET else str(names.get(id, id))
 		box.button_pressed = picked.has(id)
 		box.disabled = not picked.has(id) and picked.size() >= limit
 		box.toggled.connect(func(on: bool) -> void:
@@ -858,18 +857,22 @@ func _refresh_attach(s: GameSession, busy: bool, online: bool) -> void:
 		pick.item_selected.connect(func(i: int) -> void:
 			GameState.attached["slot"] = pick.get_item_id(i))
 		_attach_chip.add_child(pick)
-	var npcs := s.npcs_here(GameState.world().world, s.room_id)
+	var targets := GameState.attach_targets()  # the people here and the foes seen (v0.8.4.30)
+	var npcs: Array = targets.map(func(t: Dictionary) -> String: return str(t["id"]))
+	var names := {}
+	for t: Dictionary in targets:
+		names[t["id"]] = t["name"]
 	var many := str(a["kind"]) == "spell" and SpellEffects.picks_side(Catalog.data, str(a["id"])) in ["friend", "any"] \
 		and SpellEffects.picks_count(Catalog.data, str(a["id"]), int(a.get("slot", 0))) > 1
 	if many and not npcs.is_empty():  # v0.7.50.1: several targets — boxes; none ticked is the hero
-		_attach_boxes(npcs, SpellEffects.picks_count(Catalog.data, str(a["id"]), int(a.get("slot", 0))))
+		_attach_boxes(npcs, SpellEffects.picks_count(Catalog.data, str(a["id"]), int(a.get("slot", 0))), names)
 	elif not npcs.is_empty():
 		var who := OptionButton.new()
 		who.name = "AttachTarget"
 		who.add_item(tr("ATTACH_NO_TARGET"))
 		var ids: Array[String] = [""]
 		for id: String in npcs:
-			who.add_item(str(GameState.world().npc(id).get("name", id)))
+			who.add_item(str(names[id]))
 			ids.append(id)
 		who.select(maxi(0, ids.find(str(a.get("target", "")))))
 		who.item_selected.connect(func(i: int) -> void:
