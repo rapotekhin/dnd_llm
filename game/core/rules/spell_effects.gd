@@ -77,16 +77,16 @@ static func on_friend(s: GameSession, data: Dictionary, spell_id: String, slot: 
 		return
 	_end_spell_on(f, spell_id, str(CombatRules.caster(s)["id"]))
 	var boon := _effect(s, data, spell_id, slot, f)  # its speed and AC are read live: Sheet.speed, CombatRules.ac_of (v0.8.4.15)
-	for cond: Variant in sp.get("remove", []):
-		CombatRules._remove_condition(f, str(cond))
+	if sp.has("remove"):  # the one cure of anybody, its lines too (v0.8.4.29.2)
+		lines.append_array(ConditionRules.cure(s, data, {"remove": sp["remove"]}, boon.get("source", {}), f))
 	if sp.has("ac_base"):  # Mage Armor: on one without armour, its base and DEX
 		boon.erase("ac_base")
 		if str(f.get("equipped", {}).get("armor", "")).is_empty():
 			boon["ac_min"] = int(sp["ac_base"]) + Sheet.ability_mod(s, data, f, "dex")
-	if boon.has("max_hp"):
-		f["max_hp"] = int(f["max_hp"]) + int(boon["max_hp"])
-		f["hp"] = int(f["hp"]) + int(boon["max_hp"])
 	ConditionRules.add_effect(f, GameSession.whole(boon))
+	if boon.has("max_hp"):  # Aid: a status of its time, as on the hero (v0.8.4.29.2)
+		Sheet.refresh_max(s, data, f)
+		f["hp"] = mini(int(f["hp"]) + int(boon["max_hp"]), int(f["max_hp"]))
 	lines.append("%s: %s" % [f["name"], spell["name"]])
 	_temp_points(s, data, sp, slot - maxi(1, int(spell["level"])), f, lines)
 	if sp.has("temp_hp"):
@@ -900,7 +900,8 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 		if z.has("escape"):  # a web: held until broken by its skills against its DC (escape.gd), or until the zone is gone
 			fields.merge({"escape_dc": int(z["dc"]), "escape": z["escape"], "zone": str(z["spell"])})
 		lines.append_array(CombatRules._add_condition(s, data, f, str(z["cond"]), fields))
-		lines.append("%s: %s — %s" % [z["name"], f["name"], CombatRules.cond_name(data, str(z["cond"]))])
+		if ConditionRules.has(Sheet.holder(s, f), str(z["cond"])):  # an immunity keeps it off (ConditionRules.impose)
+			lines.append("%s: %s — %s" % [z["name"], f["name"], CombatRules.cond_name(data, str(z["cond"]))])
 	if bool(z.get("retch", false)):
 		f["retching"] = true  # its next start of a turn takes the action and says so (CombatRules._begin_turn)
 	return lines

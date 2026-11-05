@@ -88,7 +88,24 @@ static func max_hp(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 	if h.has("status"):
 		return int(h.get("max_hp", 1))
 	var top := int(h.get("max_hp", (h.get("creature", {}) as Dictionary).get("max_hp", template(data, who).get("hp", 1))))
-	return maxi(1, top / 2) if ConditionRules.exhaustion(h) >= 4 else top
+	return maxi(1, top / (2 if ConditionRules.exhaustion(h) >= 4 else 1) + ConditionRules.max_hp_shift(h))
+
+
+## A fighter's maximum of hit points counted as the hero's sheet counts its own (v0.8.4.29.2): its own number halved by
+## exhaustion 4, plus what its statuses add (Aid, a life drain). What was laid on it is kept apart (`max_laid`), so its own
+## number stays whatever set it. A fall holds its hit points under it; a rise does not heal by itself.
+static func refresh_max(s: GameSession, data: Dictionary, who: Dictionary) -> void:
+	if is_hero(who):
+		CharacterRules.refresh(s.character, data, s.items)
+		return
+	var h := holder(s, who)
+	var own := int(h.get("max_hp", 1)) - int(h.get("max_laid", 0))
+	var top := maxi(1, own / (2 if ConditionRules.exhaustion(h) >= 4 else 1) + ConditionRules.max_hp_shift(h))
+	var was := int(h.get("max_hp", top))
+	h["max_laid"] = top - own
+	h["max_hp"] = top
+	if top < was:
+		h["hp"] = mini(int(h.get("hp", top)), top)
 
 
 ## Its hit points now: its own count, a record whole without one its maximum.
@@ -237,11 +254,12 @@ static func save(s: GameSession, data: Dictionary, who: Dictionary, ab: String, 
 		note += ", с преимуществом (%s)" % ", ".join(at["adv"])
 	elif dis and not adv:
 		note += ", с помехой (%s)" % ", ".join(at["dis"])
+	var label := CombatRules.ab_name(ab) if not ab.is_empty() else "от смерти"  # `ab` "" — a death save (v0.8.4.29.2)
 	if hero and not bool(opts.get("quiet", false)):
-		RollParts.note(s, "Спасбросок: " + CombatRules.ab_name(ab), rolls, nat, parts, total - nat, dc)
+		RollParts.note(s, "Спасбросок: " + label, rolls, nat, parts, total - nat, dc)
 	return {"ok": ok, "total": total, "nat": nat, "rolls": rolls, "bonus": total - nat, "parts": parts,
 		"adv": at["adv"], "dis": at["dis"], "fail": at["fail"],
-		"text": "%s %d против Сл %d%s — %s" % [CombatRules.ab_name(ab), total, dc, note, "успех" if ok else "провал"]}
+		"text": "%s %d против Сл %d%s — %s" % [label, total, dc, note, "успех" if ok else "провал"]}
 
 
 ## A save's bonus and what it rolls with, nothing rolled or spent (Roll.odds): {bonus, adv, dis, failed}.
@@ -271,10 +289,14 @@ static func _save_situation(s: GameSession, data: Dictionary, who: Dictionary, a
 	return {"adv": adv, "dis": dis, "fail": fail}
 
 
-## The labelled bonus of a save: the hero's sheet with the game's difficulty and the cover on DEX; another's number.
+## The labelled bonus of a save: the hero's sheet with the game's difficulty and the cover on DEX; another's number. A death
+## save (`ab` "") has no ability: the game's difficulty for the hero and what adds to every save.
 static func _save_parts(s: GameSession, data: Dictionary, who: Dictionary, ab: String) -> Array[Dictionary]:
 	var parts: Array[Dictionary] = []
-	if is_hero(who):
+	if ab.is_empty():
+		if is_hero(who):
+			RollParts.difficulty(s, data, parts)
+	elif is_hero(who):
 		parts = RollParts.cached(s.character, data, "save", ab, s.items)
 		RollParts.difficulty(s, data, parts)  # the game's difficulty (v0.7.20.4)
 	else:

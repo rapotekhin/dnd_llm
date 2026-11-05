@@ -204,17 +204,21 @@ static func _sync(c: Dictionary) -> void:
 	c["conditions"] = ids
 
 
-## The hero lays down a condition with everything it brings (v0.7.8): an incapacitating one breaks concentration,
-## unconscious also lays the hero prone. Returns the lines.
+## A condition laid on anybody with everything it brings (v0.7.8): an incapacitating one breaks concentration,
+## unconscious also lays it prone. v0.8.4.29.2: the one gate of immunity for the hero and the rest — its template's condition
+## immunities and what a status or a trait keeps away (Heroism, Steadfast, an elf's sleep); the hero hears why. Returns the lines.
 static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Dictionary = Sheet.HERO) -> Array[String]:
 	var hero := Sheet.is_hero(who)
 	var c := Sheet.holder(s, who)
 	var cond := str(e.get("condition", ""))
 	var lines: Array[String] = []
-	if not hero and CombatRules.immune_to(data, who, cond):  # its template's condition immunities, whatever lays it
+	if CombatRules.immune_to(data, who, cond):  # its template's condition immunities, whatever lays it
 		return lines
-	if not hero and not HeroDefense.immune(s, data, who, cond, str(e.get("save", {}).get("tag", ""))).is_empty():
-		return lines  # what a status keeps away (Heroism, Steadfast; v0.8.4.27.5) — the hero's callers tell why themselves
+	var why := HeroDefense.immune(s, data, who, cond, str(e.get("tag", e.get("save", {}).get("tag", ""))))
+	if not why.is_empty():
+		if hero:
+			lines.append("%s: не действует — %s" % [name_of(data, cond), why])
+		return lines
 	if cond == "exhaustion" and (hero or who.has("id")):  # a level of the one scale, whoever takes it (v0.8.4.11)
 		return add_exhaustion(s, data, 1, str(e.get("source", {}).get("name", "")), str(who.get("id", Being.HERO)))
 	add_effect(c, e.merged(MakeRules.fx(s, cond)))
@@ -222,11 +226,23 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Diction
 		FightGrid.keep_seen(c)
 	if cond == "unconscious" and not has(c, "prone"):
 		add_effect(c, {"condition": "prone", "ends": {}, "source": e.get("source", {})})
-	if INCAPACITATING.has(cond) and hero and not str(c.get("concentration", "")).is_empty():
-		lines.append_array(end_concentration(s, data, "недееспособность"))
-	elif INCAPACITATING.has(cond) and not hero and not str(c.get("concentration", "")).is_empty():
+	if INCAPACITATING.has(cond) and hero:
+		if not str(c.get("concentration", "")).is_empty():
+			lines.append_array(end_concentration(s, data, "недееспособность"))
+		if CombatRules.active(s):  # v0.8.4.29.2: the hero's holds go as anybody's (a grapple, a net)
+			MonsterRules.release(s, data, CombatRules.player(s), lines, false)
+	elif INCAPACITATING.has(cond) and not hero and c.has("id"):  # its holds and its concentration go
 		MonsterRules.release(s, data, c, lines)
 	return lines
+
+
+## What its statuses add to its maximum of hit points (Aid +, a life drain −; v0.8.4.29.2: the hero and a fighter alike).
+static func max_hp_shift(c: Dictionary) -> int:
+	var out := 0
+	for e: Variant in c.get("effects", []):
+		if e is Dictionary:
+			out += int((e as Dictionary).get("max_hp", 0))
+	return out
 
 
 static func incapacitated(c: Dictionary) -> bool:
@@ -499,8 +515,8 @@ static func add_exhaustion(s: GameSession, data: Dictionary, n: int, why: String
 	var name := "" if hero else Rest.name_of(s, data, who) + ": "
 	if hero:
 		CharacterRules.refresh(c, data, s.items)  # speed and max HP depend on it
-	elif c.has("status") and (before >= 4) != (after >= 4):  # a fighter's maximum, as the hero's (v0.8.4.15)
-		c["max_hp"] = maxi(1, int(c["max_hp"]) / 2) if after >= 4 else int(c["max_hp"]) * 2
+	elif c.has("status"):  # a fighter's maximum, as the hero's (v0.8.4.15, v0.8.4.29.2: one count)
+		Sheet.refresh_max(s, data, c)
 		c["hp"] = mini(int(c["hp"]), int(c["max_hp"]))
 	if after < before:
 		return [name + "истощение %d → %d" % [before, after]]

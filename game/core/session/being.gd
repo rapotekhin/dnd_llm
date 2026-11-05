@@ -61,7 +61,7 @@ const NESTED := {
 	},
 	"fight": {
 		"id": TYPE_STRING, "n": TYPE_INT, "side": TYPE_STRING, "name": TYPE_STRING, "base": TYPE_STRING, "desc": TYPE_STRING, "x": TYPE_INT, "y": TYPE_INT, "span": TYPE_INT,
-		"status": TYPE_STRING, "init": TYPE_INT, "monster": TYPE_STRING, "hp": TYPE_INT, "max_hp": TYPE_INT, "ac": TYPE_INT,
+		"status": TYPE_STRING, "init": TYPE_INT, "monster": TYPE_STRING, "hp": TYPE_INT, "max_hp": TYPE_INT, "max_laid": TYPE_INT, "ac": TYPE_INT,
 		"npc_id": TYPE_STRING, "by_hero": TYPE_BOOL, "morale": TYPE_BOOL, "no_xp": TYPE_BOOL, "law": TYPE_BOOL, "helper": TYPE_BOOL,
 		"ally": TYPE_STRING, "summon_id": TYPE_STRING, "spell": TYPE_STRING, "creature_id": TYPE_STRING, "actions": TYPE_ARRAY, "inventory": TYPE_DICTIONARY,
 		"gold_cp": TYPE_INT, "equipped": TYPE_DICTIONARY, "copies": TYPE_DICTIONARY, "ammo_spent": TYPE_DICTIONARY,

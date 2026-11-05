@@ -195,12 +195,8 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 
 ## Life drain: the maximum of hit points goes down until the long rest.
 static func _drain(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, a: Dictionary, dealt: int) -> void:
-	if Sheet.is_hero(t):
-		ConditionRules.add_effect(s.character, {"condition": "", "max_hp": -dealt, "ends": {"rest": "long"}, "source": _source(f, a)})
-		CharacterRules.refresh(s.character, data, s.items)
-	else:
-		t["max_hp"] = maxi(1, int(t["max_hp"]) - dealt)
-		t["hp"] = mini(int(t["hp"]), int(t["max_hp"]))
+	ConditionRules.add_effect(Sheet.holder(s, t), {"condition": "", "max_hp": -dealt, "ends": {"rest": "long"}, "source": _source(f, a)})
+	Sheet.refresh_max(s, data, t)  # until a long rest, the hero's and anybody's (v0.8.4.29.2)
 
 
 static func _source(f: Dictionary, a: Dictionary) -> Dictionary:
@@ -227,6 +223,8 @@ static func _lay(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 	if cond == "grappled":
 		e["hold"] = true  # ends with the grappler
 	lines.append_array(ConditionRules.impose(s, data, e, t))
+	if cond != "exhaustion" and not ConditionRules.has(me, cond):
+		return  # an immunity kept it off and said why (ConditionRules.impose, v0.8.4.29.2)
 	var what := ConditionRules.name_of(data, cond).to_lower()
 	if fx.has("also") and cond == str(fx.get("condition", "")):
 		var also := {"condition": str(fx["also"]), "source": _source(f, a), "by": str(f["id"]), "ends": e["ends"], "with": cond}

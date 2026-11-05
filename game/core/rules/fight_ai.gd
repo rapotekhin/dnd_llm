@@ -277,10 +277,9 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[St
 		o = {} if blow.is_empty() else {"act": "attack", "to": str(t["id"]), "how": {"action": str(blow["name_en"])}, "kind": "melee"}
 	elif str(o["kind"]) == "melee" and moved > 0:
 		lines.append("%s сближается вплотную" % f["name"] if hero else "%s сближается с %s" % [f["name"], t["name"]])
-		if hero:
-			CombatRules._reach_strike(s, data, f, lines)
-			if str(f.get("status")) != "active":
-				return
+		CombatRules._reach_strike(s, data, f, t, lines)  # whoever it comes up to (v0.8.4.29.2)
+		if str(f.get("status")) != "active":
+			return
 	if o.is_empty() or not Acts.one(str(o["act"])).can(s, data, f, str(o["to"]), o["how"]).is_empty():
 		lines.append("%s выжидает" % f["name"])
 		return

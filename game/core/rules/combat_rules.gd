@@ -233,11 +233,11 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 	for w: Dictionary in source.get("waves", []):
 		add_incoming(s, data, w.get("enemies", []), int(w.get("round", 2)), str(w.get("side", "right")))
 	FightField.lay(s, data)
-	# Initiative: d20 + DEX; ties — the higher DEX, then the player.
+	# Initiative: a DEX check of anybody (initiative_of); ties — the higher DEX, then the player.
 	var inits := []
 	for id: String in fighters:
 		var dex := _dex_of(s, data, id)
-		var roll := Roll.d20(s.rng) + dex
+		var roll := initiative_of(s, data, id)
 		fighter(s, id)["init"] = roll
 		inits.append([roll, dex, 1 if id == PLAYER else 0, id])
 	inits.sort_custom(func(a: Array, b: Array) -> bool: return a.slice(0, 3) > b.slice(0, 3))
@@ -368,9 +368,7 @@ static func _add_foes(s: GameSession, data: Dictionary, specs: Array, at: Vector
 					f[k] = str(spec[k])
 			if bool(spec.get("helper", false)):
 				f["helper"] = true
-			if ConditionRules.exhaustion(f) >= 4:  # exhaustion 4 halves anybody's maximum (v0.8.4.15)
-				f["max_hp"] = maxi(1, int(f["max_hp"]) / 2)
-				f["hp"] = mini(int(f["hp"]), int(f["max_hp"]))
+			Sheet.refresh_max(s, data, f)  # v0.8.4.29.2: exhaustion 4, Aid, a drain — counted on it as on the hero
 			Gear.arm(s, data, f, spec)  # what it has: its blows and its AC (v0.8.4.10)
 			FightField.auras(s, data, f)  # what its traits lay around it (v0.8.4.27.1)
 			ids.append(id)
@@ -515,6 +513,8 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	f["disengaged"] = false
 	f["reacted"] = false  # the reaction comes back at the start of one's own turn (5e)
 	f.erase("swooped")
+	if not Sheet.is_hero(f):  # a status run out (Aid, a drain till a rest) takes its hit points back; the hero's sheet does it itself
+		Sheet.refresh_max(s, data, f)
 	f["points"] = fresh_points(s, data, f)
 	for o: String in s.combat["order"]:  # Shield, Help and a spell's riders last until the start of `ends.turn`'s turn
 		var h := Sheet.holder(s, fighter(s, o))
@@ -1825,10 +1825,16 @@ static func _arrivals(s: GameSession, data: Dictionary, lines: Array[String]) ->
 	s.combat["incoming"] = left
 
 
+## Anybody's initiative (v0.8.4.29.2): a Dexterity check on the one road of Roll.check — Lucky, exhaustion and the statuses,
+## the game's difficulty for the hero.
+static func initiative_of(s: GameSession, data: Dictionary, id: String) -> int:
+	return int(Roll.check(s, data, fighter(s, id), {"what": "Инициатива", "ability": "dex", "quiet": true})["total"])
+
+
 ## A newcomer rolls initiative and takes its place in the order (called at the start of a round, turn 0).
 static func _insert_initiative(s: GameSession, data: Dictionary, id: String) -> void:
 	var f := fighter(s, id)
-	f["init"] = Roll.d20(s.rng) + _dex_of(s, data, id)
+	f["init"] = initiative_of(s, data, id)
 	var order: Array = s.combat["order"]
 	var at := order.size()
 	for i in order.size():
@@ -1933,8 +1939,9 @@ static func _death_save(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	if Sheet.prop(s, data, f, "wound_closure"):  # Periapt of Wound Closure (v0.7.12)
 		stabilize(s, f, "Амулет закрытия ран", lines)
 		return
-	var beacon := not SpellEffects.hero_effects(me, "death_adv").is_empty()  # Beacon of Hope (v0.7.13.2)
-	var roll := Roll.kept(Roll.of(s, f, beacon, false), beacon, false)
+	var beacon := SpellEffects.hero_effects(me, "death_adv")  # Beacon of Hope (v0.7.13.2)
+	var r := Sheet.save(s, data, f, "", 10, "death", false, {"adv_why": [] if beacon.is_empty() else [str(beacon[0].get("source", {}).get("name", ""))]})
+	var roll := int(r["nat"])  # v0.8.4.29.2: a save on the one road — Bless, Lucky, Bardic Inspiration, the game's difficulty
 	if roll == 20:
 		me["hp"] = 1
 		ConditionRules.remove(me, "unconscious")
@@ -1943,11 +1950,11 @@ static func _death_save(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 			f["status"] = "active"
 		lines.append("%s: спасбросок от смерти 20 — приходит в себя с 1 HP!" % name)
 		return
-	if roll + (DifficultyRules.bonus(s, data) if Sheet.is_hero(f) else 0) >= 10:
+	if bool(r["ok"]):
 		ds["ok"] = int(ds["ok"]) + 1
 	else:
 		ds["fail"] = int(ds["fail"]) + (2 if roll == 1 else 1)
-	lines.append("%s: спасбросок от смерти %d — успехов %d, провалов %d" % [name, roll, mini(3, int(ds["ok"])), mini(3, int(ds["fail"]))])
+	lines.append("%s: спасбросок от смерти %d — успехов %d, провалов %d" % [name, int(r["total"]), mini(3, int(ds["ok"])), mini(3, int(ds["fail"]))])
 	if int(ds["fail"]) >= 3:
 		_dies(s, f, lines)
 	elif int(ds["ok"]) >= 3:
@@ -2072,18 +2079,20 @@ static func _teleport(s: GameSession, data: Dictionary, feet: int, to := FightGr
 	return ["%s переносится серебристым туманом на %d фт" % [me["name"], WalkRules.distance(from, best) * int(FightGrid.cfg(data)["ft"])]]
 
 
-## A reach weapon meets a foe on its way in (v0.7.12): the hero's reaction, one attack before the foe strikes.
-static func _reach_strike(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	var c := s.character
-	var wid := str(c.get("equipped", {}).get("main_hand", ""))
-	if wid.is_empty() or bool(player(s).get("reacted", false)) or ConditionRules.incapacitated(c) or int(c.get("hp", 0)) <= 0:
+## A reach weapon meets a foe on its way in (v0.7.12; v0.8.4.29.2: anybody's — the hero, a companion, a foe): the reaction of
+## `defender`, whose blade reaches past arm's length, one blow at `mover` before it strikes.
+static func _reach_strike(s: GameSession, data: Dictionary, mover: Dictionary, defender: Dictionary, lines: Array[String]) -> void:
+	var me := Sheet.holder(s, defender)
+	if bool(defender.get("reacted", false)) or ConditionRules.incapacitated(me) or int(me.get("hp", 0)) <= 0 or str(defender.get("status", "active")) != "active":
 		return
-	var w := weapon_profile(c, data, s.items, wid)
-	if not bool(w.get("reach", false)) or not bool(w["melee"]):
+	if blade_reach(s, data, defender) < 2:
 		return
-	player(s)["reacted"] = true
-	lines.append("%s встречает %s на подходе — %s бьёт дальше (досягаемость)" % [c["name"], f["name"], w["name"]])
-	Attack.swing(s, data, player(s), f, Attack.of_weapon(w), lines)
+	var b := Attack.blade(s, data, defender)
+	if b.is_empty():
+		return
+	defender["reacted"] = true
+	lines.append("%s встречает %s на подходе — %s бьёт дальше (досягаемость)" % [me.get("name", ""), mover["name"], b.get("name", "")])
+	Attack.swing(s, data, defender, mover, b, lines)
 
 
 ## A fighter that comes beside a hidden foe finds it, whoever either is (v0.8.4.15), or feels it in its web (v0.8.4.27.3).

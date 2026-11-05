@@ -322,10 +322,7 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 	c["race_name"] = race_name(c, data)
 	c["class_name"] = class_name_of(c, data)
 	c["prof_bonus"] = prof_bonus(c, data)
-	var drained := 0  # life drain until a long rest (v0.7.9)
-	for e: Variant in c.get("effects", []):
-		if e is Dictionary:
-			drained += int((e as Dictionary).get("max_hp", 0))
+	var drained := ConditionRules.max_hp_shift(c)  # Aid, a life drain until a long rest (v0.7.9)
 	c["max_hp"] = maxi(1, max_hp(c, data) / (2 if int(c.get("exhaustion", 0)) >= 4 else 1) + drained)  # exhaustion 4 halves it (v0.7.8)
 	c["hp"] = clampi(int(c.get("hp", c["max_hp"])), 0, int(c["max_hp"]))
 	c["ac"] = armor_class(c, data, session_items)
