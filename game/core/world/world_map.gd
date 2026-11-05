@@ -129,9 +129,7 @@ static func _step_rooms(s: GameSession, data: Dictionary, when: Dictionary, out:
 	elif when.has("talk"):
 		room = Where.npc_room(s, data, str(when["talk"]))  # where the person stands now (v0.8.4.16)
 	elif when.has("encounter"):
-		for r: String in world["rooms"]:
-			if str(world["rooms"][r].get("encounter", {}).get("id", "")) == str(when["encounter"]):
-				room = r
+		room = EncounterRules.room_of(s, data, str(when["encounter"]))  # a quest act's fight on a known room too (v0.8.4.29.5)
 	if not room.is_empty() and not out.has(room):
 		out.append(room)
 

@@ -81,7 +81,7 @@ static func offers(s: GameSession, data: Dictionary, npc_id: String, service: St
 
 
 static func _present(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> bool:
-	return s.npcs_here(data["world"], Life.room(s, data, who)).has(npc_id)
+	return Life.beside(s, data, who, npc_id)
 
 
 static func _pct(v: float) -> String:
@@ -350,8 +350,7 @@ static func tick_of(s: GameSession, data: Dictionary, who: String) -> Array[Stri
 		if vault_empty(Life.of(s, who, data), npc_id):
 			v["fee_day"] = s.day
 			continue
-		while s.day - int(v["fee_day"]) >= 7:
-			v["fee_day"] = int(v["fee_day"]) + 7
+		for i in TimeRules.periods(v, "fee_day", s.day, 7):  # a week's fee (v0.8.4.29.4: one catch-up)
 			if int(v["coins"]) >= fee:
 				v["coins"] = int(v["coins"]) - fee
 			else:

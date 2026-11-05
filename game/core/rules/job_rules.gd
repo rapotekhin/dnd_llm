@@ -100,7 +100,7 @@ static func requirements(s: GameSession, data: Dictionary, id: String, who: Stri
 
 
 static func employer_here(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> bool:
-	return s.npcs_here(data["world"], Life.room(s, data, who)).has(str(job(s, data, id).get("employer", "")))
+	return Life.beside(s, data, who, str(job(s, data, id).get("employer", "")))
 
 
 ## "" when the hero may ask for the job now, else a localization key.

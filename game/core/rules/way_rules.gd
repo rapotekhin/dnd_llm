@@ -131,8 +131,7 @@ static func hours(s: GameSession, data: Dictionary, site_id: String) -> Dictiona
 		return {}
 	var from := int(h["from"])
 	var to := int(h["to"])
-	var hour := s.minute / 60
-	var open := (hour >= from and hour < to) if from < to else (hour >= from or hour < to)
+	var open := TimeRules.in_hours(s, from, to)
 	var opens := (s.day - 1) * 1440 + from * 60
 	if opens <= TimeRules.abs_minute(s):
 		opens += 1440
@@ -494,7 +493,7 @@ static func plan_make(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		if (world["rooms"][r].get("ways", {}).get(to, {}) as Dictionary).has("when") and not WayRules.open_exits(s, world, r).has(to):
 			return {"reason": "в %s пока не попасть: путь туда открывает мир, не новый проход" % to}
 	var gen := WorldGen.generated(s)
-	if int(gen.get("way_day", -1)) == s.day and int(gen.get("ways_today", 0)) >= int(cfg(data)["make"]["per_day"]):
+	if TimeRules.today(s, gen, "ways") >= int(cfg(data)["make"]["per_day"]):
 		return {"reason": "сегодня новых проходов уже хватит"}
 	var row_out := {"kind": kind}
 	for k: String in ["material", "lock", "locked", "text"]:
@@ -508,8 +507,7 @@ static func plan_make(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 
 static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
 	var gen := WorldGen.generated(s)
-	gen["ways_today"] = (int(gen.get("ways_today", 0)) if int(gen.get("way_day", -1)) == s.day else 0) + 1
-	gen["way_day"] = s.day
+	TimeRules.count(s, gen, "ways")
 	var from := str(plan["from"])
 	var to := str(plan["to"])
 	var made: Dictionary = gen.get("ways", {})

@@ -104,15 +104,20 @@ const SNEAK_PASSIVE_PENALTY := 5
 ## Returns the texts noticed just now.
 ## `penalty` — passive Perception lost (TimeRules.passive_penalty: sneaking, darkness); -1 — sneaking only.
 static func enter_room(s: GameSession, world: Dictionary, room_id: String, penalty: int = -1) -> Array[String]:
-	s.room_id = room_id
-	if not s.visited.has(room_id):
-		s.visited.append(room_id)
+	place(s, room_id)
 	var out: Array[String] = []
 	var passive := int(s.character.get("passive_perception", 10)) - (penalty if penalty >= 0 else (SNEAK_PASSIVE_PENALTY if s.sneaking else 0))
 	for sec: Dictionary in secrets(world, room_id):
 		if not on_square(sec) and str(sec.get("skill", "perception")) == "perception" and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
 			out.append(str(sec["text"]))
 	return out
+
+
+## The hero is in `room_id` now and has been there (v0.8.4.29.4: one place for a step, a fight's way out, the law's prison).
+static func place(s: GameSession, room_id: String) -> void:
+	s.room_id = room_id
+	if not s.visited.has(room_id):
+		s.visited.append(room_id)
 
 
 ## A trap and a cache lie on a square (v0.8.3): passive Perception finds them on the way there, not at the door.

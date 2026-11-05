@@ -144,7 +144,7 @@ func test_a_known_crime_reaches_the_people_and_the_law() -> void:
 	var victim := "npc_innkeeper"
 	var loc := ReputationRules.home_of(data, victim)
 	var other := ""
-	for id: String in CrimeRules.people_of(data, loc):
+	for id: String in CrimeRules.people_of(s, data, loc):
 		if id != victim:
 			other = id
 			break

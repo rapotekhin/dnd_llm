@@ -228,7 +228,7 @@ static func _ok(s: GameSession, data: Dictionary, id: String, who: String = Bein
 
 
 static func here(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> bool:
-	return s.npcs_here(data["world"], Life.room(s, data, who)).has(npc_id)
+	return Life.beside(s, data, who, npc_id)
 
 
 static func _loc_of_school(data: Dictionary, sid: String) -> String:
@@ -669,10 +669,9 @@ static func tick_of(s: GameSession, data: Dictionary, who: String) -> Array[Stri
 		if co.is_empty() or _book_course(s, data, id):
 			continue
 		var st: Dictionary = view(c)["courses"][id]
-		var passed := (s.day - int(st["last"])) / (gap + 1)  # each gap missed is a miss, however many went at once
+		var passed := TimeRules.periods(st, "last", s.day, gap + 1)  # each gap missed is a miss, however many went at once
 		if passed > 0:
 			st["misses"] = int(st["misses"]) + passed
-			st["last"] = int(st["last"]) + passed * (gap + 1)
 			lines.append("Пропуск занятий: «%s» (%d из %d допустимых)" % [name_of(s, data, id), int(st["misses"]), max_misses])
 			if int(st["misses"]) > max_misses:
 				out[id] = "за пропуски"

@@ -197,8 +197,8 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 	var how: Array[String] = []
 	how.append_array(r["adv"])
 	how.append_array(r["dis"])
-	lines.append("%s, %d ч: %s %d + %d = %d против Сл %d%s — %s" % [d["name"], hours, CraftRules.tr_skill(data, skill), nat, b, nat + b, dc,
-		" (%s)" % ", ".join(how) if not how.is_empty() else "", "успех" if ok else "провал"])
+	lines.append(Activity.line("%s, %d ч" % [d["name"], hours], CraftRules.tr_skill(data, skill), r, "успех" if ok else "провал",
+		" (%s)" % ", ".join(how) if not how.is_empty() else ""))
 	var left := stock(s, data, k)
 	if ok:
 		var per := clampi(1 + (nat + b - dc) / int(c["units_per_margin"]), 1, int(c["max_per_try"]))

@@ -4,7 +4,7 @@ extends RefCounted
 ## generated.faith.gods), a room's `shrine` {god, name} is where a faith is served (the master's in
 ## generated.faith.shrines), an NPC's `god` is whom it serves. The hero's faith is c.faith:
 ##   {god, favor {god: n}, vows [{id, since, broken}], lapsed (a day, -1 — none), served {god: day},
-##    donated {god: [day, times]}, blessed {god: day}, converted (a day), last {deed, at}}.
+##    donated {god: {day, n}} (TimeRules.count), blessed {god: day}, converted (a day), last {deed, at}}.
 ## Everything breaks by facts of the engine (`deed`): a crime kind, a check of a skill (`check:<skill>`), a body
 ## searched (`rob_dead`), or a group of rules.faith.deeds. A vow broken loses its gift (RollParts.sheet reads
 ## `gift_parts`) until the atonement; the hero's god's commandment broken costs favor and the temple's blessing, and a
@@ -305,8 +305,7 @@ static func donate_why(s: GameSession, data: Dictionary) -> String:
 		return "FAITH_REFUSED"
 	if Ledger.balance(s) < _cp(data, "donation"):
 		return "FAITH_NO_MONEY"
-	var d: Array = view(s.character).get("donated", {}).get(gid, [-1, 0])
-	if int(d[0]) == s.day and int(d[1]) >= int(cfg(data)["donation"]["per_day"]):
+	if TimeRules.today(s, view(s.character).get("donated", {}), gid) >= int(cfg(data)["donation"]["per_day"]):
 		return "FAITH_DONATED"
 	if int(favor(s.character, gid)) >= int(cfg(data)["favor"]["max"]):
 		return "FAITH_FAVOR_MAX"
@@ -317,8 +316,7 @@ static func donate(s: GameSession, data: Dictionary) -> Array[String]:
 	var c := s.character
 	var gid := str(_here(s, data)["god"])
 	Ledger.add(s, -_cp(data, "donation"), "faith:donate")
-	var d: Array = view(c).get("donated", {}).get(gid, [-1, 0])
-	_rw(c)["donated"][gid] = [s.day, (int(d[1]) if int(d[0]) == s.day else 0) + 1]
+	TimeRules.count(s, _rw(c)["donated"], gid)
 	var n := int(cfg(data)["donation"]["favor"])
 	add_favor(c, data, gid, n)
 	return ["Пожертвование — %s (%s): благосклонность +%d (%s)" % [god_name(s, data, gid), Money.format(_cp(data, "donation")), n, _favor_text(c, data, gid)]]

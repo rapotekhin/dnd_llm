@@ -38,6 +38,16 @@ static func live(s: GameSession, data: Dictionary, room_id: String) -> Dictionar
 
 ## The kinds of creatures of `types` (SRD types) in the waiting encounters of this room and the rooms within `depth` ways, by
 ## their Russian words of `rules.creature_types`: no count, no place (Primeval Awareness, v0.8.4.26.1).
+## The room a world's encounter lies in now (v0.8.4.29.5): the pack's, a made room's or a variant a quest act laid on a known
+## room; "" — none.
+static func room_of(s: GameSession, data: Dictionary, enc_id: String) -> String:
+	var world: Dictionary = data["world"]
+	for r: String in world.get("rooms", {}):
+		if str(SceneRules.room(s, world, r).get("encounter", {}).get("id", "")) == enc_id:
+			return r
+	return ""
+
+
 static func sense(s: GameSession, data: Dictionary, types: Array, depth: int) -> Array[String]:
 	var out: Array[String] = []
 	var words: Dictionary = data["rules"].get("creature_types", {})

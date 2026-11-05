@@ -244,6 +244,18 @@ static func guests(s: GameSession, world: Dictionary, room_id: String) -> Array[
 	return out
 
 
+## The room a festival on now puts `npc_id` in as its guest; "" — none (v0.8.4.29.5: `Where` and the room's people alike).
+static func guest_room(s: GameSession, world: Dictionary, npc_id: String) -> String:
+	if s == null:
+		return ""
+	var fs := all(s, world)
+	for id: String in active(s, world):
+		var g: Dictionary = fs[id].get("guests", {})
+		if g.has(npc_id):
+			return str(g[npc_id])
+	return ""
+
+
 ## The trade percent of the festivals on now where the hero trades (`kind` "buy" — what the hero pays, "sell" — what he
 ## gets) for an item: the product of their `trade.<kind>_pct`; `trade.tags` limits it to items of those trade tags
 ## ("food" — the camp's food).

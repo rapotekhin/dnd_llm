@@ -48,8 +48,16 @@ static func of_npc(s: GameSession, data: Dictionary, npc_id: String) -> Dictiona
 		return room(s.room_id)
 	if Being.view(s, npc_id).has("at"):
 		return room(str(Being.of(s, npc_id)["at"])) if not str(Being.of(s, npc_id)["at"]).is_empty() else {"road": true}
+	var guest := CalendarRules.guest_room(s, data["world"], npc_id)  # v0.8.4.29.5: a festival's guest, as the room's people say
+	if not guest.is_empty():
+		return room(guest)
 	var at: Variant = SceneRules.scheduled(s, data["world"], npc_id)
-	return room(str(at) if at != null else ReputationRules.home_room(data, npc_id))
+	if at != null:
+		return room(str(at))
+	var home := SceneRules.home(s, data["world"], npc_id)  # by the rooms' variants
+	if home.is_empty() and FamilyRules.household(s, data).any(func(h: Dictionary) -> bool: return str(h.get("npc", "")) == npc_id):
+		home = str(FamilyRules.view(s.character).get("home_room", ""))  # one of the hero's family with no pack room
+	return room(home)
 
 
 ## The room an NPC stands in now (v0.8.4.16: the one answer, not a search of the pack's rooms); "" — on the road.
@@ -63,9 +71,21 @@ static func npc_location(s: GameSession, data: Dictionary, npc_id: String) -> St
 	return WorldView.new(data["world"]).location_id(r) if not r.is_empty() else ""
 
 
+## The pack people of a location (v0.8.4.29.5, one list for the law, the bonds, the offices): who lives there — moved or at
+## home by the rooms' variants — and is alive.
+static func people_of(s: GameSession, data: Dictionary, loc: String) -> Array[String]:
+	var out: Array[String] = []
+	var w := WorldView.new(data["world"])
+	for n: String in data["world"].get("npcs", {}):
+		var r := base_room(s, data, n)
+		if not r.is_empty() and w.location_id(r) == loc and not Being.dead(s, n):
+			out.append(n)
+	return out
+
+
 ## The room to look for an NPC in, whatever the hour: moved or at home. "" — on the road.
 static func base_room(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	return str(Being.view(s, npc_id).get("at", ReputationRules.home_room(data, npc_id)))
+	return str(Being.view(s, npc_id).get("at", SceneRules.home(s, data["world"], npc_id)))
 
 
 ## The room of a position: what carries a thing leads to it; "" — in no room.

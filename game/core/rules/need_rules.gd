@@ -118,8 +118,7 @@ static func food_items(c: Dictionary, data: Dictionary) -> Dictionary:
 ## by `step` of the same clock as `now`) `eat` (Callable() -> bool) is asked; a meal sets the hungry days to 0, none adds one and
 ## `missed` (Callable()) is told. The hungry days now (`rec.hungry`).
 static func hunger(rec: Dictionary, key: String, now: int, step: int, eat: Callable, missed: Callable = Callable()) -> int:
-	while now - int(rec.get(key, now)) >= step:
-		rec[key] = int(rec.get(key, now)) + step
+	for i in TimeRules.periods(rec, key, now, step):
 		if eat.call():
 			rec["hungry"] = 0
 		else:

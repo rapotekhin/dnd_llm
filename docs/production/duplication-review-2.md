@@ -131,6 +131,8 @@
 
 ## G. Где человек и кто в локации (высокая)
 
+**Исправлено в 0.8.4.29.5:** `Where.of_npc` с гостями праздника, вариантами комнат и семьёй; `SceneRules.npcs` без гостя в двух комнатах; `LetterRules.npc_loc` → `Where`; `Where.people_of` вместо `CrimeRules.people_of` и `OfficeRules._people`; `Life.beside` в шести местах; `SiteRules.unwelcome` через `ObjectRules.staff`; `_plan_door` через `inherit`; `EncounterRules.room_of` в карте и в квестах. **Осталось:** перебор комнат у потерянного письма, толпы арены и `rent_room`; приватные `PropertyRules._present` / `_gives`.
+
 - **Комната встречи по сырому полю пака:** `WorldMap._step_rooms` (`world_map.gd:131`) и `quest_gen.gd:812`. А бой акта квеста в известной комнате лежит вариантом комнаты (`quest_gen.gd:1012`). Итог: такой шаг не отмечен на карте.
 - **Две дороги одного ответа:**
   - `Where.of_npc` (`where.gd:45`) — дом из сырого пака, без вариантов комнат и гостей праздника (**остаток**);
@@ -211,6 +213,8 @@
 - **Одно место:** `Harm.save_half`; `Harm.heal` с подъёмом; `CombatRules.roll_dice` для массивов; `ThingRules.hurt` для любого удара по вещи; `SpellEffects.count`; `Sheet.dc(who, ab)`; `Sheet.ability`.
 
 ## K. Время (средняя)
+
+**Исправлено в 0.8.4.29.5:** `TimeRules.in_hours` у пяти копий; `today` / `count` у пожертвований, сбора, торга, проходов, смен; `TimeRules.periods` у ячейки банка, занятий и голода; `day_of` / `days_since` вместо `/1440`; тюрьма — `ExplorationRules.place` и `Harm.heal`.
 
 - **Окно часов «с … до …» — пять копий:**
   - `SceneRules.scheduled` (:80) и `absent` (:101);
@@ -310,6 +314,8 @@
 - **Одно место:** `run_turn` из `turns.py` для голденов с `MockEngine`; один повтор на лимите токенов с потолком агента; `topics/furnish.md.j2`; `metered_run`; таблица «вид хода → агент, эффекты, маршрут»; слова как поле строки `TOPICS`; общие базы моделей; `backend_trace_dirs()`.
 
 ## O. Прочее (низкая–средняя)
+
+**Исправлено в 0.8.4.29.5:** «важная особа» — одна `LetterRules.notable` (у закона без хозяев мест), список закона из данных убран; редкость — `Scale.row`, порог — `ItemRules.rarity_level`; `MakeRules.tier` / `_rank` — `Scale.up_to`; строка проверки впуска, сбора, приручения и угодий — `Activity.line`. **Осталось:** наследование местности (`Cond.met`, `_terrain`, `WeatherRules.table`) и четыре прохода Брезенхэма линии взгляда.
 
 - **«Важная особа» — два списка:** `CrimeRules` (`notable_tags`) и `LetterRules.notable` (:662). Ограбленный староста не важен для штрафа, но важен для подложного письма.
 - **Местность без наследования:** `Cond.met`, `CheckEngine._terrain`, `WeatherRules.table` рядом с `WorldView.inherit` в скакунах и угодьях. Сейчас результат одинаков.

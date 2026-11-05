@@ -49,7 +49,8 @@ static func npcs(s: GameSession, world: Dictionary, room_id: String) -> Array[St
 	var all: Dictionary = world.get("npcs", {})
 	for n: Variant in room(s, world, room_id).get("npcs", []):
 		var at: Variant = scheduled(s, world, str(n))
-		if (at == null or str(at) == room_id) and not FollowRules.placed(s, str(n)):
+		var guest := CalendarRules.guest_room(s, world, str(n))  # a festival's guest stands there, not at home (v0.8.4.29.5)
+		if (at == null or str(at) == room_id) and not FollowRules.placed(s, str(n)) and (guest.is_empty() or guest == room_id):
 			out.append(str(n))
 	for id: String in all:
 		if (all[id].has("schedule") or FamilyRules.home_at(s, id) != null) and not out.has(id) and not FollowRules.placed(s, id) and str(scheduled(s, world, id)) == room_id:
@@ -67,17 +68,26 @@ static func npcs(s: GameSession, world: Dictionary, room_id: String) -> Array[St
 	return out
 
 
+## The room an NPC lives in by the rooms' variants (v0.8.4.29.5): its pack room while the room keeps it, else the room whose
+## variant puts it there now; "" — none.
+static func home(s: GameSession, world: Dictionary, npc_id: String) -> String:
+	var raw := ReputationRules.home_room({"world": world}, npc_id)
+	if not raw.is_empty() and (room(s, world, raw).get("npcs", []) as Array).has(npc_id):
+		return raw
+	for rid: String in world.get("rooms", {}):
+		if world["rooms"][rid].has("variants") and (room(s, world, rid).get("npcs", []) as Array).has(npc_id):
+			return rid
+	return raw
+
+
 ## Where the NPC's `schedule` [{from, to, room}] (hours; to < from wraps past midnight; room "" — away, at home)
 ## puts it at this hour; null when no entry holds — it stands in its pack room.
 static func scheduled(s: GameSession, world: Dictionary, npc_id: String) -> Variant:
 	var home: Variant = FamilyRules.home_at(s, npc_id)  # v0.7.32: the spouse sleeps at the hero's home
 	if home != null:
 		return home
-	var hour := s.minute / 60
 	for e: Dictionary in world.get("npcs", {}).get(npc_id, {}).get("schedule", []):
-		var a := int(e["from"])
-		var b := int(e["to"])
-		if (a <= b and hour >= a and hour < b) or (a > b and (hour >= a or hour < b)):
+		if TimeRules.in_hours(s, int(e["from"]), int(e["to"])):
 			return str(e.get("room", ""))
 	return null
 
@@ -95,11 +105,8 @@ static func absent(s: GameSession, world: Dictionary, room_id: String) -> Array[
 			out.append("%s — дома, вернётся к %d:00" % [world["npcs"][id].get("name", id), int(FamilyRules.view(s.character).get("hours", [20, 7])[1])])
 			continue
 		for e: Dictionary in world["npcs"][id].get("schedule", []):
-			var a := int(e["from"])
-			var b := int(e["to"])
-			var hour := s.minute / 60
-			if (a <= b and hour >= a and hour < b) or (a > b and (hour >= a or hour < b)):
-				back = b
+			if TimeRules.in_hours(s, int(e["from"]), int(e["to"])):
+				back = int(e["to"])
 		out.append("%s — %s, вернётся к %d:00" % [world["npcs"][id].get("name", id),
 			("ушла домой" if str(world["npcs"][id].get("gender", "")) == "female" else "ушёл домой") if str(at).is_empty() else "сейчас в другом месте", back])
 	return out

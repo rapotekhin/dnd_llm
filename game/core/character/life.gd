@@ -45,5 +45,10 @@ static func each(s: GameSession, data: Dictionary, part: String, run: Callable) 
 
 
 ## The mark of `who` as an owner of a place, a beast or a thing: the hero's, else its id.
+## The NPC stands beside `who` now (v0.8.4.29.5, one place for a clerk, a banker, a teacher, an employer, a trader).
+static func beside(s: GameSession, data: Dictionary, who: String, npc_id: String) -> bool:
+	return s.npcs_here(data["world"], room(s, data, who)).has(npc_id)
+
+
 static func owner(who: String) -> String:
 	return OwnerRules.HERO if who == Being.HERO else who

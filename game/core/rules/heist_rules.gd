@@ -232,10 +232,7 @@ static func prep(s: GameSession, data: Dictionary, id: String) -> int:
 
 static func in_hours(s: GameSession, data: Dictionary, id: String) -> bool:
 	var h: Array = def(s, data, id).get("hours", kind(data, str(def(s, data, id)["kind"]))["hours"])
-	var hour := s.minute / 60
-	var a := int(h[0])
-	var b := int(h[1])
-	return (a <= b and hour >= a and hour < b) or (a > b and (hour >= a or hour < b))
+	return TimeRules.in_hours(s, int(h[0]), int(h[1]))
 
 
 static func act_why(s: GameSession, data: Dictionary, id: String) -> String:

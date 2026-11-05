@@ -14,7 +14,7 @@ extends RefCounted
 ## object of the kind `stall` rented at the registry (`rent`), the counter of a house — an object of its own (`counter`).
 ##
 ## c["property"] = {id: {deed, since, cond, cash, debt, stock: {item: qty}, upgrades: [..], pending: [{up, ready}],
-## building: {id, ready}, kind, staff: [{npc | cid, role, wage, serf}], rent_day, last_day, tax_day, shift_day}}.
+## building: {id, ready}, kind, staff: [{npc | cid, role, wage, serf}], rent_day, last_day, tax_day, shift: {day, n}}}.
 
 const TAME := "tame"
 
@@ -161,7 +161,7 @@ static func of_seller(s: GameSession, data: Dictionary, npc_id: String, who: Str
 
 
 static func _present(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> bool:
-	return s.npcs_here(data["world"], Life.room(s, data, who)).has(npc_id)
+	return Life.beside(s, data, who, npc_id)
 
 
 static func has_upgrade(c: Dictionary, id: String, up: String) -> bool:
@@ -261,7 +261,7 @@ static func buy(s: GameSession, data: Dictionary, id: String, who: String = Bein
 
 static func _fresh(s: GameSession, cond: float) -> Dictionary:
 	return {"deed": false, "since": s.day, "cond": cond, "cash": 0, "stock": {}, "upgrades": [], "pending": [], "building": {},
-		"staff": [], "last_day": s.day, "tax_day": s.day, "shift_day": -1}
+		"staff": [], "last_day": s.day, "tax_day": s.day}
 
 
 static func deed_why(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> String:
@@ -492,7 +492,7 @@ static func shift_why(s: GameSession, data: Dictionary, id: String, who: String 
 		return "PROPERTY_SHOP_SHIFT"
 	if income_day(s, data, id, who) <= 0:
 		return "PROPERTY_NO_INCOME"
-	if int(state(Life.of(s, who, data))[id].get("shift_day", -1)) == s.day:
+	if TimeRules.today(s, state(Life.of(s, who, data))[id], "shift") > 0:
 		return "PROPERTY_SHIFT_DONE"
 	return ""
 
@@ -517,7 +517,7 @@ static func shift_chance(s: GameSession, data: Dictionary, id: String, who: Stri
 static func shift(s: GameSession, data: Dictionary, id: String, minutes: int, who: String = Being.HERO) -> Array[String]:
 	var c := Life.of(s, who, data)
 	var st: Dictionary = state(c)[id]
-	st["shift_day"] = s.day
+	TimeRules.count(s, st, "shift")
 	var full := shift_hours(s, data, id, who) * 60
 	var day := income_day(s, data, id, who)
 	if minutes < full:

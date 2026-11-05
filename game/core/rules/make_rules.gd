@@ -163,8 +163,8 @@ static func _property(s: GameSession, data: Dictionary, name: String, parts: Var
 		points += int(costs[token])
 	var rarity := ItemRules.rarity_for_points(data["items"], points)
 	var level := int(s.character.get("level", 1))
-	if level < int(data["items"]["rarity_min_level"][rarity]):
-		return {"reason": "«%s» — редкость %s: %d очков, это от %d уровня героя, а герой %d" % [name, rarity, points, int(data["items"]["rarity_min_level"][rarity]), level]}
+	if level < ItemRules.rarity_level(data["items"], rarity):  # the threshold of check_generated (v0.8.4.29.5)
+		return {"reason": "«%s» — редкость %s: %d очков, это от %d уровня героя, а герой %d" % [name, rarity, points, ItemRules.rarity_level(data["items"], rarity), level]}
 	return {"tokens": tokens, "on": on, "points": points, "tier": rarity, "rarity": rarity}
 
 
@@ -262,10 +262,7 @@ static func _lay(out: Dictionary, id: String, value: String, amount: int, name: 
 
 ## The tier of `points`: its row, or {} past the last one.
 static func tier(data: Dictionary, points: int) -> Dictionary:
-	for t: Dictionary in cfg(data)["tiers"]:
-		if points <= int(t["points"]):
-			return t
-	return {}
+	return Scale.up_to(cfg(data)["tiers"], points)
 
 
 ## The effect `make`: {plan, summary} or {reason}.
@@ -659,10 +656,7 @@ static func _lay_cost(data: Dictionary, cond: String) -> int:
 
 ## The first row of `circles` that holds `points`.
 static func _rank(cf: Dictionary, points: int) -> Dictionary:
-	for r: Dictionary in cf["circles"]:
-		if points <= int(r["points"]):
-			return r
-	return {}
+	return Scale.up_to(cf["circles"], points)
 
 
 ## The plan of `make` applied. Lines.

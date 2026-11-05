@@ -808,11 +808,7 @@ static func _fact(s: GameSession, data: Dictionary, kind: String, target: String
 				if not used.has("enc:" + target):
 					used.append("enc:" + target)
 			else:
-				var found := false
-				for rid: String in data["world"]["rooms"]:
-					if str(data["world"]["rooms"][rid].get("encounter", {}).get("id", "")) == target:
-						found = true
-				if not found or s.encounters_done.has(target):
+				if EncounterRules.room_of(s, data, target).is_empty() or s.encounters_done.has(target):
 					return {"reason": "нет непобеждённой встречи %s: key боя акта (encounters или комната места с encounter) или встреча мира" % target}
 				w = {"encounter": target}
 				if bool(defeat):

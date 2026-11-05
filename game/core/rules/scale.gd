@@ -53,6 +53,14 @@ static func row(rows: Array, value: float) -> Array:
 	return out
 
 
+## The first row whose `key` is at least `value` (an ascending table of upper bounds: a tier, a circle by points); {} — past them.
+static func up_to(rows: Array, value: float, key: String = "points") -> Dictionary:
+	for r: Dictionary in rows:
+		if value <= float(r[key]):
+			return r
+	return {}
+
+
 ## How many thresholds were passed, both ways: −3…+3 on a list of positive numbers.
 static func signed(thresholds: Array, value: float) -> int:
 	var out := 0

@@ -19,8 +19,9 @@ static func attempt(s: GameSession, data: Dictionary, spec: Dictionary, who: Str
 
 
 ## «Смена: Убеждение 12 + 3 = 15 против Сл 12 — хорошо».
-static func line(what: String, label: String, r: Dictionary, result: String) -> String:
+## `note` — what is said after the DC: «(угощение: мясо)», «(с преимуществом)» (v0.8.4.29.5: one line for every check of a window).
+static func line(what: String, label: String, r: Dictionary, result: String, note: String = "") -> String:
 	var nat := int(r["nat"])
 	var rest := int(r["total"]) - nat
 	var check := "%d %s %d = %d" % [nat, "−" if rest < 0 else "+", absi(rest), int(r["total"])]
-	return "%s: %s%s против Сл %d — %s" % [what, "" if label.is_empty() else label + " ", check, int(r["dc"]), result]
+	return "%s: %s%s против Сл %d%s — %s" % [what, "" if label.is_empty() else label + " ", check, int(r["dc"]), note, result]

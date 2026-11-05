@@ -116,16 +116,7 @@ static func to_why(s: GameSession, data: Dictionary, way: String, pid: String, t
 
 ## Where an NPC is now: a follower — with the hero; one placed or travelling — there (the road — its home); else home.
 static func npc_loc(s: GameSession, data: Dictionary, npc_id: String) -> String:
-	if Being.follows(s, npc_id):
-		return _loc(data, s.room_id)
-	var at := str(Being.view(s, npc_id).get("at", ""))
-	if not at.is_empty() and data["world"]["rooms"].has(at):
-		return _loc(data, at)
-	var home := ReputationRules.home_room(data, npc_id)
-	if home.is_empty():
-		home = str(FamilyRules.view(s.character).get("home_room", "")) if FamilyRules.household(s, data).any(
-			func(h: Dictionary) -> bool: return str(h.get("npc", "")) == npc_id) else ""
-	return _loc(data, home) if not home.is_empty() else ""
+	return Where.npc_location(s, data, npc_id)  # the one answer (v0.8.4.29.5): a body, a follower, a guest, the hours, the family
 
 
 ## The locations a letter passes from `from` to `to` along the map's roads, both ends included; [] — no road.
@@ -654,8 +645,9 @@ static func guilty(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 	return false
 
 
-## A person of standing: a notable tag (rules.letters.notable_tags), an office's chief, a school's head, a site's owner.
-static func notable(s: GameSession, data: Dictionary, npc_id: String) -> bool:
+## A person of standing (v0.8.4.29.5: the one list of the letters and the law): a notable tag (rules.letters.notable_tags), an
+## office's chief, a school's head, an organization's head; a site's owner too for a letter (`owners`), not for a wergild.
+static func notable(s: GameSession, data: Dictionary, npc_id: String, owners: bool = true) -> bool:
 	var w: Dictionary = data["world"]
 	var tags: Array = w["npcs"].get(npc_id, {}).get("tags", [])
 	if tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(str(t))):
@@ -668,6 +660,8 @@ static func notable(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 			return true
 	if not Group.headed_by(s, data, npc_id).is_empty():
 		return true
+	if not owners:
+		return false
 	for si: Dictionary in w.get("sites", {}).values():
 		if str(si.get("owner", "")) == npc_id:
 			return true

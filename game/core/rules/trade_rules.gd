@@ -19,7 +19,7 @@ static func merchant(s: GameSession, data: Dictionary, npc_id: String) -> Dictio
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
 	var m: Dictionary = s.merchants.get(npc_id, {})
 	if m.is_empty():
-		m = {"stock": {}, "day": 0, "haggle_pct": 0, "haggle_failed_day": 0, "haggle_result": {}, "sold": {}, "haggles": 0, "haggle_day": 0}
+		m = {"stock": {}, "day": 0, "haggle_pct": 0, "haggle_failed_day": 0, "haggle_result": {}, "sold": {}}
 		s.merchants[npc_id] = m
 	if not m.has("sold"):
 		m["sold"] = {}
@@ -412,7 +412,7 @@ static func deal_note(lines: Array[String], net_cp: int) -> String:
 ## The DC by the attitude; every haggle already made with this trader today makes the next one harder (v0.7.17.2).
 static func haggle_dc(s: GameSession, data: Dictionary, npc_id: String) -> int:
 	var m := merchant(s, data, npc_id)
-	var done := int(m.get("haggles", 0)) if int(m.get("haggle_day", 0)) == s.day else 0
+	var done := TimeRules.today(s, m, "haggles")
 	if bool(DevelopmentRules.effect(s.character, data, "trade", "no_haggle_escalation", false)):  # «Упорство» (v0.7.19.1)
 		done = 0
 	return _pct(data["rules"]["trade"]["haggle_dc_by_attitude"], s.attitude(npc_id)) + done * int(data["rules"]["trade"]["haggle_escalation"])
@@ -449,10 +449,7 @@ static func best_skill(s: GameSession, data: Dictionary) -> String:
 ## each, every one harder that day), a failure locks haggling until the next day. Returns the percent (0 — failed).
 static func apply_haggle(s: GameSession, data: Dictionary, npc_id: String, result: Dictionary) -> int:
 	var m := merchant(s, data, npc_id)
-	if int(m.get("haggle_day", 0)) != s.day:
-		m["haggle_day"] = s.day
-		m["haggles"] = 0
-	m["haggles"] = int(m["haggles"]) + 1
+	TimeRules.count(s, m, "haggles")
 	var kept := result.duplicate()
 	kept.erase("note")
 	m["haggle_result"] = kept

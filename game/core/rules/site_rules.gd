@@ -26,10 +26,10 @@ static func unwelcome(s: GameSession, data: Dictionary, room_id: String, doer: S
 	var owner := str(world.inherit(room_id, "owner", ""))
 	if owner.is_empty() or owner == Life.owner(doer) or Being.dead(s, owner):  # v0.7.27: own place
 		return ""
-	if doer != Being.HERO:  # a person is welcome where it lives or works
-		for r: String in world.site_rooms(world.site_id(room_id)):
-			if (world.room(r).get("npcs", []) as Array).has(doer):
-				return ""
+	if doer != Being.HERO:  # a person is welcome where it lives or works: its room, the object's staff, a hand hired there (v0.8.4.29.5)
+		var sid := world.site_id(room_id)
+		if world.site_rooms(sid).has(Where.base_room(s, data, doer)) or ObjectRules.staff(s, data, sid).any(func(h: Dictionary) -> bool: return str(h["who"]) == doer):
+			return ""
 		return owner
 	if owner == OwnerRules.HERO or Being.follows(s, owner):
 		return ""
@@ -63,8 +63,8 @@ static func on_enter(s: GameSession, data: Dictionary, room_id: String, doer: St
 	if not s.trespass_warned.has(site_id):  # the first time — a warning
 		s.trespass_warned[site_id] = TimeRules.abs_minute(s)
 		return ["%s: «Сюда посторонним нельзя — выйдите!» Предупреждение: войдёте сюда снова без спроса — это вторжение" % who]
-	var today := TimeRules.abs_minute(s) / 1440
-	if s.crimes.any(func(c: Dictionary) -> bool: return str(c.get("kind")) == "trespass" and str(c.get("site", "")) == site_id and int(c["at"]) / 1440 == today):
+	var today := TimeRules.day_of(TimeRules.abs_minute(s))
+	if s.crimes.any(func(c: Dictionary) -> bool: return str(c.get("kind")) == "trespass" and str(c.get("site", "")) == site_id and TimeRules.day_of(int(c["at"])) == today):
 		return []  # once a day a site
 	var lines: Array[String] = ["%s: «Сюда посторонним нельзя!» — вы вошли без спроса (%s)" % [who, world.room_short(room_id).to_lower()]]
 	if seen.has(owner):
@@ -123,12 +123,9 @@ static func ask(s: GameSession, data: Dictionary, npc_id: String) -> Array[Strin
 	var skill := str(cfg(data)["permit"]["skill"])
 	var dc := ask_dc(s, data, npc_id)
 	var r := Roll.hero(s, data, {"what": "Просьба впустить", "skill": skill, "dc": dc, "target_id": npc_id})
-	var nat := int(r["nat"])
-	var b := int(r["bonus"])
 	var ok := bool(r["ok"])
 	var who := WorldView.name_of(data, npc_id)
-	var lines: Array[String] = ["Просьба впустить — %s: %s %d %s %d = %d против Сл %d — %s" % [who, CraftRules.tr_skill(data, skill), nat,
-		"−" if b < 0 else "+", absi(b), nat + b, dc, "согласие" if ok else "отказ"]]
+	var lines: Array[String] = [Activity.line("Просьба впустить — " + who, CraftRules.tr_skill(data, skill), r, "согласие" if ok else "отказ")]
 	if ok:
 		lines.append_array(grant(s, data, npc_id))
 	else:

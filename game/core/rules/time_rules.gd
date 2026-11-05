@@ -177,6 +177,29 @@ static func count(s: GameSession, holder: Dictionary, key: String) -> int:
 	return int(r["n"])
 
 
+## Whether the hour now is inside «from … to» (v0.8.4.29.4: one window for a schedule, a family's night at home, a heist, a
+## site's door): `to` < `from` wraps past midnight, `from` == `to` — all day.
+static func in_hours(s: GameSession, from: int, to: int) -> bool:
+	var hour := s.minute / 60
+	if from == to:
+		return true
+	return (hour >= from and hour < to) if from < to else (hour >= from or hour < to)
+
+
+## How many whole periods of `step` passed since `rec[key]` until `now` (of one clock: days, minutes); the mark moves on by them.
+## A week's fee, a missed lesson, a day without food (v0.8.4.29.4, one catch-up).
+static func periods(rec: Dictionary, key: String, now: int, step: int) -> int:
+	var last := int(rec.get(key, now))
+	var n := maxi(0, (now - last) / maxi(1, step))
+	rec[key] = last + n * step
+	return n
+
+
+## Whole days between two absolute minutes.
+static func days_since(minute: int, now: int) -> int:
+	return (now - minute) / 1440
+
+
 ## The absolute minute of the game clock (since the first day's midnight).
 static func abs_minute(s: GameSession) -> int:
 	return s.clock

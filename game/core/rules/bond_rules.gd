@@ -46,7 +46,7 @@ static func npc_def(s: GameSession, data: Dictionary, npc_id: String) -> Diction
 
 
 static func here(s: GameSession, data: Dictionary, npc_id: String) -> bool:
-	return s.npcs_here(data["world"], s.room_id).has(npc_id)
+	return Life.beside(s, data, Being.HERO, npc_id)
 
 
 # --- steps --------------------------------------------------------------------------------------------------------
@@ -408,7 +408,7 @@ static func intercessor(s: GameSession, data: Dictionary, loc: String) -> String
 		return ""
 	var ic: Dictionary = cfg(data)["perks"]["intercede"]
 	var victims := s.crimes.filter(func(cr: Dictionary) -> bool: return not bool(cr["settled"])).map(func(cr: Dictionary) -> String: return str(cr["victim"]))
-	for id: String in CrimeRules.people_of(data, loc):
+	for id: String in CrimeRules.people_of(s, data, loc):
 		if not _alive(s, id) or victims.has(id) or points(s.character, id) < int(ic["at"]):
 			continue
 		var tags: Array = WorldView.new(data["world"]).npc(id).get("tags", [])

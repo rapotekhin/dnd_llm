@@ -59,7 +59,7 @@ func run() -> void:
 	var gold := int(c["gold_cp"])
 	await press(find(win, "ShopShift"))
 	await frames(6)
-	step("a shift behind the counter", int(c["gold_cp"]) >= gold and int(ShopRules.venue(c, vid).get("shift_day", 0)) == s.day, _last_effects(s))
+	step("a shift behind the counter", int(c["gold_cp"]) >= gold and TimeRules.today(s, ShopRules.venue(c, vid), "shift") > 0, _last_effects(s))
 	await shot("after_shift")
 	win.visible = false
 

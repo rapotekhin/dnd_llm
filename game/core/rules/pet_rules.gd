@@ -139,8 +139,8 @@ static func tame(s: GameSession, data: Dictionary, cid: String, food: String) ->
 	var nat := int(r["nat"])
 	var b := int(r["bonus"])
 	var ok := bool(r["ok"])
-	var lines: Array[String] = ["Приручение: %s %d + %d = %d против Сл %d%s — %s" % [CraftRules.tr_skill(data, skill), nat, b, nat + b, d,
-		" (угощение: %s)" % ItemRules.display_name(data["items"], s.items, food) if given else "", "успех" if ok else "провал"]]
+	var lines: Array[String] = [Activity.line("Приручение", CraftRules.tr_skill(data, skill), r, "успех" if ok else "провал",
+		" (угощение: %s)" % ItemRules.display_name(data["items"], s.items, food) if given else "")]
 	cr["tame_day"] = s.day
 	if ok:
 		for k: String in ["bound", "waiting"]:

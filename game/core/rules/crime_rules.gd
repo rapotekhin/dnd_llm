@@ -171,15 +171,8 @@ static func law(data: Dictionary, location_id: String) -> Dictionary:
 
 
 ## The NPCs of the pack whose room is in `location_id`.
-static func people_of(data: Dictionary, location_id: String) -> Array[String]:
-	var out: Array[String] = []
-	var rooms: Dictionary = data["world"]["rooms"]
-	for rid: String in rooms:
-		if str(rooms[rid].get("location_id", "")) == location_id:
-			for n: Variant in rooms[rid].get("npcs", []):
-				if not out.has(str(n)):
-					out.append(str(n))
-	return out
+static func people_of(s: GameSession, data: Dictionary, location_id: String) -> Array[String]:
+	return Where.people_of(s, data, location_id)  # the living, by the rooms' variants (v0.8.4.29.5)
 
 
 ## The pack NPC killed in a fight: the body stays, its quests pass to the heir or fail, and a fight `doer` began
@@ -228,13 +221,13 @@ static func people_know(s: GameSession, data: Dictionary, f: Dictionary) -> Arra
 	var att := int(kind.get("known_attitude", -1 if _assault(crime) else int(cfg(data)["attitude"])))
 	var doer := doer_of(crime)
 	if doer != Being.HERO:  # a person's crime: the people know it of the doer; what they think of the hero stays
-		for id: String in people_of(data, loc):
+		for id: String in people_of(s, data, loc):
 			if not Being.dead(s, id) and id != victim and id != doer:
 				s.remember(id, "знает: %s — %s, сделал%s %s" % [WorldView.name_of(data, victim), str(kind["name"]), _ending(data, doer), WorldView.name_of(data, doer)])
 		return lines
 	if att != 0:
 		lines.append("%s знает: %s — отношение хуже" % [WorldView.new(data["world"]).location(loc).get("name", loc), kind["name"]])
-	for id: String in people_of(data, loc):
+	for id: String in people_of(s, data, loc):
 		if not Being.dead(s, id) and id != victim:
 			if att != 0:
 				s.shift_attitude(id, att, data)
@@ -289,7 +282,7 @@ static func spread(s: GameSession, data: Dictionary) -> Array[String]:
 				lines.append("Нашли тело: %s" % WorldView.name_of(data, str(crime["victim"])))
 				lines.append_array(_known(s, data, crime))
 			continue
-		var days := (now - int(crime["at"])) / 1440
+		var days := TimeRules.days_since(int(crime["at"]), now)
 		while int(crime.get("searched_days", 0)) < days and not bool(crime["known"]):
 			crime["searched_days"] = int(crime.get("searched_days", 0)) + 1
 			var dc := int(crime["hide_dc"]) + int(h["day_step"]) * int(crime["searched_days"])
@@ -498,8 +491,7 @@ static func fine(s: GameSession, data: Dictionary, loc: String, doer: String = B
 		if crime.has("fine_cp"):  # a debt's wergild is the debt (v0.7.28)
 			debts += int(crime["fine_cp"])
 			continue
-		var tags: Array = WorldView.new(data["world"]).npc(str(crime["victim"])).get("tags", [])
-		var notable := tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(t))
+		var notable := LetterRules.notable(s, data, str(crime["victim"]), false)  # a person of standing, one list (v0.8.4.29.5)
 		total += int(kind_of(data, crime).get("fine_cp", cfg(data)["fine_cp"])) * (int(cfg(data)["notable_mult"]) if notable else 1)
 	if doer == Being.HERO and not BondRules.intercessor(s, data, loc).is_empty():  # v0.7.31: a friend of the law speaks for the hero
 		total = Price.share(total, float(BondRules.cfg(data)["perks"]["intercede"]["fine_pct"]))
@@ -532,8 +524,7 @@ static func stocks_days(s: GameSession, data: Dictionary, loc: String, doer: Str
 static func sentence(s: GameSession, data: Dictionary, loc: String, doer: String = Being.HERO) -> Dictionary:
 	var severity := _weight(s, data, loc, doer)
 	for crime: Dictionary in _open(s, loc, doer):
-		var tags: Array = WorldView.new(data["world"]).npc(str(crime["victim"])).get("tags", [])
-		if tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(t)):
+		if LetterRules.notable(s, data, str(crime["victim"]), false):
 			severity += 1
 			break
 	if doer == Being.HERO and not BondRules.intercessor(s, data, loc).is_empty():
@@ -555,8 +546,7 @@ static func talk_tier(s: GameSession, data: Dictionary, loc: String) -> String:
 	var w := _weight(s, data, loc)  # v0.7.22.16: only assaults — a step easier
 	var i := tiers.find(str(cfg(data)["talk_tier"])) + (maxi(0, w - 1) if w > 0 else -1 if not _open(s, loc).is_empty() else 0)
 	for crime: Dictionary in _open(s, loc):
-		var tags: Array = WorldView.new(data["world"]).npc(str(crime["victim"])).get("tags", [])
-		if tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(t)):
+		if LetterRules.notable(s, data, str(crime["victim"]), false):
 			i += 1
 			break
 	return str(tiers[clampi(i, 0, tiers.size() - 1)])
@@ -637,11 +627,9 @@ static func answer(s: GameSession, data: Dictionary, how: String) -> Array[Strin
 			var days := int(sn["days"])
 			var prison := str(l.get("prison", "")) if str(sn.get("kind", "")) != "stocks" else ""  # the stocks — where the hero stands
 			if not prison.is_empty() and data["world"]["rooms"].has(prison):
-				s.room_id = prison
-				if not s.visited.has(prison):
-					s.visited.append(prison)
+				ExplorationRules.place(s, prison)
 			var passed := TimeRules.jump(s, data, days)  # the world's days pass too (v0.8.4.17)
-			s.character["hp"] = int(s.character["max_hp"])  # the wounds healed in the days
+			Harm.heal(data, s.character, int(s.character["max_hp"]))  # the wounds healed in the days
 			lines.append("%d дн. — %s; день %d, утро, %s; вещи вернули" % [days, sn["name"], s.day,
 				world.room(s.room_id).get("name", s.room_id)])
 			lines.append_array(passed)
@@ -669,7 +657,7 @@ static func _settle(s: GameSession, data: Dictionary, loc: String) -> Array[Stri
 	s.wanted.erase(loc)
 	s.let_go.erase(loc)
 	s.arrest = ""
-	for id: String in people_of(data, loc):
+	for id: String in people_of(s, data, loc):
 		if not Being.dead(s, id):
 			if int(cfg(data)["forgiven"]) != 0:
 				s.shift_attitude(id, int(cfg(data)["forgiven"]), data)
@@ -744,7 +732,7 @@ static func snapshot(s: GameSession, data: Dictionary) -> Dictionary:
 	for crime: Dictionary in s.crimes:
 		var w: Array = crime["witnesses"]
 		deeds.append("%s %s [%s] — %s, день %d; %s%s" % ["нападение на" if _assault(crime) else "убит(а)", world.npc(str(crime["victim"])).get("name", crime["victim"]), crime["victim"],
-			world.room(str(crime["room"])).get("name", crime["room"]), int(crime["at"]) / 1440 + 1,
+			world.room(str(crime["room"])).get("name", crime["room"]), TimeRules.day_of(int(crime["at"])),
 			("видели: " + ", ".join(w.map(func(id: Variant) -> String: return str(world.npc(str(id)).get("name", id)))) + "; ") if not w.is_empty() else "",
 			"искуплено" if bool(crime["settled"]) else ("знает вся округа" if bool(crime["known"]) else "никто не знает — тайна героя")])
 	var out := {"deeds": deeds, "wanted": wanted_at(s, data, s.room_id), "arrest": held(s)}

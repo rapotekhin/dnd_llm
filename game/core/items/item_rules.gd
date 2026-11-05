@@ -564,11 +564,13 @@ static func word_stems(q: String) -> Array[String]:
 
 
 static func rarity_for_points(items_data: Dictionary, points: int) -> String:
-	var rarity := "common"
-	for step: Array in items_data["rarity_by_points"]:
-		if points >= int(step[0]):
-			rarity = str(step[1])
-	return rarity
+	var r := Scale.row(items_data["rarity_by_points"], points)
+	return str(r[1]) if not r.is_empty() else "common"
+
+
+## The least level of the hero a rarity is open at (one threshold for a made thing and a built property).
+static func rarity_level(items_data: Dictionary, rarity: String) -> int:
+	return int(items_data["rarity_min_level"].get(rarity, 1))
 
 
 ## Deterministic id, so the same item made twice (or taken from the backend library) keeps one id.
@@ -604,7 +606,7 @@ static func check_generated(data: Dictionary, item: Dictionary, level: int) -> D
 			"Дай ей свойства (`properties` из словаря движка) или `use` (заряды заклинания, зелье), либо возьми готовую магическую вещь " +
 			"каталога через find_items (кольцо, плащ, амулет, очки…). Если это и правда простая вещь — rarity common") % item.get("rarity", "")}
 	var rarity := rarity_for_points(items_data, points)
-	if level < int(items_data["rarity_min_level"][rarity]):
+	if level < rarity_level(items_data, rarity):
 		return {"ok": false, "reason": "предмет редкости %s недоступен на %d уровне" % [rarity, level]}
 	var value := mini(int(item.get("value_cp", 0)), int(items_data["rarity_max_value_cp"][rarity]))
 	var def := {

@@ -167,9 +167,7 @@ static func hero_stands(s: GameSession, data: Dictionary) -> void:
 	var at := FightGrid.cell(CombatRules.player(s))
 	var room := WalkRules.room_of(map, at)
 	if not room.is_empty() and room != s.room_id:
-		s.room_id = room
-		if not s.visited.has(room):
-			s.visited.append(room)
+		ExplorationRules.place(s, room)
 	WalkRules.stand(s, map, s.room_id, at)
 
 
@@ -691,9 +689,7 @@ static func leave(s: GameSession, data: Dictionary, lines: Array[String]) -> voi
 		lines.append("%s выходит из боя" % s.character["name"])
 		return
 	var chasers := _chasers(s, data, at)
-	s.room_id = str(e["to"])
-	if not s.visited.has(s.room_id):
-		s.visited.append(s.room_id)
+	ExplorationRules.place(s, str(e["to"]))
 	s.combat["map"] = s.room_id
 	s.combat["doors"] = {}
 	s.combat["blocks"] = {}

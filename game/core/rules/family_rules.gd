@@ -62,10 +62,7 @@ static func home_at(s: GameSession, npc_id: String) -> Variant:
 	if str(f.get("spouse", "")) != npc_id and not (f.get("kin", []) as Array).any(func(k: Variant) -> bool: return str(k["npc"]) == npc_id):
 		return null
 	var h: Array = f.get("hours", [20, 7])
-	var hour := s.minute / 60
-	var a := int(h[0])
-	var b := int(h[1])
-	if (a <= b and hour >= a and hour < b) or (a > b and (hour >= a or hour < b)):
+	if TimeRules.in_hours(s, int(h[0]), int(h[1])):
 		return str(f["home_room"])
 	return null
 

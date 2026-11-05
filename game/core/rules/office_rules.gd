@@ -284,11 +284,7 @@ static func _remove(s: GameSession, id: String, who: String = Being.HERO) -> voi
 
 ## The people of the location a case may be about.
 static func _people(s: GameSession, data: Dictionary, loc: String) -> Array[String]:
-	var out: Array[String] = []
-	for n: String in data["world"]["npcs"]:
-		if ReputationRules.home_of(data, n) == loc and not Being.dead(s, n):
-			out.append(n)
-	return out
+	return Where.people_of(s, data, loc)  # the one list (v0.8.4.29.5)
 
 
 ## Today's cases of the office (made on the first look of the day): [{kind, title, who, done}].

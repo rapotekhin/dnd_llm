@@ -978,7 +978,7 @@ func _plan_door(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 		return {"reason": "между %s и %s нет двери" % [s.room_id, to]}
 	var action := str(e.get("action", "unlock"))
 	var w := WorldView.new(data["world"])
-	var owner := str(w.site_of(to).get("owner", w.site_of(s.room_id).get("owner", "")))
+	var owner := str(w.inherit(to, "owner", w.inherit(s.room_id, "owner", "")))  # the place's owner above the room (v0.8.4.29.5)
 	var by_owner := not owner.is_empty() and (s.npcs_here(w.world, s.room_id).has(owner) or s.npcs_here(w.world, to).has(owner)) 		and not Being.dead(s, owner)
 	var dcs := WayRules.dcs(s, data, s.room_id, to)
 	var passed := func(skill: String, dc: int) -> bool:

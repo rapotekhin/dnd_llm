@@ -660,8 +660,7 @@ static func gather_why(s: GameSession, data: Dictionary, tag: String) -> String:
 	var g: Dictionary = cfg(data)["gather"].get(tag, {})
 	if g.is_empty() or not gather_here(s, data).has(tag):
 		return "GATHER_NONE"
-	var rec: Dictionary = _gathered(s).get("%s:%s" % [s.room_id, tag], {})
-	if int(rec.get("day", -1)) == s.day and int(rec.get("n", 0)) >= int(g.get("per_day", 1)):
+	if TimeRules.today(s, _gathered(s), "%s:%s" % [s.room_id, tag]) >= int(g.get("per_day", 1)):
 		return "GATHER_SPENT"
 	return ""
 
@@ -670,18 +669,14 @@ static func gather_why(s: GameSession, data: Dictionary, tag: String) -> String:
 static func gather(s: GameSession, data: Dictionary, tag: String) -> Array[String]:
 	var g: Dictionary = cfg(data)["gather"][tag]
 	var key := "%s:%s" % [s.room_id, tag]
-	var rec: Dictionary = _gathered(s).get(key, {})
-	if int(rec.get("day", -1)) != s.day:
-		rec = {"day": s.day, "n": 0}
-	rec["n"] = int(rec["n"]) + 1
-	_gathered(s)[key] = rec
+	TimeRules.count(s, _gathered(s), key)
 	var skill := str(g["skill"])
 	var dc := int(g["dc"])
 	var ro := Roll.hero(s, data, {"what": str(g["name"]), "skill": skill, "dc": dc, "tool": str(g.get("tool", ""))})  # the tool by the check's own road
 	var nat := int(ro["nat"])
 	var b := int(ro["bonus"])
 	var ok := bool(ro["ok"])
-	var lines: Array[String] = ["%s: %s %d + %d = %d против Сл %d — %s" % [g["name"], tr_skill(data, skill), nat, b, nat + b, dc, "успех" if ok else "провал"]]
+	var lines: Array[String] = [Activity.line(str(g["name"]), tr_skill(data, skill), ro, "успех" if ok else "провал")]
 	if not ok:
 		lines.append("Ничего толкового не нашлось")
 		return lines

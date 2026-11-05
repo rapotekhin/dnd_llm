@@ -227,7 +227,7 @@ static func buy_chance(data: Dictionary, ratio: float) -> float:
 ## The pack traders of the location who sell the thing too: buyers go to them first.
 static func _rivals(s: GameSession, data: Dictionary, loc: String) -> Dictionary:
 	var out := {}
-	for id: String in CrimeRules.people_of(data, loc):
+	for id: String in CrimeRules.people_of(s, data, loc):
 		if Being.dead(s, id):
 			continue
 		for item: String in TradeRules.pack_stock(WorldView.new(data["world"]).npc(id), data["rules"]):
@@ -312,7 +312,7 @@ static func shift_why(s: GameSession, data: Dictionary, vid: String, who: String
 		return "SHOP_STALL_LAPSED"
 	if not active(s, vid, who):
 		return "SHOP_EMPTY"
-	return "SHOP_DONE_TODAY" if int(venue(Life.of(s, who, data), vid).get("shift_day", 0)) == s.day else ""
+	return "SHOP_DONE_TODAY" if TimeRules.today(s, venue(Life.of(s, who, data), vid), "shift") > 0 else ""
 
 
 static func shift_hours(data: Dictionary) -> int:
@@ -334,7 +334,7 @@ static func shift_chance(s: GameSession, data: Dictionary, who: String = Being.H
 ## The hero behind the counter (the time passed): a check, its outcome × the shift's buyers, the takings to the purse.
 static func shift(s: GameSession, data: Dictionary, vid: String, minutes: int, who: String = Being.HERO) -> Array[String]:
 	var c := Life.of(s, who, data)
-	venue(c, vid)["shift_day"] = s.day
+	TimeRules.count(s, venue(c, vid), "shift")
 	var sc: Dictionary = cfg(data)["shift"]
 	var base := visitors(s, data, vid, int(sc["visitors"]), who)
 	var lines: Array[String] = []
@@ -426,7 +426,7 @@ static func _fine_till(s: GameSession, data: Dictionary, vid: String, who: Strin
 static func _registry_here(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> String:
 	if not data["rules"].has("shop") or not PropertyRules.is_registry(data, npc_id):
 		return "SHOP_NO_SERVICE"
-	return "" if s.npcs_here(data["world"], Life.room(s, data, who)).has(npc_id) else "SHOP_NOT_HERE"
+	return "" if Life.beside(s, data, who, npc_id) else "SHOP_NOT_HERE"
 
 
 static func charter_why(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> String:
@@ -487,7 +487,7 @@ static func lot(data: Dictionary) -> int:
 static func wholesale_why(s: GameSession, data: Dictionary, npc_id: String, item_id: String, who: String = Being.HERO) -> String:
 	if not is_supplier(s, data, npc_id) or not goods(s, data, npc_id).has(item_id):
 		return "SHOP_NO_SERVICE"
-	if not s.npcs_here(data["world"], Life.room(s, data, who)).has(npc_id):
+	if not Life.beside(s, data, who, npc_id):
 		return "SHOP_NOT_HERE"
 	var refused := SocialRules.service_why(s, data, npc_id, who)
 	if not refused.is_empty():
