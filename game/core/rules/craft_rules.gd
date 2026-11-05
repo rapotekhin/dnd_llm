@@ -260,10 +260,6 @@ static func minutes_of(r: Dictionary) -> int:
 	return int(r["minutes"]) if r.has("minutes") else int(r.get("hours", 1)) * 60
 
 
-static func proficient(c: Dictionary, tool: String) -> bool:
-	return (c.get("tools", []) as Array).has(tool)
-
-
 ## The recipe needs its tool in hand: not a simple dish, not a tool-less template (a scroll, a wondrous thing).
 static func needs_tool(r: Dictionary) -> bool:
 	return not simple(r) and not tool_of(r).is_empty()
@@ -292,7 +288,7 @@ static func known(s: GameSession, data: Dictionary) -> Array[String]:
 	var recipes := all(s, data)
 	for id: String in recipes:
 		var r: Dictionary = recipes[id]
-		if needs_tool(r) and not proficient(s.character, tool_of(r)):
+		if needs_tool(r) and not BackgroundRules.proficient(s.character, tool_of(r)):
 			continue
 		if bool(r.get("learn", false)) and not learned(s.character).has(id) and not books.has(id):
 			continue
@@ -349,7 +345,7 @@ static func why_not(s: GameSession, data: Dictionary, id: String) -> String:
 		return "CRAFT_BUSY"
 	if not skills_missing(s.character, data, r).is_empty():
 		return "CRAFT_NO_SKILL"
-	if needs_tool(r) and int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
+	if needs_tool(r) and not BackgroundRules.has_tool(s.character, tool_of(r)):
 		return "CRAFT_NO_TOOL"
 	if not station_here(s, data, str(r.get("station", ""))):
 		return "CRAFT_NO_STATION"
@@ -387,7 +383,7 @@ static func can_work(s: GameSession, data: Dictionary) -> String:
 	if p.is_empty():
 		return "CRAFT_NO_PROJECT"
 	var r := recipe(s, data, str(p["recipe"]))
-	if needs_tool(r) and int(s.character.get("inventory", {}).get(tool_of(r), 0)) <= 0:
+	if needs_tool(r) and not BackgroundRules.has_tool(s.character, tool_of(r)):
 		return "CRAFT_NO_TOOL"
 	if not station_here(s, data, str(r.get("station", ""))):
 		return "CRAFT_NO_STATION"
@@ -680,11 +676,8 @@ static func gather(s: GameSession, data: Dictionary, tag: String) -> Array[Strin
 	rec["n"] = int(rec["n"]) + 1
 	_gathered(s)[key] = rec
 	var skill := str(g["skill"])
-	var t := BackgroundRules.tool_check(s.character, data, str(g.get("tool", "")), skill)
 	var dc := int(g["dc"])
-	var parts := RollParts.skill(s, data, skill)
-	RollParts.add(parts, str(t["note"]), int(t["bonus"]))
-	var ro := Roll.hero(s, data, {"what": str(g["name"]), "skill": skill, "parts": parts, "dc": dc, "adv": not str(t["advantage"]).is_empty()})
+	var ro := Roll.hero(s, data, {"what": str(g["name"]), "skill": skill, "dc": dc, "tool": str(g.get("tool", ""))})  # the tool by the check's own road
 	var nat := int(ro["nat"])
 	var b := int(ro["bonus"])
 	var ok := bool(ro["ok"])
@@ -712,7 +705,7 @@ static func tr_skill(_data: Dictionary, skill: String) -> String:
 static func teachable(s: GameSession, data: Dictionary, sv: Dictionary) -> Array[String]:
 	var id := str(sv.get("recipe", ""))
 	var r := recipe(s, data, id)
-	if r.is_empty() or (needs_tool(r) and not proficient(s.character, tool_of(r))) or learned(s.character).has(id):
+	if r.is_empty() or (needs_tool(r) and not BackgroundRules.proficient(s.character, tool_of(r))) or learned(s.character).has(id):
 		return []
 	return [id]
 
@@ -731,7 +724,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 	var tool := str(spec.get("tool", ""))
 	if not cfg(data)["tools"].has(tool):
 		return {"reason": "инструмент %s движку неизвестен; можно: %s" % [tool, ", ".join(cfg(data)["tools"].keys())]}
-	if not proficient(s.character, tool) and not bool(spec.get("for_course", false)):
+	if not BackgroundRules.proficient(s.character, tool) and not bool(spec.get("for_course", false)):
 		return {"reason": "герой не владеет: %s — такой рецепт ему не по руке" % BackgroundRules.tool_name(data, tool)}
 	var station := str(spec.get("station", "")) if spec.get("station") != null else ""
 	if not station.is_empty() and not stations(data).has(station):

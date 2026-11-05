@@ -221,22 +221,6 @@ static func disarm_trap(s: GameSession, room_id: String, sec: Dictionary) -> voi
 	s.traps[secret_key(room_id, sec)] = "disarmed"
 
 
-## The bonus to disarm: Sleight of Hand, or DEX + proficiency with thieves' tools; without the tools in the pack —
-## disadvantage. {bonus, disadvantage_reason, parts} — `parts` for the roll's breakdown when `data` is given.
-static func disarm_bonus(c: Dictionary, data: Dictionary = {}) -> Dictionary:
-	var bonus := int(c.get("skills", {}).get("sleight_of_hand", 0))
-	var has_tools := int(c.get("inventory", {}).get("thieves_tools", 0)) > 0
-	var parts: Array[Dictionary] = []
-	if not data.is_empty():
-		parts = RollParts.cached(c, data, "skill", "sleight_of_hand")
-	if has_tools and (c.get("tools", []) as Array).has("thieves_tools"):
-		var dex := CharacterRules.mod(CharacterRules.ability(c, "dex"))
-		if dex + int(c.get("prof_bonus", 2)) > bonus:
-			bonus = dex + int(c.get("prof_bonus", 2))
-			parts = [RollParts.part(RollParts.ability_name("dex"), dex), RollParts.part("владение воровскими инструментами", int(c.get("prof_bonus", 2)))]
-	return {"bonus": bonus, "disadvantage_reason": "" if has_tools else "нет воровских инструментов", "parts": parts}
-
-
 ## Caches found in this room and not emptied yet give their loot. Lines.
 static func take_caches(s: GameSession, data: Dictionary, room_id: String) -> Array[String]:
 	var lines: Array[String] = []

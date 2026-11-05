@@ -145,12 +145,13 @@ func test_found_traps_are_offered_and_disarming_needs_tools() -> void:
 	Knows.add(s, Knows.SECRET, "mine-gallery", "deadfall")
 	assert_array(ExplorationRules.found_traps(s, world, "mine-gallery")).has_size(1)
 	s.character["inventory"].erase("thieves_tools")
-	assert_str(ExplorationRules.disarm_bonus(s.character)["disadvantage_reason"]).contains("инструментов")
+	var spec := {"skill": "sleight_of_hand", "dc": 15, "tool": "thieves_tools"}  # v0.8.4.29.1: the tools by the check's own road
+	assert_bool(Roll.odds(s, data, Sheet.HERO, spec)["failed"]).is_true()  # no tools — no disarming
 	var r := _session("rogue_damir")
 	r.character["inventory"]["thieves_tools"] = 1
-	var db := ExplorationRules.disarm_bonus(r.character)
-	assert_str(db["disadvantage_reason"]).is_empty()
-	assert_int(db["bonus"]).is_greater_equal(CharacterRules.mod(int(r.character["abilities"]["dex"])) + int(r.character["prof_bonus"]))
+	assert_bool(Roll.odds(r, data, Sheet.HERO, spec)["failed"]).is_false()
+	var bare := int(Roll.odds(r, data, Sheet.HERO, {"skill": "sleight_of_hand", "dc": 15})["chance"])
+	assert_int(int(Roll.odds(r, data, Sheet.HERO, spec)["chance"])).is_greater_equal(bare)  # proficient: a bonus or advantage
 	ExplorationRules.disarm_trap(s, "mine-gallery", ExplorationRules.trap_on_exit(s, world, "mine-gallery", "mine-deep"))
 	assert_array(ExplorationRules.found_traps(s, world, "mine-gallery")).is_empty()
 

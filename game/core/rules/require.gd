@@ -31,7 +31,7 @@ static func rows(s: GameSession, data: Dictionary, req: Dictionary, ctx: Diction
 		out.append({"text": wt if not wt.is_empty() else "условие учителя", "ok": Cond.met(s, req["when"])})
 	if bool(req.get("tool", false)):
 		var tool := str(ctx.get("tool", ""))
-		out.append({"text": "владение: " + BackgroundRules.tool_name(data, tool), "ok": CraftRules.proficient(c, tool)})
+		out.append({"text": "владение: " + BackgroundRules.tool_name(data, tool), "ok": BackgroundRules.proficient(c, tool)})
 	if req.has("skill") and not (req["skill"] is bool and not bool(req["skill"])):
 		var skill := str(ctx.get("skill", "")) if req["skill"] is bool else str(req["skill"])
 		out.append({"text": "владение навыком: " + CraftRules.tr_skill(data, skill), "ok": JobRules._skilled(c, skill)})

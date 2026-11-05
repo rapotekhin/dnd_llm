@@ -4,11 +4,13 @@ extends RefCounted
 ## window like in BG3). The pockets are a view of what the NPC has (Gear, v0.8.4.10): a handful of its purse, small
 ## things, worn gear. Each entry has its DC:
 ## the NPC's passive Perception (at least 10) + the entry's modifiers (rules.theft.dc). A Sleight of Hand at least the
-## DC takes it; a failure — the NPC reacts by its kind (rules.theft.reactions): a guard fights, a trader closes the
-## shop for the day, others call the guard (a fine, or a fight with the guard when the player cannot pay).
+## DC takes it; a failure is `caught` (v0.8.4.29.1, the hero and a person alike): the victim's own answer (a guard fights,
+## a trader closes the shop for the day) and the crime `pickpocket` by the law. A thing taken before an owner's eyes is
+## `react` (an owner who calls the guard fines on the spot).
 
 
 const COINS := "coins"
+const PURSE := "purse"
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -82,8 +84,11 @@ static func can_steal(s: GameSession, data: Dictionary, npc_id: String, doer: St
 
 ## The outcome of a Sleight of Hand at one entry: success — it goes to `doer`; failure — the NPC reacts (v0.8.4.21: a
 ## person caught is the crime `pickpocket` where there is law). Lines.
+## `entry_id` PURSE — a handful of its coins by words, without the window (v0.8.4.29.1: the same road).
 static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: String, success: bool, doer: String = Being.HERO) -> Array[String]:
 	var list: Array = pockets(s, data, npc_id)
+	if entry_id == PURSE:
+		list = [{"id": PURSE, "cp": mini(Gear.coins(s, data, npc_id), int(cfg(data)["handful_cp"]))}]
 	var who := str(WorldView.new(data["world"]).npc_name(npc_id))
 	var lines: Array[String] = []
 	for e: Dictionary in list:
@@ -91,14 +96,10 @@ static func steal(s: GameSession, data: Dictionary, npc_id: String, entry_id: St
 			continue
 		if not success:
 			lines.append("%s замечает руку в кармане" % who)
-			if doer != Being.HERO:
-				var room := Life.room(s, data, doer)
-				lines.append_array(CrimeRules.on_job(s, data, "pickpocket", npc_id, room, WorldView.new(data["world"]).location_id(room), doer))
-				return lines
-			Being.of(s, npc_id)["caught"] = s.day
-			lines.append_array(react(s, data, npc_id))
-			lines.append_array(WorldEvent.deed(s, data, "pickpocket"))  # v0.7.49
+			lines.append_array(caught(s, data, npc_id, doer))
 			return lines
+		if entry_id == PURSE and int(e["cp"]) <= 0:
+			return lines  # nothing left in its purse
 		if int(e.get("cp", 0)) > 0:
 			Gear.pay(s, data, npc_id, -int(e["cp"]))
 			Ledger.add(s, int(e["cp"]), "theft:steal", doer)
@@ -133,13 +134,40 @@ static func without(actions: Array, lost: Array[String]) -> Array:
 	return kept
 
 
-## Coins by words (a Sleight of Hand at an NPC without the window): a handful of its purse, if any is left. cp.
-static func take_purse(s: GameSession, data: Dictionary, npc_id: String) -> int:
-	var cp := mini(Gear.coins(s, data, npc_id), int(cfg(data)["handful_cp"]))
-	if cp > 0:
-		Gear.pay(s, data, npc_id, -cp)
-		Ledger.add(s, cp, "theft:take_purse")
-	return cp
+## A caught pickpocket of anybody (v0.8.4.29.1: one road for the hero and a person). Unseen by the victim — nobody to
+## blame, though the deed is done; seen — the victim's own answer to the hero (`answer`) and the crime `pickpocket` with its
+## witnesses, wanted and sentence where the law looks for it (CrimeRules.on_job). Lines.
+static func caught(s: GameSession, data: Dictionary, npc_id: String, doer: String = Being.HERO) -> Array[String]:
+	var world := WorldView.new(data["world"])
+	var room := Life.room(s, data, doer)
+	if not WatchRules.pierces(s, data, Sheet.who(s, data, npc_id), Sheet.who(s, data, doer), -1):  # v0.7.5: felt, not seen
+		var felt: Array[String] = ["%s хватается за кошель и озирается — вора не видно" % world.npc_name(npc_id)]
+		felt.append_array(WorldEvent.deed(s, data, "pickpocket", room, doer))
+		return felt
+	var lines: Array[String] = []
+	if doer == Being.HERO:
+		Being.of(s, npc_id)["caught"] = s.day
+		lines.append_array(answer(s, data, npc_id, "поймал%s героя на краже из своих карманов"))
+	lines.append_array(CrimeRules.on_job(s, data, "pickpocket", npc_id, room, world.location_id(room), doer))
+	return lines
+
+
+## The NPC's own answer to the hero caught at it: its attitude and memory, then its kind's reaction — a fight or a shop shut
+## for the day ("" — neither: the law's business). Lines.
+static func answer(s: GameSession, data: Dictionary, npc_id: String, memory: String) -> Array[String]:
+	var npc := WorldView.new(data["world"]).npc(npc_id)
+	var who := str(npc.get("name", npc_id))
+	s.shift_attitude(npc_id, int(cfg(data)["caught_attitude"]), data)
+	s.remember(npc_id, memory % CrimeRules._ending(data, npc_id))
+	var lines: Array[String] = ["%s: отношение хуже" % who]
+	match reaction_kind(data, npc_id):
+		"fight":
+			s.pending_fight = [{"monster": Sheet.template_id(data, npc), "name": who, "desc": str(npc.get("description", "")), "npc_id": npc_id}]
+			lines.append("%s хватается за оружие" % who)
+		"close_shop":
+			s.shop_closed[npc_id] = s.day
+			lines.append("%s захлопывает лавку для вас до завтра" % who)
+	return lines
 
 
 ## What the NPC's kind does on a caught theft or a thing taken before its eyes (rules.theft.reactions). Lines.
@@ -156,25 +184,17 @@ static func reaction_kind(data: Dictionary, npc_id: String) -> String:
 static func react(s: GameSession, data: Dictionary, npc_id: String, memory: String = "поймал%s героя на краже из своих карманов",
 		rep_key: String = "theft_caught", deed: String = "theft_caught", why: String = "кража") -> Array[String]:
 	var world := WorldView.new(data["world"])
-	var npc := world.npc(npc_id)
-	var who := str(npc.get("name", npc_id))
-	var lines: Array[String] = []
+	var who := world.npc_name(npc_id)
 	if not WatchRules.pierces(s, data, Sheet.who(s, data, npc_id), Sheet.HERO, -1):  # v0.7.5: felt, not seen — nobody to blame
 		Being.drop(s, npc_id, "caught")
-		lines.append("%s хватается за кошель и озирается — вора не видно" % who)
-		return lines
-	s.shift_attitude(npc_id, int(cfg(data)["caught_attitude"]), data)
-	s.remember(npc_id, memory % CrimeRules._ending(data, npc_id))
-	lines.append("%s: отношение хуже" % who)
+		var felt: Array[String] = ["%s хватается за кошель и озирается — вора не видно" % who]
+		return felt
+	var lines := answer(s, data, npc_id, memory)
 	lines.append_array(WorldEvent.emit(s, data, "caught", {"npc": npc_id, "victim": npc_id, "crime": "theft", "location": world.location_id(s.room_id),
 		"points": rep_key, "why": why, "bond_deed": deed, "bond_why": why}))
 	match reaction_kind(data, npc_id):
-		"fight":
-			s.pending_fight = [{"monster": Sheet.template_id(data, npc), "name": who, "desc": str(npc.get("description", "")), "npc_id": npc_id}]
-			lines.append("%s хватается за оружие" % who)
-		"close_shop":
-			s.shop_closed[npc_id] = s.day
-			lines.append("%s захлопывает лавку для вас до завтра" % who)
+		"fight", "close_shop":
+			pass
 		_:
 			var fine := int(cfg(data)["fine_cp"])
 			if Ledger.balance(s) >= fine:

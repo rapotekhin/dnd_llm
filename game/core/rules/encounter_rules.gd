@@ -131,7 +131,7 @@ static func watch(s: GameSession, data: Dictionary, map: Dictionary) -> Dictiona
 			var roll := CombatRules.stealth_roll(s, data)
 			lk["stealth"] = int(roll["total"])
 			out["lines"].append("%s крадётся: Скрытность %d%s" % [s.character.get("name", ""), int(roll["total"]), roll["note"]])
-		if int(lk["stealth"]) < best_passive(s, data, [t["record"]]) - WeatherRules.unseen(s, data):
+		if not bool(WatchRules.against(s, data, [t["record"]], Sheet.HERO, int(lk["stealth"]))["ok"]):
 			out.merge({"fight": true, "source": {"sneak": true, "stealth_total": int(lk["stealth"])}}, true)
 			return out
 	return out

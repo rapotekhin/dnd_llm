@@ -176,7 +176,8 @@ func _trap_menu(box: Container, s: GameSession, id: String, can_act: bool) -> bo
 	var to := str(sec["trap"].get("guards", ""))
 	_line(str(sec["text"]), false)
 	var acts := _acts("TrapActs")
-	_flow(acts, tr("BTN_TRAP_DISARM"), _trap.bind(to, true, id), can_act, "TrapDisarm_" + id, tr("TRAP_DISARM_TIP"))
+	var picks := BackgroundRules.has_tool(s.character, "thieves_tools")  # v0.8.4.29.1: grey without the tools, as a lock
+	_flow(acts, tr("BTN_TRAP_DISARM"), _trap.bind(to, true, id), can_act and picks, "TrapDisarm_" + id, tr("TRAP_DISARM_TIP") if picks else _no_picks(s))
 	if not to.is_empty():
 		var room_name := str(GameState.world().room(to).get("name", to))
 		_flow(acts, tr("BTN_TRAP_BYPASS").format({"room": room_name}), _trap.bind(to, false, id), can_act, "TrapBypass_" + id, tr("TRAP_BYPASS_TIP"))

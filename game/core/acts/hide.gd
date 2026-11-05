@@ -37,10 +37,9 @@ func _behind(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 
 func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
 	var roll := CombatRules.stealth_roll(s, data, f)
-	var best := 0
-	for id: String in CombatRules.foes_of(s, f):
-		best = maxi(best, Sheet.passive(s, data, CombatRules.fighter(s, id)) - WeatherRules.unseen(s, data))
-	var ok := int(roll["total"]) >= best
+	var vs := WatchRules.against(s, data, CombatRules.foes_of(s, f).map(func(id: String) -> Dictionary: return CombatRules.fighter(s, id)), f, int(roll["total"]))
+	var best := int(vs["best"])  # v0.8.4.29.1: the hider's own invisibility, not the hero's
+	var ok := bool(vs["ok"])
 	if ok:
 		f["hidden"] = true
 	return ["%s прячется: Скрытность %d%s против Внимательности %d — %s" % [_name(s, f), int(roll["total"]), roll["note"], best,

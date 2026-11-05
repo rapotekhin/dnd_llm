@@ -48,12 +48,16 @@
 
 ## B. Кража: у героя одна дорога, у человека другая (высокая)
 
+**Исправлено в 0.8.4.29.1:** `TheftRules.steal` с входом `PURSE` для слов, `TheftRules.caught` для любого — ответ жертвы и `CrimeRules.on_job`; близость жертвы — `_victim_bond` по `bond` вида преступления.
+
 - **Пойманный герой:** `TheftRules` (`theft_rules.gd:94-104`, `react` :151) — штраф 200 мд на месте, хуже отношение, закрытая лавка. Записи о преступлении нет.
 - **Пойманный человек:** `CrimeRules.on_job("pickpocket")` — свидетели, розыск, приговор, штраф вида 500 мд.
 - **Кража словами:** `GameState._theft` (`game_state.gd:3497`) — своя дорога мимо `TheftRules.steal`. Нет `WorldEvent.deed("pickpocket")`, поэтому её не видят обеты, летопись и фракции.
 - **Одно место:** `TheftRules.steal` для любого, с входом «кошелёк». Поимка — `CrimeRules.on_job`. Отношение и лавка — слушатели события.
 
 ## C. Инструменты в проверке (высокая)
+
+**Исправлено в 0.8.4.29.1:** `tool` в спеке у замков, ловушек, сбора и смены; `BackgroundRules.has_tool` / `proficient`; `disarm_bonus` и `CraftRules.proficient` убраны, `RollParts.tool` — одна ветка. Сумки остались вне счёта: их содержимое по замыслу не под рукой.
 
 - **Воровские инструменты, своё правило:** `ExplorationRules.disarm_bonus` (`exploration_rules.gd:226`) зовёт `GameState._lock_roll` (`game_state.gd:1544`) для замков, дверей и ловушек. Оно читает сырые `skills` и `prof_bonus`. `ContainerRules.lock_check` отдаёт `tool`, а `_lock_roll` его выбрасывает.
 - **Канон:** `spec.tool` в `CheckEngine.situation` (`check_engine.gd:49`). Там `required` даёт автопровал, а владение и навыком, и инструментом даёт преимущество.
@@ -68,6 +72,8 @@
 - **Одно место:** `{"tool": …}` в спеке `Roll.check` и одна `BackgroundRules.has_tool(who, tool)`.
 
 ## D. Скрытность против пассивного Восприятия (высокая)
+
+**Исправлено в 0.8.4.29.1:** `WatchRules.notice` / `against` — во всех пяти местах, `WeatherRules.unseen` убран; засада застаёт и спутников. Внезапность от крадущегося — по-прежнему по броску героя: спутники идут с ним.
 
 - **Канон:** `WatchRules.eyes` (`watch_rules.gd:72`). Невидимый там не виден, пока `pierces` не скажет иначе.
 - **Ещё четыре копии:**

@@ -16,7 +16,7 @@ static func registry() -> Array[Dictionary]:
 			{"id": "faith", "on": ["deed"], "run": _faith},  # a vow and a commandment hear what the hero did (v0.7.49)
 			{"id": "faction_crime", "on": ["crime_known"], "run": _faction_crime},
 			{"id": "people", "on": ["crime_known"], "run": CrimeRules.people_know},
-			{"id": "assault_bond", "on": ["crime_known"], "run": _assault_bond},
+			{"id": "victim_bond", "on": ["crime_known"], "run": _victim_bond},
 			{"id": "fame", "on": ["crime_known"], "run": CrimeRules.fame_known},  # the reputation and the news (v0.7.47)
 			{"id": "wanted", "on": ["crime_known"], "run": CrimeRules.wanted_known},
 			{"id": "reputation", "on": ["caught", "quest_done"], "run": _reputation},
@@ -73,10 +73,12 @@ static func _faction_crime(s: GameSession, data: Dictionary, f: Dictionary) -> A
 	return FactionRules.on_crime(s, data, str(f["victim"]), str(f["crime"]))
 
 
-static func _assault_bond(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
-	if str(f["crime"]) != "assault" or CrimeRules.doer_of(f.get("record", {})) != Being.HERO:
+## The victim's bond with the hero by its crime's `bond` (rules.crime.kinds: an assault, a pocket picked; v0.7.31, v0.8.4.29.1).
+static func _victim_bond(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
+	var kind := CrimeRules.kind_of(data, f.get("record", {}))
+	if str(kind.get("bond", "")).is_empty() or CrimeRules.doer_of(f.get("record", {})) != Being.HERO:
 		return []
-	return BondRules.on_deed(s, data, str(f["victim"]), "assault", "нападение")  # v0.7.31
+	return BondRules.on_deed(s, data, str(f["victim"]), str(kind["bond"]), str(kind.get("name", "")))
 
 
 static func _reputation(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:

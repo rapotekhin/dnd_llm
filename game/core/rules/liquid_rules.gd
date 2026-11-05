@@ -287,9 +287,9 @@ static func needs_why(c: Dictionary, data: Dictionary, lid: String) -> String:
 	var tool := str(kind(data, lid).get("needs", ""))
 	if tool.is_empty():
 		return ""
-	if not CraftRules.proficient(c, tool):
+	if not BackgroundRules.proficient(c, tool):
 		return "LIQUID_NEEDS"
-	return "" if int(c.get("inventory", {}).get(tool, 0)) > 0 else "LIQUID_NEEDS_KIT"
+	return "" if BackgroundRules.has_tool(c, tool) else "LIQUID_NEEDS_KIT"
 
 
 ## The tool `lid` needs to be poured, "" — none.

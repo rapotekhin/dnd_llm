@@ -318,9 +318,10 @@ func test_a_theft_felt_has_nobody_to_blame() -> void:
 
 func test_the_watchers_lose_their_passive_perception() -> void:
 	var s := _hero()
-	var seen := WeatherRules.unseen(s, data)
+	var w := {"monster": "guard"}
+	var seen := WatchRules.notice(s, data, w)
 	_unseen(s)
-	assert_int(WeatherRules.unseen(s, data)).is_equal(seen + int(data["rules"]["invisibility"]["passive_penalty"]))
+	assert_int(WatchRules.notice(s, data, w)).is_equal(seen - int(data["rules"]["invisibility"]["passive_penalty"]))
 
 
 func test_a_foe_room_is_passed_unseen() -> void:

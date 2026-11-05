@@ -168,12 +168,6 @@ static func way_why(s: GameSession, data: Dictionary, from: String, to: String) 
 	return kind_name(data, a if float(kind(data, a).get("travel_mult", 1.0)) >= float(kind(data, b).get("travel_mult", 1.0)) else b)
 
 
-## The watchers' passive Perception lost against the hero's invisibility (ConditionRules). The weather and the dark are in
-## each watcher's own passive since v0.8.4.12 (Sheet.passive).
-static func unseen(s: GameSession, data: Dictionary) -> int:
-	return ConditionRules.unseen_penalty(s.character, data)
-
-
 ## The catch of a hunt (`game`) or a fishing (`fish`) here in percent.
 static func wilds_pct(s: GameSession, data: Dictionary, ground: String) -> int:
 	return int(kind(data, here(s, data)).get("hunt_pct" if ground == "game" else "fish_pct", 100))

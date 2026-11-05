@@ -460,7 +460,7 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 		var seen: Array[String] = []
 		for id: String in foes:
 			var f := fighter(s, id)
-			if int(roll["total"]) >= Sheet.passive(s, data, f) - WeatherRules.unseen(s, data):
+			if bool(WatchRules.against(s, data, [f], Sheet.HERO, int(roll["total"]))["ok"]):
 				f["surprised"] = true
 				unseen.append(str(f["name"]))
 			else:
@@ -479,12 +479,14 @@ static func _surprise(s: GameSession, data: Dictionary, source: Dictionary) -> A
 		var all_hidden: bool = source.get("hidden", true)
 		if not source.has("hidden"):
 			for id: String in foes:
-				if int(stealth_roll(s, data, fighter(s, id))["total"]) < passive:
+				var f := fighter(s, id)
+				if not bool(WatchRules.against(s, data, [Sheet.HERO], f, int(stealth_roll(s, data, f)["total"]))["ok"]):
 					all_hidden = false
-		if all_hidden:
-			player(s)["surprised"] = true
+		if all_hidden:  # v0.8.4.29.1: the hero's whole side is caught, its companions too
+			for id: String in friends_of(s, player(s)):
+				fighter(s, id)["surprised"] = true
 			s.combat["hero_surprised"] = true
-			lines.append("Засада! Враги подкрались незаметно — %s пропускает первый ход" % who)
+			lines.append("Засада! Враги подкрались незаметно — %s%s пропускает первый ход" % [who, " и спутники" if not allies(s).is_empty() else ""])
 		else:
 			lines.append("Засада, но %s вовремя замечает врагов (пассивная Внимательность %d)" % [who, passive])
 	return lines

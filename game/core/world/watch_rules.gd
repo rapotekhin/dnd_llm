@@ -88,7 +88,7 @@ static func eyes(s: GameSession, data: Dictionary, ids: Array, doer: String = Be
 			return true
 		if not roll.has("total"):
 			roll.merge(CombatRules.stealth_roll(s, data, who))
-		return int(roll["total"]) < Sheet.passive(s, data, w))
+		return int(roll["total"]) < notice(s, data, w, who))
 
 
 ## `watcher` makes out `doer` for all its invisibility (v0.8.4.16): the doer is not invisible or is outlined, the watcher
@@ -103,6 +103,26 @@ static func pierces(s: GameSession, data: Dictionary, watcher: Dictionary, doer:
 		return false
 	var sense := FightGrid.senses(s, data, watcher)
 	return int(sense.get("truesight", -1)) >= far or int(sense.get("blindsight", -1)) >= far
+
+
+## The passive Perception `watcher` sets against `doer`'s Stealth (v0.8.4.29.1, the one place): an invisible doer it does
+## not make out (`pierces`) it notices worse by rules.invisibility.passive_penalty.
+static func notice(s: GameSession, data: Dictionary, watcher: Dictionary, doer: Dictionary = Sheet.HERO) -> int:
+	var p := Sheet.passive(s, data, watcher)
+	return p if pierces(s, data, watcher, doer, -1) else p - ConditionRules.unseen_penalty(Sheet.holder(s, doer), data)
+
+
+## `doer`'s Stealth `total` against the watchers (v0.8.4.29.1, the one «Скрытность против наблюдателей»: a sneak past people,
+## a meeting, the surprise, Hide): {ok, best, by} — the highest notice among them, who sets it, and the total meets it.
+static func against(s: GameSession, data: Dictionary, watchers: Array, doer: Dictionary, total: int) -> Dictionary:
+	var best := 0
+	var by: Dictionary = {}
+	for w: Dictionary in watchers:
+		var n := notice(s, data, w, doer)
+		if n >= best:
+			best = n
+			by = w
+	return {"ok": total >= best, "best": best, "by": by}
 
 
 ## A person of the room here sees the hero.

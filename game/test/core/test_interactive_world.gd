@@ -109,8 +109,9 @@ func test_stealing_and_getting_caught_by_the_kind_of_npc() -> void:
 	var item: Dictionary = TheftRules.pockets(s, data, "npc_serving")[0]
 	gold = int(s.character["gold_cp"])
 	var caught := TheftRules.steal(s, data, "npc_serving", str(item["id"]), false)
-	assert_str("\n".join(caught)).contains("зовёт стражу")  # a commoner: the guard and a fine
-	assert_int(int(s.character["gold_cp"])).is_equal(gold - int(data["rules"]["theft"]["fine_cp"]))
+	assert_str("\n".join(caught)).contains("в розыске")  # v0.8.4.29.1: a commoner — the crime by the law, as for a person
+	assert_int(int(s.character["gold_cp"])).is_equal(gold)  # the fine is the sentence's, not paid on the spot
+	assert_bool(s.crimes.any(func(c: Dictionary) -> bool: return str(c["kind"]) == "pickpocket" and str(c["victim"]) == "npc_serving")).is_true()
 	assert_str(TheftRules.can_steal(s, data, "npc_serving")).is_equal("THEFT_CAUGHT")
 	var v := _session()
 	TheftRules.pockets(v, data, "npc_veteran")
@@ -122,7 +123,7 @@ func test_stealing_and_getting_caught_by_the_kind_of_npc() -> void:
 	TheftRules.pockets(poor, data, "npc_cook")
 	poor.room_id = "brod-tavern-kitchen"
 	TheftRules.steal(poor, data, "npc_cook", TheftRules.COINS, false)
-	assert_str(str(poor.pending_fight[0]["monster"])).is_equal("guard")  # cannot pay the fine
+	assert_bool(poor.wanted.is_empty()).is_false()  # no fine on the spot: the law looks for the thief
 
 
 func test_props_and_pockets_survive_the_save() -> void:

@@ -52,7 +52,9 @@ func test_a_traders_purse_is_its_one_till() -> void:
 	assert_int(till).is_greater_equal(3000)
 	assert_int(int(TradeRules.info(s, data, "npc_innkeeper")["purse_cp"])).is_equal(till)
 	assert_int(ContestRules.purse(s, data, "npc_innkeeper")).is_equal(till)
-	var hand := TheftRules.take_purse(s, data, "npc_innkeeper")
+	var before := Ledger.balance(s)
+	TheftRules.steal(s, data, "npc_innkeeper", TheftRules.PURSE, true)
+	var hand := Ledger.balance(s) - before
 	assert_int(hand).is_equal(int(data["rules"]["theft"]["handful_cp"]))  # a hand takes a handful, not the till
 	assert_int(Gear.coins(s, data, "npc_innkeeper")).is_equal(till - hand)
 	assert_int(int(TradeRules.info(s, data, "npc_innkeeper")["purse_cp"])).is_equal(till - hand)

@@ -1356,15 +1356,11 @@ func _sneak_past_people(room_id: String) -> String:
 		session.sneaking = was
 	if npcs.is_empty():
 		return ""
-	var best := 0
-	var who := ""
-	for id: String in npcs:
-		var pp := Sheet.passive(session, Catalog.data, Sheet.who(session, Catalog.data, id)) - WeatherRules.unseen(session, Catalog.data)
-		if pp >= best:
-			best = pp
-			who = str(world().npc(id).get("name", id))
 	var roll := CombatRules.stealth_roll(session, Catalog.data)
-	if int(roll["total"]) >= best:
+	var vs := WatchRules.against(session, Catalog.data, npcs.map(func(id: String) -> Dictionary: return Sheet.who(session, Catalog.data, id)), Sheet.HERO, int(roll["total"]))
+	var best := int(vs["best"])
+	var who := WorldView.name_of(Catalog.data, str(vs["by"].get("id", "")))
+	if bool(vs["ok"]):
 		return "Крадётесь: Скрытность %d%s против Внимательности %d — никто не обращает внимания" % [int(roll["total"]), roll["note"], best]
 	session.sneak_noticed = room_id
 	session.sneaking = false
@@ -1545,12 +1541,9 @@ func _lock_roll(how: String, dc: int, target: String) -> Dictionary:
 	var params := {"skill": {"pick": "sleight_of_hand", "force": "athletics", "dodge": "acrobatics"}[how], "dc_tier": "medium", "dc": dc, "target_id": target}
 	if how == "force":
 		params["about"] = "force"  # a crowbar, a portable ram (rules.check_about, v0.8.4.27)
-	var parts: Array[Dictionary] = []
 	if how == "pick":
-		var db := ExplorationRules.disarm_bonus(session.character, Catalog.data)
-		parts = db["parts"]
-		params["disadvantage_reason"] = str(db["disadvantage_reason"])
-	var result := CheckEngine.card(session, Catalog.data, params, parts)
+		params["tool"] = "thieves_tools"  # v0.8.4.29.1: the tools by the check's own road (rules.tools: required, proficiency)
+	var result := CheckEngine.card(session, Catalog.data, params)
 	_add(GameSession.check_entry(params, result))
 	return result
 
@@ -2370,6 +2363,8 @@ func trap_action(to: String, disarm: bool, trap_id: String = "") -> String:
 		else ExplorationRules.found_trap(session, Catalog.data["world"], from, trap_id)
 	if trap.is_empty() or not ExplorationRules.is_found(session, from, trap):
 		return "TRAP_NONE"
+	if disarm and not BackgroundRules.has_tool(session.character, "thieves_tools"):
+		return "PICK_NO_TOOLS"
 	var t: Dictionary = trap["trap"]
 	var result := _lock_roll("pick" if disarm else "dodge", int(t["disarm_dc"]), str(trap["id"]))
 	var lines: Array[String] = []
@@ -3495,19 +3490,16 @@ func _theft_target(params: Dictionary) -> String:
 
 ## Theft by words: the engine gives the loot (rules.theft) or the NPC notices; the master narrates the note.
 func _theft(npc_id: String, ok: bool) -> String:
-	var who := str(world().npc(npc_id).get("name", npc_id))
-	var lines: Array[String] = []
+	var who := WorldView.name_of(Catalog.data, npc_id)
+	var before := Ledger.balance(session)
+	var lines := TheftRules.steal(session, Catalog.data, npc_id, TheftRules.PURSE, ok)  # v0.8.4.29.1: the pockets' own road
+	var cp := Ledger.balance(session) - before
 	var note := ""
-	var cp := TheftRules.take_purse(session, Catalog.data, npc_id) if ok else 0
 	if ok and cp <= 0:
 		note = "Кража: у %s в кошеле больше ничего нет" % who
 	elif ok:
-		lines.append("%s — украдено: %s" % [who, Money.format(cp)])
 		note = "Кража удалась, %s ничего не заметил(а): движок уже выдал %s (зм — золотые, см — серебряные, мм — медные) — опиши добычу ровно так" % [who, Money.format(cp)]
 	else:
-		Being.of(session, npc_id)["caught"] = session.day
-		lines.append("%s замечает руку в кармане" % who)
-		lines.append_array(TheftRules.react(session, Catalog.data, npc_id))
 		note = "Кража провалилась: " + "; ".join(lines) + " — движок уже всё применил"
 	if not lines.is_empty():
 		_told(lines)

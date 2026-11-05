@@ -120,12 +120,22 @@ static func tool_name(data: Dictionary, id: String) -> String:
 
 ## The tool the character carries whose row of rules.tools has `key` (an instrument to play — `perform`, one to find the
 ## way — `wayfinder`): a proficient one first; with `owned` only a proficient one counts. "" — none (v0.8.4.26.4).
+## `c` carries the tool (v0.8.4.29.1: the one «has it» of a check, a recipe, a liquid, a lock; a bag's contents are not at hand).
+static func has_tool(c: Dictionary, tool: String) -> bool:
+	return not tool.is_empty() and int(c.get("inventory", {}).get(tool, 0)) > 0
+
+
+## `c` is proficient with the tool (its background, class, race or a course).
+static func proficient(c: Dictionary, tool: String) -> bool:
+	return (c.get("tools", []) as Array).has(tool)
+
+
 static func tool_with(c: Dictionary, data: Dictionary, key: String, owned := false) -> String:
 	var any := ""
 	for id: String in c.get("inventory", {}):
 		if not bool(data["rules"]["tools"].get(id, {}).get(key, false)):
 			continue
-		if (c.get("tools", []) as Array).has(id):
+		if proficient(c, id):
 			return id
 		if any.is_empty() and not owned:
 			any = id
@@ -138,13 +148,11 @@ static func tool_check(c: Dictionary, data: Dictionary, tool: String, skill: Str
 	if tool.is_empty():
 		return out
 	var t: Dictionary = data["rules"]["tools"].get(tool, {})
-	var has := int(c.get("inventory", {}).get(tool, 0)) > 0
-	var proficient := (c.get("tools", []) as Array).has(tool)
-	if not has:
+	if not has_tool(c, tool):
 		if bool(t.get("required", false)):
 			out["auto_fail"] = "нет: " + tool_name(data, tool)
 		return out
-	if proficient:
+	if proficient(c, tool):
 		out["note"] = "владение: " + tool_name(data, tool)
 		var skilled := (c.get("skill_profs", []) as Array).has(skill) or CharacterRules.has_feature(c, "skill_prof_" + skill)
 		if skilled and (t.get("skills", []) as Array).has(skill):

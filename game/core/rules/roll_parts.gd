@@ -121,17 +121,14 @@ static func development(c: Dictionary, data: Dictionary, dir: String, key: Strin
 
 
 ## A tool's check: the tool's ability, the proficiency with it, the game's difficulty (CraftRules.bonus).
+## Anybody's (v0.8.4.20, v0.8.4.29.1: one road): its ability and the tool it learned; the hero's with the game's difficulty.
 static func tool(s: GameSession, data: Dictionary, tool_id: String, ab: String, who: String = Being.HERO) -> Array[Dictionary]:
-	if who != Being.HERO:  # a person's (v0.8.4.20): its ability and the tool it learned
-		var w := Sheet.who(s, data, who)
-		var mine: Array[Dictionary] = [part(ability_name(ab), Sheet.ability_mod(s, data, w, ab))]
-		if CraftRules.proficient(Life.of(s, who), tool_id):
-			add(mine, "владение: " + BackgroundRules.tool_name(data, tool_id), Sheet.prof(s, data, w))
-		return mine
-	var out: Array[Dictionary] = [part(ability_name(ab), CharacterRules.mod(CharacterRules.ability(s.character, ab)))]
-	if CraftRules.proficient(s.character, tool_id):
-		add(out, "владение: " + BackgroundRules.tool_name(data, tool_id), CharacterRules.prof_bonus(s.character, data))
-	difficulty(s, data, out)
+	var w := Sheet.who(s, data, who)
+	var out: Array[Dictionary] = [part(ability_name(ab), Sheet.ability_mod(s, data, w, ab))]
+	if BackgroundRules.proficient(Life.of(s, who), tool_id):
+		add(out, "владение: " + BackgroundRules.tool_name(data, tool_id), Sheet.prof(s, data, w))
+	if who == Being.HERO:
+		difficulty(s, data, out)
 	return out
 
 

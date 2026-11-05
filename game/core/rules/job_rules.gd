@@ -197,11 +197,8 @@ static func _check(s: GameSession, data: Dictionary, id: String, who: String = B
 	if skill.is_empty():
 		parts = CraftRules.bonus_parts(s, data, tool, who)
 		label = BackgroundRules.tool_name(data, tool)
-	else:
-		var t := BackgroundRules.tool_check(c, data, tool, skill)
+	else:  # the tool goes by the check's own road (`tool` of the spec)
 		parts = RollParts.skill(s, data, skill, who)
-		RollParts.add(parts, str(t["note"]), int(t["bonus"]))
-		adv = adv or not str(t["advantage"]).is_empty()
 		label = CraftRules.tr_skill(data, skill)
 	RollParts.development(c, data, "work", "shift_bonus", parts)
 	return {"bonus": RollParts.sum(parts), "parts": parts, "adv": adv, "label": label}
@@ -211,7 +208,8 @@ static func _check(s: GameSession, data: Dictionary, id: String, who: String = B
 static func shift_spec(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Dictionary:
 	var ch := _check(s, data, id, who)
 	return {"what": str(job(s, data, id).get("name", id)), "label": ch["label"], "skill": str(job(s, data, id).get("skill", "craft")), "parts": ch["parts"],
-		"bonus": ch["bonus"], "dc": dc(s, data, id, who), "adv": ch["adv"], "ladder": cfg(data)["outcomes"]}
+		"bonus": ch["bonus"], "dc": dc(s, data, id, who), "adv": ch["adv"], "ladder": cfg(data)["outcomes"],
+		"tool": "" if str(job(s, data, id).get("skill", "")).is_empty() else str(job(s, data, id).get("tool", ""))}
 
 
 static func shift_chance(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
