@@ -114,7 +114,7 @@ func menu(box: Container, ref: String) -> bool:
 	if ref.begins_with("npc:") and s.npcs_here(Catalog.data["world"], s.room_id).has(id):
 		var n := GameState.world().npc(id)
 		var a := s.attitude(id)
-		var att := tr("ATTITUDE_0" if a == 0 else ("ATTITUDE_P%d" % a if a > 0 else "ATTITUDE_M%d" % -a))
+		var att := GameSession.attitude_word(Catalog.data, a)
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
 		box.add_child(row)
@@ -503,7 +503,7 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 	var key := "npc:" + id
 	var refuses := SocialRules.refuses(s, Catalog.data, id)  # v0.7.15.3
 	var a := s.attitude(id)
-	var att := tr("ATTITUDE_0" if a == 0 else ("ATTITUDE_P%d" % a if a > 0 else "ATTITUDE_M%d" % -a))
+	var att := GameSession.attitude_word(Catalog.data, a)
 	if not _being_row(key, "More_" + id, _npc_head.bind(s, n, id, a, att, refuses, can_act)):
 		return
 	var bw := BondRules.word(s.character, Catalog.data, id)  # v0.7.31
@@ -616,28 +616,8 @@ func _creature_acts(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	if str(cr["state"]) == PropertyRules.TAME:  # v0.7.27: an own beast goes along or stays, or is let go
 		_animal_acts(s, cr, can_act)
 		return
-	var dead := str(cr["state"]) == CreatureRules.DEAD  # v0.8.4.4: a body is searched and hidden, nothing else
-	var specs: Array = [["talk", "BTN_CREATURE_TALK"]] if not str(cr["state"]) in ["unconscious", PetRules.WILD, CreatureRules.DEAD] else []  # v0.7.22.16: one knocked out does not talk
-	if PetRules.tameable(Catalog.data, str(cr["monster"])) and str(cr.get("npc_id", "")).is_empty() and str(cr["state"]) in [PetRules.WILD, "truce", "surrendered"]:
-		specs.push_front(["tame", "BTN_PET_TAME_OPEN"])  # v0.7.43: the taming window
-	if not bool(cr.get("bound", false)) and not str(cr["state"]) in ["truce", PetRules.WILD, CreatureRules.DEAD]:
-		specs.append(["bind", "BTN_CREATURE_BIND"])
-	if bool(cr.get("bound", false)):
-		specs.append(["lead", "BTN_CREATURE_STAY" if bool(cr.get("led", false)) else "BTN_CREATURE_LEAD"])
-	if CreatureRules.joinable(cr):  # v0.7.50.1: beaten by words — may come along
-		specs.append(["join", "BTN_CREATURE_STAY" if bool(cr.get("ally", false)) else "BTN_CREATURE_JOIN"])
-	if CreatureRules.lootable(cr) or not str(cr.get("npc_id", "")).is_empty() and not bool(cr.get("searched", false)):
-		specs.append(["search", "BTN_CREATURE_SEARCH"])  # v0.7.22.16: a knocked-out person's pockets; v0.8.4.4: a foe's things
-	if CreatureRules.can(s, cid, "hand_over", Catalog.data).is_empty():
-		specs.append(["hand_over", "BTN_CREATURE_HAND_OVER"])  # v0.7.22.17: the law takes the prisoner
-	if dead and not bool(cr.get("kept", false)):
-		specs.append(["hide", "BTN_HIDE_BODY"])
-	if str(cr["state"]) != PetRules.WILD and not dead:
-		specs.append(["free", "BTN_CREATURE_FREE"])
-	if not dead:
-		specs.append(["finish", "BTN_CREATURE_FINISH"] if CreatureRules.helpless(cr) else ["attack", "BTN_CREATURE_ATTACK"])
 	var acts := _acts("CreatureActs_" + cid)
-	for sp: Array in specs:
+	for sp: Array in CreatureRules.acts(s, Catalog.data, cr):  # what `can` allows, no list of the panel's own (v0.8.4.29.6)
 		var what: String = sp[0]
 		var run := func() -> void:
 			if what == "tame":
@@ -1332,15 +1312,10 @@ func _quest_buttons(s: GameSession, can_act: bool, only_npc: String) -> void:
 			continue
 		var giver := str(q.get("giver", ""))  # v0.8.4.2: taken at talking distance, in sight of the giver
 		var near := not only_npc.is_empty() or giver.is_empty() or MapSpots.in_reach(s, Catalog.data, giver, "talk")
-		var take := func() -> void:
-			var err := GameState.accept_quest(qid)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err))
 		var ab := _button(tr("BTN_QUEST_TAKE").format({"title": q["title"]}), func() -> void:
-			if QuestGen.warns(Catalog.data, q):  # the near-impossible asks first (v0.7.39.6)
-				ConfirmBox.ask(self, tr("CONFIRM_QUEST_DEADLY_TITLE").format({"title": q["title"]}), tr("CONFIRM_QUEST_DEADLY"), tr("BTN_QUEST_TAKE_DEADLY"), take)
-			else:
-				take.call(), can_act and near)
+			var err := ConfirmBox.take_quests(self, [qid], GameState.accept_quest.bind(qid))  # the near-impossible asks first
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)), can_act and near)
 		ab.name = "QuestTake_" + qid
 		var line := QuestGen.difficulty_line(Catalog.data, q)
 		ab.tooltip_text = str(q.get("description", "")) + ("

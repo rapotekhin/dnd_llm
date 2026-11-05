@@ -21,7 +21,7 @@ static func rows(s: GameSession, data: Dictionary, req: Dictionary, ctx: Diction
 		out.append({"text": "класс: " + ", ".join(req["classes"]), "ok": (req["classes"] as Array).has(str(c.get("class", "")))})
 	if req.has("attitude"):
 		var a := int(req["attitude"])
-		var word := TranslationServer.translate("ATTITUDE_0" if a == 0 else ("ATTITUDE_P%d" % a if a > 0 else "ATTITUDE_M%d" % -a))
+		var word := GameSession.attitude_word(data, a)
 		out.append({"text": "отношение %s не хуже: %s" % [str(ctx.get("npc_of", "")), word], "ok": not hero or s.attitude(str(ctx.get("npc", ""))) >= a})
 	if req.has("quest"):
 		var qid := str(req["quest"])

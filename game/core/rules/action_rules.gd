@@ -148,6 +148,19 @@ static func numbers(s: GameSession, data: Dictionary, id: String, f: Dictionary 
 	return {"dc": Sheet.dc(s, data, f, ab), "attack": Sheet.prof(s, data, f) + Sheet.ability_mod(s, data, f, ab), "ability": ab}
 
 
+## `fn` read with `f` casting `id` by `by` (a thing's numbers) as the cast lands, and the scope taken back (v0.8.4.29.6: the window
+## of a scroll shows the chance of its own DC and attack).
+static func as_by(s: GameSession, data: Dictionary, f: Dictionary, id: String, by: Dictionary, fn: Callable) -> Variant:
+	var had: Variant = s.combat.get("by")
+	s.combat["by"] = scope(s, data, f, id, by)
+	var out: Variant = fn.call()
+	if had == null:
+		s.combat.erase("by")
+	else:
+		s.combat["by"] = had
+	return out
+
+
 ## What `f` casts with: its numbers by the template, the thing's in `by`, and it named.
 static func scope(s: GameSession, data: Dictionary, f: Dictionary, id: String, by: Dictionary = {}) -> Dictionary:
 	var out := by.duplicate() if not by.is_empty() else numbers(s, data, id, f)

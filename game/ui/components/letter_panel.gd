@@ -123,7 +123,7 @@ func _rebuild() -> void:
 				_about = about[0] if not about.is_empty() else ""
 			_pick("LetterAbout", tr("LETTER_ABOUT"), about, _strs(about.map(func(id: String) -> String: return str(w.npc_name(id)))), _about,
 				func(id: String) -> void: _about = id)
-			var proof := LetterRules.evidence(s, data, _about, LetterRules._evidence_item(s, data, _about))
+			var proof := LetterRules.evidence(s, data, _about, LetterRules.evidence_item(s, data, _about))
 			UiParts.label(_box, tr("LETTER_EVIDENCE").format({"what": proof}) if not proof.is_empty() else tr("LETTER_NO_EVIDENCE"), UiTheme.MUTED_LABEL).name = "LetterEvidence"
 	var edit := TextEdit.new()
 	edit.name = "LetterText"

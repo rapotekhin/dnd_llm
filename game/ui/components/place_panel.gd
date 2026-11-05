@@ -26,18 +26,12 @@ func open() -> void:
 
 
 func _button(row: Control, node_name: String, text: String, enabled: bool, action: Callable) -> Button:
-	var b := Button.new()
-	b.name = node_name
-	b.text = text
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.disabled = not enabled
-	b.pressed.connect(func() -> void:
+	var b := UiParts.act_button(row, node_name, text, "", func() -> String:  # v0.8.4.29.6: grey while busy too
 		var err: String = action.call()
 		if err.is_empty():
 			visible = false
-		else:
-			EventBus.message.emit(tr(err)))
-	row.add_child(b)
+		return err)
+	b.disabled = b.disabled or not enabled
 	return b
 
 

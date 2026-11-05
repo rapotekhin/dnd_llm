@@ -29,6 +29,22 @@ static func ask(host: Node, title_text: String, body_text: String, yes_label: St
 	return box
 
 
+## Quests taken by `take` (Callable() -> String, a refusal key): a near-impossible one among them asks first (v0.7.39.6;
+## v0.8.4.29.6: one question for the giver's button, the board's order and «Взять все»). The refusal now, or "" — a later
+## one goes to the message line.
+static func take_quests(host: Node, qids: Array, take: Callable) -> String:
+	var world: Dictionary = Catalog.data["world"]
+	var deadly := qids.filter(func(qid: Variant) -> bool: return QuestGen.warns(Catalog.data, QuestRules.quest(world, str(qid))))
+	if deadly.is_empty():
+		return str(take.call())
+	ask(host, TranslationServer.translate("CONFIRM_QUEST_DEADLY_TITLE").format({"title": QuestRules.quest(world, str(deadly[0]))["title"]}),
+		TranslationServer.translate("CONFIRM_QUEST_DEADLY"), TranslationServer.translate("BTN_QUEST_TAKE_DEADLY"), func() -> void:
+			var err := str(take.call())
+			if not err.is_empty():
+				EventBus.message.emit(TranslationServer.translate(err)))
+	return ""
+
+
 func required() -> Dictionary:
 	var nodes := super()
 	nodes.merge({"%ConfirmText": "Label", "%NeverAsk": "CheckBox", "%ConfirmNo": "Button", "%ConfirmYes": "Button"})

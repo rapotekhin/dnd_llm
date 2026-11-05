@@ -952,8 +952,7 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 
 ## The button that picks the hero or an ally for an armed spell of the hero's side (v0.7.50.1).
 func _friend_pick(s: GameSession, data: Dictionary, box: Control, id: String, me: bool) -> void:
-	var vol := CombatRules.volley(s)
-	var spell := str(vol.get("spell", "")) if _pending_name == "Volley" else _pending_name.trim_prefix("Cast_")
+	var spell := _pending_spell(s, data)
 	if not _pending.is_valid() or not SpellEffects.picks_side(data, spell) in ["friend", "any"]:
 		return
 	box.add_theme_constant_override("separation", 2)  # a column of three friends and their buttons still fits
@@ -1086,23 +1085,12 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			if lv > 0 and slot == 0 and not free:
 				_disabled(sp, label)
 				continue
-			var side := SpellEffects.picks_side(data, id)  # v0.7.50.1: a choice of friends, or of either side
-			var friends := side == "any" or (side == "friend" and not CombatRules.allies(s, false).is_empty())
-			var alone := side == "friend" and not friends
-			var jump := SpellEffects.spec(data, id).has("teleport")  # Misty Step: a square, not a body
-			if not jump and (alone or not friends and spell.has("heal_at_slot") or not friends and SpellEffects.self_spell(data, id) \
-					or int(spell.get("range_ft", 0)) == 0 and not spell.has("area") or not AllyRules.summon_spec(data, id).is_empty()):
-				var b := _button(sp, "Cast_" + id, label, me)
-				_details.hook(b, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
-				b.pressed.connect(func() -> void: _do(_conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, ""))))
-			else:
-				_act_sub = tr("DETAILS_CANTRIP") if lv == 0 else tr("DETAILS_CIRCLE").format({"n": lv})
-				var ab := _action(sp, "Cast_" + id, label, me,
-					func(t: String) -> String: return _conc_guard(id, func() -> String: return GameState.combat_cast(id, slot, t)),
-					func(t: String) -> String: return Acts.one("cast").can(s, data, CombatRules.player(s), t, {"spell": id, "slot": slot}),
-					func(t: String) -> Dictionary: return {} if FightGrid.is_aim(t) else CombatRules.cast_preview(s, data, id, slot, t),
-					id if spell.has("area") or jump else "", int(spell.get("range_ft", 0)))
-				_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
+			_act_sub = tr("DETAILS_CANTRIP") if lv == 0 else tr("DETAILS_CIRCLE").format({"n": lv})
+			var ab := _spell_action(s, data, sp, "Cast_" + id, label, me, id,
+				func(t: String) -> String: return GameState.combat_cast(id, slot, t),
+				func(t: String) -> String: return Acts.one("cast").can(s, data, CombatRules.player(s), t, {"spell": id, "slot": slot}),
+				func(t: String) -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t))
+			_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
 		_act_sub = ""
 		for sa: Dictionary in SpellEffects.actions(s, data):  # v0.7.13.5: the spells that go on each turn
 			var said := str(sa["id"])
@@ -1165,9 +1153,13 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 				item_btn = _action(ib, "Item_" + id, label, me, func(t: String) -> String: return GameState.combat_act("throw", t, {"item": id}),
 					func(t: String) -> String: return Acts.one("throw").can(s, data, CombatRules.player(s), t, {"item": id}), func(_t: String) -> Dictionary: return {}, id if spills else "",
 					60 if bool(fx["throw"].get("improvised", false)) else int(fx["throw"].get("range", 15)))
-			elif not sp_id.is_empty() and CombatRules.is_engine_spell(data, sp_id) and not sp.has("heal_at_slot") 					and (int(sp.get("range_ft", 0)) > 0 or sp.has("area")):
-				item_btn = _action(ib, "Item_" + id, label, me, func(t: String) -> String: return GameState.combat_act("item_spell", t, {"item": id}),
-					func(t: String) -> String: return Acts.one("item_spell").can(s, data, CombatRules.player(s), t, {"item": id}), func(_t: String) -> Dictionary: return {}, "", int(sp.get("range_ft", 0)))
+			elif not sp_id.is_empty() and CombatRules.is_engine_spell(data, sp_id):  # v0.8.4.29.6: aimed as the spell is — a square, a friend, the chance
+				var by := ItemRules.spell_numbers(c, data, s.items, id)
+				item_btn = _spell_action(s, data, ib, "Item_" + id, label, me, sp_id,
+					func(t: String) -> String: return GameState.combat_act("item_spell", t, {"item": id}),
+					func(t: String) -> String: return Acts.one("item_spell").can(s, data, CombatRules.player(s), t, {"item": id}),
+					func(t: String) -> Dictionary: return ActionRules.as_by(s, data, CombatRules.player(s), sp_id, by,
+						func() -> Dictionary: return CombatRules.cast_preview(s, data, sp_id, int(by["level"]), t)))
 			elif not sp_id.is_empty():
 				item_btn = _button(ib, "Item_" + id, label, me)
 				item_btn.pressed.connect(func() -> void: _do(GameState.combat_act("item_spell", "", {"item": id})))
@@ -1184,6 +1176,34 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		for row: Dictionary in act.buttons(s, data, hero):
 			_act_button(g, act, row, me)
 	_tabs.current_tab = clampi(_tab, 0, _tabs.get_tab_count() - 1)
+
+
+## The button of a spell of the hero or of a thing (v0.8.4.29.6, one maker for the Spells and the Items tab): no target — a press
+## casts it; a friend's pick, a square of an area or a jump, a foe — armed until the target with the roll's own chance. `cast`,
+## `can` — Callable(target) -> String, `preview` — Callable(target) -> Dictionary.
+func _spell_action(s: GameSession, data: Dictionary, box: Control, node: String, label: String, me: bool, id: String, cast: Callable, can: Callable, preview: Callable) -> Button:
+	var spell: Dictionary = data["spells"].get(id, {})
+	var side := SpellEffects.picks_side(data, id)  # v0.7.50.1: a choice of friends, or of either side
+	var friends := side == "any" or (side == "friend" and not CombatRules.allies(s, false).is_empty())
+	var alone := side == "friend" and not friends
+	var jump := SpellEffects.spec(data, id).has("teleport")  # Misty Step: a square, not a body
+	if not jump and (alone or not friends and spell.has("heal_at_slot") or not friends and SpellEffects.self_spell(data, id) \
+			or int(spell.get("range_ft", 0)) == 0 and not spell.has("area") or not AllyRules.summon_spec(data, id).is_empty()):
+		var b := _button(box, node, label, me)
+		b.pressed.connect(func() -> void: _do(_conc_guard(id, func() -> String: return str(cast.call("")))))
+		return b
+	return _action(box, node, label, me, func(t: String) -> String: return _conc_guard(id, func() -> String: return str(cast.call(t))), can,
+		func(t: String) -> Dictionary: return {} if FightGrid.is_aim(t) else preview.call(t),
+		id if spell.has("area") or jump else "", int(spell.get("range_ft", 0)))
+
+
+## The spell a pending button casts: a spell's own, a thing's (v0.8.4.29.6), a volley's.
+func _pending_spell(s: GameSession, data: Dictionary) -> String:
+	if _pending_name == "Volley":
+		return str(CombatRules.volley(s).get("spell", ""))
+	if _pending_name.begins_with("Item_"):
+		return str(ItemRules.consumable(data, _pending_name.trim_prefix("Item_"), s.items).get("spell", ""))
+	return _pending_name.trim_prefix("Cast_")
 
 
 ## The picked circle when it fits the spell and has a slot left, else the lowest that fits.

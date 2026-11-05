@@ -118,11 +118,8 @@ func _rebuild() -> void:
 	var info := TradeRules.info(s, data, _npc)
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 	var npc := GameState.world().npc(_npc)
-	var bounds := GameSession.attitude_bounds(data)
-	var att := clampi(s.attitude(_npc), bounds.x, bounds.y)
 	_title.text = str(npc.get("name", _npc))
-	_partner.text = tr("PARTNER_LINE").format({"role": npc.get("role", ""), "race": npc.get("race", ""), "body": BodyRules.npc_text(data, _npc, npc),
-		"attitude": tr("ATTITUDE_" + ("M%d" % -att if att < 0 else "P%d" % att if att > 0 else "0"))})
+	_partner.text = UiParts.partner_line(s, data, _npc)
 	_to_talk.disabled = not can_act
 	_leave.disabled = not can_act
 	_purse.text = tr("TRADE_PURSE").format({"coins": Money.format(Gear.coins(s, data, _npc))})

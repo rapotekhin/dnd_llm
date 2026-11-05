@@ -679,14 +679,7 @@ func _refresh() -> void:
 		var npc_name := str(npc.get("name", s.npc_id))
 		_mode_label.text = npc_name
 		_partner_mark.text = npc_name.left(1)
-		var bounds := GameSession.attitude_bounds(Catalog.data)
-		var att := clampi(s.attitude(s.npc_id), bounds.x, bounds.y)
-		_partner_line.text = tr("PARTNER_LINE").format({"role": npc.get("role", ""), "race": npc.get("race", ""),
-			"body": BodyRules.npc_text(Catalog.data, s.npc_id, npc),
-			"attitude": tr("ATTITUDE_" + ("M%d" % -att if att < 0 else "P%d" % att if att > 0 else "0"))})
-		var bw := BondRules.word(s.character, Catalog.data, s.npc_id)  # v0.7.31
-		if not bw.is_empty():
-			_partner_line.text += " · " + bw
+		_partner_line.text = UiParts.partner_line(s, Catalog.data, s.npc_id)
 		trade_toggle.visible = GameState.world().is_trader(s.npc_id)
 		trade_toggle.text = tr("BTN_TO_TALK" if s.mode == GameSession.MODE_TRADE else "BTN_TO_TRADE")
 		trade_toggle.disabled = busy or (s.mode != GameSession.MODE_TRADE and TimeRules.shops_closed(s, Catalog.data))

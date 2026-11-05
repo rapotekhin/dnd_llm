@@ -197,7 +197,7 @@ func level_up(picks: Dictionary) -> String:
 	if not errs.is_empty():
 		return errs[0]
 	var lines := LevelUp.apply(session.character, Catalog.data, picks, session.items)
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	return ""
 
 
@@ -432,7 +432,7 @@ func attune(item_id: String) -> String:
 	lines.append("Настройка: %d мин" % int(ItemRules.cfg(Catalog.data)["attune_minutes"]))
 	lines.append_array(TimeRules.advance(session, Catalog.data, int(ItemRules.cfg(Catalog.data)["attune_minutes"])))
 	CharacterRules.refresh(c, Catalog.data, session.items)
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	return ""
 
 
@@ -444,7 +444,7 @@ func unattune(item_id: String) -> String:
 		return why
 	ItemRules.unattune(session.character, item_id)
 	_refresh()
-	_quiet_lines(["Настройка снята: " + ItemRules.display_name(Catalog.data["items"], session.items, item_id)])
+	_effect_lines(["Настройка снята: " + ItemRules.display_name(Catalog.data["items"], session.items, item_id)], true)
 	return ""
 
 
@@ -461,7 +461,7 @@ func collect_ammo() -> String:
 		lines.append("Собрано: %s ×%d" % [ItemRules.display_name(Catalog.data["items"], session.items, id), int(left["items"][id])])
 	session.character.erase("ammo_left")
 	lines.append_array(TimeRules.advance(session, Catalog.data, int(ItemRules.cfg(Catalog.data)["collect_minutes"])))
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	return ""
 
 
@@ -476,7 +476,7 @@ func buy_service(id: String) -> String:
 			return str(sv["why"])
 		var main := str(session.character.get("equipped", {}).get("main_hand", ""))
 		var weapon := main if TradeRules.targets(session, Catalog.data, id).has(main) else ""
-		_quiet_lines(TradeRules.buy_service(session, Catalog.data, session.npc_id, id, weapon))
+		_effect_lines(TradeRules.buy_service(session, Catalog.data, session.npc_id, id, weapon), true)
 		return ""
 	return "SERVICE_NOTHING"
 
@@ -488,7 +488,7 @@ func rumor_ask(npc_id: String) -> String:
 	var why := RumorRules.ask_why(session, Catalog.data, npc_id)
 	if not why.is_empty():
 		return why
-	_quiet_lines(RumorRules.ask(session, Catalog.data, npc_id))
+	_effect_lines(RumorRules.ask(session, Catalog.data, npc_id), true)
 	return ""
 
 
@@ -499,7 +499,7 @@ func send_letter(poster: String, to: String, purpose: String, text: String, way:
 	var why := LetterRules.send_why(session, Catalog.data, poster, to, purpose, text, way, extra)
 	if not why.is_empty():
 		return why
-	_quiet_lines(LetterRules.send(session, Catalog.data, poster, to, purpose, text, way, extra))
+	_effect_lines(LetterRules.send(session, Catalog.data, poster, to, purpose, text, way, extra), true)
 	_after_turn(session, "")
 	return ""
 
@@ -533,7 +533,7 @@ func read_notices() -> void:
 	var ids := RumorRules.notices(session, Catalog.data).filter(func(r: Dictionary) -> bool:
 		return not RumorRules.heard(session, str(r["id"]))).map(func(r: Dictionary) -> String: return str(r["id"]))
 	if not ids.is_empty():
-		_quiet_lines(RumorRules.hear(session, Catalog.data, ids, "доска"))
+		_effect_lines(RumorRules.hear(session, Catalog.data, ids, "доска"), true)
 
 
 ## The name of the spell the hero concentrates on that this one would break (v0.7.13.1), or "".
@@ -542,15 +542,6 @@ func concentration_conflict(spell_id: String) -> String:
 		return ""
 	var held := str(session.character.get("concentration", ""))
 	return "" if held.is_empty() or held == spell_id else str(Catalog.data["spells"].get(held, {}).get("name", held))
-
-
-## Lines of a deterministic action without a master turn: the chat, the log, the history the master reads next.
-func _quiet_lines(lines: Array[String], save := true) -> void:
-	_told(lines)
-	_forget_gone_creature()
-	EventBus.state_changed.emit()
-	if save:
-		SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 
 
 ## «Короткий отдых» (ExplorationRules): an hour, `dice` hit dice; no master turn — the line goes to the history.
@@ -902,7 +893,7 @@ func take_all() -> String:
 	if not left.is_empty():
 		lines.append("не унести: " + ", ".join(left))
 	_refresh()
-	_quiet_lines(lines)  # nobody's things: the engine's move, no master (v0.7.22.20, #6)
+	_effect_lines(lines, true)  # nobody's things: the engine's move, no master (v0.7.22.20, #6)
 	return ""
 
 
@@ -921,7 +912,7 @@ func take_prop(prop_id: String) -> String:
 	lines.append_array(PropRules.apply_take(session, Catalog.data, r["plan"]))
 	_refresh()
 	if str(r["plan"].get("owner", "")).is_empty():  # nobody saw a theft: the engine's move, no master (v0.7.22.20, #6)
-		_quiet_lines(lines)
+		_effect_lines(lines, true)
 		return ""
 	var p := PropRules.find(session, session.room_id, prop_id)
 	var text := tr("PLACE_TAKE_SAY").format({"name": p.get("name", prop_id)})
@@ -952,7 +943,7 @@ func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> S
 		_effect_lines(lines)
 		_request("action", "Беру из чужого %s [движок: %s]" % [PropRules.find(session, session.room_id, prop_id).get("name", ""), " · ".join(lines)])
 		return ""
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	return ""
 
 
@@ -978,7 +969,7 @@ func container_take_all(prop_id: String) -> String:
 		_effect_lines(lines)
 		_request("action", "Беру всё из чужого %s [движок: %s]" % [PropRules.find(session, session.room_id, prop_id).get("name", ""), " · ".join(lines)])
 		return ""
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	return ""
 
 
@@ -989,7 +980,7 @@ func pick_development(dir: String, skill: String) -> String:
 	var why := DevelopmentRules.pick(session.character, Catalog.data, dir, skill)
 	if why.is_empty():
 		var sk: Dictionary = DevelopmentRules.direction(Catalog.data, dir)["skills"][skill]
-		_quiet_lines(["%s: навык «%s»" % [DevelopmentRules.direction(Catalog.data, dir)["name"], sk["name"]]] as Array[String])
+		_effect_lines(["%s: навык «%s»" % [DevelopmentRules.direction(Catalog.data, dir)["name"], sk["name"]]] as Array[String], true)
 	return why
 
 
@@ -1017,7 +1008,7 @@ func drop_item(what: String, qty: int = 1) -> String:
 		EventBus.message.emit(str(r["reason"]))
 		return ""
 	ContainerRules.apply_drop(session, Catalog.data, r["plan"])
-	_quiet_lines([str(r["summary"])] as Array[String])
+	_effect_lines([str(r["summary"])] as Array[String], true)
 	return ""
 
 
@@ -1055,7 +1046,7 @@ func container_lock(prop_id: String, how: String) -> String:
 		return "WAIT_NOT_NOW"
 	var lines := ContainerRules.lock_up(session, Catalog.data, p, how)
 	lines.append_array(TimeRules.advance(session, Catalog.data, int(ContainerRules.cfg(Catalog.data).get("minutes", 1))))
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	return ""
 
 
@@ -1073,10 +1064,10 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 	if not WayRules.ways(session, data, from, to).has(way):
 		return "WAIT_NOT_NOW"
 	if how == "ask":  # a knock: the owner answers as to «Попросить впустить»
-		_quiet_lines(SiteRules.ask(session, data, SiteRules.unwelcome(session, data, to)))
+		_effect_lines(SiteRules.ask(session, data, SiteRules.unwelcome(session, data, to)), true)
 		return ""
 	if how == "lock":  # the hero's own lock, or its key (v0.8.4.27): no master's turn
-		_quiet_lines(WayRules.lock_with(session, data, from, to))
+		_effect_lines(WayRules.lock_with(session, data, from, to), true)
 		return ""
 	var lines: Array[String] = []
 	var minutes := int(WayRules.cfg(data)["try_minutes"])
@@ -1227,9 +1218,14 @@ func arena_bet(sid: String, side: String, cp: int) -> String:
 	return ""
 
 
-func _effect_lines(lines: Array[String]) -> void:
+## What the engine did, told (v0.8.4.29.6, the one helper of a deed's lines): to the chat and the log, a creature gone from the
+## talk forgotten, the screens refreshed; `save` — the autosave too.
+func _effect_lines(lines: Array[String], save := false) -> void:
 	_told(lines)
+	_forget_gone_creature()
 	EventBus.state_changed.emit()
+	if save:
+		SaveManager.save_slot(SaveManager.AUTOSAVE, session)
 
 
 ## What the engine did goes to the chat and the log.
@@ -1252,7 +1248,7 @@ func _act(what: String, rows: Dictionary, no: String = "PROPERTY_NOT_NOW") -> St
 	if lines.is_empty():
 		EventBus.state_changed.emit()
 		return ""
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	return ""
 
 
@@ -1550,16 +1546,15 @@ func need_act(act: String) -> String:
 	if not _out_of_fight():
 		return "NEED_BUSY"
 	var data := Catalog.data
-	var why := NeedRules.can_eat(session, data) if act == "eat" else NeedRules.can_drink(session, data) if act == "drink" else NeedRules.can_fill(session, data)
-	if not why.is_empty():
-		return why
-	var lines := NeedRules.eat(session, data) if act == "eat" else NeedRules.drink(session, data) if act == "drink" else NeedRules.fill(session, data)
 	var cfg := NeedRules.cfg(data)
-	var minutes := int(cfg["food"]["eat_minutes"]) if act == "eat" else int(cfg["water"]["drink_minutes" if act == "drink" else "fill_minutes"])
-	lines.append_array(TimeRules.advance(session, data, minutes))
-	_refresh()
-	_effect_lines(lines)
-	return ""
+	var timed := func(lines: Array[String], minutes: int) -> Array[String]:  # the deed and the minutes it takes
+		lines.append_array(TimeRules.advance(session, data, minutes))
+		return lines
+	return _act(act, {  # one road of a window's button (v0.8.4.29.6)
+		"eat": [NeedRules.can_eat.bind(session, data), func() -> Array[String]: return timed.call(NeedRules.eat(session, data), int(cfg["food"]["eat_minutes"]))],
+		"drink": [NeedRules.can_drink.bind(session, data), func() -> Array[String]: return timed.call(NeedRules.drink(session, data), int(cfg["water"]["drink_minutes"]))],
+		"fill": [NeedRules.can_fill.bind(session, data), func() -> Array[String]: return timed.call(NeedRules.fill(session, data), int(cfg["water"]["fill_minutes"]))],
+	}, "NEED_BUSY")
 
 
 ## A liquid in a vessel or a ready thing (v0.8.4.28): drink a portion, pour it out, pour it into another vessel. `key` and
@@ -1622,11 +1617,10 @@ func wilds_act(kind: String, hours: int) -> String:
 		lines.append_array(r["lines"])
 		fight = r["fight"]
 	_refresh()
-	_told(lines)
+	_effect_lines(lines, fight.is_empty())  # the one helper (v0.8.4.29.6)
 	if not fight.is_empty():
 		session.pending_fight = fight
 		_start_pending_fight()
-	EventBus.state_changed.emit()
 	return ""
 
 
@@ -1864,7 +1858,7 @@ func permit_ask(npc_id: String) -> String:
 	if not why.is_empty():
 		return why
 	var lines := SiteRules.ask(session, Catalog.data, npc_id)
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	return ""
 
 
@@ -2157,7 +2151,7 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 			return
 	var again := ExplorationRules.again_line(session, Catalog.data, room_id) if lines.size() <= 1 else ""
 	if not again.is_empty():  # described today and nothing on the way: the engine's line, no master (v0.7.22.20, #8)
-		_quiet_lines([again] as Array[String])
+		_effect_lines([again] as Array[String], true)
 		return
 	session.described[room_id] = session.day
 	if not _enter_ready(lines):
@@ -2559,7 +2553,7 @@ func escape_captivity(how: String) -> String:
 	var text := tr("CAPTIVE_SAY_" + how.to_upper())
 	_add(GameSession.player_entry(text))
 	var lines := EncounterRules.escape(session, Catalog.data, how)
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	_request("action", text + " [движок уже решил: %s — опиши это, эффекты не нужны]" % ", ".join(lines))
 	return ""
 
@@ -2580,7 +2574,7 @@ func follower_act(npc_id: String, what: String) -> String:
 		return FollowRules.room_why(session, Catalog.data)
 	FollowRules.apply(session, plan)
 	var line: String = {"stay": "%s остаётся здесь и ждёт", "lead": "%s снова идёт с героем", "let_go": "%s уходит к себе"}[what] % name
-	_quiet_lines([line])
+	_effect_lines([line], true)
 	return ""
 
 
@@ -2595,7 +2589,7 @@ func dismiss_summon(summon_id: String) -> String:
 	var why := AllyRules.dismiss(session, summon_id)
 	if not why.is_empty():
 		return why
-	_quiet_lines(["%s отпущен(а) и исчезает" % name])
+	_effect_lines(["%s отпущен(а) и исчезает" % name], true)
 	return ""
 
 
@@ -2606,16 +2600,16 @@ func creature_act(id: String, what: String) -> String:
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
 	var c := CreatureRules.find(session, session.room_id, id)
+	var why := CreatureRules.can(session, id, what, Catalog.data)  # talking too (v0.8.4.29.6)
+	if not why.is_empty():
+		return why
 	if what == "talk":  # a truce is talked to as an equal, a prisoner as a prisoner (v0.7.22.17, #10)
 		var say := tr("CREATURE_TALK_SAY_CAPTIVE" if CreatureRules.captive(c) else "CREATURE_TALK_SAY").format({"name": c.get("name", id)})
 		if not submit(say):
 			return "WAIT_BUSY"
 		session.talk_creature = id
 		return ""
-	var why := CreatureRules.can(session, id, what, Catalog.data)
-	if not why.is_empty():
-		return why
-	_quiet_lines(CreatureRules.act(session, Catalog.data, id, what), what != "attack")
+	_effect_lines(CreatureRules.act(session, Catalog.data, id, what), what != "attack")
 	if what == "attack":
 		_start_pending_fight()
 	return ""
@@ -2665,7 +2659,7 @@ func search_body(npc_id: String) -> String:
 		return "CRIME_NO_BODY"
 	var lines := CrimeRules.search_body(session, Catalog.data, npc_id)
 	_refresh()
-	_quiet_lines(lines)
+	_effect_lines(lines, true)
 	return ""
 
 
@@ -3222,15 +3216,11 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 				return ""
 		_move_to.call_deferred(to, steps, false)
 		return ""
-	if s.room_id != room_before:
-		var waits := MountRules.on_move(s, Catalog.data, room_before, s.room_id)  # v0.7.42
-		CreatureRules.follow(s, room_before, s.room_id)  # v0.7.22.11
-		PetRules.seed(s, Catalog.data, s.room_id)  # v0.7.43
-		var moved := TimeRules.on_move(s, Catalog.data, room_before, s.room_id)
-		moved.append_array(waits)
-		ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id, TimeRules.passive_penalty(s, Catalog.data))
-		moved.append_array(ExplorationRules.take_caches(s, Catalog.data, s.room_id))
-		moved.append_array(QuestRules.advance(s, Catalog.data))
+	if s.room_id != room_before:  # the guard leads the held hero: the one road of a step (v0.8.4.29.6) — Magic Circle, a fall, the place's hooks
+		var to := s.room_id
+		s.room_id = room_before
+		var moved: Array[String] = []
+		_step(to, moved)
 		if not moved.is_empty():
 			_add(GameSession.effect_entry(moved))
 		_end_conversation()

@@ -29,16 +29,8 @@ func open(prop: String) -> void:
 
 
 func _button(parent: Control, node_name: String, text: String, enabled: bool, action: Callable) -> Button:
-	var b := Button.new()
-	b.name = node_name
-	b.text = text
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.disabled = not enabled
-	b.pressed.connect(func() -> void:
-		var err: String = action.call()
-		if not err.is_empty():
-			EventBus.message.emit(tr(err)))
-	parent.add_child(b)
+	var b := UiParts.act_button(parent, node_name, text, "", action)  # v0.8.4.29.6: grey while busy too
+	b.disabled = b.disabled or not enabled
 	return b
 
 
@@ -100,26 +92,10 @@ func _notices(s: GameSession, data: Dictionary, world: Dictionary) -> void:
 	_box.add_child(HSeparator.new())
 
 
-## The near-impossible asks «Точно?» first (v0.7.39.6).
 ## All orders at once: a deadly one among them asks first, as its own button does (v0.7.39.6).
 func _take_all(orders: Array) -> String:
-	var deadly := orders.filter(func(qid: Variant) -> bool: return QuestGen.warns(Catalog.data, QuestRules.quest(Catalog.data["world"], str(qid))))
-	if deadly.is_empty():
-		return GameState.take_board_all(orders)
-	ConfirmBox.ask(self, tr("CONFIRM_QUEST_DEADLY_TITLE").format({"title": QuestRules.quest(Catalog.data["world"], str(deadly[0]))["title"]}),
-		tr("CONFIRM_QUEST_DEADLY"), tr("BTN_QUEST_TAKE_DEADLY"), func() -> void:
-			var err := GameState.take_board_all(orders)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)))
-	return ""
+	return ConfirmBox.take_quests(self, orders, GameState.take_board_all.bind(orders))
 
 
-func _take(qid: String, q: Dictionary) -> String:
-	if not QuestGen.warns(Catalog.data, q):
-		return GameState.accept_quest(qid)
-	ConfirmBox.ask(self, tr("CONFIRM_QUEST_DEADLY_TITLE").format({"title": q["title"]}), tr("CONFIRM_QUEST_DEADLY"), tr("BTN_QUEST_TAKE_DEADLY"),
-		func() -> void:
-			var err := GameState.accept_quest(qid)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)))
-	return ""
+func _take(qid: String, _q: Dictionary) -> String:
+	return ConfirmBox.take_quests(self, [qid], GameState.accept_quest.bind(qid))

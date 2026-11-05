@@ -26,16 +26,8 @@ func open(prop: String) -> void:
 
 
 func _row_button(row: HBoxContainer, node_name: String, text: String, enabled: bool, action: Callable) -> Button:
-	var b := Button.new()
-	b.name = node_name
-	b.text = text
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.disabled = not enabled
-	b.pressed.connect(func() -> void:
-		var err: String = action.call()
-		if not err.is_empty():
-			EventBus.message.emit(tr(err)))
-	row.add_child(b)
+	var b := UiParts.act_button(row, node_name, text, "", action)  # v0.8.4.29.6: grey while busy too
+	b.disabled = b.disabled or not enabled
 	return b
 
 

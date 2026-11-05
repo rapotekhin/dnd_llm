@@ -28,22 +28,15 @@ func open(org_id: String = "") -> void:
 
 
 func _act(parent: Control, node_name: String, text: String, why: String, what: String, id: String, arg: Callable = Callable(), sure: String = "") -> Button:
-	var b := Button.new()
-	b.name = node_name
-	b.text = text
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.disabled = not why.is_empty() or GameState.is_busy()
-	b.tooltip_text = tr(why) if not why.is_empty() else ""
+	var go := func() -> String: return GameState.org_act(what, id, str(arg.call()) if arg.is_valid() else "")
+	var ask := func() -> String:  # «Точно?» before leaving
+		ConfirmBox.ask(self, sure, tr("CONFIRM_ORG_LEAVE"), text, func() -> void:
+			var err: String = go.call()
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
+		return ""
+	var b := UiParts.act_button(parent, node_name, text, why, go if sure.is_empty() else ask)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_END
-	var go := func() -> void:
-		var err := GameState.org_act(what, id, str(arg.call()) if arg.is_valid() else "")
-		if not err.is_empty():
-			EventBus.message.emit(tr(err))
-	if sure.is_empty():
-		b.pressed.connect(go)
-	else:
-		b.pressed.connect(func() -> void: ConfirmBox.ask(self, sure, tr("CONFIRM_ORG_LEAVE"), text, go))
-	parent.add_child(b)
 	return b
 
 

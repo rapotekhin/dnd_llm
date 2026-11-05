@@ -355,6 +355,13 @@ static func attitude_bounds(data: Dictionary) -> Vector2i:
 	return Vector2i(int(r[0]), int(r[1]))
 
 
+## The word of an attitude within the range (v0.8.4.29.6: one word for the panel, the trade, the journal and a requirement).
+static func attitude_word(data: Dictionary, a: int) -> String:
+	var r := attitude_bounds(data)
+	var v := clampi(a, r.x, r.y)
+	return TranslationServer.translate("ATTITUDE_0" if v == 0 else ("ATTITUDE_P%d" % v if v > 0 else "ATTITUDE_M%d" % -v))
+
+
 func in_conversation() -> bool:
 	return mode == MODE_SOCIAL or mode == MODE_TRADE
 

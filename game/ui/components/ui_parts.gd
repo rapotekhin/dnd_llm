@@ -22,6 +22,15 @@ static func heading(parent: Control, text: String) -> Label:
 	return label(parent, text, UiTheme.ACCENT_LABEL)
 
 
+## The line under a partner's name: role, race, build and height, attitude and the bond (v0.8.4.29.6: the talk and the trade).
+static func partner_line(s: GameSession, data: Dictionary, npc_id: String) -> String:
+	var npc := WorldView.new(data["world"]).npc(npc_id)
+	var line := TranslationServer.translate("PARTNER_LINE").format({"role": npc.get("role", ""), "race": npc.get("race", ""),
+		"body": BodyRules.npc_text(data, npc_id, npc), "attitude": GameSession.attitude_word(data, s.attitude(npc_id))})
+	var bw := BondRules.word(s.character, data, npc_id)  # v0.7.31
+	return line + (" · " + bw if not bw.is_empty() else "")
+
+
 ## The button of an act: grey with its reason on the hover while `why` is a key or the game is busy; `action` gives ""
 ## or the key of a refusal, which goes to the message line.
 static func act_button(parent: Control, node_name: String, text: String, why: String, action: Callable) -> Button:

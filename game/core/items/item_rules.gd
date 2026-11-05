@@ -573,6 +573,16 @@ static func rarity_level(items_data: Dictionary, rarity: String) -> int:
 	return int(items_data["rarity_min_level"].get(rarity, 1))
 
 
+## The numbers a scroll or a wand casts its spell with (v0.8.4.29.6: the cast and its window alike): a scroll by its circle
+## (DMG), a wand its own; {dc, attack, ability, level}.
+static func spell_numbers(c: Dictionary, data: Dictionary, session_items: Dictionary, item: String) -> Dictionary:
+	var fx := consumable(data, item, session_items)
+	var level := int(fx.get("level", 1))
+	var nums := scroll_numbers(data, level)
+	var ab := str(c.get("spell_ability", ""))
+	return {"dc": int(fx.get("dc", nums[0])), "attack": int(fx.get("attack", nums[1])), "ability": "int" if ab.is_empty() else ab, "level": level}
+
+
 ## Deterministic id, so the same item made twice (or taken from the backend library) keeps one id.
 static func generated_id(item: Dictionary) -> String:
 	var props: Array = item.get("properties", []).duplicate()

@@ -90,7 +90,7 @@ func run() -> void:
 	CrimeRules._known(s, data, crime)
 	step("not wanted in Brod before the rumour", not s.wanted.has("brod"))
 	var lines := TimeRules.advance(s, data, 1440)
-	gs.call("_quiet_lines", lines)
+	gs.call("_effect_lines", lines, true)
 	step("the rumour came — wanted in Brod", s.wanted.has("brod") and " ".join(lines).contains("дошёл слух"), " ".join(lines).right(300))
 	await frames(3)
 	await shot("rumor_wanted")

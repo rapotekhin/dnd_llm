@@ -43,10 +43,7 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	if spell == "identify":
 		lines.append_array(ItemRules.identify(c, data, s.items))
 		return lines
-	var nums := ItemRules.scroll_numbers(data, level)
-	var ab := str(c.get("spell_ability", ""))
-	var by := {"dc": int(fx.get("dc", nums[0])), "attack": int(fx.get("attack", nums[1])), "ability": "int" if ab.is_empty() else ab}
-	lines.append_array(ActionRules.cast(s, data, f, spell, level, to, by))
+	lines.append_array(ActionRules.cast(s, data, f, spell, level, to, ItemRules.spell_numbers(c, data, s.items, item)))
 	f["hidden"] = false
 	return lines
 

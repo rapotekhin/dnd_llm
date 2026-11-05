@@ -65,7 +65,7 @@ func run() -> void:
 	await frames(2)
 
 	CheckEngine.card(s, data, {"skill": "deception", "dc_tier": "easy"})  # a lie to the guard
-	gs.call("_quiet_lines", ["Вы уверяете стражника, что просто проходили мимо"] as Array[String])
+	gs.call("_effect_lines", ["Вы уверяете стражника, что просто проходили мимо"] as Array[String], true)
 	var chat := " ".join(s.chat.map(func(e: Dictionary) -> String: return " ".join(e.get("lines", []))))
 	step("a Deception check breaks the vow", chat.contains("Слово правды") and chat.contains("нарушен"), chat.right(300))
 	step("the gift gone", int(s.character["skills"]["persuasion"]) == persuasion, str(s.character["skills"]["persuasion"]))

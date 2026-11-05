@@ -864,6 +864,8 @@ BTN_TRADE_SHORT,Торговать
 CREATURE_HELPLESS,"Он беспомощен — его можно только добить"
 CREATURE_NOT_HELPLESS,"Он может драться — нападайте"
 CREATURE_NOTHING,Обыскивать нечего
+CREATURE_CANNOT_TALK,С ним сейчас не поговорить
+CREATURE_CANNOT_FREE,Отпускать нечего — оно и так на воле
 CREATURE_TALK_SAY,Обращаюсь к: {name}
 CREATURE_TALK_SAY_CAPTIVE,Обращаюсь к пленнику: {name}
 CREATURE_NONE,Его здесь уже нет

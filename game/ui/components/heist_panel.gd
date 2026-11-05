@@ -24,18 +24,8 @@ func open() -> void:
 
 
 func _act(parent: Control, node_name: String, text: String, why: String, what: String, id: String, arg: String = "") -> Button:
-	var b := Button.new()
-	b.name = node_name
-	b.text = text
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.disabled = not why.is_empty() or GameState.is_busy()
-	b.tooltip_text = tr(why) if not why.is_empty() else ""
+	var b := UiParts.act_button(parent, node_name, text, why, func() -> String: return GameState.heist_act(what, id, arg))
 	b.size_flags_horizontal = Control.SIZE_SHRINK_END
-	b.pressed.connect(func() -> void:
-		var err := GameState.heist_act(what, id, arg)
-		if not err.is_empty():
-			EventBus.message.emit(tr(err)))
-	parent.add_child(b)
 	return b
 
 

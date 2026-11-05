@@ -261,7 +261,7 @@ static func send(s: GameSession, data: Dictionary, poster: String, to: String, p
 		var chk := SpellRules.check(s.character, data, str(w["spell"]), 0)
 		lines.append_array(SpellRules.cast(s.character, data, str(chk["spell_id"]), int(chk["slot"]), s))
 	if str(purpose(data, pid).get("does", "")) == "arrest":  # the evidence the hero carries goes with the letter
-		var item := _evidence_item(s, data, str(l["about"]))
+		var item := evidence_item(s, data, str(l["about"]))
 		if not item.is_empty():
 			l["evidence"] = item
 			ItemRules.remove(s.character, item)
@@ -614,8 +614,9 @@ static func _family(s: GameSession, data: Dictionary) -> Array[String]:
 # --- evidence, standing, recommendations ---------------------------------------------------------------------------
 
 
-## An item the hero carries that shows this NPC's crime ("" — none): a pack or a made item with `evidence`.
-static func _evidence_item(s: GameSession, data: Dictionary, npc_id: String) -> String:
+## An item the hero carries that shows this NPC's crime ("" — none): a pack or a made item with `evidence` (public for the
+## letter window, v0.8.4.29.6).
+static func evidence_item(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	for id: String in s.character.get("inventory", {}):
 		if str(ItemRules.def_of(data["items"], s.items, id).get("evidence", "")) == npc_id:
 			return id

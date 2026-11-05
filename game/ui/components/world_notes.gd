@@ -498,10 +498,8 @@ func _met(s: GameSession, w: WorldView) -> Array[String]:
 func _person(s: GameSession, w: WorldView, npc: String) -> Array[String]:
 	var data := Catalog.data
 	var n := w.npc(npc)
-	var bounds := GameSession.attitude_bounds(data)
-	var att := clampi(s.attitude(npc), bounds.x, bounds.y)
 	var head := "%s — %s%s · %s · %s" % [n.get("name", npc), n.get("role", ""), (", " + str(n["race"])) if not str(n.get("race", "")).is_empty() else "",
-		tr("ATTITUDE_" + ("M%d" % -att if att < 0 else "P%d" % att if att > 0 else "0")), BodyRules.npc_text(data, npc, n)]
+		GameSession.attitude_word(data, s.attitude(npc)), BodyRules.npc_text(data, npc, n)]
 	var bw := BondRules.word(s.character, data, npc)  # v0.7.31
 	if not bw.is_empty():
 		head += " · " + bw

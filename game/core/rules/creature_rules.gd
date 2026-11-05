@@ -217,6 +217,16 @@ static func can(s: GameSession, id: String, what: String, data: Dictionary = {})
 	if (str(c["state"]) == DEAD or what == "hide") and (str(c["state"]) != DEAD or not what in ["search", "hide"] or what == "hide" and bool(c.get("kept", false))):
 		return "CREATURE_NOTHING"
 	match what:
+		"talk":  # v0.7.22.16: one knocked out does not talk, nor a wild beast
+			if str(c["state"]) in ["unconscious", PetRules.WILD]:
+				return "CREATURE_CANNOT_TALK"
+		"tame":  # v0.7.43: the taming window
+			if data.is_empty() or not PetRules.tameable(data, str(c["monster"])) or not str(c.get("npc_id", "")).is_empty() \
+					or not str(c["state"]) in [PetRules.WILD, "truce", "surrendered"]:
+				return "PET_NOT_TAMEABLE"
+		"free":
+			if str(c["state"]) == PetRules.WILD:
+				return "CREATURE_CANNOT_FREE"
 		"attack":
 			if helpless(c):
 				return "CREATURE_HELPLESS"
@@ -227,7 +237,7 @@ static func can(s: GameSession, id: String, what: String, data: Dictionary = {})
 			if not lootable(c) and (str(c.get("npc_id", "")).is_empty() or bool(c.get("searched", false))):
 				return "CREATURE_NOTHING"
 		"bind":
-			if bool(c.get("bound", false)) or str(c["state"]) == "truce":
+			if bool(c.get("bound", false)) or str(c["state"]) in ["truce", PetRules.WILD]:
 				return "CREATURE_CANNOT_BIND"
 		"lead":
 			if not bool(c.get("bound", false)) and str(c["state"]) != "tame":  # v0.7.27: an own beast
@@ -241,6 +251,22 @@ static func can(s: GameSession, id: String, what: String, data: Dictionary = {})
 			if data.is_empty() or CrimeRules.law(data, WorldView.new(data["world"]).location_id(s.room_id)).is_empty():
 				return "CREATURE_NO_LAW"
 	return ""
+
+
+## What can be done with the creature now (v0.8.4.29.6, one list for the panel and `can`): [[what, the button's key]], in the
+## panel's order.
+static func acts(s: GameSession, data: Dictionary, c: Dictionary) -> Array:
+	var id := str(c["id"])
+	var keys := {"tame": "BTN_PET_TAME_OPEN", "talk": "BTN_CREATURE_TALK", "bind": "BTN_CREATURE_BIND",
+		"lead": "BTN_CREATURE_STAY" if bool(c.get("led", false)) else "BTN_CREATURE_LEAD",
+		"join": "BTN_CREATURE_STAY" if bool(c.get("ally", false)) else "BTN_CREATURE_JOIN", "search": "BTN_CREATURE_SEARCH",
+		"hand_over": "BTN_CREATURE_HAND_OVER", "hide": "BTN_HIDE_BODY", "free": "BTN_CREATURE_FREE", "finish": "BTN_CREATURE_FINISH",
+		"attack": "BTN_CREATURE_ATTACK"}
+	var out: Array = []
+	for what: String in keys:
+		if can(s, id, what, data).is_empty():
+			out.append([what, keys[what]])
+	return out
 
 
 ## Does it (can first). Lines; an attack leaves s.pending_fight.

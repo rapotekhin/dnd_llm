@@ -88,7 +88,7 @@ func run() -> void:
 		(n as Control).visible = false
 	await frames(2)
 
-	gs.call("_quiet_lines", TimeRules.advance(s, data, 2 * 1440))
+	gs.call("_effect_lines", TimeRules.advance(s, data, 2 * 1440), true)
 	gs.call("_after_turn", s, "")
 	var answered := func() -> bool: return LetterRules.letters(s).all(func(l: Dictionary) -> bool: return str(l["status"]) == "answered")
 	step("both letters answered by the master's turns", await wait_until(func() -> bool: return answered.call() and not gs.is_busy(), 60.0),
@@ -98,7 +98,7 @@ func run() -> void:
 	step("Fern under guard", str(Being.view(s, "npc_merchant").get("at", "")) == "brod-lockup" and LetterRules.jailed(s, "npc_merchant"))
 	await shot("letter_answers")
 
-	gs.call("_quiet_lines", TimeRules.advance(s, data, 1440))
+	gs.call("_effect_lines", TimeRules.advance(s, data, 1440), true)
 	await _go(gs, "brod-square")
 	await _go(gs, "brod-gate")
 	step("Bruno came to the gate and goes with the hero", Being.follows(s, BRUNO), _last_effects(s))
