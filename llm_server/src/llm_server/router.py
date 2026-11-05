@@ -57,9 +57,8 @@ def by_kind(params: TurnRequestParams) -> str:
         scene = params.snapshot.scene
         return "full" if scene is not None and scene.furnish else "short"  # a new room is furnished with an effect
     if params.kind == "action" and params.mode != "combat" and "[движок уже" not in params.input:
-        scene = params.snapshot.scene
-        if scene is not None and any("герой уже слышал" not in r for r in scene.rumors) and prompts.RUMOR_WORDS.search(params.input):
-            return "full"  # v0.7.47: a rumour told goes into the journal with an effect
+        if prompts.wants_full(params.snapshot, params.input):
+            return "full"  # v0.7.47: a rumour told goes into the journal with an effect (v0.8.4.29.7: any topic's row that says so)
         return ""
     return "full"
 

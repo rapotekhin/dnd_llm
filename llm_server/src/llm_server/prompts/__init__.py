@@ -1,7 +1,9 @@
 """Prompt templates (Jinja2, *.md.j2 next to this file). StrictUndefined: a missing variable is an error."""
 
 import re
+from collections.abc import Callable
 from pathlib import Path
+from typing import NamedTuple
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
@@ -105,57 +107,6 @@ def render(name: str, **context: object) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
-# Rules of a topic (prompts/topics/<key>.md.j2, v0.7.20.4): out of the system prompt, read by the master with the tool
-# `rules` when it needs them; the scene puts a topic in by itself when it is there (an open edge, a crime, a stranger).
-# key -> (the line of the index: when to read it, the effect kinds the engine accepts only after it is read or shown).
-TOPICS: dict[str, tuple[str, tuple[str, ...]]] = {
-    "conditions": ("состояния героя: яд, страх, сон, паралич, путы, истощение, болезни; проверки зрения и слуха (`condition`, `disease`)", ("condition",)),
-    "spells": ("что заклинание сделало в мире: иллюзии, разговор со зверьми и мёртвыми, гадание; заклинание на себя", ()),
-    "pay": ("покупка у не-торговца, плата за услугу или сведения, платный вариант (`option_costs`), ночлег", ()),
-    "theft": ("кража из карманов: как её отыграть", ()),
-    "items": ("новый предмет (`move_item.item`): жезлы, свитки, зелья, вещи с текстом; магические вещи, неопознанные и проклятые; вещь, что даёт полёт, плавание, лазание или призывает существ (`wear`, `use.summon`)", ()),
-    "places": ("новое место: на открытом краю мира или объект внутри локации — лавка за городом, баня у площади (`create:place`)", ("create:place",)),
-    "crime": ("преступления героя: убитые, розыск, стража, признание (`crime:known`)", ("crime:known", "crime:release")),
-    "social": ("что NPC даёт словами: скидка, услуга даром, тайна, идёт с героем, пускает к себе, слава в поселении "
-               "(`grant:discount`, `grant:favor`, `grant:secret`, `grant:follow`, `grant:permit`, `grant:cure`, `shift:reputation`)",
-               ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "grant:cure", "shift:reputation")),
-    "goals": ("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", ()),
-    "equip": ("надеть, снять, раздеться (`equip`)", ("equip",)),
-    "water": ("набрать воды в бурдюк, флягу, кувшин, ведро из колодца, ручья, реки; нацедить вина, масла; вылить, облить водой или маслом (`fill`)", ("fill",)),
-    "invisible": ("невидимый герой", ()),
-    "people": ("новый человек (`create:npc`)", ("create:npc",)),
-    "quests": ("новое задание: NPC просит о помощи, игрок ищет работу (`create:quest`)", ("create:quest",)),
-    "languages": ("NPC не понимает героя; языки", ()),
-    "tools": ("действие инструментом: замок, травы, подделка, грим (`request_check` с `tool`)", ()),
-    "craft": ("ремесло и готовка: герой куёт, шьёт, мастерит, варит зелье, жарит мясо, варит похлёбку; новый рецепт из слов игрока (`create:recipe`)", ("create:recipe",)),
-    "property": ("имущество: купить дом, землю, мельницу, лавку; купчая; место, которого нет в продаже (`create:property`); свои места, работники, животные; свой вид места — школа, причал (`new_kind`); улучшение своего места по просьбе — станок, лодка, библиотека (`create:upgrade`); конь, мул, вьюк, телега, аренда у барышника; новый зверь у барышника (`create:stock` с `animal`)", ("create:property", "create:upgrade")),
-    "bank": ("деньги в долг и на хранение: вклад, кредит под залог, ячейка; ростовщик, которого нет (`create:bank`)", ("create:bank",)),
-    "study": ("учёба: училище, курсы, экзамен, книги; «у кого научиться» — `find_teachers`, курс у учителя (`create:course`)", ("create:course",)),
-    "bonds": ("дружба, романтика, соперничество, наставник: близость, подарки, признание; сцена, что сблизила (`shift:bond`)", ("shift:bond",)),
-    "family": ("семья: предложение, свадьба, супруг, дети, содержание дома, наследник", ()),
-    "office": ("служба и власть: должность, назначение, выборы, суд, подати, ополчение, староста, храм; взятки", ()),
-    "underworld": ("преступный мир: кража со взломом, грабёж, контрабанда, скупщик краденого, воровское братство, своя банда (`create:fence`, `create:heist`, `create:org`)", ("create:fence", "create:heist", "create:org")),
-    "shop": ("своя торговля: прилавок, лавка, грамота, опт; поставщик, которого нет (`create:supplier`)", ("create:supplier",)),
-    "jobs": ("работа за плату: игрок просит работу, которой нет у нанимателя сцены (`create:job`)", ("create:job",)),
-    "background": ("предыстория героя и связь NPC с его прошлым", ()),
-    "wilds": ("охота и рыбалка, угодья, браконьерство; зверь ушёл или вернулся, рыба пропала, новые угодья (`create:wilds`)", ("create:wilds",)),
-    "calendar": ("дата и праздники: когда ярмарка, праздник идёт, срок к празднику; свой праздник по причине (`create:festival`)", ("create:festival",)),
-    "weather": ("погода: ливень, туман, снег, зной, мороз и что они значат; чары или чудо меняют погоду на часы (`weather`)", ("weather",)),
-    "faith": ("вера: боги, святилища, молитва, обет, заповедь, осквернение; обет по словам героя (`vow`), новое святилище (`create:god`)", ("vow", "create:god")),
-    "guise": ("чужой облик: маскировка, кем выглядит герой, за кого его принимают", ("guise",)),
-    "make": ("нового нет в данных и в 5e: мастер собирает из частей (`make`) статус, навык, черту, заклинание, способность с зарядами, свойство вещи, жидкость (питьё, яд на клинок, бросок): проклятие, благословение места, редкое умение наставника, неведомое заклинание, свиток или трактат о нём", ("make",)),
-    "factions": ("фракции: новая фракция, чьи это люди и стража, отношение за поступок (`create:faction`)", ("create:faction", "shift:standing")),
-    "rumors": ("слухи: что говорят в округе, пересказ слуха NPC, слух о герое или пущенный героем, ложь и её опровержение (`rumor`)", ("rumor",)),
-    "pets": ("питомец героя и приручение: дикий зверь в сцене, имя, близость (`shift:bond` с creature_id), помощь, разведка; бездомный зверь по причине (`create:beast`)", ("create:beast",)),
-    "games": ("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; поединок по вызову; арена и ставки на бои; своя игра (`create:contest`)", ("create:contest",)),
-    "world_edits": ("правка готового места: у человека или в сундуке появилась или пропала вещь по причине в мире (`move_item:world>npc`, `move_item:npc>world`, `move_item:world>container`, `move_item:container>world`); новая вещь в обставленной комнате (`furnish` с `cause`)", ("move_item:world>npc", "move_item:npc>world", "move_item:world>container", "move_item:container>world",)),
-    "containers": ("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`move_item:container>hero`, `move_item:hero>container`, `open:container`, `move_item:hero>room`)",
-                   ("move_item:container>hero", "move_item:hero>container", "open:container", "move_item:hero>room")),
-    "doors": ("двери у выходов: заперто, часы объекта, взлом, выбить, отпереть или запереть хозяином (`open:door`)", ("open:door", "create:way")),
-    "captives": ("пленные и существа после боя, перемирие, продажа пленника, чужие вещи героя, герой в плену (`owner`)", ("owner",)),
-}
-
-
 # Topics of a scene, not of a conversation: out of the index while the hero talks (still readable by `rules`).
 SCENE_TOPICS = {"places", "containers", "doors", "equip", "tools", "invisible"}
 WATER_WORDS = re.compile(r"вод[аыуе]|набра|набер|наполн|зачерп|бурдюк|фляг|кувшин|ведр|нацед|налить|налью|вылить|вылью|выливаю|облить|оболью|обливаю|плесн|плещу|"
@@ -165,10 +116,10 @@ MOUNT_WORDS = re.compile(r"конь|коня|кобыл|лошад|мул|осл
                          re.IGNORECASE)  # v0.7.42
 WEATHER_WORDS = re.compile(r"погод|дожд|ливн|ливен|туман|снег|метел|вьюг|мороз|холод|зно[йя]|жар[аы]|небо|тучи|ветер|гроз",
                            re.IGNORECASE)
-RUMOR_WORDS = re.compile(r"слух|слыха|слышн|прислуш|подслуш|о ч[её]м говор|болтовн|говорят|что нового|новост|сплет|болтают|судачат|толкуют|пустить|распуст|наводк|объявлен",
-                         re.IGNORECASE)  # v0.7.47
+RUMOR_WORDS = re.compile(r"слух|слыха|слышн|прислуш|подслуш|о ч[её]м говор|болтовн|говорят|что нового|новост|сплет|болтают|судачат|толкуют|пустить|распуст|наводк",
+                         re.IGNORECASE)  # v0.7.47; a notice is the board's (v0.8.4.29.7)
 FAITH_WORDS = re.compile(r"бог[аиу ]|богин|бож|молит|молюсь|помол|обет|клян|присяг|храм|алтар|святил|святын|жриц|жрец|вер[уыа] |вера$|обращ|"
-                         r"благослов|искуп|скверн|заповед|идол|капищ|чонти|сильванус|тир[ау ]|вокин|маск[еуи]|келемвор", re.IGNORECASE)  # v0.7.49
+                         r"искуп|скверн|заповед|идол|капищ|чонти|сильванус|тир[ау ]|вокин|маск[еуи]|келемвор", re.IGNORECASE)  # v0.7.49; a blessing is `make`, «маскировка» is no Mask (v0.8.4.29.7)
 FESTIVAL_WORDS = re.compile(r"праздн|ярмар|дожин|гулянь|торговый день|свадьб|пир[ау ]|поминк|календар|какое число|какой день|месяц",
                             re.IGNORECASE)  # v0.7.44
 WAY_WORDS = re.compile(r"лаз|пролом|подкоп|тайн\w* ход|потайн|щел[ьи]|дыр[аую]|прокопа", re.IGNORECASE)  # v0.7.66
@@ -194,7 +145,7 @@ JOB_WORDS = re.compile(r"работ|наймусь|нанять|найми|вы�
 # Containers and new places come whole only when the player's words touch them (v0.7.34.3): a chest stood in 23 of 31
 # full turns of the author's trace, an open edge in 11. Otherwise the index has them, and the gate hands their rules.
 CONTAINER_WORDS = re.compile(r"сунду|ящик|шкаф|бочк|бочон|корзин|мешок|мешк|сумк|рюкзак|кошел|ларец|ларц|шкатул|тайник|"
-                             r"достать|достаю|достан|вынуть|выну|полож|кладу|убра|убер|спрят|отпер|отопр|вскр|ключ|оставл|остав|"
+                             r"достать|достаю|достан|вынуть|выну|полож|кладу|убра|убер|спрят(?!ан)|отпер|отопр|вскр|ключ|оставл|остав|"
                              r"брос|товар|продаж|запас|внутр|содерж", re.IGNORECASE)
 PLACE_WORDS = re.compile(r"постро|строит|стройк|основ|заложи|новое место|найти мест|ищу мест|разведа|за город|за околиц|"
                          r"лавк|мастерск|дом|избу|хижин|баню|пекарн|кузниц|таверн|трактир|харчевн|лагер|стоянк|тропу|дорогу|сверн|свора|вглубь|чащ|что там|"
@@ -215,79 +166,125 @@ def names_a_faction(said: str, scene: object) -> bool:
     return any(w[:5].lower() in low for line in getattr(scene, "factions", None) or [] for w in line.partition("(")[0].split() if len(w) >= 4)
 
 
+class Topic(NamedTuple):
+    """A rules topic: the line of the index (when to read it), the effect kinds the engine accepts only after it is read
+    or shown, and when it goes into the system prompt by itself (v0.8.4.29.7: one row instead of a branch in auto_topics):
+    `alone` — the scene alone needs it; `words` — the player's words name it while `gate` holds (by default: there is a
+    scene), `props` — a container of the scene named counts too; `full` — those words want the full prompt (the router)."""
+
+    index: str
+    kinds: tuple[str, ...]
+    words: re.Pattern[str] | None = None
+    gate: Callable[[Snapshot], bool] | None = None
+    alone: Callable[[str, Snapshot, str], bool] | None = None
+    props: bool = False
+    full: Callable[[Snapshot], bool] | None = None
+
+
+def _named(t: Topic, snap: Snapshot, said: str) -> bool:
+    return t.words is not None and (t.gate(snap) if t.gate else snap.scene is not None) and mentions(said, t.words, snap.scene if t.props else None)
+
+
 def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
-    """Topics the scene needs now: they go into the system prompt whole."""
-    scene, character = snap.scene, snap.character
-    out: list[str] = []
-    # conditions come often and by words in a scene (v0.7.20.4 goldens); a conversation keeps only its own topic —
-    # the NPC's prompt grew to 28k characters with conditions, payment and quests in it (the author's trace, v0.7.21.3)
-    if mode in ("exploration", "combat") or (character and character.conditions):
-        out.append("conditions")
-    if mode in ("social", "trade"):
-        out.append("social")
-    if scene and scene.open_edges and mentions(said, PLACE_WORDS):
-        out.append("places")
-    if snap.crimes:
-        out.append("crime")
-    if character and "invisible" in character.conditions:  # the engine sends the condition's id (v0.7.63)
-        out.append("invisible")
-    if character and character.guise:  # v0.7.63: a look to name or to play
-        out.append("guise")
-    if scene and any(not n.understands_hero for n in scene.npcs):
-        out.append("languages")
-    if scene and any(n.tie for n in scene.npcs):
-        out.append("background")
-    if scene and (any(p.container for p in scene.props) or character and character.bags) and mentions(said, CONTAINER_WORDS, scene):
-        out.append("containers")
-    if mentions(said, WATER_WORDS):  # v0.7.34.6: water drawn by words
-        out.append("water")
-    if scene and any(n.animals for n in scene.npcs) and mentions(said, MOUNT_WORDS):  # v0.7.42: a dealer by words
-        out.append("property")
-    if scene and mentions(said, FESTIVAL_WORDS):  # v0.7.44: a date, a fair, a feast by words
-        out.append("calendar")
-    if scene and mentions(said, WEATHER_WORDS):  # v0.7.46: the weather by words, magic over it
-        out.append("weather")
-    if scene and mentions(said, RUMOR_WORDS):  # v0.7.47: what they say, a rumour told or spread
-        out.append("rumors")
-    if scene and mentions(said, MAKE_WORDS):  # v0.7.63: a curse, a blessing, a rare skill by words
-        out.append("make")
-    if scene and mentions(said, BANK_WORDS):  # v0.7.70.1: the goldens — a folded effect's topic comes by the player's words
-        out.append("bank")
-    if scene and mentions(said, UNDERWORLD_WORDS):
-        out.append("underworld")
-    if scene and mentions(said, CRAFT_WORDS):
-        out.append("craft")
-    if scene and scene.hooks and mentions(said, FIND_WORDS):  # v0.8.4.28.7: a search with something hidden here
-        out.append("items")
-    if scene and mentions(said, JOB_WORDS):
-        out.append("jobs")
-    if names_a_faction(said, scene):
-        out.append("factions")
-    if scene and mentions(said, FAITH_WORDS):  # v0.7.49: a prayer, a vow, a shrine by words
-        out.append("faith")
-    if scene and any("приручить" in c or "питомец героя" in c for c in scene.creatures):  # v0.7.43: a beast to tame or a pet here
-        out.append("pets")
-    if scene and mentions(said, BOUT_WORDS):  # v0.7.45: a duel by challenge, the arena, a bet on a bout
-        out.append("games")
-    if scene and scene.wilds and mentions(said, WILDS_WORDS):  # v0.7.41: a hunt or the grounds changed by words
-        out.append("wilds")
-    if scene and (any(e.door for e in scene.exits) or mentions(said, WAY_WORDS)):  # v0.7.22.25, v0.7.66
-        out.append("doors")
-    if scene and scene.creatures:  # the prisoners, a truce, the hero's captors (v0.7.22.17)
-        out.append("captives")
-    if scene and any(BOARD.search(p.name) for p in scene.props):  # work is asked at a board (v0.7.21.2)
-        out.append("quests")
-    return [t for t in TOPICS if t in out]
+    """Topics the scene needs now: they go into the system prompt whole. Conditions come often and by words in a scene
+    (v0.7.20.4 goldens); a conversation keeps only its own topic — the NPC's prompt grew to 28k characters with conditions,
+    payment and quests in it (the author's trace, v0.7.21.3)."""
+    return [k for k, t in TOPICS.items() if (t.alone is not None and t.alone(mode, snap, said)) or _named(t, snap, said)]
+
+
+def wants_full(snap: Snapshot, said: str) -> bool:
+    """The player's words name a topic that goes with an effect (a rumour told goes into the journal, v0.7.47): the full prompt."""
+    return any(t.full is not None and t.full(snap) and _named(t, snap, said) for t in TOPICS.values())
+
+
+# Rules of a topic (prompts/topics/<key>.md.j2, v0.7.20.4): out of the system prompt, read by the master with the tool
+# `rules` when it needs them; the scene puts a topic in by itself when it is there (an open edge, a crime, a stranger).
+# key -> Topic (v0.8.4.29.7: when it comes by itself and by which words, in one row).
+TOPICS: dict[str, Topic] = {
+    "conditions": Topic("состояния героя: яд, страх, сон, паралич, путы, истощение, болезни; проверки зрения и слуха (`condition`, `disease`)", ("condition",),
+                   alone=lambda mode, snap, said: mode in ("exploration", "combat") or bool(snap.character and snap.character.conditions)),
+    "spells": Topic("что заклинание сделало в мире: иллюзии, разговор со зверьми и мёртвыми, гадание; заклинание на себя", ()),
+    "pay": Topic("покупка у не-торговца, плата за услугу или сведения, платный вариант (`option_costs`), ночлег", ()),
+    "theft": Topic("кража из карманов: как её отыграть", ()),
+    "items": Topic("новый предмет (`move_item.item`): жезлы, свитки, зелья, вещи с текстом; магические вещи, неопознанные и проклятые; вещь, что даёт полёт, плавание, лазание или призывает существ (`wear`, `use.summon`)", (),
+                   words=FIND_WORDS, gate=lambda snap: bool(snap.scene and snap.scene.hooks)),
+    "places": Topic("новое место: на открытом краю мира или объект внутри локации — лавка за городом, баня у площади (`create:place`)", ("create:place",),
+                   words=PLACE_WORDS, gate=lambda snap: bool(snap.scene and snap.scene.open_edges)),
+    "crime": Topic("преступления героя: убитые, розыск, стража, признание (`crime:known`)", ("crime:known", "crime:release"),
+                   alone=lambda mode, snap, said: bool(snap.crimes)),
+    "social": Topic("что NPC даёт словами: скидка, услуга даром, тайна, идёт с героем, пускает к себе, слава в поселении "
+               "(`grant:discount`, `grant:favor`, `grant:secret`, `grant:follow`, `grant:permit`, `grant:cure`, `shift:reputation`)",
+               ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "grant:cure", "shift:reputation"),
+                   alone=lambda mode, snap, said: mode in ("social", "trade")),
+    "goals": Topic("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", ()),
+    "equip": Topic("надеть, снять, раздеться (`equip`)", ("equip",)),
+    "water": Topic("набрать воды в бурдюк, флягу, кувшин, ведро из колодца, ручья, реки; нацедить вина, масла; вылить, облить водой или маслом (`fill`)", ("fill",),
+                   words=WATER_WORDS, gate=lambda snap: True),
+    "invisible": Topic("невидимый герой", (),
+                   alone=lambda mode, snap, said: bool(snap.character and "invisible" in snap.character.conditions)),
+    "people": Topic("новый человек (`create:npc`)", ("create:npc",)),
+    "quests": Topic("новое задание: NPC просит о помощи, игрок ищет работу (`create:quest`)", ("create:quest",),
+                   alone=lambda mode, snap, said: bool(snap.scene and any(BOARD.search(p.name) for p in snap.scene.props))),
+    "languages": Topic("NPC не понимает героя; языки", (),
+                   alone=lambda mode, snap, said: bool(snap.scene and any(not n.understands_hero for n in snap.scene.npcs))),
+    "tools": Topic("действие инструментом: замок, травы, подделка, грим (`request_check` с `tool`)", ()),
+    "craft": Topic("ремесло и готовка: герой куёт, шьёт, мастерит, варит зелье, жарит мясо, варит похлёбку; новый рецепт из слов игрока (`create:recipe`)", ("create:recipe",),
+                   words=CRAFT_WORDS),
+    "property": Topic("имущество: купить дом, землю, мельницу, лавку; купчая; место, которого нет в продаже (`create:property`); свои места, работники, животные; свой вид места — школа, причал (`new_kind`); улучшение своего места по просьбе — станок, лодка, библиотека (`create:upgrade`); конь, мул, вьюк, телега, аренда у барышника; новый зверь у барышника (`create:stock` с `animal`)", ("create:property", "create:upgrade"),
+                   words=MOUNT_WORDS, gate=lambda snap: bool(snap.scene and any(n.animals for n in snap.scene.npcs))),
+    "bank": Topic("деньги в долг и на хранение: вклад, кредит под залог, ячейка; ростовщик, которого нет (`create:bank`)", ("create:bank",),
+                   words=BANK_WORDS),
+    "study": Topic("учёба: училище, курсы, экзамен, книги; «у кого научиться» — `find_teachers`, курс у учителя (`create:course`)", ("create:course",)),
+    "bonds": Topic("дружба, романтика, соперничество, наставник: близость, подарки, признание; сцена, что сблизила (`shift:bond`)", ("shift:bond",)),
+    "family": Topic("семья: предложение, свадьба, супруг, дети, содержание дома, наследник", ()),
+    "office": Topic("служба и власть: должность, назначение, выборы, суд, подати, ополчение, староста, храм; взятки", ()),
+    "underworld": Topic("преступный мир: кража со взломом, грабёж, контрабанда, скупщик краденого, воровское братство, своя банда (`create:fence`, `create:heist`, `create:org`)", ("create:fence", "create:heist", "create:org"),
+                   words=UNDERWORLD_WORDS),
+    "shop": Topic("своя торговля: прилавок, лавка, грамота, опт; поставщик, которого нет (`create:supplier`)", ("create:supplier",)),
+    "jobs": Topic("работа за плату: игрок просит работу, которой нет у нанимателя сцены (`create:job`)", ("create:job",),
+                   words=JOB_WORDS),
+    "background": Topic("предыстория героя и связь NPC с его прошлым", (),
+                   alone=lambda mode, snap, said: bool(snap.scene and any(n.tie for n in snap.scene.npcs))),
+    "wilds": Topic("охота и рыбалка, угодья, браконьерство; зверь ушёл или вернулся, рыба пропала, новые угодья (`create:wilds`)", ("create:wilds",),
+                   words=WILDS_WORDS, gate=lambda snap: bool(snap.scene and snap.scene.wilds)),
+    "calendar": Topic("дата и праздники: когда ярмарка, праздник идёт, срок к празднику; свой праздник по причине (`create:festival`)", ("create:festival",),
+                   words=FESTIVAL_WORDS),
+    "weather": Topic("погода: ливень, туман, снег, зной, мороз и что они значат; чары или чудо меняют погоду на часы (`weather`)", ("weather",),
+                   words=WEATHER_WORDS),
+    "faith": Topic("вера: боги, святилища, молитва, обет, заповедь, осквернение; обет по словам героя (`vow`), новое святилище (`create:god`)", ("vow", "create:god"),
+                   words=FAITH_WORDS),
+    "guise": Topic("чужой облик: маскировка, кем выглядит герой, за кого его принимают", ("guise",),
+                   alone=lambda mode, snap, said: bool(snap.character and snap.character.guise)),
+    "make": Topic("нового нет в данных и в 5e: мастер собирает из частей (`make`) статус, навык, черту, заклинание, способность с зарядами, свойство вещи, жидкость (питьё, яд на клинок, бросок): проклятие, благословение места, редкое умение наставника, неведомое заклинание, свиток или трактат о нём", ("make",),
+                   words=MAKE_WORDS),
+    "factions": Topic("фракции: новая фракция, чьи это люди и стража, отношение за поступок (`create:faction`)", ("create:faction", "shift:standing"),
+                   alone=lambda mode, snap, said: names_a_faction(said, snap.scene)),
+    "rumors": Topic("слухи: что говорят в округе, пересказ слуха NPC, слух о герое или пущенный героем, ложь и её опровержение (`rumor`)", ("rumor",),
+                   words=RUMOR_WORDS, full=lambda snap: bool(snap.scene and any("герой уже слышал" not in r for r in snap.scene.rumors))),
+    "pets": Topic("питомец героя и приручение: дикий зверь в сцене, имя, близость (`shift:bond` с creature_id), помощь, разведка; бездомный зверь по причине (`create:beast`)", ("create:beast",),
+                   alone=lambda mode, snap, said: bool(snap.scene and any("приручить" in c or "питомец героя" in c for c in snap.scene.creatures))),
+    "games": Topic("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; поединок по вызову; арена и ставки на бои; своя игра (`create:contest`)", ("create:contest",),
+                   words=BOUT_WORDS),
+    "world_edits": Topic("правка готового места: у человека или в сундуке появилась или пропала вещь по причине в мире (`move_item:world>npc`, `move_item:npc>world`, `move_item:world>container`, `move_item:container>world`); новая вещь в обставленной комнате (`furnish` с `cause`)", ("move_item:world>npc", "move_item:npc>world", "move_item:world>container", "move_item:container>world",)),
+    "containers": Topic("сундуки, ящики, сумки героя, товары торговца в лавке: достать, положить, отпереть, оставить (`move_item:container>hero`, `move_item:hero>container`, `open:container`, `move_item:hero>room`)",
+                   ("move_item:container>hero", "move_item:hero>container", "open:container", "move_item:hero>room"),
+                   words=CONTAINER_WORDS, props=True,
+                   gate=lambda snap: bool(snap.scene and (any(p.container for p in snap.scene.props) or snap.character and snap.character.bags))),
+    "doors": Topic("двери у выходов: заперто, часы объекта, взлом, выбить, отпереть или запереть хозяином (`open:door`)", ("open:door", "create:way"),
+                   words=WAY_WORDS, alone=lambda mode, snap, said: bool(snap.scene and any(e.door for e in snap.scene.exits))),
+    "captives": Topic("пленные и существа после боя, перемирие, продажа пленника, чужие вещи героя, герой в плену (`owner`)", ("owner",),
+                   alone=lambda mode, snap, said: bool(snap.scene and snap.scene.creatures)),
+}
 
 
 def topic_for(kind: str) -> str:
     """The topic whose rules an effect kind needs ("" — none)."""
-    return next((k for k, (_, kinds) in TOPICS.items() if kind in kinds), "")
+    return next((k for k, t in TOPICS.items() if kind in t.kinds), "")
 
 
 def topic_fields(key: str) -> str:
     """The fields of a topic's effects: they come with its rules, not in every turn's tool description (v0.7.69)."""
-    tags = TOPICS[key][1]
+    tags = TOPICS[key].kinds
     lines = [effect_line(cls) for cls in effect_classes() if class_tag(cls) in tags]
     return "Поля (? — необязательное): " + "; ".join(lines) if lines else ""
 
@@ -321,7 +318,7 @@ def system_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = D
     shown = auto_topics(mode, snap, said)
     context["auto_topics"] = shown
     scene_only = SCENE_TOPICS if mode in ("social", "trade") else set()  # a conversation does not search or carry
-    context["topic_index"] = [(k, v[0]) for k, v in TOPICS.items() if k not in shown and k not in scene_only]
+    context["topic_index"] = [(k, v.index) for k, v in TOPICS.items() if k not in shown and k not in scene_only]
     if mode == "exploration":
         return render("exploration.md.j2", **context)
     if mode == "combat":

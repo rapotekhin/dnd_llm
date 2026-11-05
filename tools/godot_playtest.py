@@ -20,7 +20,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from connectivity_e2e import DEFAULT_GODOT, OUT, PORT, ROOT, port_busy, start_server, stop_server, wait_http  # noqa: E402
+from connectivity_e2e import OUT, PORT, ROOT, start_server, stop_server, wait_http  # noqa: E402
+from tool_base import free_port, godot as godot_path, port_busy  # noqa: E402
 
 
 def run_embedded(godot: str, real: bool, out_dir: Path) -> subprocess.CompletedProcess:
@@ -68,13 +69,11 @@ def main() -> int:
     opts = parser.parse_args()
     with_server = not opts.no_server and opts.scenario not in ("offline", "embedded")
 
-    godot = os.environ.get("GODOT", DEFAULT_GODOT)
+    godot = godot_path()
     if not Path(godot).exists():
         print(f"Godot not found: {godot} (set GODOT)")
         return 2
-    port = PORT
-    while port_busy(port) and port < PORT + 300:
-        port += 1  # the player's own llm_server may hold 8765: the playtest takes the next free port
+    port = free_port(PORT)  # the player's own llm_server may hold 8765: the playtest takes the next free port
     if port_busy(port):
         print(f"ports {PORT}–{port} are busy: stop a running llm_server first")
         return 2

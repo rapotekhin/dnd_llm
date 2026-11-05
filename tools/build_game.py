@@ -21,8 +21,9 @@ import time
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_GODOT = r"C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tool_base import ROOT, godot as godot_path  # noqa: E402
+
 PRESET = "Windows"
 NAME = "BetweenTheRolls.exe"
 SERVER = "server.exe"
@@ -159,7 +160,7 @@ def smoke_game(exe: Path) -> list[str]:
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    godot = os.environ.get("GODOT", DEFAULT_GODOT)
+    godot = godot_path()
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     out = ROOT / "build" / "release" / version / NAME
     out.parent.mkdir(parents=True, exist_ok=True)

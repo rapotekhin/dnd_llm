@@ -14,17 +14,16 @@ effect, slow turns).
 
 import argparse
 import json
-import os
 import re
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-BACKEND_TRACES = ROOT / "llm_server" / "var" / "traces"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tool_base import ROOT, USER_DIR, backend_trace_dirs  # noqa: E402
+
 OUT = ROOT / "build" / "traces"
-USER_DIR = Path(os.environ.get("APPDATA", Path.home())) / "Godot" / "app_userdata" / "Between the Rolls"
 # money or a thing changing hands in the narration — checked against the effects of the turn
 MONEY = re.compile(r"(ты (платишь|отсчитываешь|выкладываешь|отдаёшь|кладёшь) [^.]{0,30}(монет|медяк|серебр|золот)|"
                    r"(сгребает|забирает|прячет|берёт|смахивает) [^.]{0,30}(монет|медяк|серебр|золот|плату)|"
@@ -67,9 +66,7 @@ def short(text: str, n: int = 220) -> str:
 
 def backend_turns(start: int, end: int) -> dict[str, list[dict]]:
     by_turn: dict[str, list[dict]] = defaultdict(list)
-    if not BACKEND_TRACES.exists():
-        return by_turn
-    for f in sorted(BACKEND_TRACES.glob("*.jsonl")):
+    for f in sorted(f for d in backend_trace_dirs() for f in d.glob("*.jsonl")):  # the dev server's and the build's (v0.8.4.29.7)
         for r in load(f):
             if start - 60_000 <= int(r.get("ts", 0)) <= end + 120_000 and r.get("what") == "turn":
                 by_turn[str(r.get("turn_id"))].append(r)

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 from typing import get_args as typing_get_args
@@ -187,12 +188,19 @@ def scene_npc(params: TurnRequestParams, npc_id: str | None) -> SceneNpc | None:
     return next((n for n in scene.npcs if n.npc_id == npc_id), None)
 
 
+def _topic_once(t: TurnContext, topic: str) -> str:
+    """The rules of a topic the master has not read in this turn, marked read ("" — read already or no topic): one place
+    for a search before a creation and an effect of a topic (v0.8.4.29.7)."""
+    if not topic or topic in t.topics:
+        return ""
+    t.topics.add(topic)
+    return prompts.topic_text(topic)
+
+
 def _with_topic(t: TurnContext, topic: str, text: str) -> str:
     """A search before a creation answers with the topic's rules at once: a refusal «read rules first» cost a request."""
-    if topic in t.topics:
-        return text
-    t.topics.add(topic)
-    return f"{text}\n\nПравила темы «{topic}» (читать rules(\"{topic}\") уже не нужно):\n{prompts.topic_text(topic)}"
+    rules = _topic_once(t, topic)
+    return f"{text}\n\nПравила темы «{topic}» (читать rules(\"{topic}\") уже не нужно):\n{rules}" if rules else text
 
 
 def _library_stock(effect: CreateNpcEffect, library: ItemLibrary) -> CreateNpcEffect:
@@ -333,9 +341,9 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         if effect.item is not None and not t.searched_items:
             return "Отказ: перед созданием нового предмета найди похожие через find_items."
     topic = prompts.topic_for(effect_tag(effect.model_dump()))
-    if topic and topic not in t.topics and t.params.kind not in ("quest_act", "prepare"):  # the rules come with the refusal: no extra call (v0.7.34.3)
-        t.topics.add(topic)
-        return f"Отказ: эффект темы «{topic}» — по её правилам. Вот они:\n{prompts.topic_text(topic)}\nПредложи эффект снова по ним."
+    rules = "" if turn_kind(t.params).framed else _topic_once(t, topic)  # the rules come with the refusal: no extra call (v0.7.34.3)
+    if rules:
+        return f"Отказ: эффект темы «{topic}» — по её правилам. Вот они:\n{rules}\nПредложи эффект снова по ним."
     if isinstance(effect, CreateNpcEffect) and t.library is not None:
         effect = _library_stock(effect, t.library)
     if isinstance(effect, CreateQuestEffect) and not t.searched_quests:
@@ -595,32 +603,33 @@ def is_quest_act(params: TurnRequestParams) -> bool:
 DESIGNER_MAX_TOKENS = 8000  # a whole act in one effect: steps, people, places, fights
 
 
-def build_designer_agent(model: Model, system: str) -> Agent[TurnContext, TurnOutput]:
-    """The quest designer (v0.7.39.6): builds the act that opened by the engine's frame, one `quest_act`; it searches
-    the world (people, places, things, rules of the SRD) and fixes what the engine refuses, part by part."""
-    agent: Agent[TurnContext, TurnOutput] = Agent(
-        model,
-        output_type=TurnOutput,
-        deps_type=TurnContext,
-        instructions=system,
-        tools=[propose_effect_tool({"quest_act"}), lookup, find_items, find_npcs, find_places, find_teachers],
-        retries=2,
-        model_settings=settings_for(model, {**MODEL_SETTINGS, "temperature": 0.7, "max_tokens": DESIGNER_MAX_TOKENS}),  # type: ignore[typeddict-item]
-        name="quest_designer",
-    )
+def _build_worker(model: Model, system: str, name: str, tools: list[Any], settings: ModelSettings, retry: str,
+                  told: str) -> Agent[TurnContext, TurnOutput]:
+    """An agent that builds one thing by the engine's frame (v0.8.4.29.7: the designer and the second line on one builder):
+    the effects it got accepted are its answer; none — `retry`; no options, no change of mode; `told` when it said nothing."""
+    agent: Agent[TurnContext, TurnOutput] = Agent(model, output_type=TurnOutput, deps_type=TurnContext, instructions=system, tools=tools,
+                                                  retries=2, model_settings=settings, name=name)
 
     @agent.output_validator
     def _validate(ctx: RunContext[TurnContext], out: TurnOutput) -> TurnOutput:
-        t = ctx.deps
-        if not t.accepted:
-            raise ModelRetry("Акт не собран: предложи quest_act через propose_effect и исправь то, в чём движок отказал.")
-        out.effect_ids = list(t.accepted)
+        if not ctx.deps.accepted:
+            raise ModelRetry(retry)
+        out.effect_ids = list(ctx.deps.accepted)
         out.options, out.option_costs, out.option_checks, out.next_mode, out.npc_id, out.changes = [], [], [], None, None, []
         if not out.narration.strip():
-            out.narration = "Дело движется дальше."
+            out.narration = told
         return out
 
     return agent
+
+
+def build_designer_agent(model: Model, system: str, max_tokens: int | None = None) -> Agent[TurnContext, TurnOutput]:
+    """The quest designer (v0.7.39.6): builds the act that opened by the engine's frame, one `quest_act`; it searches
+    the world (people, places, things, rules of the SRD) and fixes what the engine refuses, part by part."""
+    return _build_worker(model, system, "quest_designer",
+                         [propose_effect_tool({"quest_act"}), lookup, find_items, find_npcs, find_places, find_teachers],
+                         settings_for(model, {**MODEL_SETTINGS, "temperature": 0.7, "max_tokens": max_tokens or DESIGNER_MAX_TOKENS}),  # type: ignore[typeddict-item]
+                         "Акт не собран: предложи quest_act через propose_effect и исправь то, в чём движок отказал.", "Дело движется дальше.")
 
 
 # The second line (0.106.0): «[prepare furnish | room brod-mill]», «[prepare board | room … | prop p2 | left 2]»,
@@ -649,34 +658,15 @@ def prepare_subject(params: TurnRequestParams) -> str:
     return prepare_head(params)["subject"]
 
 
-def build_prepare_agent(model: Model, system: str, subject: str) -> Agent[TurnContext, TurnOutput]:
+def build_prepare_agent(model: Model, system: str, subject: str, max_tokens: int | None = None) -> Agent[TurnContext, TurnOutput]:
     """The master of the second line (0.106.0): one thing readied ahead in one answer. A room is furnished from the
     engine's candidates without searching; an order or a person's quest searches the world's quests and people first."""
     tools: list[Any] = ([propose_effect_tool({"furnish"})] if subject == "furnish" else
                         [propose_effect_tool({"create:quest"}), find_quests, find_npcs, find_places, lookup])
-    agent: Agent[TurnContext, TurnOutput] = Agent(
-        model,
-        output_type=TurnOutput,
-        deps_type=TurnContext,
-        instructions=system,
-        tools=tools,
-        retries=2,
-        model_settings=no_thinking(settings_for(model, {**MODEL_SETTINGS, "max_tokens": PREPARE_MAX_TOKENS.get(subject, 4000)})),  # type: ignore[typeddict-item]
-        name=f"prepare_{subject}",
-    )
-
-    @agent.output_validator
-    def _validate(ctx: RunContext[TurnContext], out: TurnOutput) -> TurnOutput:
-        t = ctx.deps
-        if not t.accepted:
-            raise ModelRetry("Ничего не подготовлено: предложи эффект через propose_effect и исправь то, в чём движок отказал.")
-        out.effect_ids = list(t.accepted)
-        out.options, out.option_costs, out.option_checks, out.next_mode, out.npc_id, out.changes = [], [], [], None, None, []
-        if not out.narration.strip():
-            out.narration = "Подготовлено."
-        return out
-
-    return agent
+    tokens = max_tokens or PREPARE_MAX_TOKENS.get(subject, 4000)
+    return _build_worker(model, system, f"prepare_{subject}", tools,
+                         no_thinking(settings_for(model, {**MODEL_SETTINGS, "max_tokens": tokens})),  # type: ignore[typeddict-item]
+                         "Ничего не подготовлено: предложи эффект через propose_effect и исправь то, в чём движок отказал.", "Подготовлено.")
 
 
 # A summary is 2–4 sentences, but DeepSeek reasons first: 400 ran out before the answer (the author's trace, 2026-10-27).
@@ -708,18 +698,65 @@ def is_entry(params: TurnRequestParams) -> bool:
     return params.kind == "enter" and params.mode == "exploration"
 
 
+# --- the kinds of a turn (v0.8.4.29.7: one table instead of a check in every place) ----------------------------------
+
+
+@dataclass(frozen=True)
+class TurnKind:
+    """How a turn of the server is run: its agent, its prompt, its ceiling of output tokens, whether the router's short way
+    may answer it and whether its user prompt is the engine's frame."""
+
+    name: str
+    build: Callable[[Model, str, TurnRequestParams, int | None], Agent[TurnContext, TurnOutput]]
+    system: Callable[[TurnRequestParams], str]
+    ceiling: Callable[[TurnRequestParams], int]
+    router: bool
+    framed: bool
+
+
+def _prepare_system(params: TurnRequestParams) -> str:
+    head = prepare_head(params)
+    return prompts.prepare_prompt(params.snapshot, head["subject"], int(head.get("left", "3") or 3))
+
+
+def _turn_ceiling(_params: TurnRequestParams) -> int:
+    return int(MODEL_SETTINGS.get("max_tokens", 1500))
+
+
+TURN_KINDS: dict[str, TurnKind] = {
+    "designer": TurnKind("designer", lambda m, s, p, n: build_designer_agent(m, s, n), lambda p: prompts.quest_act_prompt(p.snapshot),
+                         lambda p: DESIGNER_MAX_TOKENS, router=False, framed=True),
+    "prepare": TurnKind("prepare", lambda m, s, p, n: build_prepare_agent(m, s, prepare_subject(p), n), _prepare_system,
+                        lambda p: PREPARE_MAX_TOKENS.get(prepare_subject(p), 4000), router=False, framed=True),
+    "entry": TurnKind("entry", lambda m, s, p, n: build_turn_agent(m, s, n, entry=True), lambda p: prompts.entry_prompt(p.snapshot),
+                      _turn_ceiling, router=True, framed=False),
+    "turn": TurnKind("turn", lambda m, s, p, n: build_turn_agent(m, s, n),
+                     lambda p: prompts.system_prompt(p.mode, p.snapshot, scene_npc(p, p.npc_id), said=p.input),
+                     _turn_ceiling, router=True, framed=False),
+}
+
+
+def turn_kind(params: TurnRequestParams) -> TurnKind:
+    return TURN_KINDS["designer" if is_quest_act(params) else "prepare" if is_prepare(params) else "entry" if is_entry(params) else "turn"]
+
+
+def agent_for(model: Model, params: TurnRequestParams, max_tokens: int | None = None) -> Agent[TurnContext, TurnOutput]:
+    """The agent of the turn's kind, at its own ceiling or at `max_tokens`."""
+    k = turn_kind(params)
+    return k.build(model, k.system(params), params, max_tokens)
+
+
+def retry_max_tokens(params: TurnRequestParams) -> int:
+    """The ceiling of a turn that ran out of output tokens (v0.8.4.29.7: every agent, by its own ceiling): half as much
+    again, never under RETRY_MAX_TOKENS."""
+    return max(RETRY_MAX_TOKENS, turn_kind(params).ceiling(params) * 3 // 2)
+
+
 def system_prompt_for(params: TurnRequestParams) -> str:
-    if is_prepare(params):
-        head = prepare_head(params)
-        return prompts.prepare_prompt(params.snapshot, head["subject"], int(head.get("left", "3") or 3))
-    if is_quest_act(params):
-        return prompts.quest_act_prompt(params.snapshot)
-    if is_entry(params):
-        return prompts.entry_prompt(params.snapshot)
-    return prompts.system_prompt(params.mode, params.snapshot, scene_npc(params, params.npc_id), said=params.input)
+    return turn_kind(params).system(params)
 
 
 def turn_user_prompt(params: TurnRequestParams) -> str:
-    if is_quest_act(params) or is_prepare(params):
+    if turn_kind(params).framed:
         return params.input  # the engine's frame of the act
     return prompts.turn_prompt(params.mode, params.kind, params.input, params.snapshot, scene_npc(params, params.npc_id))

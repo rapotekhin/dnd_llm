@@ -26,14 +26,16 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tool_base import DEV_VAR, GAME_VAR, ROOT  # noqa: E402
+
 sys.path.insert(0, str(ROOT / "llm_server" / "src"))
 from llm_server.llm.providers import BILLS_DAYS, ProviderPicker, request_cost, top  # noqa: E402
 
 DEFAULT_MODEL = "deepseek/deepseek-v4.1-flash-1017"
-TRACES = ROOT / "llm_server" / "var" / "traces"
-BILLS = ROOT / "llm_server" / "var" / "provider_bills.json"
-GAME = Path(os.environ.get("APPDATA", "")) / "Godot" / "app_userdata" / "Between the Rolls" / "master"  # the frozen server's data
+TRACES = DEV_VAR / "traces"
+BILLS = DEV_VAR / "provider_bills.json"
+GAME = GAME_VAR  # the frozen server's data
 API = "https://openrouter.ai/api/v1/models/{model}/endpoints"
 
 

@@ -13,7 +13,6 @@ import json
 import os
 import secrets
 import shutil
-import socket
 import ssl
 import subprocess
 import sys
@@ -21,11 +20,12 @@ import time
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tool_base import DEFAULT_GODOT, ROOT, godot as godot_path, port_busy  # noqa: E402, F401 — the playtests import them from here too
+
 INFRA = ROOT / "infra" / "dev"
 CA_CERT = INFRA / "caddy-data" / "caddy" / "pki" / "authorities" / "local" / "root.crt"
 OUT = ROOT / "build" / "connectivity"
-DEFAULT_GODOT = r"C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe"
 PORT = 8765
 PROXY_PORT = 8443
 
@@ -41,16 +41,6 @@ def wait_http(url: str, timeout: float, context: ssl.SSLContext | None = None) -
             pass
         time.sleep(0.3)
     return False
-
-
-def port_busy(port: int) -> bool:
-    # A bind, not a connect: Windows may reserve a port range (WinError 10013) that nobody listens on.
-    with socket.socket() as sock:
-        try:
-            sock.bind(("127.0.0.1", port))
-        except OSError:
-            return True
-        return False
 
 
 def stop_server(proc: subprocess.Popen) -> None:
@@ -104,7 +94,7 @@ def main() -> int:
     parser.add_argument("--keep-proxy", action="store_true", help="leave the Caddy container running")
     opts = parser.parse_args()
 
-    godot = os.environ.get("GODOT", DEFAULT_GODOT)
+    godot = godot_path()
     if not Path(godot).exists():
         sys.exit(f"Godot not found: {godot} (set GODOT)")
     OUT.mkdir(parents=True, exist_ok=True)

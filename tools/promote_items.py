@@ -15,20 +15,17 @@ the library keeps the master's proposal, the engine's numbers are set again here
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tool_base import DEV_VAR, ROOT, slug as _slug  # noqa: E402
+
 ITEMS = ROOT / "game" / "data" / "items.json"
 SPELLS = ROOT / "game" / "data" / "srd" / "spells.json"
 PROMOTED = ROOT / "tools" / "srd" / "promoted.json"
-LIBRARY = ROOT / "llm_server" / "var" / "items" / "library.jsonl"
-TRACES = ROOT / "llm_server" / "var" / "traces"
-
-TRANSLIT = dict(zip("абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
-                    ["a", "b", "v", "g", "d", "e", "e", "zh", "z", "i", "y", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u", "f",
-                     "kh", "ts", "ch", "sh", "shch", "", "y", "", "e", "yu", "ya"]))
+LIBRARY = DEV_VAR / "items" / "library.jsonl"
+TRACES = DEV_VAR / "traces"
 
 
 def load_json(path: Path) -> dict:
@@ -42,8 +39,7 @@ def library(path: Path = LIBRARY) -> list[dict]:
 
 
 def slug(name: str) -> str:
-    s = "".join(TRANSLIT.get(ch, ch) for ch in name.lower())
-    return re.sub(r"[^a-z0-9]+", "_", s).strip("_")[:40] or "item"
+    return _slug(name)
 
 
 def use_points(items: dict, spells: dict, item: dict) -> tuple[int, str]:

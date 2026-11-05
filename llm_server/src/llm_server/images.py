@@ -17,8 +17,6 @@ import httpx
 from . import prompts
 from .agents import build_image_agent
 from .config import SD_MODELS, ImageModel
-from .llm.catalog import REQUEST_COSTS
-from .llm.providers import PINNED, pinned_for
 from .protocol import ErrorCode, ImageModelInfo, ImageParams, ImageResult, Usage
 from .session import RpcError
 
@@ -241,17 +239,14 @@ async def stub_image(session: "Session", params: ImageParams) -> ImageResult:
 
 
 async def agent_image(session: "Session", params: ImageParams) -> ImageResult:
-    from .turns import _model_id
+    from .turns import pinned
 
-    token = PINNED.set(pinned_for(_model_id(session, params.model), params.provider))
-    try:
+    with pinned(session, params):
         return await _agent_image(session, params)
-    finally:
-        PINNED.reset(token)
 
 
 async def _agent_image(session: "Session", params: ImageParams) -> ImageResult:
-    from .turns import _model_id, _pick_providers, _usage, _with_retries
+    from .turns import _model_id, _pick_providers, metered_run
 
     services = session.services
     assert services.model_factory is not None
@@ -261,16 +256,7 @@ async def _agent_image(session: "Session", params: ImageParams) -> ImageResult:
     agent = build_image_agent(services.model_factory(model), prompts.image_instructions(spec.template, TEMPLATE_CHARS.get(spec.template, PROMPT_CHARS),
                                                                                         adult_frame(params)))
     frame = prompts.image_frame(params.event, params.place, params.time, params.hero, params.people)
-    billed: list[float] = []
-    token = REQUEST_COSTS.set(billed)
-    try:
-        result = await _with_retries(lambda: agent.run(frame), services.settings.llm_retries, lambda: True)
-    except Exception:
-        services.budget.add(sum(billed))
-        raise
-    finally:
-        REQUEST_COSTS.reset(token)
-    text_usage = _usage(session, model, result.usage, billed)
+    result, text_usage = await metered_run(session, model, lambda: agent.run(frame))
     scene = booru_scene(result.output.scene) if spec.template in ("illustrious", "anima") else result.output.scene
     prompt, negative = compose(spec, params, prompts.image_prompt(spec.template, scene, params.style),
                                result.output.negative)

@@ -74,7 +74,7 @@ def test_scripted_run_through_the_mock_engine():
         ("request_check", {"skill": "perception", "dc_tier": "medium", "reason": "поиск"}),
         ("final", {"narration": "Ты обшариваешь зал, но ничего не находишь.", "options": ["Спросить хозяина"]}),
     )
-    o = asyncio.run(golden.run_one(sc, FunctionModel(fn, model_name="m"), "m", None, {}))
+    o = asyncio.run(golden.run_one(sc, FunctionModel(fn, model_name="m"), "m", None, None))
     assert o.status == "pass", o.fails
     assert o.checks == [{"turn_id": "t-1", "skill": "perception", "dc_tier": "medium"}]
     assert "request_check" in o.tools
@@ -89,7 +89,7 @@ def test_scripted_failure_is_reported():
         ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero", "item": item}}),
         ("final", lambda m: {"narration": "Ты берёшь кинжал.", "effect_ids": [effect_id(m)]}),
     )
-    o = asyncio.run(golden.run_one(sc, FunctionModel(fn, model_name="m"), "m", None, {}))
+    o = asyncio.run(golden.run_one(sc, FunctionModel(fn, model_name="m"), "m", None, None))
     assert o.status == "fail"
     assert any("create_item" in f for f in o.fails)
     md = golden.report_markdown("m", None, [o])

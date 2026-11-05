@@ -42,8 +42,8 @@ def test_every_effect_has_a_row_in_the_engine_and_every_row_an_effect():
 
 def test_every_name_of_a_topic_is_an_effect():
     rows = _rows()
-    for key, (_, tags) in prompts.TOPICS.items():
-        assert set(tags) <= rows, key
+    for key, topic in prompts.TOPICS.items():
+        assert set(topic.kinds) <= rows, key
 
 
 def test_a_topics_fields_come_with_its_rules_not_in_every_turn():

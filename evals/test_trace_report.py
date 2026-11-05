@@ -12,7 +12,7 @@ spec.loader.exec_module(trace_report)
 
 def test_report_has_summary_route_anomalies_and_turns(tmp_path, monkeypatch):
     monkeypatch.setattr(trace_report, "OUT", tmp_path / "out")
-    monkeypatch.setattr(trace_report, "BACKEND_TRACES", tmp_path / "none")
+    monkeypatch.setattr(trace_report, "backend_trace_dirs", lambda: [])  # no model side: the dev and the build traces alike
     ts = 1_700_000_000_000
     ev = [
         {"ts": ts, "ev": "session", "what": "start", "character": {"name": "Айра"}, "version": "0.7.1"},
@@ -35,7 +35,7 @@ def test_report_has_summary_route_anomalies_and_turns(tmp_path, monkeypatch):
 
 def test_repeated_clicks_pauses_and_agent_traces(tmp_path, monkeypatch):
     monkeypatch.setattr(trace_report, "OUT", tmp_path / "out")
-    monkeypatch.setattr(trace_report, "BACKEND_TRACES", tmp_path / "none")
+    monkeypatch.setattr(trace_report, "backend_trace_dirs", lambda: [])  # no model side: the dev and the build traces alike
     ts = 1_700_000_000_000
     ev = [{"ts": ts, "ev": "session", "what": "start", "character": {"name": "Айра"}}]
     ev += [{"ts": ts + i, "ev": "click", "text": "Осмотреться", "room": "a"} for i in range(4)]
@@ -51,7 +51,7 @@ def test_repeated_clicks_pauses_and_agent_traces(tmp_path, monkeypatch):
 
 def test_paid_option_is_no_money_anomaly(tmp_path, monkeypatch):
     monkeypatch.setattr(trace_report, "OUT", tmp_path / "out")
-    monkeypatch.setattr(trace_report, "BACKEND_TRACES", tmp_path / "none")
+    monkeypatch.setattr(trace_report, "backend_trace_dirs", lambda: [])  # no model side: the dev and the build traces alike
     ts = 1_700_000_000_000
     ev = [
         {"ts": ts, "ev": "state", "state": {"room": "a", "gold_cp": 100}},

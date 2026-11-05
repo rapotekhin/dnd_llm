@@ -21,17 +21,13 @@ an old game keeps its own copy (two of a kind there, the pack's and its own), a 
 import argparse
 import importlib.util
 import json
-import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-WORLDS = ROOT / "game" / "data" / "worlds"
-USER_DIR = Path.home() / "AppData" / "Roaming" / "Godot" / "app_userdata" / "Between the Rolls"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tool_base import ROOT, USER_DIR, slug as _slug  # noqa: E402
 
-TRANSLIT = dict(zip("абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
-                    ["a", "b", "v", "g", "d", "e", "e", "zh", "z", "i", "y", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u", "f",
-                     "kh", "ts", "ch", "sh", "shch", "", "y", "", "e", "yu", "ya"]))
+WORLDS = ROOT / "game" / "data" / "worlds"
 
 _spec = importlib.util.spec_from_file_location("validate_data", ROOT / "tools" / "validate_data.py")
 validate_data = importlib.util.module_from_spec(_spec)
@@ -39,8 +35,7 @@ _spec.loader.exec_module(validate_data)
 
 
 def slug(name: str, sep: str = "_") -> str:
-    s = "".join(TRANSLIT.get(ch, ch) for ch in name.lower())
-    return re.sub(r"[^a-z0-9]+", sep, s).strip(sep)[:40] or "place"
+    return _slug(name, sep, "place")
 
 
 def saves(user_dir: Path = USER_DIR) -> dict[str, Path]:

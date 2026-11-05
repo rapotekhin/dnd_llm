@@ -5,11 +5,12 @@
 """
 
 import asyncio
+import contextlib
 import logging
 import re
 import time
-from collections.abc import Awaitable, Callable
-from typing import TypeVar, get_args
+from collections.abc import Awaitable, Callable, Iterator
+from typing import Any, TypeVar, get_args
 
 from pydantic_ai import capture_run_messages
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UnexpectedModelBehavior, UsageLimitExceeded
@@ -19,9 +20,8 @@ from pydantic_ai.usage import RunUsage, UsageLimits
 from . import prompts, router
 from .llm.catalog import REQUEST_COSTS
 from .llm.providers import PICKER, PINNED, pinned_for
-from .agents import (RETRY_MAX_TOKENS, TurnContext, TurnOutput, build_designer_agent, build_prepare_agent, build_summary_agent,
-                     build_turn_agent, is_entry, is_prepare, is_quest_act, prepare_head, prepare_subject, scene_npc, system_prompt_for,
-                     turn_user_prompt)
+from .agents import (TurnContext, TurnOutput, agent_for, build_summary_agent, prepare_head, retry_max_tokens, scene_npc, system_prompt_for,
+                     turn_kind, turn_user_prompt)
 from .protocol import (
     DcTier,
     OptionCheck,
@@ -217,6 +217,38 @@ def _usage(session: Session, model: str, run_usage: RunUsage, billed: list[float
                  model=model)
 
 
+@contextlib.contextmanager
+def pinned(session: Session, params: TurnRequestParams | SummaryParams | Any) -> Iterator[None]:
+    """The provider the player pinned in the settings for this call (v0.7.20.5), for the turn, a summary and an image alike."""
+    token = PINNED.set(pinned_for(_model_id(session, params.model), params.provider))
+    try:
+        yield
+    finally:
+        PINNED.reset(token)
+
+
+@contextlib.contextmanager
+def bills(session: Session) -> Iterator[list[float]]:
+    """What OpenRouter charges for each request inside (v0.7.14.5); on a failure they go to the day's budget all the same
+    (v0.8.4.29.7: one place for the turn, a summary and an image's frame)."""
+    billed: list[float] = []
+    token = REQUEST_COSTS.set(billed)
+    try:
+        yield billed
+    except Exception:
+        session.services.budget.add(sum(billed))
+        raise
+    finally:
+        REQUEST_COSTS.reset(token)
+
+
+async def metered_run(session: Session, model: str, run: Callable[[], Awaitable[Any]]) -> tuple[Any, Usage]:
+    """One run of a model as every call of the server pays for it: a repeat on 429/5xx, the bills, the budget; (result, usage)."""
+    with bills(session) as billed:
+        result = await _with_retries(run, session.services.settings.llm_retries, lambda: True)
+    return result, _usage(session, model, result.usage, billed)
+
+
 def _served_by(result: object) -> str:
     """The OpenRouter provider that answered the last request of the run ("" when unknown), for the trace."""
     try:
@@ -236,12 +268,40 @@ async def _pick_providers(model: Model) -> None:
         await PICKER.refresh(model.model_name)
 
 
+async def run_agent(model: Model, params: TurnRequestParams, new_ctx: Callable[[], TurnContext]) -> tuple[Any, TurnContext]:
+    """One run of the turn's agent (v0.8.4.29.7: the game and the goldens on one road): a fresh context, the usage limits
+    of a turn; out of output tokens — it goes on from where it stopped at the agent's raised ceiling (v0.7.4, v0.7.38.1),
+    the checks and accepted effects of the turn kept. (result, the context that ran)."""
+    agent = agent_for(model, params)
+    ctx = new_ctx()
+    user_prompt = turn_user_prompt(params)
+    with capture_run_messages() as messages:
+        try:
+            return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS), ctx
+        except UnexpectedModelBehavior as exc:
+            if "token limit" not in str(exc).lower():
+                raise
+    tokens = retry_max_tokens(params)
+    log.warning("turn %s ran out of output tokens, going on with %d", params.turn_id, tokens)
+    return await agent_for(model, params, tokens).run(None, message_history=messages, deps=ctx, usage_limits=TURN_USAGE_LIMITS), ctx
+
+
+def next_mode_of(params: TurnRequestParams, out: TurnOutput) -> NextMode | None:
+    """The change of mode the master asked: none when it stays where it is (the same mode with the same partner)."""
+    if not out.next_mode or (out.next_mode == params.mode and out.npc_id == params.npc_id):
+        return None
+    return NextMode(mode=out.next_mode, npc_id=out.npc_id if out.next_mode != "exploration" else None)
+
+
+def picked_options(out: TurnOutput) -> list[tuple[str, int, OptionCheck | None]]:
+    """The options the player sees: non-empty, at most three, each with its cost and its check."""
+    return [(o.strip(), out.option_costs[i] if i < len(out.option_costs) else 0, _option_check(out.option_checks, i))
+            for i, o in enumerate(out.options) if o.strip()][:3]
+
+
 async def agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
-    token = PINNED.set(pinned_for(_model_id(session, params.model), params.provider))  # v0.7.20.5
-    try:
+    with pinned(session, params):
         return await _agent_turn(session, params)
-    finally:
-        PINNED.reset(token)
 
 
 async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult:
@@ -251,59 +311,44 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
     if params.mode in ("social", "trade") and scene_npc(params, params.npc_id) is None:
         raise RpcError(ErrorCode.INVALID_PARAMS, f"mode {params.mode} needs npc_id of an NPC in the scene")
     system = system_prompt_for(params)
-    await _pick_providers(services.model_factory(model))
-    designer = is_quest_act(params)
-    prepare = is_prepare(params)
-    agent = (build_designer_agent(services.model_factory(model), system) if designer else
-             build_prepare_agent(services.model_factory(model), system, prepare_subject(params)) if prepare else
-             build_turn_agent(services.model_factory(model), system, entry=is_entry(params)))
+    llm = services.model_factory(model)
+    await _pick_providers(llm)
     user_prompt = turn_user_prompt(params)
     ctx = TurnContext(session, params, services.library)
 
-    async def attempt():
-        nonlocal ctx, agent
+    def fresh() -> TurnContext:  # each attempt anew; the last one is the turn's (its checks decide a repeat)
+        nonlocal ctx
         ctx = TurnContext(session, params, services.library)
-        with capture_run_messages() as messages:
-            try:
-                return await agent.run(user_prompt, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
-            except UnexpectedModelBehavior as exc:
-                if "token limit" not in str(exc).lower():
-                    raise
-        # Out of output tokens (v0.7.4: the fight start in the burrow failed at 1500): go on from where it stopped
-        # with room to spare — the turn's checks and accepted effects stay (v0.7.38.1: a board quest failed so).
-        log.warning("turn %s ran out of output tokens, going on with %d", params.turn_id, RETRY_MAX_TOKENS)
-        if not designer and not prepare:
-            agent = build_turn_agent(services.model_factory(model), system, RETRY_MAX_TOKENS, entry=is_entry(params))
-        return await agent.run(None, message_history=messages, deps=ctx, usage_limits=TURN_USAGE_LIMITS)
+        return ctx
+
+    async def attempt():
+        return (await run_agent(llm, params, fresh))[0]
 
     started = time.monotonic()
     trace = {"what": "turn", "turn_id": params.turn_id, "mode": params.mode, "kind": params.kind, "input": params.input,
              "npc_id": params.npc_id, "model": model, "pinned": PINNED.get(), "system": system, "user": user_prompt}
-    billed: list[float] = []
-    token = REQUEST_COSTS.set(billed)
     before = RunUsage()  # the router and a short attempt, paid on top of the full run (v0.7.20.4)
-    try:
-        if not services.settings.router or designer or prepare:
-            raise _NoRouter
-        short, before, trace["route"] = await _short_turn(services.model_factory(model), params, user_prompt, trace)
-    except _NoRouter:
-        short, trace["route"] = None, "full: router off"
-    except Exception as exc:  # noqa: BLE001 — the router is a saving, never a failure: the full turn goes on
-        log.warning("turn %s: the router failed (%s), the full prompt", params.turn_id, exc)
-        short, trace["route"] = None, "full: router error"
-    if short is not None:
-        REQUEST_COSTS.reset(token)
+    result = None
+    with bills(session) as billed:
+        try:
+            if not services.settings.router or not turn_kind(params).router:
+                raise _NoRouter
+            short, before, trace["route"] = await _short_turn(llm, params, user_prompt, trace)
+        except _NoRouter:
+            short, trace["route"] = None, "full: router off"
+        except Exception as exc:  # noqa: BLE001 — the router is a saving, never a failure: the full turn goes on
+            log.warning("turn %s: the router failed (%s), the full prompt", params.turn_id, exc)
+            short, trace["route"] = None, "full: router error"
+        if short is None:
+            try:
+                result = await _with_retries(attempt, services.settings.llm_retries, lambda: not ctx.check_ids and not ctx.accepted)
+            except Exception as exc:
+                if services.trace:
+                    services.trace.write({**trace, "error": f"{type(exc).__name__}: {exc}", "checks": ctx.check_ids,
+                                          "accepted": ctx.accepted, "billed_usd": round(sum(billed), 6), "seconds": round(time.monotonic() - started, 2)})
+                raise
+    if result is None:
         return _finish(session, params, model, short, before, billed, ctx, trace, started, None)
-    try:
-        result = await _with_retries(attempt, services.settings.llm_retries, lambda: not ctx.check_ids and not ctx.accepted)
-    except Exception as exc:
-        services.budget.add(sum(billed))  # the requests before the failure are paid all the same
-        if services.trace:
-            services.trace.write({**trace, "error": f"{type(exc).__name__}: {exc}", "checks": ctx.check_ids,
-                                  "accepted": ctx.accepted, "billed_usd": round(sum(billed), 6), "seconds": round(time.monotonic() - started, 2)})
-        raise
-    finally:
-        REQUEST_COSTS.reset(token)
     return _finish(session, params, model, result.output, before + result.usage, billed, ctx, trace, started, result)
 
 
@@ -357,11 +402,8 @@ def _finish(session: Session, params: TurnRequestParams, model: str, out: TurnOu
     log.info("turn %s mode=%s model=%s tokens=%d/%d cost=$%.5f checks=%d effects=%d/%d %.1fs",
              params.turn_id, params.mode, model, usage.input_tokens, usage.output_tokens, usage.cost_usd,
              len(ctx.check_ids), len(out.effect_ids), len(ctx.accepted), time.monotonic() - started)
-    next_mode = None
-    if out.next_mode and not (out.next_mode == params.mode and out.npc_id == params.npc_id):
-        next_mode = NextMode(mode=out.next_mode, npc_id=out.npc_id if out.next_mode != "exploration" else None)
-    picked = [(o.strip(), out.option_costs[i] if i < len(out.option_costs) else 0, _option_check(out.option_checks, i))
-              for i, o in enumerate(out.options) if o.strip()][:3]
+    next_mode = next_mode_of(params, out)
+    picked = picked_options(out)
     return TurnResult(
         turn_id=params.turn_id,
         narration=out.narration.strip(),
@@ -381,11 +423,8 @@ async def stub_summary(session: Session, params: SummaryParams) -> SummaryResult
 
 
 async def agent_summary(session: Session, params: SummaryParams) -> SummaryResult:
-    token = PINNED.set(pinned_for(_model_id(session, params.model), params.provider))  # v0.7.20.5
-    try:
+    with pinned(session, params):
         return await _agent_summary(session, params)
-    finally:
-        PINNED.reset(token)
 
 
 async def _agent_summary(session: Session, params: SummaryParams) -> SummaryResult:
@@ -395,16 +434,7 @@ async def _agent_summary(session: Session, params: SummaryParams) -> SummaryResu
     await _pick_providers(services.model_factory(model))
     agent = build_summary_agent(services.model_factory(model), params.kind)
     prompt = prompts.summary_prompt(params.kind, params.subject_id, params.previous, params.events)
-    billed: list[float] = []
-    token = REQUEST_COSTS.set(billed)
-    try:
-        result = await _with_retries(lambda: agent.run(prompt), services.settings.llm_retries, lambda: True)
-    except Exception:
-        services.budget.add(sum(billed))
-        raise
-    finally:
-        REQUEST_COSTS.reset(token)
-    usage = _usage(session, model, result.usage, billed)
+    result, usage = await metered_run(session, model, lambda: agent.run(prompt))
     if services.trace:
         services.trace.write({"what": "summary", "kind": params.kind, "subject": params.subject_id, "model": model, "prompt": prompt,
                               "summary": result.output.summary, "usage": usage.model_dump(mode="json"),

@@ -19,7 +19,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from connectivity_e2e import DEFAULT_GODOT, OUT, PORT, ROOT, port_busy, start_server, stop_server, wait_http  # noqa: E402
+from connectivity_e2e import OUT, PORT, ROOT, start_server, stop_server, wait_http  # noqa: E402
+from tool_base import free_port, godot as godot_path  # noqa: E402
 
 SCENARIOS = ROOT / "game" / "tools" / "playtest"
 NEEDS_MORE = {"playtest_base", "live", "attach", "pack_only", "unseen", "providers", "image_prompts"}  # the real master or Forge
@@ -58,15 +59,13 @@ def main() -> int:
     parser.add_argument("--only", default="", help="scenarios separated by commas")
     parser.add_argument("--slow", action="store_true", help="real time instead of the game time running off the frames")
     opts = parser.parse_args()
-    godot = os.environ.get("GODOT", DEFAULT_GODOT)
+    godot = godot_path()
     names = [n for n in opts.only.split(",") if n] or sorted(p.stem for p in SCENARIOS.glob("*.gd") if p.stem not in NEEDS_MORE)
 
     started = time.monotonic()
     subprocess.run([godot, "--headless", "--path", str(ROOT / "game"), "--import"], capture_output=True, timeout=300)
     print(f"import {time.monotonic() - started:.0f} s")
-    port = PORT
-    while port_busy(port) and port < PORT + 300:
-        port += 1
+    port = free_port(PORT)
     OUT.mkdir(parents=True, exist_ok=True)
     token = secrets.token_urlsafe(32)
     os.environ["LLM_SERVER_MAX_TURNS"] = str(opts.jobs)  # the server's default is one turn at a time: the games would get SERVER_BUSY

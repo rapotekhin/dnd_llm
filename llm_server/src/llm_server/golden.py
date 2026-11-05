@@ -25,17 +25,14 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.usage import RunUsage
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models import Model
 
 from . import REPO_ROOT
-from .llm.catalog import REQUEST_COSTS
+from .llm.catalog import REQUEST_COSTS, ModelCatalog
 from .llm.providers import PICKER, PINNED
-from .agents import (RETRY_MAX_TOKENS, TurnContext, build_designer_agent, build_prepare_agent, build_turn_agent, is_entry, is_prepare, is_quest_act,
-                     prepare_subject, settings_for,
-                     system_prompt_for, turn_user_prompt)
+from .agents import TurnContext, settings_for, turn_kind, turn_user_prompt
 from .protocol import TurnRequestParams, effect_tag
 
 SCENARIOS = REPO_ROOT / "evals" / "golden" / "scenarios.yaml"
@@ -445,7 +442,11 @@ class _ShortResult:
 
 
 async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: Model | None,
-                  prices: dict[str, tuple[float, float]], route: bool = False) -> Outcome:
+                  catalog: ModelCatalog | None, route: bool = False) -> Outcome:
+    """One scenario on the game's own road (v0.8.4.29.7): `turns.run_agent` with the MockEngine — the agent of the kind, the
+    usage limits, the token-limit continuation; the change of mode and the options as the player gets them."""
+    from .turns import _served_by, _short_turn, next_mode_of, picked_options, run_agent
+
     o = Outcome(id=sc["id"], category=sc.get("category", ""), status="pass")
     reason = unsupported(sc)
     if reason:
@@ -453,34 +454,20 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
         return o
     params = to_turn_params(sc)
     engine = MockEngine(sc.get("engine", {}), sc.get("snapshot", {}).get("scene", {}))
-    ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]
     if getattr(model, "system", "") == "openrouter":  # the same providers as the game (v0.7.14.4)
         await PICKER.refresh(model.model_name)
-    designer = is_quest_act(params)  # v0.7.39.6: the act of a quest is built by the designer, as in turns.py
-    prepare = is_prepare(params)  # v0.8.4.25: the second line readies ahead with its own agent
-    agent = (build_designer_agent(model, system_prompt_for(params)) if designer else
-             build_prepare_agent(model, system_prompt_for(params), prepare_subject(params)) if prepare else
-             build_turn_agent(model, system_prompt_for(params), entry=is_entry(params)))
     started = time.monotonic()
     billed: list[float] = []  # what OpenRouter charged for each request (v0.7.14.5)
     token = REQUEST_COSTS.set(billed)
     short = None
     before = RunUsage()
     try:
-        if route and not designer and not prepare:  # v0.7.20.4: the way of the game — the router, the short prompt, the full one when needed
-            from .turns import _short_turn
+        if route and turn_kind(params).router:  # v0.7.20.4: the way of the game — the router, the short prompt, the full one when needed
             short, before, o.route = await _short_turn(model, params, turn_user_prompt(params), {})
         if short is not None:
             result = _ShortResult(short, before)
         else:
-            try:
-                result = await agent.run(turn_user_prompt(params), deps=ctx)
-            except UnexpectedModelBehavior as exc:  # as the game does: once more with room to spare (turns.py)
-                if designer or prepare or "token limit" not in str(exc).lower() or engine.checks() or engine.effects():  # searches do not count, as in turns.py
-                    raise
-                agent = build_turn_agent(model, system_prompt_for(params), RETRY_MAX_TOKENS, entry=is_entry(params))
-                ctx = TurnContext(session=engine, params=params)  # type: ignore[arg-type]
-                result = await agent.run(turn_user_prompt(params), deps=ctx)
+            result, _ = await run_agent(model, params, lambda: TurnContext(session=engine, params=params))  # type: ignore[arg-type]
     except Exception as exc:  # noqa: BLE001 — a failed model run is a result, not a crash of the runner
         o.status, o.note = "error", f"{type(exc).__name__}: {str(exc)[:300]}"
         o.seconds = time.monotonic() - started
@@ -490,22 +477,22 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
         REQUEST_COSTS.reset(token)
     o.seconds = time.monotonic() - started
     out = result.output
-    o.narration, o.options = out.narration, out.options
-    o.next_mode = {"mode": out.next_mode, "npc_id": out.npc_id} if out.next_mode and out.next_mode != params.mode else None
+    picked = picked_options(out)
+    o.narration, o.options = out.narration, [p for p, _, _ in picked]
+    shift = next_mode_of(params, out)
+    o.next_mode = shift.model_dump() if shift is not None else None
     o.checks, o.effects = engine.checks(), engine.effects()
     o.tools = [p.tool_name for m in result.all_messages() for p in getattr(m, "parts", []) if isinstance(p, ToolCallPart)]
     usage = result.usage if short is not None else before + result.usage
     o.input_tokens, o.output_tokens = usage.input_tokens, usage.output_tokens
-    from .turns import _served_by
     o.provider = _served_by(result)
-    price_in, price_out = prices.get(model_id, (0.0, 0.0))
-    o.cost_usd = sum(billed) or (usage.input_tokens * price_in + usage.output_tokens * price_out) / 1e6
-    o.fails = check_expect(sc.get("expect", {}), {"narration": out.narration, "options": out.options, "option_checks": out.option_checks,
+    o.cost_usd = sum(billed) or (catalog.cost_usd(model_id, usage.input_tokens, usage.output_tokens) if catalog else 0.0)
+    o.fails = check_expect(sc.get("expect", {}), {"narration": out.narration, "options": o.options, "option_checks": out.option_checks,
                                                  "next_mode": o.next_mode,
                                                  "missing_concept": out.missing_concept}, engine, o.tools)
     if judge_model is not None and sc.get("rubric"):
         try:
-            o.verdicts = [v.model_dump() for v in await judge(judge_model, sc, {"narration": out.narration, "options": out.options, "option_checks": out.option_checks,
+            o.verdicts = [v.model_dump() for v in await judge(judge_model, sc, {"narration": out.narration, "options": o.options, "option_checks": out.option_checks,
                                                                               "next_mode": o.next_mode, "missing_concept": out.missing_concept}, engine)]
         except Exception as exc:  # noqa: BLE001
             o.note = f"судья упал: {type(exc).__name__}"
@@ -557,7 +544,7 @@ async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, re
 
     from dotenv import load_dotenv
 
-    from .llm.catalog import ModelCatalog, openrouter_factory
+    from .llm.catalog import openrouter_factory
 
     load_dotenv(REPO_ROOT / ".env", override=False)
     key = os.environ.get("OPENROUTER_API_KEY", "")
@@ -567,7 +554,6 @@ async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, re
     PICKER.bind(Path(os.environ.get("LLM_SERVER_DATA_DIR", str(REPO_ROOT / "llm_server" / "var"))) / "provider_bills.json")
     catalog = ModelCatalog(tuple(dict.fromkeys([model_id, *([judge_id] if judge_id else [])])), model_id)
     await catalog.load_prices()
-    prices = {i.id: (i.input_usd_per_mtok, i.output_usd_per_mtok) for i in catalog.infos()}
     if provider:  # one provider for runs to compare (v0.7.34.3): the picker's choice drifts between them
         PINNED.set(provider)
     model = make(model_id)
@@ -577,7 +563,7 @@ async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, re
         for sc in load_scenarios():
             if only and sc["id"] not in only:
                 continue
-            o = await run_one(sc, model, model_id, judge_model, prices, route)
+            o = await run_one(sc, model, model_id, judge_model, catalog, route)
             if repeat > 1:
                 o.id = f"{o.id}#{n + 1}"
             print(f"{o.status:12} {o.id:34} {o.seconds:5.1f}s  ${o.cost_usd:.4f}  {o.route + '  ' if o.route else ''}{'; '.join(o.fails)[:120]}", flush=True)
