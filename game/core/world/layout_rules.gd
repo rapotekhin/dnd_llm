@@ -20,7 +20,12 @@ static func fields(room: Dictionary) -> Dictionary:
 static func kind_of(v: WorldView, data: Dictionary, room_id: String) -> String:
 	var tags: Array = (v.site_of(room_id).get("tags", []) as Array).duplicate()
 	tags.append_array(v.tags(room_id))
-	return LayoutGen.kind_of(lib(data), tags)
+	var kind := LayoutGen.kind_of(lib(data), tags)
+	if not kind.is_empty() or v.flag(room_id, "indoor"):
+		return kind
+	var by: Dictionary = lib(data).get("terrains", {})  # an open place with no kind of its own: its land's (v0.8.4.31)
+	var terrain := str(v.location(v.location_id(room_id)).get("terrain", ""))
+	return str(by.get(terrain, by.get("default", "")))
 
 
 static func shape_of(v: WorldView, data: Dictionary, room_id: String) -> String:

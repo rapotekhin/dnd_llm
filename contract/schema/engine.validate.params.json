@@ -3994,7 +3994,7 @@
     },
     "NewSite": {
       "additionalProperties": false,
-      "description": "The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of\nits kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an\nNPC of the world or «new» — the person create:npc makes in this turn (0.52.0).",
+      "description": "The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of\nits kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…; 0.112.0: the land of an open one for its map —\n`forest`, `field`, `hills`, `rocks`, `swamp`, `shore`, `camp`…), whether anyone may walk in, its owner — an\nNPC of the world or «new» — the person create:npc makes in this turn (0.52.0).",
       "properties": {
         "description": {
           "default": "",
@@ -4964,6 +4964,15 @@
           "title": "Encounters",
           "type": "array"
         },
+        "ends": {
+          "default": "",
+          "enum": [
+            "",
+            "fail"
+          ],
+          "title": "Ends",
+          "type": "string"
+        },
         "items": {
           "items": {
             "$ref": "#/$defs/QuestItem"
@@ -5009,6 +5018,20 @@
           ],
           "default": null,
           "title": "Reward Item Id"
+        },
+        "reward_pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 25,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reward Pct"
         },
         "steps": {
           "items": {

@@ -998,9 +998,15 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), me,
 		func(t: String) -> String: return GameState.combat_act("attack", t),
 		func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t),
-		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", _far(main))
+		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", _blow_far(main))
 	if not main_id.is_empty():
 		_details.hook(main_b, str(main["name"]), DetailsPanel.item_text(c, data, s.items, main_id))
+	if Attack.throwable(Attack.of_weapon(main)):  # v0.8.4.31: a dagger or a spear thrown by its own button, it leaves the hand
+		var throw_b := _action(w, "Throw_main", tr("COMBAT_THROW").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), me,
+			func(t: String) -> String: return GameState.combat_act("attack", t, {"throw": true}),
+			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"throw": true}),
+			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false, false, true), "", _far(main))
+		throw_b.tooltip_text = tr("COMBAT_THROW_TIP")
 	var spare_id := str(CharacterRules.stowed(c).get("main_hand", ""))
 	if not spare_id.is_empty():  # the weapon put away: one click, the set changes for nothing (v0.8.4.1, as in BG3)
 		var spare: Dictionary = CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.weapon_profile(c, data, s.items, spare_id))
@@ -1031,7 +1037,12 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		_action(w, "Attack_off", tr("COMBAT_ATTACK_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), me,
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "off"}),
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "off"}),
-			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true), "", _far(ow))
+			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true), "", _blow_far(ow))
+		if Attack.throwable(Attack.of_weapon(ow)):
+			_action(w, "Throw_off", tr("COMBAT_THROW_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), me,
+				func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "off", "throw": true}),
+				func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "off", "throw": true}),
+				func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true, false, true), "", _far(ow)).tooltip_text = tr("COMBAT_THROW_TIP")
 	if bool(CombatRules.player(s).get("frenzy", false)):
 		_action(w, "Attack_frenzy", tr("COMBAT_ATTACK_FRENZY").format({"name": main["name"], "dmg": _dmg_text(main)}), me,
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "frenzy"}),
@@ -1304,6 +1315,11 @@ func _far(w: Dictionary) -> int:
 	return int(w["range"][1]) if not (w.get("range", []) as Array).is_empty() else 0
 
 
+## How far a blow of the weapon reaches: a blade only at arm's length — its throw is another button (v0.8.4.31).
+func _blow_far(w: Dictionary) -> int:
+	return 0 if bool(w.get("melee", false)) else _far(w)
+
+
 var _pending_name := ""
 
 
@@ -1416,8 +1432,14 @@ func _draw_results(s: GameSession, data: Dictionary) -> void:
 	var gather := CheckBox.new()  # v0.8.4.30: the spent shots picked up as the fight ends, by the player's choice
 	gather.name = "GatherAmmo"
 	gather.text = tr("COMBAT_GATHER_AMMO").format({"n": shot, "pct": roundi(float(ItemRules.cfg(data)["recover"]) * 100.0)})
+	var lying := Gear.left_on_field(s)  # thrown weapons on the field (v0.8.4.31)
+	if not lying.is_empty():
+		var names: Array[String] = []
+		for item: String in lying:
+			names.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, item), int(lying[item])])
+		gather.text = (gather.text + "; " if shot > 0 else "") + tr("COMBAT_GATHER_THROWN").format({"things": ", ".join(names)})
 	gather.button_pressed = true
-	gather.visible = shot > 0 and outcome in ["victory", "truce"]
+	gather.visible = (shot > 0 or not lying.is_empty()) and outcome in ["victory", "truce"]
 	_results_box.add_child(gather)
 	var go := _results.add_button("BTN_CONTINUE", func() -> void: GameState.finish_combat(gather.visible and gather.button_pressed), true)
 	go.name = "FinishCombat"

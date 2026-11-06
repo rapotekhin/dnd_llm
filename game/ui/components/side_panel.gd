@@ -546,58 +546,59 @@ func _npc_row(s: GameSession, world: WorldView, id: String, can_act: bool) -> vo
 ## What can be done with a person, under its row or on the bar while talking to it.
 func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void:
 	var acts := _acts("Acts_" + id)
+	var groups := {}  # v0.8.4.31: the acts in nested lists — deals, talk, life, spells
 	_near_ref = "npc:" + id
 	_flow(acts, tr("BTN_POCKETS_SHORT"), _near("npc:" + id, "touch", pockets_requested.emit.bind(id)), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty(), "Pockets_" + id, tr("BTN_POCKETS").format({"name": n.get("name", id)}))
 	if not JobRules.of(s, Catalog.data, id).is_empty():  # v0.7.26
-		_flow(acts, tr("BTN_JOB"), job_requested.emit.bind(id), can_act, "Jobs_" + id, tr("BTN_JOB_TIP").format({"name": n.get("name", id)}))
+		_flow(_group(groups, "deals", id), tr("BTN_JOB"), job_requested.emit.bind(id), can_act, "Jobs_" + id, tr("BTN_JOB_TIP").format({"name": n.get("name", id)}))
 	var undeeded := PropertyRules.is_registry(Catalog.data, id) and PropertyRules.state(s.character).values().any(func(p: Dictionary) -> bool: return not bool(p.get("deed", false)))
 	if not PropertyRules.of_seller(s, Catalog.data, id).is_empty() or undeeded:  # v0.7.27
-		_flow(acts, tr("BTN_PROPERTY"), property_requested.emit.bind("seller", id), can_act, "PropertySale_" + id, tr("BTN_PROPERTY_SALE_TIP").format({"name": n.get("name", id)}))
+		_flow(_group(groups, "deals", id), tr("BTN_PROPERTY"), property_requested.emit.bind("seller", id), can_act, "PropertySale_" + id, tr("BTN_PROPERTY_SALE_TIP").format({"name": n.get("name", id)}))
 	if PropertyRules.is_registry(Catalog.data, id) and Catalog.data["rules"].has("shop"):  # v0.7.29: the charter and the stalls
-		_flow(acts, tr("BTN_SHOP_REGISTRY"), shop_requested.emit.bind("registry", id), can_act, "ShopRegistry_" + id, tr("BTN_SHOP_REGISTRY_TIP"))
+		_flow(_group(groups, "deals", id), tr("BTN_SHOP_REGISTRY"), shop_requested.emit.bind("registry", id), can_act, "ShopRegistry_" + id, tr("BTN_SHOP_REGISTRY_TIP"))
 	if ShopRules.is_supplier(s, Catalog.data, id):
-		_flow(acts, tr("BTN_WHOLESALE"), shop_requested.emit.bind("supplier", id), can_act, "Wholesale_" + id, tr("BTN_WHOLESALE_TIP").format({"name": n.get("name", id)}))
+		_flow(_group(groups, "deals", id), tr("BTN_WHOLESALE"), shop_requested.emit.bind("supplier", id), can_act, "Wholesale_" + id, tr("BTN_WHOLESALE_TIP").format({"name": n.get("name", id)}))
 	if StudyRules.is_teacher(s, Catalog.data, id):  # v0.7.30
-		_flow(acts, tr("BTN_STUDY"), study_requested.emit.bind(id), can_act, "Study_" + id, tr("BTN_STUDY_TIP").format({"name": n.get("name", id)}))
+		_flow(_group(groups, "deals", id), tr("BTN_STUDY"), study_requested.emit.bind(id), can_act, "Study_" + id, tr("BTN_STUDY_TIP").format({"name": n.get("name", id)}))
 	if not SiteRules.closed_to_hero(s, Catalog.data, id).is_empty():  # v0.7.39.2: the owner's leave
 		var pw := SiteRules.ask_why(s, Catalog.data, id)
-		var pb := _flow(acts, tr("BTN_PERMIT"), _try.bind(GameState.permit_ask.bind(id)), can_act and pw.is_empty())
+		var pb := _flow(_group(groups, "talk", id), tr("BTN_PERMIT"), _try.bind(GameState.permit_ask.bind(id)), can_act and pw.is_empty())
 		pb.name = "Permit_" + id
 		pb.tooltip_text = tr(pw) if not pw.is_empty() else tr("BTN_PERMIT_TIP").format({"dc": SiteRules.ask_dc(s, Catalog.data, id),
 			"chance": SiteRules.ask_chance(s, Catalog.data, id)})
 	if not FamilyRules.engaged(s).is_empty() and not FamilyRules.officiant(s, Catalog.data, id).is_empty():  # v0.7.32
 		var why := FamilyRules.wedding_why(s, Catalog.data, id)
-		_flow(acts, tr("BTN_WEDDING"), _try.bind(GameState.family_act.bind("wedding", id)), can_act and why.is_empty(), "Wedding_" + id, tr(why) if not why.is_empty() else tr("BTN_WEDDING_TIP").format({"money": Money.format(FamilyRules.fee(Catalog.data, FamilyRules.officiant(s, Catalog.data, id)))}))
+		_flow(_group(groups, "life", id), tr("BTN_WEDDING"), _try.bind(GameState.family_act.bind("wedding", id)), can_act and why.is_empty(), "Wedding_" + id, tr(why) if not why.is_empty() else tr("BTN_WEDDING_TIP").format({"money": Money.format(FamilyRules.fee(Catalog.data, FamilyRules.officiant(s, Catalog.data, id)))}))
 	if Catalog.data["rules"].has("office") and not OfficeRules.of_chief(Catalog.data, id).is_empty():  # v0.7.34
-		_flow(acts, tr("BTN_OFFICES"), office_requested.emit.bind(id), can_act, "Office_" + id, tr("BTN_OFFICES_TIP"))
+		_flow(_group(groups, "deals", id), tr("BTN_OFFICES"), office_requested.emit.bind(id), can_act, "Office_" + id, tr("BTN_OFFICES_TIP"))
 	if Catalog.data["rules"].has("underworld"):  # v0.7.33
 		for org: String in OrgRules.of_head(s, Catalog.data, id):
-			_flow(acts, str(OrgRules.word(s, Catalog.data, org)["nom"]).capitalize(), org_requested.emit.bind(org), can_act, "Org_" + id, tr("BTN_ORG_HEAD_TIP").format({"org": OrgRules.org_name(s, Catalog.data, org)}))
+			_flow(_group(groups, "deals", id), str(OrgRules.word(s, Catalog.data, org)["nom"]).capitalize(), org_requested.emit.bind(org), can_act, "Org_" + id, tr("BTN_ORG_HEAD_TIP").format({"org": OrgRules.org_name(s, Catalog.data, org)}))
 		var rw := OrgRules.recruit_why(s, Catalog.data, id)
 		if not OrgRules.own(s, Catalog.data).is_empty() and not rw in ["ORG_NOT_FOR_HIM", "ORG_MEMBER"]:
-			_flow(acts, tr("BTN_RECRUIT"), _try.bind(GameState.org_act.bind("recruit", id)), can_act and rw.is_empty(), "Recruit_" + id, tr(rw).format({"at": int(OrgRules.cfg(Catalog.data)["recruit_bond"])}) if not rw.is_empty() else tr("BTN_RECRUIT_TIP"))
+			_flow(_group(groups, "life", id), tr("BTN_RECRUIT"), _try.bind(GameState.org_act.bind("recruit", id)), can_act and rw.is_empty(), "Recruit_" + id, tr(rw).format({"at": int(OrgRules.cfg(Catalog.data)["recruit_bond"])}) if not rw.is_empty() else tr("BTN_RECRUIT_TIP"))
 	if Catalog.data["rules"].has("contests"):  # v0.7.40
 		var playing := str(ContestRules.state(s).get("npc", "")) == id
 		var cw := "" if playing else ContestRules.why_not(s, Catalog.data, id)
-		_flow(acts, tr("BTN_CONTEST"), contest_requested.emit.bind(id), can_act and cw.is_empty(), "Contest_" + id, cw if not cw.is_empty() else tr("BTN_CONTEST_TIP").format({"name": n.get("name", id)}))
+		_flow(_group(groups, "talk", id), tr("BTN_CONTEST"), contest_requested.emit.bind(id), can_act and cw.is_empty(), "Contest_" + id, cw if not cw.is_empty() else tr("BTN_CONTEST_TIP").format({"name": n.get("name", id)}))
 	if RumorRules.on(Catalog.data):  # v0.7.47: what they say around here
 		var rw := RumorRules.ask_why(s, Catalog.data, id)
-		_flow(acts, tr("BTN_RUMORS"), _try.bind(GameState.rumor_ask.bind(id)), can_act and rw.is_empty(), "Rumors_" + id, tr(rw) if not rw.is_empty() else tr("BTN_RUMORS_TIP").format({"name": n.get("name", id)}))
+		_flow(_group(groups, "talk", id), tr("BTN_RUMORS"), _try.bind(GameState.rumor_ask.bind(id)), can_act and rw.is_empty(), "Rumors_" + id, tr(rw) if not rw.is_empty() else tr("BTN_RUMORS_TIP").format({"name": n.get("name", id)}))
 	if not PrepareRules.quest_of(s, id).is_empty():  # v0.8.4.25: a quest it readied ahead, given when asked
-		_flow(acts, tr("BTN_ASK_WORK"), _try.bind(GameState.ask_work.bind(id)), can_act, "AskWork_" + id, tr("BTN_ASK_WORK_TIP").format({"name": n.get("name", id)}))
+		_flow(_group(groups, "talk", id), tr("BTN_ASK_WORK"), _try.bind(GameState.ask_work.bind(id)), can_act, "AskWork_" + id, tr("BTN_ASK_WORK_TIP").format({"name": n.get("name", id)}))
 	if not LetterRules.ways_of(Catalog.data, id).is_empty():  # v0.7.48: a person with a post sends letters
-		_flow(acts, tr("BTN_LETTER"), letter_requested.emit.bind(id), can_act, "Letter_" + id, tr("BTN_LETTER_TIP").format({"name": n.get("name", id)}))
-	_spell_acts(acts, id, can_act)  # v0.8.4.30: a spell aimed at it, as in BG3
+		_flow(_group(groups, "deals", id), tr("BTN_LETTER"), letter_requested.emit.bind(id), can_act, "Letter_" + id, tr("BTN_LETTER_TIP").format({"name": n.get("name", id)}))
+	_spell_acts(_group(groups, "spells", id), id, can_act)  # v0.8.4.30: a spell aimed at it, as in BG3
 	var arena_site := ArenaRules.of_manager(Catalog.data, id)  # v0.7.45
 	if not arena_site.is_empty():
-		_flow(acts, tr("BTN_ARENA"), arena_requested.emit.bind(arena_site), can_act, "Arena_" + id, tr("BTN_ARENA_TIP").format({"name": ArenaRules.site_name(Catalog.data, arena_site)}))
-	var bo := _flow(acts, tr("BTN_BOND"), bond_requested.emit.bind(id), can_act)  # v0.7.31
+		_flow(_group(groups, "deals", id), tr("BTN_ARENA"), arena_requested.emit.bind(arena_site), can_act, "Arena_" + id, tr("BTN_ARENA_TIP").format({"name": ArenaRules.site_name(Catalog.data, arena_site)}))
+	var bo := _flow(_group(groups, "life", id), tr("BTN_BOND"), bond_requested.emit.bind(id), can_act)  # v0.7.31
 	bo.name = "Bond_" + id
 	bo.tooltip_text = tr("BTN_BOND_TIP").format({"name": n.get("name", id)})
 	if BankRules.is_bank(s, Catalog.data, id):  # v0.7.28
-		_flow(acts, tr("BTN_BANK"), bank_requested.emit.bind(id), can_act, "Bank_" + id, tr("BTN_BANK_TIP").format({"name": n.get("name", id)}))
+		_flow(_group(groups, "deals", id), tr("BTN_BANK"), bank_requested.emit.bind(id), can_act, "Bank_" + id, tr("BTN_BANK_TIP").format({"name": n.get("name", id)}))
 	if not PropertyRules.animals_of(Catalog.data, id).is_empty():
-		_flow(acts, tr("BTN_ANIMALS"), property_requested.emit.bind("animals", id), can_act, "Animals_" + id)
+		_flow(_group(groups, "deals", id), tr("BTN_ANIMALS"), property_requested.emit.bind("animals", id), can_act, "Animals_" + id)
 	var follow: Array = []  # v0.7.22.22 (#25): a follower by the buttons, as the prisoners
 	if Being.follows(s, id):
 		follow = [["stay", "BTN_FOLLOWER_STAY"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
@@ -605,7 +606,7 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 		follow = [["lead", "BTN_FOLLOWER_LEAD"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
 	for fa: Array in follow:
 		var what: String = fa[0]
-		var fb := _flow(acts, tr(fa[1]), _try.bind(GameState.follower_act.bind(id, what)), can_act, "Follower_%s_%s" % [what, id])
+		var fb := _flow(_group(groups, "life", id), tr(fa[1]), _try.bind(GameState.follower_act.bind(id, what)), can_act, "Follower_%s_%s" % [what, id])
 		if tr(fa[1] + "_TIP") != fa[1] + "_TIP":
 			fb.tooltip_text = tr(fa[1] + "_TIP")
 	var who := str(n.get("name", id))
@@ -614,7 +615,56 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 	at.name = "Attack_" + id  # the fight at once, without the master: last and red, apart from the peaceful acts
 	at.tooltip_text = tr("BTN_ATTACK_NPC").format({"name": n.get("name", id)})
 	at.add_theme_color_override("font_color", UiTheme.BAD)
+	_fold(acts, groups, id)
 	_near_ref = ""
+
+
+## The groups of a person's acts (v0.8.4.31, the author's feedback): a header «Дела ▸» opens its list under the row; a group of
+## one act shows it in the row itself.
+const ACT_GROUPS: Array[String] = ["talk", "deals", "life", "spells"]
+
+
+func _group(groups: Dictionary, key: String, id: String) -> HFlowContainer:
+	if not groups.has(key):
+		var box := HFlowContainer.new()
+		box.name = "Group_%s_%s" % [key, id]
+		box.add_theme_constant_override("h_separation", 6)
+		box.add_theme_constant_override("v_separation", 6)
+		groups[key] = box
+	return groups[key]
+
+
+func _fold(acts: HFlowContainer, groups: Dictionary, id: String) -> void:
+	var attack := acts.get_child(acts.get_child_count() - 1)  # the attack stays last and apart
+	var at := acts.get_child_count() - 1
+	for key: String in ACT_GROUPS:
+		if not groups.has(key):
+			continue
+		var box: HFlowContainer = groups[key]
+		if box.get_child_count() == 1:
+			var only := box.get_child(0)
+			box.remove_child(only)
+			acts.add_child(only)
+			acts.move_child(only, at)
+			at += 1
+			box.queue_free()
+			continue
+		var head := Button.new()
+		head.name = "Fold_%s_%s" % [key, id]
+		head.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		head.toggle_mode = true
+		var title := tr("ACT_GROUP_" + key.to_upper())
+		head.text = "%s ▸" % title
+		head.tooltip_text = tr("ACT_GROUP_TIP")
+		box.visible = false
+		head.toggled.connect(func(on: bool) -> void:
+			box.visible = on
+			head.text = "%s %s" % [title, "▾" if on else "▸"])
+		acts.add_child(head)
+		acts.move_child(head, at)
+		at += 1
+		_content.add_child(box)
+	acts.move_child(attack, acts.get_child_count() - 1)
 
 
 func _npc_head(row: HBoxContainer, s: GameSession, n: Dictionary, id: String, a: int, att: String, refuses: bool, can_act: bool) -> Control:

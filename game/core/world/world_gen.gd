@@ -32,12 +32,6 @@ static func merged(pack_world: Dictionary, gen: Dictionary) -> Dictionary:
 			w[bucket][id] = (gen[bucket][id] as Dictionary).duplicate(true)
 	for id: String in gen.get("npcs", {}):
 		w["npcs"][id] = (gen["npcs"][id] as Dictionary).duplicate(true)
-		var room := str(gen.get("npc_rooms", {}).get(id, ""))
-		if w["rooms"].has(room):
-			var list: Array = w["rooms"][room].get("npcs", [])
-			if not list.has(id):
-				list.append(id)
-			w["rooms"][room]["npcs"] = list
 	Overlay.apply(w, gen)  # what the hero owns and changed, a dealer's new beasts
 	return w
 
@@ -768,8 +762,24 @@ static func _merge_places(w: Dictionary, gen: Dictionary) -> Dictionary:
 		w["sites"][sid] = (gen["sites"][sid] as Dictionary).duplicate(true)
 	for rid: String in gen.get("rooms", {}):
 		w["rooms"][rid] = (gen["rooms"][rid] as Dictionary).duplicate(true)
+	_lay_people(w, gen)
 	lay_ways(w, gen)  # a quest's secrets and variants of the pack's rooms are the overlay's (v0.8.4.18)
 	return w
+
+
+## The made people into the rooms they stand in now: a made room keeps none of its own (its people are `npc_rooms`), so
+## every merge of the places lays them again — on a load and when the master makes a place (v0.8.4.31: Тимка and Тихон
+## were wiped out of their rooms by the next made place).
+static func _lay_people(w: Dictionary, gen: Dictionary) -> void:
+	var rooms: Dictionary = gen.get("npc_rooms", {})
+	for id: String in rooms:
+		var room := str(rooms[id])
+		if not w["rooms"].has(room):
+			continue
+		var list: Array = w["rooms"][room].get("npcs", [])
+		if not list.has(id):
+			list.append(id)
+		w["rooms"][room]["npcs"] = list
 
 
 ## The exits and ways made in this game into the world (v0.7.66): the rooms may be the pack's.

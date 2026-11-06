@@ -324,6 +324,75 @@ static func stow_ammo(s: GameSession, data: Dictionary, holder: Dictionary, ammo
 		Thing.add(holder, ammo, qty)
 
 
+## A weapon thrown by anybody (v0.8.4.31, the author's feedback): it leaves the hand and lies on the target's square
+## (`s.combat.dropped`) until picked up — in the fight by «Подобрать», after it with the arrows. A template's action is
+## not thrown twice (`f.thrown`); a weapon `returning` comes back to the hand.
+static func throw_out(s: GameSession, data: Dictionary, f: Dictionary, b: Dictionary, at: Vector2i) -> void:
+	var a: Dictionary = b.get("act", {})
+	if not a.is_empty():
+		var gone: Array = f.get("thrown", [])
+		gone.append(str(a.get("name_en", "")))
+		f["thrown"] = gone
+	var item := str(b.get("id", a.get("item", "")))
+	if item.is_empty() or returns(data, s.items, item):
+		return
+	var holder := Sheet.holder(s, f)
+	if not holder.has("inventory"):  # a foe of its template's gear: what it has from now on is its own
+		holder["inventory"] = (Gear.start(data, Sheet.template_id(data, f))["inventory"] as Dictionary).duplicate()
+	var slot := ""
+	for sl: String in ["main_hand", "off_hand"]:
+		if str(holder.get("equipped", {}).get(sl, "")) == item and slot.is_empty():
+			slot = sl
+	if ItemRules.remove(holder, item, 1) <= 0:
+		return
+	var dropped: Array = s.combat.get("dropped", [])
+	dropped.append({"item": item, "x": at.x, "y": at.y, "slot": slot, "by": str(f.get("id", ""))})
+	s.combat["dropped"] = dropped
+	FightGrid.changed(s)
+
+
+static func returns(data: Dictionary, session_items: Dictionary, item: String) -> bool:
+	return (ItemRules.def_of(data["items"], session_items, item).get("weapon", {}).get("properties", []) as Array).has("returning")
+
+
+## What lies on the square `at` or beside it: indices of `s.combat.dropped`.
+static func dropped_near(s: GameSession, f: Dictionary) -> Array[int]:
+	var out: Array[int] = []
+	var list: Array = s.combat.get("dropped", [])
+	for i in list.size():
+		if FightGrid.dist_to(f, Vector2i(int(list[i]["x"]), int(list[i]["y"]))) <= 1:
+			out.append(i)
+	return out
+
+
+## Picks up what lies beside `f`: back into its things (the hero's hand when it is empty). Lines.
+static func pick_up(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	var list: Array = s.combat.get("dropped", [])
+	var near := dropped_near(s, f)
+	near.reverse()
+	var holder := Sheet.holder(s, f)
+	for i: int in near:
+		var item := str(list[i]["item"])
+		var slot := str(list[i].get("slot", "")) if str(list[i].get("by", "")) == str(f.get("id", "")) else ""
+		list.remove_at(i)
+		ItemRules.add(holder, item, 1)
+		var eq: Dictionary = holder.get("equipped", {})
+		if not slot.is_empty() and str(eq.get(slot, "")).is_empty() and CharacterRules.can_equip(holder, data, s.items, item, slot).is_empty():
+			eq[slot] = item  # back to the hand it was thrown from
+			holder["equipped"] = eq
+		lines.append("%s подбирает: %s" % [holder.get("name", ""), ItemRules.display_name(data["items"], s.items, item)])
+	f.erase("thrown")  # what it threw is in its hand again
+	FightGrid.changed(s)
+
+
+## What lies on the field after the fight: {item: qty}.
+static func left_on_field(s: GameSession) -> Dictionary:
+	var out := {}
+	for d: Dictionary in s.combat.get("dropped", []):
+		out[str(d["item"])] = int(out.get(str(d["item"]), 0)) + 1
+	return out
+
+
 ## What may be picked up of what it shot: {ammo: qty}.
 static func shot_back(data: Dictionary, f: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
 	var out := {}

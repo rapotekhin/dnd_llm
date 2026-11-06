@@ -380,7 +380,13 @@
 - **Движок:** [QuestGen.plan_act](../../game/core/world/quest_gen.gd#L386) — всё, что в строке `quest_act` [master-tools](master-tools.md#задания-и-цель); стаб-сценарист — разговор с заказчиком (своё дело — приход в соседнее место).
 - **Вещь задания словами:** «ищу кольцо в погребе» — `request_check` поиска; найденное движок кладёт герою сам, без `move_item:world>hero` (`quest_thing_searched_by_words`).
 - **Заранее (v0.8.4.25, v0.8.4.30):** клиент шлёт тот же ход `quest_act` фоном (`background: true`): первый акт — пока заказ только предложен, следующий — за `rules.prepare.act_steps` шагов до него. Движок принимает акт, пока задание его ещё не ждёт (`ahead`, [QuestRules.ahead](../../game/core/rules/quest_rules.gd)), и хранит в `s.prepared`. Когда акт открывается, он проверяется заново и ложится без хода сценариста. Задание уже ждёт, а акта нет — он строится тем же фоновым ходом, игра не стоит; живой ход сценариста — только когда вторая линия закрыта.
-- **Golden:** `quest_act_thing_hidden`, `quest_act_plant_by_survival`, `quest_act_parcel_to_carry`, `quest_act_middle_with_ambush`, `quest_act_finale_boss_and_choice`.
+- **После провала шага (v0.8.4.31):** проверка не нашла тайну шага `find` или бой шага `fight` проигран и герой в плену. Тогда шаг остаётся в истории с «✗», остаток акта снимается, и акт собирается заново от неудачи ([QuestRules.setback](../../game/core/rules/quest_rules.gd)). Рамка говорит «ПРОВАЛ ШАГА», и сценарист выбирает одно:
+  - другой путь к цели;
+  - короче и беднее (`reward_pct` 25–75);
+  - тупик (`ends: "fail"`) — задание кончается провалом.
+
+  Акт на случай провала готовится заранее, рядом с обычным (`rules.prepare.setbacks`). Проваленный шаг ложится сразу, без ожидания.
+- **Golden:** `quest_act_thing_hidden`, `quest_act_plant_by_survival`, `quest_act_parcel_to_carry`, `quest_act_middle_with_ambush`, `quest_act_after_setback`, `quest_act_finale_boss_and_choice`.
 
 ### Жизненная цель героя
 

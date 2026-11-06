@@ -35,13 +35,23 @@ static func of_spell(name: String, to_hit: int, dice: String, bonus: int, dtype:
 
 
 ## What `how` strikes with: an action of its template by name, a hand of the hero, what it has at arm's length. {} with nothing.
+## `how.throw` — a weapon that is both thrown and swung goes thrown, even at arm's length (v0.8.4.31: two buttons).
 static func way(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary) -> Dictionary:
+	var b := {}
 	if how.has("action"):
 		for a: Dictionary in Sheet.template(data, f).get("actions", []):
 			if str(a.get("name_en")) == str(how["action"]):
-				return of_action(data, f, a)
-		return {}
-	return of_weapon(CombatRules.hand_profile(s, data, str(how.get("hand", "")))) if Sheet.is_hero(f) else blade(s, data, f)
+				b = of_action(data, f, a)
+	else:
+		b = of_weapon(CombatRules.hand_profile(s, data, str(how.get("hand", "")))) if Sheet.is_hero(f) else blade(s, data, f)
+	if bool(how.get("throw", false)) and not b.is_empty():
+		b["thrown"] = true
+	return b
+
+
+## The weapon is both swung and thrown: a melee one with a range.
+static func throwable(b: Dictionary) -> bool:
+	return bool(b.get("melee", false)) and not (b.get("range", []) as Array).is_empty()
 
 
 ## The blow it strikes with at arm's length: {} with nothing for it.
@@ -55,7 +65,7 @@ static func blade(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary
 
 ## The blow does not come from arm's length: a shot, a throw.
 static func shot(f: Dictionary, t: Dictionary, b: Dictionary) -> bool:
-	return not bool(b.get("melee", false)) or FightGrid.dist(f, t) > maxi(1, int(b.get("reach", 1)))
+	return bool(b.get("thrown", false)) or not bool(b.get("melee", false)) or FightGrid.dist(f, t) > maxi(1, int(b.get("reach", 1)))
 
 
 static func up(s: GameSession, t: Dictionary) -> bool:
@@ -238,10 +248,8 @@ static func swing(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	var a: Dictionary = b.get("act", {})
 	if not a.is_empty():
 		MonsterRules.spend(f, a)
-		if shot(f, t, b) and bool(b["melee"]) and a.has("range"):  # thrown: out of the hand for the fight (v0.7.22.19)
-			var gone: Array = f.get("thrown", [])
-			gone.append(str(a.get("name_en", "")))
-			f["thrown"] = gone
+	if shot(f, t, b) and throwable(b):  # thrown: out of the hand onto the target's square, anybody's (v0.8.4.31)
+		Gear.throw_out(s, data, f, b, FightGrid.cell(t))
 	if not Sheet.is_hero(f) and ConditionRules.has(me, "invisible"):
 		FightGrid.keep_seen(f)  # a strike gives an invisible foe away
 	var out := {"hit": false, "crit": false, "damage": 0}
@@ -308,8 +316,9 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	var crit_min := int(b.get("crit_min", 20))
 	var hit := nat >= crit_min or (nat != 1 and total >= ac)
 	var mark := " (с преимуществом)" if adv and not dis else " (с помехой)" if dis and not adv else ""
-	var thrown := " (бросок)" if bool(b.get("melee", false)) and shot(f, t, b) else ""  # a spear thrown, not thrust (v0.8.4.30)
-	var line := "%s — %s%s по %s: %d%s%d = %d против КД %d%s%s" % [me.get("name", ""), b["name"], thrown, it.get("name", ""), nat, " + " if to_hit >= 0 else " − ", absi(to_hit), total, ac, mark,
+	var thrown := " (бросок)" if throwable(b) and shot(f, t, b) else ""  # a spear thrown, not thrust (v0.8.4.30)
+	var both := "%s → " % " и ".join(rolls.map(func(r: int) -> String: return str(r))) if rolls.size() > 1 else ""  # both dice of an advantage (v0.8.4.31)
+	var line := "%s — %s%s по %s: %s%d%s%d = %d против КД %d%s%s" % [me.get("name", ""), b["name"], thrown, it.get("name", ""), both, nat, " + " if to_hit >= 0 else " − ", absi(to_hit), total, ac, mark,
 		(" [%s]" % die["note"]) if not str(die["note"]).is_empty() else ""]
 	var parts: Array[Dictionary] = []  # the hover of the line (v0.7.49.4, the author's finding)
 	parts.assign(b.get("hit_parts", []))

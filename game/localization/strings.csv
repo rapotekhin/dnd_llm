@@ -1,4 +1,9 @@
 keys,ru
+ACT_GROUP_TALK,Разговор
+ACT_GROUP_DEALS,Дела
+ACT_GROUP_LIFE,Жизнь
+ACT_GROUP_SPELLS,Заклинания
+ACT_GROUP_TIP,Открыть или свернуть список
 ABILITY_BUSY,Сейчас нельзя: мастер думает или нет связи
 ABILITY_CHA,Харизма
 ABILITY_CON,Телосложение
@@ -216,6 +221,13 @@ COMBAT_ATTACK_FIRST,Сначала действие «Атака»
 COMBAT_NEEDS_DARK,Только в тусклом свете или темноте
 COMBAT_ATTACK_FRENZY,Удар в неистовстве: {name} ({dmg}) ▲
 COMBAT_ATTACK_OFF,Второй рукой: {name} ({dmg}) [бонус]
+COMBAT_THROW,"Метнуть: {name} ({hit}, {dmg})"
+COMBAT_THROW_OFF,Метнуть второй рукой: {name} ({dmg}) [бонус]
+COMBAT_THROW_TIP,"Бросок: оружие уйдёт из руки и ляжет у цели — подобрать рядом в бою или собрать после него"
+COMBAT_CANT_THROW,Это оружие не метают
+COMBAT_NOTHING_TO_PICK,Рядом нечего подобрать
+COMBAT_PICKED,В этот ход вы уже подбирали вещь
+COMBAT_GATHER_THROWN,"брошенное: {things}"
 COMBAT_BAD_MOVE,Туда не дойти за этот ход
 COMBAT_NO_LINE,Цели не видно
 COMBAT_NOT_AT_EXIT,Уйти можно только у выхода с этого места
@@ -904,6 +916,12 @@ BTN_SEARCH_SHORT,Обыскать
 COMBAT_VOLLEY,"Следующий заряд «{spell}» (осталось {n}): выберите цель"
 COMBAT_NO_VOLLEY,Зарядов больше нет
 SLOT_CIRCLE,{n} круг (осталось {left})
+SLOT_DELETE_TIP,Удалить сохранение
+SLOT_DELETE_TITLE,Удалить сохранение?
+SLOT_DELETE,"«{slot}» будет удалено навсегда, вернуть его нельзя."
+SLOT_DELETE_YES,Удалить
+MSG_SLOT_DELETED,Сохранение удалено
+MSG_SLOT_DELETE_FAILED,Не удалось удалить сохранение
 SLOT_EMPTY,пусто
 SLOT_HINT,Ходов: {turns} · {date}
 SET_MELEE,Ближний бой

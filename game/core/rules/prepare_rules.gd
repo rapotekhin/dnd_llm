@@ -70,6 +70,14 @@ static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Di
 			var key := "%s:%d" % [qid, int(QuestRules.quest(world, qid).get("built", 0)) + 1]
 			if not part(s, ACTS).has(key) and not busy.has("act:" + key):
 				out.append({"kind": "act", "key": key, "quest": qid})
+	if bool(c.get("setbacks", false)):  # v0.8.4.31: the act after a failed check or a lost fight, readied beside the act after a success
+		for qid: String in s.quests_active.keys():
+			var sb := setback_preview(s, data, qid)
+			if sb.is_empty():
+				continue
+			var key := "%s:%d!%d" % [qid, int(sb["act"]) + 1, int(sb["index"])]
+			if not part(s, ACTS).has(key) and not busy.has("act:" + key):
+				out.append({"kind": "act", "key": key, "quest": qid, "setback": sb})
 	var rooms := around(s, data, int(c.get("depth", 2)))
 	for room: String in [s.room_id] + rooms:
 		PropRules.ensure_fixed(s, data, room)  # a pack's board is there before the room is furnished
@@ -147,7 +155,7 @@ static func frame(s: GameSession, data: Dictionary, job: Dictionary) -> String:
 	var lines: Array[String] = []
 	match str(job["kind"]):
 		"act":
-			return QuestGen.act_frame(s, data, str(job["quest"]))
+			return QuestGen.act_frame(s, data, str(job["quest"]), job.get("setback", {}))
 		"furnish":
 			var room := str(job["room"])
 			var r := SceneRules.room(s, data["world"], room)
@@ -265,6 +273,30 @@ static func orders(s: GameSession, room: String, prop: String) -> Array:
 
 static func quest_of(s: GameSession, npc: String) -> Dictionary:
 	return part(s, QUESTS).get(npc, {})
+
+
+## The setback the current step of a taken quest by acts may have (a `find` or a `fight`), as `QuestRules.setback` would
+## set it: {act, index, step, why}; {} — the step cannot go wrong.
+static func setback_preview(s: GameSession, data: Dictionary, quest_id: String) -> Dictionary:
+	var q := QuestRules.quest(data["world"], quest_id)
+	var step := QuestRules.current(s, data["world"], quest_id)
+	var kind := QuestRules.setback_kind(step)
+	if not q.has("acts") or kind.is_empty():
+		return {}
+	return {"act": int(step.get("act", maxi(0, int(q.get("built", 1)) - 1))), "index": int(s.quests_active[quest_id]), "step": str(step["text"]),
+		"why": QuestRules.setback_why(step, kind)}
+
+
+## A step went wrong (QuestRules.setback): the acts readied for its quest are stale; the one readied for this failure,
+## if any, becomes the act to lay.
+static func take_setback(s: GameSession, quest_id: String, act: int, index: int) -> void:
+	var acts := part(s, ACTS)
+	var ready: Dictionary = acts.get("%s:%d!%d" % [quest_id, act, index], {})
+	for key: String in acts.keys():
+		if key.get_slice(":", 0) == quest_id:
+			acts.erase(key)
+	if not ready.is_empty():
+		acts["%s:%d" % [quest_id, act]] = ready
 
 
 static func act_of(s: GameSession, quest_id: String, act: int) -> Dictionary:

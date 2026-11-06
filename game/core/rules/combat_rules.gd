@@ -2420,18 +2420,21 @@ static func dice_range(expr: String, mod: int = 0) -> Array[int]:
 
 ## A weapon attack at `target_id` before the click: {chance, min, max, adv: [reasons], dis: [reasons]}. AC stays
 ## hidden: only the percent.
-static func attack_preview(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, unarmed: bool = false) -> Dictionary:
+static func attack_preview(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, unarmed: bool = false, throw: bool = false) -> Dictionary:
 	var c := s.character
 	var t := fighter(s, target_id)
 	if t.is_empty():
 		return {}
 	var w := weapon_profile(c, data, s.items, "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", "")), offhand)
-	var mods := Attack.odds(s, data, player(s), t, Attack.of_weapon(w))  # the roll's own reasons and cover (v0.8.4.29.3)
+	var b := Attack.of_weapon(w)
+	if throw:
+		b["thrown"] = true  # v0.8.4.31: the throw's own button
+	var mods := Attack.odds(s, data, player(s), t, b)  # the roll's own reasons and cover (v0.8.4.29.3)
 	var adv := not (mods["adv"] as Array).is_empty()
 	var dis := not (mods["dis"] as Array).is_empty()
 	var r := dice_range(str(w["dice"]))
-	var bonus := int(w["bonus"]) + FeatureRules.rage_bonus(s, data, player(s), Attack.of_weapon(w), t)
-	var sneak := FeatureRules.sneak_dice(s, data, player(s), Attack.of_weapon(w), adv, dis, t)
+	var bonus := int(w["bonus"]) + FeatureRules.rage_bonus(s, data, player(s), b, t)
+	var sneak := FeatureRules.sneak_dice(s, data, player(s), b, adv, dis, t)
 	var sr: Array[int] = [0, 0]
 	if not sneak.is_empty():
 		sr = dice_range(sneak)

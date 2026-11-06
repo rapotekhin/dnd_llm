@@ -1391,6 +1391,8 @@
 			"hard",
 			"deadly"
 		],
+		"setback_pct": [25, 100],
+		"_setback": "v0.8.4.31, the author's feedback: a step of a quest by acts that went wrong (a find missed by a check, a fight lost into captivity) — its act is built again from the failure; that act may cut the reward to setback_pct[0]…[1] percent or end the quest failed (ends: fail).",
 		"act_max": {
 			"npcs": 3,
 			"places": 2,
@@ -3614,6 +3616,7 @@
 		"_doc": "The master readies ahead (v0.8.4.25, the author's decision of 2026-11-02, PrepareRules): a room's furnishing, a board's orders, a quest of a person around and the next act of a taken quest, on a second line of requests beside the player's own turn. `depth` — the rooms readied around the hero by the map's ways (2: neighbours and theirs); `parallel` — the background turns at once; `candidates` — the catalog things the engine offers for a room instead of a search: `everyday` for any room, then those of its kind, role and tags, then the goods of a trader who lives there, cut to the count by the game's seed; `quests_per_day` — people around readied with a quest each day, within `quest_depth` rooms of the hero; `act_steps` — a taken quest's next act is readied when this many of its built steps or fewer are left (v0.8.4.30: early, so the hero never waits; an offered one's first act is readied before it is taken).",
 		"on": true,
 		"act_steps": 99,
+		"setbacks": true,
 		"depth": 2,
 		"parallel": 16,
 		"candidates": 40,
@@ -3692,6 +3695,7 @@
 		"friendly_fire": {"_doc": "An area does not pick sides (v0.7.50.1): allies in it are caught, the hero too unless the area starts at the hero; a follower thinks worse of the hero by `attitude`. on false — only foes.", "on": true, "attitude": -1},
 		"potion_cost": "bonus",
 		"offhand_needs_attack": false,
+		"told": {"_doc": "v0.8.4.31, the author's feedback: the master tells a fight once, after it, by its whole log (rounds false); rounds true — after every round, as before. lines — how many of the fight's last lines the master gets.", "rounds": false, "lines": 160},
 		"_bg3": "v0.7.22.3, the author's choice (as in BG3, not 5e): drinking a potion is a bonus action (potion_cost; an action when no bonus is left), the off-hand light weapon strikes as a bonus action without the main hand's attack first (offhand_needs_attack).",
 		"engine_spells": [
 			"acid_arrow",
@@ -3831,7 +3835,7 @@
 			"flow": 80,
 			"flee_lost": 12,
 			"keep_most": 8,
-			"acts": {"frenzy": 4, "dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100, "avert": 10, "escape": 6, "help": 0.5, "grapple": 2, "shove": 3, "shape": 2},
+			"acts": {"frenzy": 4, "dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100, "pick_up": 6, "avert": 10, "escape": 6, "help": 0.5, "grapple": 2, "shove": 3, "shape": 2},
 			"items": {"_doc": "What a thing is worth to the AI (core/acts/use_item.gd, v0.8.4.10): a healing one is taken `when` (first — before it walks) under `heal_below` of its HP. A flask is thrown for its damage, a scroll is weighed as its spell.", "when": "first", "heal_below": 0.5},
 			"features": {"_doc": "What a feature is worth to the AI (core/acts/feature.gd): `when` first or last — taken for its bonus or free action before it walks or when all is done; `power` — an act beside its blows; `below` — only under this share of its HP; `foes` — only with a foe of these types within 30 ft; `near` — only with a foe beside it (Divine Eminence, v0.8.4.27.5).",
 				"rage": {"when": "first"}, "divine_eminence": {"when": "first", "near": true}, "reckless": {"when": "first"}, "action_surge": {"when": "first"}, "second_wind": {"when": "first", "below": 0.5},

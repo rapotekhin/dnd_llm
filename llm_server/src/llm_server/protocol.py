@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.111.0"
+PROTOCOL_VERSION = "0.112.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -907,7 +907,8 @@ class SiteHours(_Out):
 
 class NewSite(_Out):
     """The site (0.50.0: a building, a yard, a cave) the new rooms make: its name (empty — the first room's), tags of
-    its kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…), whether anyone may walk in, its owner — an
+    its kind (`tavern`, `smithy`, `shop`, `temple`, `home`, `bathhouse`…; 0.112.0: the land of an open one for its map —
+    `forest`, `field`, `hills`, `rocks`, `swamp`, `shore`, `camp`…), whether anyone may walk in, its owner — an
     NPC of the world or «new» — the person create:npc makes in this turn (0.52.0)."""
 
     name: str = Field(default="", max_length=60)
@@ -1129,6 +1130,10 @@ class QuestActEffect(_Out):
     choices: list[ActChoice] = Field(default_factory=list, max_length=3)
     reward_item_id: str | None = None
     teaches: "ActTeach | None" = None  # 0.82.0: the course at the teacher the hero was sent to find
+    # 0.112.0: only an act built again after a failed step («ПРОВАЛ ШАГА» in the frame): a poorer end, or a dead end —
+    # the quest ends failed with this act's last step (no way back to the giver, no reward)
+    reward_pct: int | None = Field(default=None, ge=25, le=100)
+    ends: Literal["", "fail"] = ""
 
 
 class FillEffect(_Out):

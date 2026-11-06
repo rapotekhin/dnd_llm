@@ -138,6 +138,11 @@ func slot_meta(slot: String) -> Dictionary:
 	return meta
 
 
+## A slot erased for good (v0.8.4.31, the author's feedback). False — nothing was there or it could not be removed.
+func delete_slot(slot: String) -> bool:
+	return all_slots().has(slot) and has_slot(slot) and DirAccess.remove_absolute(_path(slot)) == OK
+
+
 func has_slot(slot: String) -> bool:
 	return FileAccess.file_exists(_path(slot))
 

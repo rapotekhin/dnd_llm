@@ -178,6 +178,73 @@ static func advance(s: GameSession, data: Dictionary) -> Array[String]:
 	return lines
 
 
+## What can go wrong with a step of a quest by acts (v0.8.4.31, the author's feedback): a `find` of a secret missed by a
+## check, a `fight` lost into captivity. "" — none; else the line the designer builds the act again from.
+static func setback_kind(step: Dictionary) -> String:
+	var when: Dictionary = step.get("when", {})
+	if when.has("secret"):
+		return "find"
+	if when.has("encounter"):
+		return "fight"
+	return ""
+
+
+static func setback_why(step: Dictionary, kind: String) -> String:
+	match kind:
+		"find":
+			return "проверка провалена — герой не нашёл того, что искал: «%s»" % step["text"]
+		"fight":
+			return "бой проигран — герой попал в плен: «%s»" % step["text"]
+	return "шаг не удался: «%s»" % step["text"]
+
+
+## A step of a quest by acts went wrong: it stays in the history as failed, the rest of its act is dropped and the act is
+## built again from the failure — another way to the goal, a quicker or a poorer end, or a failed quest; the engine
+## does not wait for a lucky roll after a long rest. The act readied ahead for this failure is laid at once. Lines.
+static func setback(s: GameSession, data: Dictionary, quest_id: String, kind: String) -> Array[String]:
+	var q: Dictionary = WorldGen.generated(s).get("quests", {}).get(quest_id, {})
+	var i := int(s.quests_active.get(quest_id, -1))
+	if not q.has("acts") or i < 0 or i >= (q["steps"] as Array).size():
+		return []
+	var step: Dictionary = q["steps"][i]
+	var act := int(step.get("act", maxi(0, int(q.get("built", 1)) - 1)))
+	var dropped := (q["steps"] as Array).size() - i - 1
+	step["failed"] = true
+	q["steps"] = (q["steps"] as Array).slice(0, i + 1)
+	q["made_steps"] = maxi(0, int(q.get("made_steps", 0)) - dropped)  # the steps of the act not walked are free again
+	q["built"] = act
+	q["setback"] = {"act": act, "step": str(step["text"]), "why": setback_why(step, kind)}
+	s.quests_active[quest_id] = i + 1
+	s.quest_parts.erase(quest_id)
+	data["world"]["quests"][quest_id] = q.duplicate(true)
+	PrepareRules.take_setback(s, quest_id, act + 1, i)
+	return ["«%s»: %s — не вышло" % [q["title"], step["text"]], "История задания пойдёт иначе: мастер перестраивает акт «%s»" % q["acts"][act]["title"]]
+
+
+## A check of the hero at this room that missed the secret a quest's step looks for: that step's setback. Lines.
+static func missed(s: GameSession, data: Dictionary, skill: String, total: int) -> Array[String]:
+	var lines: Array[String] = []
+	for qid: String in s.quests_active.keys():
+		var step := current(s, data["world"], qid)
+		var key := str(step.get("when", {}).get("secret", ""))
+		if not quest(data["world"], qid).has("acts") or key.get_slice(":", 0) != s.room_id:
+			continue
+		for sec: Dictionary in ExplorationRules.secrets(data["world"], s.room_id):
+			if str(sec.get("id", "")) == key.get_slice(":", 1) and not ExplorationRules.is_found(s, s.room_id, sec) \
+					and (str(sec.get("skill", "perception")) == skill or skill == "investigation") and total < int(sec["dc"]):
+				lines.append_array(setback(s, data, qid, "find"))
+	return lines
+
+
+## The fight `enc_id` was lost into captivity: the setback of a quest's step that needed it. Lines.
+static func lost(s: GameSession, data: Dictionary, enc_id: String) -> Array[String]:
+	var lines: Array[String] = []
+	for qid: String in s.quests_active.keys():
+		if quest(data["world"], qid).has("acts") and str(current(s, data["world"], qid).get("when", {}).get("encounter", "")) == enc_id:
+			lines.append_array(setback(s, data, qid, "fight"))
+	return lines
+
+
 ## The giver lets the hero into its own private place the step leads to (v0.8.4.30, the author's feedback: a quest
 ## behind the giver's door asked a separate request with a check). One grant per site, through SiteRules.grant.
 static func _let_in(s: GameSession, data: Dictionary, quest_id: String, step: Dictionary) -> Array[String]:
@@ -216,7 +283,7 @@ static func history(s: GameSession, world: Dictionary, quest_id: String) -> Arra
 	var n := steps.size() if s.quests_done.has(quest_id) else int(s.quests_active.get(quest_id, 0))
 	for i in mini(n, steps.size()):
 		var step: Dictionary = steps[i]
-		var line := "✓ " + str(step["text"])
+		var line := ("✗ " if bool(step.get("failed", false)) else "✓ ") + str(step["text"])  # a failed step stays (v0.8.4.31)
 		for c: Dictionary in step.get("choices", []):
 			if not str(c.get("flag", "")).is_empty() and s.flags.has(str(c["flag"])):
 				line += " — %s. %s" % [c["action"], c.get("done_text", "")]
@@ -349,6 +416,14 @@ static func _complete_step(s: GameSession, data: Dictionary, quest_id: String) -
 		s.quests_active[quest_id] = i + 1  # the next act is built by the designer's turn (v0.7.39.6)
 		lines.append("«%s»: акт «%s» пройден" % [q["title"], q["acts"][int(q["built"]) - 1]["title"]])
 		lines.append("Дальше: %s" % q["acts"][int(q["built"])]["goal"])
+		return lines
+	if bool(step.get("fail_end", false)):  # a dead end after a setback (v0.8.4.31): the quest ends, failed
+		s.quests_active.erase(quest_id)
+		s.quests_failed.append(quest_id)
+		lines.append("Задание провалено: %s" % q["title"])
+		var giver_id := str(q.get("giver", ""))
+		if not giver_id.is_empty():
+			s.shift_attitude(giver_id, -1, data)
 		return lines
 	if i + 1 >= (q["steps"] as Array).size():
 		s.quests_active.erase(quest_id)

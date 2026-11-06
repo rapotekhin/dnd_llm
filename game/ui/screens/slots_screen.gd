@@ -50,7 +50,19 @@ func _fill() -> void:
 		b.text = _label(slot, meta)
 		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		b.pressed.connect(_on_slot.bind(slot))
-		_list.add_child(b)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var row := HBoxContainer.new()  # the slot and its «✕» (v0.8.4.31, the author's feedback)
+		row.name = "Row_" + slot
+		row.add_child(b)
+		_list.add_child(row)
+		if not meta.is_empty():
+			var del := Button.new()
+			del.name = "Delete_" + slot
+			del.text = "✕"
+			del.custom_minimum_size = Vector2(56, 0)
+			del.tooltip_text = "SLOT_DELETE_TIP"
+			del.pressed.connect(_ask_delete.bind(slot, _label(slot, meta).get_slice("\n", 0)))
+			row.add_child(del)
 	if _list.get_child_count() == 0:
 		var empty := Label.new()
 		empty.text = "MSG_NO_SAVES"
@@ -70,6 +82,15 @@ func _label(slot: String, meta: Dictionary) -> String:
 	else:
 		head += " · " + tr("SLOT_TURNS").format({"n": meta.get("turns", 0)})
 	return head + "\n" + str(meta.get("preview", ""))
+
+
+func _ask_delete(slot: String, what: String) -> void:
+	ConfirmBox.ask(self, tr("SLOT_DELETE_TITLE"), tr("SLOT_DELETE").format({"slot": what}), tr("SLOT_DELETE_YES"), _delete.bind(slot))
+
+
+func _delete(slot: String) -> void:
+	EventBus.message.emit(tr("MSG_SLOT_DELETED" if SaveManager.delete_slot(slot) else "MSG_SLOT_DELETE_FAILED"))
+	_fill()
 
 
 func _on_slot(slot: String) -> void:

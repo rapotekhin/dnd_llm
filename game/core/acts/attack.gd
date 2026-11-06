@@ -46,8 +46,11 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	var seen := CombatRules._as_seen(t)
 	if FightGrid.cover(s, data, f, seen) >= FightGrid.FULL_COVER:
 		return "COMBAT_NO_LINE"
-	if bool(b["melee"]) and CombatRules.blade_reaches(s, data, f, seen, int(b.get("reach", 1))):
-		return ""
+	var throw := bool(b.get("thrown", false))
+	if throw and not Attack.throwable(b):
+		return "COMBAT_CANT_THROW"
+	if bool(b["melee"]) and not throw:  # a blow is only at arm's length: a throw is its own button (v0.8.4.31)
+		return "" if CombatRules.blade_reaches(s, data, f, seen, int(b.get("reach", 1))) else "COMBAT_OUT_OF_REACH"
 	if (b.get("range", []) as Array).is_empty():
 		return "COMBAT_OUT_OF_REACH"
 	return "COMBAT_OUT_OF_RANGE" if FightGrid.shown_dist(f, t) * int(FightGrid.cfg(data)["ft"]) > int(b["range"][1]) else ""
@@ -98,8 +101,10 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 			out.append({"act": id, "to": to, "how": {"action": str(melee["name_en"])}, "t": t, "kind": "melee", "blow": melee, "touch": true,
 				"far": CombatRules.reach_of(data, f), "power": FightAI.avg(melee) * FightAI.blows(data, f, melee)})
 		var ranged := MonsterRules.pick(s, data, f, t, "ranged")
+		if str(ranged.get("kind")) == "melee" and ranged == melee and CombatRules.blade_reaches(s, data, f, t, CombatRules.reach_of(data, f)):
+			ranged = {}  # its dagger at arm's length is a blow, not a throw that leaves its hand
 		if not ranged.is_empty():
-			out.append({"act": id, "to": to, "how": {"action": str(ranged["name_en"])}, "t": t, "kind": "ranged", "blow": ranged,
+			out.append({"act": id, "to": to, "how": {"action": str(ranged["name_en"]), "throw": str(ranged.get("kind")) == "melee"}, "t": t, "kind": "ranged", "blow": ranged,
 				"far": FightGrid.squares_of(data, int(ranged["range"][1])), "short": FightGrid.squares_of(data, int(ranged["range"][0])),
 				"power": FightAI.avg(ranged) * FightAI.blows(data, f, ranged)})
 		var special := MonsterRules.save_action(s, data, f, t, 0)

@@ -1377,10 +1377,11 @@ func _combat_continue() -> void:
 			break
 		if bool(s.combat.get("round_ended", false)):
 			s.combat.erase("round_ended")
-			if not ArenaRules.watching(s):  # a watched bout is told once, at its end
+			if bool(CombatRules.cfg(Catalog.data)["told"]["rounds"]) and not ArenaRules.watching(s):
 				combat_playing = false
 				_narrate_round()
 				return
+			_story_round()  # v0.8.4.31: the round's rolls in the chat, the master tells the fight once, at its end
 		if not str(s.combat.get("outcome", "")).is_empty():
 			combat_playing = false
 			_combat_outcome()
@@ -1402,6 +1403,19 @@ func _narrate_round() -> void:
 	session.combat["log"] = []
 	_keep_rolls(log)
 	_request("combat_round", "\n".join(log))
+
+
+## A round not told by the master: its rolls go to the chat now, its lines wait for the telling of the whole fight.
+func _story_round() -> void:
+	var log: Array = session.combat.get("log", [])
+	if log.is_empty():
+		return
+	session.combat["log"] = []
+	var story: Array = session.combat.get("story", [])
+	story.append("Раунд %d:" % int(session.combat.get("round", 1)))
+	story.append_array(log)
+	session.combat["story"] = story
+	_keep_rolls(log)
 
 
 ## The round's rolls stay in the chat after the fight, before the master's words of it, with their breakdowns (v0.8.4.21.1).
@@ -1431,10 +1445,16 @@ func _combat_outcome() -> void:
 	var log: Array = s.combat.get("log", [])
 	s.combat["log"] = []
 	_keep_rolls(log)
+	var story: Array = s.combat.get("story", [])  # the rounds the master did not tell (v0.8.4.31): the whole fight at once
+	s.combat.erase("story")
+	if not story.is_empty() and not log.is_empty():
+		story.append("Раунд %d:" % int(s.combat.get("round", 1)))
+	story.append_array(log)
+	story = story.slice(maxi(0, story.size() - int(CombatRules.cfg(Catalog.data)["told"]["lines"])))
 	if outcome == "dead":
-		_request("death", "\n".join(log) + "\n" + _hero_path())
+		_request("death", "\n".join(story) + "\n" + _hero_path())
 	else:
-		_request("combat_round", "\n".join(log) + "\nИтог боя: " + tr("COMBAT_OUTCOME_" + outcome.to_upper()))
+		_request("combat_round", "\n".join(story) + "\nИтог боя: " + tr("COMBAT_OUTCOME_" + outcome.to_upper()))
 
 
 func _hero_path() -> String:
@@ -1468,6 +1488,9 @@ func finish_combat(gather := false) -> void:
 	if outcome in ["victory", "truce"]:
 		var back := {}  # v0.7.12: half the spent arrows can be picked up here
 		back = Gear.shot_back(Catalog.data, CombatRules.player(s), s.rng)
+		var lying := Gear.left_on_field(s)  # thrown weapons, the hero's and the foes' (v0.8.4.31): picked up with the arrows
+		for item: String in lying:
+			back[item] = int(back.get(item, 0)) + int(lying[item])
 		if not back.is_empty():
 			s.character["ammo_left"] = {"room": s.room_id, "items": back}
 		if int(s.combat.get("xp", 0)) > 0:
@@ -1493,6 +1516,8 @@ func finish_combat(gather := false) -> void:
 		var foes: Array = CombatRules.enemies(s).filter(func(fid: String) -> bool: return str(CombatRules.fighter(s, fid).get("npc_id", "")).is_empty())
 		lines.append_array(EncounterRules.capture(s, Catalog.data, foes, str(s.combat.get("encounter", "")), str(s.combat.get("room_from", ""))))
 		lines.append_array(EncounterRules.seize(s, Catalog.data))  # v0.7.22.17, #15
+	if outcome == "captured" and arena.is_empty():  # a quest's fight lost: its act goes on from the captivity (v0.8.4.31)
+		lines.append_array(QuestRules.lost(s, Catalog.data, str(s.combat.get("encounter", ""))))
 	for id: String in CombatRules.enemies(s, false) if arena.is_empty() else []:
 		var f := CombatRules.fighter(s, id)
 		if str(f.get("status")) == "dead" and not str(f.get("npc_id", "")).is_empty():  # the body, quests, a murder (v0.7.14)
@@ -3559,6 +3584,10 @@ func _engine_check(params: Dictionary) -> Dictionary:
 			if not listener_id.is_empty():  # v0.7.15.3: a won social check makes the NPC tell what it paid for
 				(result["revealed"] as Array).append_array(SocialRules.reveal_by_check(session, Catalog.data, listener_id, skill_id, int(result["total"])))
 	_add(GameSession.check_entry(params, result))
+	if not bool(result.get("blocked", false)) and not skill_id.is_empty():  # a quest's secret missed: its act goes on from the failure (v0.8.4.31)
+		var missed := QuestRules.missed(session, Catalog.data, skill_id, int(result["total"]))
+		if not missed.is_empty():
+			_told(missed)
 	if not (result.get("revealed", []) as Array).is_empty():
 		var found := ExplorationRules.take_caches(session, Catalog.data, room)
 		found.append_array(QuestRules.advance(session, Catalog.data))

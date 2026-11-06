@@ -314,11 +314,15 @@ static func _next_n(data: Dictionary) -> int:
 
 ## The frame of the act to build, for the designer's turn: the quest, what happened, the act's budget by the difficulty,
 ## the hero, the places and edges near, the SRD foes that fit. The first line is for machines (the stub master).
-static func act_frame(s: GameSession, data: Dictionary, quest_id: String) -> String:
+## `setback` — the act built again after a failed step (v0.8.4.31): the one set by QuestRules.setback, or one readied ahead
+## for it (PrepareRules.setback_preview).
+static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setback: Dictionary = {}) -> String:
 	var world := WorldView.new(data["world"])
 	var q := QuestRules.quest(data["world"], quest_id)
 	var d := difficulty(data, str(q["difficulty"]))
-	var n := int(q.get("built", 0))
+	if setback.is_empty():
+		setback = q.get("setback", {})
+	var n := int(setback["act"]) if not setback.is_empty() else int(q.get("built", 0))
 	var acts: Array = q["acts"]
 	var last := n + 1 == acts.size()
 	var level := _level(s)
@@ -348,6 +352,8 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String) -> Str
 	var done := QuestRules.history(s, data["world"], quest_id)
 	if not done.is_empty():
 		out.append("Что герой уже сделал: " + " ".join(done))
+	if not setback.is_empty():
+		out.append("ПРОВАЛ ШАГА: %s. Акт %d собирается заново от этого провала: история идёт дальше, повторять ту же проверку или тот же бой не нужно. Варианты: другой путь к цели (новый след, свидетель, обходной ход); короче и с меньшей наградой (reward_pct 25–75); или тупик — задание кончается неудачей (ends: \"fail\", последний шаг — уход или признание провала)." % [setback["why"], n + 1])
 	var facts := s.chronicle_tail(data["world"], 8)
 	if not facts.is_empty():
 		out.append("Летопись (последнее): " + "; ".join(facts))
@@ -448,7 +454,14 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	if spec.get("act") != null and int(spec["act"]) != n + 1:
 		return {"reason": "собирается акт %d, не %d" % [n + 1, int(spec["act"])]}
 	var d := difficulty(data, str(q["difficulty"]))
-	var last := n + 1 == (q["acts"] as Array).size()
+	var setback: Dictionary = q.get("setback", {})
+	var ends := _str(spec, "ends")
+	var pct := int(spec.get("reward_pct", 100)) if spec.get("reward_pct") != null else 100
+	if setback.is_empty() and (ends == "fail" or pct != 100):
+		return {"reason": "ends и reward_pct — только у акта, собранного заново после провала шага"}
+	pct = mini(clampi(pct, int(cfg(data)["setback_pct"][0]), int(cfg(data)["setback_pct"][1])), int(q.get("reward_pct", 100)))
+	var fails := ends == "fail"  # v0.8.4.31: a dead end — the quest ends with this act, failed
+	var last := n + 1 == (q["acts"] as Array).size() or fails
 	var content := _plan_act_content(s, data, spec, q, d, last, n == 0)
 	if content.has("reason"):
 		return content
@@ -459,7 +472,7 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	var cap := act_steps_cap(data, q, d, n)
 	if raw.size() > cap:
 		return {"reason": "у «%s» задания в этом акте не больше %d шагов (по шагу оставлено на каждый следующий акт), сейчас %d" % [d["name"], cap, raw.size()]}
-	if last and made < int(d["steps"][0]):
+	if last and not fails and made < int(d["steps"][0]):
 		return {"reason": "у «%s» задания всего не меньше %d шагов — в последнем акте их нужно больше (сейчас %d)" % [d["name"], int(d["steps"][0]), made]}
 	var steps: Array = []
 	var used: Array = []  # refs the steps name: people, encounters, things
@@ -475,7 +488,7 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 		if steps.is_empty() and str(st["when"].get("arrive", "")) == s.room_id:
 			return {"reason": "шаг «%s»: герой уже здесь — первый шаг закрылся бы сразу" % st["text"]}
 		steps.append(st)
-	if last and bool(d["choice"]) and not choice_step:
+	if last and not fails and bool(d["choice"]) and not choice_step:
 		return {"reason": "в финале «%s» задания нужен шаг choice с выборами (choices)" % d["name"]}
 	if not choice_step and not _arr(spec, "choices").is_empty():
 		return {"reason": "choices — только у шага choice"}
@@ -492,7 +505,7 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	var total := int(q.get("fights", 0)) + fights
 	if fights > act_fights_cap(q, d, last):
 		return {"reason": "боёв у «%s» задания в этом акте — не больше %d, сейчас %d" % [d["name"], act_fights_cap(q, d, last), fights]}
-	if last and total < int(d["fights"][0]):
+	if last and not fails and total < int(d["fights"][0]):
 		return {"reason": "боёв у «%s» задания — не меньше %d: в последнем акте добавь бой (encounters и шаг fight), сейчас %d" % [d["name"], int(d["fights"][0]), total]}
 	var choices: Array = []
 	if choice_step:
@@ -510,17 +523,21 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 			return teach
 	var giver := str(q.get("giver", ""))
 	var own := bool(q.get("own", false))
-	if last and not own and str(steps[-1]["when"].get("talk", "")) != giver:  # the quest ends where it began
+	if last and not fails and not own and str(steps[-1]["when"].get("talk", "")) != giver:  # the quest ends where it began
 		var who := str(WorldView.new(data["world"]).npc_name(giver))
 		steps.append({"text": "Вернуться к %s" % who, "when": {"talk": giver}, "action": "Рассказать %s" % who})
 	var tail: Dictionary = steps[-1]
-	var share := int(q["xp"]) - int(q.get("xp_paid", 0)) if last else floori(float(q["xp"]) / (q["acts"] as Array).size())
+	var share := int(q["xp"]) - int(q.get("xp_paid", 0)) if last and not fails else floori(float(q["xp"]) / (q["acts"] as Array).size())
 	tail["xp"] = share
 	if fights > 0:
 		tail["danger"] = true  # class XP of the act at its end (v0.7.19: only the dangerous)
 	var reward_item := _str(spec, "reward_item_id")
-	if last:
-		var cp := int(q.get("reward_cp", 0))
+	if fails:
+		tail["fail_end"] = true  # the act's end is the quest's failure: no reward, the giver thinks worse of the hero
+		if not reward_item.is_empty():
+			return {"reason": "у задания, которое кончается неудачей, награды нет"}
+	elif last:
+		var cp := Price.share(int(q.get("reward_cp", 0)), pct)  # a poorer end after a setback (v0.8.4.31)
 		var top := 0
 		for ch: Dictionary in choices:
 			top = maxi(top, int(ch.get("value_cp", 0)))
@@ -549,7 +566,7 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	if not teach.is_empty():
 		brings.append("курс у учителя: %s" % teach["summary"])
 	return {"plan": {"quest_id": qid, "act": n, "steps": steps, "content": content, "fights": fights, "made": raw.size(), "share": share,
-		"teach": teach.get("spec", {})},
+		"teach": teach.get("spec", {}), "fails": fails, "pct": pct},
 		"summary": "«%s», акт %d «%s»: %s%s" % [q["title"], n + 1, q["acts"][n]["title"], "; ".join(steps.map(func(st: Dictionary) -> String: return str(st["text"]))),
 			("; с ним: " + "; ".join(brings)) if not brings.is_empty() else ""],
 		"line": "«%s»: акт %d «%s»" % [q["title"], n + 1, q["acts"][n]["title"]]}  # steps, foes and rewards stay the master's (v0.7.49.4)
@@ -1056,6 +1073,11 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 		if made.has("plan"):
 			StudyRules.apply_make(s, data, made["plan"])
 	q["built"] = int(q.get("built", 0)) + 1
+	q.erase("setback")
+	if bool(plan.get("fails", false)):
+		q["acts"] = (q["acts"] as Array).slice(0, int(plan["act"]) + 1)  # no act after a dead end
+	if int(plan.get("pct", 100)) < 100:
+		q["reward_pct"] = int(plan["pct"])
 	q["fights"] = int(q.get("fights", 0)) + int(plan["fights"])
 	q["made_steps"] = int(q.get("made_steps", 0)) + int(plan["made"])
 	q["xp_paid"] = int(q.get("xp_paid", 0)) + int(plan["share"])

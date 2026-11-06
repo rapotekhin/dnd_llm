@@ -54,8 +54,21 @@
 		"gate": {"shape": "open", "paved": true, "size": [32, 32], "scatter": [{"cell": "B", "share": 0.02}], "landmarks": ["gate"]},
 		"arena": {"shape": "open", "size": [24, 24], "scatter": [], "landmarks": ["ring"]},
 		"ruin": {"shape": "open", "size": [28, 28], "scatter": [{"cell": "B", "share": 0.08}, {"cell": "%", "share": 0.1}], "landmarks": ["ruin"]},
-		"land": {"shape": "open", "size": [24, 24], "scatter": [{"cell": "%", "share": 0.06}], "landmarks": []}
+		"land": {"shape": "open", "size": [24, 24], "scatter": [{"cell": "%", "share": 0.06}], "landmarks": []},
+		"forest": {"shape": "open", "scatter": [{"cell": "T", "share": 0.2}, {"cell": "%", "share": 0.12}], "landmarks": ["wild"]},
+		"field": {"shape": "open", "scatter": [{"cell": "%", "share": 0.07}, {"cell": "T", "share": 0.02}], "landmarks": ["wild"]},
+		"hills": {"shape": "open", "scatter": [{"cell": "B", "share": 0.06}, {"cell": "%", "share": 0.16}, {"cell": "T", "share": 0.03}], "landmarks": ["wild"]},
+		"rocks": {"shape": "open", "scatter": [{"cell": "B", "share": 0.15}, {"cell": "%", "share": 0.08}, {"cell": "o", "share": 0.015}], "landmarks": ["wild"]},
+		"swamp": {"shape": "open", "scatter": [{"cell": "~", "share": 0.15}, {"cell": "%", "share": 0.2}, {"cell": "T", "share": 0.05}], "landmarks": ["wild"]},
+		"shore": {"shape": "open", "scatter": [{"cell": "~", "share": 0.12}, {"cell": "%", "share": 0.05}, {"cell": "B", "share": 0.02}], "landmarks": ["wild"]},
+		"dunes": {"shape": "open", "scatter": [{"cell": "%", "share": 0.2}, {"cell": "B", "share": 0.02}], "landmarks": []},
+		"snowfield": {"shape": "open", "scatter": [{"cell": "%", "share": 0.16}, {"cell": "B", "share": 0.03}, {"cell": "T", "share": 0.02}], "landmarks": ["wild"]},
+		"camp": {"shape": "open", "size": [28, 28], "scatter": [{"cell": "T", "share": 0.06}, {"cell": "%", "share": 0.06}, {"cell": "B", "share": 0.02}], "landmarks": ["wild"]},
+		"warehouse": {"family": "workshop"}
 	},
+	"terrains": {"_doc": "v0.8.4.31, the author's feedback (the master's open places were empty fields): an open room whose site names no kind takes one by its location's terrain, else `default`.",
+		"grassland": "field", "forest": "forest", "hills": "hills", "mountains": "rocks", "mountain": "rocks", "swamp": "swamp", "coast": "shore",
+		"desert": "dunes", "arctic": "snowfield", "underdark": "rocks", "default": "wild"},
 	"chunks": [
 		{"id": "tavern_hall", "kinds": ["tavern"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "H": "hearth", "S": "stage", "E": "entry"},
 			"rows": [
