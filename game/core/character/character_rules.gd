@@ -224,6 +224,25 @@ static func _grant_free_spells(c: Dictionary, data: Dictionary) -> void:
 		for id: Variant in table.get(str(f), []):
 			if data["spells"].has(str(id)) and not free.has(str(id)):
 				free.append(str(id))
+	var by: Dictionary = {}  # a race trait's spells by its own ability (v0.8.4.33)
+	var traits: Dictionary = data["rules"].get("trait_spells", {})
+	for t: Variant in c.get("traits", []):
+		var row: Dictionary = traits.get(str(t), {})
+		if row.is_empty():
+			continue
+		var mine: Array = (data["rules"].get("trait_cantrips", {}).get(str(t), []) as Array) + (sp.get("race", []) as Array)
+		for lv: String in row.get("at", {}):
+			if int(c.get("level", 1)) >= int(lv):
+				for id: Variant in row["at"][lv]:
+					mine.append(id)
+					if data["spells"].has(str(id)) and not free.has(str(id)):
+						free.append(str(id))
+		for id: Variant in mine:
+			by[str(id)] = str(row.get("ability", ""))
+	if by.is_empty():
+		sp.erase("ability_of")
+	else:
+		sp["ability_of"] = by
 	if free.is_empty():
 		sp.erase("free")
 	else:
@@ -553,7 +572,8 @@ static func hands_freed(c: Dictionary, data: Dictionary, session_items: Dictiona
 	return out
 
 
-## The weapon in the main hand is held in both: a two-handed one, or a versatile one with the other hand empty.
+## The weapon in the main hand is held in both: a two-handed one, or a versatile one with the other hand empty (a duelist
+## keeps it in one: its +2 is worth more than the bigger die, v0.8.4.33).
 static func two_hand_grip(c: Dictionary, data: Dictionary, session_items: Dictionary) -> bool:
 	var eq: Dictionary = c.get("equipped", {})
 	var id := str(eq.get("main_hand", ""))
@@ -561,7 +581,7 @@ static func two_hand_grip(c: Dictionary, data: Dictionary, session_items: Dictio
 		return false
 	var w := ItemRules.def_of(data["items"], session_items, id)
 	return _two_handed(data, session_items, id) or ((w.get("weapon", {}) as Dictionary).has("versatile")
-		and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty())
+		and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty() and not style(c, "dueling"))
 
 
 ## Pounds the hero carries: everything in the pack, worn things too (v0.7.7).

@@ -99,7 +99,7 @@ func test_rage_ends_without_a_blow_and_danger_sense_helps_dex_saves() -> void:
 	_fight(s, "ogre", 3)
 	CombatRules.player(s)["raging"] = true
 	var lines: Array[String] = []
-	FeatureRules.end_turn(s, CombatRules.player(s), lines)
+	FeatureRules.end_turn(s, data, CombatRules.player(s), lines)
 	assert_bool(bool(CombatRules.player(s)["raging"])).is_false()
 	assert_array(HeroDefense.save_advantages(s.character, data, "dex", "")).is_not_empty()
 	assert_array(HeroDefense.save_advantages(s.character, data, "str", "", true)).contains(["ярость"])

@@ -82,7 +82,7 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	if hero:
 		lines.append_array(ConditionRules.impose(s, data, {"condition": "unconscious", "ends": {"rest": "long"}, "source": {"kind": "engine", "name": "0 HP"}}))
 		s.combat["death_saves"] = {"ok": 0, "fail": 0}
-		f.erase("raging")
+		FeatureRules.rage_ends(s, data, f, lines)
 		lines.append("%s падает без сознания" % me["name"])
 		return
 	if who.has("called_by") and str(who.get("side")) == "enemy":

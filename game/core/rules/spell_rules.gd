@@ -50,6 +50,12 @@ static func free_now(c: Dictionary, data: Dictionary, spell_id: String) -> bool:
 	return is_free(c, spell_id) and (stock.is_empty() or Stock.left(c, data, stock) > 0)
 
 
+## The circle a spell cast without a slot is cast at: its charges' row `circle` (a race's Hellish Rebuke — the 2nd), else its own.
+static func free_circle(c: Dictionary, data: Dictionary, spell_id: String) -> int:
+	var stock := stock_of(c, data, spell_id)
+	return maxi(1, int(Stock.table(data).get(stock, {}).get("circle", level_of(data, spell_id)))) if not stock.is_empty() else maxi(1, level_of(data, spell_id))
+
+
 static func level_of(data: Dictionary, spell_id: String) -> int:
 	return int(data["spells"].get(spell_id, {}).get("level", 0))
 
@@ -124,7 +130,7 @@ static func cast(c: Dictionary, data: Dictionary, spell_id: String, slot: int, s
 					ConditionRules.remove_effect(c, int(e.get("uid", 0)))
 		c["concentration"] = spell_id
 		c.erase("invisible_others")  # v0.7.50.1: on whom Invisibility lies — set by the caster of the target
-		var rounds := ConditionRules.spell_rounds(data, spell_id)
+		var rounds := ConditionRules.spell_rounds(data, spell_id, session)
 		c["concentration_ends"] = ConditionRules.now(session) + rounds if session != null and rounds >= 0 else -1
 		lines.append("концентрация")
 	if session != null and spell_id == "identify":  # v0.7.12: every unknown thing the hero carries

@@ -239,7 +239,7 @@ static func cast_on_npc(s: GameSession, data: Dictionary, spell_id: String, slot
 		if after < int(h["max"]):
 			Being.of(s, npc_id)["hp"] = after
 		return ["%s: +%d HP" % [who, after - int(h["hp"])]]
-	var rounds := ConditionRules.spell_rounds(data, spell_id)
+	var rounds := ConditionRules.spell_rounds(data, spell_id, s)
 	var b := Being.of(s, npc_id)
 	SpellEffects._end_spell_on(b, spell_id)
 	ConditionRules.add_effect(b, {"source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}, "cast": slot, "keeps": true,

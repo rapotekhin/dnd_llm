@@ -338,6 +338,10 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	if not hit:
 		lines.append(line + " — промах")
 		CombatRules.fx(s, str(t["id"]), "dodge")
+		if FeatureRules.giant_killer(s, data, t, f) and (not Sheet.is_hero(t) or FeatureRules.policy(s) != "never"):  # on a miss too (v0.8.4.33)
+			t["reacted"] = true
+			lines.append("%s: Убийца великанов — удар в ответ" % Sheet.holder(s, t).get("name", ""))
+			swing(s, data, t, f, blade(s, data, t).merged({"opts": {"no_horde": true}}, true), lines)
 		return none
 	var guard := SpellEffects.against_attack(s, data, f, t, total)  # Mirror Image (v0.7.13.2)
 	if not guard.is_empty():
@@ -349,6 +353,10 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 		line += " (адамантин: не крит)"
 	if not crit and Acts.react(s, data, t, "hit", {"foe": str(f["id"]), "total": total, "melee": bool(b.get("melee", false)) and not shot(f, t, b)}, lines):  # Parry, Shield
 		lines.append(line + " — отбито")
+		CombatRules.fx(s, str(t["id"]), "dodge")
+		return none
+	if not crit and _words_for(s, data, f, t, total, ac, lines):
+		lines.append(line + " — мимо")
 		CombatRules.fx(s, str(t["id"]), "dodge")
 		return none
 	var hurt := _damage(s, data, f, t, b, adv and not dis, dis and not adv, crit)
@@ -373,6 +381,20 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 		Acts.react(s, data, t, "hurt", ctx, lines)
 	land(s, data, f, t, b, ctx, lines)
 	return {"hit": bool(ctx["hit"]), "crit": crit, "damage": int(ctx["dmg"])}
+
+
+## Cutting Words (5e) for one of the target's side: a bard within 60 ft who sees the striker spends its reaction and a die of
+## Bardic Inspiration on the roll at `t` (the hero's own is in its hit's reactions). Whether the blow misses now.
+static func _words_for(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, total: int, ac: int, lines: Array[String]) -> bool:
+	for id: String in CombatRules.friends_of(s, t):
+		var o := CombatRules.fighter(s, id)
+		var c := Sheet.holder(s, o)
+		if id == str(t["id"]) or not FeatureRules.has(c, "cutting_words") or bool(o.get("reacted", false)) or not up(s, o) 				or ConditionRules.incapacitated(c) or Stock.left(c, data, "bardic_inspiration") < 1 or ConditionRules.has(c, "blinded") 				or ConditionRules.invisible(Sheet.holder(s, f), data) or FightGrid.dist(o, f) > FightGrid.squares_of(data, 60) 				or (Sheet.is_hero(o) and FeatureRules.policy(s) == "never"):
+			continue
+		var ctx := {"total": total, "ac": ac, "nat20": false, "hit": true}
+		FeatureRules.apply_reaction(s, data, o, f, "cutting_words", ctx, lines)
+		return not bool(ctx["hit"])
+	return false
 
 
 ## The damage of a hit by its pieces, each through what the target resists: {dmg, types, notes, prone, tip}.
@@ -428,6 +450,8 @@ static func land(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 	var crit := bool(ctx["crit"])
 	var line := str(ctx["line"])
 	var pieces: Array = b.get("pieces", [])
+	var it := Sheet.holder(s, t)
+	b["wounded"] = int(it.get("hp", 0)) < int(it.get("max_hp", 0))  # as it was before this blow: Colossus Slayer (v0.8.4.33)
 	if not bool(ctx["hit"]):
 		lines.append(line + " — промах")
 		CombatRules.fx(s, str(t["id"]), "dodge")
@@ -447,6 +471,7 @@ static func land(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 		if bool(b.get("weapon", false)):
 			_extras(s, data, f, t, b, crit, lines)
 			_by_class(s, data, f, t, b, crit, lines)
+		b.erase("wounded")
 		var a: Dictionary = b.get("act", {})
 		if not a.is_empty():
 			var pounce := MonsterRules.charge_prone(s, data, f, t, ctx["prone"], lines)

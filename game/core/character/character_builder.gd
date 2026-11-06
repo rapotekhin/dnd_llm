@@ -449,7 +449,7 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 	var cantrips: Array = (ch.get("cantrips", []) as Array).duplicate()
 	_merge(cantrips, ch.get("race_cantrips", []))
 	var picked: Array = (ch.get("spells", []) as Array).duplicate()
-	var spells := {"cantrips": cantrips, "known": [], "prepared": [], "always": []}
+	var spells := {"cantrips": cantrips, "known": [], "prepared": [], "always": [], "race": (ch.get("race_cantrips", []) as Array).duplicate()}
 	match str(sp["mode"]):
 		"known":
 			spells["known"] = picked

@@ -136,7 +136,7 @@ func test_a_berserker_rages_by_the_ai_and_all_rage_gives_is_there() -> void:
 	var b := Attack.blade(s, data, f)
 	assert_int(FeatureRules.rage_bonus(s, data, f, b, CombatRules.player(s))).is_equal(2)
 	assert_str(Acts.one("feature").can(s, data, f, "", {"stock": "rage"})).is_not_empty()
-	FeatureRules.end_turn(s, f, lines)
+	FeatureRules.end_turn(s, data, f, lines)
 	assert_bool(bool(f["raging"])).is_false()
 	assert_str(_text(lines)).contains("Ярость угасает")
 

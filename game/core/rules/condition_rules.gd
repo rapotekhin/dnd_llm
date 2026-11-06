@@ -75,7 +75,14 @@ static func durations(data: Dictionary) -> Array[String]:
 
 
 ## Rounds of a spell's duration («Концентрация, вплоть до 1 минуты» → 10); −1 when it has no end in time.
-static func spell_rounds(data: Dictionary, spell_id: String) -> int:
+static func spell_rounds(data: Dictionary, spell_id: String, s: GameSession = null) -> int:
+	var n := _duration_rounds(data, spell_id)
+	if s != null and n >= ROUNDS_PER_MINUTE and str(s.combat.get("meta_now", "")) == "extended_spell":  # Extended Spell (5e): a minute or more, twice, up to a day
+		n = mini(n * 2, 1440 * ROUNDS_PER_MINUTE)
+	return n
+
+
+static func _duration_rounds(data: Dictionary, spell_id: String) -> int:
 	var text := str(data["spells"].get(spell_id, {}).get("duration", "")).to_lower()
 	var rx := RegEx.create_from_string("(\\d+)\\s*(раунд|минут|час|дн|день)")
 	var m := rx.search(text)

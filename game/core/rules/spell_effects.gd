@@ -195,7 +195,7 @@ static func _effect(s: GameSession, data: Dictionary, spell_id: String, slot: in
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
 	var me := CombatRules.caster(s)
-	var rounds := ConditionRules.spell_rounds(data, spell_id)
+	var rounds := ConditionRules.spell_rounds(data, spell_id, s)
 	var e := {"condition": "", "source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}, "by": str(me["id"]),
 		"concentration": bool(spell.get("concentration", false)) and Sheet.is_hero(me) and Sheet.is_hero(who), "ends": {"at": ConditionRules.now(s) + rounds} if rounds > 0 else {}}
 	for k: String in sp:
@@ -751,7 +751,7 @@ static func start_sustained(s: GameSession, data: Dictionary, spell_id: String, 
 			if FightGrid.touching(CombatRules.fighter(s, id), me):
 				t = CombatRules.fighter(s, id)
 				break
-	var rounds := ConditionRules.spell_rounds(data, spell_id)
+	var rounds := ConditionRules.spell_rounds(data, spell_id, s)
 	var e := {"condition": "", "source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}, "by": str(me["id"]),
 		"concentration": bool(spell.get("concentration", false)) and Sheet.is_hero(me), "ends": {"at": ConditionRules.now(s) + rounds} if rounds > 0 else {},
 		"sustained": spell_id, "dice": dice, "target": str(t.get("id", "")), "dc": CombatRules.spell_dc(s), "attack": CombatRules.spell_attack(s),
@@ -1025,7 +1025,7 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 			continue
 		var flag := str(cu["flag"])
 		if flag == "calmed" and Sheet.is_hero(f):  # the hero is no one's to stand down: charmed, by 5e it cannot strike its caster
-			lines.append_array(CombatRules._add_condition(s, data, f, "charmed", {"rounds": ConditionRules.spell_rounds(data, spell_id), "spell": spell_id}))
+			lines.append_array(CombatRules._add_condition(s, data, f, "charmed", {"rounds": ConditionRules.spell_rounds(data, spell_id, s), "spell": spell_id}))
 			lines.append("%s опускает оружие — %s" % [f["name"], name])
 			continue
 		if flag == "calmed":  # Calm Emotions: no more fight in it (5e: indifferent)
@@ -1110,6 +1110,8 @@ static func end_zones(s: GameSession, spell_id: String, by: String = CombatRules
 static func reaction_slot(c: Dictionary, data: Dictionary, spell_id: String) -> int:
 	if not SpellRules.ready(c).has(spell_id):
 		return 0
+	if SpellRules.free_now(c, data, spell_id):  # a race's Hellish Rebuke: its charge, at the circle of its row (v0.8.4.33)
+		return SpellRules.free_circle(c, data, spell_id)
 	return SpellRules.lowest_slot(c, data, spell_id)
 
 
@@ -1147,7 +1149,7 @@ static func apply_hit_reaction(s: GameSession, data: Dictionary, f: Dictionary, 
 	var c := s.character
 	var spell_id := id.trim_prefix("spell_")
 	var slot := reaction_slot(c, data, spell_id)
-	SpellRules.cast(c, data, spell_id, slot, null, false)
+	SpellRules.cast(c, data, spell_id, 0 if SpellRules.free_now(c, data, spell_id) else slot, null, false)
 	if str(spec(data, spell_id).get("reaction", "")) == "hit":
 		ctx["ac"] = int(ctx["ac"]) + guard(s, data, Sheet.HERO, spell_id)
 		var still := int(ctx["total"]) >= int(ctx["ac"]) or bool(ctx.get("nat20", false))
@@ -1163,7 +1165,7 @@ static func rebuke(s: GameSession, data: Dictionary, f: Dictionary, spell_id: St
 	var sp: Dictionary = data["spells"][spell_id]
 	var hero := by.is_empty()
 	var dice := CombatRules._spell_dice(sp, slot, int(s.character.get("level", 1)) if hero else int(by["level"]))
-	var dc := int(s.character.get("spell_dc", 10)) if hero else int(by["dc"])  # its own DC: a foe's spell may be landing around this
+	var dc := int(ActionRules.numbers(s, data, spell_id).get("dc", s.character.get("spell_dc", 10))) if hero else int(by["dc"])  # its own DC: a foe's spell may be landing around this
 	lines.append_array(_save_hit(s, data, str(sp["name"]), str(sp["damage_type"]), str(sp["save"]["ability"]), dice, dc, f,
 		str(sp["save"].get("success", "half")) == "half", hero))
 

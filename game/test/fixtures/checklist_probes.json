@@ -7628,7 +7628,7 @@
 		"cutting_words": {
 			"status": "нет механики",
 			"steps": [
-				"○ частично: только против попадания по самому барду; нет урона, проверок и атак по союзникам"
+				"○ частично: атаки по барду и по союзникам в 60 фт (Attack._words_for); нет урона и проверок"
 			]
 		},
 		"danger_sense": {
@@ -7968,9 +7968,9 @@
 			]
 		},
 		"fighter_fighting_style_dueling": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: +2 к урону одной рукой есть, но даётся и универсальному оружию двумя руками (к10)"
+				"✓ движок читает по имени «dueling» (character_rules, combat_rules) · проверено: CombatRules.weapon_profile: +2 к урону оружием в одной руке; универсальное остаётся в одной руке (к8 + 2)"
 			]
 		},
 		"fighter_fighting_style_great_weapon_fighting": {
@@ -8004,9 +8004,9 @@
 			]
 		},
 		"fighting_style_dueling": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: +2 к урону одной рукой есть, но даётся и универсальному оружию двумя руками (к10)"
+				"✓ движок читает по имени «dueling» (character_rules, combat_rules, character_rules) · проверено: CombatRules.weapon_profile: +2 к урону оружием в одной руке; универсальное остаётся в одной руке (к8 + 2)"
 			]
 		},
 		"fighting_style_great_weapon_fighting": {
@@ -8060,21 +8060,21 @@
 			]
 		},
 		"frenzy": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: удар бонусом есть; истощение только герою и после боя, неистовство не гаснет с яростью"
+				"✓ движок читает (код): attack, frenzy, feature_rules, being · проверено: act frenzy: удар бонусом в ярости; FeatureRules.rage_ends — истощение у любого, когда ярость кончается"
 			]
 		},
 		"hunters_prey_colossus_slayer": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: «ниже максимума» проверяется после урона удара — срабатывает и по целому"
+				"✓ движок читает (код): feature_rules · проверено: FeatureRules.hit_extras: +1к8 раз в ход, если цель была ранена до удара (Attack.land: wounded)"
 			]
 		},
 		"hunters_prey_giant_killer": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: удар в ответ только на попадание по герою, не на промах"
+				"✓ движок читает (код): feature_rules · проверено: FeatureRules.giant_killer: удар реакцией в ответ большому врагу рядом — на попадание и на промах"
 			]
 		},
 		"hunters_prey_horde_breaker": {
@@ -8131,31 +8131,31 @@
 		"metamagic_1": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает «metamagic» (feature_rules, being) · проверено: LevelUp: выбор двух вариантов метамагии, оплата очками чародейства при касте в бою"
+				"✓ движок читает «metamagic» (combat_rules, feature_rules, being) · проверено: LevelUp: выбор двух вариантов метамагии, оплата очками чародейства при касте в бою"
 			]
 		},
 		"metamagic_distant_spell": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: дистанция удваивается; касание даёт 10 фт вместо 30"
+				"✓ движок читает по имени «distant_spell» (combat_rules, feature_rules) · проверено: CombatRules.spell_range: дальность ×2, касание — 30 фт (metamagic.distant_spell.touch_ft)"
 			]
 		},
 		"metamagic_empowered_spell": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: урон бросается дважды, берётся лучший, вместо переброса до мод. Хар костей"
+				"✓ движок читает по имени «empowered_spell» (combat_rules, feature_rules) · проверено: CombatRules._empowered_roll: худшие кости урона перебрасываются, до мод. Харизмы (мин. 1)"
 			]
 		},
 		"metamagic_extended_spell": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: удваиваются лишь раунды заклинаний-состояний; баффы, зоны и прочие длительности нет"
+				"✓ движок читает по имени «extended_spell» (combat_rules, condition_rules, feature_rules) · проверено: ConditionRules.spell_rounds: длительность от минуты ×2, до суток; состояния — таймер ×2"
 			]
 		},
 		"metamagic_heightened_spell": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: помеха на спасбросок у всех целей заклинания, а не у одной"
+				"✓ движок читает по имени «heightened_spell» (combat_rules, feature_rules) · проверено: CombatRules._heighten: помеха на спасбросок одной цели заклинания"
 			]
 		},
 		"metamagic_quickened_spell": {
@@ -8335,9 +8335,9 @@
 			]
 		},
 		"ranger_fighting_style_dueling": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: +2 к урону одной рукой есть, но даётся и универсальному оружию двумя руками (к10)"
+				"✓ движок читает по имени «dueling» (character_rules, combat_rules) · проверено: CombatRules.weapon_profile: +2 к урону оружием в одной руке; универсальное остаётся в одной руке (к8 + 2)"
 			]
 		},
 		"ranger_fighting_style_two_weapon_fighting": {
@@ -8794,9 +8794,9 @@
 			]
 		},
 		"trait:high_elf_cantrip": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: заговор выбирается, но творится от характеристики класса, не от Инт (у воина Сл 10, атака +0)"
+				"✓ при создании или повышении: «spell_choice» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder: заговор из списка; spells.ability_of → ActionRules.numbers по Интеллекту"
 			]
 		},
 		"trait:naturally_stealthy": {
@@ -8944,9 +8944,9 @@
 			]
 		},
 		"trait:infernal_legacy": {
-			"status": "нет механики",
+			"status": "работает",
 			"steps": [
-				"○ частично: только Чудотворство (и то словами мастера); нет Адского укора с 3 и Тьмы с 5 уровня"
+				"✓ есть в правилах (rules.json) · проверено: trait_cantrips + trait_spells: Чудотворство, Адский укор (2 круг) с 3 и Тьма с 5 раз в долгий отдых, по Харизме"
 			]
 		},
 		"trait:dwarven_resilience": {

@@ -184,8 +184,9 @@ static func dice_avg(expr: String, mod: int = 0) -> float:
 ## "2d6+3" (or "1d8+MOD" with `mod`) → total; a critical doubles the dice; a die of `reroll` or less is rolled once more (Great
 ## Weapon Fighting: 2).
 static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = false, mod: int = 0, reroll: int = 0) -> int:
-	if expr.begins_with("E"):  # Empowered Spell: two rolls, the better (v0.7.10)
-		return maxi(roll_dice(rng, expr.substr(1), crit, mod, reroll), roll_dice(rng, expr.substr(1), crit, mod, reroll))
+	if expr.begins_with("E"):  # Empowered Spell "E<k>:<dice>": up to k dice below their middle rolled again (5e, v0.8.4.33)
+		return _empowered_roll(rng, expr.substr(1).get_slice(":", 1) if expr.contains(":") else expr.substr(1),
+			int(expr.substr(1).get_slice(":", 0)) if expr.contains(":") else 1, crit, mod, reroll)
 	var e := expr.replace(" ", "").replace("MOD", str(mod))
 	var total := 0
 	var parts := e.replace("-", "+-").split("+", false)
@@ -198,6 +199,27 @@ static func roll_dice(rng: RandomNumberGenerator, expr: String, crit: bool = fal
 				total += rng.randi_range(1, sides) if r <= reroll else r
 		else:
 			total += int(p)
+	return total
+
+
+static func _empowered_roll(rng: RandomNumberGenerator, expr: String, k: int, crit: bool, mod: int, reroll: int) -> int:
+	var e := expr.replace(" ", "").replace("MOD", str(mod))
+	var total := 0
+	var dice: Array[Vector2i] = []  # (value, sides)
+	for p: String in e.replace("-", "+-").split("+", false):
+		if p.contains("d"):
+			var n := int(p.get_slice("d", 0)) if not p.get_slice("d", 0).is_empty() else 1
+			var sides := int(p.get_slice("d", 1))
+			for i in n * (2 if crit else 1):
+				var r := rng.randi_range(1, sides)
+				dice.append(Vector2i(rng.randi_range(1, sides) if r <= reroll else r, sides))
+		else:
+			total += int(p)
+	dice.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x * 2 - a.y < b.x * 2 - b.y)  # the worst against its die first
+	for i in dice.size():
+		if i < k and dice[i].x * 2 < dice[i].y + 1:
+			dice[i].x = rng.randi_range(1, dice[i].y)
+		total += dice[i].x
 	return total
 
 
@@ -662,9 +684,10 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	if ranged and _has_style(c, "archery"):
 		to_hit += 2
 		RollParts.add(hit_parts, "боевой стиль: стрельба", 2)
-	if not ranged and not props.has("two_handed") and str(eq.get("off_hand", "")).is_empty() and _has_style(c, "dueling"):
+	var duel := not ranged and not props.has("two_handed") and str(eq.get("off_hand", "")).is_empty() and _has_style(c, "dueling")
+	if duel:  # one hand on it: a versatile weapon keeps its one-handed die (v0.8.4.33)
 		bonus += 2
-	if w.has("versatile") and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty() and not offhand:
+	elif w.has("versatile") and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty() and not offhand:
 		dice = str(w["versatile"])
 	var magic := ItemRules.plus(def, ["magic_plus"])  # a +N weapon (v0.6.3)
 	to_hit += magic + CraftRules.quality_mod(def)
@@ -937,7 +960,7 @@ static func _condition_on(s: GameSession, data: Dictionary, spell_id: String, sp
 		lines.append("%s: на %s не действует%s" % [name, t["name"], "" if no == "-" else " — " + no])
 		return
 	var ab := str(sp.get("save", {}).get("ability", spec.get("save", "dex")))  # Web asks of who is caught
-	var r := Sheet.save(s, data, t, ab, spell_dc(s), tag, str(s.combat.get("meta_now", "")) == "heightened_spell")
+	var r := Sheet.save(s, data, t, ab, spell_dc(s), tag, _heighten(s))
 	var ok := bool(r["ok"])
 	AnimRules.outcome(s, t, "resist" if ok else "debuff")
 	lines.append("%s%s: %s — спасбросок %s против Сл %d %s" % [name, said, t["name"], ab_name(ab), spell_dc(s),
@@ -1092,7 +1115,7 @@ static func spell_range(s: GameSession, data: Dictionary, spell_id: String, f: D
 	if spell_id == "eldritch_blast" and FeatureRules.has(Sheet.holder(s, f), "eldritch_invocation_eldritch_spear"):
 		ft = 300
 	if FeatureRules.active_metamagic(s, data, f) == "distant_spell":
-		ft *= 2
+		ft = int(FeatureRules.cfg(data)["metamagic"]["distant_spell"].get("touch_ft", 30)) if ft <= 5 else ft * 2  # a touch becomes 30 ft (5e)
 	return ft
 
 
@@ -1214,7 +1237,7 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 					continue
 				var save_ab := str(sp["save"]["ability"])
 				var dc := spell_dc(s)
-				var opts := {"tag": "magic", "half": str(sp["save"]["success"]) == "half", "dis": str(s.combat.get("meta_now", "")) == "heightened_spell"}
+				var opts := {"tag": "magic", "half": str(sp["save"]["success"]) == "half", "dis": _heighten(s)}
 				if sp.has("area"):
 					opts["from"] = _area_origin(s, data, sp, t)
 				var sh := Harm.save_half(s, data, tg, save_ab, dc, [{"n": dmg_full, "type": dtype}], opts)
@@ -1517,7 +1540,17 @@ static func ab_name(ab: String) -> String:
 
 ## Empowered Spell: the damage dice once more, the better roll counts (approximated as a dice expression «max of two»).
 static func _empowered(s: GameSession, dice: String) -> String:
-	return dice if str(s.combat.get("meta_now", "")) != "empowered_spell" else "E" + dice
+	if str(s.combat.get("meta_now", "")) != "empowered_spell":
+		return dice
+	return "E%d:%s" % [maxi(1, FeatureRules.ab_mod(Sheet.holder(s, caster(s)), "cha")), dice]
+
+
+## Heightened Spell (5e): one target saves with disadvantage — the first that saves against the spell, then no more.
+static func _heighten(s: GameSession) -> bool:
+	if str(s.combat.get("meta_now", "")) != "heightened_spell":
+		return false
+	s.combat["meta_now"] = ""
+	return true
 
 
 static func _spell_dice(sp: Dictionary, slot: int, level: int) -> String:
@@ -1777,7 +1810,7 @@ static func _finish(s: GameSession, data: Dictionary, f: Dictionary, lines: Arra
 				lines.append("Мерцание: %d — %s исчезает в эфире до своего хода" % [r, me.get("name", "")])
 			else:
 				lines.append("Мерцание: %d — остаётся здесь" % r)
-		FeatureRules.end_turn(s, f, lines)
+		FeatureRules.end_turn(s, data, f, lines)
 		lines.append_array(ConditionRules.end_of_turn(s, data, f))
 	s.combat.erase("prompt")
 	_check_end(s, data, lines)

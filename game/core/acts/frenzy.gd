@@ -33,4 +33,4 @@ func worth(_s: GameSession, data: Dictionary, _f: Dictionary) -> float:
 
 func run(s: GameSession, _data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
 	f["frenzy"] = true
-	return ["%s впадает в неистовство: удар бонусным действием каждый ход, после боя — истощение" % _name(s, f)]
+	return ["%s впадает в неистовство: удар бонусным действием каждый ход, когда ярость кончится — истощение" % _name(s, f)]

@@ -279,7 +279,8 @@ static func hit_extras(s: GameSession, data: Dictionary, f: Dictionary, b: Dicti
 	var dice: Array[String] = []
 	var notes: Array[String] = []
 	var e := CombatRules.points(s, data, f)
-	if has(c, "hunters_prey_colossus_slayer") and int(it.get("hp", 0)) < int(it.get("max_hp", 0)) and not bool(e.get("colossus", false)):
+	var wounded := bool(b["wounded"]) if b.has("wounded") else int(it.get("hp", 0)) < int(it.get("max_hp", 0))  # before the blow
+	if has(c, "hunters_prey_colossus_slayer") and wounded and not bool(e.get("colossus", false)):
 		e["colossus"] = true
 		dice.append("1d8")
 		notes.append("Убийца колоссов")
@@ -412,9 +413,15 @@ static func reactions(s: GameSession, data: Dictionary, t: Dictionary, f: Dictio
 	if Sheet.is_hero(t):
 		out.append_array(SpellEffects.hit_reactions(s, data, {"total": int(hit.get("total", int(f.get("last_total", 0)))), "ac": int(hit.get("ac", c.get("ac", 10))),
 			"nat20": bool(hit.get("nat20", false)), "dmg": dmg}))  # v0.7.13.7
-	if has(c, "hunters_prey_giant_killer") and CombatRules.SIZES.find(Sheet.size(s, data, f)) >= 3 and FightGrid.touching(f, t):
+	if giant_killer(s, data, t, f):
 		out.append({"id": "giant_killer", "label": "Убийца великанов: удар в ответ"})
 	return out
+
+
+## Giant Killer (5e): a Large or larger foe beside `t` hit or missed it — `t` may strike back with its reaction.
+static func giant_killer(s: GameSession, data: Dictionary, t: Dictionary, f: Dictionary) -> bool:
+	var c := Sheet.holder(s, t)
+	return has(c, "hunters_prey_giant_killer") and not bool(t.get("reacted", false)) and not ConditionRules.incapacitated(c) 		and int(c.get("hp", 0)) > 0 and CombatRules.SIZES.find(Sheet.size(s, data, f)) >= 3 and FightGrid.touching(f, t)
 
 
 static func bardic_die(c: Dictionary, data: Dictionary) -> int:
@@ -1051,14 +1058,23 @@ static func _breath(s: GameSession, data: Dictionary, f: Dictionary, target_id: 
 
 
 ## The end of a turn: a rage with no attack and no damage taken ends; Sacred Weapon runs down. Lines.
-static func end_turn(s: GameSession, f: Dictionary, lines: Array[String]) -> void:
+static func end_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	if bool(f.get("raging", false)):
 		if not bool(f.get("rage_kept", false)):
-			f["raging"] = false
 			lines.append(("" if Sheet.is_hero(f) else "%s: " % f["name"]) + "Ярость угасает: за ход ни удара, ни раны")
+			rage_ends(s, data, f, lines)
 		f["rage_kept"] = false
 	if int(f.get("sacred_weapon", 0)) > 0:
 		f["sacred_weapon"] = int(f["sacred_weapon"]) - 1
+
+
+## The rage of `f` ends (a turn without a blow, 0 HP, the fight over): a frenzy with it, and its level of exhaustion (5e:
+## when the rage ends) — for anybody (v0.8.4.33).
+static func rage_ends(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	f["raging"] = false
+	if bool(f.get("frenzy", false)):
+		f.erase("frenzy")
+		lines.append_array(ConditionRules.add_exhaustion(s, data, 1, "неистовство", Being.HERO if Sheet.is_hero(f) else str(f["id"])))
 
 
 ## Dark One's Blessing: one who drops a foe on its own turn gets temporary HP (CHA + warlock level).

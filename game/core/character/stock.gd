@@ -20,7 +20,9 @@ static func owned(c: Dictionary, data: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var all := table(data)
 	for id: String in all:
-		if all[id].has("spell") and not all[id].has("features") and SpellRules.ready(c).has(str(all[id]["spell"])):  # an ability of parts: v0.7.64
+		if int(all[id].get("level", 0)) > int(c.get("level", 1)):  # a race's spell from its level (v0.8.4.33)
+			continue
+		if all[id].has("spell") and not all[id].has("features") and not all[id].has("traits") and SpellRules.ready(c).has(str(all[id]["spell"])):  # an ability of parts: v0.7.64
 			out.append(id)
 			continue
 		for f: Variant in all[id].get("features", []):  # with `spell` too: the charges of a feature's spell (v0.8.4.26.1)

@@ -2589,6 +2589,8 @@
 	},
 	"resources": {
 		"_doc": "Feature uses (v0.6.0): who has them (features), what a press gives in a fight (in_fight: points, stance; no_armor: refused in this armour), how many (max: fixed | class_specific with default | ability_mod with min and plus | per_level), when they come back (short | long; short_with: a feature that makes it short). on_use: what the engine does itself (heal [count, sides, bonus] where bonus may be \"level\"; heal_amount — heals the points spent). combat_cost: what a use costs in a fight (action by default, bonus, free). v0.7.63: this is the one stock of what a character spends and gets back; without `features` a row is everybody's and is no feature: spell slots (max.slots — a circle of slots_max; short_with may be a list) and hit dice (back half_level — a long rest returns half the level, at least 1). Spent is `spent` {id: n} on the character. v0.8.4.26.1: max.slot_any — paid by the lowest spell slot left; on_use.sense {types, depth} — the kinds of creatures in the waiting encounters around (EncounterRules.sense); `spell` with `features` — the charges of a feature's spell (SpellRules.stock_of).",
+		"infernal_rebuke": {"_doc": "Infernal Legacy (v0.8.4.33): Hellish Rebuke once a long rest from level 3, as a 2nd-circle spell", "traits": ["infernal_legacy"], "level": 3, "spell": "hellish_rebuke", "circle": 2, "max": {"fixed": 1}, "recharge": "long", "combat_cost": "never"},
+		"infernal_darkness": {"_doc": "Infernal Legacy (v0.8.4.33): Darkness once a long rest from level 5", "traits": ["infernal_legacy"], "level": 5, "spell": "darkness", "max": {"fixed": 1}, "recharge": "long", "combat_cost": "never"},
 		"invocation_mire_the_mind": {"features": ["eldritch_invocation_mire_the_mind"], "spell": "slow", "max": {"fixed": 1}, "recharge": "long", "combat_cost": "never"},
 		"invocation_sign_of_ill_omen": {"features": ["eldritch_invocation_sign_of_ill_omen"], "spell": "bestow_curse", "max": {"fixed": 1}, "recharge": "long", "combat_cost": "never"},
 		"invocation_thief_of_five_fates": {"features": ["eldritch_invocation_thief_of_five_fates"], "spell": "bane", "max": {"fixed": 1}, "recharge": "long", "combat_cost": "never"},
@@ -3448,6 +3450,11 @@
 			"thaumaturgy"
 		]
 	},
+	"trait_spells": {
+		"_doc": "Race traits that cast (v0.8.4.33): the spells of `at` from that level (at will, their charges in rules.resources by `traits`), all of the trait's spells — its cantrips, a chosen one (spells.race) and these — by `ability`, not the class's.",
+		"infernal_legacy": {"ability": "cha", "at": {"3": ["hellish_rebuke"], "5": ["darkness"]}},
+		"high_elf_cantrip": {"ability": "int"}
+	},
 	"theft": {
 		"rearm_days": 3,
 		"handful_cp": 1000,
@@ -4284,7 +4291,8 @@
 			},
 			"distant_spell": {
 				"name": "Дальнее",
-				"cost": 1
+				"cost": 1,
+				"touch_ft": 30
 			},
 			"extended_spell": {
 				"name": "Продлённое",

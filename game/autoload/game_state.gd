@@ -1561,12 +1561,13 @@ func finish_combat(gather := false) -> void:
 	for cond: String in ["unconscious", "prone", "grappled"]:  # the fight is over: up, and nobody holds the hero
 		ConditionRules.remove(s.character, cond)
 	lines.append_array(FeatureRules.end_shape(s, Catalog.data, 0))  # the beast form ends with the fight (v0.7.10)
-	var frenzied := bool(CombatRules.player(s).get("frenzy", false))
+	for id: String in s.combat.get("order", []):  # a rage ends with the fight: a frenzy's exhaustion, anybody's (v0.8.4.33)
+		var rager := CombatRules.fighter(s, id)
+		if bool(rager.get("raging", false)) and Attack.up(s, rager):
+			FeatureRules.rage_ends(s, Catalog.data, rager, lines)
 	var minutes := ceili(int(s.combat.get("round", 1)) / float(ConditionRules.ROUNDS_PER_MINUTE))
 	CombatRules.close(s)
 	lines.append_array(TimeRules.advance(s, Catalog.data, minutes))  # the rounds of the fight on the clock (v0.7.8)
-	if frenzied:
-		lines.append_array(ConditionRules.add_exhaustion(s, Catalog.data, 1, "неистовство"))
 	if gather and str(s.character.get("ammo_left", {}).get("room", "")) == s.room_id:
 		lines.append_array(_gather_ammo(s))
 	s.mode = GameSession.MODE_EXPLORATION
