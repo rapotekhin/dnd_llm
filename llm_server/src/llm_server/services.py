@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from .config import Settings
 from .images import ImageCatalog, ImagePrices
+from .llm.account import OpenRouterAccount
 from .llm.budget import DailyBudget
 from .llm.catalog import ModelCatalog, ModelFactory
 from .llm.library import ItemLibrary
@@ -20,6 +21,7 @@ class Services:
     model_factory: ModelFactory | None = None  # None with the stub turn handler
     trace: TraceWriter | None = None
     images: ImageCatalog | None = None  # filled in __post_init__ when not given
+    account: OpenRouterAccount | None = None  # the balance of the key for the settings (0.113.0)
 
     def __post_init__(self) -> None:
         if self.images is None:
@@ -37,4 +39,5 @@ class Services:
             trace=TraceWriter(settings.data_dir / "traces", settings.trace),
             images=ImageCatalog(settings.image_models, settings.image_model, ImagePrices(settings.data_dir / "image_prices.json"),
                                 settings.a1111_url),
+            account=OpenRouterAccount(settings.openrouter_api_key) if model_factory is not None else None,
         )

@@ -37,6 +37,8 @@ var image_model: String = ""
 var image_prompts: Dictionary = {}
 ## The dev console, F3 and F12 (Dev): on by the settings, by `--dev`, or in a debug build until the settings turn it off.
 var dev_mode: bool = OS.is_debug_build()
+## The sheet's things (v0.8.4.32): the group shown, the sort, the order turned round — {group, sort, reverse}.
+var inventory_view: Dictionary = {}
 const COMBAT_SPEEDS := {"slow": 1.0, "normal": 0.6, "fast": 0.25, "instant": 0.0}
 const UI_SCALES: Array[float] = [0.85, 1.0, 1.15, 1.3]
 
@@ -180,6 +182,7 @@ func load_settings() -> void:
 		image_model = str(cfg.get_value("images", "model", ""))
 		image_prompts = cfg.get_value("images", "prompts", {})
 		dev_mode = bool(cfg.get_value("game", "dev_mode", OS.is_debug_build()))
+		inventory_view = cfg.get_value("ui", "inventory", {})
 	Hotkeys.apply(keys)
 
 
@@ -198,6 +201,7 @@ func save_settings() -> void:
 	cfg.set_value("images", "model", image_model)
 	cfg.set_value("images", "prompts", image_prompts)
 	cfg.set_value("keys", "keys", keys)
+	cfg.set_value("ui", "inventory", inventory_view)
 	cfg.set_value("game", "dev_mode", dev_mode)
 	cfg.save(settings_path)
 
@@ -266,8 +270,16 @@ func image_model_info(id: String) -> Dictionary:
 	return {}
 
 
-## The master's model and pinned provider for turn.request and summary.request (v0.7.20.5).
+## The brush (v0.7.35) draws only in the developer mode (v0.8.4.32): images are the developer's for now.
+func images_enabled() -> bool:
+	return images_on and Dev.enabled
+
+
+## The master's model and pinned provider for turn.request and summary.request (v0.7.20.5); outside the developer
+## mode the server's own (v0.8.4.32: a player only enters the key), the picks kept for the mode.
 func master_params(params: Dictionary) -> Dictionary:
+	if not Dev.enabled:
+		return params
 	if not master_model.is_empty() and not offered(master_model):
 		master_model = ""  # v0.7.34.2: the server dropped it (GLM-5.3-Flash) — its default, not a failed turn
 		save_settings()

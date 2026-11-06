@@ -33,6 +33,10 @@ const PROVIDER_SORTS := ["ours", "cost", "speed", "uptime", "name"]
 var _budget_edit: LineEdit
 var _budget_off: CheckBox
 var _budget_status: Label
+var _account_status: Label  # v0.8.4.32: what is left on the OpenRouter account of the key
+## Rows of the scene only a developer needs (v0.8.4.32): the server's address and token, the model and its provider,
+## the brush; a player enters the OpenRouter key and nothing more.
+const DEV_ONLY := "dev_only"
 var _model_ids: Array[String] = []
 var _key_buttons: Dictionary = {}  # action → its button
 var _waiting := ""  # the action waiting for a key
@@ -49,7 +53,8 @@ func required() -> Dictionary:
 	var nodes := {
 		"%Tabs": "TabContainer", "%BackButton": "Button", "%Fullscreen": "CheckBox", "%Url": "LineEdit", "%Token": "LineEdit",
 		"%CaPath": "LineEdit", "%CheckButton": "Button", "%CheckStatus": "Label", "%BudgetEdit": "LineEdit",
-		"%BudgetOff": "CheckBox", "%BudgetSave": "Button", "%BudgetStatus": "Label", "%ImagesOn": "CheckBox",
+		"%BudgetOff": "CheckBox", "%BudgetSave": "Button", "%BudgetStatus": "Label", "%AccountStatus": "Label",
+		"%BackendHint": "Label", "%ImagesOn": "CheckBox",
 		"%ImageExtra": "VBoxContainer", "%ImagePromptAdd": "TextEdit", "%ImageNegativeAdd": "TextEdit",
 		"%ImagePromptAddLabel": "Label", "%ImageNegativeAddLabel": "Label", "%ImageNegativeOnly": "CheckBox",
 		"%ImagePromptsReset": "Button", "%GameOptions": "VBoxContainer", "%NeedsOption": "CheckButton",
@@ -71,6 +76,7 @@ func _ready() -> void:
 	_display_tab()
 	_master_tab()
 	_controls_tab()
+	_show_dev_rows()
 	EventBus.backend_state_changed.connect(_on_backend_state)
 	Backend.diagnosed.connect(_on_diagnosed)
 
@@ -95,7 +101,8 @@ func _controls_tab() -> void:
 	dev.toggled.connect(func(on: bool) -> void:
 		SaveManager.dev_mode = on
 		SaveManager.save_settings()
-		Dev.set_enabled(on))
+		Dev.set_enabled(on)
+		_show_dev_rows())
 	var list: Control = UiScenes.need(self, "%KeyList")
 	for action: String in Hotkeys.defaults():
 		var row := HBoxContainer.new()
@@ -181,6 +188,15 @@ func _options(path: String, items: Array, selected: int, on_pick: Callable) -> O
 	ob.selected = maxi(0, selected)
 	ob.item_selected.connect(on_pick)
 	return ob
+
+
+## The developer's rows shown only in the developer mode; the hint says only what a player needs.
+func _show_dev_rows() -> void:
+	for n: Node in find_children("*", "", true, false):
+		if n.is_in_group(DEV_ONLY):
+			(n as CanvasItem).visible = Dev.enabled
+	(UiScenes.need(self, "%BackendHint") as Label).text = "HINT_BACKEND" if Dev.enabled else "HINT_BACKEND_PLAYER"
+	_fill_image_extra()
 
 
 func _apply_display() -> void:
@@ -271,7 +287,7 @@ func _fill_image_extra() -> void:
 		return
 	var id := SaveManager.current_image_model()
 	var info := SaveManager.image_model_info(id)
-	_image_extra.visible = SaveManager.images_on and not info.is_empty()
+	_image_extra.visible = Dev.enabled and SaveManager.images_on and not info.is_empty()
 	var own: Dictionary = SaveManager.image_prompts.get(id, {})
 	var neg := bool(info.get("negative", false))
 	for n: Node in [_image_prompt, _image_negative, _image_negative_only]:
@@ -323,6 +339,7 @@ func _budget_row() -> void:
 	_budget_off.toggled.connect(func(on: bool) -> void: _budget_edit.editable = not on)
 	(UiScenes.need(self, "%BudgetSave") as Button).pressed.connect(_save_budget)
 	_budget_status = UiScenes.need(self, "%BudgetStatus")
+	_account_status = UiScenes.need(self, "%AccountStatus")
 	_refresh_budget()
 
 
@@ -334,6 +351,7 @@ func _refresh_budget() -> void:
 
 
 func _show_budget(b: Dictionary) -> void:
+	_show_account(b.get("account"))
 	if b.is_empty():
 		_budget_status.text = tr("OPT_BUDGET_UNKNOWN")
 		return
@@ -345,6 +363,18 @@ func _show_budget(b: Dictionary) -> void:
 	var spent := float(b.get("spent_today_usd", 0.0))
 	_budget_status.text = tr("OPT_BUDGET_SPENT_OFF").format({"spent": "%.3f" % spent}) if limit == null \
 		else tr("OPT_BUDGET_SPENT").format({"spent": "%.3f" % spent, "limit": "%.2f" % float(limit), "left": "%.3f" % maxf(0.0, float(limit) - spent)})
+
+
+## What is left on the OpenRouter account and under the key's own limit (v0.8.4.32); hidden when not known.
+func _show_account(acc: Variant) -> void:
+	var parts: Array[String] = []
+	if acc is Dictionary:
+		if acc.get("credits_left_usd") != null:
+			parts.append(tr("OPT_ACCOUNT_LEFT").format({"usd": "%.2f" % float(acc["credits_left_usd"])}))
+		if acc.get("key_left_usd") != null:
+			parts.append(tr("OPT_KEY_LEFT").format({"usd": "%.2f" % float(acc["key_left_usd"])}))
+	_account_status.text = " · ".join(parts)
+	_account_status.visible = not parts.is_empty()
 
 
 func _save_budget() -> void:

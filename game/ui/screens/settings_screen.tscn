@@ -108,39 +108,40 @@ custom_minimum_size = Vector2(0, 52)
 placeholder_text = "sk-or-…"
 secret = true
 
-[node name="UrlLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+[node name="UrlLabel" type="Label" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 layout_mode = 2
 text = "OPT_BACKEND_URL"
 theme_type_variation = &"MutedLabel"
 
-[node name="Url" type="LineEdit" parent="Col/Tabs/Master/MasterBox"]
+[node name="Url" type="LineEdit" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 52)
 placeholder_text = "OPT_BACKEND_URL_EMPTY"
 
-[node name="TokenLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+[node name="TokenLabel" type="Label" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 layout_mode = 2
 text = "OPT_BACKEND_TOKEN"
 theme_type_variation = &"MutedLabel"
 
-[node name="Token" type="LineEdit" parent="Col/Tabs/Master/MasterBox"]
+[node name="Token" type="LineEdit" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 52)
 secret = true
 
-[node name="CaPathLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+[node name="CaPathLabel" type="Label" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 layout_mode = 2
 text = "OPT_BACKEND_CA"
 theme_type_variation = &"MutedLabel"
 
-[node name="CaPath" type="LineEdit" parent="Col/Tabs/Master/MasterBox"]
+[node name="CaPath" type="LineEdit" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 52)
 
 [node name="BackendHint" type="Label" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "HINT_BACKEND"
 theme_type_variation = &"MutedLabel"
@@ -173,23 +174,23 @@ layout_mode = 2
 text = "BACKEND_READY"
 theme_type_variation = &"MutedLabel"
 
-[node name="ModelLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+[node name="ModelLabel" type="Label" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 layout_mode = 2
 text = "OPT_MODEL"
 theme_type_variation = &"MutedLabel"
 
-[node name="ModelOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox"]
+[node name="ModelOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 unique_name_in_owner = true
 layout_mode = 2
 auto_translate_mode = 2
 
-[node name="ProviderLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+[node name="ProviderLabel" type="Label" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 layout_mode = 2
 text = "OPT_PROVIDER"
 theme_type_variation = &"MutedLabel"
 autowrap_mode = 3
 
-[node name="SortRow" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+[node name="SortRow" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 layout_mode = 2
 
 [node name="SortLabel" type="Label" parent="Col/Tabs/Master/MasterBox/SortRow"]
@@ -202,7 +203,7 @@ unique_name_in_owner = true
 layout_mode = 2
 fit_to_longest_item = false
 
-[node name="ProviderOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox"]
+[node name="ProviderOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 unique_name_in_owner = true
 layout_mode = 2
 auto_translate_mode = 2
@@ -242,13 +243,20 @@ auto_translate_mode = 2
 autowrap_mode = 3
 theme_type_variation = &"MutedLabel"
 
-[node name="ImagesLabel" type="Label" parent="Col/Tabs/Master/MasterBox"]
+
+[node name="AccountStatus" type="Label" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+autowrap_mode = 3
+theme_type_variation = &"MutedLabel"
+[node name="ImagesLabel" type="Label" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 layout_mode = 2
 text = "OPT_IMAGES"
 theme_type_variation = &"MutedLabel"
 autowrap_mode = 3
 
-[node name="ImagesRow" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+[node name="ImagesRow" type="HBoxContainer" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 layout_mode = 2
 theme_override_constants/separation = 12
 
@@ -263,7 +271,7 @@ layout_mode = 2
 auto_translate_mode = 2
 size_flags_horizontal = 3
 
-[node name="ImageExtra" type="VBoxContainer" parent="Col/Tabs/Master/MasterBox"]
+[node name="ImageExtra" type="VBoxContainer" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 unique_name_in_owner = true
 layout_mode = 2
 

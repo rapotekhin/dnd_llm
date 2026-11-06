@@ -199,6 +199,49 @@ autowrap_mode = 3
 size_flags_horizontal = 3
 theme_type_variation = &"MutedLabel"
 
+[node name="InvBar" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="InvFilters" type="HFlowContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/InvBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+
+[node name="SampleFilter" type="Button" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/InvBar/InvFilters" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "Все · 12"
+
+[node name="InvTools" type="HBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/InvBar"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="InvSearch" type="LineEdit" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/InvBar/InvTools"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "INV_SEARCH"
+clear_button_enabled = true
+
+[node name="InvSort" type="OptionButton" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/InvBar/InvTools"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(220, 0)
+auto_translate_mode = 2
+tooltip_text = "INV_SORT_TIP"
+
+[node name="InvReverse" type="Button" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox/InvBar/InvTools"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(48, 0)
+toggle_mode = true
+text = "⇅"
+tooltip_text = "INV_REVERSE_TIP"
+
 [node name="GearRows" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/SheetTabs/GearList/GearBox"]
 unique_name_in_owner = true
 layout_mode = 2

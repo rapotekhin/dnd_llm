@@ -15,6 +15,7 @@ from . import __version__
 from .protocol import (
     PROTOCOL_VERSION,
     RETRYABLE,
+    Account,
     Budget,
     SetBudgetParams,
     ErrorCode,
@@ -207,10 +208,10 @@ class Session:
         if method == "turn.cancel":
             return self._cancel(_parse(TurnCancelParams, params))
         if method == "session.status":
-            return self._status()
+            return await self._status()
         if method == "session.set_budget":
             self.services.budget.set_limit(_parse(SetBudgetParams, params).daily_usd)
-            return self._status()
+            return await self._status()
         if method == "summary.request":
             # Runs alongside a turn (ADR-0009 §2); it does not take a turn slot.
             return await self.summary_handler(self, _parse(SummaryParams, params))
@@ -256,13 +257,15 @@ class Session:
             image_models=images.infos() if images else [],
         )
 
-    def _status(self) -> StatusResult:
+    async def _status(self) -> StatusResult:
         budget = self.services.budget
+        account = await self.services.account.fetch() if self.services.account else None
         return StatusResult(
             server_version=__version__,
             model=self.settings.model,
             models=self.services.models.infos(),
             budget=Budget(daily_usd=budget.limit_usd, spent_today_usd=round(budget.spent_today(), 6)),
+            account=Account(**account) if account else None,
         )
 
     async def _turn(self, params: TurnRequestParams) -> TurnResult:

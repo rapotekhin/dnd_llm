@@ -4533,6 +4533,26 @@
 		"max_found_rarity": "uncommon",
 		"rarity_order": ["common", "uncommon", "rare", "very_rare", "legendary", "artifact"],
 		"unknown_suffix": ", свойства неизвестны",
+		"groups": {
+			"_doc": "Groups of the hero's things in the sheet (v0.8.4.32, ItemGroups, as in BG3 and Pathfinder): a thing falls into the first row whose `when` fits — `has` a field of its definition (weapon, armor, tool, material), `type` its item_type, `use` a key of what using it does (ItemRules.consumable), `potion` ItemRules.is_potion, `ammo` a value of `ammo`, `food` a portion of the camp or a meal, `drink` a ready drink or a vessel full of a drink (ItemGroups.drink, not a container), `container` a kind of rules.containers; a row without `when` takes the rest. The order of the rows is the order of the groups in the list. `sorts` — the sort keys of the sheet, `type` (the group, then the name) first.",
+			"rows": [
+				{"id": "weapon", "name": "Оружие", "when": {"has": ["weapon"]}},
+				{"id": "ammo", "name": "Боеприпасы", "when": {"ammo": true}},
+				{"id": "armor", "name": "Броня", "when": {"has": ["armor"]}},
+				{"id": "potion", "name": "Зелья", "when": {"potion": true}},
+				{"id": "scroll", "name": "Свитки", "when": {"use": ["scroll"]}},
+				{"id": "food", "name": "Еда и питьё", "when": {"food": true, "drink": true}},
+				{"id": "consumable", "name": "Расходники", "when": {"type": ["consumable"], "use": ["throw", "meal"]}},
+				{"id": "tool", "name": "Инструменты", "when": {"has": ["tool"]}},
+				{"id": "container", "name": "Сумки и тара", "when": {"container": true}},
+				{"id": "material", "name": "Материалы", "when": {"has": ["material"]}},
+				{"id": "magic", "name": "Магические вещи", "when": {"type": ["wondrous"]}},
+				{"id": "valuables", "name": "Ценности", "when": {"type": ["treasure"]}},
+				{"id": "quest", "name": "Для заданий", "when": {"type": ["quest"]}},
+				{"id": "misc", "name": "Прочее"}
+			],
+			"sorts": {"type": "По типу", "name": "По имени", "weight": "По весу", "value": "По цене", "rarity": "По редкости", "new": "Сначала новые"}
+		},
 		"services": {
 			"_doc": "Services of NPCs (NPC `services` in the pack; a pack may add its own in world.json `services`), v0.7.16 by pillar 6 — a service is data over an operation of the engine (`op`): identify — every unknown item the hero carries; lift_curse — the cursed items come off (they stay cursed); enchant — one carried item of `needs` (weapon | armor | any) from the catalog gets `property` from the item properties and the name «… (`suffix`)», its value + the cost; teach_recipe (v0.7.24) — the hero learns `recipe` (needs the proficiency of its tool). `name` — the button, `short` — for the lines and the master, `done` — the line of the result. Silver: PHB 100 gp.",
 			"identify": {"cost_cp": 2000, "op": "identify", "name": "Опознать вещи", "short": "опознание вещей"},

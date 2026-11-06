@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.112.0"
+PROTOCOL_VERSION = "0.113.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -114,6 +114,14 @@ class Budget(_Out):
     spent_today_usd: float
 
 
+class Account(_Out):
+    """The OpenRouter account of the server's key (0.113.0); a None — not known (no key, OpenRouter did not answer, the
+    key has no limit of its own)."""
+
+    credits_left_usd: float | None = None
+    key_left_usd: float | None = None
+
+
 class ImageModelInfo(_Out):
     """A model that draws the frame of an event (0.71.0); the price — what our images cost, or the estimate."""
 
@@ -146,6 +154,7 @@ class StatusResult(_Out):
     model: str
     models: list[ModelInfo]
     budget: Budget
+    account: Account | None = None  # 0.113.0
 
 
 # --- snapshot (ADR-0009 §4) ------------------------------------------------------

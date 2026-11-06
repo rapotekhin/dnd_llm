@@ -660,7 +660,7 @@ func _refresh() -> void:
 		input.release_focus()  # the fight's keys are not letters of the chat; typing still lands in the input
 	_was_fight = _fight.active()
 	var s0 := GameState.session if GameState.has_session() else null
-	brush.visible = SaveManager.images_on and not Backend.image_models().is_empty()
+	brush.visible = SaveManager.images_enabled() and not Backend.image_models().is_empty()
 	brush.disabled = not online or GameState.drawing or s0 == null or ImageFrame.event_index(s0) < 0
 	brush.tooltip_text = "BTN_DRAW_EVENT_BUSY" if GameState.drawing else "BTN_DRAW_EVENT"
 	var s := GameState.session if GameState.has_session() else null

@@ -14,6 +14,7 @@ const TAB_TITLES: Array[String] = ["SHEET_TAB_STATS", "SHEET_TAB_FEATURES", "SHE
 var _conc_armed := ""  # a concentration spell pressed once while another is held (v0.7.13.1)
 var _tabs: TabContainer
 var _picked_item := ""  # the item shown in the details panel of the gear tab (v0.7.7 fixes)
+var _inv_find := ""  # the search of the gear tab (v0.8.4.32): kept only while the sheet lives
 const DOLL_LEFT: Array[String] = ["head", "eyes", "neck", "cloak", "armor", "hands"]
 const DOLL_RIGHT: Array[String] = ["main_hand", "off_hand", "shield", "stowed", "ring1", "ring2", "feet"]
 
@@ -27,6 +28,7 @@ func required() -> Dictionary:
 		"%FeaturesBox": "VBoxContainer", "%DevBox": "VBoxContainer", "%DollLeft": "VBoxContainer",
 		"%DollRight": "VBoxContainer", "%GearCoins": "Label", "%CarriedWeight": "Label", "%WeightBar": "ProgressBar",
 		"%AttunedCount": "Label", "%GearRows": "VBoxContainer", "%BeltBox": "VBoxContainer",
+		"%InvFilters": "HFlowContainer", "%InvSearch": "LineEdit", "%InvSort": "OptionButton", "%InvReverse": "Button",
 	})
 	return nodes
 
@@ -43,6 +45,7 @@ func _ready() -> void:
 	_details = DetailsPanel.new(Vector2(0, 160))
 	_details.name = "ItemDetails"
 	split.add_child(_details.column(ChatView.new(), 460))
+	_inv_setup()
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
 
@@ -487,7 +490,10 @@ func _gear_tab(c: Dictionary) -> void:
 	if CharacterRules.overloaded(c, Catalog.data, s.items):
 		weight.text += " — " + tr("TOO_HEAVY")
 		weight.add_theme_color_override("font_color", UiTheme.WARN)
-	for bag_id: String in ContainerRules.bags(c):  # v0.7.18.2: the bags and what is in them
+	var inv: Dictionary = c.get("inventory", {})
+	var group := _inv_filters(inv)
+	var bags := ContainerRules.bags(c) if [ItemGroups.ALL, "container"].has(group) and _inv_find.is_empty() else {}
+	for bag_id: String in bags:  # v0.7.18.2: the bags and what is in them
 		var bag: Dictionary = ContainerRules.bags(c)[bag_id]
 		var brow := HBoxContainer.new()
 		brow.add_theme_constant_override("separation", 12)
@@ -502,14 +508,24 @@ func _gear_tab(c: Dictionary) -> void:
 		ob.pressed.connect(func() -> void: bag_requested.emit(bag_id))
 		brow.add_child(ob)
 		_drop_button(brow, bag_id, 1, "DropBag_" + bag_id, "BTN_DROP", busy)
-	for id: String in c.get("inventory", {}):
+	var shown_ids := ItemGroups.view(Catalog.data, s.items, inv, group, _inv_sort(), _inv_find, bool(SaveManager.inventory_view.get("reverse", false)))
+	var head := ""
+	for id: String in shown_ids:
 		var def := ItemRules.def_of(items, s.items, id)
+		var qty := int(c["inventory"][id])
+		var gid := ItemGroups.of(Catalog.data, s.items, id)
+		if _inv_sort() == ItemGroups.TYPE and gid != head:  # sections by group, as in Pathfinder
+			head = gid
+			UiParts.heading(box, ItemGroups.name_of(Catalog.data, gid)).name = "InvHead_" + gid
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		box.add_child(row)
-		var qty := int(c["inventory"][id])
 		var water := LiquidRules.summary(c, Catalog.data, id)  # v0.7.34.6: what each vessel holds
 		(_item_button(row, details, c, id, "%s%s%s" % [def.get("name", id), " ×%d" % qty if qty > 1 else "", " (%s)" % water if not water.is_empty() else ""], "Item_" + id) as Button).size_flags_stretch_ratio = 2.0
+		var info := UiParts.label(row, _inv_info(id, qty), UiTheme.MUTED_LABEL)  # the stack's weight and price
+		info.name = "Info_" + id
+		info.custom_minimum_size = Vector2(150, 0)
+		info.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		var acts := HFlowContainer.new()  # the buttons wrap under one another: a row never widens the window
 		acts.name = "Acts_" + id
 		acts.alignment = FlowContainer.ALIGNMENT_END
@@ -568,6 +584,8 @@ func _gear_tab(c: Dictionary) -> void:
 				_equip_button(acts, c, def, id, t, false, busy)
 			if CharacterRules.HANDS.has(t) and str(CharacterRules.stowed(c).get(t, "")) != id:  # any weapon, either set (v0.8.4.24.1)
 				_equip_button(acts, c, def, id, t, true, busy)
+	if shown_ids.is_empty() and not inv.is_empty():
+		UiParts.label(box, tr("INV_NONE"), UiTheme.MUTED_LABEL).name = "InvNone"
 	var shown := _picked_item if (c.get("inventory", {}) as Dictionary).has(_picked_item) else ""
 	if not shown.is_empty():
 		details.show_text(ItemRules.display_name(items, s.items, shown), DetailsPanel.item_text(c, Catalog.data, s.items, shown))
@@ -784,6 +802,77 @@ func _drop_button(row: Control, what: String, qty: int, node_name: String, text:
 		if not err.is_empty():
 			EventBus.message.emit(tr(err)))
 	row.add_child(b)
+
+
+# --- the things by groups, sorted and searched (v0.8.4.32, as in BG3 and Pathfinder) ----------------------------
+
+
+## The sort list and the search of the gear tab: kept in the scene, so the search keeps its focus over a rebuild.
+func _inv_setup() -> void:
+	var sort: OptionButton = UiScenes.need(self, "%InvSort")
+	sort.tooltip_text = tr("INV_SORT_TIP")
+	var keys := ItemGroups.sorts(Catalog.data).keys()
+	for i in keys.size():
+		sort.add_item(str(ItemGroups.sorts(Catalog.data)[keys[i]]), i)
+		sort.set_item_metadata(i, str(keys[i]))
+	sort.select(maxi(0, keys.find(_inv_sort())))
+	sort.item_selected.connect(func(i: int) -> void: _inv_keep("sort", str(sort.get_item_metadata(i))))
+	var rev: Button = UiScenes.need(self, "%InvReverse")
+	rev.pressed.connect(func() -> void: _inv_keep("reverse", not bool(SaveManager.inventory_view.get("reverse", false))))
+	var find: LineEdit = UiScenes.need(self, "%InvSearch")
+	find.text_changed.connect(func(text: String) -> void:
+		_inv_find = text
+		_rebuild())
+
+
+func _inv_sort() -> String:
+	var sort := str(SaveManager.inventory_view.get("sort", ItemGroups.TYPE))
+	return sort if ItemGroups.sorts(Catalog.data).has(sort) else ItemGroups.TYPE
+
+
+## A choice of the bar kept in the settings, the list built again.
+func _inv_keep(key: String, value: Variant) -> void:
+	SaveManager.inventory_view[key] = value
+	SaveManager.save_settings()
+	_rebuild()
+
+
+## The group buttons with how many kinds of things each holds; the group shown ("" — all; a group emptied shows all).
+func _inv_filters(inv: Dictionary) -> String:
+	var bar: HFlowContainer = UiScenes.need(self, "%InvFilters")
+	for ch in bar.get_children():
+		bar.remove_child(ch)
+		ch.queue_free()
+	var counts := ItemGroups.counts(Catalog.data, GameState.session.items, inv)
+	var group := str(SaveManager.inventory_view.get("group", ItemGroups.ALL))
+	if not counts.has(group):
+		group = ItemGroups.ALL
+	(UiScenes.need(self, "%InvReverse") as Button).set_pressed_no_signal(bool(SaveManager.inventory_view.get("reverse", false)))
+	var add := func(gid: String, text: String) -> void:
+		var b := Button.new()
+		b.name = "InvGroup_" + (gid if not gid.is_empty() else "all")
+		b.text = text
+		b.toggle_mode = true
+		b.button_pressed = gid == group
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.pressed.connect(_inv_keep.bind("group", gid))
+		bar.add_child(b)
+	add.call(ItemGroups.ALL, "%s · %d" % [tr("INV_ALL"), inv.size()])
+	for gid: String in counts:
+		add.call(gid, "%s · %d" % [ItemGroups.name_of(Catalog.data, gid), int(counts[gid])])
+	return group
+
+
+## «2 фнт · 5 зм» of a stack; the price of a thing not identified is «?».
+func _inv_info(id: String, qty: int) -> String:
+	var s := GameState.session
+	var w := ItemGroups.weight(Catalog.data, s.items, id, qty)
+	var v := ItemGroups.value(Catalog.data, s.items, id, qty)
+	var parts: Array[String] = []
+	if w > 0.0:
+		parts.append(tr("INV_WEIGHT").format({"n": str(int(w)) if is_equal_approx(w, roundf(w)) else String.num(w, 2)}))
+	parts.append("?" if v < 0 else Money.format(v) if v > 0 else "—")
+	return " · ".join(parts)
 
 
 ## The item's name as a flat button: a click shows what it is in the details panel (v0.7.7 fixes).

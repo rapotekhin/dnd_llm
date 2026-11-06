@@ -269,6 +269,20 @@ func _budget_settings() -> void:
 	await press(find(screen(), "BudgetSave"))
 	step("budget set to " + want, await wait_until(func() -> bool: return status.text.contains("$" + want), 10.0), status.text)
 	await shot("settings_budget")
+	var dev_box: CheckBox = find(screen(), "DevMode")  # v0.8.4.32: a player sees the key and the limit, not the developer's rows
+	dev_box.button_pressed = false
+	await frames(3)
+	var seen := func(n: String) -> bool: return find(screen(), n) != null and (find(screen(), n) as Control).is_visible_in_tree()
+	var tabs: TabContainer = find(screen(), "Tabs")
+	tabs.current_tab = 1
+	await frames(2)
+	step("a player sees the key and the limit", seen.call("OpenRouterKey") and seen.call("BudgetEdit"))
+	step("no address, token, model, provider or brush without the developer mode",
+		not seen.call("Url") and not seen.call("Token") and not seen.call("ModelOption") and not seen.call("ProviderOption") and not seen.call("ImagesOn"))
+	await shot("settings_player")
+	dev_box.button_pressed = true
+	await frames(2)
+	step("the developer mode shows them again", seen.call("Url") and seen.call("ModelOption"))
 	var adult: CheckButton = find(screen(), "AdultOption")  # v0.7.38.7: 18+ of this game, off by default
 	if adult != null:
 		adult.button_pressed = true
@@ -285,8 +299,14 @@ func _dev_console() -> void:
 	for cmd: String in ["room", "quests", "items письм", "npc бруно", "rooms", "state"]:
 		var out: String = dev.run(cmd)
 		step("console: " + cmd, not out.is_empty() and not out.begins_with("unknown") and out != "no session", out.left(1500))
-	dev.call("_input", _key_event(KEY_QUOTELEFT))
+	var bare := _key_event(KEY_QUOTELEFT)
+	dev.call("_input", bare)  # a bare «ё» is a letter for the master (v0.8.4.32)
 	var console: Control = dev.get("_console")
+	step("a bare ё opens no console", not console.visible)
+	var shifted := _key_event(KEY_QUOTELEFT)
+	shifted.shift_pressed = true
+	dev.call("_input", shifted)
+	step("Shift + ё opens the console", console.visible)
 	console.call("_on_submitted", "room")
 	await frames(5)
 	await shot("dev_console_room")
@@ -322,7 +342,9 @@ func _cheats(dev: Node, console: Control) -> void:
 	var hp := int(wolf["hp"])
 	out = dev.run("@%s hit 2d1 огонь crit" % wolf["id"])
 	step("hit: a critical 2d1 of fire takes 2 off the resisting wolf", hp - int(wolf["hp"]) == 2 and out.contains("удар консоли"), out)
-	dev.call("_input", _key_event(KEY_QUOTELEFT))
+	var shut := _key_event(KEY_QUOTELEFT)
+	shut.shift_pressed = true
+	dev.call("_input", shut)
 	await frames(10)
 	await shot("dev_spawn_fight")
 

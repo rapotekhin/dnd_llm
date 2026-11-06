@@ -4,16 +4,20 @@ extends GdUnitTestSuite
 
 var _model: String
 var _providers: Dictionary
+var _dev: bool
 
 
 func before_test() -> void:
 	_model = SaveManager.master_model
 	_providers = SaveManager.master_providers.duplicate()
+	_dev = Dev.enabled
+	Dev.enabled = true  # the picks are the developer's (v0.8.4.32)
 
 
 func after_test() -> void:
 	SaveManager.master_model = _model
 	SaveManager.master_providers = _providers
+	Dev.enabled = _dev
 
 
 func test_the_pinned_provider_of_the_chosen_model_goes_with_the_request() -> void:
@@ -24,6 +28,18 @@ func test_the_pinned_provider_of_the_chosen_model_goes_with_the_request() -> voi
 	assert_dict(SaveManager.master_params({})).is_equal({"model": "deepseek/deepseek-v4.1-flash-1017"})
 	SaveManager.master_model = ""
 	assert_dict(SaveManager.master_params({"kind": "x"})).is_equal({"kind": "x"})
+
+
+## v0.8.4.32: a player only enters the key — outside the developer mode the server's own model and provider go.
+func test_without_the_developer_mode_the_picks_stay_unsent() -> void:
+	SaveManager.master_model = "deepseek/deepseek-v4.1-flash-1017"
+	SaveManager.master_providers = {"deepseek/deepseek-v4.1-flash-1017": "relace"}
+	SaveManager.images_on = true
+	Dev.enabled = false
+	assert_dict(SaveManager.master_params({"kind": "x"})).is_equal({"kind": "x"})
+	assert_bool(SaveManager.images_enabled()).is_false()
+	Dev.enabled = true
+	assert_bool(SaveManager.images_enabled()).is_true()
 
 
 ## v0.7.34.1: every provider of the model in the list, with the cost of 1000 turns and our measured speed.

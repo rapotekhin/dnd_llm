@@ -64,8 +64,11 @@ func set_enabled(on: bool) -> void:
 func _input(event: InputEvent) -> void:
 	if not enabled or not (event is InputEventKey) or not event.pressed or event.echo:
 		return
-	match (event as InputEventKey).physical_keycode:
-		KEY_QUOTELEFT:
+	var key := event as InputEventKey
+	match key.physical_keycode:
+		KEY_QUOTELEFT:  # Shift + `/ё, «~» in the English layout: a bare «ё» goes into the master's words (v0.8.4.32)
+			if not key.shift_pressed:
+				return
 			_console.toggle()
 		KEY_F3:
 			overlay_on = not overlay_on

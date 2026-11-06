@@ -1,5 +1,37 @@
 {
   "$defs": {
+    "Account": {
+      "additionalProperties": false,
+      "description": "The OpenRouter account of the server's key (0.113.0); a None — not known (no key, OpenRouter did not answer, the\nkey has no limit of its own).",
+      "properties": {
+        "credits_left_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credits Left Usd"
+        },
+        "key_left_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key Left Usd"
+        }
+      },
+      "title": "Account",
+      "type": "object"
+    },
     "Budget": {
       "additionalProperties": false,
       "properties": {
@@ -144,6 +176,17 @@
   },
   "additionalProperties": false,
   "properties": {
+    "account": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Account"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "budget": {
       "$ref": "#/$defs/Budget"
     },
