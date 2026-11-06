@@ -1516,9 +1516,13 @@ static func _known(data: Dictionary, id: String) -> bool:
 static var _rules_json := ""
 
 
+## The rules as text without the table of prerequisites: an id that only opens another (an invocation's pact) is no mechanic
+## of its own (v0.8.4.33: Pact of the Chain and of the Tome passed by that alone).
 static func _rules_text(data: Dictionary) -> String:
 	if _rules_json.is_empty():
-		_rules_json = JSON.stringify(data["rules"])
+		var rules: Dictionary = data["rules"].duplicate(true)
+		(rules.get("class_features", {}) as Dictionary).erase("prerequisites")
+		_rules_json = JSON.stringify(rules)
 	return _rules_json
 
 
@@ -1564,7 +1568,14 @@ static func _ability(data: Dictionary, id: String, list: String) -> Dictionary:
 		return result(steps)
 	var why := _read_by(data, id, d, list)
 	if not why.is_empty():
-		check(steps, true, why)
+		var key := id if list == "features" else "trait:" + id
+		var seen := str(reviewed().get(key, ""))
+		if seen.is_empty():  # read somewhere, but nobody looked whether it does what it says (v0.8.4.33: the pacts)
+			gap(steps, UNSEEN + "%s — не проверено руками (test/fixtures/abilities_reviewed.json)" % why)
+		elif seen.begins_with(PARTLY):  # looked at: a part of its text has no mechanic
+			gap(steps, seen)
+		else:
+			check(steps, true, "%s · проверено: %s" % [why, seen])
 	else:
 		master(steps, "движок не знает: на листе как умение для мастера (по описанию)")
 	return result(steps)
@@ -1728,6 +1739,18 @@ static func _read_by(data: Dictionary, id: String, d: Dictionary, list: String) 
 
 
 static var _build_src := ""
+static var _reviewed: Variant = null
+const REVIEWED := "res://test/fixtures/abilities_reviewed.json"
+const UNSEEN := "только упоминание: "
+const PARTLY := "частично: "
+
+
+## The abilities read only by a mention (code, a rule row, a grant at creation) that a person checked to do what their text
+## says: {row id: what does it}. A new one read so is a gap until it is looked at and written here.
+static func reviewed() -> Dictionary:
+	if _reviewed == null:
+		_reviewed = JSON.parse_string(FileAccess.get_file_as_string(REVIEWED)) if FileAccess.file_exists(REVIEWED) else {}
+	return _reviewed
 
 
 static func _builder_code() -> String:
@@ -1776,6 +1799,9 @@ static func _feature_act(data: Dictionary, id: String, list: String, aid: String
 		if why.is_empty():
 			var before := _world_now(s, data, g)
 			var lines := act.go(s, data, hero, to, {"id": aid})
+			var ask: Dictionary = s.combat.get("prompt", {})
+			if lines.is_empty() and not (ask.get("options", []) as Array).is_empty():  # a choice it asks (a form, a pact weapon): the first
+				lines = FeatureRules.answer_prompt(s, data, str(ask["options"][0]["id"]))
 			var did := _what_changed(data, before, _world_now(s, data, g))
 			check(steps, not lines.is_empty(), "действие «%s» в бою%s" % [name, ": " + did if not did.is_empty() else ""], "ничего не сказало")
 			return

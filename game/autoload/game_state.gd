@@ -824,6 +824,27 @@ func font_convert(id: String) -> String:
 	return ""
 
 
+## Pact of the Blade out of a fight (v0.8.4.33): call a form, bind a weapon carried or let it go; in a fight it is the
+## features' act with its prompt.
+func pact_weapon(choice: String) -> String:
+	if not _idle():
+		return "ABILITY_BUSY"
+	if CombatRules.active(session):
+		return "PACT_IN_FIGHT"
+	_add(GameSession.effect_entry(FeatureRules.pact_weapon(session, Catalog.data, Sheet.HERO, choice)))
+	EventBus.state_changed.emit()
+	return ""
+
+
+## The form of the next familiar (v0.8.4.33): any of Find Familiar's, the special ones with Pact of the Chain.
+func choose_familiar(form: String) -> String:
+	if not _idle():
+		return "ABILITY_BUSY"
+	_add(GameSession.effect_entry(AllyRules.choose_familiar(session, Catalog.data, Sheet.HERO, form)))
+	EventBus.state_changed.emit()
+	return ""
+
+
 ## The metamagic of the next spell (a toggle; "" — none).
 func combat_metamagic(id: String) -> void:
 	if session == null or not CombatRules.active(session):

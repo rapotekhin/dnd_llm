@@ -2524,6 +2524,13 @@
 				"✓ материал ремесла: 3 рецептов"
 			]
 		},
+		"book_of_shadows": {
+			"status": "работает",
+			"steps": [
+				"· give: в инвентаре",
+				"✓ движок знает вещь: rules.feature_grants.pact_of_the_tome.item"
+			]
+		},
 		"bruno_letter": {
 			"status": "работает",
 			"steps": [
@@ -5822,7 +5829,7 @@
 				"✓ хиты 39",
 				"✓ КД 14",
 				"✓ «Укус» по герою: −11 HP, Схвачен",
-				"✓ «Кислотный плевок» по герою: −8 HP"
+				"✓ «Кислотный плевок» по герою: −5 HP"
 			]
 		},
 		"ape": {
@@ -6001,7 +6008,7 @@
 				"✓ хиты 52",
 				"✓ КД 17",
 				"✓ «Укус» по герою: −11 HP",
-				"✓ «Дыхание молнией» по герою: −11 HP"
+				"✓ «Дыхание молнией» по герою: −8 HP"
 			]
 		},
 		"boar": {
@@ -6022,7 +6029,7 @@
 				"✓ хиты 16",
 				"✓ КД 16",
 				"✓ «Укус» по герою: −11 HP",
-				"✓ «Оружие дыхания» по герою: −11 HP"
+				"✓ «Оружие дыхания» по герою: −5 HP"
 			]
 		},
 		"brown_bear": {
@@ -6113,7 +6120,7 @@
 				"✓ хиты 22",
 				"✓ КД 16",
 				"✓ «Укус» по герою: −11 HP",
-				"✓ «Оружие дыхания» по герою: −11 HP"
+				"✓ «Оружие дыхания» по герою: −5 HP"
 			]
 		},
 		"cult_fanatic": {
@@ -6622,7 +6629,7 @@
 				"✓ хиты 45",
 				"✓ КД 15",
 				"✓ «Укус» по герою: −11 HP",
-				"✓ «Огненное дыхание» по герою: −11 HP",
+				"✓ «Огненное дыхание» по герою: −9 HP",
 				"✓ черта «Острый слух и обоняние» — в движке",
 				"✓ черта «Тактика стаи» — в движке"
 			]
@@ -6666,7 +6673,7 @@
 				"✓ хиты 21",
 				"✓ КД 11",
 				"✓ «Когти» по герою: −7 HP",
-				"✓ «Ледяное дыхание» по герою: −5 HP",
+				"✓ «Ледяное дыхание» по герою: −2 HP",
 				"✓ черта «Взрыв при смерти» — в движке",
 				"✓ черта «Ложный облик» — в движке",
 				"✓ колдует в бою: 1 из 1",
@@ -6748,7 +6755,7 @@
 				"✓ хиты 22",
 				"✓ КД 11",
 				"✓ «Когти» по герою: −7 HP",
-				"✓ «Огненное дыхание» по герою: −7 HP",
+				"✓ «Огненное дыхание» по герою: −2 HP",
 				"✓ черта «Взрыв при смерти» — в движке",
 				"✓ черта «Ложный облик» — в движке",
 				"✓ колдует в бою: 1 из 1",
@@ -7035,7 +7042,7 @@
 				"✓ хиты 45",
 				"✓ КД 17",
 				"✓ «Укус» по герою: −11 HP",
-				"✓ «Оружие дыхания» по герою: −11 HP"
+				"✓ «Оружие дыхания» по герою: −5 HP"
 			]
 		},
 		"skeleton": {
@@ -7089,7 +7096,7 @@
 				"✓ хиты 21",
 				"✓ КД 10",
 				"✓ «Когти» по герою: −6 HP",
-				"✓ «Паровое дыхание» по герою: −4 HP",
+				"✓ «Паровое дыхание» по герою: −2 HP",
 				"✓ черта «Взрыв при смерти» — в движке",
 				"✓ колдует в бою: 1 из 1",
 				"✓ заклинания действуют: Размытость"
@@ -7437,43 +7444,43 @@
 		"arcane_tradition": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 2 уровне (LevelUp)"
+				"✓ выбор подкласса на 2 уровне (LevelUp) · проверено: LevelUp.plan: выбор подкласса на его уровне, умения подкласса выдаются"
 			]
 		},
 		"barbarian_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"barbarian_extra_attack": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules.extra_attacks: вторая атака действием Атака"
 			]
 		},
 		"barbarian_unarmored_defense": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules.unarmored_ac: 10+Лов+Тел без доспеха, щит разрешён"
 			]
 		},
 		"bard_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"bard_college": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 3 уровне (LevelUp)"
+				"✓ выбор подкласса на 3 уровне (LevelUp) · проверено: LevelUp.plan: выбор подкласса на его уровне, умения подкласса выдаются"
 			]
 		},
 		"bard_expertise_1": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «expertise» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «expertise» (CharacterBuilder / LevelUp) · проверено: LevelUp: выбор двух навыков с владением, двойное владение в RollParts"
 			]
 		},
 		"bardic_inspiration_d6": {
@@ -7493,19 +7500,19 @@
 		"bonus_cantrip": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: LevelUp.plan: +1 заговор друида на 2 уровне (feature_grants.cantrips)"
 			]
 		},
 		"bonus_proficiencies": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: LevelUp: выбор трёх навыков (skill_prof_*), владение в RollParts и CheckEngine"
 			]
 		},
 		"bonus_proficiency": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: feature_grants: владение тяжёлыми доспехами при создании"
 			]
 		},
 		"channel_divinity_1_rest": {
@@ -7591,55 +7598,55 @@
 		"circle_of_the_land": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: LevelUp: выбор земли на 2 уровне (options), заклинания земли — rules.spellcasting.feature_always"
 			]
 		},
 		"circle_spells_1": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells)"
+				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells) · проверено: LevelUp.always: заклинания круга 3 уровня по выбранной земле (feature_always)"
 			]
 		},
 		"circle_spells_2": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells)"
+				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells) · проверено: LevelUp.always: заклинания круга 5 уровня по выбранной земле (feature_always)"
 			]
 		},
 		"cleric_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"cunning_action": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: rules.combat.act_bonus: Рывок, Отход, Засада бонусным действием"
 			]
 		},
 		"cutting_words": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"○ частично: только против попадания по самому барду; нет урона, проверок и атак по союзникам"
 			]
 		},
 		"danger_sense": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): hero_defense"
+				"✓ движок читает (код): hero_defense · проверено: HeroDefense.save_advantages: преимущество спасбросков Лов, не ослеплён/оглох/недееспособен"
 			]
 		},
 		"dark_ones_blessing": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"✓ движок читает (код): feature_rules · проверено: FeatureRules.on_kill: врем. хиты Хар+уровень, когда враг падает в ход колдуна"
 			]
 		},
 		"deflect_missiles": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"○ частично: урон −1к10+Лов+уровень есть; поймать и метнуть снаряд за ки нельзя"
 			]
 		},
 		"destroy_undead_cr_1_2_or_below": {
@@ -7651,25 +7658,25 @@
 		"disciple_of_life": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): combat_rules, spell_rules"
+				"✓ движок читает (код): spell_rules · проверено: SpellRules.heal_points: +2 + круг ячейки к лечению заклинаниями 1+ круга"
 			]
 		},
 		"divine_domain_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ особенность подкласса на 2 уровне: умения подкласса этого уровня (LevelUp.features_at)"
+				"✓ особенность подкласса на 2 уровне: умения подкласса этого уровня (LevelUp.features_at) · проверено: LevelUp.features_at: умение домена 2 уровня (Сохранение жизни)"
 			]
 		},
 		"divine_domain": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 1 уровне (LevelUp)"
+				"✓ выбор подкласса на 1 уровне (LevelUp) · проверено: CharacterBuilder: выбор подкласса при создании (subclass_level 1), его умения 1 уровня"
 			]
 		},
 		"divine_health": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): hero_defense"
+				"✓ движок читает (код): hero_defense · проверено: HeroDefense.immune: иммунитет к болезням (DiseaseRules)"
 			]
 		},
 		"divine_sense": {
@@ -7682,31 +7689,31 @@
 		"divine_smite": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"✓ движок читает (код): feature_rules · проверено: FeatureRules.after_hit: ячейка за 2к8+1к8/круг (макс 5к8), +1к8 нежити/исчадию, крит"
 			]
 		},
 		"domain_spells_1": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells)"
+				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells) · проверено: LevelUp.always: заклинания домена Жизни всегда подготовлены по уровням 1/3/5"
 			]
 		},
 		"domain_spells_2": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells)"
+				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells) · проверено: LevelUp.always: заклинания домена Жизни всегда подготовлены по уровням 1/3/5"
 			]
 		},
 		"domain_spells_3": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells)"
+				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells) · проверено: LevelUp.always: заклинания домена Жизни всегда подготовлены по уровням 1/3/5"
 			]
 		},
 		"draconic_resilience": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules: +1 хит за уровень, КД 13+Лов без доспеха"
 			]
 		},
 		"dragon_ancestor_black___acid_damage": {
@@ -7788,13 +7795,13 @@
 		"druid_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"druid_circle": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 2 уровне (LevelUp)"
+				"✓ выбор подкласса на 2 уровне (LevelUp) · проверено: LevelUp.plan: выбор подкласса на его уровне, умения подкласса выдаются"
 			]
 		},
 		"druidic": {
@@ -7806,61 +7813,55 @@
 		"eldritch_invocation_agonizing_blast": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): combat_rules"
+				"✓ движок читает (код): combat_rules · проверено: CombatRules.spell_blow: +мод. Хар к урону каждого луча"
 			]
 		},
 		"eldritch_invocation_armor_of_shadows": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: Доспехи мага по желанию (feature_spells) и КД 13+Лов (unarmored_ac)"
 			]
 		},
 		"eldritch_invocation_beast_speech": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: feature_spells: Разговор с животными по желанию без ячейки"
 			]
 		},
 		"eldritch_invocation_beguiling_influence": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): roll_parts"
-			]
-		},
-		"eldritch_invocation_book_of_ancient_secrets": {
-			"status": "работает",
-			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ движок читает (код): roll_parts · проверено: RollParts.sheet: владение Обманом и Убеждением"
 			]
 		},
 		"eldritch_invocation_devils_sight": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): fight_grid, sight_rules"
+				"✓ движок читает (код): fight_grid, sight_rules · проверено: SightRules/FightGrid: видит во тьме, в т.ч. магической, на 120 фт"
 			]
 		},
 		"eldritch_invocation_eldritch_sight": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: feature_spells: Обнаружение магии по желанию без ячейки"
 			]
 		},
 		"eldritch_invocation_eldritch_spear": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): combat_rules"
+				"✓ движок читает (код): combat_rules · проверено: CombatRules.spell_range: дистанция мистического заряда 300 фт"
 			]
 		},
 		"eldritch_invocation_fiendish_vigor": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: feature_spells: Ложная жизнь 1 круга по желанию без ячейки"
 			]
 		},
 		"eldritch_invocation_mask_of_many_faces": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: feature_spells: Маскировка по желанию без ячейки (Guise)"
 			]
 		},
 		"eldritch_invocation_mire_the_mind": {
@@ -7872,9 +7873,9 @@
 			]
 		},
 		"eldritch_invocation_misty_visions": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"○ частично: Безмолвный образ по желанию есть, но заклинание только словами мастера (by_master)"
 			]
 		},
 		"eldritch_invocation_one_with_shadows": {
@@ -7886,7 +7887,7 @@
 		"eldritch_invocation_repelling_blast": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): combat_rules"
+				"✓ движок читает (код): combat_rules · проверено: CombatRules: попадание мистическим зарядом отталкивает на 10 фт"
 			]
 		},
 		"eldritch_invocation_sign_of_ill_omen": {
@@ -7908,19 +7909,13 @@
 		"eldritch_invocation_thirsting_blade": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
-			]
-		},
-		"eldritch_invocation_voice_of_the_chain_master": {
-			"status": "работает",
-			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules.extra_attacks: вторая атака с пактовым оружием в руке"
 			]
 		},
 		"eldritch_invocations": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: LevelUp: выбор воззваний с предпосылками (_meets), вне игры отфильтрованы"
 			]
 		},
 		"evocation_savant": {
@@ -7937,93 +7932,93 @@
 			]
 		},
 		"fast_hands": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает (код): use_item"
+				"○ частично: бонусом только «Использовать»; Ловкость рук, взлом и обезвреживание бонусом нет"
 			]
 		},
 		"fast_movement": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules.walk: +10 фт не в тяжёлом доспехе"
 			]
 		},
 		"favored_enemy_1_type": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: check_about: преимущество Выживания и Инт про тип; язык врага (languages.by_feature)"
 			]
 		},
 		"fighter_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"fighter_fighting_style_archery": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «archery» (character_rules, combat_rules)"
+				"✓ движок читает по имени «archery» (character_rules, combat_rules) · проверено: CombatRules.weapon_profile: +2 к атаке дальнобойным оружием"
 			]
 		},
 		"fighter_fighting_style_defense": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «defense» (character_rules, gear)"
+				"✓ движок читает по имени «defense» (character_rules, gear) · проверено: CharacterRules.armor_class / Gear.ac: +1 КД в доспехе"
 			]
 		},
 		"fighter_fighting_style_dueling": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «dueling» (character_rules, combat_rules)"
+				"○ частично: +2 к урону одной рукой есть, но даётся и универсальному оружию двумя руками (к10)"
 			]
 		},
 		"fighter_fighting_style_great_weapon_fighting": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «great_weapon_fighting» (feature_rules)"
+				"✓ движок читает по имени «great_weapon_fighting» (feature_rules) · проверено: Attack: переброс 1 и 2 на костях урона двуручного/универсального в двух руках"
 			]
 		},
 		"fighter_fighting_style_protection": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «protection» (protect)"
+				"✓ движок читает по имени «protection» (protect) · проверено: acts/protect.gd: реакцией со щитом помеха атаке по союзнику в 5 фт"
 			]
 		},
 		"fighter_fighting_style_two_weapon_fighting": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «two_weapon_fighting» (combat_rules)"
+				"✓ движок читает по имени «two_weapon_fighting» (combat_rules) · проверено: CombatRules.weapon_profile: мод. характеристики к урону второй рукой"
 			]
 		},
 		"fighter_fighting_style": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder / LevelUp: выбор боевого стиля"
 			]
 		},
 		"fighting_style_defense": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «defense» (character_rules, gear, character_rules)"
+				"✓ движок читает по имени «defense» (character_rules, gear, character_rules) · проверено: CharacterRules.armor_class / Gear.ac: +1 КД в доспехе"
 			]
 		},
 		"fighting_style_dueling": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «dueling» (character_rules, combat_rules, character_rules)"
+				"○ частично: +2 к урону одной рукой есть, но даётся и универсальному оружию двумя руками (к10)"
 			]
 		},
 		"fighting_style_great_weapon_fighting": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «great_weapon_fighting» (feature_rules, character_rules)"
+				"✓ движок читает по имени «great_weapon_fighting» (feature_rules, character_rules) · проверено: Attack: переброс 1 и 2 на костях урона двуручного/универсального в двух руках"
 			]
 		},
 		"fighting_style_protection": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «protection» (protect, character_rules)"
+				"✓ движок читает по имени «protection» (protect, character_rules) · проверено: acts/protect.gd: реакцией со щитом помеха атаке по союзнику в 5 фт"
 			]
 		},
 		"flexible_casting_converting_spell_slot": {
@@ -8054,7 +8049,7 @@
 		"font_of_inspiration": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: rules.resources.bardic_inspiration.short_with: восстановление на коротком отдыхе"
 			]
 		},
 		"font_of_magic": {
@@ -8065,45 +8060,45 @@
 			]
 		},
 		"frenzy": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает (код): attack, frenzy, being"
+				"○ частично: удар бонусом есть; истощение только герою и после боя, неистовство не гаснет с яростью"
 			]
 		},
 		"hunters_prey_colossus_slayer": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"○ частично: «ниже максимума» проверяется после урона удара — срабатывает и по целому"
 			]
 		},
 		"hunters_prey_giant_killer": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"○ частично: удар в ответ только на попадание по герою, не на промах"
 			]
 		},
 		"hunters_prey_horde_breaker": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): attack"
+				"✓ движок читает (код): attack · проверено: Attack._horde: раз в ход доп. атака по другому врагу рядом с целью"
 			]
 		},
 		"hunters_prey": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: LevelUp: выбор одного из трёх вариантов Добычи охотника"
 			]
 		},
 		"improved_critical": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"✓ движок читает (код): feature_rules · проверено: FeatureRules.crit_min: крит на 19–20 атаками оружием"
 			]
 		},
 		"jack_of_all_trades": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): roll_parts"
+				"✓ движок читает (код): roll_parts · проверено: RollParts.sheet: ½ владения к проверкам без владения, и к инициативе"
 			]
 		},
 		"ki": {
@@ -8123,7 +8118,7 @@
 		"martial_archetype": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 3 уровне (LevelUp)"
+				"✓ выбор подкласса на 3 уровне (LevelUp) · проверено: LevelUp.plan: выбор подкласса на его уровне, умения подкласса выдаются"
 			]
 		},
 		"martial_arts": {
@@ -8136,85 +8131,73 @@
 		"metamagic_1": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает «metamagic» (feature_rules, being)"
-			]
-		},
-		"metamagic_careful_spell": {
-			"status": "работает",
-			"steps": [
-				"✓ движок читает по имени «careful_spell» (feature_rules)"
+				"✓ движок читает «metamagic» (feature_rules, being) · проверено: LevelUp: выбор двух вариантов метамагии, оплата очками чародейства при касте в бою"
 			]
 		},
 		"metamagic_distant_spell": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «distant_spell» (combat_rules, feature_rules)"
+				"○ частично: дистанция удваивается; касание даёт 10 фт вместо 30"
 			]
 		},
 		"metamagic_empowered_spell": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «empowered_spell» (combat_rules, feature_rules)"
+				"○ частично: урон бросается дважды, берётся лучший, вместо переброса до мод. Хар костей"
 			]
 		},
 		"metamagic_extended_spell": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «extended_spell» (combat_rules, feature_rules)"
+				"○ частично: удваиваются лишь раунды заклинаний-состояний; баффы, зоны и прочие длительности нет"
 			]
 		},
 		"metamagic_heightened_spell": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «heightened_spell» (combat_rules, feature_rules)"
+				"○ частично: помеха на спасбросок у всех целей заклинания, а не у одной"
 			]
 		},
 		"metamagic_quickened_spell": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «quickened_spell» (cast, feature_rules)"
-			]
-		},
-		"metamagic_subtle_spell": {
-			"status": "работает",
-			"steps": [
-				"✓ движок читает по имени «subtle_spell» (feature_rules)"
+				"✓ движок читает по имени «quickened_spell» (cast, feature_rules) · проверено: cast.gd: заклинание за бонусное действие за 2 очка"
 			]
 		},
 		"metamagic_twinned_spell": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «twinned_spell» (feature_rules)"
+				"✓ движок читает по имени «twinned_spell» (action_rules, feature_rules, feature_rules) · проверено: FeatureRules.twin_fits / ActionRules.twin: вторая цель за очки по кругу, выбор кликом"
 			]
 		},
 		"monastic_tradition": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 3 уровне (LevelUp)"
+				"✓ выбор подкласса на 3 уровне (LevelUp) · проверено: LevelUp.plan: выбор подкласса на его уровне, умения подкласса выдаются"
 			]
 		},
 		"monk_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"monk_extra_attack": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules.extra_attacks: вторая атака действием Атака"
 			]
 		},
 		"monk_unarmored_defense": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules.unarmored_ac: 10+Лов+Мдр без доспеха и щита"
 			]
 		},
 		"natural_explorer_1_terrain_type": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «1_terrain_type» (check_engine)"
+				"○ частично: только двойное владение в проверках Инт/Мдр в локации этой местности; нет выгод пути, фуража, слежки"
 			]
 		},
 		"natural_recovery": {
@@ -8227,7 +8210,7 @@
 		"oath_spells": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells)"
+				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells) · проверено: LevelUp.always: заклинания клятвы преданности всегда подготовлены с 3 и 5 уровня"
 			]
 		},
 		"open_hand_technique": {
@@ -8244,55 +8227,55 @@
 		"otherworldly_patron": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 1 уровне (LevelUp)"
+				"✓ выбор подкласса на 1 уровне (LevelUp) · проверено: CharacterBuilder: выбор подкласса при создании (subclass_level 1), его умения 1 уровня"
 			]
 		},
 		"pact_boon": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: LevelUp: выбор пакта цепи, клинка или книги на 3 уровне"
 			]
 		},
 		"pact_magic": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: ячейки колдуна по таблице, восстановление на коротком отдыхе (resources.short_with)"
 			]
 		},
 		"pact_of_the_blade": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules, feature_rules"
+				"✓ действие «Пактовое оружие» в бою: на герое: Пакт клинка"
 			]
 		},
 		"pact_of_the_chain": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ движок читает (код): familiar_strike · проверено: feature_spells: Поиск фамильяра; формы беса/квазита/спрайта; familiar_strike вместо атаки"
 			]
 		},
 		"pact_of_the_tome": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: LevelUp: 3 заговора любых классов и Книга теней; SpellRules.ready, пока книга при себе"
 			]
 		},
 		"paladin_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"paladin_extra_attack": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules.extra_attacks: вторая атака действием Атака"
 			]
 		},
 		"paladin_fighting_style": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder / LevelUp: выбор боевого стиля"
 			]
 		},
 		"patient_defense": {
@@ -8304,7 +8287,7 @@
 		"primal_path": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 3 уровне (LevelUp)"
+				"✓ выбор подкласса на 3 уровне (LevelUp) · проверено: LevelUp.plan: выбор подкласса на его уровне, умения подкласса выдаются"
 			]
 		},
 		"primeval_awareness": {
@@ -8324,49 +8307,49 @@
 		"ranger_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"ranger_archetype": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 3 уровне (LevelUp)"
+				"✓ выбор подкласса на 3 уровне (LevelUp) · проверено: LevelUp.plan: выбор подкласса на его уровне, умения подкласса выдаются"
 			]
 		},
 		"ranger_extra_attack": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules.extra_attacks: вторая атака действием Атака"
 			]
 		},
 		"ranger_fighting_style_archery": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «archery» (character_rules, combat_rules)"
+				"✓ движок читает по имени «archery» (character_rules, combat_rules) · проверено: CombatRules.weapon_profile: +2 к атаке дальнобойным оружием"
 			]
 		},
 		"ranger_fighting_style_defense": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «defense» (character_rules, gear)"
+				"✓ движок читает по имени «defense» (character_rules, gear) · проверено: CharacterRules.armor_class / Gear.ac: +1 КД в доспехе"
 			]
 		},
 		"ranger_fighting_style_dueling": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «dueling» (character_rules, combat_rules)"
+				"○ частично: +2 к урону одной рукой есть, но даётся и универсальному оружию двумя руками (к10)"
 			]
 		},
 		"ranger_fighting_style_two_weapon_fighting": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «two_weapon_fighting» (combat_rules)"
+				"✓ движок читает по имени «two_weapon_fighting» (combat_rules) · проверено: CombatRules.weapon_profile: мод. характеристики к урону второй рукой"
 			]
 		},
 		"ranger_fighting_style": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder / LevelUp: выбор боевого стиля"
 			]
 		},
 		"reckless_attack": {
@@ -8378,31 +8361,31 @@
 		"rogue_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"rogue_expertise_1": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ при создании или повышении: «expertise» (CharacterBuilder / LevelUp)"
+				"○ частично: два навыка с двойным владением есть; варианта с воровскими инструментами нет"
 			]
 		},
 		"roguish_archetype": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 3 уровне (LevelUp)"
+				"✓ выбор подкласса на 3 уровне (LevelUp) · проверено: LevelUp.plan: выбор подкласса на его уровне, умения подкласса выдаются"
 			]
 		},
 		"sacred_oath": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 3 уровне (LevelUp)"
+				"✓ выбор подкласса на 3 уровне (LevelUp) · проверено: LevelUp.plan: выбор подкласса на его уровне, умения подкласса выдаются"
 			]
 		},
 		"sculpt_spells": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells)"
+				"✓ заклинания подкласса всегда готовы (LevelUp: subclass_spells) · проверено: CombatRules._sculpted: 1 + круг своих вне области заклинания воплощения (friendly_fire.sculpt)"
 			]
 		},
 		"second_story_work": {
@@ -8428,67 +8411,67 @@
 		"sneak_attack": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"✓ движок читает (код): feature_rules · проверено: FeatureRules.sneak_dice: раз в ход, фехтовальное/дальнобойное, преимущество или союзник рядом"
 			]
 		},
 		"song_of_rest_d6": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает «song_of_rest» (exploration_rules)"
+				"✓ движок читает «song_of_rest» (rest) · проверено: Rest.song: +кость песни тем, кто тратит Кости хитов на коротком отдыхе"
 			]
 		},
 		"sorcerer_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"sorcerous_origin": {
 			"status": "работает",
 			"steps": [
-				"✓ выбор подкласса на 1 уровне (LevelUp)"
+				"✓ выбор подкласса на 1 уровне (LevelUp) · проверено: CharacterBuilder: выбор подкласса при создании (subclass_level 1), его умения 1 уровня"
 			]
 		},
 		"spellcasting_bard": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания класса: ячейки и списки по таблице класса"
+				"✓ заклинания класса: ячейки и списки по таблице класса · проверено: LevelUp/CharacterBuilder: ячейки по таблице, список класса, известные/подготовленные/книга"
 			]
 		},
 		"spellcasting_cleric": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания класса: ячейки и списки по таблице класса"
+				"✓ заклинания класса: ячейки и списки по таблице класса · проверено: LevelUp/CharacterBuilder: ячейки по таблице, список класса, известные/подготовленные/книга"
 			]
 		},
 		"spellcasting_druid": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания класса: ячейки и списки по таблице класса"
+				"✓ заклинания класса: ячейки и списки по таблице класса · проверено: LevelUp/CharacterBuilder: ячейки по таблице, список класса, известные/подготовленные/книга"
 			]
 		},
 		"spellcasting_paladin": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания класса: ячейки и списки по таблице класса"
+				"✓ заклинания класса: ячейки и списки по таблице класса · проверено: LevelUp/CharacterBuilder: ячейки по таблице, список класса, известные/подготовленные/книга"
 			]
 		},
 		"spellcasting_ranger": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания класса: ячейки и списки по таблице класса"
+				"✓ заклинания класса: ячейки и списки по таблице класса · проверено: LevelUp/CharacterBuilder: ячейки по таблице, список класса, известные/подготовленные/книга"
 			]
 		},
 		"spellcasting_sorcerer": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания класса: ячейки и списки по таблице класса"
+				"✓ заклинания класса: ячейки и списки по таблице класса · проверено: LevelUp/CharacterBuilder: ячейки по таблице, список класса, известные/подготовленные/книга"
 			]
 		},
 		"spellcasting_wizard": {
 			"status": "работает",
 			"steps": [
-				"✓ заклинания класса: ячейки и списки по таблице класса"
+				"✓ заклинания класса: ячейки и списки по таблице класса · проверено: LevelUp/CharacterBuilder: ячейки по таблице, список класса, известные/подготовленные/книга"
 			]
 		},
 		"step_of_the_wind": {
@@ -8513,19 +8496,19 @@
 		"unarmored_movement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает «unarmored_movement» (character_rules)"
+				"✓ движок читает «unarmored_movement» (character_rules) · проверено: CharacterRules.walk: +10 фт без доспеха и щита по таблице монаха"
 			]
 		},
 		"uncanny_dodge": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"✓ движок читает (код): feature_rules · проверено: FeatureRules.reactions: реакцией урон видимой атаки вдвое"
 			]
 		},
 		"warlock_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"wild_shape_cr_1_2_or_below_no_flying_speed": {
@@ -8545,7 +8528,7 @@
 		"wizard_ability_score_improvement_1": {
 			"status": "работает",
 			"steps": [
-				"✓ увеличение характеристик при повышении (LevelUp)"
+				"✓ увеличение характеристик при повышении (LevelUp) · проверено: LevelUp: +2 к одной или +1 к двум характеристикам (до 20), пересчёт листа"
 			]
 		},
 		"favored_enemy_aberration": {
@@ -8643,57 +8626,57 @@
 			]
 		},
 		"natural_explorer_arctic": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «arctic» (check_engine)"
+				"○ частично: только двойное владение Инт/Мдр в такой локации (в пакете их нет); нет выгод пути, фуража"
 			]
 		},
 		"natural_explorer_coast": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «coast» (check_engine)"
+				"○ частично: только двойное владение Инт/Мдр в такой локации (в пакете их нет); нет выгод пути, фуража"
 			]
 		},
 		"natural_explorer_desert": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «desert» (check_engine)"
+				"○ частично: только двойное владение Инт/Мдр в такой локации (в пакете их нет); нет выгод пути, фуража"
 			]
 		},
 		"natural_explorer_forest": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «forest» (check_engine)"
+				"○ частично: только двойное владение в проверках Инт/Мдр в локации этой местности; нет выгод пути, фуража, слежки"
 			]
 		},
 		"natural_explorer_grassland": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «grassland» (check_engine)"
+				"○ частично: только двойное владение в проверках Инт/Мдр в локации этой местности; нет выгод пути, фуража, слежки"
 			]
 		},
 		"natural_explorer_mountain": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «mountain» (check_engine)"
+				"○ частично: двойное владение Инт/Мдр лишь при terrain «mountain» (мастер пишет «mountains»); нет выгод пути"
 			]
 		},
 		"natural_explorer_swamp": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «swamp» (check_engine)"
+				"○ частично: только двойное владение Инт/Мдр в такой локации (в пакете их нет); нет выгод пути, фуража"
 			]
 		},
 		"natural_explorer_underdark": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает по имени «underdark» (check_engine)"
+				"○ частично: только двойное владение в проверках Инт/Мдр в локации этой местности; нет выгод пути, фуража, слежки"
 			]
 		},
 		"eldritch_invocations_5": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: LevelUp: выбор воззваний с предпосылками (_meets), вне игры отфильтрованы"
 			]
 		},
 		"skill_prof_acrobatics": {
@@ -8811,123 +8794,123 @@
 			]
 		},
 		"trait:high_elf_cantrip": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ при создании или повышении: «spell_choice» (CharacterBuilder / LevelUp)"
+				"○ частично: заговор выбирается, но творится от характеристики класса, не от Инт (у воина Сл 10, атака +0)"
 			]
 		},
 		"trait:naturally_stealthy": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ движок читает (код): hide"
+				"○ частично: прячется лишь рядом с врагом крупнее себя; укрытие за крупным союзником не учтено"
 			]
 		},
 		"trait:menacing": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «skills» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «skills» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder.fixed_skills: владение Запугиванием"
 			]
 		},
 		"trait:draconic_ancestry": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «options» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder: выбор предка; тип урона, форма и спасбросок дыхания, сопротивление"
 			]
 		},
 		"trait:draconic_ancestry_white": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «white» (feature_rules, hero_defense)"
+				"✓ движок читает по имени «white» (feature_rules, hero_defense) · проверено: FeatureRules.breath_*: холод, конус 15 фт, Тел; сопротивление этому урону"
 			]
 		},
 		"trait:draconic_ancestry_silver": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «silver» (cheats, feature_rules, hero_defense)"
+				"✓ движок читает по имени «silver» (cheats, feature_rules, hero_defense) · проверено: FeatureRules.breath_*: холод, конус 15 фт, Тел; сопротивление этому урону"
 			]
 		},
 		"trait:draconic_ancestry_red": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «red» (feature_rules, hero_defense)"
+				"✓ движок читает по имени «red» (feature_rules, hero_defense) · проверено: FeatureRules.breath_*: огонь, конус 15 фт, Лов; сопротивление этому урону"
 			]
 		},
 		"trait:draconic_ancestry_green": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «green» (feature_rules, hero_defense)"
+				"✓ движок читает по имени «green» (feature_rules, hero_defense) · проверено: FeatureRules.breath_*: яд, конус 15 фт, Тел; сопротивление этому урону"
 			]
 		},
 		"trait:draconic_ancestry_gold": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «gold» (feature_rules, hero_defense)"
+				"✓ движок читает по имени «gold» (feature_rules, hero_defense) · проверено: FeatureRules.breath_*: огонь, конус 15 фт, Лов; сопротивление этому урону"
 			]
 		},
 		"trait:draconic_ancestry_copper": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «copper» (feature_rules, feature_rules, hero_defense)"
+				"✓ движок читает по имени «copper» (feature_rules, feature_rules, hero_defense) · проверено: FeatureRules.breath_*: кислота, линия 30 фт, Лов; сопротивление этому урону"
 			]
 		},
 		"trait:draconic_ancestry_bronze": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «bronze» (feature_rules, feature_rules, hero_defense)"
+				"✓ движок читает по имени «bronze» (feature_rules, feature_rules, hero_defense) · проверено: FeatureRules.breath_*: молния, линия 30 фт, Лов; сопротивление этому урону"
 			]
 		},
 		"trait:draconic_ancestry_brass": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «brass» (feature_rules, feature_rules, hero_defense)"
+				"✓ движок читает по имени «brass» (feature_rules, feature_rules, hero_defense) · проверено: FeatureRules.breath_*: огонь, линия 30 фт, Лов; сопротивление этому урону"
 			]
 		},
 		"trait:draconic_ancestry_blue": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «blue» (feature_rules, feature_rules, hero_defense)"
+				"✓ движок читает по имени «blue» (feature_rules, feature_rules, hero_defense) · проверено: FeatureRules.breath_*: молния, линия 30 фт, Лов; сопротивление этому урону"
 			]
 		},
 		"trait:draconic_ancestry_black": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает по имени «black» (feature_rules, feature_rules, hero_defense)"
+				"✓ движок читает по имени «black» (feature_rules, feature_rules, hero_defense) · проверено: FeatureRules.breath_*: кислота, линия 30 фт, Лов; сопротивление этому урону"
 			]
 		},
 		"trait:relentless_endurance": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): harm"
+				"✓ движок читает (код): harm · проверено: Harm.survives: 1 хит вместо 0 раз за долгий отдых"
 			]
 		},
 		"trait:extra_language": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «language_choice» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «language_choice» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder: выбор дополнительного языка при создании"
 			]
 		},
 		"trait:tinker": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ при создании или повышении: «tools» (CharacterBuilder / LevelUp)"
+				"○ частично: владение инструментами ремонтника и их рецепты есть; заводных устройств нет"
 			]
 		},
 		"trait:trance": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): time_rules"
+				"✓ движок читает (код): time_rules · проверено: TimeRules.sleep: эльф просыпается после долгого отдыха на 3 часа раньше"
 			]
 		},
 		"trait:savage_attacks": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): feature_rules"
+				"✓ движок читает (код): feature_rules · проверено: FeatureRules.hit_extras: ещё одна кость оружия при рукопашном крите"
 			]
 		},
 		"trait:damage_resistance": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: HeroDefense.resistances: сопротивление типу урона драконьего предка"
 			]
 		},
 		"trait:stonecunning": {
@@ -8957,13 +8940,13 @@
 		"trait:skill_versatility": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «skill_choice» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «skill_choice» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder: выбор двух навыков (race_skill_choice)"
 			]
 		},
 		"trait:infernal_legacy": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"○ частично: только Чудотворство (и то словами мастера); нет Адского укора с 3 и Тьмы с 5 уровня"
 			]
 		},
 		"trait:dwarven_resilience": {
@@ -8975,19 +8958,19 @@
 		"trait:keen_senses": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): monster_rules"
+				"✓ движок читает (код): monster_rules · проверено: CharacterBuilder.fixed_skills: владение Внимательностью"
 			]
 		},
 		"trait:hellish_resistance": {
 			"status": "работает",
 			"steps": [
-				"✓ есть в правилах (rules.json)"
+				"✓ есть в правилах (rules.json) · проверено: HeroDefense.resistances: сопротивление огню"
 			]
 		},
 		"trait:darkvision": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): spell_effects, sight_rules"
+				"✓ движок читает (код): spell_effects, sight_rules · проверено: SightRules: видит в темноте на 60 фт (12 клеток)"
 			]
 		},
 		"trait:breath_weapon": {
@@ -8999,31 +8982,31 @@
 		"trait:dwarven_toughness": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): character_rules"
+				"✓ движок читает (код): character_rules · проверено: CharacterRules.hp_step: +1 хит за уровень"
 			]
 		},
 		"trait:tool_proficiency": {
-			"status": "работает",
+			"status": "нет механики",
 			"steps": [
-				"✓ при создании или повышении: «tool_choice» (CharacterBuilder / LevelUp)"
+				"○ частично: инструмент не выбирается — всегда берётся первый из списка (кузнечные)"
 			]
 		},
 		"trait:lucky": {
 			"status": "работает",
 			"steps": [
-				"✓ движок читает (код): roll"
+				"✓ движок читает (код): roll · проверено: Roll.dice: переброс единицы на d20 атак, проверок и спасбросков"
 			]
 		},
 		"trait:dwarven_combat_training": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «weapons» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «weapons» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder: владение боевым и ручным топором, лёгким и боевым молотом"
 			]
 		},
 		"trait:elf_weapon_training": {
 			"status": "работает",
 			"steps": [
-				"✓ при создании или повышении: «weapons» (CharacterBuilder / LevelUp)"
+				"✓ при создании или повышении: «weapons» (CharacterBuilder / LevelUp) · проверено: CharacterBuilder: владение длинным/коротким мечом, длинным/коротким луком"
 			]
 		},
 		"trait:halfling_nimbleness": {

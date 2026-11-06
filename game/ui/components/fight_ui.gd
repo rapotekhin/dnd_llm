@@ -939,7 +939,8 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 ## The button that picks the hero or an ally for an armed spell of the hero's side (v0.7.50.1).
 func _friend_pick(s: GameSession, data: Dictionary, box: Control, id: String, me: bool) -> void:
 	var spell := _pending_spell(s, data)
-	if not _pending.is_valid() or not SpellEffects.picks_side(data, spell) in ["friend", "any"]:
+	var side := CombatRules.volley_side(data, CombatRules.volley(s)) if _pending_name == "Volley" else SpellEffects.picks_side(data, spell)
+	if not _pending.is_valid() or not side in ["friend", "any"]:
 		return
 	box.add_theme_constant_override("separation", 2)  # a column of three friends and their buttons still fits
 	var why := str(_pending_check.call(id))
@@ -1053,7 +1054,8 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		var sp := _tab_box("COMBAT_TAB_SPELLS")
 		for mm: Dictionary in FeatureRules.metamagic(c, data):  # v0.7.10: metamagic toggles of the next spell
 			var mid := str(mm["id"])
-			var mb := _button(sp, "Meta_" + mid, "✦ %s (%d)" % [mm["name"], int(mm["cost"])], me and Stock.left(c, data, "sorcery_points") >= int(mm["cost"]))
+			var cost := tr("META_COST_CIRCLE") if bool(mm["per_circle"]) else str(int(mm["cost"]))
+			var mb := _button(sp, "Meta_" + mid, "✦ %s (%s)" % [mm["name"], cost], me and Stock.left(c, data, "sorcery_points") >= int(mm["cost"]))
 			mb.toggle_mode = true
 			mb.button_pressed = str(CombatRules.player(s).get("metamagic", "")) == mid
 			mb.tooltip_text = tr("META_TIP_" + mid.to_upper())

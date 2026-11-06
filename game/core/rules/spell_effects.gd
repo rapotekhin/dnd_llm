@@ -404,6 +404,10 @@ static func text(data: Dictionary, sp: Dictionary) -> String:
 		parts.append("+%d к %s" % [int(sp["skill_bonus"][k]), TranslationServer.translate("SKILL_" + str(k).to_upper())])
 	if sp.has("ability_adv"):
 		parts.append("преимущество на проверки одной характеристики")
+	if sp.has("familiar_form"):
+		parts.append("следующий фамильяр — в выбранном облике")
+	if sp.has("pact_weapon"):
+		parts.append("оружие пакта: владение, магическое, бьёт заклинательной характеристикой")
 	if sp.has("shillelagh"):
 		parts.append("дубинка или посох бьют к8 характеристикой заклинаний, магически")
 	if sp.has("weapon_plus"):
@@ -586,6 +590,22 @@ static func weapon(c: Dictionary, w: Dictionary, kind: String) -> Dictionary:
 			if CombatRules.dice_range(str(out["dice"]))[1] < 8:
 				out["dice"] = "1d8"
 			out["magical"] = true
+	for e: Dictionary in hero_effects(c, "pact_weapon"):  # the pact weapon (v0.8.4.33, BG3): magical, by the spellcasting ability
+		if str(e["pact_weapon"]) != str(out.get("id", "")) or str(out.get("id", "")).is_empty():
+			continue
+		out = out.duplicate()
+		out["magical"] = true
+		var sab := str(c.get("spell_ability", ""))
+		if bool(e.get("spell_ability", true)) and not sab.is_empty():
+			var was := "str" if bool(out.get("str_based", true)) else "dex"
+			var gain := CharacterRules.mod(CharacterRules.ability(c, sab)) - CharacterRules.mod(CharacterRules.ability(c, was))
+			if gain > 0:
+				out["to_hit"] = int(out["to_hit"]) + gain
+				out["bonus"] = int(out["bonus"]) + gain
+				var parts: Array[Dictionary] = []
+				parts.assign(out.get("hit_parts", []))
+				parts.append(RollParts.part("%s: %s вместо %s" % [e.get("source", {}).get("name", ""), RollParts.ability_name(sab), RollParts.ability_name(was)], gain))
+				out["hit_parts"] = parts
 	for e: Dictionary in hero_effects(c, "weapon_plus"):
 		if not str(c.get("equipped", {}).get("main_hand", "")).is_empty() and kind != "":
 			out = out.duplicate()

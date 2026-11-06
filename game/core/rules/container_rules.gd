@@ -455,8 +455,8 @@ static func plan_drop(s: GameSession, data: Dictionary, what: String, qty: int) 
 ## a cursed thing does not leave the hero.
 static func droppable(s: GameSession, data: Dictionary, item_id: String) -> int:
 	var c := s.character
-	if ItemRules.held_by_curse(c, data, s.items, item_id):
-		return 0
+	if ItemRules.held_by_curse(c, data, s.items, item_id) or FeatureRules.pact_made(data, s.items, item_id):
+		return 0  # a called pact weapon is let go, not dropped (v0.8.4.33)
 	var worn := 0
 	for slot: String in ["armor", "shield"]:
 		if str(c.get("equipped", {}).get(slot, "")) == item_id:

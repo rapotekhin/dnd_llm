@@ -648,7 +648,7 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	var ranged := str(w.get("range", "melee")) == "ranged"
 	var monk := not martial.is_empty() and FeatureRules.monk_weapon(def) and not ranged
 	var mod := dex_mod if ranged else (maxi(str_mod, dex_mod) if props.has("finesse") or monk else str_mod)
-	var proficient := weapon_proficient(c, w, weapon_id) or (FeatureRules.pact_blade(c) and not ranged)
+	var proficient := weapon_proficient(c, w, weapon_id) or FeatureRules.is_pact(c, weapon_id)  # the pact weapon alone (v0.8.4.33)
 	var to_hit := mod + (prof if proficient else 0)
 	var hit_parts: Array[Dictionary] = [RollParts.part(RollParts.ability_name("dex" if mod == dex_mod and mod != str_mod else "str"), mod)]
 	RollParts.add(hit_parts, "владение оружием", prof if proficient else 0)
@@ -1193,7 +1193,7 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 		return
 	var targets: Array[Dictionary] = [t]
 	if sp.has("area"):
-		targets = area_targets(s, data, sp, t)
+		targets = _sculpted(s, data, sp, me, area_targets(s, data, sp, t), lines)
 	var multi: Dictionary = cfg(data)["multi"].get(spell_id, {})
 	var count := SpellEffects.count(data, spell_id, slot, level)
 	var dtype := str(sp.get("damage_type", ""))
@@ -1294,9 +1294,14 @@ static func _start_picks(s: GameSession, data: Dictionary, spell_id: String, slo
 		s.combat.erase("volley")
 
 
+## The side a volley's chosen targets are of: the spell's own, or that of the first target of a twinned one.
+static func volley_side(data: Dictionary, v: Dictionary) -> String:
+	return str(v.get("side", SpellEffects.picks_side(data, str(v.get("spell", "")))))
+
+
 static func _can_pick_more(s: GameSession, data: Dictionary) -> bool:
 	var ids: Array[String] = enemies(s)
-	if SpellEffects.picks_side(data, str(volley(s)["spell"])) == "friend":
+	if volley_side(data, volley(s)) == "friend":
 		ids = allies(s, false)
 		ids.append(PLAYER)
 	return ids.any(func(id: String) -> bool: return can_volley(s, data, id).is_empty())
@@ -1307,7 +1312,9 @@ static func _pick_shot(s: GameSession, data: Dictionary, v: Dictionary, target_i
 	var spell_id := str(v["spell"])
 	var slot := int(v["slot"])
 	(v["picks"] as Array).append(target_id)
-	if SpellEffects.picks_side(data, spell_id) == "friend":
+	if v.has("side"):  # the twin of a spell lands on its own way (v0.8.4.33)
+		ActionRules.land(s, data, spell_id, slot, target_id, lines)
+	elif SpellEffects.picks_side(data, spell_id) == "friend":
 		if target_id != PLAYER or not Sheet.is_hero(caster(s)):
 			SpellEffects.on_friend(s, data, spell_id, slot, fighter(s, target_id), lines)
 		elif SpellEffects.self_spell(data, spell_id):
@@ -1347,7 +1354,7 @@ static func can_volley(s: GameSession, data: Dictionary, target_id: String) -> S
 	if v.has("picks"):
 		if (v["picks"] as Array).has(target_id):
 			return "COMBAT_PICKED"
-		if SpellEffects.picks_side(data, str(v["spell"])) == "friend":
+		if volley_side(data, v) == "friend":
 			return _can_friend(s, data, str(v["spell"]), target_id, player(s))
 	var t := fighter(s, target_id)
 	if t.is_empty() or str(t.get("status")) != "active" or str(t.get("side")) != "enemy":
@@ -1369,7 +1376,12 @@ static func volley_shot(s: GameSession, data: Dictionary, target_id: String) -> 
 	var sp: Dictionary = data["spells"][str(v["spell"])]
 	var t := fighter(s, target_id)
 	if v.has("picks"):
+		var scoped := v.has("by") and not s.combat.has("by")  # a twin lands with the numbers it was cast with
+		if scoped:
+			s.combat["by"] = v["by"]
 		_pick_shot(s, data, v, target_id, lines)
+		if scoped:
+			s.combat.erase("by")
 	else:
 		_bolt(s, data, str(v["spell"]), int(v["slot"]), t, _spell_dice(sp, int(v["slot"]), int(s.character.get("level", 1))), lines)
 	v["left"] = int(v["left"]) - 1
@@ -1449,6 +1461,26 @@ static func monster_area(s: GameSession, data: Dictionary, f: Dictionary, a: Dic
 
 
 ## A follower caught in the hero's area thinks worse of the hero.
+## Sculpt Spells (rules.combat.friendly_fire.sculpt): the caster's own side out of the area of a spell of its school, as many
+## as its row says by the spell's circle, the nearest first. The targets left.
+static func _sculpted(s: GameSession, data: Dictionary, sp: Dictionary, me: Dictionary, targets: Array[Dictionary], lines: Array[String]) -> Array[Dictionary]:
+	var row: Dictionary = cfg(data)["friendly_fire"].get("sculpt", {})
+	if row.is_empty() or str(sp.get("school_id", "")) != str(row["school"]) or not FeatureRules.has(Sheet.holder(s, me), str(row["feature"])):
+		return targets
+	var mine := friends_of(s, me) + [str(me["id"])]
+	var spared := targets.filter(func(x: Dictionary) -> bool: return mine.has(str(x["id"])))
+	spared.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return FightGrid.dist(me, a) < FightGrid.dist(me, b))
+	spared = spared.slice(0, int(row.get("base", 1)) + int(sp.get("level", 0)))
+	if spared.is_empty():
+		return targets
+	lines.append("%s: %s — вне удара" % [data["classes"]["features"].get(str(row["feature"]), {}).get("name", row["feature"]), ", ".join(spared.map(func(x: Dictionary) -> String: return str(x["name"])))])
+	var left: Array[Dictionary] = []
+	for x: Dictionary in targets:
+		if not spared.has(x):
+			left.append(x)
+	return left
+
+
 static func _caught_friend(s: GameSession, data: Dictionary, t: Dictionary) -> void:
 	var npc := str(t.get("npc_id", ""))
 	if str(t.get("side")) == "ally" and not npc.is_empty():
@@ -2157,7 +2189,7 @@ static func add_allies(s: GameSession, data: Dictionary, specs: Array, mid_fight
 ## A spell calls its creatures to the side of `f`, not to the hero's: they live as long as this fight.
 static func summon_for(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String) -> Array[String]:
 	var sp := AllyRules.summon_spec(data, spell_id, s.items)
-	var mon := AllyRules.monster_of(s, sp)
+	var mon := AllyRules.monster_of(s, sp, f)
 	var m: Dictionary = data["monsters"].get(mon, {})
 	if m.is_empty() or bool(sp.get("carrier", false)):
 		return []

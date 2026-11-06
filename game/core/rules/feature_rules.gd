@@ -127,9 +127,105 @@ static func great_weapon(c: Dictionary) -> bool:
 	return false
 
 
-## A melee weapon of the Blade pact: the warlock is proficient with any.
-static func pact_blade(c: Dictionary) -> bool:
-	return has(c, "pact_of_the_blade")
+# --- Pact of the Blade (v0.8.4.33, as in BG3) ----------------------------------------------------------------------
+
+
+static func pact_row(data: Dictionary) -> Dictionary:
+	return rows(data).get("pact_weapon", {})
+
+
+## The thing that is the pact weapon of `c` now, "" — none: the item of its status `pact_weapon`.
+static func pact_item(c: Dictionary) -> String:
+	for e: Dictionary in SpellEffects.hero_effects(c, "pact_weapon"):
+		return str(e["pact_weapon"])
+	return ""
+
+
+## Whether `id` is the pact weapon of `c` (proficiency, magic and the spellcasting ability on its blows).
+static func is_pact(c: Dictionary, id: String) -> bool:
+	return not id.is_empty() and pact_item(c) == id
+
+
+## A thing called by the pact: it is no thing of the world, it is not sold or dropped, only let go.
+static func pact_made(data: Dictionary, session_items: Dictionary, id: String) -> bool:
+	return bool(ItemRules.def_of(data["items"], session_items, id).get("pact", false))
+
+
+## What the pact can do now: call a form into the hand (`make:<form>`) or bind a melee weapon the holder carries
+## (`bind:<id>`, the thing itself, no copy); `drop` — let the pact weapon go. [{id, label}].
+static func pact_options(c: Dictionary, data: Dictionary, session_items: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not has(c, "pact_of_the_blade"):
+		return out
+	for form: String in pact_row(data).get("forms", []):
+		out.append({"id": "make:" + form, "label": "Призвать: %s" % ItemRules.display_name(data["items"], session_items, form)})
+	var now := pact_item(c)
+	for id: String in c.get("inventory", {}):
+		var def := ItemRules.def_of(data["items"], session_items, id)
+		if id != now and not pact_made(data, session_items, id) and def.has("weapon") and str(def["weapon"].get("range", "melee")) == "melee":
+			out.append({"id": "bind:" + id, "label": "Связать: %s" % ItemRules.display_name(data["items"], session_items, id)})
+	if not now.is_empty():
+		out.append({"id": "drop", "label": "Отпустить оружие пакта"})
+	return out
+
+
+## Calls or binds the pact weapon of `who` by an option of `pact_options`; the old one goes. Lines.
+static func pact_weapon(s: GameSession, data: Dictionary, who: Dictionary, choice: String) -> Array[String]:
+	var c := Sheet.holder(s, who)
+	var lines: Array[String] = []
+	var old := pact_item(c)
+	_pact_end(c, data, s.items)
+	if choice == "drop":
+		lines.append("Оружие пакта отпущено")
+		return lines
+	var id := choice.trim_prefix("bind:")
+	if choice.begins_with("make:"):
+		var form := choice.trim_prefix("make:")
+		id = "pact_" + form
+		var name := ItemRules.display_name(data["items"], s.items, form)
+		s.items[id] = {"name": "%s пакта" % name, "base": form, "pact": true, "value_cp": 0, "rarity": "common",
+			"description": "Оружие, призванное договором с покровителем. Исчезает, если его отпустить, призвать или связать другое."}
+		ItemRules.add(c, id, 1)
+		var eq: Dictionary = c.get("equipped", {})
+		for sl: String in CharacterRules.hands_freed(c, data, s.items, id, "main_hand", false):
+			eq[sl] = ""
+		eq["main_hand"] = id
+		c["equipped"] = eq
+		lines.append("%s призывает в руку: %s" % [c.get("name", ""), s.items[id]["name"]])
+	elif int(c.get("inventory", {}).get(id, 0)) <= 0:
+		return lines
+	else:
+		lines.append("%s связывает с пактом: %s" % [c.get("name", ""), ItemRules.display_name(data["items"], s.items, id)])
+	ConditionRules.add_effect(c, {"condition": "", "pact_weapon": id, "spell_ability": bool(pact_row(data).get("spell_ability", true)), "ends": {}, "source": {"kind": "feature", "id": "pact_of_the_blade", "name": "Пакт клинка"}})
+	if Sheet.is_hero(who):
+		CharacterRules.refresh(c, data, s.items)
+	if not old.is_empty() and old != id and pact_made(data, s.items, old):
+		lines.append("Прежнее оружие пакта исчезло")
+	return lines
+
+
+## The pact ends: its status off, a called weapon gone from the holder's things.
+static func _pact_end(c: Dictionary, data: Dictionary, session_items: Dictionary) -> void:
+	for e: Dictionary in SpellEffects.hero_effects(c, "pact_weapon"):
+		var id := str(e["pact_weapon"])
+		ConditionRules.remove_effect(c, int(e["uid"]))
+		if pact_made(data, session_items, id):
+			ItemRules.remove(c, id)
+
+
+## The pact weapon that left its holder ends (given, sold, lost); a called one let go from both sets vanishes. Lines.
+static func pact_tidy(c: Dictionary, data: Dictionary, session_items: Dictionary) -> void:
+	var id := pact_item(c)
+	if id.is_empty():
+		for made: String in (c.get("inventory", {}) as Dictionary).keys():
+			if pact_made(data, session_items, made):  # a called weapon outlives no pact
+				ItemRules.remove(c, made)
+		return
+	if int(c.get("inventory", {}).get(id, 0)) <= 0:
+		_pact_end(c, data, session_items)
+		return
+	if pact_made(data, session_items, id) and CharacterRules.held_copies(c, id) <= 0 and not CharacterRules.stowed(c).values().has(id):
+		_pact_end(c, data, session_items)
 
 
 ## What `f`'s class does to a blow before the roll: Sacred Weapon, Rage, Sneak Attack, its critical range. A copy of `b`; `m` — the
@@ -288,6 +384,8 @@ static func answer_prompt(s: GameSession, data: Dictionary, choice: String) -> A
 			return _wild_shape(s, data, choice)
 		"font":
 			return font_convert(s, data, choice)
+		"pact_weapon":
+			return pact_weapon(s, data, Sheet.HERO, choice)
 	return []
 
 
@@ -585,6 +683,14 @@ static func _hook(s: GameSession, data: Dictionary, f: Dictionary, id: String, t
 				s.combat["prompt"] = {"kind": "font", "options": options, "text": "Источник магии: очков %d" % Stock.left(c, data, "sorcery_points")}
 		"breath":
 			lines.append_array(_breath(s, data, f, target_id))
+		"pact_weapon":  # the form or the weapon picked as in BG3; another than the hero calls the first form
+			var opts := pact_options(c, data, s.items)
+			if not hero:
+				if not opts.is_empty():
+					lines.append_array(pact_weapon(s, data, f, str(opts[0]["id"])))
+				return
+			opts.append({"id": "none", "label": "Ничего"})
+			s.combat["prompt"] = {"kind": "pact_weapon", "options": opts, "text": "Пакт клинка: призвать оружие или связать то, что при вас"}
 
 
 ## Turn Undead / Turn the Unholy: every foe of those types within 30 ft saves WIS against the spell DC or flees for a
@@ -780,38 +886,63 @@ static func font_convert(s: GameSession, data: Dictionary, id: String) -> Array[
 	return ["Источник магии: ячейка %d круга стала %d очк." % [lv, lv]]
 
 
-## The metamagic options of the sorcerer: [{id, name, cost}].
+## The metamagic options of the sorcerer: [{id, name, cost, per_circle}].
 static func metamagic(c: Dictionary, data: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var table: Dictionary = cfg(data)["metamagic"]
 	for id: String in table:
 		if has(c, "metamagic_" + id):
-			out.append({"id": id, "name": str(table[id]["name"]), "cost": int(table[id]["cost"])})
+			out.append({"id": id, "name": str(table[id]["name"]), "cost": int(table[id]["cost"]), "per_circle": bool(table[id].get("per_circle", false))})
 	return out
 
 
-## The active metamagic of the next cast ("" none) when `who` can pay it.
-static func active_metamagic(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> String:
+## The points a metamagic costs on `spell_id` cast at `slot`: its own, or the circle of the cast (a cantrip 1).
+static func meta_cost(data: Dictionary, id: String, spell_id: String = "", slot: int = 0) -> int:
+	var row: Dictionary = cfg(data)["metamagic"].get(id, {})
+	if not bool(row.get("per_circle", false)):
+		return int(row.get("cost", 0))
+	var circle := maxi(slot, int(data["spells"].get(spell_id, {}).get("level", 0))) if not spell_id.is_empty() else 0
+	return maxi(int(row.get("cost", 1)), circle)
+
+
+## Twinned Spell fits `spell_id` at `slot` cast by `who`: a spell of one creature by a way of `twin_ways`, with a range, no
+## area, not darts or rays, not chosen targets past one at this circle.
+static func twin_fits(s: GameSession, data: Dictionary, spell_id: String, slot: int, who: Dictionary = Sheet.HERO) -> bool:
+	var sp: Dictionary = data["spells"].get(spell_id, {})
+	if sp.is_empty() or sp.has("area") or int(sp.get("range_ft", 0)) <= 0:
+		return false
+	if not (cfg(data)["metamagic"].get("twinned_spell", {}).get("twin_ways", []) as Array).has(ActionRules.way(data, spell_id, true)):
+		return false
+	if SpellEffects.count(data, spell_id, slot, int(Sheet.holder(s, who).get("level", 1))) > 1:
+		return false
+	return SpellEffects.picks(data, spell_id).is_empty() or SpellEffects.picks_count(data, spell_id, slot) <= 1
+
+
+## The active metamagic of the next cast ("" none) when `who` can pay it and it fits the spell (when one is named).
+static func active_metamagic(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO, spell_id: String = "", slot: int = 0) -> String:
 	if not CombatRules.active(s):
 		return ""
 	var id := str(_fighter(s, who).get("metamagic", ""))
 	if id.is_empty() or not cfg(data)["metamagic"].has(id):
 		return ""
-	return id if Stock.left(Sheet.holder(s, who), data, "sorcery_points") >= int(cfg(data)["metamagic"][id]["cost"]) else ""
+	if id == "twinned_spell" and not spell_id.is_empty() and not twin_fits(s, data, spell_id, slot, who):
+		return ""
+	return id if Stock.left(Sheet.holder(s, who), data, "sorcery_points") >= meta_cost(data, id, spell_id, slot) else ""
 
 
-## Pays the metamagic of this cast. One who is not the hero uses the cheapest it has. The id or "".
-static func pay_metamagic(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> String:
+## Pays the metamagic of this cast of `spell_id` at `slot`. One who is not the hero uses the cheapest that fits. The id or "".
+static func pay_metamagic(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO, spell_id: String = "", slot: int = 0) -> String:
 	var c := Sheet.holder(s, who)
 	if not Sheet.is_hero(who):
 		var best := 1 << 20
 		for m: Dictionary in metamagic(c, data):
-			if int(m["cost"]) < best:
-				best = int(m["cost"])
+			var cost := meta_cost(data, str(m["id"]), spell_id, slot)
+			if cost < best and (str(m["id"]) != "twinned_spell" or twin_fits(s, data, spell_id, slot, who)):
+				best = cost
 				who["metamagic"] = str(m["id"])
-	var id := active_metamagic(s, data, who)
+	var id := active_metamagic(s, data, who, spell_id, slot)
 	if not id.is_empty():
-		Stock.use(c, data, "sorcery_points", int(cfg(data)["metamagic"][id]["cost"]), s.rng)
+		Stock.use(c, data, "sorcery_points", meta_cost(data, id, spell_id, slot), s.rng)
 	_fighter(s, who).erase("metamagic")
 	return id
 

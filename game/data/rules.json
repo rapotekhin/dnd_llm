@@ -3,7 +3,7 @@
 		"_doc": "Вне игры (v0.8.4.28.4, Catalog.cut): записи остаются в данных, но движок их не читает — их нельзя дать, продать, призвать, встретить или выбрать. Вещи, монстры и умения, у которых нет механики (чек-лист: «нет механики» или только слова мастера). Пакет мира с такой ссылкой не проходит проверку.",
 		"items": ["climbers_kit"],
 		"monsters": ["animated_armor", "bat", "black_dragon_wyrmling", "bronze_dragon_wyrmling", "crab", "crocodile", "darkmantle", "doppelganger", "dryad", "flying_sword", "gelatinous_cube", "ghast", "giant_bat", "giant_crab", "giant_frog", "giant_octopus", "giant_sea_horse", "giant_toad", "gibbering_mouther", "gold_dragon_wyrmling", "gray_ooze", "green_dragon_wyrmling", "green_hag", "grimlock", "homunculus", "hunter_shark", "killer_whale", "lemure", "lion", "lizardfolk", "manticore", "merfolk", "merrow", "mimic", "minotaur", "nightmare", "ochre_jelly", "octopus", "phase_spider", "plesiosaurus", "pseudodragon", "quipper", "reef_shark", "rug_of_smothering", "rust_monster", "sahuagin", "sea_hag", "shadow", "specter", "swarm_of_bats", "swarm_of_quippers", "will_o_wisp"],
-		"features": ["eldritch_invocation_eyes_of_the_rune_keeper", "eldritch_invocation_gaze_of_two_minds"]
+		"features": ["eldritch_invocation_eyes_of_the_rune_keeper", "eldritch_invocation_gaze_of_two_minds", "eldritch_invocation_book_of_ancient_secrets", "eldritch_invocation_voice_of_the_chain_master", "metamagic_careful_spell", "metamagic_subtle_spell"]
 	},
 	"dc_tiers": {
 		"very_easy": 5,
@@ -1449,7 +1449,7 @@
 		"_v08_4_4": "A row of `summons` with `carrier`: no fighter, a creature of the hero like a horse (MountRules) that goes with him until its time is out; `carries_lb` — its own load, without it the beast's pack.",
 		"_v08_4_26": "A row may be named by a thing, not a spell: its `use.summon` calls it (a Bag of Tricks); `pick` — one of these creatures by the dice instead of one `monster`.",
 		"summons": {
-			"find_familiar": {"monster": "owl", "count": 1, "helper": true},
+			"find_familiar": {"monster": "owl", "count": 1, "helper": true, "forms": ["owl", "cat", "bat", "raven", "hawk", "rat", "lizard", "spider", "weasel", "crab", "poisonous_snake", "octopus", "quipper"], "pact_forms": ["imp", "pseudodragon", "quasit", "sprite"], "pact_feature": "pact_of_the_chain"},
 			"find_steed": {"monster": "warhorse", "count": 1},
 			"conjure_animals": {"monster": "wolf", "count": 4, "minutes": 60},
 			"animate_dead": {"monster": "skeleton", "count": 1, "minutes": 1440},
@@ -1599,6 +1599,11 @@
 		},
 		"bonus_cantrip": {
 			"cantrips": 1
+		},
+		"pact_of_the_tome": {
+			"_doc": "Pact of the Tome (v0.8.4.33): `tome` cantrips of any class's list picked at the level it is chosen (LevelUp `tome`), cast only while the hero carries `item` (SpellRules.ready), not counted among the known.",
+			"tome": 3,
+			"item": "book_of_shadows"
 		}
 	},
 	"trade": {
@@ -3062,6 +3067,7 @@
 	},
 	"feature_spells": {
 		"_doc": "Spells a feature lets the hero cast at will, without a slot (v0.7.22.4, big test #15: «Туманные видения» gave no spell): the warlock's invocations; they come into c.spells.free and cast at their own circle. v0.8.4.26.1: a row of `resources` with this feature and `spell` gives it charges (once a long rest), SpellRules.stock_of.",
+		"pact_of_the_chain": ["find_familiar"],
 		"eldritch_invocation_misty_visions": ["silent_image"],
 		"eldritch_invocation_armor_of_shadows": ["mage_armor"],
 		"eldritch_invocation_beast_speech": ["speak_with_animals"],
@@ -3692,7 +3698,8 @@
 	},
 	"combat": {
 		"_doc": "Combat (v0.6.1, ADR-0010 §7): 7 columns of 30 ft on a line (−3…3), the player starts at 0; a move is one column (speed ≥ 60 — two), Dash one more. Spells the engine resolves itself — engine_spells (the rest go to the master as improvisation); multi: several darts or rays. Morale: a WIS save at half HP or when the leader falls; intelligent foes (INT ≥ intelligent_int) surrender, the rest flee. XP budget per character level for the master's fights (DMG, hard); in a fight the master's reinforcement keeps the foes in play within it and comes after reinforce_delay rounds; a foe's call for help (pack encounter help) — after help_delay.",
-		"friendly_fire": {"_doc": "An area does not pick sides (v0.7.50.1): allies in it are caught, the hero too unless the area starts at the hero; a follower thinks worse of the hero by `attitude`. on false — only foes.", "on": true, "attitude": -1},
+		"friendly_fire": {"_doc": "An area does not pick sides (v0.7.50.1): allies in it are caught, the hero too unless the area starts at the hero; a follower thinks worse of the hero by `attitude`. on false — only foes.", "on": true, "attitude": -1,
+			"sculpt": {"_doc": "Sculpt Spells (v0.8.4.33): one with `feature` shapes a spell of `school` round its own side — `base` + the spell's circle of them, nearest first, are out of its area", "feature": "sculpt_spells", "school": "evocation", "base": 1}},
 		"potion_cost": "bonus",
 		"offhand_needs_attack": false,
 		"told": {"_doc": "v0.8.4.31, the author's feedback: the master tells a fight once, after it, by its whole log (rounds false); rounds true — after every round, as before. lines — how many of the fight's last lines the master gets.", "rounds": false, "lines": 160},
@@ -4282,6 +4289,13 @@
 			"extended_spell": {
 				"name": "Продлённое",
 				"cost": 1
+			},
+			"twinned_spell": {
+				"_doc": "Twinned Spell (v0.8.4.33): points by the spell's circle (a cantrip 1); a spell of one creature of its ways, no area, not on oneself, never more than one target at that circle — the same spell at a second one in range (FeatureRules.twin_fits, ActionRules.twin)",
+				"name": "Удвоенное",
+				"cost": 1,
+				"per_circle": true,
+				"twin_ways": ["condition", "curse", "heal", "damage", "dispel"]
 			}
 		}
 	},
@@ -4935,6 +4949,16 @@
 			"aims": true,
 			"trait": "breath_weapon",
 			"hook": "breath"
+		},
+		"pact_weapon": {
+			"_doc": "Pact of the Blade as in BG3 (v0.8.4.33, FeatureRules.pact_*): `forms` — what is called into the main hand (a two-handed form frees the other hand); a melee weapon the holder carries may be bound instead — no copy: that very thing is the pact weapon while the status lasts. The pact weapon is the status `pact_weapon` on its holder: proficiency with it, magical, `spell_ability` — its attacks and damage by the spellcasting ability when that is higher (BG3; false — by 5e). A called one is the game's thing with `pact` (not sold, not dropped: «Отпустить»); it vanishes when another is called or bound, when it is let go or when it leaves its holder.",
+			"name": "Пактовое оружие",
+			"cost": "action",
+			"features": ["pact_of_the_blade"],
+			"hook": "pact_weapon",
+			"tip": "Призвать оружие пакта в руку или связать с пактом оружие, которое в руке",
+			"forms": ["longsword", "greatsword", "rapier", "battleaxe", "warhammer", "glaive", "trident", "shortsword", "scimitar"],
+			"spell_ability": true
 		}
 	},
 	"spell_effects": {

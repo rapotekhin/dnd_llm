@@ -104,8 +104,16 @@ static func plan(c: Dictionary, data: Dictionary, picks: Dictionary = {}) -> Dic
 	var out := {"level": level, "features": features_at(c, data, level, subclass), "subclass": sub_now,
 		"subclasses": (k.get("subclasses", []) as Array).duplicate(), "options": [], "expertise": 0,
 		"asi": int(row.get("asi", 0)) > int(prev.get("asi", 0)), "cantrips": 0, "spells": 0, "prepared": 0,
-		"spell_mode": "", "max_spell_level": 0, "cantrip_list": [], "spell_list": [], "prepared_list": []}
+		"spell_mode": "", "max_spell_level": 0, "cantrip_list": [], "spell_list": [], "prepared_list": [], "tome": 0, "tome_list": []}
 	var bonus_cantrips := 0
+	for fid: Variant in picks.get("options", {}):  # an option picked now grants at once: Pact of the Tome's cantrips (v0.8.4.33)
+		for o: Variant in picks["options"][fid]:
+			out["tome"] = int(out["tome"]) + int(grants.get(str(o), {}).get("tome", 0))
+	if int(out["tome"]) > 0:
+		var have := _all_spells(c)
+		for id: String in data["spells"]:
+			if int(data["spells"][id]["level"]) == 0 and not have.has(id) and not bool(data["spells"][id].get("generated", false)):
+				(out["tome_list"] as Array).append(id)
 	for f: String in out["features"]:
 		var d: Dictionary = feats.get(f, {})
 		if d.has("options"):
@@ -164,7 +172,7 @@ static func plan(c: Dictionary, data: Dictionary, picks: Dictionary = {}) -> Dic
 static func _all_spells(c: Dictionary) -> Array:
 	var out: Array = []
 	var sp: Dictionary = c.get("spells", {})
-	for list: String in ["cantrips", "known", "prepared", "always"]:
+	for list: String in ["cantrips", "known", "prepared", "always", "tome"]:
 		for id: Variant in sp.get(list, []):
 			if not out.has(id):
 				out.append(id)
@@ -203,6 +211,8 @@ static func errors(c: Dictionary, data: Dictionary, picks: Dictionary) -> Array[
 			e.append("LVL_ERR_ASI")
 	elif not (picks.get("asi", {}) as Dictionary).is_empty():
 		e.append("LVL_ERR_ASI")
+	if int(p["tome"]) > 0 and (not _picked(picks.get("tome", []), int(p["tome"]), p["tome_list"]) or _dupes((picks.get("tome", []) as Array) + (picks.get("cantrips", []) as Array))):
+		e.append("LVL_ERR_TOME")
 	if not _picked(picks.get("cantrips", []), int(p["cantrips"]), p["cantrip_list"]):
 		e.append("LVL_ERR_CANTRIPS")
 	if not _picked(picks.get("spells", []), int(p["spells"]), p["spell_list"]):
@@ -263,6 +273,14 @@ static func apply(c: Dictionary, data: Dictionary, picks: Dictionary, session_it
 		if not sp.has(list):
 			sp[list] = []
 	(sp["cantrips"] as Array).append_array(picks.get("cantrips", []))
+	if int(p["tome"]) > 0:  # the tome's cantrips and the book they live in (v0.8.4.33)
+		sp["tome"] = (sp.get("tome", []) as Array) + (picks.get("tome", []) as Array)
+		for f: Variant in features:
+			var book := str(grants.get(str(f), {}).get("item", ""))
+			if not book.is_empty():
+				sp["tome_book"] = book
+				if int(c.get("inventory", {}).get(book, 0)) <= 0:
+					ItemRules.add(c, book, 1)
 	(sp["known"] as Array).append_array(picks.get("spells", []))
 	if str(p["spell_mode"]) == "known":
 		(sp["prepared"] as Array).append_array(picks.get("spells", []))
@@ -309,6 +327,9 @@ static func default_picks(c: Dictionary, data: Dictionary) -> Dictionary:
 			order.sort_custom(func(a: String, b: String) -> bool: return int(ab[a]) > int(ab[b]))
 			picks["asi"] = {order[0]: 1, order[1]: 1}
 	picks["cantrips"] = (p["cantrip_list"] as Array).slice(0, maxi(0, int(p["cantrips"])))
+	var tome := plan(c, data, picks)  # the options picked may bring the tome
+	if int(tome["tome"]) > 0:
+		picks["tome"] = (tome["tome_list"] as Array).filter(func(x: Variant) -> bool: return not (picks["cantrips"] as Array).has(x)).slice(0, int(tome["tome"]))
 	picks["spells"] = (p["spell_list"] as Array).slice(0, maxi(0, int(p["spells"])))
 	p = plan(c, data, picks)
 	picks["prepared"] = (p["prepared_list"] as Array).slice(0, maxi(0, int(p["prepared"])))

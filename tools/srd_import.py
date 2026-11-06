@@ -625,6 +625,9 @@ class Builder:
                 d["spellcasting"] = {"ability": spell["spellcasting_ability"]["index"], "prepared": idx in PREPARED_CASTERS,
                                      "spellbook": idx == "wizard", "from_level": spell.get("level", 1)}
             classes[sid(idx)] = d
+        # The API's levels leave out some features of a subclass (Circle of the Land, its Circle Spells, v0.8.4.33):
+        # every feature of the subclass that is no option of another is given at its own level.
+        own_feats = [f for f in all_of("features") if f.get("subclass") and not f.get("parent") and int(f["level"]) <= MAX_LEVEL]
         for s in all_of("subclasses"):
             idx = s["index"]
             ru = self.tr(f"subclass:{idx}", s["name"], desc_text(s))
@@ -636,6 +639,9 @@ class Builder:
                 lv = json.loads(p.read_text(encoding="utf-8"))
                 if lv.get("features"):
                     feats[str(n)] = [sid(f["index"]) for f in lv["features"]]
+            for f in own_feats:
+                if f["subclass"]["index"] == idx and sid(f["index"]) not in [x for fs in feats.values() for x in fs]:
+                    feats.setdefault(str(f["level"]), []).append(sid(f["index"]))
             spells: dict[str, list[str]] = {}
             for sp in s.get("spells", []):
                 lvl = int(sp["prerequisites"][0]["index"].rsplit("-", 1)[1]) if sp.get("prerequisites") else 1

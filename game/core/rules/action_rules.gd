@@ -32,8 +32,41 @@ static func way(data: Dictionary, id: String, aimed: bool) -> String:
 	return "damage" if CombatRules.is_engine_spell(data, id) and aimed else ""
 
 
-## The spell lands (its cost is paid): chosen targets first, then its way. Lines into `lines`.
+## The spell lands (its cost is paid) and, twinned, on a second creature. Lines into `lines`.
 static func run(s: GameSession, data: Dictionary, id: String, slot: int, target_id: String, lines: Array[String]) -> void:
+	land(s, data, id, slot, target_id, lines)
+	if str(s.combat.get("meta_now", "")) == "twinned_spell":
+		twin(s, data, id, slot, target_id, lines)
+
+
+## Twinned Spell (v0.8.4.33): the same spell at a second creature of the first one's side, in range. The hero picks it as a
+## chosen target (a volley with `side`), one who is not the hero takes the nearest at once.
+static func twin(s: GameSession, data: Dictionary, id: String, slot: int, first: String, lines: Array[String]) -> void:
+	var me := CombatRules.caster(s)
+	var mine := str(me["id"])
+	var on := mine if first.is_empty() or first == CombatRules.PLAYER and Sheet.is_hero(me) else first
+	var side := "foe" if CombatRules.foes_of(s, me).has(on) else "friend"
+	lines.append("Удвоенное заклинание: вторая цель")
+	if Sheet.is_hero(me):
+		s.combat["volley"] = {"spell": id, "slot": slot, "left": 1, "last": on, "picks": [on], "side": side, "by": s.combat.get("by", {}).duplicate()}
+		if not CombatRules._can_pick_more(s, data):
+			s.combat.erase("volley")
+			lines.append("…но второй цели в пределах дистанции нет")
+		return
+	var ids: Array[String] = CombatRules.foes_of(s, me) if side == "foe" else CombatRules.friends_of(s, me)
+	if side == "friend":
+		ids.append(mine)
+	ids.sort_custom(func(a: String, b: String) -> bool: return FightGrid.dist(me, CombatRules.fighter(s, a)) < FightGrid.dist(me, CombatRules.fighter(s, b)))
+	for to: String in ids:
+		var t := CombatRules.fighter(s, to)
+		if to == on or not Attack.up(s, t) or FightGrid.dist(me, t) > CombatRules._spell_squares(s, data, id, me) or CombatRules._no_line(s, data, me, t):
+			continue
+		land(s, data, id, slot, to, lines)
+		return
+
+
+## The spell lands on one target: chosen targets first, then its way. Lines into `lines`.
+static func land(s: GameSession, data: Dictionary, id: String, slot: int, target_id: String, lines: Array[String]) -> void:
 	var me := CombatRules.caster(s)
 	var hero := Sheet.is_hero(me)
 	var chosen := not SpellEffects.picks(data, id).is_empty()
@@ -180,8 +213,8 @@ static func cast(s: GameSession, data: Dictionary, f: Dictionary, id: String, sl
 	var lines: Array[String] = []
 	if Sheet.is_hero(f):
 		var c := s.character
-		s.combat["meta_now"] = FeatureRules.pay_metamagic(s, data)
 		var chk := {"spell_id": id, "slot": slot} if not by.is_empty() else SpellRules.check(c, data, id, slot)
+		s.combat["meta_now"] = FeatureRules.pay_metamagic(s, data, Sheet.HERO, id, int(chk.get("slot", slot)))
 		var held := str(c.get("concentration", ""))
 		lines = SpellRules.cast(c, data, chk["spell_id"], int(chk["slot"]), s, to in ["", CombatRules.PLAYER], not by.is_empty())
 		slot = int(chk["slot"])
@@ -193,7 +226,7 @@ static func cast(s: GameSession, data: Dictionary, f: Dictionary, id: String, sl
 		else:
 			run(s, data, id, slot, to, lines)
 	else:
-		s.combat["meta_now"] = FeatureRules.pay_metamagic(s, data, f)
+		s.combat["meta_now"] = FeatureRules.pay_metamagic(s, data, f, id, slot)
 		lines = _by_other(s, data, f, id, slot, to)
 	s.combat.erase("by")
 	return lines

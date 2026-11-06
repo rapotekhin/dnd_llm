@@ -256,8 +256,8 @@ static func extra_attacks(c: Dictionary, data: Dictionary) -> int:
 	for f: String in ["barbarian_extra_attack", "monk_extra_attack", "paladin_extra_attack", "ranger_extra_attack"]:
 		if has_feature(c, f):
 			n = maxi(n, 1)
-	if has_feature(c, "eldritch_invocation_thirsting_blade") and has_feature(c, "pact_of_the_blade"):
-		n = maxi(n, 1)
+	if has_feature(c, "eldritch_invocation_thirsting_blade") and FeatureRules.is_pact(c, str(c.get("equipped", {}).get("main_hand", ""))):
+		n = maxi(n, 1)  # with the pact weapon in the hand (v0.8.4.33)
 	return n
 
 
@@ -318,6 +318,8 @@ static func class_name_of(c: Dictionary, data: Dictionary) -> String:
 ## Recomputes the derived cache in place. Call after creation, load, equip, level-up.
 static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> void:
 	sanitize_equipped(c)
+	if data.has("items") and data.has("rules"):
+		FeatureRules.pact_tidy(c, data, session_items)  # a pact weapon that left its holder (v0.8.4.33)
 	for h: Dictionary in Thing.holders(c):
 		Thing.trim(h)
 	if data.has("rules") and data["rules"].has("containers"):

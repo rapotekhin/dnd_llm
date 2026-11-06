@@ -13,7 +13,7 @@ const WHO := {"divine_eminence": {"monster": "priest"}, "reckless": {"class": "b
 	"turn_undead": {"class": "cleric", "level": 5, "subclass": "life"}, "preserve_life": {"class": "cleric", "level": 5, "subclass": "life"},
 	"sacred_weapon": {"class": "paladin", "level": 5, "subclass": "devotion"}, "turn_unholy": {"class": "paladin", "level": 5, "subclass": "devotion"},
 	"wild_shape": {"class": "druid", "level": 4, "subclass": "land"}, "font": {"class": "sorcerer", "level": 3, "subclass": "draconic"}, "breath": {},
-	"one_with_shadows": {"class": "warlock", "level": 5}}
+	"one_with_shadows": {"class": "warlock", "level": 5}, "pact_weapon": {"class": "warlock", "level": 3}}
 
 
 func before_test() -> void:
@@ -62,6 +62,9 @@ func test_every_feature_action_goes_for_a_foe_of_its_class() -> void:
 		if bool(rows[id].get("dark", false)):  # an invocation only in the dark: the tavern's cellar
 			(f["features"] as Array).append("eldritch_invocation_one_with_shadows")
 			s.room_id = "brod-tavern-cellar"
+		for need: String in rows[id].get("features", []):  # a pact is a choice, not of the class table: put on
+			if not (f["features"] as Array).has(need):
+				(f["features"] as Array).append(need)
 		CombatRules.points(s, data, f)["attacked"] = bool(rows[id].get("after_attack", false))
 		var to := CombatRules.PLAYER if bool(rows[id].get("target", false)) else ""
 		assert_str(Acts.one("feature").can(s, data, f, to, {"id": id})).override_failure_message(id).is_empty()

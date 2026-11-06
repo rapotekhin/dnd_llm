@@ -63,7 +63,7 @@ func _rebuild() -> void:
 	var p := LevelUp.plan(c, data, picks)
 	var feats: Dictionary = data["classes"]["features"]
 	var choices := bool(p["subclass"]) or not (p["options"] as Array).is_empty() or int(p["expertise"]) > 0 or bool(p["asi"]) \
-		or int(p["cantrips"]) > 0 or int(p["spells"]) > 0 or int(p["prepared"]) > 0
+		or int(p["cantrips"]) > 0 or int(p["spells"]) > 0 or int(p["prepared"]) > 0 or int(p["tome"]) > 0
 	set_width(WIDE if choices else COMPACT)  # a level with nothing to pick is a small window (О3)
 	_info.visible = choices
 	title.text = tr("LVL_TITLE").format({"level": p["level"], "class": c.get("class_name", "")})
@@ -107,6 +107,9 @@ func _rebuild() -> void:
 	if int(p["cantrips"]) > 0:
 		_choice_text(tr("LVL_CANTRIPS").format({"n": p["cantrips"]}), "cantrip", p["cantrip_list"], spell_name, int(p["cantrips"]),
 			picks.get("cantrips", []), func(sel: Array) -> void: picks["cantrips"] = sel)
+	if int(p["tome"]) > 0:  # Pact of the Tome: cantrips of any class (v0.8.4.33)
+		_choice_text(tr("LVL_TOME").format({"n": p["tome"]}), "tome", p["tome_list"], spell_name, int(p["tome"]),
+			picks.get("tome", []), func(sel: Array) -> void: picks["tome"] = sel)
 	if int(p["spells"]) > 0:
 		_choice_text(tr("LVL_SPELLS_SPELLBOOK" if p["spell_mode"] == "spellbook" else "LVL_SPELLS").format({"n": p["spells"]}), "spell",
 			p["spell_list"], spell_name, int(p["spells"]), picks.get("spells", []), func(sel: Array) -> void:
@@ -125,7 +128,7 @@ func _rebuild() -> void:
 ## Picks without empty lists the plan does not ask for (errors() wants exact counts).
 func _clean(p: Dictionary) -> Dictionary:
 	var out := picks.duplicate(true)
-	for key: String in ["cantrips", "spells", "prepared", "expertise"]:
+	for key: String in ["cantrips", "spells", "prepared", "expertise", "tome"]:
 		if not out.has(key):
 			out[key] = []
 	if not bool(p["asi"]):

@@ -29,9 +29,51 @@ static func source_name(data: Dictionary, key: String, items: Dictionary = {}) -
 
 
 ## The creature a row calls: its `monster`, or one of `pick` by the session's dice (a Bag of Tricks).
-static func monster_of(s: GameSession, sp: Dictionary) -> String:
+static func monster_of(s: GameSession, sp: Dictionary, who: Dictionary = Sheet.HERO) -> String:
+	var forms := forms_of(Sheet.holder(s, who), sp)
+	for e: Dictionary in SpellEffects.hero_effects(Sheet.holder(s, who), "familiar_form"):  # the caster's pick (v0.8.4.33)
+		if forms.has(str(e["familiar_form"])):
+			return str(e["familiar_form"])
 	var pick: Array = sp.get("pick", [])
 	return str(pick[s.rng.randi_range(0, pick.size() - 1)]) if not pick.is_empty() else str(sp.get("monster", ""))
+
+
+## The forms a summon of `sp` may take for `c` (Find Familiar, v0.8.4.33): its `forms`, and its `pact_forms` with the pact.
+static func forms_of(c: Dictionary, sp: Dictionary) -> Array:
+	var out: Array = (sp.get("forms", []) as Array).duplicate()
+	if FeatureRules.has(c, str(sp.get("pact_feature", "-"))):
+		out.append_array(sp.get("pact_forms", []))
+	return out
+
+
+## The forms of the familiar `c` may pick, when it knows the spell: [{id, label}] (the next call takes it).
+static func familiar_options(s: GameSession, data: Dictionary, c: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not SpellRules.ready(c).has("find_familiar"):
+		return out
+	var now := familiar_form(s, data, c)
+	for mid: Variant in forms_of(c, summon_spec(data, "find_familiar")):
+		if data["monsters"].has(str(mid)) and str(mid) != now:
+			out.append({"id": str(mid), "label": str(data["monsters"][str(mid)]["name"])})
+	return out
+
+
+## The form the next familiar of `c` takes.
+static func familiar_form(s: GameSession, data: Dictionary, c: Dictionary) -> String:
+	for e: Dictionary in SpellEffects.hero_effects(c, "familiar_form"):
+		return str(e["familiar_form"])
+	return str(summon_spec(data, "find_familiar").get("monster", ""))
+
+
+## Picks the form of the next familiar of `who` (a status kept until changed). Lines.
+static func choose_familiar(s: GameSession, data: Dictionary, who: Dictionary, form: String) -> Array[String]:
+	var c := Sheet.holder(s, who)
+	if not forms_of(c, summon_spec(data, "find_familiar")).has(form):
+		return []
+	for e: Dictionary in SpellEffects.hero_effects(c, "familiar_form"):
+		ConditionRules.remove_effect(c, int(e["uid"]))
+	ConditionRules.add_effect(c, {"condition": "", "familiar_form": form, "ends": {}, "source": {"kind": "spell", "id": "find_familiar", "name": "Облик фамильяра"}})
+	return ["Следующий фамильяр придёт в облике: %s" % data["monsters"][form]["name"]]
 
 
 ## A row of the summons called by anybody (v0.8.4.26: one road for a spell and a thing): the hero's go with him, another's

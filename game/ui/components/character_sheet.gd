@@ -64,6 +64,43 @@ func _rebuild() -> void:
 	_development_tab(c)  # v0.7.19.1
 
 
+## Pact of the Blade (v0.8.4.33, as in BG3): what the pact weapon is, the forms to call and the weapons to bind, nested.
+func _pact_rows(box: VBoxContainer, c: Dictionary, can_act: bool) -> void:
+	var d := Catalog.data
+	var opts := FeatureRules.pact_options(c, d, GameState.session.items)
+	if opts.is_empty():
+		return
+	var now := FeatureRules.pact_item(c)
+	_text(box, tr("PACT_NOW").format({"weapon": ItemRules.display_name(d["items"], GameState.session.items, now)}) if not now.is_empty() else tr("PACT_NONE"), UiTheme.MUTED_LABEL)
+	var in_fight := CombatRules.active(GameState.session)
+	var flow := HFlowContainer.new()
+	flow.name = "PactOptions"
+	flow.add_theme_constant_override("h_separation", 8)
+	flow.add_theme_constant_override("v_separation", 6)
+	box.add_child(flow)
+	for o: Dictionary in opts:
+		var b := UiParts.act_button(flow, "Pact_" + str(o["id"]).replace(":", "_"), str(o["label"]), "" if can_act and not in_fight else ("PACT_IN_FIGHT" if in_fight else "ABILITY_BUSY"),
+			GameState.pact_weapon.bind(str(o["id"])))
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+
+
+## The form of the next familiar (v0.8.4.33): the special ones of Pact of the Chain among them.
+func _familiar_rows(box: VBoxContainer, c: Dictionary, can_act: bool) -> void:
+	var d := Catalog.data
+	var opts := AllyRules.familiar_options(GameState.session, d, c)
+	if opts.is_empty():
+		return
+	var now := AllyRules.familiar_form(GameState.session, d, c)
+	_text(box, tr("FAMILIAR_FORM").format({"form": d["monsters"].get(now, {}).get("name", now)}), UiTheme.MUTED_LABEL)
+	var flow := HFlowContainer.new()
+	flow.name = "FamiliarForms"
+	flow.add_theme_constant_override("h_separation", 8)
+	flow.add_theme_constant_override("v_separation", 6)
+	box.add_child(flow)
+	for o: Dictionary in opts:
+		UiParts.act_button(flow, "Familiar_" + str(o["id"]), str(o["label"]), "" if can_act else "ABILITY_BUSY", GameState.choose_familiar.bind(str(o["id"])))
+
+
 ## The life goal (v0.7.22): the player's own words, the master's assessment, a field to change or clear it.
 func _goal_section(box: VBoxContainer, c: Dictionary) -> void:
 	_text(box, tr("GOAL_TITLE"), UiTheme.HEADING)
@@ -306,6 +343,8 @@ func _abilities_tab(c: Dictionary) -> void:
 					_action(row, "Font_" + str(o["id"]), str(o["label"]), can_act, GameState.font_convert.bind(str(o["id"])))
 				continue
 			_action(row, "Use_" + str(r["id"]), "BTN_USE", can_act and int(r["left"]) > 0, GameState.use_feature.bind(str(r["id"])))
+	_pact_rows(box, c, can_act)
+	_familiar_rows(box, c, can_act)
 	if str(c.get("spell_ability", "")).is_empty():
 		return
 	box.add_child(HSeparator.new())
@@ -332,7 +371,7 @@ func _abilities_tab(c: Dictionary) -> void:
 		box.add_child(prep)
 	var ready_ids := SpellRules.ready(c)
 	var sp: Dictionary = c.get("spells", {})
-	for list: String in ["cantrips", "free", "prepared", "always", "known"]:
+	for list: String in ["cantrips", "tome", "free", "prepared", "always", "known"]:
 		var ids: Array = sp.get(list, [])
 		if list == "known" and ids == sp.get("prepared", []):
 			continue

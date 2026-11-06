@@ -306,8 +306,8 @@ static func tag_words(data: Dictionary, tags: Array[String]) -> String:
 ## What `who` may part with of a thing (v0.8.4.29: anybody's, the hero by default): not cursed onto it, not worn, no full bag.
 static func sellable(s: GameSession, item_id: String, data: Dictionary = {}, who: String = Being.HERO) -> int:
 	var c := Life.of(s, who, data)
-	if not data.is_empty() and ItemRules.held_by_curse(c, data, s.items, item_id):
-		return 0  # a cursed thing does not leave the hero (v0.7.12)
+	if not data.is_empty() and (ItemRules.held_by_curse(c, data, s.items, item_id) or FeatureRules.pact_made(data, s.items, item_id)):
+		return 0  # a cursed thing does not leave the hero (v0.7.12), a called pact weapon is no thing to sell (v0.8.4.33)
 	var worn := CharacterRules.held_copies(c, item_id)
 	return maxi(0, int(c.get("inventory", {}).get(item_id, 0)) - worn - ContainerRules.full_bags(c, item_id))  # a full bag — empty it first (v0.7.18.2)
 

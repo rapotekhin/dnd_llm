@@ -12,11 +12,15 @@ static func resolve(c: Dictionary, data: Dictionary, name: String) -> String:
 	return id if not id.is_empty() and ready(c).has(id) else ""
 
 
-## Spell ids the character can cast now: cantrips, prepared and always-prepared.
+## Spell ids the character can cast now: cantrips, prepared and always-prepared; the tome's cantrips while its book is
+## carried (Pact of the Tome, v0.8.4.33).
 static func ready(c: Dictionary) -> Array:
 	var out: Array = []
 	var sp: Dictionary = c.get("spells", {})
-	for list: String in ["cantrips", "prepared", "always", "free"]:
+	var lists: Array[String] = ["cantrips", "prepared", "always", "free"]
+	if int(c.get("inventory", {}).get(str(sp.get("tome_book", "")), 0)) > 0:
+		lists.append("tome")
+	for list: String in lists:
 		for id: Variant in sp.get(list, []):
 			if not out.has(str(id)):
 				out.append(str(id))

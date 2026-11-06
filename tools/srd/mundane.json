@@ -85,5 +85,6 @@
 	"tag_wooden": {"name": "Бирка", "item_type": "gear", "value_cp": 0, "weight": 0, "properties": [], "stack": true, "description": "Деревянная или кожаная бирка с меткой владельца."},
 	"clay": {"name": "Глина", "item_type": "gear", "value_cp": 1, "weight": 5, "properties": [], "stack": true, "material": true, "description": "Ком сырой речной глины. Гончар лепит из неё посуду и обжигает в очаге."},
 	"stone": {"name": "Камень", "item_type": "gear", "value_cp": 1, "weight": 10, "properties": [], "stack": true, "material": true, "description": "Глыба тёсаного камня из шахты. Каменщик режет из неё точила, ступки и статуэтки."},
-	"boots": {"name": "Сапоги", "item_type": "gear", "value_cp": 100, "weight": 2, "properties": [], "stack": false, "description": "Крепкие кожаные сапоги на каждый день."}
+	"boots": {"name": "Сапоги", "item_type": "gear", "value_cp": 100, "weight": 2, "properties": [], "stack": false, "description": "Крепкие кожаные сапоги на каждый день."},
+  "book_of_shadows": {"name": "Книга теней", "item_type": "gear", "value_cp": 0, "weight": 3, "properties": [], "stack": false, "description": "Гримуар Пакта книги: пока он при колдуне, тот творит три заговора из него, из списков любого класса."}
 }
