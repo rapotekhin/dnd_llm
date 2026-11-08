@@ -140,6 +140,8 @@ BANK_WORDS = re.compile(r"ссуд|заём|заем|займ|в долг|зал
 UNDERWORLD_WORDS = re.compile(r"взлом|обчист|ограб|обнес|контрабанд|скупщик|краден|вынести|вынесу|кассу", re.IGNORECASE)  # v0.7.70.1
 CRAFT_WORDS = re.compile(r"выков|скую|скова|кую |смастер|сработаю|выточ|сошью|рецепт", re.IGNORECASE)  # v0.7.70.2
 # v0.8.4.28.7: a search where something is hidden — what is found is given as a new thing (wear, summon, use)
+READ_WORDS = re.compile(r"прочит|прочт|читаю|что (там |в н[её]м |в ней )?написано|что пишут|вскрыва\w* (письм|конверт|свит)|разворачива\w* (письм|записк|свит|карт)",
+                        re.IGNORECASE)  # v0.8.4.42: the player reads something — a thing with `text` given this turn
 TEACH_WORDS = re.compile(r"научи|обучи|выучи|хочу уметь|хочу так же|хочу научиться|научиться|перенять|возьми в ученики|в ученики",
                          re.IGNORECASE)  # v0.8.4.41.1: a request to be taught, checked at the end of the turn
 FIND_WORDS = re.compile(r"обыск|обшар|ищу|искать|поиск|пошар|роюсь|рыться|перерыва|разгреб|вороша|что тут|что здесь|что внутри|"

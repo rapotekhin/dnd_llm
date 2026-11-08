@@ -815,3 +815,18 @@ def test_the_checker_sees_the_status_this_turn_made_for_the_thing(data_dir):
     play(data_dir, fn, services=services)
     ring_prompt = str(fn.checker["prompts"][-1])
     assert "Собрано раньше" in ring_prompt and "against" in ring_prompt and "new:friendly" in ring_prompt
+
+
+def test_reading_a_letter_needs_a_thing_with_its_text(data_dir):
+    letter = {"name": "Письмо", "item_type": "treasure", "rarity": "common", "value_cp": 0, "description": "Запечатанное письмо."}
+    fn = scripted(
+        ("find_items", {"query": "письмо"}),
+        ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero", "item": letter}}),
+        ("final", lambda m: {"narration": "Ты вскрываешь письмо.", "effect_ids": [effect_id(m)]}),
+        ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero",
+                                       "item": {**letter, "item_type": "gear", "text": "Встреча у брода в полночь."}}}),
+        ("final", lambda m: {"narration": "«Встреча у брода в полночь».", "effect_ids": [effect_id(m)]}),
+    )
+    msg, _, _ = play(data_dir, fn, input="Вскрываю письмо — что там написано?")
+    assert "Игрок хочет прочесть" in last_tool_text(fn.state["prompts"][3])
+    assert msg["result"]["narration"].startswith("«Встреча")

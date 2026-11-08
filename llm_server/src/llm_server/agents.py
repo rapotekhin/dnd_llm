@@ -185,6 +185,7 @@ class TurnContext:
     kinds: list[str] = field(default_factory=list)  # the names of the effects the engine accepted this turn
     reminded: bool = False  # the turn was sent back once for a thing told and not given
     made: dict[str, str] = field(default_factory=dict)  # `make` accepted this turn by key, for the checker of what refers to it
+    readable: bool = False  # a thing given this turn the player can read: a new one with `text`, or a known one by id
     side_usage: RunUsage = field(default_factory=RunUsage)  # what the checker spent, paid with the turn
 
     def __post_init__(self) -> None:
@@ -382,6 +383,8 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         return f"Отклонено движком: {r.reason or 'без причины'}. Перепиши описание с учётом отказа."
     t.accepted[r.effect_id] = r.summary
     t.kinds.append(effect_tag(effect.model_dump()))
+    if isinstance(effect, MoveItemEffect) and effect.target == "hero":  # a known thing keeps its own text in the engine
+        t.readable = t.readable or effect.item is None or bool(effect.item.text)
     if isinstance(effect, MakeEffect):  # a thing of this turn refers to it as «new:<key>»: the checker must see what it is
         t.made[effect.key] = json.dumps(effect.model_dump(mode="json", exclude_defaults=True), ensure_ascii=False)
     t.proposed.add(key)
@@ -415,6 +418,11 @@ def told_not_given(t: TurnContext) -> str:
         return ("Игрок просит научить. Если учитель согласен — в этом же ходе `create:course` у него (а умение, которого нет в "
                 "данных, сначала собери `make`; правила — rules(\"make\")); без эффекта герой ничему не учится. "
                 "Если учитель отказывает или откладывает — верни ответ как есть.")
+    if prompts.READ_WORDS.search(t.params.input) and not t.readable:
+        return ("Игрок хочет прочесть, что написано. Вещь с написанным (письмо, записка, книга, карта) дай герою эффектом в этом же "
+                "ходе — `move_item:world>hero` с новой `item` (`item_type` gear) и её содержимым в `text`, ровно то, что расскажешь; "
+                "вещь из «Вокруг» — `move_item:room>hero` с её `prop_id`. Без эффекта прочесть нечего. Если вещь уже у героя или "
+                "прочесть не дали — верни ответ как есть.")
     return ""
 
 
