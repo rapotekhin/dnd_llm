@@ -158,8 +158,10 @@ func _foe_menu(s: GameSession, id: String, can_act: bool) -> bool:
 		var word := bool(EncounterRules.lurking(s, s.room_id).get("word", false))
 		_flow(acts, tr("BTN_FOE_ATTACK"), _near("foe:" + id, "touch", _try.bind(GameState.encounter_attack)), can_act, "FoeAttack_" + id,
 			tr("BTN_FOE_ATTACK_WORD_TIP") if word else "")
-		var looked := CombatRules.known(s, e) or bool(Being.view(s, id).get("looked", false))
-		_flow(acts, tr("BTN_FOE_INSPECT"), _try.bind(GameState.inspect_foe.bind(id)), can_act and not looked, "FoeInspect_" + id, tr("BTN_FOE_INSPECT_TIP"))
+		var looked := GameState.inspect_why(id)  # the one knowledge check (v0.8.4.41: anybody's)
+		_flow(acts, tr("BTN_FOE_INSPECT"), _try.bind(GameState.inspect.bind(id)), can_act and looked.is_empty(), "FoeInspect_" + id,
+			tr("BTN_FOE_INSPECT_TIP") if looked.is_empty() else tr(looked))
+		UiParts.card_button(acts, id)
 		_spell_acts(acts, id, can_act)
 		return true
 	return false
@@ -549,6 +551,7 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 	var acts := _acts("Acts_" + id)
 	var groups := {}  # v0.8.4.31: the acts in nested lists — deals, talk, life, spells
 	_near_ref = "npc:" + id
+	UiParts.card_button(acts, id)  # v0.8.4.41: its card, as in BG3
 	_flow(acts, tr("BTN_POCKETS_SHORT"), _near("npc:" + id, "touch", pockets_requested.emit.bind(id)), can_act and TheftRules.can_steal(s, Catalog.data, id).is_empty(), "Pockets_" + id, tr("BTN_POCKETS").format({"name": n.get("name", id)}))
 	if not JobRules.of(s, Catalog.data, id).is_empty():  # v0.7.26
 		_flow(_group(groups, "deals", id), tr("BTN_JOB"), job_requested.emit.bind(id), can_act, "Jobs_" + id, tr("BTN_JOB_TIP").format({"name": n.get("name", id)}))
@@ -718,6 +721,7 @@ func _creature_acts(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 		_animal_acts(s, cr, can_act)
 		return
 	var acts := _acts("CreatureActs_" + cid)
+	UiParts.card_button(acts, cid)  # v0.8.4.41
 	for sp: Array in CreatureRules.acts(s, Catalog.data, cr):  # what `can` allows, no list of the panel's own (v0.8.4.29.6)
 		var what: String = sp[0]
 		var run := func() -> void:
@@ -958,6 +962,7 @@ func _work_row(s: GameSession, can_act: bool) -> void:
 func _animal_acts(s: GameSession, cr: Dictionary, can_act: bool) -> void:
 	var cid := str(cr["id"])
 	var acts := _acts("CreatureActs_" + cid)
+	UiParts.card_button(acts, cid)  # v0.8.4.41: one's own beast is seen whole
 	if MountRules.on(Catalog.data):  # v0.7.42: the pack and the cart open as containers
 		for spec: Array in [[MountRules.PACK, "BTN_MOUNT_PACK"], [MountRules.CART, "BTN_MOUNT_CART"]]:
 			if MountRules.container(s, Catalog.data, str(spec[0]) + cid).is_empty():

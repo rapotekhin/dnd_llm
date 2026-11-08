@@ -466,6 +466,9 @@ func on_cell(cell: Vector2i) -> void:
 	if not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
 		_foe_menu(id)
 		return
+	if not id.is_empty() and id != CombatRules.PLAYER:  # one of the hero's side: its card (v0.8.4.41)
+		EventBus.card_requested.emit(id)
+		return
 	var way := _way_out_at(s, data, cell)
 	if way != FightGrid.NONE:
 		if way == FightGrid.cell(CombatRules.player(s)):
@@ -505,6 +508,12 @@ func _foe_menu(id: String) -> void:
 	add_child(_pop)
 	_pop.add_separator(str(f.get("name", "")))
 	_pop_acts = []
+	_pop.id_pressed.connect(_foe_pick)
+	_pop.add_item(tr("BTN_CARD"), 0)  # v0.8.4.41: its card, free — a look is no act
+	_pop.set_item_tooltip(_pop.item_count - 1, tr("BTN_CARD_TIP"))
+	_pop_acts.append({"act": func(to: String) -> String:
+		EventBus.card_requested.emit(to)
+		return "", "target": id})
 	var lists := {}
 	for row: Dictionary in _acts:
 		var target := aim if not str(row["aims"]).is_empty() else id
@@ -825,6 +834,10 @@ func _ally_row(s: GameSession, data: Dictionary, id: String, me: bool) -> void:
 	var ally_about := tr("COMBAT_ALLY_ABOUT").format({"monster": CombatRules.monster_card(s, data, a)}) + \
 		("\n\n" + str(a["desc"]) if not str(a.get("desc", "")).is_empty() else "")
 	al.mouse_entered.connect(func() -> void: _details.show_text(ally_name, ally_about))
+	al.tooltip_text = tr("BTN_CARD_TIP")
+	al.gui_input.connect(func(ev: InputEvent) -> void:  # v0.8.4.41: a click opens its card
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			EventBus.card_requested.emit(id))
 	ally.add_child(al)
 	_friend_pick(s, data, _foes, id, me)
 

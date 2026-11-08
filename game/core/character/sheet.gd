@@ -186,11 +186,17 @@ static func passive(s: GameSession, data: Dictionary, who: Dictionary) -> int:
 	return v if is_hero(who) else v + MonsterRules.passive_bonus(data, who)
 
 
-## The AC it stands with now: its armour, its statuses, the cover of this moment.
-static func ac(s: GameSession, who: Dictionary) -> int:
+## The AC it stands with now: its armour, its statuses, the cover of this moment. A record out of a fight keeps no AC of
+## its own: with `data` it is counted by what it wears as a fighter's would be (Gear.ac, v0.8.4.41: the card of anybody).
+static func ac(s: GameSession, who: Dictionary, data: Dictionary = {}) -> int:
 	if is_hero(who):
 		return int(s.character.get("ac", 10)) + (int(CombatRules.player(s).get("cover", 0)) if CombatRules.active(s) else 0)
-	return CombatRules.ac_of(who)
+	if who.has("ac") or data.is_empty():
+		return CombatRules.ac_of(who)
+	var tid := template_id(data, who)
+	var f := who.duplicate()
+	f["ac"] = Gear.ac(s, data, tid, things(s, data, who)) if data["monsters"].has(tid) else 10
+	return CombatRules.ac_of(f)
 
 
 ## A feature of a class, a trait of a race or of a template: what it has whoever it is.

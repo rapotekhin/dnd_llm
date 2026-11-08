@@ -49,6 +49,20 @@ static func act_button(parent: Control, node_name: String, text: String, why: St
 	return b
 
 
+## «Осмотреть» (v0.8.4.41): the card of a person, a creature or a foe (CreatureCardPanel) — a look only, so it stays open
+## while the master thinks and needs no walk up.
+static func card_button(parent: Control, id: String) -> Button:
+	var b := Button.new()
+	b.name = "Card_" + id
+	b.text = TranslationServer.translate("BTN_CARD")
+	b.tooltip_text = TranslationServer.translate("BTN_CARD_TIP")
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(func() -> void: EventBus.card_requested.emit(id))
+	parent.add_child(b)
+	return b
+
+
 ## A line of a fight's rolls: a hit is red (the damage), a miss grey; its breakdown on the hover (v0.7.49.4).
 static func roll_line(parent: Control, text: String, tip: String = "") -> Label:
 	var l := label(parent, text, UiTheme.MUTED_LABEL)

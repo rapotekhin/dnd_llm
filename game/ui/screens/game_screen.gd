@@ -43,6 +43,7 @@ var _arena: ArenaPanel  # v0.7.45
 var _family: FamilyPanel
 var _pet: PetPanel  # v0.7.43
 var _gear: GearPanel  # v0.8.4.40
+var _card: CreatureCardPanel  # v0.8.4.41
 var _letter: LetterPanel  # v0.7.48
 var _faith: FaithPanel  # v0.7.49
 var _heists: HeistPanel
@@ -225,6 +226,8 @@ func _ready() -> void:
 	_faith = _window(FaithPanel.SCENE, "FaithView")  # v0.7.49
 	_pet = _window(PetPanel.SCENE, "PetView")  # v0.7.43
 	_gear = _window(GearPanel.SCENE, "GearView")  # v0.8.4.40
+	_card = _window(CreatureCardPanel.SCENE, "CardView")  # v0.8.4.41: the card of any creature, from the side panel and a fight
+	EventBus.card_requested.connect(_card.open)
 	_family = _window(FamilyPanel.SCENE, "FamilyView")  # v0.7.32
 	_heists = _window(HeistPanel.SCENE, "HeistView")  # v0.7.33
 	_org = _window(OrgPanel.SCENE, "OrgView")
@@ -275,7 +278,7 @@ func _mount(w: Control) -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _wait, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _heists, _org, _office, _image]
+	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _wait, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _gear, _card, _heists, _org, _office, _image]
 
 
 # _input, not _unhandled_input: the focused chat input would swallow Esc.

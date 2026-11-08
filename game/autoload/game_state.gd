@@ -2607,22 +2607,52 @@ func attach_targets() -> Array[Dictionary]:
 	return out
 
 
-## «Осмотреть» a foe before the fight (v0.8.4.30, the author's feedback): the same knowledge check as in a fight, once a
-## foe. "" or a key.
-func inspect_foe(id: String) -> String:
-	if not _out_of_fight():
-		return "WAIT_BUSY"
+## Who `id` is for a look (v0.8.4.41, the card of any creature): a fighter of the fight, a foe seen before it with its
+## wounds, the hero, else its record — a person, a creature of the room, a follower. {} — nobody here.
+func creature_who(id: String) -> Dictionary:
+	if session == null or id.is_empty():
+		return {}
+	if id == Being.HERO:
+		return Sheet.HERO
+	if CombatRules.active(session):
+		return CombatRules.fighter(session, id)
 	for e: Dictionary in foes_here():
-		if EncounterRules.foe_id(e) != id:
-			continue
-		if CombatRules.known(session, e):
-			return "COMBAT_ALREADY_KNOWN"
-		if bool(Being.view(session, id).get("looked", false)):
-			return "FOE_LOOKED"
-		Being.of(session, id)["looked"] = true
-		_effect_lines(CombatRules.look_over(session, Catalog.data, e), true)
-		return ""
-	return "CREATURE_NONE"
+		if EncounterRules.foe_id(e) == id:
+			var mx := int(e.get("max_hp", Sheet.template(Catalog.data, e).get("hp", 0)))
+			return e.merged({"hp": int(e.get("hp", mx)), "max_hp": mx})
+	if session.npcs_here(Catalog.data["world"], session.room_id).has(id) or not CreatureRules.find(session, session.room_id, id).is_empty() \
+			or Being.follows(session, id):
+		return Sheet.who(session, Catalog.data, id)
+	return {}
+
+
+## Why the hero may not look `id` over now: "" or a key. In a fight — the act's own («Присмотреться», a bonus action).
+func inspect_why(id: String) -> String:
+	if session == null:
+		return "WAIT_BUSY"
+	if CombatRules.active(session):
+		return Acts.one("inspect").can(session, Catalog.data, CombatRules.player(session), id)
+	var who := creature_who(id)
+	if who.is_empty():
+		return "CREATURE_NONE"
+	if CombatRules.known(session, who):
+		return "COMBAT_ALREADY_KNOWN"
+	if bool(Being.view(session, id).get("looked", false)):
+		return "FOE_LOOKED"
+	return "" if _out_of_fight() else "WAIT_BUSY"
+
+
+## «Присмотреться» to anybody (v0.8.4.30 a foe before the fight, v0.8.4.41 a person or a creature of the room): the knowledge
+## check of a fight (CombatRules.look_over), once a creature out of it; in a fight the act itself. "" or a key.
+func inspect(id: String) -> String:
+	if session != null and CombatRules.active(session):
+		return combat_act("inspect", id)
+	var why := inspect_why(id)
+	if not why.is_empty():
+		return why
+	Being.of(session, id)["looked"] = true
+	_effect_lines(CombatRules.look_over(session, Catalog.data, creature_who(id)), true)
+	return ""
 
 
 ## A thing pinned with a target, from a person's or a foe's menu (v0.8.4.30): the spell aimed at it, sent at once — a
