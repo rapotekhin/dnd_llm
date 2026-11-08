@@ -43,7 +43,7 @@ func test_one_parley_dc_a_wounded_foe_listens_sooner() -> void:
 func test_the_words_a_window_reads() -> void:
 	assert_str(WorldView.location_name(data, "brod")).is_equal("Ольховый Брод")
 	assert_str(WorldView.location_name(data, "nowhere")).is_equal("nowhere")
-	assert_str(Scale.name_at(OfficeRules.cfg(data)["discontent_words"], 0)).is_equal("довольны")
+	assert_str(Scale.name_at(TestUtils.rules()["office"]["discontent_words"], 0)).is_equal("довольны")
 	assert_str(CalendarRules.days_noun(1)).is_equal("день")
 	assert_str(CalendarRules.days_noun(3)).is_equal("дня")
 	assert_str(CalendarRules.days_noun(12)).is_equal("дней")

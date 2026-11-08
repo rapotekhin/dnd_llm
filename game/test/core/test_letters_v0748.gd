@@ -158,6 +158,7 @@ func test_no_evidence_no_case_and_a_false_one_is_a_crime() -> void:
 
 func test_a_recommendation_opens_an_office_a_school_and_a_private_place() -> void:
 	var s := _session()
+	TestUtils.system_on(data, "office")  # offices are out of the game (v0.8.4.39), their road stays
 	var judge := OfficeRules.requirements(s, data, "brod_judge")
 	assert_bool(judge[0]["ok"]).is_false()  # the standing in Brod
 	BondRules.add(s, data, "npc_captain", 30, "")

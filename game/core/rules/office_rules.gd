@@ -8,6 +8,13 @@ extends RefCounted
 ## builds {project: done_day}}}. Each day `cases_per_day` cases of the office's kinds wait at its room; an option is
 ## a check or plain effects (rules.office.cases). The day tick pays a week's wage, decays suspicion and runs the
 ## inquiry, punishes absence, and moves a town's treasury and discontent.
+## Out of the game since v0.8.4.39 (`rules.off.systems`, the backlog of docs/production/roadmap.md): with no
+## `rules.office` there are no offices at all — none offered, held, ticked or told to the master.
+
+
+## Whether offices are in the game: `rules.office` stays unless `rules.off.systems` names it (Catalog.cut).
+static func on(data: Dictionary) -> bool:
+	return data["rules"].has("office")
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -15,7 +22,7 @@ static func cfg(data: Dictionary) -> Dictionary:
 
 
 static func all(data: Dictionary) -> Dictionary:
-	return data["world"].get("offices", {})
+	return data["world"].get("offices", {}) if on(data) else {}
 
 
 static func def(data: Dictionary, id: String) -> Dictionary:
@@ -479,7 +486,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 
 ## One holder's day (v0.8.4.20): the hero's, or a person's who keeps a part of this life.
 static func tick_of(s: GameSession, data: Dictionary, who: String) -> Array[String]:
-	if not data["rules"].has("office"):
+	if not on(data):
 		return []
 	var lines: Array[String] = []
 	var c := Life.of(s, who, data)
@@ -565,7 +572,7 @@ static func _town_day(s: GameSession, data: Dictionary, loc: String, t: Dictiona
 
 
 static func text(s: GameSession, data: Dictionary) -> String:
-	if not data["rules"].has("office"):
+	if not on(data):
 		return ""
 	var c := s.character
 	var parts: Array[String] = []

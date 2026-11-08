@@ -198,10 +198,7 @@ static func _effect(s: GameSession, data: Dictionary, spell_id: String, slot: in
 	var rounds := ConditionRules.spell_rounds(data, spell_id, s)
 	var e := {"condition": "", "source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}, "by": str(me["id"]),
 		"concentration": bool(spell.get("concentration", false)) and Sheet.is_hero(me) and Sheet.is_hero(who), "ends": {"at": ConditionRules.now(s) + rounds} if rounds > 0 else {}}
-	for k: String in sp:
-		if not k in ["foe", "targets", "save", "temp_dice", "temp_per_slot", "per_slot", "resist_auto", "remove", "max_hp_plus", "plus_at_slot",
-				"next_dice", "blade_dice", "foe_target"]:
-			e[k] = ItemRules.walk_of(Sheet.holder(s, who), data) if str(sp[k]) == "walk" else sp[k]  # Spider Climb: the walk (v0.8.4.26.2)
+	e.merge(body(data, spell_id, Sheet.holder(s, who)))
 	var slot_up := maxi(0, slot - maxi(1, int(spell["level"])))
 	if sp.has("self_status"):  # a spell the master built: its status with what it lays
 		e["condition"] = str(sp["self_status"])
@@ -235,6 +232,50 @@ static func _effect(s: GameSession, data: Dictionary, spell_id: String, slot: in
 		e["dc"] = maxi(CombatRules.spell_dc(s), 10)
 	if bool(sp.get("stay", false)):  # Magic Circle: it holds in this room only (v0.8.4.26.3)
 		e["ends"]["room"] = s.room_id
+	return e
+
+
+## The keys of a spell's row that a body carries while it lasts (the rest — how it is cast, scaled or aimed).
+const NOT_CARRIED: Array[String] = ["foe", "targets", "save", "temp_dice", "temp_per_slot", "per_slot", "resist_auto", "remove", "max_hp_plus",
+	"plus_at_slot", "next_dice", "blade_dice", "foe_target"]
+
+
+## What a spell's row lays on `holder` beside its source and time: one reader for a cast and a worn thing (v0.8.4.39).
+static func body(data: Dictionary, spell_id: String, holder: Dictionary) -> Dictionary:
+	var sp := spec(data, spell_id)
+	var out := {}
+	for k: String in sp:
+		if not k in NOT_CARRIED:
+			out[k] = ItemRules.walk_of(holder, data) if str(sp[k]) == "walk" else sp[k]  # Spider Climb: the walk (v0.8.4.26.2)
+	return out
+
+
+## The status a spell lays on one it lands on, for a thing worn (v0.8.4.39): {fields, harm} or {reason}. A boon of the self
+## (Bless, Haste, Shield of Faith…) by `body`; Bane's minus die; a curse's flag (Slow, Faerie Fire, Bestow Curse…). Not a
+## status at all (damage, a summon, a teleport, a zone, a reaction) — a reason.
+static func worn(data: Dictionary, spell_id: String, holder: Dictionary) -> Dictionary:
+	var sp := spec(data, spell_id)
+	var name := str(data["spells"].get(spell_id, {}).get("name", spell_id))
+	if sp.has("curse"):
+		var flag := str((sp["curse"] as Dictionary).get("flag", ""))
+		if flag.is_empty() or flag == "calmed":
+			return {"reason": "«%s» не кладёт статус, который можно носить" % name}
+		return {"fields": curse_fields(data, spell_id), "harm": true}
+	if bool(sp.get("foe", false)) and sp.has("die"):
+		return {"fields": {"die": str(sp["die"]), "on": (sp.get("on", ["attack", "save"]) as Array).duplicate(), "minus": true}, "harm": true}
+	if not self_spell(data, spell_id) or NOT_ON_A_BODY.any(func(k: String) -> bool: return sp.has(k)) or sp.has("make"):
+		return {"reason": "«%s» не кладёт статус на тело — для вещи годятся благословения и проклятия (bless, haste, shield_of_faith, bane, slow…)" % name}
+	var fields := body(data, spell_id, holder)
+	fields.erase("ac_base")  # Mage Armor's base needs the wearer's DEX at the cast: a worn thing gives its floor by `ac_min` instead
+	return {"fields": fields, "harm": false}
+
+
+## What a curse spell lays on one who failed: its flag as the condition, Slow's −2 AC with it.
+static func curse_fields(data: Dictionary, spell_id: String) -> Dictionary:
+	var flag := str(curse(data, spell_id).get("flag", ""))
+	var e := {"condition": flag}
+	if flag == "slowed_spell":
+		e["ac_plus"] = -2
 	return e
 
 
@@ -334,10 +375,12 @@ static func save_adv(c: Dictionary, ability: String) -> String:
 ## «+к4 к атакам и спасброскам» — what the effect gives, for the chip and the line.
 static func text(data: Dictionary, sp: Dictionary) -> String:
 	var parts: Array[String] = []
+	if not str(sp.get("condition", "")).is_empty():  # a worn thing's status (v0.8.4.39)
+		parts.append(ConditionRules.name_of(data, str(sp["condition"])).to_lower())
 	if sp.has("die"):
 		var names := {"attack": "атакам", "save": "спасброскам", "check": "проверкам"}
 		var on: Array = (sp.get("on", []) as Array).map(func(x: Variant) -> String: return str(names.get(str(x), x)))
-		parts.append("%s%s к %s%s" % ["−" if bool(sp.get("foe", false)) else "+", str(sp["die"]).replace("1d", "к"), " и ".join(on),
+		parts.append("%s%s к %s%s" % ["−" if bool(sp.get("foe", false)) or bool(sp.get("minus", false)) else "+", str(sp["die"]).replace("1d", "к"), " и ".join(on),
 			" (один раз)" if bool(sp.get("once", false)) else ""])
 	if bool(sp.get("next_attack_adv", false)):
 		parts.append("следующая атака с преимуществом")
@@ -1032,11 +1075,9 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 			f["status"] = "truce"
 			lines.append("%s опускает оружие — %s" % [f["name"], name])
 			continue
-		var e := {"condition": flag, "source": {"kind": "spell", "id": spell_id, "name": name}, "by": str(me["id"])}
+		var e := curse_fields(data, spell_id).merged({"source": {"kind": "spell", "id": spell_id, "name": name}, "by": str(me["id"])})
 		if not str(cu.get("repeat", "")).is_empty():
 			e["save"] = {"ability": str(cu["repeat"]), "dc": dc, "repeat": true}
-		if flag == "slowed_spell":
-			e["ac_plus"] = -2
 		ConditionRules.add_effect(it, e)
 		if Sheet.is_hero(f):
 			CharacterRules.refresh(it, data, s.items)

@@ -967,6 +967,47 @@ scenarios:
     rubric:
       - "Найденный плащ из перьев — новая вещь мастера с `wear.fly_speed`: полёт, пока надет; не плащ защиты каталога и не безделушка без механики"
 
+  - id: magic_find_ring_of_bless
+    title: "Мастер делает вещь, что благословляет носящего, пока надета (wear.status spell:bless, v0.8.4.39)"
+    category: items
+    extends: tavern
+    input: "Обыскиваю нишу за расколотым алтарём: что там блестит?"
+    snapshot:
+      scene:
+        room: {id: room_old_chapel, name: "Разрушенная часовня", description: "Обвалившийся свод, расколотый алтарь; в нише за ним что-то тускло блестит."}
+        npcs: []
+        hooks: [{id: hook_chapel_ring, text: "в нише — серебряное кольцо жрецов: пока его носят, на носящем благословение — к4 к атакам и спасброскам", dc: 13}]
+      character: {level: 5}
+    engine:
+      check: {d20: [17], bonus: 4, total: 21, dc: 13, success: true, nat: null, blocked: false}
+      find_items:
+        - {id: ring_of_protection, name: "Кольцо защиты", base: null, rarity: rare}
+    expect:
+      check: {required: true, skill_in: [investigation, perception]}
+      effects: {required_kinds_any: [move_item:world>hero], required_fields: [item.wear.status]}
+    rubric:
+      - "Найденное кольцо — новая вещь мастера с `wear.status: \"spell:bless\"` (или свой статус с костью к атаке и спасброску): благословение на носящем, пока надето; не кольцо защиты каталога и не заклинание по зарядам"
+
+  - id: magic_find_cursed_ring_of_paralysis
+    title: "Мастер делает проклятую вещь, что сковывает надевшего (wear.status + cursed, v0.8.4.39)"
+    category: items
+    extends: tavern
+    input: "Обыскиваю шкатулку некроманта на столе."
+    snapshot:
+      scene:
+        room: {id: room_necro_study, name: "Кабинет некроманта", description: "Пыльные склянки, череп со свечой, на столе — чёрная шкатулка с костяной защёлкой."}
+        npcs: []
+        hooks: [{id: hook_cursed_ring, text: "в шкатулке — кольцо из чёрного железа; на нём проклятие: надевший застывает, скованный параличом, и снять кольцо не может, пока проклятие не снимут", dc: 12}]
+      character: {level: 4}
+    engine:
+      check: {d20: [15], bonus: 4, total: 19, dc: 12, success: true, nat: null, blocked: false}
+    expect:
+      check: {required: true, skill_in: [investigation, perception]}
+      effects: {required_kinds_any: [move_item:world>hero], required_fields: [item.wear.status]}
+    rubric:
+      - "Кольцо — новая вещь с `wear.status: \"paralyzed\"` и свойством `cursed` в `properties`: вредный статус держит только проклятая вещь"
+      - "Рассказ не раскрывает, что кольцо проклято, прямым текстом механики — герой видит лишь зловещее кольцо; находка не надевается сама"
+
   - id: magic_find_made_summoning_horn
     title: "Мастер делает вещь, которая призывает существ (use.summon, v0.8.4.28.7)"
     category: items
@@ -1727,41 +1768,6 @@ scenarios:
     rubric:
       - "Ферн отвечает как скупщик (понимающе, без лишних вопросов) и называет или подразумевает цену около 40% — сделка в окне «Торговать»"
       - "Мастер не забирает перстень и не выдаёт монеты словами или эффектами"
-
-  - id: office_ask_by_button
-    title: "Просят место писаря — кнопка «Должности», не назначение словами"
-    category: rules
-    extends: tavern
-    mode: social
-    input: "Тихон, возьми меня к себе писарем! Я грамотный, честный — с завтрашнего дня и начну."
-    snapshot:
-      scene:
-        room: {id: room_townhall, name: "Ратуша", description: "Низкий зал с конторкой, сундуком с бумагами и гербом Брода на стене."}
-        npcs:
-          - {id: npc_clerk, name: "Тихон Перо", role: "писарь ратуши", template: commoner, attitude: indifferent}
-      character:
-        office: "Служба (окно «Служба»: решения, назначение, выборы — кнопки): Тихон Перо даёт место: Писарь при ратуше; Тихон Перо даёт место: Сборщик податей"
-    expect:
-      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world, note]}
-    rubric:
-      - "Тихон отвечает в характере и не объявляет героя назначенным: место оформляется кнопкой «Должности» у него (названа прямо или отсылкой к условиям)"
-
-  - id: office_bribe_in_court
-    title: "Судья берёт мзду словами — решение кнопкой окна «Служба», без монет от мастера"
-    category: rules
-    extends: tavern
-    input: "Шепчу мельнику: «Три серебряка — и я тебя отпущу». Беру деньги и объявляю его невиновным."
-    snapshot:
-      scene:
-        room: {id: room_townhall, name: "Ратуша", description: "Низкий зал с конторкой, сундуком с бумагами и гербом Брода на стене."}
-        npcs:
-          - {id: npc_miller, name: "Мельник Гриня", role: "мельник", template: commoner, attitude: indifferent}
-      character:
-        office: "Служба (окно «Служба»: решения, назначение, выборы — кнопки): Судья Брода — судья (заслуги 4, о мзде: тихо)"
-    expect:
-      effects: {forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world, crime:known]}
-    rubric:
-      - "Мастер не выдаёт монеты и не объявляет приговор свершившимся: решение по делу — кнопка в окне «Служба» («Взять мзду и отпустить» названа прямо или отсылкой)"
 
   - id: condition_ghost_fear
     title: "Вопль призрака — страх со спасброском Мудрости"

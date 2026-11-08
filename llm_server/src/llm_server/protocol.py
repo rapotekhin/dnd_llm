@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.115.0"
+PROTOCOL_VERSION = "0.117.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -334,7 +334,7 @@ class CharacterSheet(_In):
     bonds: str = ""  # 0.63.0: the hero's bonds with NPCs (kind, step, points, perks) and the romance of the scene's people
     family: str = ""  # 0.64.0: the engagement, the spouse and the home's hours, the children by age, upkeep, the heir
     underworld: str = ""  # 0.65.0: known fences and stolen goods, the hero's criminal jobs, organizations and ranks
-    office: str = ""  # 0.66.0: the hero's offices (rank, merit, whispers about bribes, a town's treasury and mood), offices on offer
+    # 0.117.0: no `office` (0.66.0) — the offices are out of the game, in the backlog of docs/production/roadmap.md
     faith: str = ""  # 0.93.0: the hero's god and favor, the vows with their gifts, what is broken
     made: str = ""  # 0.97.0: what the master built in this game, with ids to use again
     guise: str = ""  # 0.97.0: the hero's look that is not their own, whose it passes for
@@ -682,7 +682,9 @@ class GeneratedItem(_Out):
     use: GeneratedUse | None = None  # 0.27.0: a wand, a scroll, a potion
     # 0.110.0: what it lays while it works, the engine's words (items.json wear_points): swim_speed, climb_speed,
     # water_walk, fly_speed — feet 5–60 or "walk"; see_invisible — true; 0.114.0: aura — {ft 5–30, cond, save, rounds?,
-    # spares_friends?}, a zone of the fight around the wearer, its DC and price by the engine
+    # spares_friends?}, a zone of the fight around the wearer, its DC and price by the engine; 0.116.0: status — any status
+    # on the wearer while it works: an engine condition, "spell:<id>" (what the spell lays on its target: bless, haste,
+    # bane, slow…) or a made status ("new:<key>" of this turn's make); a harm only with the property "cursed"
     wear: dict[str, int | str | bool | WornAura] | None = None
     hit: GeneratedHit | None = None  # 0.115.0: a weapon's status on the one it strikes
     spells: list[GeneratedSpell] = Field(default_factory=list, max_length=4)  # 0.115.0: spells a long rest

@@ -196,11 +196,6 @@
           "title": "Name",
           "type": "string"
         },
-        "office": {
-          "default": "",
-          "title": "Office",
-          "type": "string"
-        },
         "property": {
           "default": "",
           "title": "Property",

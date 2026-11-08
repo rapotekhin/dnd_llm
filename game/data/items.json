@@ -188,6 +188,7 @@
 				"flying": true
 			}
 		},
+		"status": {"points": 0, "value": "status", "by_circle": [3, 5, 7, 9, 10, 11], "made_plus": 1, "conditions": {"invisible": 8}, "cursed_points": 2, "_doc": "v0.8.4.39, the author: any status on the wearer while the thing works — an engine condition, `spell:<id>` (what the spell lays on its target, by its row of spell_effects: Bless, Haste, Bane, Slow…) or a made status (gen_st_…, new:<key> of the same turn). A boon prices by `by_circle` of the spell (0..5), `conditions` (an engine condition that helps), a made one by its parts + made_plus; a harm (a condition of make.act.lay_cost, a foe spell, a made harm) only on a cursed thing, at cursed_points. Laid by ItemRules.wear on anybody, through the immunities of its template."},
 		"see_invisible": {
 			"points": 3,
 			"value": "flag"

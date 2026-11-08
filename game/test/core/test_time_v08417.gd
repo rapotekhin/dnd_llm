@@ -74,8 +74,9 @@ func test_asking_for_a_game_writes_nothing() -> void:
 
 func test_a_town_s_project_is_built_without_a_headman() -> void:
 	var s := _session()
+	var d := TestUtils.system_on(data.duplicate(true), "office")  # offices are out of the game (v0.8.4.39), their road stays
 	var t := {"builds": {"palisade": Progress.by_day(s.day + 1).merged({"office": "brod_headman"})}, "treasury": 0, "discontent": 0, "tax": "normal"}
-	OfficeRules._town_day(s, data, "brod", t, s.day + 1)
+	OfficeRules._town_day(s, d, "brod", t, s.day + 1)
 	assert_bool(s.flags.has("brod_palisade")).is_true()
 	assert_bool(bool(OfficeRules.build_rec(t, "palisade")["done"])).is_true()
 

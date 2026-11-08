@@ -7,7 +7,20 @@ var data: Dictionary
 
 
 func before_test() -> void:
-	data = TestUtils.data()
+	data = TestUtils.system_on(TestUtils.data(), "office")  # out of the game since v0.8.4.39, the road kept and tested
+
+
+func test_offices_are_out_of_the_game() -> void:
+	var game := TestUtils.data()  # as the game has it: rules.off.systems names the offices
+	var s := TestUtils.new_session()
+	assert_bool(OfficeRules.on(game)).is_false()
+	assert_dict(OfficeRules.all(game)).is_empty()
+	assert_array(OfficeRules.of_chief(game, "npc_clerk")).is_empty()
+	assert_array(OfficeRules.of_room(game, "brod-townhall")).is_empty()
+	s.character["offices"] = {"brod_scribe": {"since": s.day}}  # even one held in a save
+	assert_str(OfficeRules.text(s, game)).is_empty()
+	assert_array(OfficeRules.tick(s, game)).is_empty()
+	assert_bool(TurnSnapshot.character_sheet(s, game).has("office")).is_false()
 
 
 func _hero(room: String = "brod-townhall", hour: int = 12) -> GameSession:
@@ -168,9 +181,10 @@ func test_the_people_remove_a_hated_headman() -> void:
 	assert_bool(OfficeRules.holds(s.character, "brod_headman")).is_false()
 
 
-func test_the_snapshot_tells_the_master() -> void:
+## The line «Служба» is kept for the master's return; the snapshot does not carry it while offices are off (v0.8.4.39).
+func test_the_line_for_the_master() -> void:
 	var s := _hero()
 	OfficeRules.buy(s, data, "brod_scribe")
-	var snap := TurnSnapshot.build(s, data, 2000)
-	assert_str(str(snap["character"].get("office", ""))).contains("Писарь при ратуше")
-	assert_str(str(snap["character"].get("office", ""))).contains("Тихон")
+	assert_str(OfficeRules.text(s, data)).contains("Писарь при ратуше")
+	assert_str(OfficeRules.text(s, data)).contains("Тихон")
+	assert_bool((TurnSnapshot.build(s, data, 2000)["character"] as Dictionary).has("office")).is_false()

@@ -1,6 +1,6 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## The master's quests by acts (python tools/godot_playtest.py --scenario quests_complex), v0.7.39.6: a hard quest from
-## Bruno in two acts — the first with a talk and a guarded tower, the second with a gnoll's lair, its boss and the
+## Bruno in two acts — the first with a talk and a guarded tower, the second with a goblin's lair, its boss and the
 ## finale's choice that changes the place; the reward by the difficulty; a deadly order on the board asks «Точно?».
 ## The acts are applied as the designer's `quest_act` would be (the stub designer only builds a talk).
 
@@ -27,7 +27,7 @@ func run() -> void:
 		"offer_text": "Кто-то ведёт этих тварей — найди вожака, я в долгу не останусь.",
 		"acts": [{"title": "Следы", "goal": "Расспросить Миру и проверить башню у дороги"},
 			{"title": "Логово Хорта", "goal": "Найти логово вожака и решить его судьбу"}],
-		"villain": "Хорт, вожак гноллов", "finale": "Пощадить выводок или сжечь логово"})
+		"villain": "Хорт, вожак гоблинов", "finale": "Пощадить выводок или сжечь логово"})
 	if not step("the skeleton is accepted", bool(r["accepted"]), str(r)):
 		return
 	fx.apply(s, "t-qc", [r["effect_id"]])
@@ -39,8 +39,8 @@ func run() -> void:
 	await shot("offered")
 	QuestRules.accept(s, data, qid)  # taken without the stub designer: the acts below are the designer's
 	var a1 := fx.validate(s, data, "t-a1", {"kind": "quest_act", "quest_id": qid, "act": 1,
-		"encounters": [{"key": "watch", "room": "outpost-tower", "kind": "guard", "enemies": [{"monster": "wolf"}, {"monster": "bandit"}],
-			"text": "волк и разбойник с пепельной меткой"}],
+		"encounters": [{"key": "watch", "room": "outpost-tower", "kind": "guard", "enemies": [{"monster": "wolf"}],
+			"text": "волк с пепельной меткой на ошейнике"}],
 		"steps": [{"text": "Расспросить Миру о метках", "kind": "talk", "target": "npc_serving"},
 			{"text": "Осмотреть штрек и башню", "kind": "all", "parts": [{"text": "штрек", "kind": "visit", "target": "mine-flooded"},
 				{"text": "башня", "kind": "fight", "target": "watch"}]}]})
@@ -68,7 +68,7 @@ func run() -> void:
 	await frames(3)
 	await shot("waits_for_act")
 	var lair := {"room_id": "pushcha-edge", "edge": 0, "rooms": [{"key": "den", "name": "Логово Хорта", "description": "Нора под корнями, пахнет пеплом.",
-		"encounter": {"enemies": [{"monster": "gnoll", "name": "Хорт"}], "boss": true}}]}
+		"encounter": {"enemies": [{"monster": "goblin", "name": "Хорт"}], "boss": true}}]}
 	var a2 := fx.validate(s, data, "t-a2", {"kind": "quest_act", "quest_id": qid, "act": 2, "new_places": [lair],
 		"steps": [{"text": "Одолеть Хорта", "kind": "fight", "target": "new:den"},
 			{"text": "Решить судьбу логова", "kind": "choice", "target": "new:den"}],

@@ -653,7 +653,7 @@ static func notable(s: GameSession, data: Dictionary, npc_id: String, owners: bo
 	var tags: Array = w["npcs"].get(npc_id, {}).get("tags", [])
 	if tags.any(func(t: Variant) -> bool: return (cfg(data)["notable_tags"] as Array).has(str(t))):
 		return true
-	for o: Dictionary in w.get("offices", {}).values():
+	for o: Dictionary in OfficeRules.all(data).values():  # none while offices are off (v0.8.4.39)
 		if str(o.get("chief", "")) == npc_id:
 			return true
 	for sc: Dictionary in w.get("schools", {}).values():

@@ -82,6 +82,7 @@ func test_beside_the_one_who_acts() -> void:
 
 func test_a_person_of_standing_in_one_list() -> void:
 	var s := TestUtils.new_session()
+	TestUtils.system_on(data, "office")  # offices are out of the game (v0.8.4.39), their road stays
 	for o: Dictionary in data["world"].get("offices", {}).values():
 		var chief := str(o.get("chief", ""))
 		if not chief.is_empty():

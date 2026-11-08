@@ -569,7 +569,7 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 	if not FamilyRules.engaged(s).is_empty() and not FamilyRules.officiant(s, Catalog.data, id).is_empty():  # v0.7.32
 		var why := FamilyRules.wedding_why(s, Catalog.data, id)
 		_flow(_group(groups, "life", id), tr("BTN_WEDDING"), _try.bind(GameState.family_act.bind("wedding", id)), can_act and why.is_empty(), "Wedding_" + id, tr(why) if not why.is_empty() else tr("BTN_WEDDING_TIP").format({"money": Money.format(FamilyRules.fee(Catalog.data, FamilyRules.officiant(s, Catalog.data, id)))}))
-	if Catalog.data["rules"].has("office") and not OfficeRules.of_chief(Catalog.data, id).is_empty():  # v0.7.34
+	if OfficeRules.on(Catalog.data) and not OfficeRules.of_chief(Catalog.data, id).is_empty():  # v0.7.34
 		_flow(_group(groups, "deals", id), tr("BTN_OFFICES"), office_requested.emit.bind(id), can_act, "Office_" + id, tr("BTN_OFFICES_TIP"))
 	if Catalog.data["rules"].has("underworld"):  # v0.7.33
 		for org: String in OrgRules.of_head(s, Catalog.data, id):
@@ -1046,7 +1046,7 @@ func _underworld_row(s: GameSession, can_act: bool) -> void:
 
 ## Offices (v0.7.34): «Служба» while the hero holds one or the room holds an election.
 func _office_row(s: GameSession, can_act: bool) -> void:
-	if not Catalog.data["rules"].has("office"):
+	if not OfficeRules.on(Catalog.data):
 		return
 	if OfficeRules.held(s.character).is_empty() and OfficeRules.of_room(Catalog.data, s.room_id).is_empty():
 		return

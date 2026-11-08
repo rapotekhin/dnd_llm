@@ -36,6 +36,13 @@ static func uncut(kind: String, id: String) -> Dictionary:
 	return raw.get(id, {})
 
 
+## A system out of the game (rules.off.systems, v0.8.4.39) back in `d` as rules.json keeps it: its own tests run
+## while the player and the master never meet it.
+static func system_on(d: Dictionary, id: String) -> Dictionary:
+	d["rules"][id] = rules()[id]
+	return d
+
+
 ## The start pack's first ready-made character (Айра, fighter 1).
 static func preset_choices() -> Dictionary:
 	return CharacterBuilder.preset_choices(data()["presets"][0])

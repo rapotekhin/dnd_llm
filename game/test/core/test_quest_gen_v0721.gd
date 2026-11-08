@@ -53,7 +53,8 @@ func _taken(spec: Dictionary) -> String:
 	return id
 
 
-func _wolf_at(room: String, key := "pack", n := 1, monster := "wolf") -> Dictionary:
+## A foe of a medium fight at level 1 for one hero by the DMG (v0.8.4.38): a giant rat, 25 XP ×1,5 = 38 of (25, 50].
+func _wolf_at(room: String, key := "pack", n := 1, monster := "giant_rat") -> Dictionary:
 	return {"key": key, "room": room, "kind": "ambush", "enemies": [{"monster": monster, "count": n}]}
 
 
@@ -70,7 +71,7 @@ func test_a_skeleton_is_offered_and_waits_for_its_act_when_taken() -> void:
 	assert_array(QuestRules.awaiting(s, data["world"])).contains([id])
 	assert_str(QuestRules.step_text(s, data["world"], id)).contains("мастер готовит")
 	assert_str(QuestRules.tracked(s, data["world"])).is_equal(id)
-	assert_str(QuestGen.act_frame(s, data, id)).starts_with("[quest %s | act 1 | giver npc_innkeeper" % id).contains("wolf")
+	assert_str(QuestGen.act_frame(s, data, id)).starts_with("[quest %s | act 1 | giver npc_innkeeper" % id).contains("giant_rat")
 
 
 func test_an_act_with_an_ambush_is_built_fought_and_paid() -> void:
@@ -119,8 +120,8 @@ func test_a_fight_is_checked_by_the_difficulty_and_the_room() -> void:
 	var fight := {"text": "Отбиться", "kind": "fight", "target": "pack"}
 	var act := func(enc: Dictionary) -> String:
 		return str(_act({"quest_id": id, "act": 1, "encounters": [enc], "steps": [talk, fight]}).get("reason", ""))
-	assert_str(act.call(_wolf_at("pushcha-edge", "pack", 3, "bandit"))).contains("не по силам")  # 75 > medium 50
-	assert_str(act.call(_wolf_at("pushcha-edge", "pack", 1, "giant_rat"))).contains("слишком лёгкий")  # 25 — easy
+	assert_str(act.call(_wolf_at("pushcha-edge", "pack", 3, "bandit"))).contains("не по силам")  # 75 ×2,5 by the DMG > medium 50
+	assert_str(act.call(_wolf_at("pushcha-edge", "pack", 1, "rat"))).contains("слишком лёгкий")  # 10 ×1,5 — easy
 	assert_str(act.call(_wolf_at("brod-square"))).contains("люди")
 	assert_str(act.call(_wolf_at("pushcha-trail"))).contains("уже ждёт встреча")
 	assert_str(act.call(_wolf_at("brod-tavern-upstairs"))).contains("отдыха")
@@ -135,7 +136,7 @@ func test_a_fight_is_checked_by_the_difficulty_and_the_room() -> void:
 func test_a_hard_quest_by_acts_with_parts_a_lair_its_boss_and_the_choice() -> void:
 	var id := _taken(_skeleton("hard", 2, "Пепельная стая"))
 	var act1 := {"quest_id": id, "act": 1, "encounters": [{"key": "watch", "room": "outpost-tower", "kind": "guard",
-			"enemies": [{"monster": "wolf"}, {"monster": "bandit"}]}],
+			"enemies": [{"monster": "wolf"}]}],
 		"steps": [{"text": "Осмотреть штрек и башню", "kind": "all", "parts": [{"text": "штрек", "kind": "visit", "target": "mine-flooded"},
 			{"text": "башня", "kind": "fight", "target": "watch"}]}, {"text": "Рассказать Мире", "kind": "talk", "target": "npc_serving"}]}
 	var r := _act(act1)
@@ -153,7 +154,7 @@ func test_a_hard_quest_by_acts_with_parts_a_lair_its_boss_and_the_choice() -> vo
 	assert_array(lines).contains(["«Пепельная стая»: акт «Акт 1» пройден"])
 	assert_array(QuestRules.awaiting(s, data["world"])).contains([id])
 	var lair := {"room_id": "pushcha-edge", "edge": 0, "rooms": [{"key": "den", "name": "Логово Хорта", "description": "Нора под корнями.",
-		"encounter": {"enemies": [{"monster": "gnoll", "name": "Хорт"}], "boss": true}}]}
+		"encounter": {"enemies": [{"monster": "goblin", "name": "Хорт"}], "boss": true}}]}
 	var act2 := {"quest_id": id, "act": 2, "new_places": [lair],
 		"steps": [{"text": "Одолеть Хорта", "kind": "fight", "target": "new:den"}]}
 	assert_str(str(_act(act2)["reason"])).contains("не меньше 4 шагов")
@@ -218,7 +219,7 @@ func test_a_boss_and_a_choice_belong_to_the_last_act() -> void:
 	var boss := {"key": "lead", "room": "outpost-tower", "kind": "target", "boss": true, "enemies": [{"monster": "gnoll", "name": "Хорт"}]}
 	assert_str(str(_act({"quest_id": id, "act": 1, "encounters": [boss], "steps": [{"text": "Одолеть Хорта", "kind": "fight", "target": "lead"}]})["reason"])).contains("последнем акте")
 	assert_str(str(_act({"quest_id": id, "act": 1, "steps": [{"text": "Решить", "kind": "choice", "target": "outpost-tower"}]})["reason"])).contains("последнем акте")
-	var unnamed := {"key": "lead", "room": "outpost-tower", "kind": "target", "enemies": [{"monster": "wolf"}, {"monster": "bandit"}]}
+	var unnamed := {"key": "lead", "room": "outpost-tower", "kind": "target", "enemies": [{"monster": "wolf"}]}
 	assert_str(str(_act({"quest_id": id, "act": 1, "encounters": [unnamed], "steps": [{"text": "Одолеть вожака", "kind": "fight", "target": "lead"}]})["reason"])).contains("имя")
 
 
@@ -301,7 +302,7 @@ func test_a_visit_step_closes_on_arriving_and_never_where_the_hero_stands() -> v
 
 func test_a_part_done_stays_done_when_the_hero_moves_on() -> void:
 	var id := _taken(_skeleton("easy"))
-	var r := _act({"quest_id": id, "act": 1, "encounters": [_wolf_at("pushcha-edge", "pack", 1, "giant_rat")],
+	var r := _act({"quest_id": id, "act": 1, "encounters": [_wolf_at("pushcha-edge", "pack", 1, "rat")],
 		"steps": [{"text": "Осмотреть штрек и отбить волка", "kind": "all", "parts": [{"text": "штрек", "kind": "visit", "target": "mine-flooded"},
 			{"text": "волк", "kind": "fight", "target": "pack"}]}]})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
@@ -331,7 +332,7 @@ func test_only_a_named_foe_or_a_boss_must_be_beaten() -> void:
 	var id2 := _taken(_skeleton("medium", 1, "Вожак стаи"))
 	var target := _wolf_at("mine-flooded", "leader")
 	target["kind"] = "target"
-	target["enemies"] = [{"monster": "wolf", "name": "Седой"}]
+	target["enemies"] = [{"monster": "giant_rat", "name": "Седой"}]
 	r = _act({"quest_id": id2, "act": 1, "encounters": [target], "steps": [{"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"},
 		{"text": "Убить вожака", "kind": "fight", "target": "leader"}]})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()

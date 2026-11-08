@@ -371,8 +371,8 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setbac
 			steps_min, steps_cap, fights_min, fights_cap])
 	else:
 		out.append("Рамка акта %d из %d: шагов в акте 1–%d (по шагу оставлено на каждый следующий акт), боёв 0–%d." % [n + 1, acts.size(), steps_cap, fights_cap])
-	out.append("Бой задания — «%s»: опыт врагов %d–%d на бой (уровень героя %d%s)%s." % [tier, tier_xp(s, data, floor_tier, level) + 1 if not floor_tier.is_empty() else 1,
-		tier_xp(s, data, tier, level), level, (", бои на %d героев" % DifficultyRules.party(s, data)) if DifficultyRules.party(s, data) > 1 else "", ("; главарь (boss) в последнем акте — до %d" % tier_xp(s, data, tier_step(data, tier, 1) if not tier_step(data, tier, 1).is_empty() else tier, level)) if bool(d["boss"]) else ""])
+	out.append("Бой задания — «%s»: опыт врагов %d–%d на бой по DMG (уровень героя %d%s)%s. Опыт боя — сумма опыта врагов × множитель за их число: %s." % [tier, tier_xp(s, data, floor_tier, level) + 1 if not floor_tier.is_empty() else 1,
+		tier_xp(s, data, tier, level), level, (", бои на %d героев" % DifficultyRules.party(s, data)) if DifficultyRules.party(s, data) > 1 else "", ("; главарь (boss) в последнем акте — до %d" % tier_xp(s, data, tier_step(data, tier, 1) if not tier_step(data, tier, 1).is_empty() else tier, level)) if bool(d["boss"]) else "", DifficultyRules.crowd_line(s, data)])
 	if last and bool(d["choice"]):
 		out.append("Финал: шаг choice с 2–3 выборами обязателен (флаг, отношение, перемена места).")
 	out.append("Награду назначит движок: %s и опыт к концу задания — не указывай её." % Money.format(int(q.get("reward_cp", 0))))
@@ -399,7 +399,7 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setbac
 	ids.sort_custom(func(a: String, b: String) -> bool: return int(data["monsters"][a]["xp"]) < int(data["monsters"][b]["xp"]))
 	for mid: String in ids:
 		var m: Dictionary = data["monsters"][mid]
-		if int(m["xp"]) > cap or int(m["xp"]) <= 0:
+		if DifficultyRules.weigh(s, data, [{"xp": int(m["xp"]), "count": 1}]) > cap or int(m["xp"]) <= 0:  # one alone, by the DMG
 			continue
 		foes.append("%s (%s, %s, ПО %s, %d оп.)" % [mid, m.get("name", mid), m.get("type", ""), str(m.get("cr", "")), int(m["xp"])])
 	out.append("Враги SRD по силам (id, имя, тип, ПО, опыт за одного): " + "; ".join(foes))
@@ -735,7 +735,6 @@ static func _encounter_room_why(s: GameSession, data: Dictionary, room: String, 
 ## boss of the last act — up to the next tier.
 static func _plan_encounter(s: GameSession, data: Dictionary, e: Dictionary, tier: String, level: int, boss_ok: bool, key: String) -> Dictionary:
 	var enemies: Array = []
-	var xp := 0
 	for f: Variant in _arr(e, "enemies"):
 		if not (f is Dictionary):
 			return {"reason": "враг — объект: monster, count, name?"}
@@ -743,7 +742,6 @@ static func _plan_encounter(s: GameSession, data: Dictionary, e: Dictionary, tie
 		if not data["monsters"].has(mid):
 			return {"reason": "бой %s: нет такого монстра SRD: %s" % [key, mid]}
 		var cnt := clampi(int(f.get("count", 1)) if f.get("count") != null else 1, 1, 6)
-		xp += int(data["monsters"][mid]["xp"]) * cnt
 		var named := not _str(f, "name").strip_edges().is_empty()
 		enemies.append({"monster": mid, "count": cnt, "name": _str(f, "name").strip_edges().left(60) if named else str(data["monsters"][mid]["name"]),
 			"desc": _str(f, "desc").left(200), "named": named})
@@ -756,10 +754,13 @@ static func _plan_encounter(s: GameSession, data: Dictionary, e: Dictionary, tie
 	var cap := tier_xp(s, data, up if boss and not up.is_empty() else tier, level)
 	var low := tier_step(data, tier, -1)
 	var floor := tier_xp(s, data, low, level) if not low.is_empty() else 0
+	var weighed := DifficultyRules.of_monsters(data, enemies)  # by the DMG: the XP times the multiplier of their number (v0.8.4.38)
+	var xp := DifficultyRules.weigh(s, data, weighed)
 	if xp > cap:
-		return {"reason": "бой %s не по силам: %d опыта врагов при пределе %d (бой «%s», уровень %d, героев %d)" % [key, xp, cap, tier, level, DifficultyRules.party(s, data)]}
+		return {"reason": "бой %s не по силам: %s при пределе %d (бой «%s», уровень %d, героев %d) — меньше врагов или слабее" % [key,
+			DifficultyRules.weigh_text(s, data, weighed), cap, tier, level, DifficultyRules.party(s, data)]}
 	if xp <= floor:
-		return {"reason": "бой %s слишком лёгкий для этой сложности: %d опыта врагов, нужно больше %d" % [key, xp, floor]}
+		return {"reason": "бой %s слишком лёгкий для этой сложности: %s, нужно больше %d" % [key, DifficultyRules.weigh_text(s, data, weighed), floor]}
 	return {"enemies": enemies, "xp": xp, "boss": boss, "loot": {"coins_cp": 0, "items": {}}, "faction": _str(e, "faction")}
 
 

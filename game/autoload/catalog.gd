@@ -45,8 +45,12 @@ static func load_all() -> Dictionary:
 ## What the engine does not read (v0.8.4.28.4): `rules.off` names items, monsters and class features kept in the data
 ## but out of the game — none has a mechanic. They leave the base here, before any pack, so nothing gives, sells,
 ## summons, meets or offers them, and a pack that names one fails its check.
+## Whole systems out of the game for a while (v0.8.4.39, `rules.off.systems`): their rules block leaves, and each
+## system reads its absence as «off» (OfficeRules.on).
 static func cut(out: Dictionary) -> void:
 	var off: Dictionary = out["rules"].get("off", {})
+	for id: Variant in off.get("systems", []):
+		out["rules"].erase(str(id))
 	for id: Variant in off.get("items", []):
 		out["items"]["catalog"].erase(str(id))
 	for id: Variant in off.get("monsters", []):

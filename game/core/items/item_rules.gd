@@ -277,8 +277,11 @@ static func belt_take(c: Dictionary, data: Dictionary, session_items: Dictionary
 # --- attunement (v0.7.12) --------------------------------------------------------------------------
 
 
+## A cursed wondrous thing of the SRD bites on attunement; one whose `wear` lays a status bites as soon as it is put on
+## (v0.8.4.39, the author: «на того, кто его надел») unless it asks for attunement itself.
 static func needs_attunement(d: Dictionary) -> bool:
-	return bool(d.get("attunement", false)) or ((d.get("properties", []) as Array).has("cursed") and str(d.get("item_type", "")) == "wondrous")
+	var bites_worn: bool = d.get("wear") is Dictionary and (d["wear"] as Dictionary).has(STATUS)
+	return bool(d.get("attunement", false)) or ((d.get("properties", []) as Array).has("cursed") and str(d.get("item_type", "")) == "wondrous" and not bites_worn)
 
 
 static func attuned(c: Dictionary) -> Array:
@@ -336,11 +339,12 @@ static func can_unattune(c: Dictionary, data: Dictionary, session_items: Diction
 	return ""
 
 
-## A cursed thing the hero wears, wields or is attuned to: it does not come off (v0.7.12).
+## A cursed thing on the body — worn or in the hands: it does not come off (v0.7.12). The author (v0.8.4.39): only the body
+## holds it — one in the pockets, attuned or not, is given, sold, pawned or put away like any thing.
 static func held_by_curse(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> bool:
 	if id.is_empty() or not cursed(def_of(data["items"], session_items, id)):
 		return false
-	return attuned(c).has(id) or CharacterRules.held_copies(c, id) > 0
+	return CharacterRules.held_copies(c, id) > 0
 
 
 ## Remove Curse (the spell or the priestess): the cursed things come off and lose the attunement; they stay cursed.
@@ -464,9 +468,55 @@ static func wear_spec(c: Dictionary, data: Dictionary, d: Dictionary) -> Diction
 	var spec: Dictionary = d.get("wear", {})
 	for k: String in spec:
 		var v: Variant = spec[k]
+		if k == STATUS:  # any status while it works (v0.8.4.39): a condition, a spell's, a made one
+			out.merge(status_fields(data, c, str(v)))
+			continue
 		out[k] = walk_of(c, data) if str(v) == "walk" else maxi(0, CharacterRules.mod(CharacterRules.ability(c, str(v)))) \
 			if (data["rules"]["saves"] as Array).has(str(v)) else v  # an ability: its modifier (Second-Story Work's jump)
 	return out
+
+
+## The word of `wear` that lays a status (v0.8.4.39).
+const STATUS := "status"
+
+
+## What the status of a worn thing lays on `c`: an engine condition, `spell:<id>` — what the spell lays on its target,
+## a made status (gen_st_…) with its numbers. {} — none, or `c` is immune to the condition (ConditionRules.impose's gate).
+static func status_fields(data: Dictionary, c: Dictionary, status: String) -> Dictionary:
+	var got := status_of(data, c, status)
+	if got.has("reason"):
+		return {}
+	var f: Dictionary = got["fields"]
+	if not str(f.get("condition", "")).is_empty() and CombatRules.immune_to(data, c, str(f["condition"])):
+		return {}
+	return f
+
+
+## A status a thing may lay on its wearer: {fields, harm, points} or {reason}. The points of a boon by items.json
+## wear_points.status: a condition's own, a spell's by its circle, a made one's parts; a harm — the curse's own points.
+static func status_of(data: Dictionary, c: Dictionary, status: String) -> Dictionary:
+	var row: Dictionary = data["items"]["wear_points"][STATUS]
+	if status.begins_with("spell:"):
+		var sp := status.trim_prefix("spell:")
+		if not data["spells"].has(sp):
+			return {"reason": "wear.status: заклинания %s нет в книге движка" % sp}
+		var w := SpellEffects.worn(data, sp, c)
+		if w.has("reason"):
+			return w
+		return {"fields": w["fields"], "harm": w["harm"], "points": int(row["by_circle"][clampi(int(data["spells"][sp].get("level", 0)), 0, 5)])}
+	if status.begins_with(MakeRules.PREFIX):
+		var def := MakeRules.def_of(data, status)
+		if str(def.get("what", "")) != "status":
+			return {"reason": "wear.status: %s — не статус мастера (make с what: status)" % status}
+		return {"fields": ({"condition": status} as Dictionary).merged(def.get("fx", {})), "harm": bool(def.get("harm", false)),
+			"points": int(def.get("points", 0)) + int(row["made_plus"])}
+	var good: Dictionary = row["conditions"]
+	if good.has(status):
+		return {"fields": {"condition": status}, "harm": false, "points": int(good[status])}
+	if (data["rules"]["make"]["act"]["lay_cost"] as Dictionary).has(status) or (data["rules"]["condition_effects"] as Dictionary).has(status):
+		return {"fields": {"condition": status}, "harm": true, "points": 0}
+	return {"reason": "wear.status — состояние движка (%s…), spell:<id> заклинания или статус мастера (new:<key> / gen_st_…)" % ", ".join(
+		(data["rules"]["make"]["act"]["lay_cost"] as Dictionary).keys().slice(0, 6))}
 
 
 ## The walking speed of its race or its template.
@@ -868,6 +918,15 @@ static func _generated_wear(items_data: Dictionary, item: Dictionary, data: Dict
 			return {"reason": "wear: %s движок не читает; есть: %s" % [k, ", ".join(words)]}
 		var row: Dictionary = table[k]
 		var v: Variant = w[k]
+		if str(row["value"]) == STATUS:  # v0.8.4.39: any status while it works; a harm only on a cursed thing
+			var st := status_of(data, {}, str(v))
+			if st.has("reason"):
+				return st
+			if bool(st["harm"]) and not (item.get("properties", []) as Array).has("cursed"):
+				return {"reason": "wear.status %s вредит носящему — такое держит только проклятая вещь: добавь properties \"cursed\" (её не снять, пока проклятие не снимут)" % v}
+			out["wear"][k] = str(v)
+			out["points"] = int(out["points"]) + (int(row["cursed_points"]) if bool(st["harm"]) else int(st["points"]))
+			continue
 		if str(row["value"]) == "aura":  # v0.8.4.35: an aura of the field around the wearer
 			var aura := _aura(data, row, v)
 			if aura.has("reason"):

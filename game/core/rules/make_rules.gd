@@ -150,6 +150,8 @@ static func resolved_item(item: Dictionary, pending: Array[Dictionary]) -> Dicti
 	out["properties"] = (item.get("properties", []) as Array).map(func(p: Variant) -> String: return resolve(pending, str(p)))
 	if out.get("use") is Dictionary and out["use"].get("spell") is String:
 		out["use"]["spell"] = resolve(pending, str(out["use"]["spell"]))
+	if out.get("wear") is Dictionary and out["wear"].get("status") is String:  # v0.8.4.39: a status of this turn's make
+		out["wear"]["status"] = resolve(pending, str(out["wear"]["status"]))
 	for key: String in ["spells", "stored"]:
 		if out.get(key) is Array:
 			for r: Variant in out[key]:

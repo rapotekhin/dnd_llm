@@ -866,7 +866,6 @@ func _plan_on_foe(s: GameSession, data: Dictionary, e: Dictionary, tid: String) 
 ## they come at the edge column after rules.combat.reinforce_delay rounds.
 func _plan_fight(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	var foes: Array = []
-	var xp := 0
 	for spec: Variant in e.get("enemies", []):
 		if not (spec is Dictionary):
 			continue
@@ -875,21 +874,21 @@ func _plan_fight(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		if m.is_empty():
 			return {"reason": "нет такого монстра SRD: %s" % mid}
 		var n := clampi(int(spec.get("count", 1)), 1, 6)
-		xp += int(m["xp"]) * n
 		foes.append({"monster": mid, "count": n, "name": str(spec.get("name", m["name"]))})
 	if foes.is_empty():
 		return {"reason": "кого звать в бой? enemies: [{monster, count}]"}
 	var cap := DifficultyRules.hard_cap(s, data)
 	if CombatRules.active(s):
-		var in_play := CombatRules.xp_in_play(s, data)
-		if in_play + xp > cap:
-			return {"reason": "подкрепление не по силам %d уровню: в бою и на подходе %d опыта врагов, с новыми %d при пределе %d" % [int(s.character.get("level", 1)), in_play, in_play + xp, cap]}
+		var all: Array = CombatRules.foes_in_play(s, data) + DifficultyRules.of_monsters(data, foes)  # weighed by the DMG (v0.8.4.38)
+		if DifficultyRules.weigh(s, data, all) > cap:
+			return {"reason": "подкрепление не по силам %d уровню: в бою, на подходе и с новыми %s при пределе %d (по DMG — опыт × множитель за число врагов)" % [int(s.character.get("level", 1)), DifficultyRules.weigh_text(s, data, all), cap]}
 		var side := str(e.get("side", "")) if e.get("side") != null else ""
 		if not side in ["left", "right"]:
 			side = "left" if s.rng.randi_range(0, 1) == 0 else "right"
 		return {"plan": {"foes": foes, "reinforce": true, "side": side}, "summary": "Подкрепление: " + ", ".join(foes.map(func(f: Dictionary) -> String: return "%s ×%d" % [f["name"], f["count"]]))}
-	if xp > cap:
-		return {"reason": "бой слишком тяжёл для %d уровня: %d опыта врагов при пределе %d — меньше врагов или слабее" % [int(s.character.get("level", 1)), xp, cap]}
+	if DifficultyRules.weigh(s, data, DifficultyRules.of_monsters(data, foes)) > cap:  # by the DMG (v0.8.4.38)
+		return {"reason": "бой слишком тяжёл для %d уровня: %s при пределе %d (по DMG — опыт × множитель за число врагов) — меньше врагов или слабее" % [int(s.character.get("level", 1)),
+			DifficultyRules.weigh_text(s, data, DifficultyRules.of_monsters(data, foes)), cap]}
 	return {"plan": {"foes": foes}, "summary": "Бой: " + ", ".join(foes.map(func(f: Dictionary) -> String: return "%s ×%d" % [f["name"], f["count"]]))}
 
 

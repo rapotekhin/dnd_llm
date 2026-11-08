@@ -3,6 +3,8 @@ extends "res://tools/playtest/playtest_base.gd"
 ## collector's place, decides the day's cases (one honestly, one with a squeeze), gets a week's wage; joins the militia
 ## at the captain; the judge's place after her service; elected headman at the townhall — the tax, the palisade built,
 ## the gate with its new palisade; the temple's conditions. Difficulty «trivial»: only a natural 1 fails.
+## Offices are out of the game since v0.8.4.39 (rules.off.systems): this run brings them back into its own game
+## only, to keep the road checked until they return (docs/production/roadmap.md, «Бэклог»).
 
 
 func run() -> void:
@@ -16,6 +18,8 @@ func run() -> void:
 	if not step("game started", await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)):
 		return
 	var data: Dictionary = node("Catalog").data
+	var catalog := preload("res://autoload/catalog.gd")
+	data["rules"]["office"] = catalog.load_json(catalog.FILES["rules"])["office"]
 	var s: GameSession = gs.session
 	var c := s.character
 	c["gold_cp"] = 100000

@@ -1858,16 +1858,16 @@ static func add_incoming(s: GameSession, data: Dictionary, foes: Array, at: int,
 
 
 ## XP of the enemies still fighting and on the way (the master's reinforcements stay within the level's budget).
-static func xp_in_play(s: GameSession, data: Dictionary) -> int:
-	var xp := 0
+## The foes in the fight and on their way, [{xp, count}] for DifficultyRules.weigh (v0.8.4.38).
+static func foes_in_play(s: GameSession, data: Dictionary) -> Array:
+	var out: Array = []
 	for id: String in enemies(s):
-		xp += int(Sheet.template(data, fighter(s, id))["xp"])
+		out.append({"xp": int(Sheet.template(data, fighter(s, id))["xp"]), "count": 1})
 	for w: Dictionary in s.combat.get("incoming", []):
 		if bool(w.get("ally", false)):
 			continue
-		for spec: Dictionary in w["foes"]:
-			xp += int(data["monsters"][spec["monster"]]["xp"]) * int(spec.get("count", 1))
-	return xp
+		out.append_array(DifficultyRules.of_monsters(data, w["foes"]))
+	return out
 
 
 static func _arrivals(s: GameSession, data: Dictionary, lines: Array[String]) -> void:

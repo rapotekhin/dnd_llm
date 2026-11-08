@@ -177,7 +177,6 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"bonds": BondRules.text(s, data),  # v0.7.31
 		"family": FamilyRules.text(s, data),  # v0.7.32
 		"underworld": _underworld(s, data),  # v0.7.33
-		"office": OfficeRules.text(s, data),  # v0.7.34
 		"made": MakeRules.text(s, data),  # v0.7.63
 		"guise": Guise.text(s, data),  # v0.7.63
 		"faith": FaithRules.text(s, data),  # v0.7.49

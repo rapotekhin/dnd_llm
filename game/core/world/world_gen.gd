@@ -397,17 +397,17 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 				"skill": "investigation" if str(sec.get("skill", "")) == "investigation" else "perception"})
 		var enc := {}
 		if r.get("encounter") is Dictionary and not (r["encounter"].get("enemies", []) as Array).is_empty():
-			var xp := 0
 			var enemies: Array = []
 			for f: Variant in r["encounter"]["enemies"]:
 				var mid := str(f.get("monster", ""))
 				if not data["monsters"].has(mid):
 					return {"reason": "нет такого монстра SRD: %s" % mid}
 				var n := clampi(int(f.get("count", 1)), 1, 6)
-				xp += int(data["monsters"][mid]["xp"]) * n
 				enemies.append({"monster": mid, "count": n, "name": str(f.get("name", data["monsters"][mid]["name"])), "desc": str(f.get("desc", "")).left(200)})
-			if xp > cap:
-				return {"reason": "встреча в %s не по силам %d уровню: %d опыта врагов при пределе %d" % [name, int(s.character.get("level", 1)), xp, cap]}
+			var weighed := DifficultyRules.of_monsters(data, enemies)  # by the DMG (v0.8.4.38)
+			if DifficultyRules.weigh(s, data, weighed) > cap:
+				return {"reason": "встреча в %s не по силам %d уровню: %s при пределе %d (по DMG — опыт × множитель за число врагов)" % [name, int(s.character.get("level", 1)),
+					DifficultyRules.weigh_text(s, data, weighed), cap]}
 			enc = {"enemies": enemies, "loot": {"coins_cp": 0, "items": {}}, "faction": FactionRules.ensure(s, data, str(r["encounter"].get("faction", "")), "monsters", true)}  # v0.7.50
 		var room_edges: Array = []
 		for ed: Variant in r.get("open_edges", []) if r.get("open_edges") is Array else []:

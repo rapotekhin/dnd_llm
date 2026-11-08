@@ -1,6 +1,8 @@
 {
 	"off": {
 		"_doc": "Вне игры (v0.8.4.28.4, Catalog.cut): записи остаются в данных, но движок их не читает — их нельзя дать, продать, призвать, встретить или выбрать. Вещи, монстры и умения, у которых нет механики (чек-лист: «нет механики» или только слова мастера). Пакет мира с такой ссылкой не проходит проверку.",
+		"_systems": "v0.8.4.39, the author: whole systems out of the game for a while, their code and data kept — Catalog.cut drops rules.<id>, so the system's rules read it as off (OfficeRules.on) and nothing shows it to the player or to the master. To bring one back, take its id out of the list. office — the offices of v0.7.34 (docs/production/roadmap.md, «Бэклог»).",
+		"systems": ["office"],
 		"items": ["climbers_kit"],
 		"monsters": ["animated_armor", "bat", "black_dragon_wyrmling", "bronze_dragon_wyrmling", "crab", "crocodile", "darkmantle", "doppelganger", "dryad", "flying_sword", "gelatinous_cube", "ghast", "giant_bat", "giant_crab", "giant_frog", "giant_octopus", "giant_sea_horse", "giant_toad", "gibbering_mouther", "gold_dragon_wyrmling", "gray_ooze", "green_dragon_wyrmling", "green_hag", "grimlock", "homunculus", "hunter_shark", "killer_whale", "lemure", "lion", "lizardfolk", "manticore", "merfolk", "merrow", "mimic", "minotaur", "nightmare", "ochre_jelly", "octopus", "phase_spider", "plesiosaurus", "pseudodragon", "quipper", "reef_shark", "rug_of_smothering", "rust_monster", "sahuagin", "sea_hag", "shadow", "specter", "swarm_of_bats", "swarm_of_quippers", "will_o_wisp"],
 		"features": ["eldritch_invocation_eyes_of_the_rune_keeper", "eldritch_invocation_gaze_of_two_minds", "eldritch_invocation_book_of_ancient_secrets", "eldritch_invocation_voice_of_the_chain_master", "metamagic_careful_spell", "metamagic_subtle_spell"]
@@ -1408,6 +1410,8 @@
 	"difficulty": {
 		"_party": "v0.8.4.37, the author: how many heroes the master's fights are made for (1..max) — the DMG budget of a fight is the sum over the party, so the budget of one hero times the number; chosen for a new game, changed in the settings, kept in `session.settings.party`. The pack's own encounters stay as the author made them.",
 		"party": {"default": 1, "max": 4},
+		"_crowd": "v0.8.4.38, the author: a fight is weighed by the DMG — the foes' XP times a multiplier by their number (from: the least number of a step, mult: its multiplier); a party below small_party takes the next step up, one of large_party or more the step down (mult_below and mult_above past the table's ends). The weighed XP is checked against the budget of quest fights, reinforcements and made lairs.",
+		"crowd": {"from": [1, 2, 3, 7, 11, 15], "mult": [1, 1.5, 2, 2.5, 3, 4], "mult_below": 0.5, "mult_above": 5, "small_party": 3, "large_party": 6},
 		"_doc": "Difficulty of a game (M5, first iteration v0.7.20.4, DifficultyRules): check_bonus is added to the hero's checks and saving throws (death saves too), not to attacks. Chosen for a new game, changed in the settings.",
 		"default": "normal",
 		"levels": {

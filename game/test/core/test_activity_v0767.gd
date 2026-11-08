@@ -116,5 +116,6 @@ func test_the_family_and_the_party_read_alike() -> void:
 
 func test_a_town_with_a_treasury_shows_it() -> void:
 	var s := _hero()
+	TestUtils.system_on(data, "office")  # offices are out of the game (v0.8.4.39), their road stays
 	OfficeRules.town(s, data, "brod")["treasury"] = 1234
 	assert_int(int(Group.view(s, data, "brod_folk")["treasury_cp"])).is_equal(1234)
