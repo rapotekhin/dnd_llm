@@ -1,10 +1,10 @@
 extends Act
-## Looking a foe over: a bonus action, a knowledge check by its kind; a success opens the kind's numbers for good. What a player
-## learns: nobody else has a bestiary to fill.
+## Looking a foe over («Присмотреться»): a bonus action, a knowledge check by its kind; a success opens the kind's numbers
+## for good — the card of any creature shows them (v0.8.4.41). What a player learns: nobody else has a bestiary to fill.
 
 
 func title() -> String:
-	return "Осмотреть"
+	return "Присмотреться"
 
 
 func tip() -> String:

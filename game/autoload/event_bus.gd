@@ -25,3 +25,4 @@ signal navigate(screen: String, args: Dictionary)
 signal combat_lines(lines: Array[String])
 
 signal letter_requested(poster: String)  ## v0.8.4.26.3: the letter window; "" — the hero's own spell (Sending)
+signal card_requested(id: String)  ## v0.8.4.41: the card of any creature (a person, a creature, a foe, a fighter)

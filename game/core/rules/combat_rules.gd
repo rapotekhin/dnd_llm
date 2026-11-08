@@ -2562,54 +2562,23 @@ static func look_over(s: GameSession, data: Dictionary, t: Dictionary) -> Array[
 	var dc := lore_dc(data, t)
 	var r := Roll.hero(s, data, {"what": "Присмотреться", "skill": skill, "dc": dc, "target_id": str(t.get("id", ""))})  # Favored Enemy by its type
 	if bool(r["ok"]):
-		Knows.add(s, Knows.MONSTER, str(t["monster"]))
-	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], t.get("name", ""), TranslationServer.translate("SKILL_" + skill.to_upper()),
-		int(r["total"]), dc, "теперь ясно, на что способны такие враги" if bool(r["ok"]) else "ничего толкового"]]
+		Knows.add(s, Knows.MONSTER, str(t.get("monster", Sheet.template_id(data, t))))
+	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], CreatureCard.name_of(s, data, t),
+		TranslationServer.translate("SKILL_" + skill.to_upper()), int(r["total"]), dc,
+		"теперь ясно, на что способны такие враги" if bool(r["ok"]) else "ничего толкового"]]
 
 
+## The hero knows what `f` is (the one road of knowledge, v0.8.4.41): a kind looked over (`Knows.MONSTER`), or one of its own
+## side — the hero, an ally of a fight, a follower, a tamed beast — seen whole.
 static func known(s: GameSession, f: Dictionary) -> bool:
-	return Knows.has(s, Knows.MONSTER, str(f.get("monster", ""))) or str(f.get("side")) == "ally"  # one's own side is known
+	var id := str(f.get("npc_id", f.get("id", "")))
+	var cr: Dictionary = f.get("creature", Being.view(s, id).get("creature", {}))
+	return Sheet.is_hero(f) or str(f.get("side")) == "ally" or Being.follows(s, id) or str(cr.get("state", "")) == PropertyRules.TAME \
+		or Knows.has(s, Knows.MONSTER, str(f.get("monster", "")))
 
 
-## The card of a known kind: HP (this one's), AC, speed, attacks, resistances. "" for an unknown one.
+## The card of a known kind as lines (a fight's hover): HP (this one's), AC, speed, attacks, resistances. "" for an unknown
+## one. One reader with the window: CreatureCard.
 static func monster_card(s: GameSession, data: Dictionary, f: Dictionary) -> String:
-	if not known(s, f):
-		return ""
-	var m := Sheet.template(data, f)
-	var dtypes: Dictionary = data["misc"]["damage_types"]
-	var lines: Array[String] = ["%s · HP %d/%d · КД %d · скорость %s" % [m["name"], int(f["hp"]), int(f["max_hp"]), int(m["ac"]), Move.text(data, m)]]
-	for a: Dictionary in m["actions"]:
-		var dmg: Array[String] = []
-		for d: Dictionary in a.get("damage", []):
-			dmg.append("%s %s" % [str(d["dice"]).replace("d", "к"), dtypes.get(str(d["type"]), d["type"])])
-		var fx := MonsterRules.effect_text(data, a)  # v0.7.9: what it does besides the damage
-		if a.has("save"):
-			lines.append("%s: спасбросок %s Сл %d%s%s" % [a["name"], ab_name(str(a["save"]["ability"])), int(a["save"]["dc"]),
-				(", " + ", ".join(dmg)) if not dmg.is_empty() else "", ("; " + fx) if not fx.is_empty() else ""])
-		else:
-			lines.append("%s: %+d%s%s" % [a["name"], int(a.get("to_hit", 0)), (", " + ", ".join(dmg)) if not dmg.is_empty() else "",
-				("; " + fx) if not fx.is_empty() else ""])
-	var sc: Dictionary = m.get("spellcasting", {})
-	if not sc.is_empty():
-		var names: Array = []
-		for x: Dictionary in sc["spells"]:
-			if data["spells"].has(str(x["id"])):
-				names.append(str(data["spells"][str(x["id"])]["name"]) + (" (%d/день)" % int(x["per_day"]) if x.has("per_day") else ""))
-		lines.append("Заклинания (Сл %d): %s" % [int(sc.get("dc", 10)), ", ".join(names)])
-		var full: Dictionary = sc.get("slots", {})
-		if not full.is_empty():  # what is left of its slots (big test #21, v0.7.22.4)
-			lines.append("Ячейки: " + " · ".join(full.keys().map(func(k: Variant) -> String:
-				return "%s круг %d/%d" % [k, SpellRules.slots_left(f, int(k)) if f.has("slots_max") else int(full[k]), int(full[k])])))
-	for r: Dictionary in m.get("reactions", []):
-		if r.has("ac"):
-			lines.append("Реакция: парирование (+%d КД против удара вплотную)" % int(r["ac"]))
-	for key: String in ["resistances", "immunities", "vulnerabilities", "condition_immunities"]:
-		var list: Array = m.get(key, [])
-		if not list.is_empty():
-			lines.append("%s: %s" % [{"resistances": "Сопротивление", "immunities": "Иммунитет", "vulnerabilities": "Уязвимость",
-				"condition_immunities": "Не бывает"}[key], ", ".join(list.map(func(x: Variant) -> String:
-					return ConditionRules.name_of(data, str(x)).to_lower() if key == "condition_immunities" else str(dtypes.get(str(x), x))))])
-	for tr_: Dictionary in m.get("traits", []):
-		lines.append("%s: %s" % [tr_["name"], str(tr_.get("desc", "")).left(160)])
-	return "\n".join(lines)
+	return CreatureCard.text(s, data, f)
 

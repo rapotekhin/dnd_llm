@@ -250,7 +250,7 @@ COMBAT_SLOT_CIRCLE,Ячейка {n} круга (осталось {left})
 COMBAT_NO_SURRENDER,Сдаваться некому: среди врагов нет разумных
 COMBAT_FEATURE_TAB,Это — кнопками на вкладке «Умения»
 COMBAT_FOE_SURPRISED,врасплох
-COMBAT_FOE_UNKNOWN,"Вид не изучен. «Осмотреть» (бонусное действие) — проверка знаний; удача запоминает таких врагов навсегда: хиты, КД, атаки, сопротивления"
+COMBAT_FOE_UNKNOWN,"Вид не изучен. «Присмотреться» (бонусное действие) — проверка знаний; удача запоминает таких врагов навсегда: хиты, КД, атаки, сопротивления. «Осмотреть» в меню врага — его карточка"
 COMBAT_FRIGHTENED,Страх не пускает ближе к его источнику
 COMBAT_FT,{ft} фт
 COMBAT_HIDDEN,Спрятан — враги не видят
@@ -1961,8 +1961,8 @@ BTN_EQUIP_STOWED_OFF,В запасной набор: вторая рука
 STOWED_EMPTY_TIP,Пусто. Оружие этого набора кладётся сюда кнопкой «В запасной набор» в снаряжении
 BTN_FOE_ATTACK,Атаковать
 BTN_FOE_ATTACK_WORD_TIP,Они ждут слов — удар начнёт бой
-BTN_FOE_INSPECT,Осмотреть
-BTN_FOE_INSPECT_TIP,"Проверка знаний по виду врага (Природа, Религия, Магия, Проницательность), один раз. Успех открывает хиты, КД, атаки и сопротивления таких врагов насовсем"
+BTN_FOE_INSPECT,Присмотреться
+BTN_FOE_INSPECT_TIP,"Проверка знаний по виду существа (Природа, Религия, Магия, Проницательность), один раз. Успех открывает его характеристики, хиты, КД, атаки, способности и защиты — у всех таких насовсем"
 FOE_LOOKED,Вы уже присматривались к нему
 BTN_CAST_AT_TIP,"Заклинание в цель сразу: враждебное начнёт бой и ляжет первым ударом"
 SPELL_NOT_READY,Это заклинание сейчас не сотворить
@@ -1987,3 +1987,52 @@ LVL_TOME,"Заговоры в Книгу теней — из списка люб
 LVL_ERR_TOME,Выберите заговоры для Книги теней
 FEEDBACK_BUTTON,Баг / идея
 FEEDBACK_TIP,"Сообщить о баге или предложить идею — откроется форма в браузере"
+BTN_CARD,Осмотреть
+BTN_CARD_TIP,"Карточка существа: характеристики, атаки, способности, состояния с источником и временем, снаряжение"
+BTN_CARD_LOOK_FIGHT_TIP,Бонусное действие: проверка знаний по виду существа. Успех открывает таких насовсем
+CARD_NUMBERS,КД {ac} · хиты {hp} · скорость {speed}
+CARD_HIDDEN,"Вид не изучен — числа скрыты. «Присмотреться»: проверка {skill}, Сл {dc}; успех открывает таких существ насовсем"
+CARD_PASSIVE,Пассивная Внимательность {n} · бонус мастерства +{prof}
+CARD_CR,опасность {cr}
+CARD_SAVES,Спасброски: {list}
+CARD_SKILLS,Навыки: {list}
+CARD_LANGUAGES,Языки: {list}
+CARD_NO_LANGUAGES,не говорит
+CARD_BLOWS,Атаки
+CARD_REACTION,Реакция: {what}
+CARD_FEATURES,Способности
+CARD_RESOURCES,Заряды: {list}
+CARD_SPELLS,Заклинания
+CARD_SPELL_DC,Сл спасброска от заклинаний {dc}
+CARD_SLOTS,Ячейки: {list}
+CARD_SLOT,{n} круг {left}/{max}
+CARD_DEFENSES,Защиты
+CARD_STATUSES,Состояния и эффекты
+CARD_NO_STATUSES,Ничего не действует
+CARD_SOURCE,источник: {source}
+CARD_WORN,Снаряжение
+CARD_SPARE,запасной набор
+CARD_ADV,с преимуществом
+CARD_DIS,с помехой
+CARD_FAIL,автопровал
+SIZE_TINY,Крошечный
+SIZE_SMALL,Маленький
+SIZE_MEDIUM,Средний
+SIZE_LARGE,Большой
+SIZE_HUGE,Огромный
+SIZE_GARGANTUAN,Громадный
+CREATURE_TYPE_ABERRATION,аберрация
+CREATURE_TYPE_BEAST,зверь
+CREATURE_TYPE_CELESTIAL,небожитель
+CREATURE_TYPE_CONSTRUCT,конструкт
+CREATURE_TYPE_DRAGON,дракон
+CREATURE_TYPE_ELEMENTAL,элементаль
+CREATURE_TYPE_FEY,фея
+CREATURE_TYPE_FIEND,исчадие
+CREATURE_TYPE_GIANT,великан
+CREATURE_TYPE_HUMANOID,гуманоид
+CREATURE_TYPE_MONSTROSITY,чудовище
+CREATURE_TYPE_OOZE,слизь
+CREATURE_TYPE_PLANT,растение
+CREATURE_TYPE_UNDEAD,нежить
+CREATURE_TYPE_SWARM,рой

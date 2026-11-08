@@ -108,8 +108,11 @@ static func rounds_left(s: GameSession, e: Dictionary) -> int:
 
 ## «54 мин», «3 р.», «до долгого отдыха» — what the chips and the master see.
 static func left_text(s: GameSession, e: Dictionary) -> String:
-	if str(e.get("source", {}).get("kind", "")) == "trait":
+	var kind := str(e.get("source", {}).get("kind", ""))
+	if kind in ["trait", ItemRules.BORN]:
 		return "черта"
+	if kind == ItemRules.WORN:  # what a worn thing lays lasts while it is worn (v0.8.4.41)
+		return "пока надето"
 	var ends: Dictionary = e.get("ends", {})
 	if ends.has("at"):
 		var r := rounds_left(s, e)
@@ -693,15 +696,49 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 	return lines
 
 
-## «преимущество на спасброски от яда, сопротивление яду (1 ч)» — what a boon gives.
+## «преимущество на спасброски от яда, сопротивление яду (1 ч)» — what a boon gives. v0.8.4.41 (the card of anybody): every
+## number a status lays, a made one's parts too — checks and saves with advantage or disadvantage, the checks of the others
+## against it, damage and conditions it is immune or weak to, AC, speed, a skill, a die.
 static func boon_text(data: Dictionary, e: Dictionary) -> String:
 	var parts: Array[String] = []
+	var dtypes: Dictionary = data["misc"]["damage_types"]
 	if e.has("adv_tag"):
 		parts.append("преимущество на спасброски: %s" % HeroDefense.tag_name(e["adv_tag"]))
+	if e.has("dis_tag"):
+		parts.append("помеха на спасброски: %s" % HeroDefense.tag_name(e["dis_tag"]))
 	for t: Variant in e.get("resist", []):
-		parts.append("сопротивление: %s" % str(data["misc"]["damage_types"].get(str(t), t)))
-	if e.has("check_adv"):
-		parts.append("преимущество на проверки: %s" % TranslationServer.translate("SKILL_" + str(e["check_adv"]).to_upper()))
+		parts.append("сопротивление: %s" % str(dtypes.get(str(t), t)))
+	for key: String in ["immune", "vulnerable"]:
+		for t: Variant in e.get(key, []):
+			if dtypes.has(str(t)):
+				parts.append("%s: %s" % ["иммунитет" if key == "immune" else "уязвимость", dtypes[str(t)]])
+			elif key == "immune":
+				parts.append("не бывает: %s" % name_of(data, str(t)).to_lower())
+	for key: String in ["check_adv", "check_dis", "save_adv", "save_dis"]:
+		if e.has(key):
+			parts.append("%s на %s: %s" % ["преимущество" if key.ends_with("_adv") else "помеха", "проверки" if key.begins_with("check") else "спасброски",
+				_what(e[key], "SKILL_" if key.begins_with("check") else "ABILITY_")])
+	var against: Dictionary = e["against"] if e.get("against") is Dictionary else {}
+	for skill: String in against:
+		parts.append("проверки против него (%s) — с %s" % [_what(skill, "SKILL_"), "преимуществом" if str(against[skill]) == "advantage" else "помехой"])
+	var ac := int(e.get("ac", 0)) + int(e.get("ac_plus", 0))
+	if ac != 0:
+		parts.append("КД %+d" % ac)
+	if e.has("ac_min"):
+		parts.append("КД не ниже %d" % int(e["ac_min"]))
+	var speed := int(e.get("speed", 0)) + int(e.get("speed_plus", 0))
+	if speed != 0:
+		parts.append("скорость %+d фт" % speed)
+	var bonus: Dictionary = e["skill_bonus"] if e.get("skill_bonus") is Dictionary else {}
+	for skill: String in bonus:
+		parts.append("%s %+d" % [_what(skill, "SKILL_"), int(bonus[skill])])
+	if int(e.get("saves_plus", 0)) != 0:
+		parts.append("спасброски %+d" % int(e["saves_plus"]))
+	if int(e.get("max_hp", 0)) != 0:
+		parts.append("максимум хитов %+d" % int(e["max_hp"]))
+	if e.get("on") is Array and e.has("die"):
+		parts.append("%s%s к броскам: %s" % ["−" if bool(e.get("minus", false)) else "+", str(e["die"]).replace("d", "к"),
+			", ".join((e["on"] as Array).map(func(x: Variant) -> String: return str({"attack": "атака", "save": "спасбросок", "check": "проверка"}.get(str(x), x))))])
 	if bool(e.get("enlarged", false)):
 		parts.append("увеличение: +1к4 к урону оружием, преимущество на проверки Силы")
 	if e.has("coat"):
@@ -714,26 +751,54 @@ static func boon_text(data: Dictionary, e: Dictionary) -> String:
 	return ", ".join(parts)
 
 
-## The hero's effects for the chips and the master: [{name, left, source, text, condition}].
-static func shown(s: GameSession, data: Dictionary) -> Array[Dictionary]:
-	var c := s.character
+## «помеха на проверки: Скрытность» — the names of a status's list: skills or abilities by their keys, «all» as «все».
+static func _what(v: Variant, prefix: String) -> String:
+	var list: Array = v if v is Array else [v]
+	return ", ".join(list.map(func(x: Variant) -> String:
+		return "все" if str(x) == "all" else TranslationServer.translate(prefix + str(x).to_upper())))
+
+
+## What a made status's row does to blows (its parts `attack`, `attacked`): «его атаки — с преимуществом».
+static func _blows_text(row_of: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for key: String in ["attack", "attacked"]:
+		var mode := str(row_of.get(key, ""))
+		if mode in ["advantage", "disadvantage"]:
+			out.append("%s — с %s" % ["его атаки" if key == "attack" else "атаки по нему", "преимуществом" if mode == "advantage" else "помехой"])
+	return out
+
+
+## The statuses of anybody for the chips, the master and the card (v0.8.4.41: any creature, `who` of Sheet):
+## [{name, left, source, kind, text, does, condition}] — `does` is what its numbers do (boon_text), `kind` where it comes from
+## (a spell, a worn thing, a trait…). A trait's status counts even when nothing laid it yet (ItemRules.born_effects).
+static func shown(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> Array[Dictionary]:
+	var c := Sheet.holder(s, who)
 	var out: Array[Dictionary] = []
-	for e: Dictionary in effects(c):
+	for e: Dictionary in ItemRules.born_effects(data, c):
 		var id := str(e.get("condition", ""))
+		var kind := str(e.get("source", {}).get("kind", ""))
 		var title := name_of(data, id) if not id.is_empty() else str(e.get("source", {}).get("name", ""))
-		var text := str(data["rules"]["conditions"].get(id, "")) if not id.is_empty() else boon_text(data, e)
+		var does: Array[String] = []
+		if not boon_text(data, e).is_empty():
+			does.append(boon_text(data, e))
+		if id.begins_with(MakeRules.PREFIX):
+			does.append_array(_blows_text(row(c, data, id)))
+		var text := str(data["rules"]["conditions"].get(id, "")) if not id.is_empty() else ""
 		if e.has("disease"):
 			text = str(DiseaseRules.def_of(s, data, str(e["disease"])).get("text", ""))
-		if text.is_empty() and str(e.get("source", {}).get("kind", "")) == "spell":
+		if text.is_empty() and kind == "spell":
 			text = SpellEffects.text(data, SpellEffects.spec(data, str(e["source"].get("id", ""))))
-		out.append({"condition": id, "name": title, "left": left_text(s, e), "source": str(e.get("source", {}).get("name", "")), "text": text})
+		if text.is_empty():
+			text = ", ".join(does)
+		out.append({"condition": id, "name": title, "left": left_text(s, e), "source": str(e.get("source", {}).get("name", "")), "kind": kind,
+			"text": text, "does": ", ".join(does)})
 	if exhaustion(c) > 0:
-		out.append({"condition": "exhaustion", "name": "Истощение %d" % exhaustion(c), "left": "до долгого отдыха", "source": "",
-			"text": exhaustion_text(exhaustion(c))})
+		out.append({"condition": "exhaustion", "name": "Истощение %d" % exhaustion(c), "left": "до долгого отдыха", "source": "", "kind": "engine",
+			"text": exhaustion_text(exhaustion(c)), "does": ""})
 	if not str(c.get("concentration", "")).is_empty():
 		var sp := str(c["concentration"])
 		var ends := int(c.get("concentration_ends", -1))
 		out.append({"condition": "concentration", "name": "Концентрация: %s" % data["spells"].get(sp, {}).get("name", sp),
 			"left": left_text(s, {"ends": {"at": ends}} if ends >= 0 else {"ends": {}}).replace("пока не снимут", "пока держится"),
-			"source": "", "text": "Урон — спасбросок Телосложения (Сл 10 или половина урона), иначе заклинание прервётся."})
+			"source": "", "kind": "spell", "does": "", "text": "Урон — спасбросок Телосложения (Сл 10 или половина урона), иначе заклинание прервётся."})
 	return out

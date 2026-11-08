@@ -33,6 +33,18 @@ static func hero(c: Dictionary, data: Dictionary) -> Array[String]:
 	return out
 
 
+## The languages of anybody (v0.8.4.41, the card): the hero's sheet, a person of the world's, else its template's SRD line.
+static func of(s: GameSession, data: Dictionary, who: Dictionary) -> Array[String]:
+	if Sheet.is_hero(who):
+		return hero(s.character, data)
+	var n: Dictionary = data["world"]["npcs"].get(str(who.get("npc_id", who.get("id", ""))), {})
+	if not n.is_empty():
+		return npc(data, n)
+	var out: Array[String] = []
+	out.assign(monster(data, Sheet.template_id(data, who))["speaks"])
+	return out
+
+
 ## An NPC of the pack: its `languages`, or Common and the language of its people.
 static func npc(data: Dictionary, n: Dictionary) -> Array[String]:
 	var out: Array[String] = []

@@ -45,6 +45,7 @@ const PARTS := {
 	"skill_profs": TYPE_ARRAY, "tools": TYPE_ARRAY, "languages": TYPE_ARRAY, "spells": TYPE_DICTIONARY, "recipes": TYPE_ARRAY,
 	"stolen_animals": TYPE_ARRAY,
 	"wanted": TYPE_DICTIONARY,  # where a person is wanted for its crimes (v0.8.4.21, CrimeRules.wanted_of)
+	"looked": TYPE_BOOL,  # the hero tried the knowledge check on it out of a fight (v0.8.4.30, v0.8.4.41)
 }
 const NESTED := {
 	"creature": {
