@@ -23,7 +23,8 @@ bases:
           - {id: npc_innkeeper, name: "Горм", role: "хозяин таверны",
              template: commoner, attitude: indifferent}
           - {id: npc_guard, name: "сержант Ведда", role: "стражница",
-             template: guard, attitude: indifferent}
+             template: guard, attitude: indifferent,
+             wears: ["armor: Кольчужная рубаха [chain_shirt]", "shield: Щит [shield]", "main_hand: Копьё [spear]"]}
         items_visible: []
         hooks: []
         time: "вечер"
@@ -1036,7 +1037,6 @@ scenarios:
     engine:
       check: {d20: [15], bonus: 3, total: 18, dc: 10, success: true, nat: 15, blocked: false}
     expect:
-      check: {required: false}
       effects: {required_kinds_any: [equip], required_fields: [npc_id]}
     rubric:
       - "Если сержант соглашается, мастер даёт equip с npc_id сержанта, slot shield без item_id; не equip героя и не move_item"

@@ -193,3 +193,13 @@ func test_a_check_part_gives_advantage_or_disadvantage() -> void:
 	assert_array(CheckEngine.situation(s, d, Sheet.HERO, {"skill": "stealth"})["adv"]).contains(["мастер"])  # by the one who laid it
 	assert_array(CheckEngine.situation(s, d, Sheet.HERO, {"skill": "athletics"})["adv"]).is_empty()
 	assert_bool(bool(Sheet.save_odds(s, d, Sheet.HERO, "con")["dis"])).is_true()
+
+
+## The master sees what a person of the scene wears and holds, by the slots its `equip` names.
+func test_the_snapshot_shows_a_persons_gear() -> void:
+	var s := TestUtils.new_session()
+	var lines: Array = TurnSnapshot._wears(s, data, "npc_captain")
+	assert_bool(lines.any(func(l: String) -> bool: return l.begins_with("armor: ") and l.ends_with("[splint_armor]"))).is_true()
+	Equip.off(s, data, "npc_captain", "armor")
+	lines = TurnSnapshot._wears(s, data, "npc_captain")
+	assert_bool(lines.any(func(l: String) -> bool: return l.begins_with("armor: "))).is_false()

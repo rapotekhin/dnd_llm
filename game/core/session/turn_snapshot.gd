@@ -27,7 +27,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"deal": SocialRules.deal_text(s, data, id),
 			"secrets": SocialRules.secret_hints(s, data, id), "refuses": SocialRules.refuses(s, data, id), "eager": SocialRules.eager(s, data, id),
 			"follows": Being.follows(s, id), "under": SpellEffects.npc_spell_text(s, id), "animals": _animals(data, id),
-			"god": FaithRules.npc_text(s, data, id)})  # v0.7.49
+			"god": FaithRules.npc_text(s, data, id), "wears": _wears(s, data, id)})  # v0.7.49
 	var near := MapSpots.near_words(s, data)  # v0.8.2: no squares for the master, words
 	for n: Dictionary in npcs:
 		n["near"] = str(near.get(n["npc_id"], ""))
@@ -240,6 +240,20 @@ static func _hungry(s: GameSession, id: String) -> String:
 ## « Болен: хохочущая лихорадка, заразно.» — a sick NPC (v0.7.23.1); its course ends (v0.7.39): « Уже здоров…».
 
 ## A dealer's beasts and vehicles for the master (v0.7.42): «Мул [mule] 8 зм».
+## What a person wears and holds (v0.8.4.40), in the form of the hero's «Надето»: «shield: Щит [shield]», the other set
+## «запас main_hand: …» — the slots the master's `equip` with `npc_id` names. One not yet looked at — its template's kit.
+static func _wears(s: GameSession, data: Dictionary, id: String) -> Array:
+	var b := Being.view(s, id)
+	var kit := b if b.has("inventory") else Gear.start(data, Sheet.template_id(data, Sheet.who(s, data, id)))
+	var out: Array = []
+	for row: String in ["equipped", "stowed"]:
+		var slots: Dictionary = kit.get(row, {})
+		for slot: String in slots:
+			if not str(slots[slot]).is_empty():
+				out.append("%s%s: %s [%s]" % ["запас " if row == "stowed" else "", slot, ItemRules.display_name(data["items"], s.items, str(slots[slot])), slots[slot]])
+	return out
+
+
 static func _animals(data: Dictionary, id: String) -> Array:
 	var out: Array = []
 	if not data["rules"].has("property"):

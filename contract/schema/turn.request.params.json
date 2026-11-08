@@ -1047,6 +1047,13 @@
           "default": true,
           "title": "Understands Hero",
           "type": "boolean"
+        },
+        "wears": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Wears",
+          "type": "array"
         }
       },
       "required": [

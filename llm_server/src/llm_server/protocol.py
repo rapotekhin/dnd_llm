@@ -211,6 +211,7 @@ class SceneNpc(_In):
     animals: list[str] = Field(default_factory=list)  # 0.86.0: a dealer's beasts and vehicles — «Мул [mule] 8 зм»
     god: str = ""  # 0.93.0: whom it serves — «вера: Чонтия (Светлая Мать), одной веры с героем»
     near: str = ""  # 0.104.0: how far from the hero, in words: «рядом», «в нескольких шагах», «в другом конце»
+    wears: list[str] = Field(default_factory=list)  # 0.118.0: what it wears and holds, as the hero's «Надето» — «shield: Щит [shield]», «запас main_hand: …»
 
 
 class SceneProp(_In):
