@@ -3,6 +3,7 @@ ACT_GROUP_TALK,Разговор
 ACT_GROUP_DEALS,Дела
 ACT_GROUP_LIFE,Жизнь
 ACT_GROUP_SPELLS,Заклинания
+ACT_GROUP_SERVICES,Услуги
 ACT_GROUP_TIP,Открыть или свернуть список
 ABILITY_BUSY,Сейчас нельзя: мастер думает или нет связи
 ABILITY_CHA,Харизма
@@ -410,6 +411,8 @@ ITEM_NEEDS_ATTUNEMENT,"Требует настройки: час с вещью, 
 ITEM_NO_PROF_ARMOR,Вы не владеете этим доспехом: надеть нельзя
 ITEM_NO_PROF_WEAPON,Вы не владеете этим оружием: атака без бонуса мастерства
 ITEM_PROPERTIES,Свойства: {list}
+ITEM_MARKS,Сделано у мастера: {list}
+ITEM_MARKS_SOME,Сделано у мастера: {list} — {n} из {of}
 ITEM_PROP_AC_PLUS1,КД +1
 ITEM_PROP_AC_PLUS2,КД +2
 ITEM_PROP_AMMUNITION,нужны боеприпасы: половину выпущенных можно собрать после боя
@@ -701,6 +704,8 @@ SEARCH_SAY_INVESTIGATION,Тщательно обыскиваю это место
 SEARCH_SAY_PERCEPTION,Осматриваюсь по сторонам
 SERVICE_BUTTON,{name} — {cost}
 SERVICE_NOTHING,Нечего — услуга сейчас не нужна
+SERVICE_ACTIVE,Это уже действует — второй раз не наложить
+SERVICE_NOT_HERE,Этого человека здесь нет
 SHEET_ABILITIES,Характеристика · модификатор · спасбросок (● — владение)
 SHEET_ABILITY_ROW,{name} {score} ({mod}) · спасбросок {save}
 SHEET_ATTACK,"Атака: {name} {hit}, урон {dmg}"

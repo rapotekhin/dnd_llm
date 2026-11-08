@@ -162,7 +162,7 @@ func _reject(reason: String) -> Dictionary:
 ## `new:<key>` of this turn's `make` stands for its id wherever a thing is named (v0.7.63).
 func _made_ids(e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var out := e.duplicate()
-	for k: String in ["condition", "teach_id", "item_id", "reward_item_id", "liquid"]:
+	for k: String in ["condition", "teach_id", "item_id", "reward_item_id", "liquid", "status", "property"]:
 		if out.get(k) is String:
 			out[k] = MakeRules.resolve(pending, out[k])
 	return out
@@ -233,6 +233,7 @@ func _table() -> Dictionary:
 		"create:way": {"rule": WayRules.plan_make, "apply": WayRules.apply_make},
 		"create:supplier": {"rule": ShopRules.make, "apply": ShopRules.apply_make},
 		"create:bank": {"rule": BankRules.make, "do": _do_bank},
+		"create:service": {"plan": _plan_service, "do": _do_service},
 		"create:fence": {"rule": FenceRules.make, "apply": FenceRules.apply_make},
 		"create:heist": {"rule": HeistRules.make, "apply": HeistRules.apply_make},
 		"create:org": {"rule": OrgRules.make, "apply": OrgRules.apply_make},
@@ -1294,6 +1295,14 @@ func _do_contest(s: GameSession, plan: Dictionary) -> void:
 
 func _do_wilds(s: GameSession, plan: Dictionary) -> void:
 	_extra_lines.append_array(WildsRules.apply(s, _data, plan))
+
+
+func _plan_service(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
+	return ServiceRules.make(s, data, _made_ids(e, pending))
+
+
+func _do_service(s: GameSession, plan: Dictionary) -> void:
+	_extra_lines.append_array(ServiceRules.apply_make(s, _data, plan, str(_made.get("npc", ""))))
 
 
 func _do_bank(s: GameSession, plan: Dictionary) -> void:

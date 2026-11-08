@@ -4849,3 +4849,67 @@ scenarios:
       effects: {required_kinds_any: [furnish]}
     rubric:
       - "Мастер предлагает furnish, и хотя бы у одной важной вещи стоит near с местом из списка (hearth или counter) или id человека; координат клеток нет."
+
+  - id: service_new_ward_of_the_road
+    title: "Оберег в дорогу у жрицы, которого нет в её услугах: статус make и create:service, без денег словами"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Сестра Илва, я завтра ухожу в Пущу. Можешь наложить на меня оберег в дорогу, чтобы хворь и яд не брали? Заплачу, сколько скажешь."
+    snapshot:
+      scene:
+        room: {id: room_temple, name: "Храм Чонтеи", description: "Светлый храм с колосьями у алтаря, пахнет воском и хлебом."}
+        npcs:
+          - {id: npc_priestess, name: "Сестра Илва", role: "жрица храма", template: acolyte, attitude: friendly, trader: true,
+             services: ["опознание вещей [identify], 20 зм", "снятие проклятия [remove_curse], 90 зм", "исцеление болезни [cure_disease], 15 зм"]}
+      character:
+        gold_cp: 5000
+    engine:
+      validate:
+        - {kind: make, status: accept, summary: "Новое: «Оберег путника» (2 очк., слабое)"}
+        - {kind: create:service, status: accept, summary: "Услуга «Наложить оберег путника» у Сестра Илва за 12 зм"}
+    expect:
+      effects: {required_kinds_any: [create:service], forbidden_kinds: [coins, condition, create:npc]}
+    rubric:
+      - "Мастер собирает статус пользы эффектом make (what status, части вроде save_adv con), потом create:service с npc_id жрицы, op status, status new:<key> и сроком hours или rest"
+      - "Деньги не берутся и оберег не накладывается словами (нет эффекта coins или condition), покупка остаётся игроку; если цена названа — это 12 зм из ответа движка на create:service, не другая сумма и не другая монета"
+
+  - id: service_new_silver_at_the_veteran
+    title: "Посеребрить меч у старого оружейника: create:service с op enchant и silvered"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Орвин, ты же был оружейником в войске. Говорят, в Пуще бродит оборотень. Посеребришь мне длинный меч?"
+    snapshot:
+      scene:
+        npcs:
+          - {id: npc_veteran, name: "Старый Орвин", role: "отставной оружейник войска", template: veteran, attitude: friendly}
+      character:
+        gold_cp: 20000
+    engine:
+      validate:
+        - {kind: create:service, status: accept, summary: "Услуга «Посеребрить клинок» у Старый Орвин за 100 зм"}
+    expect:
+      effects: {required_kinds_any: [create:service], forbidden_kinds: [coins, move_item:world>hero, move_item:hero>world, make]}
+    rubric:
+      - "Мастер заводит услугу эффектом create:service: npc_id Орвина, op enchant, property silvered, needs weapon"
+      - "Меч не посеребрён словами и деньги не взяты: дело — кнопкой «Услуги» у Орвина; новой вещи в руки герою нет"
+
+  - id: service_existing_by_button
+    title: "Серебрение у кузнеца, у которого оно есть: кнопка «Услуги», без эффектов"
+    category: rules
+    extends: tavern
+    mode: trade
+    input: "Гуннар, посеребри мне меч — сколько с меня?"
+    snapshot:
+      scene:
+        room: {id: room_smithy, name: "Кузница", description: "Жаркая кузница, горн и наковальня."}
+        npcs:
+          - {id: npc_smith, name: "Гуннар Тяжёлая Рука", role: "кузнец", template: commoner, attitude: indifferent, trader: true,
+             services: ["серебрение оружия [silver], 100 зм"]}
+      character:
+        gold_cp: 20000
+    expect:
+      effects: {forbidden_kinds: [coins, create:service, grant:favor, move_item:world>hero, move_item:hero>world]}
+    rubric:
+      - "Гуннар соглашается в характере и называет цену 100 зм или отсылает к кнопке «Услуги»; серебрение не проведено словами, денег эффектом нет"

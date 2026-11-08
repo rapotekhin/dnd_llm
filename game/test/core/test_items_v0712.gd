@@ -292,7 +292,7 @@ func test_a_cursed_thing_does_not_come_off() -> void:
 	assert_bool(ItemRules.held_by_curse(c, data, s.items, id)).is_true()
 	assert_int(TradeRules.sellable(s, id, data)).is_equal(0)
 	s.npc_id = "npc_priestess"
-	var lines := TradeRules.buy_service(s, data, "npc_priestess", "remove_curse")
+	var lines := ServiceRules.buy(s, data, "npc_priestess", "remove_curse")
 	assert_str(str(c["equipped"]["main_hand"])).is_empty()
 	assert_bool(lines.any(func(l: String) -> bool: return l.contains("проклятие отпустило"))).is_true()
 
@@ -302,13 +302,15 @@ func test_silvering_at_the_smith() -> void:
 	var c := s.character
 	var main := str(c["equipped"]["main_hand"])
 	c["gold_cp"] = 100000
-	var sv := TradeRules.services(s, data, "npc_smith")
+	var sv := ServiceRules.of(s, data, "npc_smith")
 	assert_str(str(sv[0]["id"])).is_equal("silver")
 	assert_str(str(sv[0]["why"])).is_empty()
-	TradeRules.buy_service(s, data, "npc_smith", "silver", main)
-	var now := str(c["equipped"]["main_hand"])
-	assert_str(now).is_not_equal(main)
-	assert_bool(bool(CombatRules.weapon_profile(c, data, s.items, now)["silvered"])).is_true()
+	assert_bool(bool(CombatRules.weapon_profile(c, data, s.items, main)["silvered"])).is_false()
+	var made := s.items.size()
+	ServiceRules.buy(s, data, "npc_smith", "silver", main)
+	assert_str(str(c["equipped"]["main_hand"])).is_equal(main)  # v0.8.4.35: the same sword, a mark on its copy
+	assert_int(s.items.size()).is_equal(made)  # no new thing in the game's library
+	assert_bool(bool(CombatRules.weapon_profile(c, data, s.items, main)["silvered"])).is_true()
 
 
 func test_the_master_hands_out_nothing_rarer_than_uncommon() -> void:

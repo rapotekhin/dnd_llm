@@ -21,6 +21,9 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	var props := properties_line(def)
 	if not props.is_empty():
 		out.append(props)
+	var marked := marks_line(c, data, id)  # v0.8.4.35: what a service laid on a copy
+	if not marked.is_empty():
+		out.append(marked)
 	var meta: Array[String] = []
 	var rarity := str(def.get("rarity", ""))
 	if not rarity.is_empty() and rarity != "common":
@@ -105,6 +108,40 @@ static func properties_line(def: Dictionary) -> String:
 	for n: Variant in def.get("built", []):
 		names.append(str(n))
 	return "" if names.is_empty() else TranslationServer.translate("ITEM_PROPERTIES").format({"list": ", ".join(names)})
+
+
+## «Сделано у мастера: посеребрено — 1 из 2»: the marks of the copies `h` holds (v0.8.4.35); "" when none.
+static func marks_line(h: Dictionary, data: Dictionary, id: String) -> String:
+	if h.is_empty():
+		return ""
+	var n := Thing.count(h, id)
+	var marked := 0
+	var names: Array[String] = []
+	for i in n:
+		var m := ItemRules.marks(h, id, i)
+		marked += 1 if not m.is_empty() else 0
+		for p: Variant in m:
+			var name := mark_name(data, str(p))
+			if not names.has(name):
+				names.append(name)
+	if marked == 0:
+		return ""
+	if marked == n:
+		return _t("ITEM_MARKS").format({"list": ", ".join(names)})
+	return _t("ITEM_MARKS_SOME").format({"list": ", ".join(names), "n": marked, "of": n})
+
+
+## A mark's word: the sheet's name of a property, a made property's own, or the token.
+static func mark_name(data: Dictionary, p: String) -> String:
+	var names: Dictionary = data["rules"].get("item_props", {}).get("names", {})
+	if names.has(p):
+		return str(names[p])
+	var built: Dictionary = data["items"].get("built", {})
+	if built.has(p):
+		return str(built[p]["name"])
+	var key := "ITEM_PROP_" + p.to_upper()
+	var n := TranslationServer.translate(key)
+	return p if n == key else n.get_slice(":", 0)
 
 
 ## Weapons and armor the hero is not trained with: no proficiency bonus / disadvantage and no spells in armor.

@@ -149,17 +149,17 @@ func test_a_clerics_commandment_and_the_lapse() -> void:
 
 func test_desecration_closes_the_priests_and_their_services() -> void:
 	var s := _session()
-	var cost := int(TradeRules.services(s, data, "npc_priestess")[0]["cost_cp"])
+	var cost := int(ServiceRules.of(s, data, "npc_priestess")[0]["cost_cp"])
 	FaithRules.start(s.character, "chauntea")
 	FaithRules.add_favor(s.character, data, "chauntea", 60)
-	assert_int(int(TradeRules.services(s, data, "npc_priestess")[0]["cost_cp"])).is_equal(int(cost * 0.6))  # the chosen: 40% off
+	assert_int(int(ServiceRules.of(s, data, "npc_priestess")[0]["cost_cp"])).is_equal(int(cost * 0.6))  # the chosen: 40% off
 	assert_bool(FaithRules.shelter(s, data, "brod-temple")).is_true()
 	assert_bool(ExplorationRules.rest_place(data["world"], "brod-temple", s, data).get("free", false)).is_true()
 	var lines := FaithRules.deed(s, data, "assault", "brod-temple")
 	assert_str(" ".join(lines)).contains("Осквернение")
 	assert_int(FaithRules.favor(s.character, "chauntea")).is_equal(-100)
 	assert_str(FaithRules.refuses(s, data, "npc_priestess")).contains("осквернитель")
-	assert_str(str(TradeRules.services(s, data, "npc_priestess")[0]["why"])).is_equal("FAITH_REFUSED")
+	assert_str(str(ServiceRules.of(s, data, "npc_priestess")[0]["why"])).is_equal("FAITH_REFUSED")
 	assert_str(FaithRules.service_why(s, data)).is_equal("FAITH_REFUSED")
 
 

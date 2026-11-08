@@ -471,20 +471,12 @@ func _gather_ammo(s: GameSession) -> Array[String]:
 	return lines
 
 
-## A trader's service (v0.7.12; data since v0.7.16): an enchant takes the main hand when it fits, else the first. "" or a key.
-func buy_service(id: String) -> String:
-	if session == null or is_busy() or session.mode != GameSession.MODE_TRADE:
+## A service of a person (v0.7.12; any person since v0.8.4.35): at the counter or under its row, out of a fight; `item` —
+## what it acts on, the thing in the hand first by default. "" or a localization key.
+func service(npc_id: String, id: String, item: String = "") -> String:
+	if not _out_of_fight():
 		return "EQUIP_BUSY"
-	for sv: Dictionary in TradeRules.services(session, Catalog.data, session.npc_id):
-		if str(sv["id"]) != id:
-			continue
-		if not str(sv["why"]).is_empty():
-			return str(sv["why"])
-		var main := str(session.character.get("equipped", {}).get("main_hand", ""))
-		var weapon := main if TradeRules.targets(session, Catalog.data, id).has(main) else ""
-		_effect_lines(TradeRules.buy_service(session, Catalog.data, session.npc_id, id, weapon), true)
-		return ""
-	return "SERVICE_NOTHING"
+	return _act("service", {"service": _row(ServiceRules.why, ServiceRules.buy, [session, Catalog.data, npc_id, id, item])})
 
 
 ## «Слухи» at an NPC (v0.7.47): what it knows and the hero has not heard, without the master. "" or a localization key.

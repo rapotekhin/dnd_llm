@@ -249,6 +249,7 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 	var ring := ArenaRules.ring(s, data)  # v0.8.4.5: its sides and its crowd
 	s.combat["crowd"] = ring.get("crowd", [])
 	FightGrid.put(player(s), FightGrid.free_near(s, data, ring["hero"]) if ring.has("hero") else _hero_square(s, data))
+	FightField.auras(s, data, player(s))  # what the hero wears lays around it (v0.8.4.35), as a monster's traits do
 	var key := str(source.get("encounter", ""))
 	if (not key.is_empty() or bool(source.get("on_map", false))) and not s.combat.has("field") and not s.combat.has("arena"):
 		foes = MapSpots.on_lair(s, data, key, foes)  # the foes seen on the map keep their squares (v0.8.4.24)
@@ -552,6 +553,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			CharacterRules.refresh(h, data, s.items)
 	if str(f.get("status")) != "active":
 		return
+	FightField.auras(s, data, f)  # a thing put on or taken off since (v0.8.4.35)
 	MonsterRules.start_turn(s, data, f, lines)  # recharges, once-a-turn extras, Reckless Attack lasts until now
 	lines.append_array(SpellEffects.turn_start(s, data, f))  # Heroism (v0.7.13.1)
 	_fire(s, data, f, lines)
@@ -664,7 +666,7 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 		return {"name": "Безоружный удар", "to_hit": umod + prof, "hit_parts": [RollParts.part(RollParts.ability_name("str" if umod == str_mod else "dex"), umod), RollParts.part("владение", prof)], "dice": martial if not martial.is_empty() else "1", "bonus": umod,
 			"type": "bludgeoning", "melee": true, "range": [], "light": false, "id": "", "magical": false, "silvered": false,
 			"crit_min": FeatureRules.crit_min(c), "str_based": umod == str_mod}
-	var def := ItemRules.def_of(data["items"], session_items, weapon_id)
+	var def := ItemRules.copy_def(data["items"], session_items, c, weapon_id, CharacterRules.hold_index(c, weapon_id, "off_hand" if offhand else "main_hand"))
 	var w: Dictionary = def.get("weapon", {})
 	var props: Array = def.get("properties", [])
 	var ranged := str(w.get("range", "melee")) == "ranged"

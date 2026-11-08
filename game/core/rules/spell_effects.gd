@@ -1083,6 +1083,9 @@ static func _reaches(s: GameSession, data: Dictionary, z: Dictionary, f: Diction
 	var owner := CombatRules.fighter(s, str(z.get("by", CombatRules.PLAYER)))
 	if owner.is_empty() or str(f.get("id")) == str(owner.get("id")) or not Sheet.is_hero(owner) and str(owner.get("status")) != "active":
 		return false
+	if z.has("worn") and not ConditionRules.effects(Sheet.holder(s, owner)).any(func(e: Dictionary) -> bool:
+			return str(e.get("source", {}).get("kind", "")) == ItemRules.WORN and str(e["source"].get("id", "")) == str(z["worn"])):
+		return false  # v0.8.4.35: the thing was taken off
 	if z.has("types") and not (z["types"] as Array).has(str(Sheet.template(data, f).get("type", "humanoid"))):
 		return false
 	return not (bool(z.get("sees", false)) and not FightGrid.sees(s, data, f, owner)) and not (z.get("spared", []) as Array).has(str(f["id"]))

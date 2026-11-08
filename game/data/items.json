@@ -171,7 +171,8 @@
 		"see_invisible": {
 			"points": 3,
 			"value": "flag"
-		}
+		},
+		"aura": {"points": 1, "value": "aura", "_doc": "v0.8.4.35: an aura of the field around the wearer (FightField.auras, the zone a monster trait's aura is): `ft` 5-30 (per_10ft points each 10 ft begun), `cond` - a status of rules.make.act.lay_cost (its cost in points), `save` - an ability, `rounds` 1-10 the status lasts with a save at its end, `spares_friends` - not on the wearer's side (spares_points). Its DC by its points (dc: the first row that holds them). It works at the start of a turn of one inside, never on the wearer.", "ft": [5, 30], "per_10ft": 1, "rounds": [1, 10], "spares_points": 1, "dc": [{"points": 4, "dc": 11}, {"points": 7, "dc": 13}, {"points": 10, "dc": 15}, {"points": 999, "dc": 17}]}
 	},
 	"catalog": {
 		"abacus": {

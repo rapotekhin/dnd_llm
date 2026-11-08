@@ -133,6 +133,7 @@ MAKE_WORDS = re.compile(r"проклят|проклин|порч|сглаз|мо
                         r"свит[оке]|трактат|манускрипт|фолиант|гримуар|неведом|хочу уметь|перенять|придума|сочин|изобрет|вывед|выводу|разработа|"
                         r"яд|отрав|виски|самогон|настойк|наливк|эликсир|ликёр|ликер|бренди|медовух",
                         re.IGNORECASE)  # v0.7.63: what the data has not, built of parts; v0.8.4.28.5: a liquid
+SERVICE_WORDS = re.compile(r"посереб|услуг|закал|заточ|освят|оберег|благослов|зачаруй|зачаровать|наложи|наточ", re.IGNORECASE)  # v0.8.4.35
 BANK_WORDS = re.compile(r"ссуд|заём|заем|займ|в долг|залог|ростовщ|кредит|вклад|одолж", re.IGNORECASE)  # v0.7.70.1
 UNDERWORLD_WORDS = re.compile(r"взлом|обчист|ограб|обнес|контрабанд|скупщик|краден|вынести|вынесу|кассу", re.IGNORECASE)  # v0.7.70.1
 CRAFT_WORDS = re.compile(r"выков|скую|скова|кую |смастер|сработаю|выточ|сошью|рецепт", re.IGNORECASE)  # v0.7.70.2
@@ -234,6 +235,8 @@ TOPICS: dict[str, Topic] = {
                    words=MOUNT_WORDS, gate=lambda snap: bool(snap.scene and any(n.animals for n in snap.scene.npcs))),
     "bank": Topic("деньги в долг и на хранение: вклад, кредит под залог, ячейка; ростовщик, которого нет (`create:bank`)", ("create:bank",),
                    words=BANK_WORDS),
+    "services": Topic("услуги людей за плату: серебрение, закалка, оберег, отвар в дорогу; услуга, которой у человека сцены нет (`create:service`)", ("create:service",),
+                   words=SERVICE_WORDS),
     "study": Topic("учёба: училище, курсы, экзамен, книги; «у кого научиться» — `find_teachers`, курс у учителя (`create:course`)", ("create:course",)),
     "bonds": Topic("дружба, романтика, соперничество, наставник: близость, подарки, признание; сцена, что сблизила (`shift:bond`)", ("shift:bond",)),
     "family": Topic("семья: предложение, свадьба, супруг, дети, содержание дома, наследник", ()),

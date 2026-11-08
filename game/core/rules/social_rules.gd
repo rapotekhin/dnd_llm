@@ -99,7 +99,7 @@ static func grant_discount(s: GameSession, data: Dictionary, plan: Dictionary) -
 static func plan_favor(s: GameSession, data: Dictionary, npc_id: String, service: String, item: String, won: bool) -> Dictionary:
 	var c: Dictionary = cfg(data)["favor"]
 	var npc: Dictionary = data["world"]["npcs"].get(npc_id, {})
-	var own := TradeRules.services(s, data, npc_id).filter(func(x: Dictionary) -> bool: return x["id"] == service)
+	var own := ServiceRules.of(s, data, npc_id).filter(func(x: Dictionary) -> bool: return x["id"] == service)
 	if own.is_empty():
 		var ids: Array = npc.get("services", [])
 		return {"reason": "у %s нет услуги %s%s" % [npc.get("name", npc_id), service, "; есть: " + ", ".join(ids) if not ids.is_empty() else ""]}
@@ -107,49 +107,27 @@ static func plan_favor(s: GameSession, data: Dictionary, npc_id: String, service
 		return {"reason": "герой в розыске в округе %s: услуг ему не оказывают, даром тоже" % npc.get("name", npc_id)}
 	if str(own[0]["why"]) == "SERVICE_NOTHING":
 		return {"reason": "услуга %s сейчас не нужна: у героя нет того, к чему она применима" % service}
-	if not item.is_empty() and not TradeRules.targets(s, data, service).has(item):
-		return {"reason": "%s — не для услуги %s; подходят: %s" % [item, service, ", ".join(TradeRules.targets(s, data, service))]}
+	if not item.is_empty() and not ServiceRules.targets(s, data, service).has(item):
+		return {"reason": "%s — не для услуги %s; подходят: %s" % [item, service, ", ".join(ServiceRules.targets(s, data, service))]}
 	if Being.view(s, npc_id).has("favor") and s.day - int(Being.of(s, npc_id)["favor"]) < int(c["cooldown_days"]):
 		return {"reason": "%s уже оказал(а) герою услугу даром в день %d — следующая не раньше дня %d" % [npc.get("name", npc_id), int(Being.of(s, npc_id)["favor"]), int(Being.of(s, npc_id)["favor"]) + int(c["cooldown_days"])]}
 	var why := _willing(s, data, npc_id, int(c["min_attitude"]), won)
 	if not why.is_empty():
 		return {"reason": why}
 	return {"plan": {"favor": npc_id, "service": service, "item_id": item},
-		"summary": "%s: %s даром — %s" % [npc.get("name", npc_id), tr_service(data, service), "; ".join(_outcome(s, data, service, item))]}
-
-
-## What the service will do, told to the master before the turn ends: «опознано: Кольцо защиты» (the master narrates
-## it, never invents it).
-static func _outcome(s: GameSession, data: Dictionary, service: String, item: String) -> Array[String]:
-	var c: Dictionary = s.character.duplicate(true)
-	var sv := TradeRules.service_def(data, service)
-	match str(sv.get("op", "")):
-		"meal":
-			return ["Сыт и напоен"]
-		"identify":
-			return ItemRules.identify(c, data, s.items.duplicate(true))
-		"lift_curse":
-			return ItemRules.lift_curse(c, data, s.items)
-		"cure_disease":
-			return ["исцеление болезни"]
-		"teach_recipe":
-			return ["урок ремесла: %s" % CraftRules.recipe_name(s, data, str(sv.get("recipe", "")))]
-		"enchant":
-			var thing := item if not item.is_empty() else TradeRules.targets(s, data, service)[0]
-			return ["%s: %s" % [sv.get("done", "готово"), ItemRules.display_name(data["items"], s.items, thing)]]
-	return []
+		"summary": "%s: %s даром — %s" % [npc.get("name", npc_id), tr_service(data, service), "; ".join(ServiceRules.outcome(s, data, service, item))]}
 
 
 static func grant_favor(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
 	var npc_id := str(plan["favor"])
 	Being.of(s, npc_id)["favor"] = s.day
 	s.remember(npc_id, "оказал%s герою услугу даром (%s) — герой в долгу" % [CrimeRules._ending(data, npc_id), tr_service(data, str(plan["service"]))])
-	return TradeRules.buy_service(s, data, npc_id, str(plan["service"]), str(plan.get("item_id", "")), true)
+	return ServiceRules.buy(s, data, npc_id, str(plan["service"]), str(plan.get("item_id", "")), true)
 
 
 ## A service's name for the lines and the master: «опознание вещей» (`short` of its data).
 static func tr_service(data: Dictionary, id: String) -> String:
-	return str(TradeRules.service_def(data, id).get("short", id))
+	return ServiceRules.short(data, id)
 
 
 ## What the NPC granted, for the snapshot: «скидка 10% до дня 9; услуга даром — была в день 3».

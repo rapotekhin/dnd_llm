@@ -2398,6 +2398,9 @@
                   },
                   {
                     "type": "boolean"
+                  },
+                  {
+                    "$ref": "#/$defs/WornAura"
                   }
                 ]
               },
@@ -5703,6 +5706,129 @@
       "title": "RumorEffect",
       "type": "object"
     },
+    "ServiceEffect": {
+      "additionalProperties": false,
+      "description": "A paid service the person lacks (0.114.0): «посеребри мне клинок», «наложи оберег в дорогу», «закали кольчугу».\nA scene NPC (or `new` — the person create:npc made in this turn) offers it from now on. `op` status — a status on the\nhero (`status`: a made one — `new:<key>` of this turn's `make` with what=status, or its id; never a harmful one) for\n`hours` (1–24) or until the long rest (`rest`); `op` enchant — a mark on one copy of the hero's thing of `needs`\n(`property`: a token — silvered, fire_damage, magic_plus1, ac_plus1, resist_fire… — or `new:<key>` of `make` with\nwhat=property). The engine sets the price; the hero buys it by the «Услуги» button — the engine's act.",
+      "properties": {
+        "done": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Done"
+        },
+        "hours": {
+          "anyOf": [
+            {
+              "maximum": 24,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hours"
+        },
+        "kind": {
+          "const": "create",
+          "default": "create",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 60,
+          "minLength": 3,
+          "title": "Name",
+          "type": "string"
+        },
+        "needs": {
+          "anyOf": [
+            {
+              "enum": [
+                "weapon",
+                "armor",
+                "any"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Needs"
+        },
+        "npc_id": {
+          "title": "Npc Id",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "status",
+            "enchant"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "property": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Property"
+        },
+        "rest": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rest"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "what": {
+          "const": "service",
+          "default": "service",
+          "title": "What",
+          "type": "string"
+        }
+      },
+      "required": [
+        "npc_id",
+        "op",
+        "name"
+      ],
+      "title": "ServiceEffect",
+      "type": "object"
+    },
     "SiteHours": {
       "additionalProperties": false,
       "description": "When the object is open (0.80.0), hours 0–24.",
@@ -6533,6 +6659,53 @@
       ],
       "title": "WildsEffect",
       "type": "object"
+    },
+    "WornAura": {
+      "additionalProperties": false,
+      "description": "An aura a made thing lays around its wearer in a fight (0.114.0): at the start of a turn of anybody within `ft`\nbut the wearer, a `save` or `cond` (a status of the engine: blinded, frightened, poisoned…) for `rounds`, a save at its\nend; `spares_friends` — not on the wearer's side. The engine sets its DC and its rarity points.",
+      "properties": {
+        "cond": {
+          "title": "Cond",
+          "type": "string"
+        },
+        "ft": {
+          "maximum": 30,
+          "minimum": 5,
+          "title": "Ft",
+          "type": "integer"
+        },
+        "rounds": {
+          "default": 1,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Rounds",
+          "type": "integer"
+        },
+        "save": {
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "title": "Save",
+          "type": "string"
+        },
+        "spares_friends": {
+          "default": false,
+          "title": "Spares Friends",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ft",
+        "cond",
+        "save"
+      ],
+      "title": "WornAura",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -6564,6 +6737,7 @@
                 "property": "#/$defs/PropertyEffect",
                 "quest": "#/$defs/CreateQuestEffect",
                 "recipe": "#/$defs/RecipeEffect",
+                "service": "#/$defs/ServiceEffect",
                 "stock": "#/$defs/StockEffect",
                 "supplier": "#/$defs/SupplierEffect",
                 "upgrade": "#/$defs/UpgradeEffect",
@@ -6635,6 +6809,9 @@
               },
               {
                 "$ref": "#/$defs/FactionEffect"
+              },
+              {
+                "$ref": "#/$defs/ServiceEffect"
               }
             ]
           },
@@ -6886,6 +7063,7 @@
               "property": "#/$defs/PropertyEffect",
               "quest": "#/$defs/CreateQuestEffect",
               "recipe": "#/$defs/RecipeEffect",
+              "service": "#/$defs/ServiceEffect",
               "stock": "#/$defs/StockEffect",
               "supplier": "#/$defs/SupplierEffect",
               "upgrade": "#/$defs/UpgradeEffect",
@@ -6957,6 +7135,9 @@
             },
             {
               "$ref": "#/$defs/FactionEffect"
+            },
+            {
+              "$ref": "#/$defs/ServiceEffect"
             }
           ]
         },

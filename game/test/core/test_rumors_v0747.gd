@@ -120,11 +120,11 @@ func test_asking_once_a_day_and_a_gossip_tells_more() -> void:
 func test_the_innkeeper_sells_a_rumour_a_tip_first() -> void:
 	var s := _session()
 	s.npc_id = "npc_innkeeper"
-	var svc := TradeRules.services(s, data, "npc_innkeeper").filter(func(x: Dictionary) -> bool: return x["id"] == "rumor")
+	var svc := ServiceRules.of(s, data, "npc_innkeeper").filter(func(x: Dictionary) -> bool: return x["id"] == "rumor")
 	assert_int(svc.size()).is_equal(1)
 	assert_str(str(svc[0]["why"])).is_empty()
 	var gold := int(s.character["gold_cp"])
-	var lines := TradeRules.buy_service(s, data, "npc_innkeeper", "rumor")
+	var lines := ServiceRules.buy(s, data, "npc_innkeeper", "rumor")
 	assert_int(int(s.character["gold_cp"])).is_equal(gold - 20)
 	assert_str(" ".join(lines)).contains("отмечено на карте")
 	assert_int(Knows.all(s, Knows.RUMOR).size()).is_equal(1)

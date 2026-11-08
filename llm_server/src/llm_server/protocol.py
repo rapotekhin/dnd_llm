@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.113.0"
+PROTOCOL_VERSION = "0.114.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -631,6 +631,18 @@ class GeneratedUse(_Out):
     summon: GeneratedSummon | None = None
 
 
+class WornAura(_Out):
+    """An aura a made thing lays around its wearer in a fight (0.114.0): at the start of a turn of anybody within `ft`
+    but the wearer, a `save` or `cond` (a status of the engine: blinded, frightened, poisoned…) for `rounds`, a save at its
+    end; `spares_friends` — not on the wearer's side. The engine sets its DC and its rarity points."""
+
+    ft: int = Field(ge=5, le=30)
+    cond: str
+    save: Literal["str", "dex", "con", "int", "wis", "cha"]
+    rounds: int = Field(default=1, ge=1, le=10)
+    spares_friends: bool = False
+
+
 class GeneratedItem(_Out):
     name: str
     item_type: ItemType
@@ -641,8 +653,9 @@ class GeneratedItem(_Out):
     description: str = ""
     use: GeneratedUse | None = None  # 0.27.0: a wand, a scroll, a potion
     # 0.110.0: what it lays while it works, the engine's words (items.json wear_points): swim_speed, climb_speed,
-    # water_walk, fly_speed — feet 5–60 or "walk"; see_invisible — true
-    wear: dict[str, int | str | bool] | None = None
+    # water_walk, fly_speed — feet 5–60 or "walk"; see_invisible — true; 0.114.0: aura — {ft 5–30, cond, save, rounds?,
+    # spares_friends?}, a zone of the fight around the wearer, its DC and price by the engine
+    wear: dict[str, int | str | bool | WornAura] | None = None
     text: str = ""  # 0.27.0: what is written in it — a letter, a diary, an inscription (a thing without mechanics is fine)
     evidence: str | None = None  # 0.92.0: the npc_id whose crime this thing shows (a smuggler's tally, an intercepted letter)
 
@@ -1694,6 +1707,27 @@ class BankEffect(_Out):
     ltv_pct: int | None = Field(default=None, ge=0, le=100)
 
 
+class ServiceEffect(_Out):
+    """A paid service the person lacks (0.114.0): «посеребри мне клинок», «наложи оберег в дорогу», «закали кольчугу».
+    A scene NPC (or `new` — the person create:npc made in this turn) offers it from now on. `op` status — a status on the
+    hero (`status`: a made one — `new:<key>` of this turn's `make` with what=status, or its id; never a harmful one) for
+    `hours` (1–24) or until the long rest (`rest`); `op` enchant — a mark on one copy of the hero's thing of `needs`
+    (`property`: a token — silvered, fire_damage, magic_plus1, ac_plus1, resist_fire… — or `new:<key>` of `make` with
+    what=property). The engine sets the price; the hero buys it by the «Услуги» button — the engine's act."""
+
+    kind: Literal["create"] = "create"
+    what: Literal["service"] = "service"
+    npc_id: str  # an NPC of the scene or "new"
+    op: Literal["status", "enchant"]
+    name: str = Field(min_length=3, max_length=60)  # the button: «Наложить оберег путника»
+    done: str | None = Field(default=None, max_length=40)  # the line of the result: «оберег наложен»
+    status: str | None = None  # op status
+    hours: int | None = Field(default=None, ge=1, le=24)
+    rest: bool | None = None  # until the long rest instead of hours
+    property: str | None = None  # op enchant
+    needs: Literal["weapon", "armor", "any"] | None = None
+
+
 class NewStation(_Out):
     """A crafting station an upgrade brings (0.83.0): «станок ювелира» for the jeweler's tools."""
 
@@ -1982,7 +2016,7 @@ class FlagEffect(_Out):
 _CreateEffect = Annotated[
     CreateNpcEffect | CreatePlaceEffect | CreateQuestEffect | RecipeEffect | JobEffect | CourseEffect | WayEffect | SupplierEffect
     | BankEffect | FenceEffect | HeistEffect | OrgEffect | GodEffect | FestivalEffect | BeastEffect | PropertyEffect
-    | UpgradeEffect | StockEffect | WildsEffect | ContestEffect | FactionEffect,
+    | UpgradeEffect | StockEffect | WildsEffect | ContestEffect | FactionEffect | ServiceEffect,
     Field(discriminator="what"),
 ]
 _ShiftEffect = Annotated[NpcAttitudeEffect | ReputationEffect | BondEffect | StandingEffect, Field(discriminator="what")]

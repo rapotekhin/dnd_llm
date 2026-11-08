@@ -27,10 +27,10 @@ func test_recipes_by_the_tool_and_learned_ones_hidden() -> void:
 	var known := CraftRules.known(s, data)
 	assert_array(known).contains(["dagger", "smelt_iron", "shortsword"])
 	assert_array(known).not_contains(["longsword", "chain_shirt", "leather_armor"])
-	TradeRules.buy_service(s, data, "npc_smith", "teach_longsword")
+	ServiceRules.buy(s, data, "npc_smith", "teach_longsword")
 	assert_array(CraftRules.known(s, data)).contains(["longsword"])
 	assert_int(int(s.character["gold_cp"])).is_equal(3000)
-	assert_array(TradeRules.targets(s, data, "teach_longsword")).is_empty()
+	assert_array(ServiceRules.targets(s, data, "teach_longsword")).is_empty()
 
 
 func test_a_book_teaches_while_carried() -> void:

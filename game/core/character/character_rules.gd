@@ -85,7 +85,7 @@ static func _hp_extra(c: Dictionary) -> int:
 
 static func item_def(c: Dictionary, data: Dictionary, session_items: Dictionary, slot: String) -> Dictionary:
 	var id := str(c.get("equipped", {}).get(slot, ""))
-	return {} if id.is_empty() else ItemRules.def_of(data["items"], session_items, id)
+	return {} if id.is_empty() else ItemRules.copy_def(data["items"], session_items, c, id, hold_index(c, id, slot))
 
 
 ## The AC of worn armour: its base and DEX within its cap. Anybody's (Gear.ac).
@@ -146,7 +146,7 @@ static func style(c: Dictionary, id: String) -> bool:
 ## Wondrous items that work now (v0.6.3): carried — those that need it, only when attuned (v0.7.12); a worn kind (a
 ## cloak, a ring, boots) only in its slot (v0.7.22.9).
 static func carried(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[Dictionary]:
-	return _defs(carried_ids(c, data, session_items), data, session_items)
+	return _defs(carried_ids(c, data, session_items), data, session_items, c)
 
 
 ## The ids of `carried`.
@@ -169,7 +169,7 @@ static func carried_ids(c: Dictionary, data: Dictionary, session_items: Dictiona
 ## The things that work now (v0.8.4.15: one list for the boons, the properties and the resistances): the wondrous
 ## ones carried or worn (`carried`) and the gear in the other slots, attuned when they need it.
 static func working(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Array[Dictionary]:
-	return _defs(working_ids(c, data, session_items), data, session_items)
+	return _defs(working_ids(c, data, session_items), data, session_items, c)
 
 
 ## The ids of `working` (v0.8.4.26: what a worn thing lays is named by its thing).
@@ -182,10 +182,13 @@ static func working_ids(c: Dictionary, data: Dictionary, session_items: Dictiona
 	return ids
 
 
-static func _defs(ids: Array[String], data: Dictionary, session_items: Dictionary) -> Array[Dictionary]:
+## The defs of `ids`, the k-th of one id read as its k-th copy with that copy's marks (v0.8.4.35).
+static func _defs(ids: Array[String], data: Dictionary, session_items: Dictionary, c: Dictionary = {}) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
+	var seen := {}
 	for id: String in ids:
-		out.append(ItemRules.def_of(data["items"], session_items, id))
+		out.append(ItemRules.copy_def(data["items"], session_items, c, id, int(seen.get(id, 0))))
+		seen[id] = int(seen.get(id, 0)) + 1
 	return out
 
 
@@ -470,6 +473,17 @@ static func free_copy(c: Dictionary, id: String, from: Dictionary, slot: String,
 
 
 ## How many copies of the thing are held or worn: a stowed weapon is not for sale either.
+## Which copy of `id` the slot holds (v0.8.4.35): the first slot of it the first copy, a second hand of the same the second.
+static func hold_index(c: Dictionary, id: String, slot: String) -> int:
+	var n := 0
+	for sl: String in SLOTS:
+		if sl == slot:
+			return n
+		if str(c.get("equipped", {}).get(sl, "")) == id:
+			n += 1
+	return 0
+
+
 static func held_copies(c: Dictionary, id: String) -> int:
 	var n := 0
 	for slot: String in SLOTS:

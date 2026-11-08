@@ -43,7 +43,7 @@ func run() -> void:
 	s.mode = GameSession.MODE_TRADE
 	s.npc_id = BRUNO
 	var gold := int(s.character["gold_cp"])
-	var err: String = gs.buy_service("rumor")
+	var err: String = gs.service(BRUNO, "rumor")
 	step("a rumour bought for a coin", err.is_empty() and int(s.character["gold_cp"]) == gold - 20 and _last_effects(s).contains("(Бруно"), err + " " + _last_effects(s))
 	s.mode = GameSession.MODE_EXPLORATION
 	s.npc_id = ""

@@ -44,14 +44,7 @@ static func def_of(items_data: Dictionary, session_items: Dictionary, id: String
 			if not props.has(p):
 				props.append(p)
 		d["properties"] = props
-	var built: Dictionary = items_data.get("built", {})
-	if not built.is_empty():  # a property of parts (v0.7.65) adds the engine's own tokens
-		var all: Array = (d.get("properties", []) as Array).duplicate()
-		for p: Variant in d.get("properties", []):
-			if built.has(p):
-				all.append_array(built[p]["tokens"])
-				d["built"] = (d.get("built", []) as Array) + [str(built[p]["name"])]
-		d["properties"] = all
+	_expand(items_data, d, d.get("properties", []))
 	var props: Array = d.get("properties", [])
 	if (props.has("mithral") or props.has("masterwork")) and d.has("armor"):  # no Strength need, no stealth trouble
 		var a: Dictionary = (d["armor"] as Dictionary).duplicate()
@@ -59,6 +52,51 @@ static func def_of(items_data: Dictionary, session_items: Dictionary, id: String
 		a["stealth_disadvantage"] = false
 		d["armor"] = a
 	return d
+
+
+## A property of parts (v0.7.65) among `added` adds the engine's own tokens to `d`; the rest are tokens themselves.
+static func _expand(items_data: Dictionary, d: Dictionary, added: Array) -> void:
+	var built: Dictionary = items_data.get("built", {})
+	var all: Array = (d.get("properties", []) as Array).duplicate()
+	for p: Variant in added:
+		if not all.has(p):
+			all.append(p)
+		if built.has(p):
+			all.append_array(built[p]["tokens"])
+			d["built"] = (d.get("built", []) as Array) + [str(built[p]["name"])]
+	d["properties"] = all
+
+
+## What a service or a hand laid on one copy of a thing (v0.8.4.35): property tokens or made properties in its `props`.
+static func marks(h: Dictionary, id: String, i: int = 0) -> Array:
+	var list := Thing.states(h, id)
+	return ((list[i] as Dictionary).get("props", []) as Array) if i >= 0 and i < list.size() else []
+
+
+## The def of copy `i` of `id` that `h` holds: its template with the marks of that copy (a silvered sword is still a
+## sword, v0.8.4.35). Anybody's things: the hero, a bag, a fighter in the hero's form.
+static func copy_def(items_data: Dictionary, session_items: Dictionary, h: Dictionary, id: String, i: int = 0) -> Dictionary:
+	var d := def_of(items_data, session_items, id)
+	var extra := marks(h, id, i)
+	if d.is_empty() or extra.is_empty():
+		return d
+	_expand(items_data, d, extra)
+	d["marks"] = extra.duplicate()
+	return d
+
+
+## Lays a mark on a copy of `id` in `h` that lacks it, the indices of `first` tried first; the copy's index or -1.
+static func mark(h: Dictionary, id: String, prop: String, first: Array[int] = []) -> int:
+	var order: Array[int] = first.duplicate()
+	for i in Thing.count(h, id):
+		if not order.has(i):
+			order.append(i)
+	for i: int in order:
+		if i < Thing.count(h, id) and not marks(h, id, i).has(prop):
+			var st := Thing.nth(h, id, i)
+			st["props"] = (st.get("props", []) as Array) + [prop]
+			return i
+	return -1
 
 
 ## «Плащ, свойства неизвестны» — what an unidentified thing is called.
@@ -618,7 +656,7 @@ static func check_generated(data: Dictionary, item: Dictionary, level: int) -> D
 	if use.has("reason"):
 		return {"ok": false, "reason": use["reason"]}
 	points += int(use.get("points", 0))
-	var wear := _generated_wear(items_data, item)  # v0.8.4.28.7: what it lays while it works
+	var wear := _generated_wear(items_data, item, data)  # v0.8.4.28.7: what it lays while it works
 	if wear.has("reason"):
 		return {"ok": false, "reason": wear["reason"]}
 	points += int(wear.get("points", 0))
@@ -660,7 +698,7 @@ static func check_generated(data: Dictionary, item: Dictionary, level: int) -> D
 
 ## The `wear` of a generated thing (v0.8.4.28.7): the words of items.json `wear_points`, each a speed (feet or "walk")
 ## or a flag, with what the word brings along. {} — none; {reason}; or {wear, points}.
-static func _generated_wear(items_data: Dictionary, item: Dictionary) -> Dictionary:
+static func _generated_wear(items_data: Dictionary, item: Dictionary, data: Dictionary = {}) -> Dictionary:
 	var w: Variant = item.get("wear")
 	if w == null or not (w is Dictionary) or (w as Dictionary).is_empty():
 		return {}
@@ -672,6 +710,13 @@ static func _generated_wear(items_data: Dictionary, item: Dictionary) -> Diction
 			return {"reason": "wear: %s движок не читает; есть: %s" % [k, ", ".join(words)]}
 		var row: Dictionary = table[k]
 		var v: Variant = w[k]
+		if str(row["value"]) == "aura":  # v0.8.4.35: an aura of the field around the wearer
+			var aura := _aura(data, row, v)
+			if aura.has("reason"):
+				return aura
+			out["wear"][k] = aura["aura"]
+			out["points"] = int(out["points"]) + int(aura["points"])
+			continue
 		if str(row["value"]) == "speed":
 			if str(v) == "walk":
 				v = "walk"
@@ -685,6 +730,35 @@ static func _generated_wear(items_data: Dictionary, item: Dictionary) -> Diction
 		out["wear"].merge(row.get("with", {}), true)
 		out["points"] = int(out["points"]) + int(row["points"])
 	return out
+
+
+## The aura a made thing lays around its wearer (v0.8.4.35), in the form of a monster trait's (rules.feature_wear
+## `aura`): {aura, points} or {reason}. Its points: the word's own, each 10 ft begun, the status's cost by make.act.lay_cost,
+## sparing friends; its DC by those points.
+static func _aura(data: Dictionary, row: Dictionary, v: Variant) -> Dictionary:
+	if not (v is Dictionary) or data.is_empty():
+		return {"reason": "wear.aura — объект: ft, cond, save, rounds?, spares_friends?"}
+	var a: Dictionary = v
+	var ft := int(a.get("ft", 0)) if a.get("ft") != null else 0
+	if ft < int(row["ft"][0]) or ft > int(row["ft"][1]) or ft % 5 != 0:
+		return {"reason": "wear.aura.ft — от %d до %d футов, кратно 5" % [int(row["ft"][0]), int(row["ft"][1])]}
+	var cond := str(a.get("cond", "")) if a.get("cond") != null else ""
+	var costs: Dictionary = data["rules"]["make"]["act"]["lay_cost"]
+	if not costs.has(cond):
+		return {"reason": "wear.aura.cond — состояние из %s" % ", ".join(costs.keys())}
+	var save := str(a.get("save", "")) if a.get("save") != null else ""
+	if not (data["rules"]["saves"] as Array).has(save):
+		return {"reason": "wear.aura.save — характеристика спасброска: %s" % ", ".join(data["rules"]["saves"])}
+	var rounds := int(a.get("rounds", 1)) if a.get("rounds") != null else 1
+	if rounds < int(row["rounds"][0]) or rounds > int(row["rounds"][1]):
+		return {"reason": "wear.aura.rounds — от %d до %d" % [int(row["rounds"][0]), int(row["rounds"][1])]}
+	var spares: bool = a.get("spares_friends") == true
+	var points := int(row["points"]) + ceili(ft / 10.0) * int(row["per_10ft"]) + int(costs[cond]) + (int(row["spares_points"]) if spares else 0)
+	var dc := int(Scale.up_to(row["dc"], points).get("dc", 17))
+	var aura := {"ft": ft, "on": ["start"], "save": save, "dc": dc, "tag": "", "cond": cond, "for": {"rounds": rounds, "save": save, "dc": dc, "tag": ""}}
+	if spares:
+		aura["spares_friends"] = true
+	return {"aura": aura, "points": points}
 
 
 ## What a generated `use.summon` calls (v0.8.4.28.7): a row in the shape of rules.allies.summons — an SRD `monster` or a

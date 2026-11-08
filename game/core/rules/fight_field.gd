@@ -104,7 +104,7 @@ static func _ends(m: Dictionary, d: Dictionary) -> Array[String]:
 
 ## The keys of a row a zone takes as they are: what a failed save does, what it hides, who it spares, whom it touches.
 const ZONE_KEYS: Array[String] = ["cond", "fail", "tag", "obscure", "veil", "silence", "retch", "block_ranged", "spares_friends", "for",
-	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel", "douses", "tile"]
+	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel", "douses", "tile", "worn"]
 
 
 ## A zone of the field by its row: one record for the ground, strewn things, the fire, a spell's zone and a trait's aura
@@ -119,17 +119,35 @@ static func zone_of(id: String, row: Dictionary, cells: Array) -> Dictionary:
 	return z
 
 
-## The auras of a fighter's traits (Horrific Appearance, v0.8.4.27.1): a born `aura` is a zone of the field that follows it,
-## the record a spell's zone has (`_ground`) with a sphere of `ft` around it; `types` — only those of these types, `sees` —
-## only those who see it, `spare_saved` — one who saved is spared after, `for` — the status's rounds and repeated save.
+## The auras of a fighter (Horrific Appearance, v0.8.4.27.1; a worn thing's, v0.8.4.35): a born or worn `aura` is a zone of
+## the field that follows it, the record a spell's zone has (`_ground`) with a sphere of `ft` around it; `types` — only those
+## of these types, `sees` — only those who see it, `spare_saved` — one who saved is spared after, `for` — the status's rounds
+## and repeated save. Anybody's, the hero's too; called when it joins a fight and at the start of its turns, so a thing put
+## on or off changes it (a zone kept keeps whom it spared).
 static func auras(s: GameSession, data: Dictionary, f: Dictionary) -> void:
-	var born := ItemRules.born_rows(f, data, Sheet.template(data, f))
+	var rows := {}
+	var h := Sheet.holder(s, f)
+	var born := ItemRules.born_rows(h, data, Sheet.template(data, f))
 	for id: String in born:
-		var row: Dictionary = born[id]["row"]
-		if not row.get("aura") is Dictionary:
+		if born[id]["row"].get("aura") is Dictionary:
+			rows["aura:" + id] = {"aura": born[id]["row"]["aura"], "name": born[id]["name"]}
+	for e: Dictionary in ConditionRules.effects(h):
+		if e.get("aura") is Dictionary and str(e.get("source", {}).get("kind", "")) == ItemRules.WORN:
+			rows["aura:" + str(e["source"]["id"])] = {"aura": e["aura"], "name": str(e["source"].get("name", "")), "worn": str(e["source"]["id"])}
+	var by := str(f["id"])
+	for z: Dictionary in SpellEffects.zones(s).duplicate():
+		if str(z.get("by", "")) == by and str(z["spell"]).begins_with("aura:") and bool(z.get("follow", false)) and not rows.has(str(z["spell"])):
+			SpellEffects.zones(s).erase(z)
+	var have := SpellEffects.zones(s).filter(func(z: Dictionary) -> bool: return str(z.get("by", "")) == by).map(func(z: Dictionary) -> String: return str(z["spell"]))
+	for id: String in rows:
+		if have.has(id):
 			continue
-		SpellEffects.add_zone(s, zone_of("aura:" + id, (row["aura"] as Dictionary).merged({"name": born[id]["name"], "follow": true,
-			"shape": {"type": "sphere", "size": int(row["aura"].get("ft", 5))}, "by": str(f["id"]), "side": str(f.get("side", "enemy"))}), []))
+		var r: Dictionary = rows[id]
+		var row: Dictionary = (r["aura"] as Dictionary).merged({"name": r["name"], "follow": true,
+			"shape": {"type": "sphere", "size": int(r["aura"].get("ft", 5))}, "by": by, "side": str(f.get("side", "enemy"))})
+		if r.has("worn"):
+			row["worn"] = r["worn"]
+		SpellEffects.add_zone(s, zone_of(id, row, []))
 
 
 static func _block(data: Dictionary, body_id: String, name: String) -> Dictionary:

@@ -22,24 +22,23 @@ func _hero(room: String) -> GameSession:
 func test_a_pack_adds_a_service_of_its_own() -> void:
 	var d := data.duplicate(true)
 	d["world"]["services"] = {"rune": {"cost_cp": 5000, "op": "enchant", "needs": "weapon", "property": "fire_damage",
-		"suffix": "с огненной руной", "done": "вырезана руна", "name": "Вырезать огненную руну", "short": "огненная руна"}}
+		"done": "вырезана руна", "name": "Вырезать огненную руну", "short": "огненная руна"}}
 	(d["world"]["npcs"]["npc_smith"]["services"] as Array).append("rune")
 	var s := _hero("brod-smithy")
 	s.character["gold_cp"] = 10000
-	var offer := TradeRules.services(s, d, "npc_smith").filter(func(x: Dictionary) -> bool: return x["id"] == "rune")
+	var offer := ServiceRules.of(s, d, "npc_smith").filter(func(x: Dictionary) -> bool: return x["id"] == "rune")
 	assert_str(str(offer[0]["name"])).is_equal("Вырезать огненную руну")
 	assert_str(str(offer[0]["why"])).is_empty()
 	var main := str(s.character["equipped"]["main_hand"])
-	var lines := TradeRules.buy_service(s, d, "npc_smith", "rune", main)
+	var lines := ServiceRules.buy(s, d, "npc_smith", "rune", main)
 	assert_str(" ".join(lines)).contains("вырезана руна")
-	var now := str(s.character["equipped"]["main_hand"])
-	assert_array(ItemRules.def_of(d["items"], s.items, now)["properties"]).contains(["fire_damage"])
+	assert_array(CharacterRules.item_def(s.character, d, s.items, "main_hand")["properties"]).contains(["fire_damage"])
 	assert_int(int(s.character["gold_cp"])).is_equal(5000)
 
 
 func test_the_built_in_services_are_data_too() -> void:
 	var s := _hero("brod-smithy")
-	assert_str(str(TradeRules.services(s, data, "npc_smith")[0]["name"])).is_equal("Посеребрить оружие")
+	assert_str(str(ServiceRules.of(s, data, "npc_smith")[0]["name"])).is_equal("Посеребрить оружие")
 	assert_str(SocialRules.tr_service(data, "identify")).is_equal("опознание вещей")
 
 

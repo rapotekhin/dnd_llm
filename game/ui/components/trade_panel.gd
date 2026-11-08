@@ -190,7 +190,7 @@ func _rebuild() -> void:
 	deal_button.disabled = not can_act or not cart_error.is_empty() or empty
 	_clear.disabled = empty
 	_clear_children(_services)
-	var svs := TradeRules.services(s, data, _npc)
+	var svs := ServiceRules.of(s, data, _npc)
 	if not svs.is_empty():
 		_heading(_services, "TRADE_SERVICES")
 	for sv: Dictionary in svs:
@@ -203,7 +203,7 @@ func _rebuild() -> void:
 		b.disabled = not can_act or not str(sv["why"]).is_empty()
 		b.tooltip_text = tr(str(sv["why"])) if not str(sv["why"]).is_empty() else ""
 		b.pressed.connect(func() -> void:
-			var err := GameState.buy_service(sid)
+			var err := GameState.service(_npc, sid)
 			if not err.is_empty():
 				_error.text = tr(err))
 		_services.add_child(b)

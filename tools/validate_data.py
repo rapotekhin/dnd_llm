@@ -212,7 +212,7 @@ def known() -> dict[str, set[str]]:
 
 
 ROOM_TAGS = {"temple", "stage", "water", "foul_water", "market"}  # v0.7.29: a market for stalls; v0.7.11: an acolyte's free rest, a show; v0.7.23: water to drink and fill; v0.7.23.1: foul
-SERVICE_OPS = {"identify", "lift_curse", "enchant", "meal", "cure_disease", "teach_recipe"}  # v0.7.16: the engine's operations a service runs (rules.json items.services)
+SERVICE_OPS = {"identify", "lift_curse", "enchant", "meal", "cure_disease", "teach_recipe", "rumor"}  # v0.7.16: the engine's operations a pack service runs (rules.json items.services); status only by the master (v0.8.4.35)
 NPC_TAGS = {"clergy", "underworld", "commoner", "military", "registry", "bank", "school"}  # the people of the hero's past (rules.json backgrounds ties); registry — v0.7.27, bank — v0.7.28
 
 
@@ -380,8 +380,8 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     for sid, sv in world.get("services", {}).items():  # v0.7.16: a pack's own services — data over the engine's operations
         if sv.get("op") not in SERVICE_OPS or not isinstance(sv.get("cost_cp"), int) or not sv.get("name"):
             errors.append(f"услуга {sid}: нужны op из {sorted(SERVICE_OPS)}, cost_cp, name")
-        if sv.get("op") == "enchant" and not (sv.get("property") and sv.get("suffix")):
-            errors.append(f"услуга {sid}: enchant — нужны property и suffix")
+        if sv.get("op") == "enchant" and sv.get("property") not in load(DATA / "items.json")["properties"]:
+            errors.append(f"услуга {sid}: enchant — property из свойств вещей (items.json properties)")  # v0.8.4.35: a mark of a copy
     for sid, sv in services.items():
         if sv.get("op") == "teach_recipe" and sv.get("recipe") not in recipes:
             errors.append(f"услуга {sid}: teach_recipe — рецепта {sv.get('recipe')} нет")
@@ -468,8 +468,6 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         errors += [f"NPC {nid}: неизвестная метка {x}" for x in npc.get("tags", []) if x not in NPC_TAGS]
         errors += [f"NPC {nid}: неизвестная повозка {v}" for v in npc.get("vehicles", []) if v not in game_rules.get("mounts", {}).get("vehicles", {})]  # v0.7.42
         errors += [f"NPC {nid}: неизвестная услуга {x}" for x in npc.get("services", []) if x not in services]
-        if npc.get("services") and not npc.get("trader"):
-            errors.append(f"NPC {nid}: услуги только у торговца (trader)")
         if npc.get("monster") and npc["monster"] not in ids["monsters"]:
             errors.append(f"NPC {nid}: нет монстра-шаблона {npc['monster']}")
         diseases = set(load(DATA / "rules.json")["diseases"]["catalog"]) | set(world.get("diseases", {}))

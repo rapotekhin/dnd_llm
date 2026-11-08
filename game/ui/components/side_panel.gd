@@ -588,6 +588,7 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 		_flow(_group(groups, "talk", id), tr("BTN_ASK_WORK"), _try.bind(GameState.ask_work.bind(id)), can_act, "AskWork_" + id, tr("BTN_ASK_WORK_TIP").format({"name": n.get("name", id)}))
 	if not LetterRules.ways_of(Catalog.data, id).is_empty():  # v0.7.48: a person with a post sends letters
 		_flow(_group(groups, "deals", id), tr("BTN_LETTER"), letter_requested.emit.bind(id), can_act, "Letter_" + id, tr("BTN_LETTER_TIP").format({"name": n.get("name", id)}))
+	_service_acts(s, _group(groups, "services", id) if not ServiceRules.ids_of(Catalog.data, id).is_empty() else null, id, can_act)
 	_spell_acts(_group(groups, "spells", id), id, can_act)  # v0.8.4.30: a spell aimed at it, as in BG3
 	var arena_site := ArenaRules.of_manager(Catalog.data, id)  # v0.7.45
 	if not arena_site.is_empty():
@@ -621,7 +622,22 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 
 ## The groups of a person's acts (v0.8.4.31, the author's feedback): a header «Дела ▸» opens its list under the row; a group of
 ## one act shows it in the row itself.
-const ACT_GROUPS: Array[String] = ["talk", "deals", "life", "spells"]
+const ACT_GROUPS: Array[String] = ["talk", "deals", "services", "life", "spells"]
+
+
+## The services of any person (v0.8.4.35): a button each, a mark on a thing one per thing it fits when there are several.
+func _service_acts(s: GameSession, box: HFlowContainer, id: String, can_act: bool) -> void:
+	if box == null:
+		return
+	for sv: Dictionary in ServiceRules.of(s, Catalog.data, id):
+		var sid := str(sv["id"])
+		var on: Array = sv["targets"] if str(sv["op"]) == "enchant" and (sv["targets"] as Array).size() > 1 else [""]
+		for item: Variant in on:
+			var name := str(sv["name"]) if str(item).is_empty() else "%s: %s" % [sv["name"], ItemRules.display_name(Catalog.data["items"], s.items, str(item))]
+			var why := str(sv["why"])
+			_flow(box, tr("SERVICE_BUTTON").format({"name": name, "cost": Money.format(int(sv["cost_cp"]))}),
+				_try.bind(GameState.service.bind(id, sid, str(item))), can_act and why.is_empty(),
+				"Service_%s_%s%s" % [sid, id, "" if str(item).is_empty() else "_" + str(item)], tr(why) if not why.is_empty() else "")
 
 
 func _group(groups: Dictionary, key: String, id: String) -> HFlowContainer:

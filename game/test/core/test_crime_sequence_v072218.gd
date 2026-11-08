@@ -76,10 +76,10 @@ func test_the_law_guard_defends_and_holds() -> void:
 func test_no_services_and_no_bed_for_the_wanted() -> void:
 	var s := _hero("brod-temple")
 	s.character["inventory"]["ring_of_protection"] = 1
-	var before: Array = TradeRules.services(s, data, "npc_priestess").map(func(x: Dictionary) -> String: return str(x["why"]))
+	var before: Array = ServiceRules.of(s, data, "npc_priestess").map(func(x: Dictionary) -> String: return str(x["why"]))
 	assert_bool(before.has("SHOP_CLOSED_WANTED")).is_false()
 	s.wanted["brod"] = TimeRules.abs_minute(s)
-	for sv: Dictionary in TradeRules.services(s, data, "npc_priestess"):
+	for sv: Dictionary in ServiceRules.of(s, data, "npc_priestess"):
 		assert_str(str(sv["why"])).is_equal("SHOP_CLOSED_WANTED")
 	var favor := SocialRules.plan_favor(s, data, "npc_priestess", "identify", "", true)
 	assert_str(str(favor.get("reason", ""))).contains("розыске")

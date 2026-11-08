@@ -59,12 +59,12 @@ func test_a_favor_is_free_once_a_week_and_leaves_a_debt() -> void:
 	var s := _hero("brod-smithy")
 	var fx := EffectEngine.new()
 	Being.of(s, "npc_smith")["attitude"] = 2
-	var weapon := TradeRules.targets(s, data, "silver")[0]
+	var weapon := ServiceRules.targets(s, data, "silver")[0]
 	var gold := int(s.character["gold_cp"])
 	var r := _apply(s, fx, {"kind": "grant", "what": "favor", "npc_id": "npc_smith", "service": "silver", "item_id": weapon, "reason": "по дружбе"})
 	assert_bool(bool(r["accepted"])).is_true()
 	assert_int(int(s.character["gold_cp"])).is_equal(gold)
-	assert_bool((s.character["inventory"] as Dictionary).keys().any(func(id: String) -> bool: return ItemRules.display_name(data["items"], s.items, id).contains("посеребр"))).is_true()
+	assert_array(ItemRules.marks(s.character, weapon)).contains(["silvered"])
 	assert_str(" ".join(s.memory_of("npc_smith"))).contains("в долгу")
 	var again := _apply(s, fx, {"kind": "grant", "what": "favor", "npc_id": "npc_smith", "service": "silver", "reason": "ещё"}, "t-2")
 	assert_bool(bool(again["accepted"])).is_false()

@@ -139,16 +139,6 @@ static func cure_npc(s: GameSession, data: Dictionary, npc_id: String, power: St
 	return ["%s исцелён: %s" % [who, def_of(s, data, id).get("name", id)]]
 
 
-## What a healer's services can cure: "magic", "herbs", "" — nothing. The op of rules.services, not a list of healers.
-static func art(data: Dictionary, npc_id: String) -> String:
-	var out := ""
-	for id: Variant in data["world"]["npcs"].get(npc_id, {}).get("services", []):
-		var d := TradeRules.service_def(data, str(id))
-		if str(d.get("op", "")) == "cure_disease":
-			out = "magic" if str(d.get("power", "herbs")) == "magic" else out if not out.is_empty() else "herbs"
-	return out
-
-
 ## The master's `grant:cure` (protocol 0.105.0): a healer of the scene cures a sick NPC of this settlement by its art.
 ## {plan, summary} or {reason}.
 static func plan_cure(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
@@ -157,7 +147,7 @@ static func plan_cure(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 	var patient := str(e.get("patient_id", ""))
 	if not s.npcs_here(world.world, s.room_id).has(who):
 		return {"reason": "%s не в сцене: лечит тот, кто здесь" % who}
-	var power := art(data, who)
+	var power := ServiceRules.art(data, who)
 	if power.is_empty():
 		return {"reason": "%s не лечит болезни: среди услуг нет лечения" % WorldView.name_of(data, who)}
 	if npc_disease(s, data, patient).is_empty():

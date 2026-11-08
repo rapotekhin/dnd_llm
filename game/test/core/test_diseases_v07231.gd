@@ -93,12 +93,12 @@ func test_the_remedy_cures_even_before_it_shows() -> void:
 
 func test_the_healers_see_a_disease_and_cure_it() -> void:
 	var s := _session()
-	assert_array(TradeRules.targets(s, data, "cure_disease")).is_empty()
+	assert_array(ServiceRules.targets(s, data, "cure_disease")).is_empty()
 	DiseaseRules.contract(s, data, "rot_fever")
-	assert_array(TradeRules.targets(s, data, "cure_disease")).is_equal(["rot_fever"])
-	assert_array(TradeRules.targets(s, data, "herbal_cure")).is_empty()  # magic rot: the herbalist cannot
+	assert_array(ServiceRules.targets(s, data, "cure_disease")).is_equal(["rot_fever"])
+	assert_array(ServiceRules.targets(s, data, "herbal_cure")).is_empty()  # magic rot: the herbalist cannot
 	s.character["gold_cp"] = 5000
-	TradeRules.buy_service(s, data, "npc_priestess", "cure_disease")
+	ServiceRules.buy(s, data, "npc_priestess", "cure_disease")
 	assert_bool(DiseaseRules.sick(s.character, "rot_fever")).is_false()
 	assert_int(int(s.character["gold_cp"])).is_equal(3500)
 

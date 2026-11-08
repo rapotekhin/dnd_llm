@@ -82,9 +82,9 @@ func test_a_friend_sells_cheaper_and_a_rival_dearer() -> void:
 
 func test_a_friend_serves_for_less() -> void:
 	var s := _hero("brod-temple")
-	var full := int(TradeRules.service_def(data, "identify")["cost_cp"])
+	var full := int(ServiceRules.def_of(data, "identify")["cost_cp"])
 	_bond(s, "npc_priestess", 60)
-	var sv := TradeRules.services(s, data, "npc_priestess").filter(func(x: Dictionary) -> bool: return x["id"] == "identify")
+	var sv := ServiceRules.of(s, data, "npc_priestess").filter(func(x: Dictionary) -> bool: return x["id"] == "identify")
 	assert_int(int(sv[0]["cost_cp"])).is_equal(ceili(full * 0.5))
 
 
