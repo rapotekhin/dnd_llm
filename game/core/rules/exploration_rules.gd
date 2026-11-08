@@ -161,12 +161,17 @@ static func approach(s: GameSession, data: Dictionary, room_id: String, sec: Dic
 ## A successful search check finds the room's secrets with DC ≤ total: Perception finds what can be noticed,
 ## Investigation (a thorough search) finds that too and also mechanisms and caches; a quest's thing hidden for
 ## another skill (v0.7.38.5: a root in black water — Survival) is found by that skill too. Returns their texts.
+## A cache of the pack the engine gives itself (take_caches): the master is told so and gives nothing again — the server
+## reads this mark (agents.CACHE_GIVEN, v0.8.4.41.1).
+const CACHE_GIVEN := " (тайник: найденное движок уже выдал герою — не выдавай его снова)"
+
+
 static func active_reveal(s: GameSession, world: Dictionary, skill: String, total: int) -> Array[String]:
 	var out: Array[String] = []
 	for sec: Dictionary in secrets(world, s.room_id):
 		var needs := str(sec.get("skill", "perception"))
 		if (needs == skill or skill == "investigation") and total >= int(sec["dc"]) and _reveal(s, s.room_id, sec):
-			out.append(str(sec["text"]))
+			out.append(str(sec["text"]) + (CACHE_GIVEN if sec.has("loot") else ""))
 	return out
 
 

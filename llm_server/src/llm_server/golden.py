@@ -14,6 +14,7 @@ import argparse
 import asyncio
 import copy
 import json
+import os
 import re
 import sys
 import time
@@ -429,6 +430,8 @@ class Outcome:
     note: str = ""
     route: str = ""  # --route: the router's way (v0.7.20.4)
     provider: str = ""  # who answered the last request (v0.7.34.1, for tools/provider_cost.py)
+    made_checks: int = 0  # v0.8.4.41.1: the checker's looks at made things
+    made_refused: list[str] = field(default_factory=list)  # and what it found wrong
 
 
 class _ShortResult:
@@ -467,7 +470,8 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
         if short is not None:
             result = _ShortResult(short, before)
         else:
-            result, _ = await run_agent(model, params, lambda: TurnContext(session=engine, params=params))  # type: ignore[arg-type]
+            result, ran = await run_agent(model, params, lambda: TurnContext(session=engine, params=params, model=model if os.environ.get("LLM_SERVER_MADE_CHECK", "1") != "0" else None))  # type: ignore[arg-type]
+            o.made_checks, o.made_refused = ran.made_checks, ran.made_refused
     except Exception as exc:  # noqa: BLE001 — a failed model run is a result, not a crash of the runner
         o.status, o.note = "error", f"{type(exc).__name__}: {str(exc)[:300]}"
         o.seconds = time.monotonic() - started
@@ -534,6 +538,8 @@ def report_markdown(model_id: str, judge_id: str | None, outcomes: list[Outcome]
         if o.narration:
             lines.append(f"\n> {o.narration}\n")
             lines.append(f"проверки: {o.checks} · эффекты: {o.effects} · режим: {o.next_mode} · варианты: {o.options}")
+            if o.made_checks:
+                lines.append(f"проверка собранного: {o.made_checks} раз, отказы: {o.made_refused or 'нет'}")
         lines.append("")
     return "\n".join(lines)
 

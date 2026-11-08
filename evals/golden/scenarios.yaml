@@ -937,7 +937,7 @@ scenarios:
         hooks: [{id: hook_altar_niche, text: "под алтарём ниша; из щели сочится слабый холодный свет — там лежит что-то зачарованное", dc: 15}]
       character: {level: 4}
     engine:
-      check: {d20: [17], bonus: 5, total: 22, dc: 15, success: true, nat: null, blocked: false}
+      check: {d20: [17], bonus: 5, total: 22, dc: 15, success: true, nat: null, blocked: false, revealed: ["под алтарём ниша; из щели сочится слабый холодный свет — там лежит что-то зачарованное"]}
       find_items:
         - {id: goggles_of_night, name: "Очки ночного видения", base: null, rarity: uncommon}
         - {id: stone_of_good_luck, name: "Камень удачи", base: null, rarity: uncommon}
@@ -959,7 +959,7 @@ scenarios:
         hooks: [{id: hook_nest_cloak, text: "в ворохе — плащ из перьев гарпии; в нём осталась сила их полёта: надевший летает", dc: 13}]
       character: {level: 4}
     engine:
-      check: {d20: [16], bonus: 4, total: 20, dc: 13, success: true, nat: null, blocked: false}
+      check: {d20: [16], bonus: 4, total: 20, dc: 13, success: true, nat: null, blocked: false, revealed: ["в ворохе — плащ из перьев гарпии; в нём осталась сила их полёта: надевший летает"]}
       find_items:
         - {id: cloak_of_protection, name: "Плащ защиты", base: null, rarity: uncommon}
     expect:
@@ -980,7 +980,7 @@ scenarios:
         hooks: [{id: hook_chapel_ring, text: "в нише — серебряное кольцо жрецов: пока его носят, на носящем благословение — к4 к атакам и спасброскам", dc: 13}]
       character: {level: 5}
     engine:
-      check: {d20: [17], bonus: 4, total: 21, dc: 13, success: true, nat: null, blocked: false}
+      check: {d20: [17], bonus: 4, total: 21, dc: 13, success: true, nat: null, blocked: false, revealed: ["в нише — серебряное кольцо жрецов: пока его носят, на носящем благословение — к4 к атакам и спасброскам"]}
       find_items:
         - {id: ring_of_protection, name: "Кольцо защиты", base: null, rarity: rare}
     expect:
@@ -1001,7 +1001,7 @@ scenarios:
         hooks: [{id: hook_cursed_ring, text: "в шкатулке — кольцо из чёрного железа; на нём проклятие: надевший застывает, скованный параличом, и снять кольцо не может, пока проклятие не снимут", dc: 12}]
       character: {level: 4}
     engine:
-      check: {d20: [15], bonus: 4, total: 19, dc: 12, success: true, nat: null, blocked: false}
+      check: {d20: [15], bonus: 4, total: 19, dc: 12, success: true, nat: null, blocked: false, revealed: ["в шкатулке — кольцо из чёрного железа; на нём проклятие: надевший застывает, скованный параличом, и снять кольцо не может, пока проклятие не снимут"]}
     expect:
       check: {required: true, skill_in: [investigation, perception]}
       effects: {required_kinds_any: [move_item:world>hero], required_fields: [item.wear.status]}
@@ -1021,7 +1021,7 @@ scenarios:
         hooks: [{id: hook_friend_ring, text: "в шкатулке — кольцо с розовым камнем; проклятие: кто его наденет, того легко уговорить — все проверки Убеждения против него с преимуществом, и снять кольцо он не может, пока проклятие не снимут", dc: 12}]
       character: {level: 4}
     engine:
-      check: {d20: [15], bonus: 4, total: 19, dc: 12, success: true, nat: null, blocked: false}
+      check: {d20: [15], bonus: 4, total: 19, dc: 12, success: true, nat: null, blocked: false, revealed: ["в шкатулке — кольцо с розовым камнем; проклятие: кто его наденет, того легко уговорить — все проверки Убеждения против него с преимуществом, и снять кольцо он не может, пока проклятие не снимут"]}
     expect:
       check: {required: true, skill_in: [investigation, perception]}
       effects: {required_kinds_all: [make, move_item:world>hero], required_fields: [item.wear.status]}
@@ -1053,7 +1053,7 @@ scenarios:
         hooks: [{id: hook_barrow_horn, text: "под шкурами у ложа спрятан рог вождя волчьего племени: кто в него трубит, к тому приходят два волка и бьются за него час", dc: 13}]
       character: {level: 4}
     engine:
-      check: {d20: [15], bonus: 4, total: 19, dc: 13, success: true, nat: null, blocked: false}
+      check: {d20: [15], bonus: 4, total: 19, dc: 13, success: true, nat: null, blocked: false, revealed: ["под шкурами у ложа спрятан рог вождя волчьего племени: кто в него трубит, к тому приходят два волка и бьются за него час"]}
       find_items:
         - {id: horn_of_blasting, name: "Рог взрыва", base: null, rarity: rare}
     expect:
@@ -2758,7 +2758,7 @@ scenarios:
       scene:
         hooks: ["в золе старого очага что-то блестит — тонкий резной жезл, от него пахнет грозой и по резьбе пробегают искры"]
     engine:
-      check: {d20: [15], bonus: 3, total: 18, dc: 12, success: true, nat: 15, blocked: false}
+      check: {d20: [15], bonus: 3, total: 18, dc: 12, success: true, nat: 15, blocked: false, revealed: ["в золе старого очага что-то блестит — тонкий резной жезл, от него пахнет грозой и по резьбе пробегают искры"]}
       validate:
         - {kind: move_item:room>hero, status: reject, reason: "такой вещи нет в «Вокруг» — найденную вещь даёт move_item:world>hero (сначала find_items)"}
     expect:

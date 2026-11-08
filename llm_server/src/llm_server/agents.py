@@ -7,6 +7,7 @@ lists only effect ids the engine reserved this turn.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import os
 from collections.abc import Callable
@@ -18,6 +19,7 @@ from pydantic import BaseModel, BeforeValidator, Field, TypeAdapter, ValidationE
 from pydantic_ai import Agent, ModelRetry, PromptedOutput, RunContext, Tool
 from pydantic_ai.models import Model
 from pydantic_ai.settings import ModelSettings
+from pydantic_ai.usage import RunUsage
 
 from . import prompts
 from .llm.providers import PICKER, PINNED, min_tps
@@ -43,7 +45,9 @@ from .protocol import (
     EngineLookupResult,
     EngineValidateParams,
     EngineValidateResult,
+    MakeEffect,
     MoveItemEffect,
+    RecipeEffect,
     class_tag,
     effect_classes,
     effect_line,
@@ -54,6 +58,8 @@ from .protocol import (
     SceneNpc,
     TurnRequestParams,
 )
+
+log = logging.getLogger("llm_server")
 
 if TYPE_CHECKING:
     from .llm.library import ItemLibrary
@@ -172,6 +178,14 @@ class TurnContext:
     bad_effects: int = 0  # effects refused for their shape this turn (v0.7.21.2)
     topics: set[str] = field(default_factory=set)  # rule topics the master has: in the prompt or read with `rules` (v0.7.20.4)
     made_npcs: list[str] = field(default_factory=list)  # create:npc accepted this turn: in the world only after the turn
+    model: Model | None = None  # the turn's model: the checker of a made thing asks it (v0.8.4.41.1); None — no check
+    made_checks: int = 0  # the checker's runs this turn
+    made_refused: list[str] = field(default_factory=list)  # what the checker found wrong, for the trace and the goldens
+    revealed: list[str] = field(default_factory=list)  # what this turn's successful checks opened (v0.8.4.41.1)
+    kinds: list[str] = field(default_factory=list)  # the names of the effects the engine accepted this turn
+    reminded: bool = False  # the turn was sent back once for a thing told and not given
+    made: dict[str, str] = field(default_factory=dict)  # `make` accepted this turn by key, for the checker of what refers to it
+    side_usage: RunUsage = field(default_factory=RunUsage)  # what the checker spent, paid with the turn
 
     def __post_init__(self) -> None:
         self.topics |= set(prompts.auto_topics(self.params.mode, self.params.snapshot))
@@ -285,6 +299,7 @@ async def request_check(
     if r.rolled_as:
         nat += f" — бросок по выбору игрока: {r.rolled_as}; описывай действие через это"
     if r.success:
+        t.revealed.extend(r.revealed)
         found = (" Движок открыл скрытое — опиши именно это и ничего сверх: " + "; ".join(r.revealed) + ".") if r.revealed else ""
         return (f"Успех: {r.total} против DC {r.dc}{nat}. Игрок добился своего — опиши это как удачу, а не отказ: "
                 "если просьба невозможна целиком, он получает лучшее возможное (расположение, услугу, наводку, аудиенцию)." + found)
@@ -352,6 +367,9 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         return "Отказ: перед созданием человека поищи его через find_npcs."
     if isinstance(effect, CreatePlaceEffect) and not t.searched_places:
         return "Отказ: перед созданием места поищи его через find_places."
+    wrong = await _check_made(t, effect)  # before the engine: a refused thing must not stay reserved in the turn
+    if wrong:
+        return wrong
     raw = await t.session.call_engine("engine.validate", EngineValidateParams(turn_id=t.params.turn_id, effect=effect))
     r = EngineValidateResult.model_validate(raw)
     made = (t.library.get(effect.item_id) if not r.accepted and _gives(effect) and effect.item_id
@@ -363,6 +381,9 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     if not r.accepted or not r.effect_id:
         return f"Отклонено движком: {r.reason or 'без причины'}. Перепиши описание с учётом отказа."
     t.accepted[r.effect_id] = r.summary
+    t.kinds.append(effect_tag(effect.model_dump()))
+    if isinstance(effect, MakeEffect):  # a thing of this turn refers to it as «new:<key>»: the checker must see what it is
+        t.made[effect.key] = json.dumps(effect.model_dump(mode="json", exclude_defaults=True), ensure_ascii=False)
     t.proposed.add(key)
     if isinstance(effect, CreateNpcEffect):
         t.made_npcs.append(effect.npc.name)
@@ -370,6 +391,97 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
         t.library.add(r.item_id, effect.item)
     hint = " Что заклинание сделало в мире — по правилам rules(\"spells\")." if effect.kind == "cast" and "spells" not in t.topics else ""
     return f"Принято: effect_id={r.effect_id}. {r.summary}{hint}"
+
+
+# --- told and not given (v0.8.4.41.1, the goldens of 2026-11-08: DeepSeek tells the ring on the velvet and gives none) ---
+
+GIVES = ("move_item:world>hero",)  # a found thing is given; a `make` alone is only what the thing will carry
+TEACHES = ("make", "create:course")
+CACHE_GIVEN = "тайник: найденное движок уже выдал"  # the client's mark on a pack cache (ExplorationRules.CACHE_GIVEN)
+
+
+def told_not_given(t: TurnContext) -> str:
+    """Once a turn: the engine opened a hidden thing and the master gave nothing, or the player asked to be taught and no
+    `make` / course came — the reminder sent back as a retry ("" — nothing missing). A second answer as it is stands: a
+    secret passage is no thing, a teacher may refuse."""
+    if t.reminded or t.params.mode == "combat" or turn_kind(t.params).framed:
+        return ""
+    hidden = [r for r in t.revealed if CACHE_GIVEN not in r]
+    if hidden and not any(k in GIVES for k in t.kinds):
+        return ("Движок открыл скрытое: «" + "»; «".join(hidden) + "». Если это вещь, которую герой нашёл, — дай её эффектом "
+                "`move_item:world>hero` в этом же ходе (с `item_id` из find_items или новой `item` с механикой; не знаешь полей — "
+                "rules(\"items\")): описанная словами вещь у героя не появится. Если это не вещь (ход, след, надпись) — верни ответ как есть.")
+    if prompts.TEACH_WORDS.search(t.params.input) and not any(k in TEACHES for k in t.kinds):
+        return ("Игрок просит научить. Если учитель согласен — в этом же ходе `create:course` у него (а умение, которого нет в "
+                "данных, сначала собери `make`; правила — rules(\"make\")); без эффекта герой ничему не учится. "
+                "Если учитель отказывает или откладывает — верни ответ как есть.")
+    return ""
+
+
+# --- the checker of a made thing (v0.8.4.41.1, the author: «финальный чек ещё одним запросом к ЛЛМ, что созданный предмет
+# по свойствам соответствует запросу») ---------------------------------------------------------------------------------
+
+MADE_CHECKS = 3  # a turn's checks of made things: past them the engine's word is the last (no endless loop)
+MADE_CHECK_MAX_TOKENS = 600
+
+
+class MadeCheck(BaseModel):
+    """The checker's verdict: does what the master made do what was promised."""
+
+    ok: bool
+    mismatches: list[str] = Field(default_factory=list, max_length=5)
+
+
+def made_topics(effect: Any) -> tuple[str, list[str]]:
+    """What a made thing is, in words, and the topics of its vocabulary; ("", []) — not a made thing."""
+    if isinstance(effect, MakeEffect):
+        return {"status": "статус", "skill": "навык", "trait": "черту", "spell": "заклинание", "ability": "способность",
+                "property": "свойство вещи", "liquid": "жидкость"}[effect.what], ["make"]
+    if isinstance(effect, RecipeEffect):
+        return "рецепт", (["craft", "items"] if effect.output is not None else ["craft"])
+    if isinstance(effect, MoveItemEffect) and effect.item is not None:
+        return "новую вещь", ["items"]
+    return "", []
+
+
+def build_made_check_agent(model: Model) -> Agent[None, MadeCheck]:
+    # Reasoning off: a verdict on one card, the player waits for the turn.
+    return Agent(model, output_type=MadeCheck, retries=2, name="made_check",
+                 instructions="Ты придирчивый, но справедливый помощник мастера D&D 5e: сверяешь механику собранной вещи с тем, что ей обещано.",
+                 model_settings=no_thinking(settings_for(model, {"temperature": 0.0, "max_tokens": MADE_CHECK_MAX_TOKENS})))
+
+
+def made_check_prompt(t: TurnContext, effect: Any, what: str, topics: list[str]) -> str:
+    snap = t.params.snapshot
+    hooks = list(snap.scene.hooks) if snap.scene is not None else []
+    history = [f"{h.role}: {h.text}" for h in snap.history[-3:]]
+    body = json.dumps(effect.model_dump(mode="json", exclude_defaults=True), ensure_ascii=False, indent=1)
+    made = [f"new:{k} — {v}" for k, v in t.made.items() if f"new:{k}" in body]
+    return prompts.made_check_prompt(what, t.params.input, history, hooks, body, topics, made)
+
+
+async def _check_made(t: TurnContext, effect: Any) -> str:
+    """A second look of the model at a made thing before the engine takes it: "" — it does what it promises (or there is
+    nothing to check), otherwise a refusal with what to change, in the same turn."""
+    what, topics = made_topics(effect)
+    if not what or t.model is None or t.made_checks >= MADE_CHECKS:
+        return ""
+    t.made_checks += 1
+    prompt = made_check_prompt(t, effect, what, topics)
+    try:
+        r = await build_made_check_agent(t.model).run(prompt)
+    except Exception as exc:  # noqa: BLE001 — the check is a help, never a failure of the turn
+        log.warning("turn %s: the made check failed (%s)", t.params.turn_id, exc)
+        return ""
+    t.side_usage = t.side_usage + r.usage
+    trace = getattr(getattr(t.session, "services", None), "trace", None)
+    if trace:
+        trace.write({"what": "made_check", "turn_id": t.params.turn_id, "prompt": prompt, "output": r.output.model_dump(mode="json")})
+    if r.output.ok or not r.output.mismatches:
+        return ""
+    t.made_refused.append("; ".join(r.output.mismatches))
+    return ("Отказ проверки: собранное не делает того, что ему обещано — " + "; ".join(r.output.mismatches) +
+            ". Поправь поля или части (или описание, если так задумано) и предложи эффект снова.")
 
 
 # `propose_effect` takes the effect as a JSON string for every model: its description lists every kind with its fields
@@ -560,7 +672,7 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None, e
         instructions=system,
         tools=([propose_effect_tool(ENTRY_EFFECTS), find_items] if entry else
                [Tool(request_check, max_retries=EFFECT_RETRIES), propose_effect_tool(), rules, lookup, find_items, find_npcs, find_places, find_quests, find_teachers]),
-        retries=2,
+        retries=3,  # v0.8.4.41.1: one more for the reminder of a thing told and not given
         model_settings=no_thinking(settings) if entry else settings,
     )
 
@@ -583,6 +695,10 @@ def build_turn_agent(model: Model, system: str, max_tokens: int | None = None, e
         unknown = [e for e in out.effect_ids if e not in t.accepted]
         if unknown:
             raise ModelRetry(f"effect_ids {unknown} не принимались движком в этом ходе. Используй только id из ответов propose_effect.")
+        missed = told_not_given(t)
+        if missed:
+            t.reminded = True
+            raise ModelRetry(missed)
         if (out.next_mode == "social" and out.npc_id
                 and any(f"[{out.npc_id}]" in c for c in t.params.snapshot.scene.creatures)):
             out.next_mode = None  # 0.45.0: a creature a fight left is no NPC — the talk goes on in the narration

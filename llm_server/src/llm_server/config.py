@@ -141,6 +141,7 @@ class Settings:
     daily_budget_usd: float | None = 1.0
     data_dir: Path = REPO_ROOT / "llm_server" / "var"  # budget counter, generated item library
     langfuse: bool = False
+    made_check: bool = True  # v0.8.4.41.1: a made thing checked by a second look of the model; LLM_SERVER_MADE_CHECK=0 — off
     router: bool = True  # v0.7.20.4: a turn of words only goes with the short prompt; LLM_SERVER_ROUTER=0 — always the full one
     trace: bool = True  # the model side of play sessions in data_dir/traces (v0.7.1); LLM_SERVER_TRACE=0 turns it off
     image_models: tuple[ImageModel, ...] = IMAGE_MODELS  # LLM_SERVER_IMAGES=0 — none, the brush is hidden (v0.7.35)
@@ -197,6 +198,7 @@ class Settings:
             daily_budget_usd=budget,
             data_dir=Path(os.environ.get("LLM_SERVER_DATA_DIR", str(cls.data_dir))),
             router=os.environ.get("LLM_SERVER_ROUTER", "1").strip() not in ("0", "false", "no", ""),
+            made_check=os.environ.get("LLM_SERVER_MADE_CHECK", "1").strip() not in ("0", "false", "no", ""),
             trace=os.environ.get("LLM_SERVER_TRACE", "1").strip() not in ("0", "false", "no", ""),
             langfuse=os.environ.get("LANGFUSE_ENABLED") == "1",
             image_models=_image_models(),

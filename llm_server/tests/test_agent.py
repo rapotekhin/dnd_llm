@@ -698,3 +698,120 @@ def test_summary_has_room_to_reason_before_its_answer():
 
     agent = build_summary_agent(FunctionModel(lambda messages, info: ModelResponse(parts=[])), "dialogue")
     assert agent.model_settings["max_tokens"] == SUMMARY_MAX_TOKENS >= 2000
+
+
+# --- the checker of a made thing (v0.8.4.41.1) ----------------------------------------------------------------------
+
+
+def _with_checker(*verdicts):
+    """The master's scripted steps, and the checker's verdicts in turn: the checker's output tool tells them apart."""
+    def build(*steps):
+        master = scripted(*steps)
+        seen = {"n": 0, "prompts": []}
+
+        async def fn(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            if info.output_tools and "mismatches" in json.dumps(info.output_tools[0].parameters_json_schema):
+                seen["prompts"].append(messages)
+                v = verdicts[min(seen["n"], len(verdicts) - 1)]
+                seen["n"] += 1
+                return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, v)])
+            return await master(messages, info)
+
+        fn.state, fn.checker = master.state, seen  # type: ignore[attr-defined]
+        return fn
+    return build
+
+
+def test_a_made_thing_that_does_not_do_what_it_promises_is_refused_before_the_engine(data_dir):
+    ring = {"name": "Кольцо дружбы", "item_type": "wondrous", "rarity": "uncommon", "value_cp": 15000, "properties": ["cursed"],
+            "description": "Кто носит его, того легко уговорить.", "wear": {"status": "charmed"}}
+    fixed = {**ring, "wear": {"status": "new:friendly"}}
+    fn = _with_checker({"ok": False, "mismatches": ["обещано: уговорить легче — дай часть against persuasion, а не очарование"]},
+                       {"ok": True, "mismatches": []})(
+        ("find_items", {"query": "кольцо"}),
+        ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero", "item": ring}}),
+        ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero", "item": fixed}}),
+        ("final", lambda m: {"narration": "В шкатулке — кольцо.", "effect_ids": [effect_id(m)]}),
+    )
+    services = make_services(data_dir, model_factory=lambda m: FunctionModel(fn, model_name=m), turn_handler="agent", made_check=True)
+    msg, calls, _ = play(data_dir, fn, services=services, input="обыскиваю шкатулку")
+    refused = last_tool_text(fn.state["prompts"][2])
+    assert "Отказ проверки" in refused and "against persuasion" in refused
+    validated = [c["params"]["effect"]["item"]["wear"]["status"] for c in calls if c["method"] == "engine.validate"]
+    assert validated == ["new:friendly"]  # the refused ring never reached the engine
+    assert msg["result"]["effect_ids"] == ["e-1"]
+    prompt = str(fn.checker["prompts"][0])
+    assert "обыскиваю шкатулку" in prompt and "Кольцо дружбы" in prompt
+
+
+def test_the_checker_looks_only_at_made_things_and_a_few_times_a_turn(data_dir):
+    fn = _with_checker({"ok": False, "mismatches": ["не то"]})(
+        ("propose_effect", {"effect": {"kind": "damage", "severity": "unpleasant", "damage_type": "колющий", "reason": "заноза"}}),
+        ("final", lambda m: {"narration": "Заноза.", "effect_ids": [effect_id(m)]}),
+    )
+    services = make_services(data_dir, model_factory=lambda m: FunctionModel(fn, model_name=m), turn_handler="agent", made_check=True)
+    msg, _, _ = play(data_dir, fn, services=services)
+    assert fn.checker["n"] == 0 and msg["result"]["effect_ids"] == ["e-1"]
+    from llm_server.agents import MADE_CHECKS
+    assert MADE_CHECKS == 3
+
+
+# --- told and not given (v0.8.4.41.1) -----------------------------------------------------------------------------
+
+
+def _engine_revealing(text):
+    def engine(method, params):
+        if method == "engine.check":
+            return {**CHECK_OK, "revealed": [text]}
+        return default_engine(method, params)
+    return engine
+
+
+def test_a_found_thing_told_without_an_effect_is_sent_back_once(data_dir):
+    fn = scripted(
+        ("request_check", {"skill": "investigation", "dc_tier": "medium", "reason": "обыск"}),
+        ("final", {"narration": "На бархате лежит кольцо из чёрного железа."}),
+        ("final", {"narration": "На бархате лежит кольцо из чёрного железа."}),
+    )
+    msg, _, _ = play(data_dir, fn, _engine_revealing("в шкатулке кольцо из чёрного железа"), input="обыскиваю шкатулку")
+    reminder = last_tool_text(fn.state["prompts"][2])
+    assert "Движок открыл скрытое" in reminder and "move_item:world>hero" in reminder
+    assert msg["result"]["narration"].startswith("На бархате")  # the second answer as it is stands: maybe no thing at all
+    assert len(fn.state["prompts"]) == 3
+
+
+def test_a_pack_cache_given_by_the_engine_is_not_asked_again(data_dir):
+    fn = scripted(
+        ("request_check", {"skill": "investigation", "dc_tier": "medium", "reason": "обыск"}),
+        ("final", {"narration": "В дупле — мешочек монет."}),
+    )
+    msg, _, _ = play(data_dir, fn, _engine_revealing("в дупле мешочек (тайник: найденное движок уже выдал герою — не выдавай его снова)"))
+    assert len(fn.state["prompts"]) == 2 and "result" in msg
+
+
+def test_a_request_to_be_taught_without_a_course_is_sent_back_once(data_dir):
+    fn = scripted(
+        ("final", {"narration": "Сом показывает удар."}),
+        ("final", {"narration": "Сом качает головой: «Не сейчас»."}),
+    )
+    msg, _, _ = play(data_dir, fn, input="Сом, покажи этот удар. Хочу уметь так же.")
+    assert "Игрок просит научить" in last_tool_text(fn.state["prompts"][1])
+    assert msg["result"]["narration"].startswith("Сом качает")
+
+
+def test_the_checker_sees_the_status_this_turn_made_for_the_thing(data_dir):
+    status = {"kind": "make", "what": "status", "key": "friendly", "name": "Розовое обаяние", "text": "Убедить носящего легче.",
+              "parts": [{"part": "against", "value": "persuasion", "amount": 1}]}
+    ring = {"name": "Кольцо дружбы", "item_type": "wondrous", "rarity": "uncommon", "value_cp": 15000, "properties": ["cursed"],
+            "description": "Тёплое кольцо.", "wear": {"status": "new:friendly"}}
+    fn = _with_checker({"ok": True, "mismatches": []})(
+        ("find_items", {"query": "кольцо"}),
+        ("propose_effect", {"effect": status}),  # refused once: the topic's rules come with it
+        ("propose_effect", {"effect": status}),
+        ("propose_effect", {"effect": {"kind": "move_item", "source": "world", "target": "hero", "item": ring}}),
+        ("final", lambda m: {"narration": "Кольцо.", "effect_ids": [effect_id(m)]}),
+    )
+    services = make_services(data_dir, model_factory=lambda m: FunctionModel(fn, model_name=m), turn_handler="agent", made_check=True)
+    play(data_dir, fn, services=services)
+    ring_prompt = str(fn.checker["prompts"][-1])
+    assert "Собрано раньше" in ring_prompt and "against" in ring_prompt and "new:friendly" in ring_prompt

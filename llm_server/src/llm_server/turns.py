@@ -314,11 +314,12 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
     llm = services.model_factory(model)
     await _pick_providers(llm)
     user_prompt = turn_user_prompt(params)
-    ctx = TurnContext(session, params, services.library)
+    checker = llm if services.settings.made_check else None
+    ctx = TurnContext(session, params, services.library, model=checker)
 
     def fresh() -> TurnContext:  # each attempt anew; the last one is the turn's (its checks decide a repeat)
         nonlocal ctx
-        ctx = TurnContext(session, params, services.library)
+        ctx = TurnContext(session, params, services.library, model=checker)
         return ctx
 
     async def attempt():
@@ -349,7 +350,7 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
                 raise
     if result is None:
         return _finish(session, params, model, short, before, billed, ctx, trace, started, None)
-    return _finish(session, params, model, result.output, before + result.usage, billed, ctx, trace, started, result)
+    return _finish(session, params, model, result.output, before + result.usage + ctx.side_usage, billed, ctx, trace, started, result)
 
 
 class _NoRouter(Exception):

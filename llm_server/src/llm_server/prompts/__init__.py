@@ -140,6 +140,8 @@ BANK_WORDS = re.compile(r"ссуд|заём|заем|займ|в долг|зал
 UNDERWORLD_WORDS = re.compile(r"взлом|обчист|ограб|обнес|контрабанд|скупщик|краден|вынести|вынесу|кассу", re.IGNORECASE)  # v0.7.70.1
 CRAFT_WORDS = re.compile(r"выков|скую|скова|кую |смастер|сработаю|выточ|сошью|рецепт", re.IGNORECASE)  # v0.7.70.2
 # v0.8.4.28.7: a search where something is hidden — what is found is given as a new thing (wear, summon, use)
+TEACH_WORDS = re.compile(r"научи|обучи|выучи|хочу уметь|хочу так же|хочу научиться|научиться|перенять|возьми в ученики|в ученики",
+                         re.IGNORECASE)  # v0.8.4.41.1: a request to be taught, checked at the end of the turn
 FIND_WORDS = re.compile(r"обыск|обшар|ищу|искать|поиск|пошар|роюсь|рыться|перерыва|разгреб|вороша|что тут|что здесь|что внутри|"
                         r"натаскал|положили|спрятан|клад|сокровищ", re.IGNORECASE)
 JOB_WORDS = re.compile(r"работ|наймусь|нанять|найми|вышибал|устроиться", re.IGNORECASE)  # v0.7.70.1
@@ -373,6 +375,13 @@ def turn_prompt(mode: str, kind: str, player_input: str, snap: Snapshot, npc: Sc
     return render("turn.md.j2", mode=mode, kind=kind, input=player_input, history=snap.history,
                   room_name=snap.scene.room_name if snap.scene else "",
                   npc_name=npc.name if npc else "", world=snap.world)
+
+
+def made_check_prompt(what: str, said: str, history: list[str], hooks: list[str], effect: str, topics: list[str],
+                      made: list[str] | None = None) -> str:
+    """The checker of a made thing (v0.8.4.41.1): what was promised against what its fields do, with the topics' vocabulary."""
+    rules = "\n\n".join(topic_text(k) for k in topics)
+    return render("made_check.md.j2", what=what, said=said, history=history, hooks=hooks, effect=effect, rules=rules, made=made or [])
 
 
 def summary_prompt(kind: str, subject_id: str, previous: str, events: list[str]) -> str:
