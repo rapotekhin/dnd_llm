@@ -144,7 +144,7 @@ static func map_of(s: GameSession, data: Dictionary, room_id: String) -> Diction
 	var asks: Array[Dictionary] = []
 	for r: String in on_map:
 		asks.append(ask(v, data, r, on_map, boxes))
-	var key := hash(asks)
+	var key := hash([asks, BuildRules.records(v, on_map)])  # what the owners built by hand is a part of the map (v0.8.4.42)
 	var cached: Dictionary = s.layout_cache.get(id, {})
 	var map: Dictionary = cached.get("map", {})
 	if int(cached.get("key", 0)) != key or map.is_empty():
@@ -153,6 +153,7 @@ static func map_of(s: GameSession, data: Dictionary, room_id: String) -> Diction
 		if not (map["left"] as Array).is_empty():
 			_part(s, map["left"])
 			return map_of(s, data, room_id)
+		BuildRules.lay(map, v)
 	return map
 
 

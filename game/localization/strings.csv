@@ -1357,6 +1357,47 @@ PROPERTY_NOT_A_SERF,Это не ваш пленник
 PROPERTY_NO_UPGRADE,Этого здесь не устроить
 PROPERTY_UPGRADE_HAS,Уже есть или строится
 PROPERTY_NEEDS_ROOF,Нужна крыша — сначала постройте дом
+BTN_PROPERTY_FURNISH,Обустроить
+BTN_PROPERTY_FURNISH_TIP,"Экран строительства: стены, окна, двери, вещи по клеткам и проходы в новые комнаты"
+BUILD_TITLE,"Обустройство: {name}"
+BUILD_TITLE_NONE,Обустройство
+BUILD_HINT,"Выберите вещь справа и нажмите клетку на карте. Колесо — масштаб, перетаскивание — вид"
+BUILD_HINT_PASSAGE,"Назовите новую комнату и нажмите клетку: в доме — лестница, на открытом месте у края — новый участок, в нарисованной стене — новое здание"
+BUILD_HINT_REMOVE,"Нажмите клетку со своей постройкой — половина цены вернётся"
+BUILD_SEARCH,Поиск по названию
+BUILD_NAME_HINT,Название новой комнаты
+BUILD_FROM,"от {price}"
+BUILD_HERE,"Сюда — {price}"
+BUILD_REMOVE_HERE,Убрать отсюда
+BTN_BUILD_REMOVE,Убрать
+BTN_BUILD_DONE,Готово
+BUILD_GROUP_ALL,Всё
+BUILD_GROUP_WALLS,Стены
+BUILD_GROUP_CRAFT,Ремесло
+BUILD_GROUP_REST,Отдых
+BUILD_GROUP_STORAGE,Хранение
+BUILD_GROUP_TRADE,Торговля
+BUILD_GROUP_DECOR,Обстановка
+BUILD_GROUP_WAYS,Проходы
+BUILD_NOT_HOME,Обустраивать можно только своё место — встаньте в нём
+BUILD_NOT_NOW,Не сейчас
+BUILD_UNKNOWN,Такого здесь не поставить
+BUILD_NOT_YOURS,Эта клетка — не ваше место
+BUILD_TAKEN,"Клетка занята: проход, вещь или вы сами"
+BUILD_SAME,Здесь уже это стоит
+BUILD_ON_WALL,Окно и дверь ставят в стену
+BUILD_ON_FLOOR,Это ставят на свободный пол
+BUILD_DOOR_NOWHERE,Дверь должна вести с пола на пол
+BUILD_CUTS,Так перекроется путь к выходу
+BUILD_NAME,Назовите новую комнату
+BUILD_PASSAGE_WALL,"Новое здание — дверью в стене, которую вы нарисовали: сначала поставьте стены"
+BUILD_PASSAGE_EDGE,Перед проходом нужна свободная клетка
+BUILD_NO_WAY,Отсюда больше нет места для нового прохода
+BUILD_PICK_FIRST,Сначала выберите вещь в списке справа
+BUILD_NOTHING,Здесь нет ваших построек
+BUILD_KEEP_OBJECT,Прилавок держит свою лавку — его не убрать
+BUILD_CHEST_FULL,Сначала выньте вещи из сундука
+BUILD_KEEP_WAY,Проход в новую комнату не убрать
 PROPERTY_NOT_LAND,Строятся только на своей земле
 PROPERTY_BUILDING,Стройка уже идёт
 PROPERTY_NO_ANIMAL,Такого животного нет

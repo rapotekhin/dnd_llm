@@ -6356,6 +6356,20 @@
       "additionalProperties": false,
       "description": "What an upgrade gives — only what the engine runs (0.83.0); the engine sets the price and the days by it.",
       "properties": {
+        "capacity_lb": {
+          "anyOf": [
+            {
+              "maximum": 2000,
+              "minimum": 10,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capacity Lb"
+        },
         "decay_mult": {
           "anyOf": [
             {

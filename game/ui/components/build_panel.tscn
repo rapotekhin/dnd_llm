@@ -1,0 +1,106 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://ui/components/modal_frame.tscn" id="1"]
+[ext_resource type="Script" path="res://ui/components/build_panel.gd" id="2"]
+[ext_resource type="Script" path="res://ui/components/map_field.gd" id="3"]
+
+[node name="BuildPanel" instance=ExtResource("1")]
+script = ExtResource("2")
+width = 0.0
+
+[node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
+text = "BUILD_TITLE_NONE"
+
+[node name="SampleText" parent="ModalPanel/Col/ModalScroll/ModalBody" index="0"]
+visible = false
+
+[node name="ModalScroll" parent="ModalPanel/Col" index="1"]
+visible = false
+
+[node name="BuildSplit" type="HBoxContainer" parent="ModalPanel/Col" index="2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="BuildField" type="Control" parent="ModalPanel/Col/BuildSplit"]
+unique_name_in_owner = true
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("3")
+
+[node name="BuildSide" type="VBoxContainer" parent="ModalPanel/Col/BuildSplit"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BuildHint" type="Label" parent="ModalPanel/Col/BuildSplit/BuildSide"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+text = "BUILD_HINT"
+autowrap_mode = 3
+
+[node name="BuildSearch" type="LineEdit" parent="ModalPanel/Col/BuildSplit/BuildSide"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "BUILD_SEARCH"
+clear_button_enabled = true
+
+[node name="BuildGroups" type="HFlowContainer" parent="ModalPanel/Col/BuildSplit/BuildSide"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SampleGroup" type="Button" parent="ModalPanel/Col/BuildSplit/BuildSide/BuildGroups" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Ремесло (4)"
+
+[node name="BuildListScroll" type="ScrollContainer" parent="ModalPanel/Col/BuildSplit/BuildSide"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="BuildList" type="VBoxContainer" parent="ModalPanel/Col/BuildSplit/BuildSide/BuildListScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="SampleItem" type="Button" parent="ModalPanel/Col/BuildSplit/BuildSide/BuildListScroll/BuildList" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Кровать — 3 зм"
+alignment = 0
+
+[node name="BuildName" type="LineEdit" parent="ModalPanel/Col/BuildSplit/BuildSide"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "BUILD_NAME_HINT"
+max_length = 40
+
+[node name="BuildInfo" type="Label" parent="ModalPanel/Col/BuildSplit/BuildSide"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Кровать — 3 зм: долгий отдых дома даром"
+autowrap_mode = 3
+
+[node name="BuildRemove" type="Button" parent="ModalPanel/Col/BuildSplit/BuildSide"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "BTN_BUILD_REMOVE"
+
+[node name="SampleButton" parent="ModalPanel/Col/ModalFooter" index="0"]
+visible = false
+
+[node name="BuildDone" type="Button" parent="ModalPanel/Col/ModalFooter" index="1"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+theme_type_variation = &"AccentButton"
+text = "BTN_BUILD_DONE"

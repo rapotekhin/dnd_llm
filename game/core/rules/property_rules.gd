@@ -218,11 +218,14 @@ static func slavery(s: GameSession, data: Dictionary) -> bool:
 # --- the world's patches ------------------------------------------------------------------------------------------
 
 
-static func _add_tag(s: GameSession, data: Dictionary, room_id: String, tag: String) -> void:
+## True when the tag is new to the room.
+static func _add_tag(s: GameSession, data: Dictionary, room_id: String, tag: String) -> bool:
 	var tags: Array = (WorldView.new(data["world"]).room(room_id).get("tags", []) as Array).duplicate()
-	if not tags.has(tag):
-		tags.append(tag)
+	if tags.has(tag):
+		return false
+	tags.append(tag)
 	Overlay.put(s, data, EntityRef.room(room_id), "tags", tags)
+	return true
 
 
 # --- buying and the deed --------------------------------------------------------------------------------------------
@@ -346,7 +349,7 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int, who: St
 	var cf := cfg(data)
 	var lines: Array[String] = []
 	for pd: Dictionary in Progress.take_due(st.get("pending", []), day):
-		lines.append_array(_apply_upgrade(s, data, id, str(pd["up"]), who))
+		lines.append_array(apply_upgrade(s, data, id, str(pd["up"]), who))
 	var b: Dictionary = st.get("building", {})
 	if Progress.due(b, day):
 		lines.append_array(_finish_build(s, data, id, str(b["id"]), who))
@@ -741,22 +744,26 @@ static func upgrades_for(s: GameSession, data: Dictionary, id: String, who: Stri
 	var out: Array[String] = []
 	if bool(kind(s, data, id, who).get("buildable", false)):
 		return out
-	var k := kind(s, data, id, who)
-	var all_ups := ups(data)
-	for up: String in all_ups:
-		var u: Dictionary = all_ups[up]
-		if u.has("places") and not (u["places"] as Array).has(id):  # asked at this place (effect `upgrade`)
-			continue
-		if u.has("kinds") and not (u["kinds"] as Array).has(kind_id(s, data, id, who)):
-			continue
-		if bool(u.get("income", false)) and int(k.get("income_cp_day", 0)) <= 0 and not k.has("trade"):
-			continue
-		if bool(u.get("trade", false)) and not k.has("trade"):
-			continue
-		if (k.get("staff", []) as Array).is_empty() and u.get("gives", {}).has("staff_max"):
-			continue
-		out.append(up)
+	for up: String in ups(data):
+		if fits(s, data, id, up, who):
+			out.append(up)
 	return out
+
+
+## The upgrade suits the place: asked at it, of its kind, its income or trade, its staff. One filter for the window's
+## orders and the build screen's things (v0.8.4.42), which stand on bare land too.
+static func fits(s: GameSession, data: Dictionary, id: String, up: String, who: String = Being.HERO) -> bool:
+	var u: Dictionary = ups(data).get(up, {})
+	var k := kind(s, data, id, who)
+	if u.is_empty() or (u.has("places") and not (u["places"] as Array).has(id)):  # asked at this place (effect `upgrade`)
+		return false
+	if u.has("kinds") and not (u["kinds"] as Array).has(kind_id(s, data, id, who)):
+		return false
+	if bool(u.get("income", false)) and int(k.get("income_cp_day", 0)) <= 0 and not k.has("trade"):
+		return false
+	if bool(u.get("trade", false)) and not k.has("trade"):
+		return false
+	return not ((k.get("staff", []) as Array).is_empty() and u.get("gives", {}).has("staff_max"))
 
 
 static func pending(c: Dictionary, id: String, up: String) -> Dictionary:
@@ -786,33 +793,63 @@ static func upgrade(s: GameSession, data: Dictionary, id: String, up: String, wh
 	Ledger.add(s, -int(u["price_cp"]), "property:upgrade", who)
 	var days := int(u.get("days", 0))
 	if days <= 0:
-		return _apply_upgrade(s, data, id, up, who)
+		return apply_upgrade(s, data, id, up, who)
 	(state(Life.of(s, who, data))[id]["pending"] as Array).append(Progress.by_day(s.day + days).merged({"up": up}))
 	return ["%s: заказано «%s» за %s — готово через %s" % [name_of(s, data, id), u["name"], Money.format(int(u["price_cp"])), CalendarRules.days_count(days)]]
 
 
-static func _apply_upgrade(s: GameSession, data: Dictionary, id: String, up: String, who: String = Being.HERO) -> Array[String]:
+## What an upgrade gives laid on the world: in `room` (the main room by default). `thing` — the record of one placed on
+## a square by the build screen (v0.8.4.42): its chest stands there, and it keeps what it changed so that it comes off.
+static func apply_upgrade(s: GameSession, data: Dictionary, id: String, up: String, who: String = Being.HERO, room: String = "",
+		thing: Dictionary = {}) -> Array[String]:
 	var u: Dictionary = ups(data)[up]
 	var g: Dictionary = u.get("gives", {})
-	var room := main_room(s, data, id)
+	if room.is_empty():
+		room = main_room(s, data, id)
 	if g.has("station"):
-		_add_tag(s, data, room, str(g["station"]))
+		thing["tagged"] = _add_tag(s, data, room, str(g["station"]))
 	if bool(g.get("rest", false)):
+		thing["safe"] = not (WorldView.new(data["world"]).room(room).get("safe") is Dictionary)
 		Overlay.put(s, data, EntityRef.room(room), "safe", {"rest_cost_cp": 0})
 	if bool(g.get("private", false)):
 		Overlay.put(s, data, EntityRef.site(str(prop(s, data, id)["site"])), "public", false)
 	if g.has("object"):  # v0.7.39.5: a counter — a trading object of its own beside the house
 		(state(Life.of(s, who, data))[id]["upgrades"] as Array).append(up)
 		var made := new_object(s, data, str(g["object"]), room, "%s: %s" % [name_of(s, data, id), str(kind_cfg(data, str(g["object"])).get("name", ""))], who)
+		thing["object"] = made
 		return ["%s: готово «%s» — %s (новое место: %s)" % [name_of(s, data, id), u["name"], u.get("text", ""), name_of(s, data, made)]]
 	if bool(g.get("storage", false)):
 		var list: Array = s.props.get(room, [])
-		list.append({"id": "chest_" + id, "name": "Ваш сундук", "description": "Крепкий сундук с вашим замком.", "item_id": "",
-			"owner": "", "text": "", "state": "", "container": "chest", "contents": {}, "mine": true})
+		var chest := {"id": "chest_" + id, "name": "Ваш сундук", "description": "Крепкий сундук с вашим замком.", "item_id": "",
+			"owner": "", "text": "", "state": "", "container": "chest", "contents": {}, "mine": true}
+		if thing.has("id"):  # a chest of its own on its square, as big as the thing says
+			chest.merge({"id": "chest_%s_%s" % [id, thing["id"]], "name": str(u["name"]), "at": [int(thing["x"]), int(thing["y"])]}, true)
+			thing["prop"] = chest["id"]
+		if g.has("capacity_lb"):
+			chest["capacity_lb"] = int(g["capacity_lb"])
+		list.append(chest)
 		s.props[room] = list
 	(state(Life.of(s, who, data))[id]["upgrades"] as Array).append(up)
 	ObjectRules.note(s, str(prop(s, data, id).get("site", "")), "готово «%s»" % u["name"])
 	return ["%s: готово «%s» — %s" % [name_of(s, data, id), u["name"], u.get("text", "")]]
+
+
+## A placed thing taken away (v0.8.4.42): what its upgrade gave comes off unless another thing of the room still gives it.
+static func remove_upgrade(s: GameSession, data: Dictionary, id: String, thing: Dictionary, room: String, others: Array, who: String = Being.HERO) -> void:
+	var up := str(thing["up"])
+	var g: Dictionary = ups(data).get(up, {}).get("gives", {})
+	var gives := func(key: String, value: Variant) -> bool:
+		return others.any(func(t: Dictionary) -> bool: return ups(data).get(str(t["up"]), {}).get("gives", {}).get(key) == value)
+	if bool(thing.get("tagged", false)) and not gives.call("station", g.get("station")):
+		var tags: Array = (WorldView.new(data["world"]).room(room).get("tags", []) as Array).duplicate()
+		tags.erase(str(g["station"]))
+		Overlay.put(s, data, EntityRef.room(room), "tags", tags)
+	if bool(thing.get("safe", false)) and not gives.call("rest", true):
+		Overlay.put(s, data, EntityRef.room(room), "safe", null)
+	if thing.has("prop"):
+		var list: Array = s.props.get(room, [])
+		s.props[room] = list.filter(func(p: Dictionary) -> bool: return str(p.get("id", "")) != str(thing["prop"]))
+	(state(Life.of(s, who, data))[id]["upgrades"] as Array).erase(up)
 
 
 static func build_why(s: GameSession, data: Dictionary, id: String, b: String, who: String = Being.HERO) -> String:
@@ -838,30 +875,9 @@ static func build(s: GameSession, data: Dictionary, id: String, b: String, who: 
 static func _finish_build(s: GameSession, data: Dictionary, id: String, b: String, who: String = Being.HERO) -> Array[String]:
 	var bc: Dictionary = cfg(data)["build"][b]
 	var st: Dictionary = state(Life.of(s, who, data))[id]
-	var gen := WorldGen.generated(s)
-	for k: String in ["rooms", "edge_exits"]:
-		if not gen.has(k):
-			gen[k] = {}
-	var w := WorldView.new(data["world"])
 	var land := main_room(s, data, id)
-	var sid := str(prop(s, data, id)["site"])
 	for spec: Dictionary in bc["rooms"]:
-		var n := 1
-		while data["world"]["rooms"].has("gen_room_%d" % n):
-			n += 1
-		var rid := "gen_room_%d" % n
-		var room := {"name": str(spec["name"]), "location_id": w.location_id(land), "description": str(spec.get("description", "")),
-			"exits": [land], "npcs": [], "hooks": [], "secrets": [], "generated": true, "site_id": sid}
-		if bool(spec.get("indoor", false)):
-			room["indoor"] = true
-		if spec.has("tags"):
-			room["tags"] = (spec["tags"] as Array).duplicate()
-		gen["rooms"][rid] = room
-		data["world"]["rooms"][rid] = room.duplicate(true)
-		var exits: Array = gen["edge_exits"].get(land, [])
-		exits.append(rid)
-		gen["edge_exits"][land] = exits
-		(data["world"]["rooms"][land]["exits"] as Array).append(rid)
+		add_room(s, data, land, spec, str(prop(s, data, id)["site"]))
 	st["building"] = {}
 	st["kind"] = str(bc["kind"])
 	st["cond"] = 100.0
@@ -879,39 +895,55 @@ static func kind_cfg(data: Dictionary, k: String) -> Dictionary:
 ## its way from the anchor, the hero's state. Its id.
 static func new_object(s: GameSession, data: Dictionary, k: String, anchor: String, name: String, who: String = Being.HERO) -> String:
 	var gen := WorldGen.generated(s)
-	for key: String in ["rooms", "sites", "edge_exits", "properties"]:
+	for key: String in ["sites", "properties"]:
 		if not gen.has(key):
 			gen[key] = {}
 	var w := WorldView.new(data["world"])
-	var spec: Dictionary = kind_cfg(data, k).get("room", {})
-	var n := 1
-	while data["world"]["rooms"].has("gen_room_%d" % n) or gen["rooms"].has("gen_room_%d" % n):
-		n += 1
-	var rid := "gen_room_%d" % n
+	var spec: Dictionary = (kind_cfg(data, k).get("room", {}) as Dictionary).duplicate()
+	spec["name"] = str(spec.get("name", name))
 	var sn := 1
 	while data["world"].get("sites", {}).has("gen_site_%d" % sn) or gen["sites"].has("gen_site_%d" % sn):
 		sn += 1
 	var sid := "gen_site_%d" % sn
-	var room := {"name": str(spec.get("name", name)), "location_id": w.location_id(anchor), "description": str(spec.get("description", "")),
-		"exits": [anchor], "npcs": [], "hooks": [], "secrets": [], "generated": true, "site_id": sid}
-	if bool(spec.get("indoor", false)):
-		room["indoor"] = true
-	gen["rooms"][rid] = room
+	var rid := add_room(s, data, anchor, spec, sid)
 	gen["sites"][sid] = {"name": name, "location_id": w.location_id(anchor), "entry": rid, "owner": Life.owner(who), "kind": k, "public": true}
-	var exits: Array = gen["edge_exits"].get(anchor, [])
-	exits.append(rid)
-	gen["edge_exits"][anchor] = exits
 	var id := "gen_p_" + sid
 	gen["properties"][id] = {"site": sid, "name": name, "kind": k, "seller": "", "price_cp": 0, "generated": true}
-	data["world"]["rooms"][rid] = room.duplicate(true)
 	if not data["world"].has("sites"):
 		data["world"]["sites"] = {}
 	data["world"]["sites"][sid] = (gen["sites"][sid] as Dictionary).duplicate(true)
-	(data["world"]["rooms"][anchor]["exits"] as Array).append(rid)
 	state(Life.of(s, who, data))[id] = _fresh(s, 100.0)
 	state(Life.of(s, who, data))[id]["kind"] = k
 	ObjectRules.note(s, sid, "открыт героем")
 	return id
+
+
+## A room the place grows (a building on land, an object's room, a passage of the build screen): of the site `sid`, in
+## the anchor's location, a way both sides, kept by this game's world. `spec` — {name, description, indoor, tags,
+## layout}. Its id.
+static func add_room(s: GameSession, data: Dictionary, anchor: String, spec: Dictionary, sid: String) -> String:
+	var gen := WorldGen.generated(s)
+	for key: String in ["rooms", "edge_exits"]:
+		if not gen.has(key):
+			gen[key] = {}
+	var n := 1
+	while data["world"]["rooms"].has("gen_room_%d" % n) or gen["rooms"].has("gen_room_%d" % n):
+		n += 1
+	var rid := "gen_room_%d" % n
+	var room := {"name": str(spec.get("name", "")), "location_id": WorldView.new(data["world"]).location_id(anchor),
+		"description": str(spec.get("description", "")), "exits": [anchor], "npcs": [], "hooks": [], "secrets": [], "generated": true, "site_id": sid}
+	if bool(spec.get("indoor", false)):
+		room["indoor"] = true
+	for key: String in ["tags", "layout"]:
+		if spec.has(key):
+			room[key] = spec[key].duplicate(true)
+	gen["rooms"][rid] = room
+	data["world"]["rooms"][rid] = room.duplicate(true)
+	var exits: Array = gen["edge_exits"].get(anchor, [])
+	exits.append(rid)
+	gen["edge_exits"][anchor] = exits
+	(data["world"]["rooms"][anchor]["exits"] as Array).append(rid)
+	return rid
 
 
 ## The hero's rented object of `kind` in the location ("" — none).
@@ -1290,6 +1322,11 @@ static func plan_upgrade(s: GameSession, data: Dictionary, spec: Dictionary, kin
 			"rest", "storage", "private":
 				g[key] = true
 				price += float(um["base_cp"][key])
+			"capacity_lb":  # v0.8.4.42: «сундук на 50 фунтов»
+				if not bool(g_in.get("storage", false)):
+					return {"reason": "capacity_lb — только вместе со storage: это вместимость сундука"}
+				g[key] = clampi(int(v), int(caps["capacity_lb"][0]), int(caps["capacity_lb"][1]))
+				price += float(um["base_cp"]["capacity_lb"]) * int(g[key])
 			"station":
 				if not CraftRules.stations(data).has(str(v)):
 					return {"reason": "станции %s нет; есть: %s — или station_new {name, tools}" % [v, ", ".join(CraftRules.stations(data).keys())]}
@@ -1342,7 +1379,7 @@ static func plan_upgrade(s: GameSession, data: Dictionary, spec: Dictionary, kin
 				g[key] = clampi(int(v), 1, int(caps["produce_pct"]))
 				price += float(um["base_cp"]["staff_max"]) * int(g[key]) / 25.0
 			_:
-				return {"reason": "gives.%s — движок так не умеет; можно: rest, storage, private, station, station_new, income_pct, staff_max, decay_mult, feed_mult, produce, produce_pct, lesson_bonus" % key}
+				return {"reason": "gives.%s — движок так не умеет; можно: rest, storage, capacity_lb, private, station, station_new, income_pct, staff_max, decay_mult, feed_mult, produce, produce_pct, lesson_bonus" % key}
 	if g.is_empty():
 		return {"reason": "gives пусто — что улучшение даёт по правилам"}
 	var cp := clampi(roundi(price), int(um["price_cp"][0]), int(um["price_cp"][1]))
@@ -1402,8 +1439,6 @@ static func plan_asked(s: GameSession, data: Dictionary, spec: Dictionary, who: 
 		pid = here(s, data, who)
 	if pid.is_empty() or not owned(Life.of(s, who, data), pid):
 		return {"reason": "улучшение — только месту героя: он стоит не в своём месте (или place_id его места)"}
-	if bool(kind(s, data, pid, who).get("buildable", false)):
-		return {"reason": "на голой земле сначала строят — улучшения потом"}
 	var all_ups := ups(data)
 	var mine := 0
 	for u: String in all_ups:
@@ -1416,6 +1451,8 @@ static func plan_asked(s: GameSession, data: Dictionary, spec: Dictionary, who: 
 	var up := plan_upgrade(s, data, spec, kind(s, data, pid, who))
 	if up.has("reason"):
 		return up
+	if bool(kind(s, data, pid, who).get("buildable", false)) and not BuildRules.is_thing(data, up["def"]):  # a thing stands on bare land too (v0.8.4.42)
+		return {"reason": "на голой земле сначала строят — улучшения потом; вещь (кровать, сундук, станок) можно поставить и здесь"}
 	up["def"]["places"] = [pid]
 	up["place"] = pid
 	return up
@@ -1425,6 +1462,9 @@ static func apply_asked(s: GameSession, data: Dictionary, plan: Dictionary) -> A
 	keep_made(s, data, {"upgrades": {str(plan["id"]): plan["def"]}, "stations": plan.get("stations", {})})
 	var u: Dictionary = plan["def"]
 	ObjectRules.note(s, str(prop(s, data, str(plan["place"])).get("site", "")), "можно заказать «%s»" % u["name"])
+	if BuildRules.is_thing(data, u):  # v0.8.4.42: a thing goes on its square by hand, at once
+		return ["%s: «%s» за %s — поставьте на свою клетку в окне «Обустройство»" % [name_of(s, data, str(plan["place"])), u["name"],
+			Money.format(int(u["price_cp"]))]]
 	return ["%s: можно заказать «%s» за %s, работы — %s (кнопка в окне «Имущество»)" % [name_of(s, data, str(plan["place"])), u["name"],
 		Money.format(int(u["price_cp"])), CalendarRules.days_count(int(u["days"]))]]
 

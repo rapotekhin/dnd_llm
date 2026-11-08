@@ -1768,6 +1768,18 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 	})
 
 
+## The build screen (v0.8.4.42): «build» a row of the catalog `id` on `cell` (a passage's room named `name`), «remove»
+## what the hands built there. "" or a localization key.
+func build_act(what: String, id: String, cell: Vector2i, name: String = "") -> String:
+	if not _at_leisure():
+		return "BUILD_NOT_NOW"
+	var data := Catalog.data
+	return _act(what, {
+		"build": _row(BuildRules.build_why, BuildRules.build, [session, data, id, cell, name]),
+		"remove": _row(BuildRules.remove_why, BuildRules.remove, [session, data, cell]),
+	}, "BUILD_NOT_NOW")
+
+
 ## Own trade (v0.7.29): put / take (vid, arg — the item, amount — qty), price (arg — the item, amount ±1), collect,
 ## shift, hire (arg — the role), fire (arg — the person) (vid); charter, rent (npc, arg — the kind, amount — days);
 ## wholesale (npc, arg — the item). "" or a localization key.
