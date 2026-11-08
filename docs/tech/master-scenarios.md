@@ -347,6 +347,8 @@
 | Умение с использованиями | `use:feature {feature, amount}` (лечение умения считает движок) |
 | Зелье, свиток, жезл | `use:item {item_id}` |
 | Надеть, снять, раздеться | `rules("equip")` → `equip {slot, item_id?}`; переодевание тратит минуты |
+| Человек сцены надевает свою вещь («Бруно, надень кольцо») | `equip {npc_id, slot, item_id}` — по тем же правилам `Equip`; вещь героя он получает подарком кнопкой игрока и надевает сам в пустой слот (v0.8.4.40) |
+| Проклятая вещь против носящего («кольцо дружбы») | `make` статуса с частью `against` (навык или `all`, amount 1) → вещь с `wear.status` и `cursed`; подаренную NPC надевает сам, проверки героя против него — с преимуществом (v0.8.4.40) |
 
 - **Движок:** [SpellRules.check](../../game/core/rules/spell_rules.gd#L51), [Stock.use](../../game/core/character/stock.gd#L73), [ItemRules.can_use](../../game/core/items/item_rules.gd#L473), [_plan_equip](../../game/core/rules/effect_engine.gd).
 - **Golden:** `cast_spell_words`, `use_feature_words`, `spell_zone_of_truth`, `spell_minor_illusion`, `spell_speak_with_animals`, `strip_by_words`, `put_on_a_ring_by_words`, `throw_flask_out_of_combat`.

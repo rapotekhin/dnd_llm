@@ -2880,46 +2880,21 @@ func cancel_turn() -> void:
 
 ## Puts an owned item into an equipment slot (CharacterRules.SLOTS). "" on success, else a localization key.
 ## Not while the master thinks: the snapshot of the turn in flight would no longer match. `spare` — into the set put away.
-func equip(item_id: String, slot: String, both: bool = false, spare: bool = false) -> String:
+## `who` — whose: the hero, or a follower by its «Снаряжение» window (v0.8.4.40, Equip — one set of rules for anybody).
+func equip(item_id: String, slot: String, both: bool = false, spare: bool = false, who: String = Being.HERO) -> String:
 	if not _idle():
 		return "EQUIP_BUSY"
-	var c := session.character
-	if CharacterRules.HANDS.has(slot) and spare:
-		return _equip_stowed(item_id, slot)
-	var freed := CharacterRules.hands_freed(c, Catalog.data, session.items, item_id, slot, both)
-	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot) or freed.has("shield")) and session.mode == GameSession.MODE_COMBAT:
-		return "EQUIP_IN_COMBAT"
-	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot)
+	var why := Equip.why(session, Catalog.data, who, item_id, slot, spare, both)
 	if not why.is_empty():
 		return why
-	if ItemRules.held_by_curse(c, Catalog.data, session.items, str(c["equipped"].get(slot, ""))):
-		return "ITEM_CURSED"
-	var before: Dictionary = (c["equipped"] as Dictionary).duplicate()
-	if CharacterRules.HANDS.has(slot):  # the last copy in the set put away comes to the hands (v0.8.4.24)
-		CharacterRules.free_copy(c, item_id, CharacterRules.stowed(c), slot, c["equipped"])
-	c["equipped"][slot] = item_id
-	for sl: String in freed:  # both hands on the weapon: the shield and the off hand go to the pack
-		c["equipped"][sl] = ""
-	if slot == "main_hand" and str(c["equipped"].get("off_hand", "")) == item_id and int(c["inventory"][item_id]) < 2:
-		c["equipped"]["off_hand"] = ""
-	for pair: Array in [["ring1", "ring2"], ["ring2", "ring1"]]:  # one ring cannot be on two fingers
-		if slot == pair[0] and str(c["equipped"].get(pair[1], "")) == item_id and int(c["inventory"][item_id]) < 2:
-			c["equipped"][pair[1]] = ""
-	_gear_changed(before)
-	return ""
-
-
-## A thing of the row put away goes there without touching the hands (as in BG3).
-func _equip_stowed(item_id: String, slot: String) -> String:
-	var c := session.character
-	if slot == "shield" and session.mode == GameSession.MODE_COMBAT:
-		return "EQUIP_IN_COMBAT"
-	var why := CharacterRules.can_equip(c, Catalog.data, session.items, item_id, slot, true)
-	if not why.is_empty():
-		return why
-	CharacterRules.put_stowed(c, Catalog.data, session.items, item_id, slot)
-	_refresh()
-	EventBus.state_changed.emit()  # the sheet draws the set again (v0.8.4.24: it did not)
+	var c := Gear.of(session, Catalog.data, who)
+	var before: Dictionary = (c.get("equipped", {}) as Dictionary).duplicate()
+	Equip.put(session, Catalog.data, who, item_id, slot, spare, both)
+	if spare:  # a thing of the row put away goes there without touching the hands (as in BG3)
+		_refresh()
+		EventBus.state_changed.emit()
+		return ""
+	_gear_changed(before, who)
 	return ""
 
 
@@ -2933,15 +2908,23 @@ func swap_weapons() -> String:
 		func() -> Array[String]: return Acts.one("swap").go(session, Catalog.data, Sheet.HERO)]})
 
 
-func unequip_stowed(slot: String) -> void:
+## The «Снаряжение» window of a follower (v0.8.4.40): a thing handed over either way, the sets swapped. Equip's rules.
+func gear_act(what: String, who: String, item: String = "") -> String:
 	if not _idle():
-		return
-	if slot == "shield" and session.mode == GameSession.MODE_COMBAT:
-		EventBus.message.emit(tr("EQUIP_IN_COMBAT"))
-		return
-	CharacterRules.stowed(session.character)[slot] = ""
-	_refresh()
-	EventBus.state_changed.emit()
+		return "EQUIP_BUSY"
+	var data := Catalog.data
+	var s := session
+	return _act(what, {
+		"give": _row(Equip.hand_why, Equip.hand, [s, data, Being.HERO, who, item]),
+		"take": _row(Equip.hand_why, Equip.hand, [s, data, who, Being.HERO, item]),
+		"swap": [Equip.swap_why.bind(s, data, who), func() -> Array:
+			Equip.swap(s, data, who)
+			return []],
+	})
+
+
+func unequip_stowed(slot: String, who: String = Being.HERO) -> void:
+	unequip(slot, who, true)
 
 
 ## A thing onto the belt under the doll (v0.8.4.24): "" or the reason. Not in a fight, as in Pathfinder.
@@ -2968,25 +2951,28 @@ func belt_take(at: int) -> String:
 	return ""
 
 
-func unequip(slot: String) -> void:
+func unequip(slot: String, who: String = Being.HERO, spare: bool = false) -> void:
 	if not _idle():
 		return
-	if (slot == "armor" or slot == "shield" or CharacterRules.WEAR_SLOTS.has(slot)) and session.mode == GameSession.MODE_COMBAT:
-		EventBus.message.emit(tr("EQUIP_IN_COMBAT"))
+	var why := Equip.off_why(session, Catalog.data, who, slot, spare)
+	if not why.is_empty():
+		if why != "EQUIP_EMPTY":
+			EventBus.message.emit(tr(why))
 		return
-	if ItemRules.held_by_curse(session.character, Catalog.data, session.items, str(session.character["equipped"].get(slot, ""))):
-		EventBus.message.emit(tr("ITEM_CURSED"))
+	var before: Dictionary = (Gear.of(session, Catalog.data, who).get("equipped", {}) as Dictionary).duplicate()
+	Equip.off(session, Catalog.data, who, slot, spare)
+	if spare:
+		_refresh()
+		EventBus.state_changed.emit()
 		return
-	var before: Dictionary = (session.character["equipped"] as Dictionary).duplicate()
-	session.character["equipped"][slot] = ""
-	_gear_changed(before)
+	_gear_changed(before, who)
 
 
 ## After the sheet changed the gear: the minutes of armour (v0.7.7, rules.equip_minutes) pass and show in the chat
 ## and the history, so the master knows the hero is now in other clothes.
-func _gear_changed(before: Dictionary) -> void:
-	var c := session.character
-	CharacterRules.refresh(c, Catalog.data, session.items)
+func _gear_changed(before: Dictionary, who: String = Being.HERO) -> void:
+	var c := Gear.of(session, Catalog.data, who)
+	Equip.settle(session, Catalog.data, who)
 	var minutes := CharacterRules.gear_minutes(Catalog.data, session.items, before, c["equipped"])
 	if minutes > 0 and session.mode != GameSession.MODE_COMBAT:
 		var lines: Array[String] = []
@@ -2995,9 +2981,9 @@ func _gear_changed(before: Dictionary) -> void:
 			var now := str(c["equipped"].get(slot, ""))
 			if was != now:
 				if not was.is_empty():
-					lines.append("Снято: " + ItemRules.display_name(Catalog.data["items"], session.items, was))
+					lines.append(("Снято: " if who == Being.HERO else "%s снимает: " % WorldView.new(Catalog.data["world"]).npc_name(who)) + ItemRules.display_name(Catalog.data["items"], session.items, was))
 				if not now.is_empty():
-					lines.append("Надето: " + ItemRules.display_name(Catalog.data["items"], session.items, now))
+					lines.append(("Надето: " if who == Being.HERO else "%s надевает: " % WorldView.new(Catalog.data["world"]).npc_name(who)) + ItemRules.display_name(Catalog.data["items"], session.items, now))
 		lines.append("Переодевание: %d мин" % minutes)
 		lines.append_array(TimeRules.advance(session, Catalog.data, minutes))
 		_told(lines)

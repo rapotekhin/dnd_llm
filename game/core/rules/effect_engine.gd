@@ -892,68 +892,76 @@ func _plan_fight(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	return {"plan": {"foes": foes}, "summary": "Бой: " + ", ".join(foes.map(func(f: Dictionary) -> String: return "%s ×%d" % [f["name"], f["count"]]))}
 
 
-## Gear by words (v0.7.4): like the character sheet; `all` strips every slot; in a fight armour cannot change.
+## Gear by words (v0.7.4): like the character sheet; `all` strips every slot; in a fight armour cannot change. `npc_id`
+## (v0.8.4.40): a person of the scene or a follower puts on or takes off its own things by the same rules (Equip).
 func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
-	var c := s.character
+	var who := str(e.get("npc_id", "")) if e.get("npc_id") != null else ""
+	if who.is_empty():
+		who = Being.HERO
+	elif not s.npcs_here(data["world"], s.room_id).has(who):
+		return {"reason": "%s нет в сцене — надеть вещь можно только на того, кто рядом" % who}
+	elif CombatRules.active(s):
+		return {"reason": "в бою чужое снаряжение не меняют словами — только своё"}
+	var c := Gear.of(s, data, who)
+	var name := "" if who == Being.HERO else WorldView.name_of(data, who) + " — "
 	var slot := str(e.get("slot", ""))
 	var id := str(e.get("item_id", "")) if e.get("item_id") != null else ""
 	var eq: Dictionary = c.get("equipped", {})
 	if slot == "all":
-		if CombatRules.active(s) and not str(eq.get("armor", "")).is_empty():
-			return {"reason": "в бою доспех не снять — на это уходят минуты"}
 		var worn: Array[String] = []
 		for sl: String in CharacterRules.SLOTS:
-			if ItemRules.held_by_curse(c, data, s.items, str(eq.get(sl, ""))):
-				return {"reason": "%s проклят и не снимается — только «Снятие проклятия»" % ItemRules.display_name(data["items"], s.items, str(eq[sl]))}
 			if not str(eq.get(sl, "")).is_empty():
 				worn.append(ItemRules.display_name(data["items"], s.items, str(eq[sl])))
-		if worn.is_empty():
-			return {"reason": "на персонаже и так ничего не надето"}
-		return {"plan": {"slots": CharacterRules.SLOTS.duplicate(), "item_id": "", "stowed": true}, "summary": "Снято: %s" % ", ".join(worn)}
+		var why_all := Equip.strip_why(s, data, who)
+		if not why_all.is_empty():
+			return {"reason": _equip_reason(s, data, who, "", why_all, eq)}
+		return {"plan": {"who": who, "slots": CharacterRules.SLOTS.duplicate(), "item_id": "", "stowed": true}, "summary": ("%sснято: %s" if who != Being.HERO else "%sСнято: %s") % [name, ", ".join(worn)]}
 	if not CharacterRules.SLOTS.has(slot):
 		return {"reason": "нет такого слота: %s (%s, all)" % [slot, ", ".join(CharacterRules.SLOTS)]}
-	if CharacterRules.WEAR_SLOTS.has(slot) and CombatRules.active(s):
-		return {"reason": "в бою кольца, плащи и сапоги не меняют — на это уходит время"}
-	if (slot == "armor" or slot == "shield") and CombatRules.active(s):
-		return {"reason": "в бою %s не сменить — на это уходят минуты или целое действие" % ("доспех" if slot == "armor" else "щит")}
 	if not id.is_empty() and CharacterRules.HANDS.has(slot) and CharacterRules.stowed(c).values().has(id) and not eq.values().has(id):
-		return _plan_other_set(s, data, id, slot)  # a weapon of the set put away: that set comes to hand
-	if CombatRules.active(s) and not id.is_empty():  # drawing a weapon: free once a turn, then the action (5e)
+		return _plan_other_set(s, data, who, id, slot)  # a weapon of the set put away: that set comes to hand
+	if CombatRules.active(s) and not id.is_empty() and not (slot in ["armor", "shield"] or CharacterRules.WEAR_SLOTS.has(slot)):  # drawing a weapon: free once a turn, then the action (5e)
 		var econ := CombatRules.economy(s)
 		if bool(econ.get("object", false)) and int(econ.get("action", 0)) <= 0:
 			return {"reason": "в этот ход оружие уже доставали, а действие потрачено — сменить можно в следующий ход"}
-	if ItemRules.held_by_curse(c, data, s.items, str(eq.get(slot, ""))):
-		return {"reason": "%s проклят и не снимается — только «Снятие проклятия»" % ItemRules.display_name(data["items"], s.items, str(eq[slot]))}
 	if id.is_empty():
-		if str(eq.get(slot, "")).is_empty():
-			return {"reason": "в слоте %s и так пусто" % slot}
-		return {"plan": {"slots": [slot], "item_id": ""}, "summary": "Снято: %s" % ItemRules.display_name(data["items"], s.items, str(eq[slot]))}
-	var why := CharacterRules.can_equip(c, data, s.items, id, slot)
+		var off := Equip.off_why(s, data, who, slot)
+		if not off.is_empty():
+			return {"reason": _equip_reason(s, data, who, slot, off, eq)}
+		return {"plan": {"who": who, "slots": [slot], "item_id": ""}, "summary": ("%sснято: %s" if who != Being.HERO else "%sСнято: %s") % [name, ItemRules.display_name(data["items"], s.items, str(eq[slot]))]}
+	var why := Equip.why(s, data, who, id, slot)
 	if not why.is_empty():
-		return {"reason": "нельзя надеть %s в %s: %s" % [id, slot, tr(why)]}
-	var freed := CharacterRules.hands_freed(c, data, s.items, id, slot)
-	if freed.has("shield") and CombatRules.active(s):
-		return {"reason": "двуручное в бою не взять со щитом — щит снимают целым действием"}
-	return {"plan": {"slots": [slot], "item_id": id, "freed": freed}, "summary": "Надето: %s" % ItemRules.display_name(data["items"], s.items, id)}
+		return {"reason": _equip_reason(s, data, who, slot, why, eq, id)}
+	return {"plan": {"who": who, "slots": [slot], "item_id": id}, "summary": ("%sнадето: %s" if who != Being.HERO else "%sНадето: %s") % [name, ItemRules.display_name(data["items"], s.items, id)]}
 
 
-## A weapon of the set put away (v0.8.4.1): the hero takes up that set, free, and the weapon is in hand.
-func _plan_other_set(s: GameSession, data: Dictionary, id: String, slot: String) -> Dictionary:
-	var c := s.character
-	for sl: String in CharacterRules.HANDS:
-		if ItemRules.held_by_curse(c, data, s.items, str(c.get("equipped", {}).get(sl, ""))):
-			return {"reason": "%s проклят и не снимается — только «Снятие проклятия»" % ItemRules.display_name(data["items"], s.items, str(c["equipped"][sl]))}
-	var probe := c.duplicate(true)
+## A refusal of Equip in words for the master.
+func _equip_reason(s: GameSession, data: Dictionary, who: String, slot: String, why: String, eq: Dictionary, id := "") -> String:
+	match why:
+		"ITEM_CURSED":
+			var held := str(eq.get(slot, "")) if not slot.is_empty() else ""
+			if held.is_empty():
+				for sl: String in CharacterRules.SLOTS:
+					if ItemRules.held_by_curse(Gear.of(s, data, who), data, s.items, str(eq.get(sl, ""))):
+						held = str(eq[sl])
+			return "%s проклят и не снимается — только «Снятие проклятия»" % ItemRules.display_name(data["items"], s.items, held)
+		"EQUIP_IN_COMBAT":
+			return "в бою доспех, щит, кольца, плащи и сапоги не меняют — на это уходят минуты или целое действие"
+		"EQUIP_EMPTY":
+			return "в слоте %s и так пусто" % slot if not slot.is_empty() else "и так ничего не надето"
+	return "нельзя надеть %s в %s: %s" % [id, slot, tr(why)]
+
+
+## A weapon of the set put away (v0.8.4.1): it takes up that set, free, and the weapon is in hand.
+func _plan_other_set(s: GameSession, data: Dictionary, who: String, id: String, slot: String) -> Dictionary:
+	var swap := Equip.swap_why(s, data, who)
+	if not swap.is_empty():
+		return {"reason": _equip_reason(s, data, who, "main_hand", swap, Gear.of(s, data, who).get("equipped", {}))}
+	var probe := Gear.of(s, data, who).duplicate(true)
 	CharacterRules.swap_hands(probe)
 	if str(probe["equipped"].get(slot, "")) == id:
-		return {"plan": {"slots": [], "item_id": id, "swap": true}, "summary": "В руках: %s" % ItemRules.display_name(data["items"], s.items, id)}
-	var why := CharacterRules.can_equip(probe, data, s.items, id, slot)
-	if not why.is_empty():
-		return {"reason": "нельзя надеть %s в %s: %s" % [id, slot, tr(why)]}
-	var freed := CharacterRules.hands_freed(probe, data, s.items, id, slot)
-	if freed.has("shield") and CombatRules.active(s):
-		return {"reason": "двуручное в бою не взять со щитом — щит снимают целым действием"}
-	return {"plan": {"slots": [slot], "item_id": id, "freed": freed, "swap": true}, "summary": "Надето: %s" % ItemRules.display_name(data["items"], s.items, id)}
+		return {"plan": {"who": who, "slots": [], "item_id": id, "swap": true}, "summary": "В руках: %s" % ItemRules.display_name(data["items"], s.items, id)}
+	return {"reason": "%s лежит в другом наборе не в слоте %s — сначала смена набора" % [ItemRules.display_name(data["items"], s.items, id), slot]}
 
 
 ## Opening a locked container by words (v0.7.18.1): a key the hero carries, or a check of this turn that beat the lock
@@ -1408,15 +1416,19 @@ func _do_flag(s: GameSession, plan: Dictionary) -> void:
 
 
 func _do_equip(s: GameSession, plan: Dictionary) -> void:
-	var before: Dictionary = (s.character["equipped"] as Dictionary).duplicate()
+	var who := str(plan.get("who", Being.HERO))
+	var c := Gear.of(s, _data, who)
+	var before: Dictionary = (c.get("equipped", {}) as Dictionary).duplicate()
 	if bool(plan.get("swap", false)):
-		CharacterRules.swap_hands(s.character)
-	if bool(plan.get("stowed", false)):
-		s.character["stowed"] = {}
-	for sl: Variant in plan["slots"]:
-		s.character["equipped"][str(sl)] = str(plan["item_id"])
-	for sl: Variant in plan.get("freed", []):  # a two-handed weapon empties the other hand
-		s.character["equipped"][str(sl)] = ""
+		Equip.swap(s, _data, who)
+	elif bool(plan.get("stowed", false)):
+		Equip.strip(s, _data, who)
+	elif str(plan["item_id"]).is_empty():
+		for sl: Variant in plan["slots"]:
+			Equip.off(s, _data, who, str(sl))
+	else:
+		for sl: Variant in plan["slots"]:
+			Equip.put(s, _data, who, str(plan["item_id"]), str(sl))
 	if CombatRules.active(s):
 		if not str(plan["item_id"]).is_empty() and not bool(plan.get("swap", false)):
 			var econ := CombatRules.economy(s)
@@ -1424,14 +1436,10 @@ func _do_equip(s: GameSession, plan: Dictionary) -> void:
 				econ["action"] = int(econ.get("action", 0)) - 1
 			econ["object"] = true
 	else:
-		var minutes := CharacterRules.gear_minutes(_data, s.items, before, s.character["equipped"])
+		var minutes := CharacterRules.gear_minutes(_data, s.items, before, c.get("equipped", {}))
 		if minutes > 0:
 			_extra_lines.append("Переодевание: %d мин" % minutes)
 			_extra_lines.append_array(TimeRules.advance(s, _data, minutes))
-	var main := str(s.character["equipped"].get("main_hand", ""))
-	if not main.is_empty() and str(s.character["equipped"].get("off_hand", "")) == main and int(s.character["inventory"].get(main, 0)) < 2:
-		s.character["equipped"]["off_hand"] = ""
-	CharacterRules.refresh(s.character, _data, s.items)
 
 
 func _do_follow(s: GameSession, plan: Dictionary) -> void:

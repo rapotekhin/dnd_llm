@@ -89,10 +89,11 @@ func test_a_foe_spends_its_bolts_and_without_them_has_no_bow() -> void:
 
 func test_what_it_has_makes_its_blows_and_its_ac() -> void:
 	var s := _hero()
-	Gear.give(s, data, "npc_serving", "longsword")
-	Gear.give(s, data, "npc_serving", "chain_shirt")
+	Gear.give(s, data, "npc_serving", "longsword")  # its club is in the hand: the sword stays in the pack (v0.8.4.40)
+	Gear.give(s, data, "npc_serving", "leather_armor")  # light armour goes on by itself; a chain shirt is past a commoner
+	Equip.put(s, data, "npc_serving", "longsword", "main_hand")
 	var f := _foe(s, {"monster": "commoner", "npc_id": "npc_serving"})
-	assert_int(int(f["ac"])).is_equal(13)  # a commoner of AC 10 in a chain shirt
+	assert_int(int(f["ac"])).is_equal(11)  # a commoner of AC 10 in leather
 	assert_bool((Sheet.template(data, f)["actions"] as Array).any(func(a: Dictionary) -> bool: return str(a.get("item", "")) == "longsword")).is_true()
 	var t := _hero()
 	var bare := _foe(t, {"monster": "bandit", "gear": {"scimitar": 1}})

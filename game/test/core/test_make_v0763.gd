@@ -19,7 +19,7 @@ func _hero(level: int = 5) -> GameSession:
 
 func _rot() -> Dictionary:
 	return {"kind": "make", "what": "status", "key": "rot", "name": "Чёрная вода", "text": "Слабость от проклятой воды.",
-		"parts": [{"part": "checks", "value": "disadvantage"}, {"part": "ac", "amount": -1}]}
+		"parts": [{"part": "check", "value": "all", "amount": -1}, {"part": "ac", "amount": -1}]}
 
 
 func _made(s: GameSession, e: Dictionary) -> Dictionary:
@@ -44,8 +44,8 @@ func test_a_strong_thing_cannot_be_given_to_a_weak_hero_nor_priced_down() -> voi
 	assert_str(str(MakeRules.plan(_hero(1), data, strong).get("reason", ""))).contains("уровня")
 	assert_bool(MakeRules.plan(_hero(5), data, strong).has("plan")).is_true()
 	var mighty: Dictionary = strong.duplicate(true)
-	(mighty["parts"] as Array).append_array([{"part": "attacked", "value": "disadvantage"}, {"part": "resist", "value": "fire"},
-		{"part": "resist", "value": "cold"}, {"part": "resist", "value": "acid"}])
+	(mighty["parts"] as Array).append_array([{"part": "attacked", "value": "disadvantage"}, {"part": "damage", "value": "fire", "amount": 1},
+		{"part": "damage", "value": "cold", "amount": 1}, {"part": "damage", "value": "acid", "amount": 1}])
 	assert_str(str(MakeRules.plan(_hero(20), data, mighty).get("reason", ""))).contains("не собирает")
 
 
@@ -70,7 +70,7 @@ func test_a_made_status_works_as_any_on_the_hero() -> void:
 	ConditionRules.impose(s, data, {"condition": id, "ends": {"rest": "long"}, "source": {"kind": "master", "name": "колодец"}})
 	CharacterRules.refresh(s.character, data, s.items)
 	assert_int(int(s.character["ac"])).is_equal(ac - 1)
-	assert_array(ConditionRules.check_mods(s.character, data, {"skill": "athletics"})["disadvantage"]).contains([id])
+	assert_array(CheckEngine.situation(s, data, Sheet.HERO, {"skill": "athletics"})["dis"]).contains(["колодец"])  # v0.8.4.40: the part `check`
 	var chip: Dictionary = ConditionRules.shown(s, data).filter(func(e: Dictionary) -> bool: return e["condition"] == id)[0]
 	assert_str(str(chip["name"])).is_equal("Чёрная вода")
 	assert_str(str(chip["text"])).contains("проклятой воды")
@@ -148,7 +148,7 @@ func test_a_trait_costs_double_and_must_help() -> void:
 	var s := _hero(1)
 	var e := {"kind": "make", "what": "trait", "key": "k", "name": "Кожа", "text": "Твёрже камня.", "parts": [{"part": "ac", "amount": 2}]}
 	assert_str(str(MakeRules.plan(s, data, e).get("reason", ""))).contains("уровня")  # 4 × 2 = 8 points
-	e["parts"] = [{"part": "checks", "value": "disadvantage"}]
+	e["parts"] = [{"part": "check", "value": "all", "amount": -1}]
 	assert_str(str(MakeRules.plan(s, data, e).get("reason", ""))).contains("без пользы")
 
 
@@ -212,7 +212,7 @@ func test_every_number_of_a_status_reaches_the_rules_of_the_hero() -> void:
 	var c := s.character
 	var speed := CharacterRules.speed(c, data)
 	var id := str(_made(s, {"kind": "make", "what": "status", "key": "k", "name": "Милость", "text": "Много всего.", "parts": [
-		{"part": "speed", "amount": 10}, {"part": "resist", "value": "fire"}, {"part": "save_adv", "value": "wis"},
+		{"part": "speed", "amount": 10}, {"part": "damage", "value": "fire", "amount": 1}, {"part": "save", "value": "wis", "amount": 1},
 		{"part": "skill_bonus", "value": "athletics", "amount": 3}, {"part": "die", "value": "check", "amount": 1}]})["id"])
 	ConditionRules.impose(s, data, {"condition": id, "ends": {"rest": "long"}, "source": {"kind": "master", "name": "родник"}})
 	assert_int(CharacterRules.speed(c, data)).is_equal(speed + 10)

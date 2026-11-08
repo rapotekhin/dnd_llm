@@ -280,6 +280,10 @@ static func _save_situation(s: GameSession, data: Dictionary, who: Dictionary, a
 		fail.append(ConditionRules.why(data, str(id)))
 	if dis_extra:
 		dis.append("обстоятельства")
+	var tags := tag.split(",", false)
+	for e: Dictionary in ItemRules.born_effects(data, holder(s, who)):  # a made status, a cursed thing (v0.8.4.40)
+		if ConditionRules.lists(e.get("save_dis"), ab) or (e.get("dis_tag", []) as Array).any(func(x: Variant) -> bool: return tags.has(str(x))):
+			dis.append(str(e.get("source", {}).get("name", "")))
 	for k: String in ["adv_why", "dis_why", "fail_why"]:
 		for x: String in CheckEngine.whys(opts.get(k)):  # a text or a list
 			({"adv_why": adv, "dis_why": dis, "fail_why": fail}[k] as Array).append(x)

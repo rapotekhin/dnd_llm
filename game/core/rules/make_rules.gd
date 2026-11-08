@@ -212,8 +212,8 @@ static func price(data: Dictionary, name: String, parts: Array) -> Dictionary:
 		var harm := _harm(spec, value, amount)
 		out["harm"] = bool(out["harm"]) or harm
 		out["boon"] = bool(out["boon"]) or not harm
-		out["points"] = int(out["points"]) + _cost(spec, amount)
-		_lay(out, id, value, amount, name)
+		out["points"] = int(out["points"]) + _cost(spec, amount, value)
+		_lay(data, out, id, value, amount, name)
 	return out
 
 
@@ -230,6 +230,10 @@ static func _valid(data: Dictionary, spec: Dictionary, id: String, value: String
 			known = (data["rules"]["skills"] as Dictionary).keys()
 		"ability":
 			known = data["rules"]["saves"]
+		"skill_all":  # v0.8.4.40: a skill or every check
+			known = (data["rules"]["skills"] as Dictionary).keys() + ["all"]
+		"ability_all":
+			known = (data["rules"]["saves"] as Array) + ["all"]
 		"damage":
 			known = (data["misc"]["damage_types"] as Dictionary).keys()
 		"condition":
@@ -240,6 +244,8 @@ static func _valid(data: Dictionary, spec: Dictionary, id: String, value: String
 
 
 static func _harm(spec: Dictionary, value: String, amount: int) -> bool:
+	if str(spec.get("harm", "")) == "+":  # a boon to the others is a harm to it (v0.8.4.40: checks against it)
+		return amount > 0
 	if spec.has("harm"):
 		return str(spec["harm"]) == value if spec["harm"] is String else bool(spec["harm"])
 	return amount < 0
@@ -248,29 +254,36 @@ static func _harm(spec: Dictionary, value: String, amount: int) -> bool:
 static func _cost(spec: Dictionary, amount: int, value: String = "") -> int:
 	if spec.has("costs"):
 		return int(spec["costs"].get(value, 0))
+	var mult := int(spec.get("all_mult", 1)) if value == "all" else 1
 	if spec.has("number"):
-		return int(spec["cost"]) * absi(amount) / int(spec.get("step", 1))
-	return int(spec["cost"])
+		return int(spec["cost"]) * absi(amount) / int(spec.get("step", 1)) * mult
+	return int(spec["cost"]) * mult
 
 
 ## One part into the status's row (read by ConditionRules) or its effect (read by the rules of numbers).
-static func _lay(out: Dictionary, id: String, value: String, amount: int, name: String) -> void:
+static func _lay(data: Dictionary, out: Dictionary, id: String, value: String, amount: int, name: String) -> void:
 	var row: Dictionary = out["row"]
 	var f: Dictionary = out["fx"]
 	match id:
 		"attack", "attacked":
 			row[id] = value
 			row[id + "_why"] = name
-		"checks":
-			row["checks"] = value
 		"no_move":
 			row["no_move"] = true
-		"skill_dis":
-			row["skills"] = (row.get("skills", {}) as Dictionary).merged({value: "disadvantage"})
-		"save_dis":
-			row["saves"] = (row.get("saves", {}) as Dictionary).merged({value: "disadvantage"})
-		"save_adv":
-			f["save_adv"] = (f.get("save_adv", []) as Array) + [value]
+		"check", "save":  # v0.8.4.40: advantage or disadvantage on a skill's checks, an ability's saves, or all of them
+			var key := id + ("_adv" if amount > 0 else "_dis")
+			f[key] = (f.get(key, []) as Array) + [value]
+		"against":  # the checks of the others against it (a cursed Ring of Friendship)
+			f["against"] = (f.get("against", {}) as Dictionary).merged({value: "advantage" if amount > 0 else "disadvantage"}, true)
+		"damage":
+			var to: String = {-1: "vulnerable", 1: "resist", 2: "immune"}[amount]
+			f[to] = (f.get(to, []) as Array) + [value]
+		"condition":  # its saves against it by the condition's tag, or no hold at all
+			if amount == 2:
+				f["immune"] = (f.get("immune", []) as Array) + [value]
+			else:
+				var key := "adv_tag" if amount > 0 else "dis_tag"
+				f[key] = (f.get(key, []) as Array) + Array(HeroDefense.cond_tags(data, [value]).split(",", false))
 		"skill_bonus":
 			f["skill_bonus"] = (f.get("skill_bonus", {}) as Dictionary).merged({value: amount})
 		"ac":

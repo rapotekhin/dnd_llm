@@ -641,8 +641,9 @@ static func _two_handed(data: Dictionary, session_items: Dictionary, id: String)
 
 
 ## Best starting kit: the heaviest armor with proficiency, a melee weapon in hand, the best ranged one in the other set,
-## a shield when the hand is free.
-static func auto_equip(c: Dictionary, data: Dictionary) -> void:
+## a shield when the hand is free. `full` — every weapon in a hand (a template's gear, v0.8.4.40: it strikes only with what
+## it holds): one that finds its set taken goes to the other, a second light blade to the off hand when there is no shield.
+static func auto_equip(c: Dictionary, data: Dictionary, full := false) -> void:
 	var eq := {"armor": "", "shield": "", "main_hand": "", "off_hand": ""}
 	c["equipped"] = eq
 	var best_ac := -1
@@ -657,10 +658,13 @@ static func auto_equip(c: Dictionary, data: Dictionary) -> void:
 			weapons.append(id)
 	weapons.sort_custom(func(a: String, b: String) -> bool: return _weapon_rank(data, a) > _weapon_rank(data, b))
 	c["stowed"] = {}
+	var left: Array[String] = []
 	for id: String in weapons:
 		var row: Dictionary = stowed(c) if set_kind(ItemRules.def_of(data["items"], {}, id)) == "ranged" else eq
 		if str(row.get("main_hand", "")).is_empty():
 			row["main_hand"] = id
+		else:
+			left.append(id)
 	if str(eq["main_hand"]).is_empty():
 		swap_hands(c)
 	for id: String in c.get("inventory", {}):
@@ -672,6 +676,19 @@ static func auto_equip(c: Dictionary, data: Dictionary) -> void:
 		if can_equip(c, data, {}, id, "shield", true).is_empty():  # a bow in both hands: the shield with the blade
 			stowed(c)["shield"] = id
 			break
+	if not full:
+		return
+	var main := str(eq.get("main_hand", ""))
+	for id: String in left + ([main] as Array[String]):  # a second blade in the free hand (a captain's dagger)
+		if not main.is_empty() and can_equip(c, data, {}, id, "off_hand").is_empty():
+			eq["off_hand"] = id
+			left.erase(id)
+			break
+	for id: String in left:  # the rest in the empty hands of the other set (an orc's javelin)
+		for row: Dictionary in [stowed(c), eq]:
+			if str(row.get("main_hand", "")).is_empty():
+				row["main_hand"] = id
+				break
 
 
 static func _weapon_rank(data: Dictionary, id: String) -> int:

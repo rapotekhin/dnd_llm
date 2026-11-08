@@ -26,7 +26,10 @@ static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
 	var cp := mini(int(c.get("gold_cp", 0)), int(cfg(data)["handful_cp"]))
 	if cp > 0:
 		out.append({"id": COINS, "name": "Кошель", "item_id": "", "cp": cp, "qty": 1, "worn": false})
-	var on: Array = (c.get("equipped", {}) as Dictionary).values()
+	var on: Array = []  # on its back: armour, a shield, rings — a weapon in its hands is in reach, at a harder DC (`worn`)
+	for slot: String in c.get("equipped", {}):
+		if not slot in ["main_hand", "off_hand"]:
+			on.append(c["equipped"][slot])
 	var items: Array = (c["inventory"] as Dictionary).keys()
 	items.sort()  # one order before and after a save
 	for item: String in items:

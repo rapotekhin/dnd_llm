@@ -7,7 +7,7 @@ extends RefCounted
 ## treasure. In a fight they lie on the fighter, as its statuses do (`arm`), and go back to the record at its end (`back`).
 ## A trader's purse is this `gold_cp`: one till for the trade, the pockets and the stakes.
 
-const KEYS: Array[String] = ["inventory", "gold_cp", "equipped", "copies"]
+const KEYS: Array[String] = ["inventory", "gold_cp", "equipped", "copies", "stowed", "attuned"]
 
 
 ## The holder of what `id` has: the hero's sheet, the fighter in a fight, the record otherwise. For writing.
@@ -19,7 +19,7 @@ static func of(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 		return b["fight"]
 	if not b.has("inventory"):
 		_fill(s, data, id, b)
-	_rearm(s, data, b)
+	_rearm(s, data, id, b)
 	return b
 
 
@@ -43,6 +43,7 @@ static func _fill(s: GameSession, data: Dictionary, id: String, b: Dictionary) -
 		_add(data, inv, item, int(kit["inventory"][item]))
 	b["inventory"] = inv
 	b["equipped"] = kit["equipped"]
+	b["stowed"] = kit["stowed"]
 
 
 static func _add(data: Dictionary, inv: Dictionary, item: String, qty: int) -> void:
@@ -50,11 +51,12 @@ static func _add(data: Dictionary, inv: Dictionary, item: String, qty: int) -> v
 		inv[item] = int(inv.get(item, 0)) + qty
 
 
-## What a template comes with: its SRD gear with the ammunition for it and `rules.creatures.kit`; armour and a shield are worn.
+## What a template comes with: its SRD gear with the ammunition for it and `rules.creatures.kit`. Its SRD gear is on it as
+## the hero's kit would be (v0.8.4.40, CharacterRules.auto_equip): armour and a shield worn, a blade in the hands with a
+## second light one in the other, a bow in the set put away — it strikes with what it holds, as anybody.
 static func start(data: Dictionary, tid: String) -> Dictionary:
 	var m: Dictionary = data["monsters"].get(tid, {})
 	var inv := {}
-	var worn := {}
 	var ammo: Dictionary = ItemRules.cfg(data)["ammo"]
 	var all: Array = (m.get("equipment", []) as Array) + (data["rules"]["creatures"]["kit"].get(tid, []) as Array)
 	for v: Variant in all:
@@ -64,10 +66,29 @@ static func start(data: Dictionary, tid: String) -> Dictionary:
 		_add(data, inv, item, 1)
 		if ammo.has(item):  # what it shoots with
 			_add(data, inv, str(ammo[item]), int(data["rules"]["creatures"]["foe_ammo"]))
-		var slot := _slot(data["items"]["catalog"][item])
-		if not slot.is_empty() and not worn.has(slot):
-			worn[slot] = item
-	return {"inventory": inv, "equipped": worn}
+	var own := {}
+	for v: Variant in m.get("equipment", []):
+		if inv.has(str(v)):
+			own[str(v)] = int(inv[str(v)])
+	var body := {"inventory": own, "armor_profs": ["light", "medium", "heavy", "shield"]}  # its own gear is what it is made to wear
+	CharacterRules.auto_equip(body, data, true)
+	return {"inventory": inv, "equipped": body["equipped"], "stowed": body["stowed"]}
+
+
+## Where each of its weapons lay as it came: {"equipped.main_hand": item, "stowed.main_hand": item…}.
+static func layout(data: Dictionary, tid: String) -> Dictionary:
+	return _hand_slots(start(data, tid))
+
+
+## The weapons in the hands of both sets: {"equipped.<slot>" or "stowed.<slot>": item}, the hands first.
+static func _hand_slots(c: Dictionary) -> Dictionary:
+	var out := {}
+	for row: String in ["equipped", "stowed"]:
+		for slot: String in ["main_hand", "off_hand"]:
+			var item := str((c.get(row, {}) as Dictionary).get(slot, ""))
+			if not item.is_empty():
+				out[row + "." + slot] = item
+	return out
 
 
 ## The slot armour or a shield is worn in; "" for anything else.
@@ -105,15 +126,10 @@ static func count(s: GameSession, data: Dictionary, id: String, item: String) ->
 	return int(of(s, data, id)["inventory"].get(item, 0))
 
 
-## A thing into its hands; armour or a shield is put on when it wears none.
+## A thing into its hands; it goes on by itself where its place is free (Equip.fill: armour, a shield, a weapon, a ring).
 static func give(s: GameSession, data: Dictionary, id: String, item: String, qty: int = 1) -> void:
-	var c := of(s, data, id)
-	ItemRules.add(c, item, qty)
-	var slot := _slot(ItemRules.def_of(data["items"], s.items, item))
-	var worn_now: Dictionary = c.get("equipped", {})
-	if not slot.is_empty() and str(worn_now.get(slot, "")).is_empty():
-		worn_now[slot] = item
-		c["equipped"] = worn_now
+	ItemRules.add(of(s, data, id), item, qty)
+	Equip.fill(s, data, id, item)
 
 
 ## Takes up to `qty` of a thing (all of it when < 0): ItemRules.remove. How many.
@@ -127,7 +143,7 @@ static func strip(s: GameSession, data: Dictionary, id: String, keep_worn: bool)
 	var tid := Sheet.template_id(data, WorldView.new(data["world"]).npc(id))
 	var out := {"cp": int(c.get("gold_cp", 0)), "items": {}}
 	Ledger.purse(c, 0)
-	var on: Array = (c.get("equipped", {}) as Dictionary).values()
+	var on: Array = (c.get("equipped", {}) as Dictionary).values() + CharacterRules.stowed(c).values()
 	for item: String in (c["inventory"] as Dictionary).keys():
 		if keep_worn and (on.has(item) or worn(data, tid, item)):
 			continue
@@ -136,13 +152,17 @@ static func strip(s: GameSession, data: Dictionary, id: String, keep_worn: bool)
 
 
 ## A weapon stolen out of its hands comes back after `rules.theft.rearm_days` (v0.7.22.8): it bought a new one.
-static func _rearm(s: GameSession, data: Dictionary, b: Dictionary) -> void:
+static func _rearm(s: GameSession, data: Dictionary, id: String, b: Dictionary) -> void:
 	var gone: Dictionary = b.get("disarmed", {})
+	var back: Array[String] = []
 	for item: String in gone.keys():
 		if s.day - int(gone[item]) >= int(TheftRules.cfg(data).get("rearm_days", 3)):
 			if int(b["inventory"].get(item, 0)) <= 0:
 				b["inventory"][item] = 1
 			gone.erase(item)
+			back.append(item)
+	for item: String in back:  # the new one is in its hand (v0.8.4.40: it strikes only with what it holds)
+		Equip.fill(s, data, id, item)
 
 
 # --- a fight -------------------------------------------------------------------------------------------------------
@@ -155,12 +175,13 @@ static func arm(s: GameSession, data: Dictionary, f: Dictionary, spec: Dictionar
 	var tid := str(f["monster"])
 	if spec.get("gear") is Dictionary:
 		f["inventory"] = (spec["gear"] as Dictionary).duplicate()
-		var was: Dictionary = start(data, tid)["equipped"]
-		var on := {}
-		for slot: String in was:
-			if f["inventory"].has(was[slot]):
-				on[slot] = was[slot]
-		f["equipped"] = on
+		var kit := start(data, tid)
+		for row: String in ["equipped", "stowed"]:
+			var on := {}
+			for slot: String in kit[row]:
+				if f["inventory"].has(kit[row][slot]):
+					on[slot] = kit[row][slot]
+			f[row] = on
 	elif Being.view(s, id).has("inventory") or not str(f.get("npc_id", "")).is_empty():
 		var mine := of(s, data, id)
 		for k: String in KEYS:
@@ -191,10 +212,19 @@ static func follow(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 	f["ac"] = ac(s, data, tid, f)
 
 
+## Its blows by what it holds (v0.8.4.40, the author: no difference between a person, a monster and the hero): a template's
+## action with a weapon only while that weapon is in the hands of one of its sets — one of the set put away is `stowed`,
+## struck after a free swap (the act «Атака»); natural ones (a bite, a claw) always. A weapon in its hands the template
+## does not know is a blow of its own (`_blow`); in the hand of a lost one it carries that one's name, so its Multiattack
+## strikes with what is in the hand now (a scimitar swapped for a longsword: «Длинный меч ×2»). Nothing in the hands — fists.
 static func actions(s: GameSession, data: Dictionary, tid: String, c: Dictionary) -> Array:
 	var m: Dictionary = data["monsters"][tid]
-	var inv: Dictionary = c.get("inventory", {})
 	var ammo: Dictionary = ItemRules.cfg(data)["ammo"]
+	var hands := _hand_slots(c)
+	var where := {}  # item: "equipped" or "stowed", the hands first
+	for key: String in hands:
+		if not where.has(hands[key]):
+			where[hands[key]] = key.get_slice(".", 0)
 	var lost: Array[String] = []
 	var held: Array[String] = []
 	for a: Dictionary in m["actions"]:
@@ -202,14 +232,37 @@ static func actions(s: GameSession, data: Dictionary, tid: String, c: Dictionary
 		if item.is_empty():
 			continue
 		held.append(item)
-		if not inv.has(item) or (ammo.has(item) and ammo_left(data, c, str(ammo[item])) <= 0):
+		if not where.has(item) or (ammo.has(item) and ammo_left(data, c, str(ammo[item])) <= 0):
 			lost.append(item)
-	var out: Array = TheftRules.without(m["actions"], lost)
-	for item: String in inv:
+	var out: Array = []
+	for a: Dictionary in TheftRules.without(m["actions"], lost):
+		if str(where.get(str(a.get("item", "")), "")) == "stowed":
+			a = a.duplicate()
+			a["stowed"] = true
+		out.append(a)
+	var named := {}  # the hand of a lost action: its name goes to what is there now
+	var was := layout(data, tid)
+	for a: Dictionary in m["actions"]:
+		for key: String in was:
+			if lost.has(str(a.get("item", ""))) and str(was[key]) == str(a["item"]) and not named.has(key):
+				named[key] = str(a.get("name_en", ""))
+	var fresh: Array = []
+	var seen: Array[String] = []
+	for key: String in hands:
+		var item := str(hands[key])
 		var w: Dictionary = ItemRules.def_of(data["items"], s.items, item).get("weapon", {})
-		if not w.is_empty() and not held.has(item) and (not ammo.has(item) or ammo_left(data, c, str(ammo[item])) > 0):
-			out = out + [_blow(s, data, c, m, item)]
-	return out
+		if w.is_empty() or held.has(item) or seen.has(item) or (ammo.has(item) and ammo_left(data, c, str(ammo[item])) <= 0):
+			continue
+		seen.append(item)
+		var b := _blow(s, data, c, m, item)
+		if named.has(key):
+			b["name_en"] = named[key]
+		if key.begins_with("stowed"):
+			b["stowed"] = true
+		fresh.append(b)
+	if fresh.any(func(b: Dictionary) -> bool: return str(b["kind"]) == "melee"):
+		out = out.filter(func(a: Dictionary) -> bool: return a.has("item") or m["actions"].has(a))  # a blade, not fists
+	return out + fresh
 
 
 ## A blow with a weapon its template does not know, as the hero's hands would have it (v0.8.4.15): CombatRules.weapon_profile

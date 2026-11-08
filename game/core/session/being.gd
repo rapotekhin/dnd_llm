@@ -5,7 +5,8 @@ extends RefCounted
 ## nothing happened: no such key. A change of state is a change of a field, not a move between stores.
 ##
 ## attitude, attitude_base — the mood towards the hero and where it starts; memory [{day, text}] — what it remembers;
-## inventory, gold_cp, equipped, copies — what it has, in the hero's form (Gear, v0.8.4.10); picked, caught — the day its
+## inventory, gold_cp, equipped, copies — what it has, in the hero's form (Gear, v0.8.4.10); stowed, attuned, belt — its other
+## weapon set, the things it is attuned to and its belt, as the hero's (Equip, v0.8.4.40); picked, caught — the day its
 ## pockets were tried and the day it caught a thief;
 ## hp — its wounds between fights, full when absent; effects, conditions, next_effect — its statuses as on the hero
 ## (ConditionRules, v0.7.63): a spell on it, a poison kept after a fight; sick {id} — the pack's disease was laid on it as an effect (DiseaseRules, v0.8.4.11); dead true; body — the room it lies in, body_at — since when (an absolute minute), searched
@@ -32,7 +33,7 @@ const PARTS := {
 	"id": TYPE_STRING, "n": TYPE_INT, "monster": TYPE_STRING, "name": TYPE_STRING, "base": TYPE_STRING, "desc": TYPE_STRING, "sheet": TYPE_DICTIONARY,
 	"faction": TYPE_STRING, "encounter": TYPE_STRING, "no_xp": TYPE_BOOL,
 	"attitude": TYPE_INT, "attitude_base": TYPE_INT, "memory": TYPE_ARRAY, "inventory": TYPE_DICTIONARY, "gold_cp": TYPE_INT,
-	"equipped": TYPE_DICTIONARY, "copies": TYPE_DICTIONARY, "picked": TYPE_INT, "caught": TYPE_INT,
+	"equipped": TYPE_DICTIONARY, "copies": TYPE_DICTIONARY, "stowed": TYPE_DICTIONARY, "attuned": TYPE_ARRAY, "belt": TYPE_ARRAY, "picked": TYPE_INT, "caught": TYPE_INT,
 	"hp": TYPE_INT, "effects": TYPE_ARRAY, "conditions": TYPE_ARRAY, "next_effect": TYPE_INT, "sick": TYPE_DICTIONARY, "dead": TYPE_BOOL, "body": TYPE_STRING,
 	"body_at": TYPE_INT, "repose_until": TYPE_INT, "searched": TYPE_BOOL, "disarmed": TYPE_DICTIONARY, "follows": TYPE_INT, "fed": TYPE_DICTIONARY, "at": TYPE_STRING,
 	"discount": TYPE_DICTIONARY, "favor": TYPE_INT, "spent": TYPE_DICTIONARY, "exhaustion": TYPE_INT, "diseases": TYPE_ARRAY,
@@ -64,7 +65,7 @@ const NESTED := {
 		"status": TYPE_STRING, "init": TYPE_INT, "monster": TYPE_STRING, "hp": TYPE_INT, "max_hp": TYPE_INT, "max_laid": TYPE_INT, "ac": TYPE_INT,
 		"npc_id": TYPE_STRING, "by_hero": TYPE_BOOL, "morale": TYPE_BOOL, "no_xp": TYPE_BOOL, "law": TYPE_BOOL, "helper": TYPE_BOOL,
 		"ally": TYPE_STRING, "summon_id": TYPE_STRING, "spell": TYPE_STRING, "creature_id": TYPE_STRING, "actions": TYPE_ARRAY, "inventory": TYPE_DICTIONARY,
-		"gold_cp": TYPE_INT, "equipped": TYPE_DICTIONARY, "copies": TYPE_DICTIONARY, "ammo_spent": TYPE_DICTIONARY,
+		"gold_cp": TYPE_INT, "equipped": TYPE_DICTIONARY, "copies": TYPE_DICTIONARY, "stowed": TYPE_DICTIONARY, "attuned": TYPE_ARRAY, "ammo_spent": TYPE_DICTIONARY,
 		"effects": TYPE_ARRAY, "conditions": TYPE_ARRAY, "next_effect": TYPE_INT, "surprised": TYPE_BOOL, "dodging": TYPE_BOOL, "hidden": TYPE_BOOL,
 		"reckless": TYPE_BOOL, "disengaged": TYPE_BOOL, "swooped": TYPE_BOOL, "blinked": TYPE_BOOL, "retching": TYPE_BOOL, "reacted": TYPE_BOOL,
 		"lethargy": TYPE_BOOL, "fleeing": TYPE_BOOL, "relentless_used": TYPE_BOOL, "exhaustion": TYPE_INT,

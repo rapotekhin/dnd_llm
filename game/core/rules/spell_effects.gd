@@ -125,7 +125,7 @@ static func boon(f: Dictionary, key: String, fallback: Variant = null) -> Varian
 
 ## Advantage on a save from the spells on a fighter: Enhance Ability, Haste (DEX), Beacon of Hope (WIS).
 static func boon_save_adv(f: Dictionary, ab: String) -> bool:
-	return boon(f, "ability_adv") != null or (boon(f, "save_adv", []) as Array).has(ab)
+	return boon(f, "ability_adv") != null or ConditionRules.lists(boon(f, "save_adv", []), ab)
 
 
 ## It strikes or casts at a foe: what ends then (Sanctuary, Invisibility on anybody). Lines.
@@ -367,7 +367,7 @@ static func max_heal(c: Dictionary) -> bool:
 
 static func save_adv(c: Dictionary, ability: String) -> String:
 	for e: Dictionary in hero_effects(c, "save_adv"):
-		if (e["save_adv"] as Array).has(ability):
+		if ConditionRules.lists(e["save_adv"], ability):
 			return str(e.get("source", {}).get("name", ""))
 	return ""
 

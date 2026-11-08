@@ -369,6 +369,24 @@ EQUIP_NOT_LIGHT,Во вторую руку — только лёгкое ору�
 EQUIP_NOT_OWNED,Этого предмета нет
 EQUIP_NO_PROFICIENCY,Нет владения этим видом доспеха
 EQUIP_WRONG_SLOT,Сюда это не надеть
+EQUIP_NO_HANDS,Этому существу нечем это надеть
+EQUIP_EMPTY,Здесь ничего не надето
+GEAR_NOT_IN_COMBAT,В бою вещи не передают
+GEAR_NOT_FOLLOWER,Вещи передают только тому, кто идёт с героем
+GEAR_TAKE_OFF_FIRST,Сначала снять: эта вещь надета
+GEAR_TITLE,Снаряжение: {name}
+GEAR_WORN,Надето
+GEAR_STOWED,Запасной набор
+GEAR_THINGS,Вещи спутника
+GEAR_HERO_THINGS,Вещи героя
+GEAR_NONE,Ничего
+GEAR_SLOT_LINE,{slot}: {item}
+BTN_GEAR,Снаряжение
+BTN_GEAR_TIP,"Что надето на спутнике и в его вещах: надеть, снять, сменить набор, передать вещь"
+BTN_GEAR_GIVE,Отдать
+BTN_GEAR_TAKE,Забрать
+BTN_GEAR_OFF,Снять
+BTN_GEAR_SWAP,Сменить набор
 GAME_SUBTITLE,D&D 5e с мастером-ИИ
 GAME_TITLE,Between the Rolls
 HEALTH_BLOODIED,тяжело ранен

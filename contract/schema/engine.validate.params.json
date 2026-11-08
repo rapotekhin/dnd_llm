@@ -1902,7 +1902,7 @@
     },
     "EquipEffect": {
       "additionalProperties": false,
-      "description": "The player changes gear by words (0.14.0): `slot` armor / shield / main_hand / off_hand, worn things (0.44.0)\nhead / eyes / neck / cloak / hands / feet / ring1 / ring2, or `all` to strip; `item_id` puts that carried item on,\nnone takes the slot off. The engine checks it like the character sheet; in a fight armour and worn things cannot\nbe changed.",
+      "description": "The player changes gear by words (0.14.0): `slot` armor / shield / main_hand / off_hand, worn things (0.44.0)\nhead / eyes / neck / cloak / hands / feet / ring1 / ring2, or `all` to strip; `item_id` puts that carried item on,\nnone takes the slot off. The engine checks it like the character sheet; in a fight armour and worn things cannot\nbe changed. `npc_id` (0.118.0): a person of the scene puts on or takes off one of its own things by the same rules —\na template wears its class's armour and its own; the hero's thing reaches it as a gift by the player's buttons.",
       "properties": {
         "item_id": {
           "anyOf": [
@@ -1921,6 +1921,18 @@
           "default": "equip",
           "title": "Kind",
           "type": "string"
+        },
+        "npc_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Npc Id"
         },
         "slot": {
           "enum": [

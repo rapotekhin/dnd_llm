@@ -39,7 +39,7 @@ func test_a_magic_sword_in_a_foe_s_hands_is_magic() -> void:
 	var s := TestUtils.new_session()
 	var f := _foe(s, "bandit")
 	f["inventory"]["longsword_plus_1"] = 1
-	Gear.follow(s, data, f)
+	Equip.put(s, data, str(f["id"]), "longsword_plus_1", "main_hand")  # only what is in its hands strikes (v0.8.4.40)
 	var blow: Dictionary = {}
 	for a: Dictionary in Sheet.template(data, f)["actions"]:
 		if str(a.get("item", "")) == "longsword_plus_1":

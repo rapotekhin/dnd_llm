@@ -36,7 +36,7 @@ func _turn(s: GameSession, fx: EffectEngine, effects: Array, turn := "t-1") -> A
 
 func _ward() -> Dictionary:
 	return {"kind": "make", "what": "status", "key": "ward", "name": "Оберег путника", "text": "Тропа бережёт.",
-		"parts": [{"part": "save_adv", "value": "con"}]}
+		"parts": [{"part": "save", "value": "con", "amount": 1}]}
 
 
 func test_silver_marks_the_sword_in_the_hand_not_a_new_thing() -> void:
@@ -108,7 +108,7 @@ func test_a_status_until_the_long_rest_costs_by_the_rest_hours() -> void:
 func test_harm_a_stranger_and_a_wrong_time_are_refused() -> void:
 	var s := _hero("pushcha-glade", 3)
 	var fx := EffectEngine.new()
-	var hurt := {"kind": "make", "what": "status", "key": "rot", "name": "Порча", "text": "Слабость.", "parts": [{"part": "checks", "value": "disadvantage"}]}
+	var hurt := {"kind": "make", "what": "status", "key": "rot", "name": "Порча", "text": "Слабость.", "parts": [{"part": "check", "value": "all", "amount": -1}]}
 	var r := _turn(s, fx, [hurt, {"kind": "create", "what": "service", "npc_id": "npc_hermit", "op": "status", "name": "Навести порчу", "status": "new:rot", "hours": 2}])
 	assert_str(str(r[1]["reason"])).contains("вредит")
 	r = _turn(s, fx, [_ward(), {"kind": "create", "what": "service", "npc_id": "npc_smith", "op": "status", "name": "Оберег", "status": "new:ward", "hours": 2}], "t-2")

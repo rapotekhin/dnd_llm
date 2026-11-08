@@ -1008,6 +1008,39 @@ scenarios:
       - "Кольцо — новая вещь с `wear.status: \"paralyzed\"` и свойством `cursed` в `properties`: вредный статус держит только проклятая вещь"
       - "Рассказ не раскрывает, что кольцо проклято, прямым текстом механики — герой видит лишь зловещее кольцо; находка не надевается сама"
 
+  - id: magic_find_cursed_ring_of_friendship
+    title: "Проклятое кольцо дружбы: статус с частью against и проклятая вещь с ним (v0.8.4.40)"
+    category: items
+    extends: tavern
+    input: "Обыскиваю шкатулку свахи на комоде."
+    snapshot:
+      scene:
+        room: {id: room_matchmaker, name: "Комната свахи", description: "Кружевные салфетки, сундучок с приданым, на комоде — шкатулка, обтянутая розовым шёлком."}
+        npcs: []
+        hooks: [{id: hook_friend_ring, text: "в шкатулке — кольцо с розовым камнем; проклятие: кто его наденет, того легко уговорить — все проверки Убеждения против него с преимуществом, и снять кольцо он не может, пока проклятие не снимут", dc: 12}]
+      character: {level: 4}
+    engine:
+      check: {d20: [15], bonus: 4, total: 19, dc: 12, success: true, nat: null, blocked: false}
+    expect:
+      check: {required: true, skill_in: [investigation, perception]}
+      effects: {required_kinds_all: [make, move_item:world>hero], required_fields: [item.wear.status]}
+    rubric:
+      - "Статус собран эффектом make (what status) с частью `against`, value `persuasion`, amount 1 — проверки других против носящего с преимуществом; не `check` и не придуманная часть"
+      - "Кольцо — новая вещь с `wear.status: \"new:<key>\"` этого статуса и `cursed` в `properties`: вред носящему держит только проклятая вещь"
+
+  - id: npc_takes_off_its_shield_by_words
+    title: "Человек сцены снимает своё — equip с npc_id (v0.8.4.40)"
+    category: effects
+    extends: tavern
+    input: "Сержант Ведда, отставь щит, посиди с нами без железа."
+    engine:
+      check: {d20: [15], bonus: 3, total: 18, dc: 10, success: true, nat: 15, blocked: false}
+    expect:
+      check: {required: false}
+      effects: {required_kinds_any: [equip], required_fields: [npc_id]}
+    rubric:
+      - "Если сержант соглашается, мастер даёт equip с npc_id сержанта, slot shield без item_id; не equip героя и не move_item"
+
   - id: magic_find_made_summoning_horn
     title: "Мастер делает вещь, которая призывает существ (use.summon, v0.8.4.28.7)"
     category: items

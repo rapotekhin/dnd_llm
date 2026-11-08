@@ -82,7 +82,7 @@ func test_reach_range_and_the_attack_economy() -> void:
 		TestUtils.beside(s, CombatRules.fighter(s, TestUtils.foe(s, 1)))
 		assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), TestUtils.foe(s, 1))).is_empty()
 		var lines := Acts.one("attack").go(s, data, CombatRules.player(s), TestUtils.foe(s, 1))
-		assert_str(lines[0]).contains("против КД 15")
+		assert_str(lines[0]).contains("против КД %d" % CombatRules.ac_of(CombatRules.fighter(s, TestUtils.foe(s, 1))))  # 15, 13 with the bow in its hands (v0.8.4.40)
 		assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), TestUtils.foe(s, 1))).is_equal("COMBAT_NO_ACTION")
 
 

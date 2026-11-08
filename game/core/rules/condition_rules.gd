@@ -562,6 +562,13 @@ static func dead(c: Dictionary) -> bool:
 # --- checks ---------------------------------------------------------------------------------------
 
 
+## A status's list of what it touches holds `key`: a name, a list of them, or «all» (v0.8.4.40).
+static func lists(v: Variant, key: String) -> bool:
+	if v is Array:
+		return (v as Array).has(key) or (v as Array).has("all")
+	return v != null and (str(v) == key or str(v) == "all") and not key.is_empty()
+
+
 ## What the conditions do to a check: {"disadvantage": [condition ids], "auto_fail": [condition ids]}.
 ## `params.sense` — "sight" / "hearing" when the check needs it (the master's flag, v0.7.8).
 static func check_mods(c: Dictionary, data: Dictionary, params: Dictionary) -> Dictionary:

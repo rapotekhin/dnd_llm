@@ -112,6 +112,8 @@ SCENE_TOPICS = {"places", "containers", "doors", "equip", "tools", "invisible"}
 WATER_WORDS = re.compile(r"вод[аыуе]|набра|набер|наполн|зачерп|бурдюк|фляг|кувшин|ведр|нацед|налить|налью|вылить|вылью|выливаю|облить|оболью|обливаю|плесн|плещу|"
                          r"масл[оау]|вина|вино", re.IGNORECASE)  # v0.8.4.28.3: any liquid
 BOARD = re.compile(r"доск|объявлен|листк|столб с", re.IGNORECASE)
+EQUIP_WORDS = re.compile(r"наден|надева|надет|сним|сня[лт]|сбрось|разде[нв]|переоде|отстав|щит|доспех|кольчуг|латы|кольц|плащ|шлем|сапог|перчат|амулет",
+                         re.IGNORECASE)  # v0.8.4.40: the hero's and a person's gear by words, in a conversation too
 MOUNT_WORDS = re.compile(r"конь|коня|кобыл|лошад|мул|осл|верблюд|вьюк|навьюч|телег|фургон|повозк|запряч|упряж|верхом|скакун|аренд|напрокат",
                          re.IGNORECASE)  # v0.7.42
 WEATHER_WORDS = re.compile(r"погод|дожд|ливн|ливен|туман|снег|метел|вьюг|мороз|холод|зно[йя]|жар[аы]|небо|тучи|ветер|гроз",
@@ -218,7 +220,7 @@ TOPICS: dict[str, Topic] = {
                ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "grant:cure", "shift:reputation"),
                    alone=lambda mode, snap, said: mode in ("social", "trade")),
     "goals": Topic("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", ()),
-    "equip": Topic("надеть, снять, раздеться (`equip`)", ("equip",)),
+    "equip": Topic("надеть, снять, раздеться (`equip`), герою или человеку сцены", ("equip",), words=EQUIP_WORDS),
     "water": Topic("набрать воды в бурдюк, флягу, кувшин, ведро из колодца, ручья, реки; нацедить вина, масла; вылить, облить водой или маслом (`fill`)", ("fill",),
                    words=WATER_WORDS, gate=lambda snap: True),
     "invisible": Topic("невидимый герой", (),

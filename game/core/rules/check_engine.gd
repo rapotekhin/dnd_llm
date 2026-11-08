@@ -41,9 +41,13 @@ static func situation(s: GameSession, data: Dictionary, who: Dictionary, spec: D
 	for e: Dictionary in ItemRules.born_effects(data, me):
 		if str(e.get("ability_adv", "")) == ab and not ab.is_empty():  # Enhance Ability (v0.7.13.3)
 			_add(adv, str(e.get("source", {}).get("name", "")))
-		if not skill.is_empty() and (str(e.get("check_adv", "")) == skill or (bool(e.get("enlarged", false)) and skill == "athletics")) \
+		if not skill.is_empty() and (ConditionRules.lists(e.get("check_adv"), skill) or (bool(e.get("enlarged", false)) and skill == "athletics")) \
 				and Cond.holds(s, e, data):  # Stone Camouflage: only where it is rocky (v0.8.4.27.4)
 			_add(adv, str(e.get("source", {}).get("name", "зелье")))
+		if ConditionRules.lists(e.get("check_adv"), "all") and skill.is_empty() and not ab.is_empty():  # a bare ability's check
+			_add(adv, str(e.get("source", {}).get("name", "")))
+		if ConditionRules.lists(e.get("check_dis"), skill if not skill.is_empty() else "all"):  # a made status (v0.8.4.40)
+			_add(dis, str(e.get("source", {}).get("name", "")))
 	if Sheet.is_hero(who):
 		_add(adv, PetRules.helper(s, data, skill))  # v0.7.43: a dog's nose, a hawk's eye — the hero's pets
 	var tool := str(spec.get("tool", "")) if spec.get("tool") != null else ""
@@ -63,6 +67,11 @@ static func situation(s: GameSession, data: Dictionary, who: Dictionary, spec: D
 		var charm := SpellEffects.npc_spells(s, listener).filter(func(e: Dictionary) -> bool: return (e.get("skills", ExplorationRules.SOCIAL_SKILLS) as Array).has(skill))
 		if not charm.is_empty():  # Charm Person and the like (v0.7.22.3), Zone of Truth on Insight (v0.8.4.26.3)
 			adv.append("%s: %s" % [charm[0].get("word", "очарован"), charm[0]["source"]["name"]])
+		for e: Dictionary in ConditionRules.effects(Being.view(s, listener)):  # what it wears or bears (v0.8.4.40: a Ring of Friendship)
+			var against: Dictionary = e.get("against", {})
+			var mode := str(against.get(skill, against.get("all", "")))
+			if not mode.is_empty():
+				({"advantage": adv, "disadvantage": dis}[mode] as Array).append(str(e.get("source", {}).get("name", "")))
 	var die := SpellEffects.die(s, me, "check", peek)  # Guidance (v0.7.13.1)
 	parts.append_array(die["parts"])
 	return {"adv": adv, "dis": dis, "fail": fail, "parts": parts}

@@ -2267,32 +2267,11 @@
 				"harm": "advantage",
 				"text": "броски атаки по нему"
 			},
-			"checks": {
-				"cost": 2,
-				"values": [
-					"disadvantage"
-				],
-				"harm": true,
-				"text": "все проверки"
-			},
-			"skill_dis": {
-				"cost": 1,
-				"of": "skill",
-				"harm": true,
-				"text": "помеха на проверки навыка"
-			},
-			"save_dis": {
-				"cost": 1,
-				"of": "ability",
-				"harm": true,
-				"text": "помеха на спасбросок"
-			},
-			"save_adv": {
-				"cost": 2,
-				"of": "ability",
-				"harm": false,
-				"text": "преимущество на спасбросок"
-			},
+			"check": {"cost": 1, "of": "skill_all", "number": [-1, 1], "all_mult": 3, "text": "преимущество (+1) или помеха (−1) на проверки навыка или на все (all)"},
+			"save": {"cost": 2, "of": "ability_all", "number": [-1, 1], "all_mult": 3, "text": "преимущество (+1) или помеха (−1) на спасброски характеристики или на все (all)"},
+			"against": {"cost": 1, "of": "skill_all", "number": [-1, 1], "all_mult": 3, "harm": "+", "text": "проверки других против носящего: с преимуществом (+1) или с помехой (−1)"},
+			"damage": {"cost": 3, "of": "damage", "number": [-1, 2], "text": "к типу урона: уязвимость (−1), сопротивление (1), иммунитет (2)"},
+			"condition": {"cost": 2, "of": "condition", "number": [-1, 2], "text": "к состоянию: помеха на спасброски против него (−1), преимущество (1), иммунитет (2)"},
 			"skill_bonus": {
 				"cost": 1,
 				"of": "skill",
@@ -2318,12 +2297,6 @@
 				],
 				"step": 10,
 				"text": "скорость, футы"
-			},
-			"resist": {
-				"cost": 3,
-				"of": "damage",
-				"harm": false,
-				"text": "сопротивление урону"
 			},
 			"no_move": {
 				"cost": 4,
@@ -3419,6 +3392,7 @@
 		"_v08_4_4": "A fight gives only XP (v0.8.4.4): a dead foe lies where it fell for leave_minutes.dead, what it had is looked through like a chest of body_capacity_lb.",
 		"body_capacity_lb": 2000,
 		"foe_ammo": 6,
+		"gear": {"_doc": "v0.8.4.40, the author: anybody puts things on by the hero's rules (Equip). armor — what any template may wear beside its class's and its SRD gear's (5e: a creature is proficient with what it is made to wear); no_hands — the kinds of creature that put nothing on (a beast, a dragon, an ooze).", "armor": ["light"], "no_hands": ["beast", "dragon", "ooze", "plant", "swarm"]},
 		"kit": {"_doc": "What a template carries beside its SRD gear (v0.8.4.10, Gear.start): a person has it in its pockets, a foe uses it in a fight (a potion when hurt, a flask, a scroll) and what is left lies on it after.",
 			"veteran": ["healing_potion"], "knight": ["healing_potion"], "gladiator": ["healing_potion"], "scout": ["healing_potion"],
 			"bandit_captain": ["healing_potion", "alchemists_fire_flask", "manacles"], "thug": ["oil_flask", "manacles"], "spy": ["acid_vial"], "guard": ["manacles"],

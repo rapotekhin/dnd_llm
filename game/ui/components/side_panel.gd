@@ -36,6 +36,7 @@ signal heist_requested  # v0.7.33
 signal org_requested(org_id: String)  # v0.7.33
 signal office_requested(chief: String)  # v0.7.34
 signal pet_requested(creature_id: String)  # v0.7.43
+signal gear_requested(npc_id: String)  # v0.8.4.40: a follower's «Снаряжение»
 signal letter_requested(npc_id: String)  # v0.7.48
 signal faith_requested  # v0.7.49
 signal arena_requested(site_id: String)  # v0.7.45
@@ -605,6 +606,8 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 		follow = [["stay", "BTN_FOLLOWER_STAY"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
 	elif str(Being.view(s, id).get("at", "")) == s.room_id:
 		follow = [["lead", "BTN_FOLLOWER_LEAD"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
+	if Being.follows(s, id):  # v0.8.4.40: what it wears, by the hero's rules
+		_flow(_group(groups, "life", id), tr("BTN_GEAR"), gear_requested.emit.bind(id), can_act, "Gear_" + id, tr("BTN_GEAR_TIP"))
 	for fa: Array in follow:
 		var what: String = fa[0]
 		var fb := _flow(_group(groups, "life", id), tr(fa[1]), _try.bind(GameState.follower_act.bind(id, what)), can_act, "Follower_%s_%s" % [what, id])

@@ -64,6 +64,9 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 		return lines
 	var t := CombatRules.fighter(s, to)
 	var b := Attack.way(s, data, f, how)
+	if bool((b.get("act", {}) as Dictionary).get("stowed", false)) and Equip.swap_why(s, data, str(f.get("id", Being.HERO))).is_empty():
+		lines = Acts.one("swap").go(s, data, f)  # its other set to the hands for nothing (v0.8.4.40), then the blow
+		b = Attack.way(s, data, f, how)
 	CombatRules.points(s, data, f)["attacked"] = true
 	if bool(b["melee"]) and Move.air(s, data, f):
 		f["swooped"] = true  # Fly (v0.7.63): down at arm's length, in reach until its next turn

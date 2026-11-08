@@ -33,7 +33,7 @@ func run() -> void:
 	await frames(4)
 	var fx := EffectEngine.new()
 	var ward := {"kind": "make", "what": "status", "key": "ward", "name": "Оберег путника", "text": "Тропа бережёт.",
-		"parts": [{"part": "save_adv", "value": "con"}]}
+		"parts": [{"part": "save", "value": "con", "amount": 1}]}
 	var made := {"kind": "create", "what": "service", "npc_id": HERMIT, "op": "status", "name": "Наложить оберег путника",
 		"done": "оберег наложен", "status": "new:ward", "hours": 8}
 	var ids: Array = []

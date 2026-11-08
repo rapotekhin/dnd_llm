@@ -33,8 +33,8 @@ func _wear(s: GameSession, id: String) -> void:
 func test_a_ring_gives_a_swim_only_while_worn() -> void:
 	var s := _hero()
 	var c := s.character
-	Gear.give(s, data, Being.HERO, "ring_of_swimming", 1)
-	CharacterRules.refresh(c, data, s.items)
+	Gear.give(s, data, Being.HERO, "ring_of_swimming", 1)  # a free finger: it goes on by itself (v0.8.4.40)
+	Equip.off(s, data, Being.HERO, "ring1")
 	assert_bool(Move.speeds(s, data, Sheet.HERO).has("swim")).is_false()  # in the pack
 	c["equipped"]["ring1"] = "ring_of_swimming"
 	CharacterRules.refresh(c, data, s.items)
@@ -78,6 +78,7 @@ func test_a_hat_casts_at_will_where_it_is_worn() -> void:
 	var s := _hero()
 	var c := s.character
 	Gear.give(s, data, Being.HERO, "hat_of_disguise", 1)
+	Equip.off(s, data, Being.HERO, "head")  # a free head: it went on by itself (v0.8.4.40)
 	ItemRules.attune(c, data, s.items, "hat_of_disguise")
 	CharacterRules.refresh(c, data, s.items)
 	assert_str(ItemRules.can_use(c, data, s.items, "hat_of_disguise")).contains("не надета")

@@ -42,6 +42,7 @@ var _contest: ContestPanel  # v0.7.40
 var _arena: ArenaPanel  # v0.7.45
 var _family: FamilyPanel
 var _pet: PetPanel  # v0.7.43
+var _gear: GearPanel  # v0.8.4.40
 var _letter: LetterPanel  # v0.7.48
 var _faith: FaithPanel  # v0.7.49
 var _heists: HeistPanel
@@ -174,6 +175,7 @@ func _ready() -> void:
 	side.arena_requested.connect(func(sid: String) -> void: _arena.open(sid))  # v0.7.45
 	side.family_requested.connect(func() -> void: _family.open())  # v0.7.32
 	side.pet_requested.connect(func(id: String) -> void: _pet.open(id))  # v0.7.43
+	side.gear_requested.connect(func(id: String) -> void: _gear.open(id))  # v0.8.4.40
 	side.letter_requested.connect(func(id: String) -> void: _letter.open(id))  # v0.7.48
 	side.faith_requested.connect(func() -> void: _faith.open())  # v0.7.49
 	side.heist_requested.connect(func() -> void: _heists.open())  # v0.7.33
@@ -222,6 +224,7 @@ func _ready() -> void:
 	EventBus.letter_requested.connect(_letter.open)  # Sending from the sheet (v0.8.4.26.3)
 	_faith = _window(FaithPanel.SCENE, "FaithView")  # v0.7.49
 	_pet = _window(PetPanel.SCENE, "PetView")  # v0.7.43
+	_gear = _window(GearPanel.SCENE, "GearView")  # v0.8.4.40
 	_family = _window(FamilyPanel.SCENE, "FamilyView")  # v0.7.32
 	_heists = _window(HeistPanel.SCENE, "HeistView")  # v0.7.33
 	_org = _window(OrgPanel.SCENE, "OrgView")
