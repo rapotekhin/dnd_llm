@@ -31,6 +31,7 @@ var labels := false  ## every name is written while the key is held
 var reach: Dictionary = {}  ## the squares the picked shot or spell gets to: tinted, with a rim
 var instant := false  ## a walk ends at once: the playtests' game time does not come from frames
 var dim := false  ## what is out of view is dimmed (the author's preview has none)
+var fit_most := BASE_TILE  ## the biggest tile a whole map is fitted at (the build screen comes closer, v0.8.4.42)
 var now: Dictionary = {}  ## the squares seen right now: SightRules (v0.8.3)
 var cones: Dictionary = {}  ## the squares under watch while sneaking
 var fighters: Array[Dictionary] = []  ## the bodies of a fight: {"id", "mark", "name", "colour", "span", "x", "y", "hp", "most", "out", "now", "dim", "gear", "states"}
@@ -210,7 +211,7 @@ func _fit() -> void:
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
 	var whole := minf(size.x / float(map["w"]), size.y / float(map["h"]))
-	_tile = clampf(whole, MIN_TILE, BASE_TILE)
+	_tile = clampf(whole, MIN_TILE, fit_most)
 	_follow = true
 	_aim()
 

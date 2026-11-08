@@ -34,6 +34,7 @@ var _board: BoardPanel
 var _craft: CraftPanel
 var _jobs: JobPanel
 var _property: PropertyPanel
+var _build: BuildPanel  # v0.8.4.42
 var _bank: BankPanel
 var _shop: ShopPanel
 var _study: StudyPanel
@@ -215,6 +216,10 @@ func _ready() -> void:
 	_craft = _window(CraftPanel.SCENE, "CraftView")  # v0.7.24
 	_jobs = _window(JobPanel.SCENE, "JobView")  # v0.7.26
 	_property = _window(PropertyPanel.SCENE, "PropertyView")  # v0.7.27
+	_build = _window(BuildPanel.SCENE, "BuildView")  # v0.8.4.42: the place furnished by hand
+	_property.furnish_requested.connect(func() -> void:
+		_property.visible = false
+		_build.open())
 	_bank = _window(BankPanel.SCENE, "BankView")  # v0.7.28
 	_shop = _window(ShopPanel.SCENE, "ShopView")  # v0.7.29
 	_study = _window(StudyPanel.SCENE, "StudyView")  # v0.7.30
@@ -278,7 +283,7 @@ func _mount(w: Control) -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _wait, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _gear, _card, _heists, _org, _office, _image]
+	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _wait, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _gear, _card, _heists, _org, _office, _image, _build]
 
 
 # _input, not _unhandled_input: the focused chat input would swallow Esc.

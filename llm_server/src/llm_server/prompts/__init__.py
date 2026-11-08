@@ -235,7 +235,7 @@ TOPICS: dict[str, Topic] = {
     "tools": Topic("действие инструментом: замок, травы, подделка, грим (`request_check` с `tool`)", ()),
     "craft": Topic("ремесло и готовка: герой куёт, шьёт, мастерит, варит зелье, жарит мясо, варит похлёбку; новый рецепт из слов игрока (`create:recipe`)", ("create:recipe",),
                    words=CRAFT_WORDS),
-    "property": Topic("имущество: купить дом, землю, мельницу, лавку; купчая; место, которого нет в продаже (`create:property`); свои места, работники, животные; свой вид места — школа, причал (`new_kind`); улучшение своего места по просьбе — станок, лодка, библиотека (`create:upgrade`); конь, мул, вьюк, телега, аренда у барышника; новый зверь у барышника (`create:stock` с `animal`)", ("create:property", "create:upgrade"),
+    "property": Topic("имущество: купить дом, землю, мельницу, лавку; купчая; место, которого нет в продаже (`create:property`); свои места, работники, животные; свой вид места — школа, причал (`new_kind`); улучшение или вещь своего места по просьбе — станок, лодка, сундук на N фунтов, кровать, наковальня (`create:upgrade`); конь, мул, вьюк, телега, аренда у барышника; новый зверь у барышника (`create:stock` с `animal`)", ("create:property", "create:upgrade"),
                    words=MOUNT_WORDS, gate=lambda snap: bool(snap.scene and any(n.animals for n in snap.scene.npcs))),
     "bank": Topic("деньги в долг и на хранение: вклад, кредит под залог, ячейка; ростовщик, которого нет (`create:bank`)", ("create:bank",),
                    words=BANK_WORDS),

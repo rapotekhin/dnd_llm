@@ -5,6 +5,8 @@ extends ModalFrame
 ## the till, the worker, upgrades and building, and the acts of the place while the hero is in it. Every act is
 ## GameState.property_act: the engine decides.
 
+signal furnish_requested  ## the build screen of the place the hero stands in (v0.8.4.42)
+
 const SCENE := "res://ui/components/property_panel.tscn"
 
 var _box: VBoxContainer
@@ -255,6 +257,9 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 	if not here:
 		UiParts.label(col, tr("PROPERTY_GO_THERE"), UiTheme.MUTED_LABEL)
 		return
+	UiParts.act_button(buttons, "PropertyFurnish_" + id, tr("BTN_PROPERTY_FURNISH"), BuildRules.where_why(s, data), func() -> String:
+		furnish_requested.emit()
+		return "").tooltip_text = tr("BTN_PROPERTY_FURNISH_TIP")
 	UiParts.act_button(buttons, "PropertyCollect_" + id, tr("BTN_PROPERTY_COLLECT"), PropertyRules.collect_why(s, data, id), _act("collect", id))
 	if PropertyRules.income_day(s, data, id) > 0:
 		var sb := UiParts.act_button(buttons, "PropertyShift_" + id, tr("BTN_PROPERTY_SHIFT").format({"time": TimeRules.span(PropertyRules.shift_hours(s, data, id) * 60)}),

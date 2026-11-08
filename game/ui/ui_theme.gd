@@ -17,7 +17,7 @@ const OK := Color("#8fb36f")
 const BAD := Color("#c8705f")
 const TILES := {  ## squares of a map, plain until the sprites (v0.8.0)
 	"#": Color("#5e4d3a"), ".": Color("#3b3027"), "=": Color("#7f7a6c"), ",": Color("#6b5838"), "+": Color("#8a6a3c"), "%": Color("#33301c"), "^": Color("#6a2f22"),
-	"~": Color("#2c4a5c"), "o": Color("#0d0b09"), "T": Color("#27402a"), "B": Color("#5a4c3c"),
+	"~": Color("#2c4a5c"), "o": Color("#0d0b09"), "T": Color("#27402a"), "B": Color("#5a4c3c"), "w": Color("#7d98a3"),
 }
 const WARN := Color("#d1a14a")
 

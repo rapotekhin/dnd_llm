@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.118.0"
+PROTOCOL_VERSION = "0.119.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1781,6 +1781,7 @@ class UpgradeGives(_Out):
 
     rest: bool | None = None  # a bed: the long rest free
     storage: bool | None = None  # a chest of the hero
+    capacity_lb: int | None = Field(default=None, ge=10, le=2000)  # 0.119.0: how much the chest holds, with storage
     private: bool | None = None  # a lock: strangers keep out
     station: str | None = None  # a known station (forge, workbench, alchemy, hearth…)
     station_new: NewStation | None = None  # a new station with its tools

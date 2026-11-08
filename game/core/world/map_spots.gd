@@ -231,6 +231,10 @@ static func traps(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Di
 
 
 static func _prop_cell(s: GameSession, data: Dictionary, map: Dictionary, cells: Array[Vector2i], taken: Dictionary, placed: Array[Dictionary], p: Dictionary) -> Vector2i:
+	if p.get("at") is Array:  # put on its square by hand (v0.8.4.42), kept on the grid
+		var own := LayoutGen.off_grid(map, Vector2i(int(p["at"][0]), int(p["at"][1])))
+		if cells.has(own) and not taken.has(own):
+			return own
 	var near := str(p.get("near", ""))
 	if not near.is_empty():
 		var at := _mark_cell(map, s.room_id, near)

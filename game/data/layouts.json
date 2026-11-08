@@ -2,6 +2,7 @@
 	"_doc": "Layouts of places (v0.8.0, LayoutGen, LayoutRules): a square is 5 ft. `cells` — what a character of a chunk means; `open.gap` / `open.room_gap` — squares a new way keeps from the ways already there on an open map and in a building's room (v0.8.4.36), `open.road_cost` — what a square costs a road, a character that is not there stops it; `kinds` — a place's kind by the tag of its site: its shape (building, tunnels, open), family, rooms with roles and their limit, the size and scatter of an open map; `chunks` — parts of maps: `rows` of `cells`, D — a door socket on the edge, letters of `marks` — named floor squares, a blank — leave the map as it is (landmarks). Rotations and mirrors make new variants of a chunk. The chain of picking a chunk: kind and role, family and role, the room's tags, a generic chunk of the size.",
 	"cells": {
 		"#": {"name": "wall", "solid": true, "opaque": true},
+		"w": {"name": "window", "solid": true},
 		".": {"name": "floor"},
 		"=": {"name": "road"},
 		",": {"name": "path"},
