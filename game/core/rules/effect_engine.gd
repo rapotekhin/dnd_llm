@@ -312,16 +312,19 @@ func _plan_move(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 		if place.is_empty() or str(place["from"]) != s.room_id or str(place["rooms"][0]["key"]) != to.trim_prefix("new:"):
 			return {"reason": "войти можно только в первую комнату места, созданного в этом ходе у этой комнаты (new:<её key>)"}
 		return {"plan": {"room_id": to, "with": []}, "summary": "Переход: %s" % place["rooms"][0]["name"]}
-	if not WayRules.open_exits(s, data["world"], s.room_id).has(to):
-		return {"reason": "из этой комнаты нет выхода в %s" % to}
+	var path: Array[String] = [to]
+	if not WayRules.open_exits(s, data["world"], s.room_id).has(to):  # v0.8.4.36: a far place the hero has been to, by the known paths
+		path = WorldMap.route(s, data["world"], s.room_id, to, data)
+		if path.is_empty():
+			return {"reason": "из этой комнаты нет выхода в %s; дальше соседней — только в место, где герой уже был, по известным путям (как «Идти сюда» на карте)" % to}
 	# v0.7.22.16, v0.8.4.16: the master's move is checked as the exit button — by WayRules.leave_why
-	var why := WayRules.leave_why(s, data, s.room_id, to)
+	var why := WayRules.leave_why(s, data, s.room_id, path[0])
 	if why == "TOO_HEAVY":
 		return {"reason": "герой перегружен и не может идти — сначала оставить лишнее (move_item:hero>room)"}
 	if why == "TRAP_ON_WAY":
 		return {"reason": "путь стережёт найденная ловушка — её обезвреживают или обходят (кнопки игрока), просто пройти нельзя"}
 	if not why.is_empty():  # v0.7.22.25
-		return {"reason": "%s — пройти нельзя: открыть её — кнопки игрока (ключ, отмычки, сила, заклинание) или эффект door, если её отпирает хозяин" % WayRules.describe(s, data, s.room_id, to)}
+		return {"reason": "%s — пройти нельзя: открыть её — кнопки игрока (ключ, отмычки, сила, заклинание) или эффект door, если её отпирает хозяин" % WayRules.describe(s, data, s.room_id, path[0])}
 	var with: Array = []  # NPCs who go along (v0.7.20.4): the same engine rule as grant:follow
 	for n: Variant in e.get("npcs", []) if e.get("npcs") is Array else []:
 		var nid := str(n)
@@ -333,7 +336,8 @@ func _plan_move(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 		with.append(nid)
 	var names := ", ".join(with.map(func(n: String) -> String: return str(world.npc_name(n))))
 	return {"plan": {"room_id": to, "with": with},
-		"summary": "Переход: %s%s" % [world.room(to).get("name", to), (" (с героем: %s)" % names) if not with.is_empty() else ""]}
+		"summary": "%s: %s%s" % ["Переход" if path.size() == 1 else "Путь", " → ".join(path.map(func(r: String) -> String: return str(world.room(r).get("name", r)))),
+			(" (с героем: %s)" % names) if not with.is_empty() else ""]}
 
 
 func _plan_damage(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
@@ -563,7 +567,7 @@ func _plan_use_feature(s: GameSession, data: Dictionary, turn_id: String, e: Dic
 	var why := Stock.can_use(c, data, rid, amount, spent)
 	if not why.is_empty():
 		return {"reason": why}
-	var heals: bool = not (Stock.table(data)[rid].get("on_use", {}) as Dictionary).is_empty()
+	var heals: bool = not (Stock.table(data, c)[rid].get("on_use", {}) as Dictionary).is_empty()
 	return {"plan": {"id": rid, "amount": amount}, "summary": "Умение: %s%s" % [Stock.display_name(c, data, rid),
 		" (лечение движок посчитает сам, heal не нужен)" if heals else ""]}
 
@@ -600,7 +604,7 @@ func _plan_goal_assess(s: GameSession, data: Dictionary, turn_id: String, e: Dic
 
 
 func _plan_goal_hint(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
-	return GoalRules.plan_hint(s.character, data)
+	return GoalRules.plan_hint(s, data, e)
 
 
 func _plan_create_quest(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
@@ -875,7 +879,7 @@ func _plan_fight(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		foes.append({"monster": mid, "count": n, "name": str(spec.get("name", m["name"]))})
 	if foes.is_empty():
 		return {"reason": "кого звать в бой? enemies: [{monster, count}]"}
-	var cap := int(CombatRules.cfg(data)["xp_budget_hard"].get(str(int(s.character.get("level", 1))), 750))
+	var cap := DifficultyRules.hard_cap(s, data)
 	if CombatRules.active(s):
 		var in_play := CombatRules.xp_in_play(s, data)
 		if in_play + xp > cap:
@@ -1465,8 +1469,8 @@ func _do_goal_assess(s: GameSession, plan: Dictionary) -> void:
 	GoalRules.apply_assess(s.character, plan)
 
 
-func _do_goal_hint(s: GameSession, _plan_of: Dictionary) -> void:
-	GoalRules.apply_hint(s.character)
+func _do_goal_hint(s: GameSession, plan: Dictionary) -> void:
+	GoalRules.apply_hint(s.character, plan, s.day)
 
 
 func _do_quest(s: GameSession, plan: Dictionary) -> void:

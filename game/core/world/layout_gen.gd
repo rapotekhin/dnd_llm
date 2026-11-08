@@ -247,7 +247,7 @@ static func _stitch(lib: Dictionary, asks: Array[Dictionary], seed_value: int, p
 				pick = {}
 			var ways: Array = (a.get("exits", []) as Array).duplicate()
 			ways.append_array(_unjoined(a, index, ids, doors))
-			_exits_of(out, a, index, ways, rests, rng, pick)
+			_exits_of(out, a, index, ways, rests, rng, pick, int(lib["open"].get("room_gap", 0)))
 			kept[id]["spots"] = _wanted_marks(out, a, index, rng, pick)
 			kept[id]["ways"] = _ways_of(out, id)
 	_close_sockets(out)
@@ -532,7 +532,7 @@ static func _shifted(list: Array[Dictionary], origin: Vector2i) -> Array[Diction
 
 
 ## The ways out of a room: a free socket on the side of the world's scheme, else any, else a square by a wall.
-static func _exits_of(out: Dictionary, ask: Dictionary, index: int, ways: Array, rests: Array[Dictionary], rng: RandomNumberGenerator, pick: Dictionary) -> void:
+static func _exits_of(out: Dictionary, ask: Dictionary, index: int, ways: Array, rests: Array[Dictionary], rng: RandomNumberGenerator, pick: Dictionary, gap: int) -> void:
 	var fresh: Array[Dictionary] = []
 	for e: Dictionary in ways:
 		var was: Dictionary = pick.get("ways", {}).get(str(e["to"]), {})
@@ -540,7 +540,7 @@ static func _exits_of(out: Dictionary, ask: Dictionary, index: int, ways: Array,
 			fresh.append(e)
 	for e: Dictionary in fresh:
 		var side := str(e.get("side", "n"))
-		var spot := {} if str(e.get("kind", "door")) == "stairs" else _socket_for(out, rests, index, side)
+		var spot := {} if str(e.get("kind", "door")) == "stairs" else _socket_for(out, rests, index, side, gap, str(ask["id"]))
 		if spot.is_empty():
 			spot = _by_wall(out, index, rng)
 			out["exits"].append({"to": e["to"], "room": str(ask["id"]), "x": spot["x"], "y": spot["y"], "ax": spot["x"], "ay": spot["y"], "side": side, "kind": "stairs"})
@@ -552,14 +552,25 @@ static func _exits_of(out: Dictionary, ask: Dictionary, index: int, ways: Array,
 			"ay": int(spot["y"]) + inward.y, "side": spot["side"], "kind": kind})
 
 
-static func _socket_for(out: Dictionary, rests: Array[Dictionary], index: int, side: String) -> Dictionary:
-	for want: bool in [true, false]:
-		for i: int in rests.size():
-			var s: Dictionary = rests[i]
-			if int(s["room"]) == index and (not want or str(s["side"]) == side) and _opens_out(out, s):
-				rests.remove_at(i)
-				return s
+## A socket for a way: away from the room's other ways first (the author's feedback, v0.8.4.36), on the wanted side first.
+static func _socket_for(out: Dictionary, rests: Array[Dictionary], index: int, side: String, gap: int, room: String) -> Dictionary:
+	for far: bool in [true, false]:
+		for want: bool in [true, false]:
+			for i: int in rests.size():
+				var s: Dictionary = rests[i]
+				if int(s["room"]) == index and (not want or str(s["side"]) == side) and _opens_out(out, s) 						and (not far or _gap_to(out, Vector2i(int(s["x"]), int(s["y"])), room) >= gap):
+					rests.remove_at(i)
+					return s
 	return {}
+
+
+## Squares from `at` to the nearest way already laid (of `room` alone when it is given); far when there is none.
+static func _gap_to(out: Dictionary, at: Vector2i, room := "") -> int:
+	var best := 1 << 20
+	for e: Dictionary in out["exits"]:
+		if room.is_empty() or str(e["room"]) == room:
+			best = mini(best, maxi(absi(int(e["x"]) - at.x), absi(int(e["y"]) - at.y)))
+	return best
 
 
 ## A way out must lead to nothing of this map: the square behind the socket is empty.
@@ -777,7 +788,7 @@ static func _exits_open(out: Dictionary, grid: Array[PackedStringArray], ask: Di
 					continue
 				var along := int(round((i + 1.0) / (list.size() + 1.0) * (w if side in ["n", "s"] else h)))
 				if not doors or not _box(out, grid, e, side, along, cfg, taken, boxes):
-					_edge(out, grid, e, side, along, taken)
+					_edge(out, grid, e, side, along, taken, int(cfg.get("gap", 0)))
 	var order := {}
 	for e: Dictionary in ask.get("exits", []):
 		order[str(e["to"])] = order.size()
@@ -826,16 +837,23 @@ static func _spread(ways: Array, spread: int) -> Dictionary:
 	return out
 
 
-static func _edge(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary, side: String, along: int, taken: Dictionary) -> void:
+## A way on the edge: the nearest free spot to the wanted one that keeps `gap` from the ways already there (the author's
+## feedback, v0.8.4.36: new ways were laid right beside the old), else the nearest free one.
+static func _edge(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary, side: String, along: int, taken: Dictionary, gap := 0) -> void:
 	var w: int = grid[0].size()
 	var h: int = grid.size()
 	var spots := _around(side, along, w, h)
 	var pick: Array = spots[0]
-	for spot: Array in spots:
-		var at := _edge_cell(str(spot[0]), int(spot[1]), w, h)
-		var before: Vector2i = at + STEP[OPPOSITE[str(spot[0])]]
-		if not taken.has(at) and not taken.has(before) and grid[before.y][before.x] != WALL and grid[before.y][before.x] != DOOR:
-			pick = spot
+	var found := false
+	for far: bool in [true, false]:
+		for spot: Array in spots:
+			var at := _edge_cell(str(spot[0]), int(spot[1]), w, h)
+			var before: Vector2i = at + STEP[OPPOSITE[str(spot[0])]]
+			if not taken.has(at) and not taken.has(before) and grid[before.y][before.x] != WALL and grid[before.y][before.x] != DOOR 					and (not far or _gap_to(out, at) >= gap):
+				pick = spot
+				found = true
+				break
+		if found:
 			break
 	var s := str(pick[0])
 	var at := _edge_cell(s, int(pick[1]), w, h)
@@ -853,12 +871,19 @@ static func _edge_cell(side: String, along: int, w: int, h: int) -> Vector2i:
 
 ## A box on a free spot: walls may meet, a door and what lies before it stay free. False: no spot, not even for a small one.
 static func _box(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary, side: String, along: int, cfg: Dictionary, taken: Dictionary, boxes: Dictionary) -> bool:
+	for far: bool in [true, false]:  # away from the ways already there first (v0.8.4.36)
+		if _box_far(out, grid, e, side, along, cfg, taken, boxes, int(cfg.get("gap", 0)) if far else 0):
+			return true
+	return false
+
+
+static func _box_far(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary, side: String, along: int, cfg: Dictionary, taken: Dictionary, boxes: Dictionary, gap: int) -> bool:
 	var w: int = grid[0].size()
 	var h: int = grid.size()
 	for size: Array in [cfg["box"], cfg["box_small"]]:
 		for spot: Array in _around(side, along, w, h):
 			var at := _box_at(str(spot[0]), int(spot[1]), size, w, h)
-			if not _box_free(grid, at, taken):
+			if not _box_free(grid, at, taken) or _gap_to(out, at["door"]) < gap:
 				continue
 			var door: Vector2i = at["door"]
 			var front: Vector2i = at["front"]

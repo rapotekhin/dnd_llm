@@ -117,6 +117,8 @@ static func immune(s: GameSession, data: Dictionary, who: Dictionary, cond: Stri
 		return by_spell
 	if tag.split(",").has("disease") and CharacterRules.has_feature(c, "divine_health"):
 		return str(data["classes"]["features"].get("divine_health", {}).get("name", ""))
+	if Sheet.prop(s, data, who, "immune_" + cond):  # a thing that guards against it (v0.8.4.36): a ring against fear
+		return str(data["rules"]["item_props"]["names"].get("immune_" + cond, cond))
 	if tag.split(",").has("disease") and Sheet.prop(s, data, who, "immune_disease"):
 		return "Амулет здоровья"  # Periapt of Health (v0.7.12)
 	var table: Dictionary = cfg(data)["trait_immune"]

@@ -52,7 +52,7 @@ static func situation(s: GameSession, data: Dictionary, who: Dictionary, spec: D
 	_add(adv, str(t["advantage"]))
 	RollParts.add(parts, str(t["note"]), int(t["bonus"]))
 	RollParts.add(parts, "исследователь природы", _terrain(s, data, me, skill))
-	var about := _about(s, data, me, spec, skill)
+	var about := _about(s, data, me, spec, skill, who)
 	_add(adv, str(about["adv"]))
 	RollParts.add(parts, str(about["label"]), int(about["bonus"]))
 	var listener := listener(s, data, spec)
@@ -105,7 +105,7 @@ static func about_of(s: GameSession, data: Dictionary, spec: Dictionary) -> Stri
 ## the check's subject and its skill or ability (v0.8.4.26.1): Favored Enemy gives advantage, Dragon Ancestor, Artificer's
 ## Lore and Stonecunning the proficiency twice (`proficient` — counted as proficient), a crowbar advantage on forcing,
 ## a portable ram +4 (v0.8.4.27). {adv: why, label, bonus}.
-static func _about(s: GameSession, data: Dictionary, me: Dictionary, spec: Dictionary, skill: String) -> Dictionary:
+static func _about(s: GameSession, data: Dictionary, me: Dictionary, spec: Dictionary, skill: String, who: Dictionary = {}) -> Dictionary:
 	var out := {"adv": "", "label": "", "bonus": 0}
 	var about := about_of(s, data, spec)
 	if about.is_empty():
@@ -121,6 +121,8 @@ static func _about(s: GameSession, data: Dictionary, me: Dictionary, spec: Dicti
 			name = str(data["races"]["traits"].get(str(row["trait"]), {}).get("name", row["trait"]))
 		if row.has("item") and Thing.count(me, str(row["item"])) > 0:  # a crowbar, a ram, a magnifying glass (v0.8.4.27)
 			name = ItemRules.display_name(data["items"], s.items, str(row["item"]))
+		if row.has("prop") and not who.is_empty() and Sheet.prop(s, data, who, str(row["prop"])):  # a thing's property (v0.8.4.36)
+			name = str(data["rules"]["item_props"]["names"].get(str(row["prop"]), row["prop"]))
 		for f: Variant in me.get("features", []):
 			var d: Dictionary = feats.get(str(f), {})
 			if row.has("parent") and str(d.get("parent", "")) == str(row["parent"]) and (str(row.get("about", "")) != "creature_type" or str(d.get("creature_type", "")) == about):

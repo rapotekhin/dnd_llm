@@ -716,7 +716,7 @@ class TurnKind:
 
 def _prepare_system(params: TurnRequestParams) -> str:
     head = prepare_head(params)
-    return prompts.prepare_prompt(params.snapshot, head["subject"], int(head.get("left", "3") or 3))
+    return prompts.prepare_prompt(params.snapshot, head["subject"], int(head.get("left", "3") or 3), "goal" in head)
 
 
 def _turn_ceiling(_params: TurnRequestParams) -> int:

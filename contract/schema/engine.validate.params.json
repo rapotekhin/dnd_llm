@@ -168,7 +168,7 @@
     },
     "ActFact": {
       "additionalProperties": false,
-      "description": "A fact of the engine (0.81.0): `visit` — a room id or «new:<room key>», `find` — «room:secret» of the world or\nthe `key` of a hidden thing of the act, `fight` — the `key` of a fight of the act («new:<room key>» for a room of a\nnew place with its `encounter`) or a live encounter of the world. 0.94.0: a fight is beaten or slipped past\nunseen; `defeat` true — only beaten, false — passing is enough, unsaid — by the fight's kind (a target, a lair or\na boss is to be beaten).",
+      "description": "A fact of the engine (0.81.0): `visit` — a room id or «new:<room key>», `find` — «room:secret» of the world or\nthe `key` of a hidden thing of the act, `fight` — the `key` of a fight of the act («new:<room key>» for a room of a\nnew place with its `encounter`) or a live encounter of the world. 0.94.0: a fight is beaten or slipped past\nunseen; `defeat` true — only beaten, false — passing is enough, unsaid — by the fight's kind (a target, a lair or\na boss is to be beaten). 0.115.0: only a named target and a boss are held to `defeat`; a guard, an ambush or a\nplace's fight slipped past moves the quest on (a dead end is never passed).",
       "properties": {
         "defeat": {
           "anyOf": [
@@ -2237,6 +2237,41 @@
       "title": "FurnishEffect",
       "type": "object"
     },
+    "GeneratedHit": {
+      "additionalProperties": false,
+      "description": "What a made weapon lays on the one it strikes, each hit (0.115.0): `cond` a status of the engine (blinded,\nfrightened, poisoned, prone…), a `save` against it, for `rounds` (1 — until its next turn, more — a minute with a save\nat the end of each of its turns). The engine sets its DC and its rarity points.",
+      "properties": {
+        "cond": {
+          "title": "Cond",
+          "type": "string"
+        },
+        "rounds": {
+          "default": 1,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Rounds",
+          "type": "integer"
+        },
+        "save": {
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "title": "Save",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cond",
+        "save"
+      ],
+      "title": "GeneratedHit",
+      "type": "object"
+    },
     "GeneratedItem": {
       "additionalProperties": false,
       "properties": {
@@ -2268,6 +2303,17 @@
           ],
           "default": null,
           "title": "Evidence"
+        },
+        "hit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedHit"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "item_type": {
           "enum": [
@@ -2346,7 +2392,24 @@
               "no_crit",
               "crude",
               "masterwork",
-              "water_source"
+              "water_source",
+              "initiative_plus1",
+              "initiative_plus2",
+              "initiative_plus3",
+              "initiative_advantage",
+              "life_drain",
+              "regeneration",
+              "immune_frightened",
+              "immune_charmed",
+              "immune_poisoned",
+              "immune_paralyzed",
+              "immune_blinded",
+              "immune_stunned",
+              "immune_restrained",
+              "immune_prone",
+              "immune_grappled",
+              "immune_deafened",
+              "immune_petrified"
             ],
             "type": "string"
           },
@@ -2363,6 +2426,29 @@
           ],
           "title": "Rarity",
           "type": "string"
+        },
+        "spells": {
+          "items": {
+            "$ref": "#/$defs/GeneratedSpell"
+          },
+          "maxItems": 4,
+          "title": "Spells",
+          "type": "array"
+        },
+        "store": {
+          "default": 0,
+          "maximum": 5,
+          "minimum": 0,
+          "title": "Store",
+          "type": "integer"
+        },
+        "stored": {
+          "items": {
+            "$ref": "#/$defs/StoredSpell"
+          },
+          "maxItems": 5,
+          "title": "Stored",
+          "type": "array"
         },
         "text": {
           "default": "",
@@ -2421,6 +2507,28 @@
         "value_cp"
       ],
       "title": "GeneratedItem",
+      "type": "object"
+    },
+    "GeneratedSpell": {
+      "additionalProperties": false,
+      "description": "A spell a thing gives while it works (0.115.0): `uses` times a long rest, cast without a slot by the thing's own\nDC and attack. A spell of the book or `new:<key>` of a spell made this turn, circles 0–5.",
+      "properties": {
+        "spell": {
+          "title": "Spell",
+          "type": "string"
+        },
+        "uses": {
+          "default": 1,
+          "maximum": 7,
+          "minimum": 1,
+          "title": "Uses",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "spell"
+      ],
+      "title": "GeneratedSpell",
       "type": "object"
     },
     "GeneratedSummon": {
@@ -2612,13 +2720,31 @@
     },
     "GoalHintEffect": {
       "additionalProperties": false,
-      "description": "A hint toward the hero's life goal (0.40.0): only past its threshold and only when the player asks or seeks;\nthe engine counts them — the quest for the goal comes after enough.",
+      "description": "A hint toward the hero's life goal (0.40.0): only past its threshold and only when the player asks or seeks;\nthe engine counts them — the quest for the goal comes after enough. 0.115.0: `clue` — what the hero learned, one\nsentence the sheet keeps; `npc` — who told it (an NPC id of the world), the giver of the goal's quest the engine\nreadies; past the count the engine refuses more hints.",
       "properties": {
+        "clue": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Clue",
+          "type": "string"
+        },
         "kind": {
           "const": "goal",
           "default": "goal",
           "title": "Kind",
           "type": "string"
+        },
+        "npc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Npc"
         },
         "what": {
           "const": "hint",
@@ -3132,7 +3258,7 @@
         "amount": {
           "anyOf": [
             {
-              "maximum": 20,
+              "maximum": 120,
               "minimum": -20,
               "type": "integer"
             },
@@ -6055,6 +6181,21 @@
         "npc_id"
       ],
       "title": "StockEffect",
+      "type": "object"
+    },
+    "StoredSpell": {
+      "additionalProperties": false,
+      "description": "A spell already kept in a thing that keeps spells (0.115.0): cast once, then gone.",
+      "properties": {
+        "spell": {
+          "title": "Spell",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spell"
+      ],
+      "title": "StoredSpell",
       "type": "object"
     },
     "SupplierEffect": {

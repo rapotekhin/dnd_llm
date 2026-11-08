@@ -311,3 +311,28 @@ func test_a_part_done_stays_done_when_the_hero_moves_on() -> void:
 	s.encounters_done.append(id + "_pack")
 	QuestRules.advance(s, data)
 	assert_str(QuestRules.step_text(s, data["world"], id)).contains("Вернуться к")
+
+
+## v0.8.4.36, the author's feedback: a guard or an ambush slipped past moves the quest on even when the designer said
+## `defeat` (mephits at a cleft's mouth hidden by False Appearance were never found); a named foe or a boss is still beaten.
+func test_only_a_named_foe_or_a_boss_must_be_beaten() -> void:
+	var id := _taken(_skeleton())
+	var guard := _wolf_at("pushcha-edge")
+	guard["kind"] = "guard"
+	var r := _act({"quest_id": id, "act": 1, "encounters": [guard], "steps": [{"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"},
+		{"text": "Пробиться сквозь стаю у входа", "kind": "fight", "target": "pack", "defeat": true}]})
+	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
+	var fight: Dictionary = QuestRules.quest(data["world"], id)["steps"][1]["when"]
+	assert_bool(fight.has("defeat")).is_false()
+	var enc_id := str(fight["encounter"]).trim_prefix("enc:")
+	if not s.encounters_passed.has(enc_id):
+		s.encounters_passed.append(enc_id)
+	assert_bool(Cond.met(s, fight) or Cond.met(s, {"encounter": enc_id})).is_true()
+	var id2 := _taken(_skeleton("medium", 1, "Вожак стаи"))
+	var target := _wolf_at("mine-flooded", "leader")
+	target["kind"] = "target"
+	target["enemies"] = [{"monster": "wolf", "name": "Седой"}]
+	r = _act({"quest_id": id2, "act": 1, "encounters": [target], "steps": [{"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"},
+		{"text": "Убить вожака", "kind": "fight", "target": "leader"}]})
+	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
+	assert_bool(bool(QuestRules.quest(data["world"], id2)["steps"][1]["when"].get("defeat", false))).is_true()

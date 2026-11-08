@@ -17,7 +17,7 @@ func required() -> Dictionary:
 	var nodes := {
 		"%Worlds": "VBoxContainer", "%Form": "VBoxContainer", "%PackName": "Label", "%PackTone": "Label",
 		"%DmStyleChoices": "HFlowContainer", "%DmStyleHint": "Label", "%DifficultyChoices": "HFlowContainer",
-		"%DifficultyHint": "Label", "%ViolenceChoices": "HFlowContainer", "%ToMenu": "Button", "%NextButton": "Button", "%SeedEdit": "LineEdit",
+		"%DifficultyHint": "Label", "%PartyChoices": "HFlowContainer", "%PartyHint": "Label", "%ViolenceChoices": "HFlowContainer", "%ToMenu": "Button", "%NextButton": "Button", "%SeedEdit": "LineEdit",
 	}
 	for path: String in TOGGLES:
 		nodes[path] = "CheckButton"
@@ -90,6 +90,7 @@ func _redraw() -> void:
 	(UiScenes.need(self, "%DmStyleHint") as Label).text = tr("DM_STYLE_%s_HINT" % str(settings["dm_style"]).to_upper())
 	_choice("%DifficultyChoices", "difficulty", DifficultyRules.levels(Catalog.data), "DIFFICULTY_")
 	(UiScenes.need(self, "%DifficultyHint") as Label).text = tr("DIFFICULTY_%s_HINT" % str(settings.get("difficulty", "normal")).to_upper())
+	_choice("%PartyChoices", "party", DifficultyRules.party_sizes(Catalog.data), "PARTY_")  # v0.8.4.37
 	# «Одна жизнь» comes with the roguelike loop (M5): until then every game is «История» (v0.7.7).
 	for path: String in TOGGLES:
 		var key: String = TOGGLES[path]

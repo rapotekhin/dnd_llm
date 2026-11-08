@@ -42,6 +42,19 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 		out.append(use)
 	if def.get("wear") is Dictionary:  # v0.8.4.26: what it lays while it works, in the words of a spell's effect
 		out.append(_t("ITEM_WEAR").format({"what": SpellEffects.text(data, ItemRules.wear_spec(c, data, def))}))
+	if def.get("hit") is Dictionary:  # v0.8.4.36: what a weapon lays on the one it strikes
+		out.append(_t("ITEM_HIT").format({"what": MonsterRules.effect_text(data, {"effect": ItemRules.hit_effect(def)})}))
+	var spells: Array[String] = []
+	for r: Dictionary in def.get("spells", []):
+		var rid := "item:%s:%s" % [ItemRules.real_id(id), r["spell"]]
+		var have := (c.get("item_stock", {}) as Dictionary).has(rid)
+		spells.append("%s %s" % [data["spells"].get(str(r["spell"]), {}).get("name", r["spell"]),
+			("%d/%d" % [Stock.left(c, data, rid), int(r["uses"])]) if have else "×%d" % int(r["uses"])])
+	if not spells.is_empty():
+		out.append(_t("ITEM_SPELLS").format({"list": ", ".join(spells)}))
+	if int(def.get("store", 0)) > 0:
+		var kept: Array = ItemRules.stored(c, id, def).map(func(k: Dictionary) -> String: return "%s (%d)" % [data["spells"].get(str(k["spell"]), {}).get("name", k["spell"]), int(k["circle"])])
+		out.append(_t("ITEM_STORE").format({"n": int(def["store"]), "list": ", ".join(kept) if not kept.is_empty() else _t("ITEM_STORE_EMPTY")}))
 	if ItemRules.charges_max(def) > 0:  # v0.7.12
 		out.append(_t("ITEM_CHARGES").format({"left": ItemRules.charges_left(c, def, id) if not c.is_empty() else ItemRules.charges_max(def), "max": ItemRules.charges_max(def)}))
 	if ItemRules.needs_attunement(def):

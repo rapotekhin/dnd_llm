@@ -44,6 +44,15 @@ func test_monster_languages_from_the_srd_line() -> void:
 	assert_bool(LanguageRules.monster(data, "dretch")["telepathy"]).is_true()
 
 
+## v0.8.4.36, the author's feedback: a bandit captain («any two languages») understood no Common and the hero's
+## Intimidation went with disadvantage.
+func test_any_number_of_languages_is_common() -> void:
+	for m: String in ["bandit_captain", "noble", "priest", "spy", "mage", "archmage"]:
+		assert_array(LanguageRules.monster(data, m)["speaks"]).override_failure_message(m).contains(["common"])
+	assert_array(LanguageRules.monster(data, "druid")["speaks"]).contains(["common"])
+	assert_bool(LanguageRules.foe_understands(TestUtils.new_session().character, data, {"monster": "bandit_captain"})).is_true()
+
+
 func test_undercommon_is_not_common() -> void:
 	for id: String in data["monsters"]:
 		var line := str(data["monsters"][id].get("languages", "")).to_lower()

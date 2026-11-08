@@ -57,7 +57,7 @@ func required() -> Dictionary:
 		"%BackendHint": "Label", "%ImagesOn": "CheckBox",
 		"%ImageExtra": "VBoxContainer", "%ImagePromptAdd": "TextEdit", "%ImageNegativeAdd": "TextEdit",
 		"%ImagePromptAddLabel": "Label", "%ImageNegativeAddLabel": "Label", "%ImageNegativeOnly": "CheckBox",
-		"%ImagePromptsReset": "Button", "%GameOptions": "VBoxContainer", "%NeedsOption": "CheckButton",
+		"%ImagePromptsReset": "Button", "%GameOptions": "VBoxContainer", "%NeedsOption": "CheckButton", "%PartyOption": "OptionButton",
 		"%AdultOption": "CheckButton", "%ConfirmRisky": "CheckBox", "%DevMode": "CheckBox", "%KeyList": "VBoxContainer", "%KeysReset": "Button",
 	}
 	for path: String in ["%Resolution", "%UiScale", "%CombatSpeed", "%ModelOption", "%ProviderOption", "%ProviderSortOption",
@@ -241,6 +241,9 @@ func _master_tab() -> void:
 	var levels := DifficultyRules.levels(Catalog.data)
 	_options("%DifficultyOption", levels.map(func(d: Variant) -> String: return tr("DIFFICULTY_" + str(d).to_upper())),
 		levels.find(DifficultyRules.level(GameState.session, Catalog.data)), func(i: int) -> void: GameState.set_difficulty(str(levels[i])))
+	var sizes := DifficultyRules.party_sizes(Catalog.data)  # v0.8.4.37
+	_options("%PartyOption", sizes.map(func(n: Variant) -> String: return tr("PARTY_%d" % int(n))),
+		sizes.find(DifficultyRules.party(GameState.session, Catalog.data)), func(i: int) -> void: GameState.set_party(int(sizes[i])))
 	var needs: CheckButton = UiScenes.need(self, "%NeedsOption")  # v0.7.23
 	needs.button_pressed = NeedRules.on(GameState.session)
 	needs.toggled.connect(GameState.set_needs)

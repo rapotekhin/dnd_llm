@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.114.0"
+PROTOCOL_VERSION = "0.115.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -603,6 +603,10 @@ ItemProperty = Literal[
     "immune_disease", "understand_all", "missile_snaring", "carry_plus_500", "str_19", "int_19", "mithral", "no_crit",
     "crude", "masterwork",  # 0.56.0: the make of a crafted thing (−1 / +1 to attack; armor −1 AC / no Str and stealth trouble)
     "water_source",  # 0.107.0: the carrier has water anywhere (Decanter of Endless Water)
+    # 0.115.0: initiative (+1..+3, advantage), an immunity to a condition, a blow that drains life, regeneration
+    "initiative_plus1", "initiative_plus2", "initiative_plus3", "initiative_advantage", "life_drain", "regeneration",
+    "immune_frightened", "immune_charmed", "immune_poisoned", "immune_paralyzed", "immune_blinded", "immune_stunned",
+    "immune_restrained", "immune_prone", "immune_grappled", "immune_deafened", "immune_petrified",
 ]
 
 
@@ -643,6 +647,30 @@ class WornAura(_Out):
     spares_friends: bool = False
 
 
+class GeneratedHit(_Out):
+    """What a made weapon lays on the one it strikes, each hit (0.115.0): `cond` a status of the engine (blinded,
+    frightened, poisoned, prone…), a `save` against it, for `rounds` (1 — until its next turn, more — a minute with a save
+    at the end of each of its turns). The engine sets its DC and its rarity points."""
+
+    cond: str
+    save: Literal["str", "dex", "con", "int", "wis", "cha"]
+    rounds: int = Field(default=1, ge=1, le=10)
+
+
+class GeneratedSpell(_Out):
+    """A spell a thing gives while it works (0.115.0): `uses` times a long rest, cast without a slot by the thing's own
+    DC and attack. A spell of the book or `new:<key>` of a spell made this turn, circles 0–5."""
+
+    spell: str
+    uses: int = Field(default=1, ge=1, le=7)
+
+
+class StoredSpell(_Out):
+    """A spell already kept in a thing that keeps spells (0.115.0): cast once, then gone."""
+
+    spell: str
+
+
 class GeneratedItem(_Out):
     name: str
     item_type: ItemType
@@ -656,6 +684,10 @@ class GeneratedItem(_Out):
     # water_walk, fly_speed — feet 5–60 or "walk"; see_invisible — true; 0.114.0: aura — {ft 5–30, cond, save, rounds?,
     # spares_friends?}, a zone of the fight around the wearer, its DC and price by the engine
     wear: dict[str, int | str | bool | WornAura] | None = None
+    hit: GeneratedHit | None = None  # 0.115.0: a weapon's status on the one it strikes
+    spells: list[GeneratedSpell] = Field(default_factory=list, max_length=4)  # 0.115.0: spells a long rest
+    store: int = Field(default=0, ge=0, le=5)  # 0.115.0: circles of spells it keeps (a Ring of Spell Storing)
+    stored: list[StoredSpell] = Field(default_factory=list, max_length=5)  # 0.115.0: what it keeps already
     text: str = ""  # 0.27.0: what is written in it — a letter, a diary, an inscription (a thing without mechanics is fine)
     evidence: str | None = None  # 0.92.0: the npc_id whose crime this thing shows (a smuggler's tally, an intercepted letter)
 
@@ -1057,7 +1089,8 @@ class ActFact(_Out):
     the `key` of a hidden thing of the act, `fight` — the `key` of a fight of the act («new:<room key>» for a room of a
     new place with its `encounter`) or a live encounter of the world. 0.94.0: a fight is beaten or slipped past
     unseen; `defeat` true — only beaten, false — passing is enough, unsaid — by the fight's kind (a target, a lair or
-    a boss is to be beaten)."""
+    a boss is to be beaten). 0.115.0: only a named target and a boss are held to `defeat`; a guard, an ambush or a
+    place's fight slipped past moves the quest on (a dead end is never passed)."""
 
     text: str = ""
     kind: Literal["visit", "find", "fight"]
@@ -1246,7 +1279,7 @@ class MakePart(_Out):
 
     part: str
     value: str | None = None
-    amount: int | None = Field(default=None, ge=-20, le=20)
+    amount: int | None = Field(default=None, ge=-20, le=120)  # 0.115.0: a size of an area to 120 ft; the engine checks each part
 
 
 class MakeEffect(_Out):
@@ -1967,10 +2000,14 @@ class GoalAssessEffect(_Out):
 
 class GoalHintEffect(_Out):
     """A hint toward the hero's life goal (0.40.0): only past its threshold and only when the player asks or seeks;
-    the engine counts them — the quest for the goal comes after enough."""
+    the engine counts them — the quest for the goal comes after enough. 0.115.0: `clue` — what the hero learned, one
+    sentence the sheet keeps; `npc` — who told it (an NPC id of the world), the giver of the goal's quest the engine
+    readies; past the count the engine refuses more hints."""
 
     kind: Literal["goal"] = "goal"
     what: Literal["hint"] = "hint"
+    clue: str = Field(default="", max_length=200)
+    npc: str | None = None
 
 
 class NpcFollowEffect(_Out):

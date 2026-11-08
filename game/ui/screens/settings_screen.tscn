@@ -346,6 +346,16 @@ theme_type_variation = &"MutedLabel"
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="PartyLabel" type="Label" parent="Col/Tabs/Master/MasterBox/GameOptions"]
+layout_mode = 2
+text = "OPT_PARTY"
+theme_type_variation = &"MutedLabel"
+
+[node name="PartyOption" type="OptionButton" parent="Col/Tabs/Master/MasterBox/GameOptions"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "PARTY_HINT"
+
 [node name="NeedsOption" type="CheckButton" parent="Col/Tabs/Master/MasterBox/GameOptions"]
 unique_name_in_owner = true
 layout_mode = 2

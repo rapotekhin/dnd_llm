@@ -487,6 +487,7 @@ static func wear(c: Dictionary, data: Dictionary, session_items: Dictionary) -> 
 		var own := wear_spec(c, data, {"wear": born[fid]["row"]})
 		own.merge({"condition": "", "ends": {}, "source": {"kind": BORN, "id": fid, "name": str(born[fid]["name"])}})
 		ConditionRules.add_effect(c, own)
+	_thing_spells(c, data, session_items)
 	var lit := belt(c, data, session_items)
 	for id: String in CharacterRules.working_ids(c, data, session_items):
 		var d := def_of(data["items"], session_items, id)
@@ -495,6 +496,150 @@ static func wear(c: Dictionary, data: Dictionary, session_items: Dictionary) -> 
 		var e := wear_spec(c, data, d)
 		e.merge({"condition": "", "ends": {}, "source": {"kind": WORN, "id": real_id(id), "name": str(d.get("name", ""))}})
 		ConditionRules.add_effect(c, e)
+
+
+## Regeneration (v0.8.4.36): a thing with the property heals its holder — in a fight at the start of its turn, `f` its fighter.
+static func regenerate(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	var me := Sheet.holder(s, f)
+	if not Sheet.prop(s, data, f, "regeneration") or int(me.get("hp", 0)) <= 0 or int(me.get("hp", 0)) >= int(me.get("max_hp", 0)):
+		return
+	var got := Harm.mend(s, data, f, CombatRules.roll_dice(s.rng, str(data["rules"]["item_props"]["regeneration"]["dice"])))
+	if got > 0:
+		lines.append("%s: регенерация, +%d хитов" % [me.get("name", ""), got])
+
+
+## Out of a fight: the hero's regeneration every `every` minutes that passed (a TimeRules hook).
+static func regenerate_hero(s: GameSession, data: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var c := s.character
+	var row: Dictionary = data["rules"]["item_props"].get("regeneration", {})
+	var n := TimeRules.periods(c, "regen_at", TimeRules.abs_minute(s), int(row.get("every", 10)))
+	if row.is_empty() or CombatRules.active(s) or not Sheet.prop(s, data, Sheet.HERO, "regeneration") or int(c.get("hp", 0)) <= 0:
+		return lines
+	var got := 0
+	for i in mini(n, 60):
+		got += CombatRules.roll_dice(s.rng, str(row["dice"]))
+	got = Harm.mend(s, data, Sheet.HERO, got)
+	if got > 0:
+		lines.append("Регенерация: +%d хитов" % got)
+	return lines
+
+
+## The spells of the things that work now (v0.8.4.36): a row of the holder's stock each (Stock.table with `c`) — a thing's
+## `spells` a long rest each, the spells kept in a thing's copy once; cast without a slot (spells.items), by the thing's
+## numbers when its holder casts by no ability of its own (spells.item_numbers).
+static func _thing_spells(c: Dictionary, data: Dictionary, session_items: Dictionary) -> void:
+	var stock := {}
+	var free: Array = []
+	var nums := {}
+	var add := func(rid: String, row: Dictionary, spell: String, circle: int, dc: int, attack: int) -> void:
+		stock[rid] = row
+		if not free.has(spell):
+			free.append(spell)
+		nums[spell] = {"dc": dc, "attack": attack, "ability": "int"}
+	var seen := {}
+	for id: String in CharacterRules.working_ids(c, data, session_items):
+		if seen.has(id):
+			continue
+		seen[id] = true
+		var d := def_of(data["items"], session_items, id)
+		for r: Dictionary in d.get("spells", []):
+			var sp := str(r["spell"])
+			var lv := maxi(1, int(data["spells"].get(sp, {}).get("level", 1)))
+			var n := scroll_numbers(data, lv)
+			add.call("item:%s:%s" % [real_id(id), sp], {"spell": sp, "max": {"fixed": int(r.get("uses", 1))}, "recharge": "long", "circle": lv,
+				"item": id, "name": "%s — %s" % [data["spells"].get(sp, {}).get("name", sp), d.get("name", id)], "combat_cost": "never"}, sp, lv, int(n[0]), int(n[1]))
+		var kept := stored(c, id, d)
+		for i in kept.size():
+			var k: Dictionary = kept[i]
+			var sp := str(k["spell"])
+			add.call("store:%s:%d" % [id, i], {"spell": sp, "max": {"fixed": 1}, "recharge": "never", "circle": int(k["circle"]), "item": id, "store": i,
+				"name": "%s — в вещи «%s»" % [data["spells"].get(sp, {}).get("name", sp), d.get("name", id)], "combat_cost": "never", "kept": kept}, sp, int(k["circle"]),
+				int(k["dc"]), int(k["attack"]))
+	if stock.is_empty():
+		c.erase("item_stock")
+		if c.get("spells") is Dictionary:
+			(c["spells"] as Dictionary).erase("items")
+			(c["spells"] as Dictionary).erase("item_numbers")
+		return
+	c["item_stock"] = stock
+	if not (c.get("spells") is Dictionary):
+		c["spells"] = {}
+	c["spells"]["items"] = free
+	c["spells"]["item_numbers"] = nums
+
+
+## The spells kept in the first copy of a thing that keeps spells (a Ring of Spell Storing): [{spell, circle, dc, attack}];
+## a copy not yet touched holds what the thing was made with.
+static func stored(h: Dictionary, id: String, d: Dictionary) -> Array:
+	if int(d.get("store", 0)) <= 0:
+		return []
+	var list := Thing.states(h, id)
+	return (list[0] as Dictionary).get("stored", d.get("stored", [])) if not list.is_empty() and (list[0] as Dictionary).has("stored") else d.get("stored", [])
+
+
+## A kept spell cast: it leaves its thing. True when `rid` was one (Stock.spend calls it).
+static func unstore(c: Dictionary, rid: String) -> bool:
+	if not rid.begins_with("store:"):
+		return false
+	var row: Dictionary = c.get("item_stock", {}).get(rid, {})
+	if row.is_empty():
+		return true
+	var copy := Thing.nth(c, str(row["item"]), 0)
+	var kept: Array = (copy.get("stored", row["kept"]) as Array).duplicate(true)  # the live list: another kept spell may be gone already
+	for i in kept.size():
+		if str(kept[i]["spell"]) == str(row["spell"]) and int(kept[i]["circle"]) == int(row["circle"]):
+			kept.remove_at(i)
+			break
+	copy["stored"] = kept
+	(c["item_stock"] as Dictionary).erase(rid)
+	return true
+
+
+## "" or why the hero cannot put `spell` into the thing `id` at `circle` now (a key or a line).
+static func store_why(s: GameSession, data: Dictionary, id: String, spell: String, circle: int) -> String:
+	var c := s.character
+	var d := def_of(data["items"], s.items, id)
+	var room := int(d.get("store", 0))
+	if room <= 0 or Thing.count(c, id) <= 0:
+		return "ITEM_STORE_NONE"
+	if not SpellRules.ready(c).has(spell) or SpellRules.level_of(data, spell) < 1 or circle < SpellRules.level_of(data, spell):
+		return "ITEM_STORE_SPELL"
+	if SpellRules.slots_left(c, circle) <= 0:
+		return "ITEM_STORE_SLOT"
+	var full: int = stored(c, id, d).reduce(func(a: int, k: Dictionary) -> int: return a + int(k["circle"]), 0)
+	if full + circle > room:
+		return "ITEM_STORE_FULL"
+	return ""
+
+
+## The hero casts `spell` into the thing at `circle`: the slot spent, the spell kept with the hero's DC and attack. Lines.
+static func store_spell(s: GameSession, data: Dictionary, id: String, spell: String, circle: int) -> Array[String]:
+	var c := s.character
+	var d := def_of(data["items"], s.items, id)
+	var kept: Array = stored(c, id, d).duplicate(true)
+	var n := ActionRules.numbers(s, data, spell)
+	var ab := str(c.get("spell_ability", "int"))
+	kept.append({"spell": spell, "circle": circle, "dc": int(n.get("dc", Sheet.dc(s, data, Sheet.HERO, ab))),
+		"attack": int(n.get("attack", Sheet.prof(s, data, Sheet.HERO) + Sheet.ability_mod(s, data, Sheet.HERO, ab)))})
+	Stock.spend(c, "slot_%d" % circle)
+	Thing.nth(c, id, 0)["stored"] = kept
+	CharacterRules.refresh(c, data, s.items)
+	return ["%s: в вещи «%s» — %s (%d круг)" % [c.get("name", ""), d.get("name", id), data["spells"].get(spell, {}).get("name", spell), circle]]
+
+
+## What the hero could put into a thing that keeps spells now: [{spell, circle, name}].
+static func storable(s: GameSession, data: Dictionary, id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if int(def_of(data["items"], s.items, id).get("store", 0)) <= 0:
+		return out
+	for sp: Variant in SpellRules.ready(s.character):
+		var lv := SpellRules.level_of(data, str(sp))
+		if lv >= 1 and not SpellRules.is_free(s.character, str(sp)):
+			var at := SpellRules.lowest_slot(s.character, data, str(sp))
+			if at > 0 and store_why(s, data, id, str(sp), at).is_empty():
+				out.append({"spell": str(sp), "circle": at, "name": str(data["spells"][str(sp)].get("name", sp))})
+	return out
 
 
 ## What its features and traits lay for good by `rules.feature_wear`: {id: {row, name}} — its own features and race traits,
@@ -660,6 +805,14 @@ static func check_generated(data: Dictionary, item: Dictionary, level: int) -> D
 	if wear.has("reason"):
 		return {"ok": false, "reason": wear["reason"]}
 	points += int(wear.get("points", 0))
+	var hit := _generated_hit(data, item)  # v0.8.4.36: what it lays on the one it strikes
+	if hit.has("reason"):
+		return {"ok": false, "reason": hit["reason"]}
+	points += int(hit.get("points", 0))
+	var spells := _generated_spells(data, item)  # v0.8.4.36: spells a long rest, spells kept in it
+	if spells.has("reason"):
+		return {"ok": false, "reason": spells["reason"]}
+	points += int(spells.get("points", 0))
 	var dealt: Array = elements(data, item).map(func(el: Dictionary) -> String: return str(el["type"]))
 	var base_def: Dictionary = items_data["catalog"].get(base, {})
 	dealt.append(str(base_def.get("weapon", {}).get("damage_type", "")))
@@ -685,6 +838,11 @@ static func check_generated(data: Dictionary, item: Dictionary, level: int) -> D
 		def["evidence"] = str(item["evidence"])
 	if not (wear.get("wear", {}) as Dictionary).is_empty():
 		def["wear"] = wear["wear"]
+	if hit.has("hit"):
+		def["hit"] = hit["hit"]
+	for k: String in ["spells", "store", "stored"]:
+		if spells.has(k) and not (spells[k] is Array and (spells[k] as Array).is_empty() and k != "stored"):
+			def[k] = spells[k]
 	if use.has("use"):
 		def["use"] = use["use"]
 		if use.has("charges"):
@@ -733,8 +891,7 @@ static func _generated_wear(items_data: Dictionary, item: Dictionary, data: Dict
 
 
 ## The aura a made thing lays around its wearer (v0.8.4.35), in the form of a monster trait's (rules.feature_wear
-## `aura`): {aura, points} or {reason}. Its points: the word's own, each 10 ft begun, the status's cost by make.act.lay_cost,
-## sparing friends; its DC by those points.
+## `aura`): {aura, points} or {reason}. Its points: the word's own, each 10 ft begun, the status laid, sparing friends.
 static func _aura(data: Dictionary, row: Dictionary, v: Variant) -> Dictionary:
 	if not (v is Dictionary) or data.is_empty():
 		return {"reason": "wear.aura — объект: ft, cond, save, rounds?, spares_friends?"}
@@ -742,23 +899,97 @@ static func _aura(data: Dictionary, row: Dictionary, v: Variant) -> Dictionary:
 	var ft := int(a.get("ft", 0)) if a.get("ft") != null else 0
 	if ft < int(row["ft"][0]) or ft > int(row["ft"][1]) or ft % 5 != 0:
 		return {"reason": "wear.aura.ft — от %d до %d футов, кратно 5" % [int(row["ft"][0]), int(row["ft"][1])]}
+	var spares: bool = a.get("spares_friends") == true
+	var laid := _laid(data, a, "wear.aura", int(row["points"]) + ceili(ft / 10.0) * int(row["per_10ft"]) + (int(row["spares_points"]) if spares else 0))
+	if laid.has("reason"):
+		return laid
+	var aura := {"ft": ft, "on": ["start"], "save": laid["save"], "dc": laid["dc"], "tag": "", "cond": laid["cond"],
+		"for": {"rounds": laid["rounds"], "save": laid["save"], "dc": laid["dc"], "tag": ""}}
+	if spares:
+		aura["spares_friends"] = true
+	return {"aura": aura, "points": laid["points"]}
+
+
+## A status a made thing lays on another (items.json laid): {cond, save, rounds, dc, points} or {reason}; `base` — the
+## points of the rest of it, the DC is by the whole.
+static func _laid(data: Dictionary, a: Dictionary, field: String, base: int) -> Dictionary:
+	var row: Dictionary = data["items"]["laid"]
 	var cond := str(a.get("cond", "")) if a.get("cond") != null else ""
 	var costs: Dictionary = data["rules"]["make"]["act"]["lay_cost"]
 	if not costs.has(cond):
-		return {"reason": "wear.aura.cond — состояние из %s" % ", ".join(costs.keys())}
+		return {"reason": "%s.cond — состояние из %s" % [field, ", ".join(costs.keys())]}
 	var save := str(a.get("save", "")) if a.get("save") != null else ""
 	if not (data["rules"]["saves"] as Array).has(save):
-		return {"reason": "wear.aura.save — характеристика спасброска: %s" % ", ".join(data["rules"]["saves"])}
+		return {"reason": "%s.save — характеристика спасброска: %s" % [field, ", ".join(data["rules"]["saves"])]}
 	var rounds := int(a.get("rounds", 1)) if a.get("rounds") != null else 1
 	if rounds < int(row["rounds"][0]) or rounds > int(row["rounds"][1]):
-		return {"reason": "wear.aura.rounds — от %d до %d" % [int(row["rounds"][0]), int(row["rounds"][1])]}
-	var spares: bool = a.get("spares_friends") == true
-	var points := int(row["points"]) + ceili(ft / 10.0) * int(row["per_10ft"]) + int(costs[cond]) + (int(row["spares_points"]) if spares else 0)
-	var dc := int(Scale.up_to(row["dc"], points).get("dc", 17))
-	var aura := {"ft": ft, "on": ["start"], "save": save, "dc": dc, "tag": "", "cond": cond, "for": {"rounds": rounds, "save": save, "dc": dc, "tag": ""}}
-	if spares:
-		aura["spares_friends"] = true
-	return {"aura": aura, "points": points}
+		return {"reason": "%s.rounds — от %d до %d" % [field, int(row["rounds"][0]), int(row["rounds"][1])]}
+	var points := base + int(costs[cond])
+	return {"cond": cond, "save": save, "rounds": rounds, "dc": int(Scale.up_to(row["dc"], points).get("dc", 17)), "points": points}
+
+
+## The spells of a made thing (v0.8.4.36, items.json spells_points): {spells, store, stored, points} or {reason}; {} — none.
+static func _generated_spells(data: Dictionary, item: Dictionary) -> Dictionary:
+	var row: Dictionary = data["items"]["spells_points"]
+	var list: Variant = item.get("spells")
+	var room := int(item.get("store", 0)) if item.get("store") != null else 0
+	if (list == null or not (list is Array) or (list as Array).is_empty()) and room <= 0:
+		return {}
+	var out := {"spells": [], "points": 0}
+	for r: Variant in (list if list is Array else []):
+		var sp := str((r as Dictionary).get("spell", ""))
+		if not data["spells"].has(sp):
+			return {"reason": "spells: заклинания %s нет в книге движка" % sp}
+		var lv := int(data["spells"][sp].get("level", 0))
+		if lv > int(row["circle_max"]):
+			return {"reason": "spells: не выше %d круга" % int(row["circle_max"])}
+		var uses := int(r.get("uses", 1)) if r.get("uses") != null else 1
+		if uses < int(row["uses"][0]) or uses > int(row["uses"][1]):
+			return {"reason": "spells.uses — от %d до %d за долгий отдых" % [int(row["uses"][0]), int(row["uses"][1])]}
+		out["spells"].append({"spell": sp, "uses": uses})
+		out["points"] = int(out["points"]) + int(row["by_circle"][lv]) + (uses - 1) / int(row["per_uses"])
+	if room > 0:
+		if room > int(row["store_max"]):
+			return {"reason": "store — не больше %d кругов" % int(row["store_max"])}
+		out["store"] = room
+		out["points"] = int(out["points"]) + room * int(row["store_per_circle"])
+		var kept: Array = []
+		var full := 0
+		for r: Variant in (item.get("stored", []) if item.get("stored") is Array else []):
+			var sp := str((r as Dictionary).get("spell", ""))
+			var lv := maxi(1, int(data["spells"].get(sp, {}).get("level", 0)))
+			if not data["spells"].has(sp) or int(data["spells"][sp].get("level", 0)) < 1:
+				return {"reason": "stored: заклинания %s (1 круга и выше) нет в книге движка" % sp}
+			full += lv
+			var n := scroll_numbers(data, lv)
+			kept.append({"spell": sp, "circle": lv, "dc": int(n[0]), "attack": int(n[1])})
+		if full > room:
+			return {"reason": "stored: вложено %d кругов, а вещь держит %d" % [full, room]}
+		out["stored"] = kept
+	return out
+
+
+## A made weapon's `hit` (v0.8.4.36): {hit, points} or {reason}; {} — none.
+static func _generated_hit(data: Dictionary, item: Dictionary) -> Dictionary:
+	var h: Variant = item.get("hit")
+	if h == null or not (h is Dictionary) or (h as Dictionary).is_empty():
+		return {}
+	if str(item.get("item_type", "")) != "weapon" and not data["items"]["catalog"].get(str(item.get("base", "")), {}).has("weapon"):
+		return {"reason": "hit — только у оружия (item_type weapon или base — оружие каталога)"}
+	var laid := _laid(data, h, "hit", int(data["items"]["hit_points"]["points"]))
+	if laid.has("reason"):
+		return laid
+	return {"hit": {"cond": laid["cond"], "save": laid["save"], "dc": laid["dc"], "rounds": laid["rounds"]}, "points": laid["points"]}
+
+
+## What a weapon's `hit` lays on the one it strikes, as a monster attack's effect (MonsterRules.apply_effect).
+static func hit_effect(def: Dictionary) -> Dictionary:
+	var h: Dictionary = def.get("hit", {})
+	if h.is_empty():
+		return {}
+	var rounds := int(h.get("rounds", 1))
+	return {"condition": str(h["cond"]), "save": {"ability": str(h["save"]), "dc": int(h["dc"])}, "duration": "round" if rounds <= 1 else "minute",
+		"repeat": rounds > 1}
 
 
 ## What a generated `use.summon` calls (v0.8.4.28.7): a row in the shape of rules.allies.summons — an SRD `monster` or a

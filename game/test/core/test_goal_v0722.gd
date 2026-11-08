@@ -93,3 +93,41 @@ func _assess_kind(e: Dictionary, turn: String) -> Dictionary:
 	if bool(r["accepted"]):
 		fx.apply(s, turn, [r["effect_id"]])
 	return r
+
+
+## v0.8.4.36, the author's feedback: the master went on hinting «3 of 2» and the goal never began. Each hint keeps its
+## clue and who told it; past the count the engine refuses more; the second line readies the goal's quest from the last
+## clue's giver; with the quest made — no more hints.
+func test_clues_are_kept_hints_stop_and_the_goal_quest_is_readied() -> void:
+	var c := s.character
+	s.room_id = "brod-tavern-hall"
+	GoalRules.write(c, "Сшить плащ невидимости")
+	_assess({"scale": "hard"})
+	c["level"] = 3
+	assert_str(str(_assess_kind({"kind": "goal", "what": "hint", "npc": "nobody_here"}, "t-2")["reason"])).contains("goal:hint.npc")
+	assert_bool(bool(_assess_kind({"kind": "goal", "what": "hint", "clue": "Ткач плащей приходит с северным обозом.", "npc": "npc_smith"}, "t-3")["accepted"])).is_true()
+	assert_bool(bool(_assess_kind({"kind": "goal", "what": "hint", "clue": "В казне Серой заставы держали такую ткань.", "npc": "npc_captain"}, "t-4")["accepted"])).is_true()
+	assert_int(GoalRules.clues(c).size()).is_equal(2)
+	assert_str(GoalRules.by(c)).is_equal("npc_captain")
+	assert_str(GoalRules.text_of(c, data)).contains("Ткач плащей")
+	assert_str(GoalRules.text_of(c, data, false)).not_contains("Ткач плащей")  # the sheet lists them itself
+	var third := _assess_kind({"kind": "goal", "what": "hint", "clue": "Ещё слух."}, "t-5")
+	assert_str(str(third["reason"])).contains("пора задание цели")
+	assert_str(GoalRules.quest_due(s, data)).is_equal("npc_captain")
+	var jobs := PrepareRules.jobs(s, data)
+	var goal_jobs := jobs.filter(func(j: Dictionary) -> bool: return str(j["kind"]) == "goal")
+	assert_int(goal_jobs.size()).is_equal(1)
+	assert_str(PrepareRules.frame(s, data, goal_jobs[0])).contains("| goal]")
+	assert_str(PrepareRules.frame(s, data, goal_jobs[0])).contains("Ткач плащей")
+	var quest := {"kind": "create", "what": "quest", "giver": "npc_captain", "title": "Ткань из казны", "difficulty": "hard",
+		"acts": [{"title": "Казна", "goal": "Разузнать о казне заставы"}, {"title": "Ткань", "goal": "Добыть ткань из казны"}]}
+	PrepareRules.keep(s, data, goal_jobs[0], [quest])
+	var ready: Array = PrepareRules.goal_quests(s, data)
+	assert_bool(bool(ready[0]["for_goal"])).is_true()  # whatever the master wrote
+	fx.searched_quests["t-6"] = true
+	var made := _assess_kind(ready[0], "t-6")
+	assert_bool(bool(made["accepted"])).override_failure_message(str(made)).is_true()
+	assert_str(GoalRules.quest_of(c)).is_not_empty()
+	assert_str(GoalRules.quest_due(s, data)).is_empty()
+	assert_str(str(_assess_kind({"kind": "goal", "what": "hint"}, "t-7")["reason"])).contains("задание цели уже есть")
+	assert_str(GoalRules.text_of(c, data)).contains("Ткань из казны")

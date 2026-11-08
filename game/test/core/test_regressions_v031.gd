@@ -48,7 +48,7 @@ func test_b9_conversation_only_with_an_npc_in_the_room() -> void:
 	assert_str(GameState._apply_result(s, "t-1", {"narration": "x", "next_mode": {"mode": "social", "npc_id": TestUtils.COOK}}, "action")).is_empty()
 	assert_str(s.mode).is_equal(GameSession.MODE_EXPLORATION)
 	assert_str(GameState._apply_result(s, "t-2", {"narration": "x", "next_mode": {"mode": "social", "npc_id": "ghost"}}, "action")).is_empty()
-	assert_str(GameState._apply_result(s, "t-3", {"narration": "x", "next_mode": {"mode": "social", "npc_id": TestUtils.INNKEEPER}}, "action")).is_equal("enter")
+	assert_str(GameState._apply_result(s, "t-3", {"narration": "x", "next_mode": {"mode": "social", "npc_id": TestUtils.INNKEEPER}}, "action")).is_empty()  # no second turn: the NPC answered already (v0.8.4.36)
 	assert_str(s.mode).is_equal(GameSession.MODE_SOCIAL)
 	assert_str(s.npc_id).is_equal(TestUtils.INNKEEPER)
 

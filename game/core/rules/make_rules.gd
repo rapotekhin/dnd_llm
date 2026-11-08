@@ -143,12 +143,18 @@ static func resolve(pending: Array[Dictionary], value: String) -> String:
 	return value
 
 
-## A master's item with `new:<key>` among its properties: the real ids.
+## A master's item with `new:<key>` of this turn's `make` among its properties, its `use.spell`, its `spells` or `stored`
+## (v0.8.4.36: a wand of a spell made in the same turn): the real ids.
 static func resolved_item(item: Dictionary, pending: Array[Dictionary]) -> Dictionary:
-	if not (item.get("properties", []) as Array).any(func(p: Variant) -> bool: return str(p).begins_with("new:")):
-		return item
-	var out := item.duplicate()
-	out["properties"] = (item["properties"] as Array).map(func(p: Variant) -> String: return resolve(pending, str(p)))
+	var out := item.duplicate(true)
+	out["properties"] = (item.get("properties", []) as Array).map(func(p: Variant) -> String: return resolve(pending, str(p)))
+	if out.get("use") is Dictionary and out["use"].get("spell") is String:
+		out["use"]["spell"] = resolve(pending, str(out["use"]["spell"]))
+	for key: String in ["spells", "stored"]:
+		if out.get(key) is Array:
+			for r: Variant in out[key]:
+				if r is Dictionary and (r as Dictionary).get("spell") is String:
+					r["spell"] = resolve(pending, str(r["spell"]))
 	return out
 
 
@@ -277,6 +283,19 @@ static func _lay(out: Dictionary, id: String, value: String, amount: int, name: 
 			f["minus"] = amount < 0
 		"guise":
 			f["guise"] = {"name": value}
+
+
+## The shape of a made spell's area (rules.make.act.shapes, v0.8.4.36): {area {type, size}, mult, extra} or {reason}; size 0 —
+## the shape's default.
+static func _shape(cf: Dictionary, type: String, size: int) -> Dictionary:
+	var shapes: Dictionary = cf.get("shapes", {})
+	if not shapes.has(type) or type.begins_with("_"):
+		return {"reason": "shape — %s" % ", ".join(shapes.keys().filter(func(k: Variant) -> bool: return not str(k).begins_with("_")))}
+	var row: Dictionary = shapes[type]
+	var ft := size if size > 0 else int(row["default"])
+	if ft < int(row["size"][0]) or ft > int(row["size"][1]):
+		return {"reason": "size у %s — от %d до %d футов" % [type, int(row["size"][0]), int(row["size"][1])]}
+	return {"area": {"type": type, "size": ft}, "mult": float(row["mult"]), "extra": maxi(0, ft - int(row["default"])) / int(shapes.get("per_ft", 20))}
 
 
 ## The tier of `points`: its row, or {} past the last one.
@@ -479,8 +498,15 @@ static func _acted(s: GameSession, data: Dictionary, what: String, id: String, n
 		return {"reason": "реакция — только заклинание: урон обидчику со спасброском, target one"}
 	if what != "ability" and (got.has("uses") or got.has("recharge")):
 		return {"reason": "uses и recharge — только у ability"}
+	var area: Dictionary = cf["area"]
+	if (got.has("shape") or got.has("size")) and target != "area":
+		return {"reason": "shape и size — у target area"}
 	if target == "area":
-		points = ceili(points * float(cf["area_mult"]))
+		var shape := _shape(cf, val.call("shape", str(area["type"])), num.call("size"))
+		if shape.has("reason"):
+			return shape
+		area = shape["area"]
+		points = ceili(points * float(shape["mult"])) + int(shape["extra"])
 	points = maxi(1, points) + charges
 	var rank := _rank(cf, points)
 	if rank.is_empty():
@@ -493,12 +519,13 @@ static func _acted(s: GameSession, data: Dictionary, what: String, id: String, n
 	if circle == 0 and (heal > 0 or not lay.is_empty() or cast == "reaction"):
 		circle = 1
 	var key: String = val.call("range", "touch" if target == "self" else "60")
+	var from_self := target == "area" and bool(cf.get("shapes", {}).get(str(area["type"]), {}).get("from_self", false))
 	var lasts: Array = cf["lasts"][val.call("lasts", "round")]
 	var conc := got.has("concentration")
 	var row := {"name": name, "name_en": "", "level": circle, "school": "Собрано мастером", "school_id": "", "casting_time": cf["casting"][cast],
-		"range": "На себя" if target == "self" else ("Касание" if key == "touch" else "%s футов" % key), "duration": lasts[0], "components": ["V", "S"],
+		"range": "На себя" if target == "self" or from_self else ("Касание" if key == "touch" else "%s футов" % key), "duration": lasts[0], "components": ["V", "S"],
 		"concentration": conc, "ritual": false, "classes": [], "subclasses": [], "desc": text, "generated": true,
-		"range_ft": 5 if key == "touch" else (0 if target == "self" else int(key))}
+		"range_ft": 5 if key == "touch" and not from_self else (0 if target == "self" or from_self else int(key))}
 	var act := {"spells": row}
 	var tier_name := "%d круг" % circle if circle > 0 else "заговор"
 	var dc := int(data["rules"]["dc_tiers"][str(cf["dc_by_circle"][circle])])
@@ -535,7 +562,7 @@ static func _acted(s: GameSession, data: Dictionary, what: String, id: String, n
 	elif not roll.is_empty():
 		row["save"] = {"ability": roll, "success": "half" if got.has("half") else "none"}
 	if target == "area":
-		row["area"] = cf["area"]
+		row["area"] = area
 	if dmg > 0:
 		row["damage_type"] = val.call("damage", "force")
 		if circle == 0 and what == "spell":

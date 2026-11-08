@@ -162,9 +162,10 @@ static func _level(s: GameSession) -> int:
 	return clampi(int(s.character.get("level", 1)), 1, 5)
 
 
-## The DMG budget of one fight of a tier for the hero's level (raw XP of the foes, as xp_budget_hard).
-static func tier_xp(data: Dictionary, tier: String, level: int) -> int:
-	return int(cfg(data)["encounter_xp"].get(tier, [0, 0, 0, 0, 0])[clampi(level, 1, 5) - 1])
+## The DMG budget of one fight of a tier for the hero's level (raw XP of the foes, as xp_budget_hard), for the party the
+## game's fights are made for (DifficultyRules.party, v0.8.4.37).
+static func tier_xp(s: GameSession, data: Dictionary, tier: String, level: int) -> int:
+	return DifficultyRules.budget(s, data, int(cfg(data)["encounter_xp"].get(tier, [0, 0, 0, 0, 0])[clampi(level, 1, 5) - 1]))
 
 
 ## The tier one step harder (the boss of the last act) or one step easier (the floor of a fight).
@@ -290,6 +291,8 @@ static func apply_quest(s: GameSession, data: Dictionary, plan: Dictionary) -> S
 	if not made.is_empty():
 		q["giver"] = WorldGen.apply_npc(s, data, {"npc": made["npc"], "room": made["room"], "items": made.get("items", {})})
 	_store(s, data, id, q)
+	if bool(q.get("for_goal", false)):
+		GoalRules.got_quest(s.character, id)  # v0.8.4.36: no more hints, the tab shows it
 	if q.has("board"):
 		mark_board_read(s, str(q["board"]["prop"]), str(q["board"]["room"]))
 	return id
@@ -368,8 +371,8 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setbac
 			steps_min, steps_cap, fights_min, fights_cap])
 	else:
 		out.append("Рамка акта %d из %d: шагов в акте 1–%d (по шагу оставлено на каждый следующий акт), боёв 0–%d." % [n + 1, acts.size(), steps_cap, fights_cap])
-	out.append("Бой задания — «%s»: опыт врагов %d–%d на бой (уровень героя %d)%s." % [tier, tier_xp(data, floor_tier, level) + 1 if not floor_tier.is_empty() else 1,
-		tier_xp(data, tier, level), level, ("; главарь (boss) в последнем акте — до %d" % tier_xp(data, tier_step(data, tier, 1) if not tier_step(data, tier, 1).is_empty() else tier, level)) if bool(d["boss"]) else ""])
+	out.append("Бой задания — «%s»: опыт врагов %d–%d на бой (уровень героя %d%s)%s." % [tier, tier_xp(s, data, floor_tier, level) + 1 if not floor_tier.is_empty() else 1,
+		tier_xp(s, data, tier, level), level, (", бои на %d героев" % DifficultyRules.party(s, data)) if DifficultyRules.party(s, data) > 1 else "", ("; главарь (boss) в последнем акте — до %d" % tier_xp(s, data, tier_step(data, tier, 1) if not tier_step(data, tier, 1).is_empty() else tier, level)) if bool(d["boss"]) else ""])
 	if last and bool(d["choice"]):
 		out.append("Финал: шаг choice с 2–3 выборами обязателен (флаг, отношение, перемена места).")
 	out.append("Награду назначит движок: %s и опыт к концу задания — не указывай её." % Money.format(int(q.get("reward_cp", 0))))
@@ -390,7 +393,7 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setbac
 	var edges := WorldGen.reach_edges(s, data).map(func(e: Dictionary) -> String: return "[%s] %s, край %d: %s (%s)" % [e["room_id"], e["room"], int(e["edge"]), e["text"], ", ".join(e.get("terrain", []))])
 	if not edges.is_empty():
 		out.append("Открытые края мира (для new_places — room_id и edge): " + "; ".join(edges))
-	var cap := tier_xp(data, tier_step(data, tier, 1) if bool(d["boss"]) and not tier_step(data, tier, 1).is_empty() else tier, level)
+	var cap := tier_xp(s, data, tier_step(data, tier, 1) if bool(d["boss"]) and not tier_step(data, tier, 1).is_empty() else tier, level)
 	var foes: Array[String] = []
 	var ids: Array = (data["monsters"] as Dictionary).keys()
 	ids.sort_custom(func(a: String, b: String) -> bool: return int(data["monsters"][a]["xp"]) < int(data["monsters"][b]["xp"]))
@@ -690,7 +693,7 @@ static func _plan_act_content(s: GameSession, data: Dictionary, spec: Dictionary
 		if not why.is_empty():
 			return {"reason": why}
 		var src: Dictionary = e["encounter"] if e.has("encounter") else e
-		var plan := _plan_encounter(data, src, tier, level, boss_ok, key)
+		var plan := _plan_encounter(s, data, src, tier, level, boss_ok, key)
 		if plan.has("reason"):
 			return plan
 		if kind == "target" and not (plan["enemies"] as Array).any(func(f: Dictionary) -> bool: return bool(f.get("named", false))):
@@ -730,7 +733,7 @@ static func _encounter_room_why(s: GameSession, data: Dictionary, room: String, 
 
 ## One fight by the difficulty: {enemies, xp, boss, loot} or {reason}. Between the tier below and its own budget; the
 ## boss of the last act — up to the next tier.
-static func _plan_encounter(data: Dictionary, e: Dictionary, tier: String, level: int, boss_ok: bool, key: String) -> Dictionary:
+static func _plan_encounter(s: GameSession, data: Dictionary, e: Dictionary, tier: String, level: int, boss_ok: bool, key: String) -> Dictionary:
 	var enemies: Array = []
 	var xp := 0
 	for f: Variant in _arr(e, "enemies"):
@@ -750,11 +753,11 @@ static func _plan_encounter(data: Dictionary, e: Dictionary, tier: String, level
 	if boss and not boss_ok:
 		return {"reason": "бой %s: главарь (boss) — только в последнем акте сложного или почти невозможного задания" % key}
 	var up := tier_step(data, tier, 1)
-	var cap := tier_xp(data, up if boss and not up.is_empty() else tier, level)
+	var cap := tier_xp(s, data, up if boss and not up.is_empty() else tier, level)
 	var low := tier_step(data, tier, -1)
-	var floor := tier_xp(data, low, level) if not low.is_empty() else 0
+	var floor := tier_xp(s, data, low, level) if not low.is_empty() else 0
 	if xp > cap:
-		return {"reason": "бой %s не по силам: %d опыта врагов при пределе %d (бой «%s», уровень %d)" % [key, xp, cap, tier, level]}
+		return {"reason": "бой %s не по силам: %d опыта врагов при пределе %d (бой «%s», уровень %d, героев %d)" % [key, xp, cap, tier, level, DifficultyRules.party(s, data)]}
 	if xp <= floor:
 		return {"reason": "бой %s слишком лёгкий для этой сложности: %d опыта врагов, нужно больше %d" % [key, xp, floor]}
 	return {"enemies": enemies, "xp": xp, "boss": boss, "loot": {"coins_cp": 0, "items": {}}, "faction": _str(e, "faction")}
@@ -800,7 +803,17 @@ static func _plan_item(s: GameSession, data: Dictionary, qi: Dictionary, content
 ## A fact of the engine for a step, a part or a need: {when, danger?} or {reason}. Kinds visit, find, fight (and talk
 ## for a whole step). `used` collects the refs it names.
 ## v0.7.49.3: a fight — beaten, or slipped past unseen (EncounterRules.slip_past); `defeat` (the designer's, or by the
-## fight's kind when unsaid: a named target, a lair or a boss) — only beaten.
+## fight's kind when unsaid: a named target, a lair or a boss) — only beaten. v0.8.4.36, the author's feedback: only a
+## named foe (`target`, a person of the world among the foes) and a `boss` may ask to be beaten — a guard, an ambush or a
+## place's fight slipped past moves the quest on too (foes hidden by False Appearance are never found by the player). A dead
+## end is never passed (`slip_past`): its fight is still won or talked round.
+static func _must_beat(enc: Dictionary, kind: String, defeat: Variant) -> bool:
+	var inner: Dictionary = enc.get("encounter", enc)  # a lair of a new place keeps its fight inside
+	var named := kind == "target" or bool(enc.get("boss", false)) or bool(inner.get("boss", false)) or (inner.get("enemies", []) as Array).any(func(e: Variant) -> bool:
+		return e is Dictionary and not str((e as Dictionary).get("npc_id", "")).is_empty())
+	return named and (defeat == null or bool(defeat))
+
+
 static func _fact(s: GameSession, data: Dictionary, kind: String, target: String, item: String, content: Dictionary, q: Dictionary, used: Array, defeat: Variant = null) -> Dictionary:
 	var world := WorldView.new(data["world"])
 	var w := {}
@@ -840,7 +853,7 @@ static func _fact(s: GameSession, data: Dictionary, kind: String, target: String
 			if (content["enc_keys"] as Array).has(target):
 				w = {"encounter": "enc:" + target}
 				var enc: Dictionary = (content["encounters"] as Array).filter(func(x: Dictionary) -> bool: return str(x["key"]) == target)[0]
-				if bool(defeat) if defeat != null else (str(enc.get("kind", "")) in ["target", "lair"] or bool(enc.get("boss", false))):
+				if _must_beat(enc, str(enc.get("kind", "")), defeat):
 					w["defeat"] = true
 				if not used.has("enc:" + target):
 					used.append("enc:" + target)
@@ -848,7 +861,7 @@ static func _fact(s: GameSession, data: Dictionary, kind: String, target: String
 				if EncounterRules.room_of(s, data, target).is_empty() or s.encounters_done.has(target):
 					return {"reason": "нет непобеждённой встречи %s: key боя акта (encounters или комната места с encounter) или встреча мира" % target}
 				w = {"encounter": target}
-				if bool(defeat):
+				if _must_beat(SceneRules.room(s, data["world"], EncounterRules.room_of(s, data, target)).get("encounter", {}), "", defeat):
 					w["defeat"] = true
 				if not used.has("pack:" + target):
 					used.append("pack:" + target)

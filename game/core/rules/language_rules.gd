@@ -50,8 +50,8 @@ static func npc(data: Dictionary, n: Dictionary) -> Array[String]:
 	return out
 
 
-## A monster of the SRD: {"speaks": [ids], "telepathy": bool} from its languages line. «Any one language» and «the
-## languages it knew in life» — Common; no line — none (beasts).
+## A monster of the SRD: {"speaks": [ids], "telepathy": bool} from its languages line. «Any one language» («any two»,
+## «any four»…) and «the languages it knew in life» — Common; no line — none (beasts).
 static func monster(data: Dictionary, monster_id: String) -> Dictionary:
 	var text := str(data["monsters"].get(monster_id, {}).get("languages", "")).to_lower()
 	var out: Array[String] = []
@@ -62,7 +62,8 @@ static func monster(data: Dictionary, monster_id: String) -> Dictionary:
 		if text.contains(en):
 			out.append(id)
 			text = text.replace(en, "")
-	if text.contains("any one language") or text.contains("knew in life") or text.contains("any languages"):
+	var any := RegEx.create_from_string("any (one |two |three |four |five |six )?languages?")  # v0.8.4.36: «any two languages» of a bandit captain too
+	if any.search(text) != null or text.contains("knew in life"):
 		if not out.has("common"):
 			out.append("common")
 	return {"speaks": out, "telepathy": text.contains("telepathy")}

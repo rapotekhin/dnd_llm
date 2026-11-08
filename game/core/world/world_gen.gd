@@ -374,7 +374,7 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 	for rid: String in data["world"]["rooms"]:
 		names.append(str(data["world"]["rooms"][rid].get("name", "")).to_lower())
 	var keys: Array = rooms.map(func(r: Variant) -> String: return str((r as Dictionary).get("key", "")) if r is Dictionary else "")
-	var cap := int(CombatRules.cfg(data)["xp_budget_hard"].get(str(int(s.character.get("level", 1))), 750))
+	var cap := DifficultyRules.hard_cap(s, data)
 	var defs: Array = []
 	for r: Variant in rooms:
 		if not (r is Dictionary):

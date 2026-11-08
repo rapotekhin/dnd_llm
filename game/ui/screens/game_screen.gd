@@ -547,8 +547,16 @@ func _show_menu(ref: String) -> void:
 		_menu.visible = false
 		return
 	for b: Node in _menu_box.find_children("*", "BaseButton", true, false):
+		if str(b.name).begins_with("Fold_"):  # a group's head opens its list in the menu, it does not close it (v0.8.4.36, the author's feedback)
+			(b as BaseButton).toggled.connect(func(_on: bool) -> void: _place_menu(ref))
+			continue
 		(b as BaseButton).pressed.connect(_close_menu)
 	_menu.visible = true
+	_place_menu(ref)
+
+
+## The menu fitted to what it shows now and kept on the screen beside `ref`.
+func _place_menu(ref: String) -> void:
 	await get_tree().process_frame  # a flow knows its height only after a layout
 	_menu.reset_size()
 	var at := _field.global_position + _field.cell_point(_cell_of(ref)) + Vector2(28, -20)

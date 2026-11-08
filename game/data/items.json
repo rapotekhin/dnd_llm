@@ -58,7 +58,24 @@
 		"no_crit": 3,
 		"crude": 0,
 		"masterwork": 0,
-		"water_source": 2
+		"water_source": 2,
+		"initiative_plus1": 1,
+		"initiative_plus2": 2,
+		"initiative_plus3": 3,
+		"initiative_advantage": 2,
+		"life_drain": 3,
+		"regeneration": 4,
+		"immune_frightened": 2,
+		"immune_charmed": 2,
+		"immune_poisoned": 2,
+		"immune_paralyzed": 3,
+		"immune_blinded": 3,
+		"immune_stunned": 3,
+		"immune_restrained": 2,
+		"immune_prone": 1,
+		"immune_grappled": 1,
+		"immune_deafened": 1,
+		"immune_petrified": 3
 	},
 	"rarity_by_points": [
 		[
@@ -147,6 +164,9 @@
 			"minutes_max": 1440
 		}
 	},
+	"laid": {"_doc": "v0.8.4.36: a status a made thing lays on another (an aura, a weapon's hit; ItemRules._laid): `cond` - a status of rules.make.act.lay_cost (its cost in points), `save` - an ability, `rounds` 1-10 (1 - until its next turn, more - a minute with a save at the end of each of its turns). Its DC by the points of the whole (dc: the first row that holds them).", "rounds": [1, 10], "dc": [{"points": 4, "dc": 11}, {"points": 7, "dc": 13}, {"points": 10, "dc": 15}, {"points": 999, "dc": 17}]},
+	"spells_points": {"_doc": "v0.8.4.36: the spells of a made thing (ItemRules._generated_spells): `spells` [{spell, uses}] - cast without a slot by who holds it while it works, `uses` 1-7 a long rest each; points by the spell's circle (by_circle) and one each per_uses uses past the first. `store` - a thing that keeps spells cast into it (a Ring of Spell Storing), up to `store` circles in all, points store_per_circle a circle; `stored` - what it holds when made. Cast from a thing by its DC and attack of item_rules.scrolls unless its holder casts by its own ability.", "by_circle": [0, 1, 2, 3, 4, 5], "per_uses": 2, "uses": [1, 7], "circle_max": 5, "store_max": 5, "store_per_circle": 1},
+	"hit_points": {"_doc": "v0.8.4.36: a made weapon's `hit` - a status on the one it strikes, each hit, with its save (items.json laid); points: its own and the status's.", "points": 1},
 	"wear_points": {
 		"_doc": "v0.8.4.28.7: what a thing the master makes lays while it works (`wear`), in the words of a spell's effect, read by ItemRules.wear like a catalog thing's: points of rarity per word; speed — feet 5–60 or \"walk\" (the wearer's walking speed), flag — true; with — what the word brings along (a flight is `flying`). A new word is a row here that the spell's own rules already read.",
 		"swim_speed": {
@@ -172,7 +192,7 @@
 			"points": 3,
 			"value": "flag"
 		},
-		"aura": {"points": 1, "value": "aura", "_doc": "v0.8.4.35: an aura of the field around the wearer (FightField.auras, the zone a monster trait's aura is): `ft` 5-30 (per_10ft points each 10 ft begun), `cond` - a status of rules.make.act.lay_cost (its cost in points), `save` - an ability, `rounds` 1-10 the status lasts with a save at its end, `spares_friends` - not on the wearer's side (spares_points). Its DC by its points (dc: the first row that holds them). It works at the start of a turn of one inside, never on the wearer.", "ft": [5, 30], "per_10ft": 1, "rounds": [1, 10], "spares_points": 1, "dc": [{"points": 4, "dc": 11}, {"points": 7, "dc": 13}, {"points": 10, "dc": 15}, {"points": 999, "dc": 17}]}
+		"aura": {"points": 1, "value": "aura", "_doc": "v0.8.4.36: an aura of the field around the wearer (FightField.auras, the zone a monster trait's aura is): `ft` 5-30 (per_10ft points each 10 ft begun) and a status laid (items.json laid), `spares_friends` - not on the wearer's side (spares_points). It works at the start of a turn of one inside, never on the wearer.", "ft": [5, 30], "per_10ft": 1, "spares_points": 1}
 	},
 	"catalog": {
 		"abacus": {

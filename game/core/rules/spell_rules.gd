@@ -17,7 +17,7 @@ static func resolve(c: Dictionary, data: Dictionary, name: String) -> String:
 static func ready(c: Dictionary) -> Array:
 	var out: Array = []
 	var sp: Dictionary = c.get("spells", {})
-	var lists: Array[String] = ["cantrips", "prepared", "always", "free"]
+	var lists: Array[String] = ["cantrips", "prepared", "always", "free", "items"]
 	if int(c.get("inventory", {}).get(str(sp.get("tome_book", "")), 0)) > 0:
 		lists.append("tome")
 	for list: String in lists:
@@ -29,7 +29,7 @@ static func ready(c: Dictionary) -> Array:
 
 ## A spell the hero casts at will, without a slot (an invocation, v0.7.22.4).
 static func is_free(c: Dictionary, spell_id: String) -> bool:
-	return (c.get("spells", {}).get("free", []) as Array).has(spell_id)
+	return (c.get("spells", {}).get("free", []) as Array).has(spell_id) or (c.get("spells", {}).get("items", []) as Array).has(spell_id)
 
 
 ## The charges a spell spends when it is cast without a slot: its own (an ability of parts, v0.7.64) or a row of
@@ -38,10 +38,14 @@ static func stock_of(c: Dictionary, data: Dictionary, spell_id: String) -> Strin
 	var own := str(data["spells"].get(spell_id, {}).get("stock", ""))
 	if not own.is_empty():
 		return own
-	for rid: String in Stock.owned(c, data):
-		if str(Stock.table(data)[rid].get("spell", "")) == spell_id:
-			return rid
-	return ""
+	var first := ""
+	var table := Stock.table(data, c)
+	for rid: String in Stock.owned(c, data):  # a row with charges left first: a dagger's Fireball spent, a ring's kept one (v0.8.4.36)
+		if str(table[rid].get("spell", "")) == spell_id:
+			if Stock.left(c, data, rid) > 0:
+				return rid
+			first = rid if first.is_empty() else first
+	return first
 
 
 ## Cast without a slot now: a spell at will, with its charges left when it has them.
@@ -53,7 +57,7 @@ static func free_now(c: Dictionary, data: Dictionary, spell_id: String) -> bool:
 ## The circle a spell cast without a slot is cast at: its charges' row `circle` (a race's Hellish Rebuke — the 2nd), else its own.
 static func free_circle(c: Dictionary, data: Dictionary, spell_id: String) -> int:
 	var stock := stock_of(c, data, spell_id)
-	return maxi(1, int(Stock.table(data).get(stock, {}).get("circle", level_of(data, spell_id)))) if not stock.is_empty() else maxi(1, level_of(data, spell_id))
+	return maxi(1, int(Stock.table(data, c).get(stock, {}).get("circle", level_of(data, spell_id)))) if not stock.is_empty() else maxi(1, level_of(data, spell_id))
 
 
 static func level_of(data: Dictionary, spell_id: String) -> int:

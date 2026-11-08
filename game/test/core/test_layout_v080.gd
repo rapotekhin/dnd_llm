@@ -536,3 +536,23 @@ func test_a_save_comes_back_with_whole_numbers_all_the_way_down() -> void:
 	var loaded: Variant = GameSession.whole(JSON.parse_string('{"a": 2.0, "b": [1.0, {"c": 3.0}], "d": 1.5, "e": "7"}'))
 	assert_str(JSON.stringify(loaded, "", false)).is_equal('{"a":2,"b":[1,{"c":3}],"d":1.5,"e":"7"}')
 
+
+
+## v0.8.4.36, the author's feedback: new ways to new places were laid right beside the old ones — now they keep `open.gap`
+## (and `open.room_gap` in a building's room) while there is room for it.
+func test_new_ways_are_laid_apart_from_the_old() -> void:
+	var gap := int(layouts["open"]["gap"])
+	for kind: String in ["wild", "square"]:
+		for sd: int in 6:
+			var ask := {"id": "r", "kind": kind, "tags": [], "exits": [{"to": "a", "side": "n", "kind": "edge"}]}
+			var map := LayoutGen.open_map(layouts, ask, sd * 13 + 1)
+			for to: String in ["b", "c", "d"]:  # each made later, one at a time, on the same side
+				ask = ask.duplicate(true)
+				(ask["exits"] as Array).append({"to": to, "side": "n", "kind": "door" if kind == "square" else "edge"})
+				ask["kept"] = map["picks"]
+				map = LayoutGen.open_map(layouts, ask, sd * 13 + 1)
+				var new_one: Dictionary = (map["exits"] as Array).filter(func(e: Dictionary) -> bool: return str(e["to"]) == to)[0]
+				for e: Dictionary in map["exits"]:
+					if str(e["to"]) != to:
+						var d := maxi(absi(int(e["x"]) - int(new_one["x"])), absi(int(e["y"]) - int(new_one["y"])))
+						assert_int(d).override_failure_message("%s seed %d: %s beside %s" % [kind, sd, to, e["to"]]).is_greater_equal(gap)

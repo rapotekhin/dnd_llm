@@ -3401,7 +3401,7 @@ scenarios:
     engine:
       find_quests: []
     expect:
-      effects: {required_kinds_any: [goal:hint], forbidden_kinds: [create:quest, create:npc, create:place]}
+      effects: {required_kinds_any: [goal:hint], forbidden_kinds: [create:quest, create:npc, create:place], required_fields: [clue]}
     rubric:
       - "Горм даёт намёк по логике места (что-то слышал, советует расспросить ещё — можно отослать к человеку из сцены, например к сержанту Ведде) и мастер проводит goal:hint; задания ещё нет, новых людей, которых нет в сцене и мире, мастер не выдумывает и не создаёт"
 
@@ -3421,6 +3421,23 @@ scenarios:
       tools_required: [find_quests]
     rubric:
       - "Мастер создаёт задание для цели create:quest с for_goal: true (заказчик — Горм или человек из задания): сложность и акты к цели героя, без шагов"
+
+  - id: goal_quest_not_another_hint
+    title: "Намёков уже довольно, есть зацепки — игрок снова спрашивает: задание цели, а не новый слух (v0.8.4.36)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, ну так что там с троллем? Расскажи ещё, что слышал."
+    snapshot:
+      character:
+        goal: "«Убить тролля» — трудная, по силам: уровень класса 3 из 3; намёков 2 из 2 перед заданием; зацепки: Горм: тролль приходит с северных болот после дождей; Горм: сержант Ведда видела его следы у мельницы"
+    engine:
+      find_quests: []
+    expect:
+      effects: {required_kinds_any: [create:quest], forbidden_kinds: [goal:hint]}
+      tools_required: [find_quests]
+    rubric:
+      - "Мастер не даёт нового намёка, а создаёт задание для цели create:quest с for_goal: true; оно продолжает зацепки (болота, следы у мельницы), а не спорит с ними"
 
   - id: goal_no_hint_in_the_wrong_place
     title: "Неуместная сцена — у менялы о драконе не намекают"

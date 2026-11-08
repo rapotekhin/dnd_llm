@@ -9,6 +9,10 @@ extends RefCounted
 ## Batch 2 (v0.7.22.1): past the threshold, when the player asks or seeks in a fitting place, the master hints
 ## (`goal:hint`, counted on the goal); after `rules.goal.hints` of them for its scale it may make the quest for the
 ## goal (`create:quest` with `for_goal`) — a simple goal at once, a great one through a chain of hints.
+## v0.8.4.36, the author's feedback (the master went on hinting «3 of 2» and never made the quest): each hint keeps its
+## clue — what was learned and from whom (`clues`, shown on the sheet's Development tab and to the master, so the next
+## rumour does not contradict the last); past the count of hints the engine refuses more and says the quest is due; the
+## second line readies the quest for the goal from the one who gave the last clue (PrepareRules, `goal`).
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -98,21 +102,80 @@ static func quest_why_not(c: Dictionary, data: Dictionary) -> String:
 	return ""
 
 
-static func plan_hint(c: Dictionary, data: Dictionary) -> Dictionary:
+static func plan_hint(s: GameSession, data: Dictionary, e: Dictionary = {}) -> Dictionary:
+	var c := s.character
 	var why := hint_why_not(c, data)
 	if not why.is_empty():
 		return {"reason": why}
-	return {"plan": {"goal_hint": true}, "summary": "Намёк о цели: %d из %d перед заданием" % [hints(c) + 1, hints_needed(c, data)]}
+	var q := quest_of(c)
+	if not q.is_empty():
+		return {"reason": "задание цели уже есть: «%s» — веди к нему словами, без новых намёков" % QuestRules.quest(data["world"], q).get("title", q)}
+	if hints(c) >= hints_needed(c, data):
+		return {"reason": "намёков довольно (%d из %d): пора задание цели — create:quest с for_goal: true, заказчик — тот, кто знает%s" % [
+			hints(c), hints_needed(c, data), (" (последняя зацепка — от %s [%s])" % [WorldView.new(data["world"]).npc_name(by(c)), by(c)]) if not by(c).is_empty() else ""]}
+	var npc := str(e.get("npc", "")) if e.get("npc") != null else ""
+	if not npc.is_empty() and WorldView.new(data["world"]).npc(npc).is_empty():
+		return {"reason": "goal:hint.npc — id человека мира, от которого зацепка (find_npcs), или пусто"}
+	var clue := (str(e.get("clue", "")) if e.get("clue") != null else "").strip_edges().left(int(cfg(data).get("clue_chars", 200)))
+	return {"plan": {"goal_hint": true, "clue": clue, "npc": npc}, "summary": "Намёк о цели: %d из %d перед заданием%s" % [hints(c) + 1, hints_needed(c, data),
+		(" · зацепка: " + clue) if not clue.is_empty() else ""]}
 
 
-static func apply_hint(c: Dictionary) -> void:
-	var g := goal(c).duplicate()
+static func apply_hint(c: Dictionary, plan: Dictionary = {}, day: int = 0) -> void:
+	var g := goal(c).duplicate(true)
 	g["hints"] = int(g.get("hints", 0)) + 1
+	var clue := str(plan.get("clue", ""))
+	if not clue.is_empty():
+		var list: Array = g.get("clues", [])
+		list.append({"day": day, "npc": str(plan.get("npc", "")), "text": clue})
+		g["clues"] = list.slice(maxi(0, list.size() - CLUES_MAX))
+	if not str(plan.get("npc", "")).is_empty():
+		g["by"] = str(plan["npc"])
 	c["goal"] = g
 
 
+const CLUES_MAX := 8
+
+
+## The clues the hints gave: [{day, npc, text}], oldest first.
+static func clues(c: Dictionary) -> Array:
+	return goal(c).get("clues", [])
+
+
+## Who gave the last clue ("" — nobody named).
+static func by(c: Dictionary) -> String:
+	return str(goal(c).get("by", ""))
+
+
+## The quest made for the goal ("" — none yet).
+static func quest_of(c: Dictionary) -> String:
+	return str(goal(c).get("quest", ""))
+
+
+static func got_quest(c: Dictionary, id: String) -> void:
+	if not goal(c).is_empty():
+		c["goal"]["quest"] = id
+
+
+## The quest for the goal is due and nobody made it: the hints are enough. The one to give it — the last clue's giver,
+## alive; "" — the engine readies none (the master makes it when the player asks).
+static func quest_due(s: GameSession, data: Dictionary) -> String:
+	var c := s.character
+	if not quest_of(c).is_empty() or not quest_why_not(c, data).is_empty():
+		return ""
+	var npc := by(c)
+	return npc if not npc.is_empty() and not Being.dead(s, npc) and not WorldView.new(data["world"]).npc(npc).is_empty() else ""
+
+
+## The clues as one line for the master and the sheet: «Гуннар: …; Ратмир: …».
+static func clues_text(c: Dictionary, data: Dictionary) -> String:
+	var v := WorldView.new(data["world"])
+	return "; ".join(clues(c).map(func(k: Dictionary) -> String:
+		return ("%s: %s" % [v.npc_name(str(k["npc"])), k["text"]]) if not str(k.get("npc", "")).is_empty() else str(k["text"])))
+
+
 ## For the sheet and the master: «Открыть свою таверну — по силам: Торговля 2 из 2» / «… — рано: уровень класса 1 из 3».
-static func text_of(c: Dictionary, data: Dictionary) -> String:
+static func text_of(c: Dictionary, data: Dictionary, more := true) -> String:
 	var g := goal(c)
 	if g.is_empty():
 		return ""
@@ -127,4 +190,10 @@ static func text_of(c: Dictionary, data: Dictionary) -> String:
 		"по силам" if reached(c, data) else "рано", what, level(c, data), need]
 	if reached(c, data):
 		out += "; намёков %d из %d перед заданием" % [mini(hints(c), hints_needed(c, data)), hints_needed(c, data)]
+	if not more:  # the sheet lists the clues and the quest itself
+		return out
+	if not clues(c).is_empty():
+		out += "; зацепки: " + clues_text(c, data)
+	if not quest_of(c).is_empty():
+		out += "; задание цели: «%s»" % QuestRules.quest(data["world"], quest_of(c)).get("title", quest_of(c))
 	return out

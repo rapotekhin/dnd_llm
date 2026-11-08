@@ -178,8 +178,9 @@ static func numbers(s: GameSession, data: Dictionary, id: String, f: Dictionary 
 	var ab := str(data["spells"].get(id, {}).get("ability", ""))
 	if ab.is_empty():  # a race trait's spell by its own ability (v0.8.4.33: a high elf's cantrip by Intelligence)
 		ab = str(Sheet.holder(s, f).get("spells", {}).get("ability_of", {}).get(id, ""))
-	if ab.is_empty():
-		return {}
+	if ab.is_empty():  # a thing's spell to one who casts by no ability of its own: the thing's numbers (v0.8.4.36)
+		var own: Dictionary = Sheet.holder(s, f).get("spells", {}).get("item_numbers", {}).get(id, {})
+		return own.duplicate() if not own.is_empty() else {}
 	return {"dc": Sheet.dc(s, data, f, ab), "attack": Sheet.prof(s, data, f) + Sheet.ability_mod(s, data, f, ab), "ability": ab}
 
 

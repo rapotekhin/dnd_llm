@@ -150,6 +150,33 @@ autowrap_mode = 3
 size_flags_horizontal = 3
 theme_type_variation = &"MutedLabel"
 
+[node name="PartyLabel" type="Label" parent="Col/Row/Right/RightScroll/Form"]
+layout_mode = 2
+text = "NG_PARTY"
+theme_type_variation = &"MutedLabel"
+autowrap_mode = 3
+
+[node name="PartyChoices" type="HFlowContainer" parent="Col/Row/Right/RightScroll/Form"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+
+[node name="Sample" type="Button" parent="Col/Row/Right/RightScroll/Form/PartyChoices" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+custom_minimum_size = Vector2(160, 48)
+text = "Вариант"
+toggle_mode = true
+
+[node name="PartyHint" type="Label" parent="Col/Row/Right/RightScroll/Form"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "PARTY_HINT"
+autowrap_mode = 3
+size_flags_horizontal = 3
+theme_type_variation = &"MutedLabel"
+
 [node name="NeedsToggle" type="CheckButton" parent="Col/Row/Right/RightScroll/Form"]
 unique_name_in_owner = true
 layout_mode = 2

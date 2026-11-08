@@ -12,6 +12,7 @@ const ROOMS := "rooms"
 const BOARDS := "boards"
 const QUESTS := "quests"
 const ACTS := "acts"
+const GOAL := "goal"
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -70,6 +71,9 @@ static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Di
 			var key := "%s:%d" % [qid, int(QuestRules.quest(world, qid).get("built", 0)) + 1]
 			if not part(s, ACTS).has(key) and not busy.has("act:" + key):
 				out.append({"kind": "act", "key": key, "quest": qid})
+	var giver := GoalRules.quest_due(s, data)  # v0.8.4.36: the quest for the hero's life goal, from the last clue's giver
+	if not giver.is_empty() and not part(s, GOAL).has(giver) and not busy.has("goal:" + giver) 			and TimeRules.today(s, s.prepared, "goal_tries") < int(c.get("goal_per_day", 2)):
+		out.append({"kind": "goal", "key": giver, "npc": giver, "room": Where.npc_room(s, data, giver)})
 	if bool(c.get("setbacks", false)):  # v0.8.4.31: the act after a failed check or a lost fight, readied beside the act after a success
 		for qid: String in s.quests_active.keys():
 			var sb := setback_preview(s, data, qid)
@@ -184,11 +188,17 @@ static func frame(s: GameSession, data: Dictionary, job: Dictionary) -> String:
 			if not str(p.get("text", "")).is_empty():
 				lines.append("На ней уже: %s" % p["text"])
 			lines.append("Округа: %s" % v.location(v.location_id(room)).get("description", ""))
-		"quest":
+		"quest", "goal":
 			var npc := str(job["npc"])
 			var n := v.npc(npc)
 			var room := str(job["room"])
-			lines.append("[prepare quest | giver %s]" % npc)
+			lines.append("[prepare quest | giver %s%s]" % [npc, " | goal" if job["kind"] == "goal" else ""])
+			if job["kind"] == "goal":
+				var c := s.character
+				lines.append("Жизненная цель героя: «%s» (%s; направление — %s)." % [GoalRules.goal(c)["text"], data["rules"]["goal"]["names"].get(str(GoalRules.goal(c).get("scale", "")), ""),
+					", ".join(GoalRules.goal(c).get("concepts", []))])
+				if not GoalRules.clues(c).is_empty():
+					lines.append("Зацепки, что герой уже узнал (задание продолжает их, не спорит с ними): %s." % GoalRules.clues_text(c, data))
 			lines.append("Заказчик: %s [%s] — %s; %s, %s." % [v.npc_name(npc), npc, n.get("role", ""), v.room(room).get("name", room),
 				v.location(v.location_id(room)).get("name", "")])
 			for k: String in ["personality", "description"]:
@@ -238,6 +248,10 @@ static func keep(s: GameSession, data: Dictionary, job: Dictionary, effects: Arr
 		"quest":
 			part(s, QUESTS)[str(job["npc"])] = effects[0]
 			TimeRules.count(s, s.prepared, "quests_today")
+		"goal":
+			var e: Dictionary = effects[0].duplicate(true)
+			e["for_goal"] = true  # whatever the master wrote: this is the goal's quest
+			part(s, GOAL)[str(job["npc"])] = e
 		"act":
 			part(s, ACTS)[str(job["key"])] = effects[0]
 
@@ -273,6 +287,20 @@ static func orders(s: GameSession, room: String, prop: String) -> Array:
 
 static func quest_of(s: GameSession, npc: String) -> Dictionary:
 	return part(s, QUESTS).get(npc, {})
+
+
+## The quests for the goal readied ahead, taken out to be laid wherever the hero is: [effect], each `at` the room its
+## giver stands in now (offered by it there, as a person's readied quest).
+static func goal_quests(s: GameSession, data: Dictionary) -> Array:
+	var out: Array = []
+	for npc: String in part(s, GOAL):
+		var e: Dictionary = (part(s, GOAL)[npc] as Dictionary).duplicate(true)
+		var room := Where.npc_room(s, data, npc)
+		if not room.is_empty():
+			e["at"] = room
+		out.append(e)
+	part(s, GOAL).clear()
+	return out
 
 
 ## The setback the current step of a taken quest by acts may have (a `find` or a `fight`), as `QuestRules.setback` would

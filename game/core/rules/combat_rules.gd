@@ -554,6 +554,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	if str(f.get("status")) != "active":
 		return
 	FightField.auras(s, data, f)  # a thing put on or taken off since (v0.8.4.35)
+	ItemRules.regenerate(s, data, f, lines)
 	MonsterRules.start_turn(s, data, f, lines)  # recharges, once-a-turn extras, Reckless Attack lasts until now
 	lines.append_array(SpellEffects.turn_start(s, data, f))  # Heroism (v0.7.13.1)
 	_fire(s, data, f, lines)
@@ -1887,7 +1888,7 @@ static func _arrivals(s: GameSession, data: Dictionary, lines: Array[String]) ->
 ## Anybody's initiative (v0.8.4.29.2): a Dexterity check on the one road of Roll.check — Lucky, exhaustion and the statuses,
 ## the game's difficulty for the hero.
 static func initiative_of(s: GameSession, data: Dictionary, id: String) -> int:
-	return int(Roll.check(s, data, fighter(s, id), {"what": "Инициатива", "ability": "dex", "quiet": true})["total"])
+	return int(Roll.check(s, data, fighter(s, id), {"what": "Инициатива", "ability": "dex", "quiet": true, "about": "initiative"})["total"])
 
 
 ## A newcomer rolls initiative and takes its place in the order (called at the start of a round, turn 0).

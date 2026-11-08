@@ -479,6 +479,13 @@ func service(npc_id: String, id: String, item: String = "") -> String:
 	return _act("service", {"service": _row(ServiceRules.why, ServiceRules.buy, [session, Catalog.data, npc_id, id, item])})
 
 
+## A spell cast into a thing that keeps spells (v0.8.4.36, a Ring of Spell Storing): its slot spent, out of a fight. "" or a key.
+func store_spell(item: String, spell: String, circle: int) -> String:
+	if not _out_of_fight():
+		return "EQUIP_BUSY"
+	return _act("store", {"store": _row(ItemRules.store_why, ItemRules.store_spell, [session, Catalog.data, item, spell, circle])})
+
+
 ## «Слухи» at an NPC (v0.7.47): what it knows and the hero has not heard, without the master. "" or a localization key.
 func rumor_ask(npc_id: String) -> String:
 	if not _idle():
@@ -1979,6 +1986,12 @@ func set_difficulty(id: String) -> void:
 		session.settings["difficulty"] = id
 
 
+## v0.8.4.37: how many heroes the master's fights are made for.
+func set_party(n: int) -> void:
+	if session != null and DifficultyRules.party_sizes(Catalog.data).has(n):
+		session.settings["party"] = n
+
+
 func set_dm_style(style: String) -> void:
 	if session != null and WorldPack.DM_STYLES.has(style):
 		session.settings["dm_style"] = style
@@ -3239,6 +3252,8 @@ func _prepare_one(s: GameSession, job: Dictionary) -> void:
 	_ahead_n += 1
 	var turn_id := "b-%d" % _ahead_n
 	_ahead[turn_id] = job
+	if job["kind"] == "goal":
+		TimeRules.count(s, s.prepared, "goal_tries")  # a refused or failed one is not asked again and again
 	effects.ahead[turn_id] = PrepareRules.ahead_of(job)
 	var params := {
 		"turn_id": turn_id,
@@ -3263,6 +3278,12 @@ func _prepare_one(s: GameSession, job: Dictionary) -> void:
 	_log("Заготовка %s %s: %s" % [job["kind"], job["key"], str(call.result.get("narration", ""))])
 	if not is_busy() and s.mode != GameSession.MODE_COMBAT and job["kind"] == "act":
 		_build_next_act(s)  # v0.8.4.30: a quest waiting for this act goes on now; else the next turn lays it
+	if job["kind"] == "goal":  # v0.8.4.36: the goal's quest is offered by its giver at once, checked again
+		var got := _lay_prepared(s, PrepareRules.goal_quests(s, Catalog.data))
+		_log("Задание цели: %s" % (", ".join(got) if not got.is_empty() else "движок не принял"))
+		if not got.is_empty():
+			EventBus.state_changed.emit()
+			SaveManager.save_slot(SaveManager.AUTOSAVE, s)
 	if not is_busy():
 		_prepare()
 
@@ -3326,16 +3347,16 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 		_end_conversation()
 		return "downed"
 
-	if s.in_conversation() and not s.npcs_here(Catalog.data["world"], s.room_id).has(s.npc_id):  # its hour came (v0.7.14.2)
-		_add(GameSession.effect_entry(["%s уходит" % world().npc(s.npc_id).get("name", s.npc_id)]))
-		_end_conversation()
-		return "resume"
 	_quest_progress()
 	if s.room_id != room_before and s.arrest != s.room_id:
-		# v0.7.22.16: the master's move goes the way of the exit button — a trap on the exit, a meeting, the fight
+		# v0.7.22.16: the master's move goes the way of the exit button — a trap on the exit, a meeting, the fight; first, so a
+		# captive on the rope and the followers come along out of a conversation too (v0.8.4.36, the author's feedback)
 		var to := s.room_id
 		s.room_id = room_before
 		_end_conversation()
+		if not WayRules.open_exits(s, Catalog.data["world"], room_before).has(to):  # a far place by the known paths, as «Идти сюда»
+			_walk.call_deferred(WorldMap.route(s, Catalog.data["world"], room_before, to, Catalog.data))
+			return ""
 		var steps: Array[String] = []
 		var trap := ExplorationRules.trap_on_exit(s, Catalog.data["world"], room_before, to)
 		if not trap.is_empty():
@@ -3354,6 +3375,10 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 			_add(GameSession.effect_entry(moved))
 		_end_conversation()
 		return "enter"
+	if s.in_conversation() and not s.npcs_here(Catalog.data["world"], s.room_id).has(s.npc_id):  # its hour came (v0.7.14.2)
+		_add(GameSession.effect_entry(["%s уходит" % world().npc(s.npc_id).get("name", s.npc_id)]))
+		_end_conversation()
+		return "resume"
 	var next: Variant = result.get("next_mode")
 	if not (next is Dictionary):
 		return ""
@@ -3381,7 +3406,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 				s.mode = mode
 			return ""
 		_begin_conversation(npc_id, mode)
-		return "enter"
+		return ""  # v0.8.4.36, the author's feedback: the master's turn already answered as the NPC; a greeting after it was off the point
 	return ""
 
 

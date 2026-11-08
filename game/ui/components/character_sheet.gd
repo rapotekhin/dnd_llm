@@ -105,10 +105,22 @@ func _familiar_rows(box: VBoxContainer, c: Dictionary, can_act: bool) -> void:
 func _goal_section(box: VBoxContainer, c: Dictionary) -> void:
 	_text(box, tr("GOAL_TITLE"), UiTheme.HEADING)
 	_text(box, tr("GOAL_HINT"), UiTheme.MUTED_LABEL)
-	var shown := GoalRules.text_of(c, Catalog.data)
+	var shown := GoalRules.text_of(c, Catalog.data, false)
 	if not shown.is_empty():
 		var l := _text(box, shown)
 		l.name = "GoalText"
+	var v := WorldView.new(Catalog.data["world"])
+	var qid := GoalRules.quest_of(c)
+	if not qid.is_empty():  # v0.8.4.36: the quest the clues led to
+		var q := QuestRules.quest(Catalog.data["world"], qid)
+		_text(box, tr("GOAL_QUEST").format({"title": q.get("title", qid), "giver": v.npc_name(str(q.get("giver", "")))})).name = "GoalQuest"
+	if not GoalRules.clues(c).is_empty():
+		_text(box, tr("GOAL_CLUES"), UiTheme.MUTED_LABEL)
+		var i := 0
+		for k: Dictionary in GoalRules.clues(c):
+			var who := v.npc_name(str(k.get("npc", ""))) if not str(k.get("npc", "")).is_empty() else ""
+			_text(box, tr("GOAL_CLUE").format({"day": int(k.get("day", 0)), "who": (who + ": ") if not who.is_empty() else "", "text": k["text"]})).name = "GoalClue%d" % i
+			i += 1
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	box.add_child(row)
@@ -336,7 +348,7 @@ func _abilities_tab(c: Dictionary) -> void:
 			box.add_child(row)
 			_text(row, tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"],
 				"rest": tr("REST_KIND_" + str(r["recharge"]).to_upper())}))
-			if Stock.table(d)[str(r["id"])].has("spell"):  # spent by casting its spell (v0.8.4.26.1)
+			if Stock.table(d, c)[str(r["id"])].has("spell"):  # spent by casting its spell (v0.8.4.26.1)
 				continue
 			if str(r["id"]) == "sorcery_points":  # Font of Magic: slots and points (v0.7.10)
 				for o: Dictionary in FeatureRules.font_options(c, d):
@@ -618,6 +630,9 @@ func _gear_tab(c: Dictionary) -> void:
 				_action(acts, "Attune_" + id, "BTN_ATTUNE", not busy and at_why.is_empty(), GameState.attune.bind(id))
 				if not at_why.is_empty():
 					(acts.get_child(acts.get_child_count() - 1) as Button).tooltip_text = tr(at_why)
+		for o: Dictionary in ItemRules.storable(s, Catalog.data, id):  # a spell into a thing that keeps spells (v0.8.4.36)
+			_action(acts, "Store_%s_%s" % [id, o["spell"]], tr("BTN_STORE_SPELL").format({"name": o["name"], "circle": o["circle"]}), not busy,
+				GameState.store_spell.bind(id, str(o["spell"]), int(o["circle"])))
 		for t: String in CharacterRules.slots_of(def, Catalog.data):
 			if str(c["equipped"].get(t, "")) != id:
 				_equip_button(acts, c, def, id, t, false, busy)

@@ -1107,7 +1107,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 				sub.pressed.connect(func() -> void: _do(GameState.combat_feature(said)))
 	# Features: limited uses with an action of their own, then the feature actions (v0.7.10).
 	var res := Stock.lines(c, data).filter(func(r: Dictionary) -> bool:
-		return str(Stock.table(data).get(str(r["id"]), {}).get("combat_cost", "action")) != "never")
+		return str(Stock.table(data, c).get(str(r["id"]), {}).get("combat_cost", "action")) != "never")
 	var feats := FeatureRules.actions(s, data).filter(func(a: Dictionary) -> bool: return not str(a["id"]).begins_with("spell_"))
 	if not res.is_empty() or not feats.is_empty():
 		var fb := _tab_box("COMBAT_TAB_FEATURES")

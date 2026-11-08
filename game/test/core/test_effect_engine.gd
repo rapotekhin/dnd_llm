@@ -193,3 +193,18 @@ func test_a_quest_thing_elsewhere_is_refused() -> void:
 	s.mode = GameSession.MODE_SOCIAL
 	s.npc_id = "npc_innkeeper"
 	assert_str(_no({"kind": "move_item", "source": "hero", "target": "world", "item_id": "bruno_letter"}, "t-2")).contains("Сестра Илва")
+
+
+## v0.8.4.36, the author's feedback: the master moves the hero further than one exit — only to a place the hero has been
+## to, by the known paths, as «Идти сюда» on the map; the first exit is checked as the exit button.
+func test_move_far_by_the_known_paths() -> void:
+	s.room_id = "brod-tavern-hall"
+	assert_str(_no({"kind": "move", "room_id": "brod-gate"})).contains("уже был")
+	for r: String in ["brod-tavern-hall", "brod-square", "brod-gate"]:
+		if not s.visited.has(r):
+			s.visited.append(r)
+	var r := fx.validate(s, data, "t-1", {"kind": "move", "room_id": "brod-gate"})
+	assert_bool(r["accepted"]).override_failure_message(str(r)).is_true()
+	assert_str(str(r["summary"])).starts_with("Путь:").contains("→")
+	fx.apply(s, "t-1", [r["effect_id"]])
+	assert_str(s.room_id).is_equal("brod-gate")

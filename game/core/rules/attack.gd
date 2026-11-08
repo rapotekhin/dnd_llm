@@ -465,6 +465,10 @@ static func land(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 			CombatRules.fx(s, str(t["id"]), "crit")
 		if not pieces.is_empty():
 			Harm.take(s, data, t, dmg, lines, str(pieces[0]["type"]), crit, Sheet.is_hero(f))
+			if bool(b.get("weapon", false)) and (weapon_def(s, data, f, b).get("properties", []) as Array).has("life_drain"):
+				var back := Harm.mend(s, data, f, dmg / 2)  # the blow drinks: half its damage back (v0.8.4.36)
+				if back > 0:
+					lines.append("%s: удар возвращает %d хитов" % [Sheet.holder(s, f).get("name", ""), back])
 	if str(s.combat.get("outcome", "")) == "dead":
 		return
 	if bool(ctx["hit"]):
@@ -498,6 +502,15 @@ static func follow_up(s: GameSession, data: Dictionary, f: Dictionary, t: Dictio
 	lines.append(line % f["name"])
 	swing(s, data, f, t, of_action(data, f, bite), lines)
 	return true
+
+
+## The thing a blow is struck with, the copy in that hand with its marks (v0.8.4.36); {} — no thing.
+static func weapon_def(s: GameSession, data: Dictionary, f: Dictionary, b: Dictionary) -> Dictionary:
+	var id := str(b.get("id", ""))
+	if id.is_empty():
+		return {}
+	var h := Sheet.things(s, data, f)
+	return ItemRules.copy_def(data["items"], s.items, h, id, CharacterRules.hold_index(h, id, "off_hand" if bool(b.get("offhand", false)) else "main_hand"))
 
 
 ## The melee Bite of its template, {} when it has none.
@@ -583,6 +596,9 @@ static func _extras(s: GameSession, data: Dictionary, f: Dictionary, t: Dictiona
 			var add := Sheet.taken(s, data, t, dtype, CombatRules.roll_dice(s.rng, str(el["dice"]), crit))
 			lines.append("%s: ещё %d (%s)" % [def.get("name", ""), add, data["misc"]["damage_types"][dtype]])
 			more.call(add, dtype)
+	var hit := ItemRules.hit_effect(weapon_def(s, data, f, b))  # a weapon that lays a status on a hit (v0.8.4.36)
+	if not hit.is_empty() and up(s, t):
+		MonsterRules.apply_effect(s, data, f, t, {"name": str(def.get("name", "")), "effect": hit}, 0, lines)
 	if ConditionRules.effects(me).any(func(e: Dictionary) -> bool: return bool(e.get("enlarged", false))) and up(s, t):
 		var big := Sheet.taken(s, data, t, type, CombatRules.roll_dice(s.rng, "1d4", crit), bool(b.get("magical", false)), bool(b.get("silvered", false)))
 		lines.append("увеличение: ещё %d" % big)

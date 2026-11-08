@@ -516,7 +516,7 @@ static func price(data: Dictionary, id: String) -> String:
 static func stocks(s: GameSession, data: Dictionary, f: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	for id: String in Stock.owned(Sheet.holder(s, f), data):
-		if str(Stock.table(data)[id].get("combat_cost", "action")) != "never":
+		if str(Stock.table(data, Sheet.holder(s, f))[id].get("combat_cost", "action")) != "never":
 			out.append(id)
 	return out
 

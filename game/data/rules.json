@@ -1406,6 +1406,8 @@
 		}
 	},
 	"difficulty": {
+		"_party": "v0.8.4.37, the author: how many heroes the master's fights are made for (1..max) — the DMG budget of a fight is the sum over the party, so the budget of one hero times the number; chosen for a new game, changed in the settings, kept in `session.settings.party`. The pack's own encounters stay as the author made them.",
+		"party": {"default": 1, "max": 4},
 		"_doc": "Difficulty of a game (M5, first iteration v0.7.20.4, DifficultyRules): check_bonus is added to the hero's checks and saving throws (death saves too), not to attacks. Chosen for a new game, changed in the settings.",
 		"default": "normal",
 		"levels": {
@@ -2233,7 +2235,12 @@
 			 "darkvision": {
 			  "token": "darkvision",
 			  "text": "тёмное зрение"
-			 }
+			 },
+			 "initiative": {"token": "initiative_plus%d", "number": [1, 3], "text": "к инициативе"},
+			 "initiative_first": {"token": "initiative_advantage", "text": "преимущество на инициативу"},
+			 "immune": {"token": "immune_%s", "of": "condition", "text": "иммунитет к состоянию (frightened, charmed, poisoned, paralyzed, blinded, stunned, restrained, prone, grappled, deafened, petrified)"},
+			 "drain": {"token": "life_drain", "on": "weapon", "text": "удар возвращает владельцу половину нанесённого урона"},
+			 "regen": {"token": "regeneration", "text": "регенерация: 1d6 хитов каждые 10 минут, в бою — в начале хода, пока хиты выше 0"}
 			}
 		},
 		"_doc": "v0.7.63, the language of parts (MakeRules): what the master may build a status or a trait of. A part: cost — points (a number: per `step` of `amount`), values — its `value`, of — what its `value` names (skill, ability, damage), number [min, max] of `amount`, harm — which value hurts (a number hurts below 0). Tiers: the sum of points gives the first tier that holds it: its name, the hero's level, the DC. A trait costs trait_mult times its parts. book — a book a made skill or trait is learned from.",
@@ -2473,7 +2480,9 @@
 					"costs": {
 						"short": 2
 					}
-				}
+				},
+				"shape": {"values": ["sphere", "cone", "line", "cube", "cylinder"], "cost": 0},
+				"size": {"number": [5, 120], "step": 5, "cost": 0}
 			},
 			"lasts": {
 				"round": [
@@ -2503,6 +2512,12 @@
 				"type": "sphere",
 				"size": 20
 			},
+			"shapes": {"_doc": "v0.8.4.36: the shape of an area (parts shape and size, target area): its sizes in feet, the default, its own multiplier of the points in place of area_mult, a point more each per_ft past the default; from_self — it starts at the caster (a cone, a line: range «На себя», as the SRD's).", "per_ft": 20,
+				"sphere": {"size": [5, 40], "default": 20, "mult": 1.5},
+				"cylinder": {"size": [5, 40], "default": 10, "mult": 1.5},
+				"cube": {"size": [5, 30], "default": 15, "mult": 1.25},
+				"cone": {"size": [15, 60], "default": 15, "mult": 1.25, "from_self": true},
+				"line": {"size": [30, 120], "default": 100, "mult": 1.5, "from_self": true}},
 			"lay_cost": {
 				"deafened": 1,
 				"prone": 1,
@@ -3021,7 +3036,12 @@
 		"_items": "v0.8.4.27: `item` — who carries the thing has the row; `gives` plus — `n` to the check (the portable ram's +4).",
 		"crowbar": {"item": "crowbar", "about": ["force"], "abilities": ["str"], "gives": "advantage"},
 		"ram_portable": {"item": "ram_portable", "about": ["force"], "abilities": ["str"], "gives": "plus", "n": 4},
-		"magnifying_glass": {"item": "magnifying_glass", "about": ["small_object"], "skills": ["investigation"], "gives": "advantage"}
+		"magnifying_glass": {"item": "magnifying_glass", "about": ["small_object"], "skills": ["investigation"], "gives": "advantage"},
+		"_props": "v0.8.4.36: `prop` — who has a working thing with this property has the row (Sheet.prop); its name is the property's of item_props.names. The subject initiative is CombatRules.initiative_of's.",
+		"initiative_plus1": {"prop": "initiative_plus1", "about": ["initiative"], "abilities": ["dex"], "gives": "plus", "n": 1},
+		"initiative_plus2": {"prop": "initiative_plus2", "about": ["initiative"], "abilities": ["dex"], "gives": "plus", "n": 2},
+		"initiative_plus3": {"prop": "initiative_plus3", "about": ["initiative"], "abilities": ["dex"], "gives": "plus", "n": 3},
+		"initiative_advantage": {"prop": "initiative_advantage", "about": ["initiative"], "abilities": ["dex"], "gives": "advantage"}
 	},
 	"shapes": {
 		"_doc": "The forms of a shapechanger (5e Shapechanger, v0.8.4.27.2, FeatureRules.forms, core/acts/shape.gd): a row for the templates of `of`; a form is `monster` — the template of its body (blows, AC, size), or `speeds` — its own template with these feet (speed, fly, climb, swim), and `wear` — a status while in it. The hit points stay its own; it dies in its true form. What a form's gain of blows is worth to the AI, in turns, is `rules.combat.ai.acts.shape`.",
@@ -3420,6 +3440,7 @@
 		"per_npc": 6
 	},
 	"item_props": {
+		"regeneration": {"_doc": "v0.8.4.36: the property regeneration — `dice` hit points at the start of its turn in a fight (CombatRules._begin_turn) and every `every` minutes out of one (TimeRules hook regeneration), anybody's.", "dice": "1d6", "every": 10},
 		"_doc": "v0.7.49.4 (the author's finding): what a property of a thing that works now gives, in words for the sheet's «От вещей» — a worn or carried wondrous item, an equipped weapon or armour. A property not named here (finesse, heavy, reach…) is a weapon's own and stays on its card.",
 		"names": {
 			"ac_plus1": "КД +1",
@@ -3430,6 +3451,23 @@
 			"saves_plus1": "спасброски +1",
 			"darkvision": "тёмное зрение 60 фт",
 			"immune_disease": "невосприимчивость к болезням",
+			"initiative_plus1": "инициатива +1",
+			"initiative_plus2": "инициатива +2",
+			"initiative_plus3": "инициатива +3",
+			"initiative_advantage": "преимущество на инициативу",
+			"life_drain": "удар возвращает половину урона хитами",
+			"regeneration": "регенерация: 1к6 хитов в начале своего хода в бою и каждые 10 минут вне боя",
+			"immune_frightened": "иммунитет: страх",
+			"immune_charmed": "иммунитет: очарование",
+			"immune_poisoned": "иммунитет: отравление",
+			"immune_paralyzed": "иммунитет: паралич",
+			"immune_blinded": "иммунитет: слепота",
+			"immune_stunned": "иммунитет: оглушение",
+			"immune_restrained": "иммунитет: опутанность",
+			"immune_prone": "иммунитет: падение с ног",
+			"immune_grappled": "иммунитет: захват",
+			"immune_deafened": "иммунитет: глухота",
+			"immune_petrified": "иммунитет: окаменение",
 			"int_19": "Интеллект 19",
 			"str_19": "Сила 19",
 			"investigation_advantage": "преимущество на Анализ",
@@ -3645,6 +3683,7 @@
 		"parallel": 16,
 		"candidates": 40,
 		"quests_per_day": 2,
+		"goal_per_day": 2,
 		"quest_depth": 1,
 		"everyday": ["candle", "candlestick", "lamp", "lantern", "torch", "jug_or_pitcher", "cup_clay", "pewter_mug", "flask_or_tankard", "bowl_wooden", "plate_clay", "spoon_wooden", "bucket", "basket", "sack", "barrel", "chest", "stool", "broom", "rag", "blanket", "pillow", "bedsheet", "towel", "soap", "washbasin", "bottle_glass", "scrap_note", "letter", "parchment_one_sheet", "ink_1_ounce_bottle", "ink_pen", "dice_set", "playing_card_set", "wooden_toy", "comb", "needle_and_thread", "string_10_feet", "rope", "tinderbox", "pipe_tobacco", "figurine"],
 		"by_kind": {
