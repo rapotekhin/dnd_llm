@@ -92,6 +92,6 @@ static func quest_list(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 		if all[id].has("steps"):
 			continue
 		out.append({"id": id, "title": str(all[id]["title"]), "description": str(all[id].get("description", "")),
-			"done": s.quests_done.has(id), "step": ""})
+			"done": s.quests_done.has(id), "step": "", "outcome": QuestRules.outcome(s, world, id)})
 	out.append_array(QuestRules.info(s, world))
 	return out

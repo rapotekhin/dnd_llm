@@ -55,12 +55,16 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
 
 
 
-def check_rumors(world, rooms) -> list[str]:
-    """v0.7.47: the pack's own rumours — a text, a weight 1–3, an origin location, a tip's room and secret of the world."""
+def check_rumors(world, rooms, items: set | None = None) -> list[str]:
+    """v0.7.47: the pack's own rumours — a text, a weight 1–3, an origin location, a tip's room and secret of the world;
+    v0.8.4.42.@: `when` — the talk begins when its fact holds, `ends` — the fact that makes it old news (Cond)."""
     errors: list[str] = []
     locs = set(world.get("locations", {}))
     for rid, r in world.get("rumors", {}).items():
         where = f"world.rumors.{rid}"
+        for key in ("when", "ends"):
+            if key in r:
+                errors += check_when(r[key], f"{where}.{key}", rooms, world.get("npcs", {}), items or set(), top=False, quests=world.get("quests", {})) if isinstance(r[key], dict) else [f"{where}.{key}: условие Cond"]
         if len(str(r.get("text", "")).strip()) < 10:
             errors.append(f"{where}: text — от 10 знаков")
         if r.get("weight", 1) not in (1, 2, 3):
@@ -473,6 +477,12 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         diseases = set(load(DATA / "rules.json")["diseases"]["catalog"]) | set(world.get("diseases", {}))
         if npc.get("sick") and npc["sick"] not in diseases:  # v0.7.23.1: a sick NPC passes its disease on
             errors.append(f"NPC {nid}: sick — болезнь из {', '.join(sorted(diseases))}")
+        for i, nv in enumerate(npc.get("variants", [])):  # v0.8.4.42.@: the person by the hero's deeds (SceneRules.NPC_KEYS)
+            where = f"NPC {nid}, variants[{i}]"
+            if not isinstance(nv.get("when"), dict) or set(nv) - {"when", "description", "personality", "role"}:
+                errors.append(f"{where}: ключи when, description, personality, role")
+            else:
+                errors += check_when(nv["when"], where, rooms, npcs, items, top=False, quests=world.get("quests", {}))
         for i, tv in enumerate(npc.get("trade_variants", [])):  # v0.7.17.2: the trader and the world's flags
             where = f"NPC {nid}, trade_variants[{i}]"
             if not (set(tv) <= {"when", "price_pct", "stock", "remove", "news"}) or not isinstance(tv.get("when"), dict):
@@ -552,7 +562,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
 
     errors += check_calendar(world.get("calendar"), world, npcs, rooms)
     errors += check_weather(world, load(DATA / "rules.json").get("weather", {}))
-    errors += check_rumors(world, rooms)
+    errors += check_rumors(world, rooms, items)
     errors += check_letters(world, load(DATA / "rules.json").get("letters", {}))
     rules_all = load(DATA / "rules.json")
     errors += check_faith(world, rules_all.get("faith", {}), [k for k in rules_all["crime"]["kinds"] if not k.startswith("_")], chars["presets"])

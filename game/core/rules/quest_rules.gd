@@ -566,8 +566,30 @@ static func info(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 		if not s.quests_active.has(id) and not s.quests_done.has(id) and not s.quests_failed.has(id):
 			continue
 		out.append({"id": id, "title": str(all[id]["title"]), "description": str(all[id].get("description", "")),
-			"done": s.quests_done.has(id), "failed": s.quests_failed.has(id), "step": step_text(s, world, id)})
+			"done": s.quests_done.has(id), "failed": s.quests_failed.has(id), "step": step_text(s, world, id),
+			"outcome": outcome(s, world, id)})
 	return out
+
+
+## What came of a finished quest, for the master and the journal (v0.8.4.42.@): the quest's own `outcome` (what the
+## world knows now) or the `done_text` of its last step, and the finale's choice the hero made — the choice whose flag
+## is set, by its `outcome` or `done_text`. "" while the quest goes on or when it failed without words.
+static func outcome(s: GameSession, world: Dictionary, quest_id: String) -> String:
+	if not s.quests_done.has(quest_id) and not s.quests_failed.has(quest_id):
+		return ""
+	var q: Dictionary = world.get("quests", {}).get(quest_id, {})  # a step-less one too (XpRules)
+	var steps: Array = q.get("steps", [])
+	var parts: Array[String] = []
+	var own := str(q.get("outcome" if s.quests_done.has(quest_id) else "fail_outcome", ""))
+	if own.is_empty() and s.quests_done.has(quest_id):
+		own = str(q.get("done_text", "")) if steps.is_empty() else str(steps[-1].get("done_text", ""))
+	for step: Dictionary in steps:
+		for c: Dictionary in step.get("choices", []):
+			if not str(c.get("flag", "")).is_empty() and s.flags.has(str(c["flag"])):
+				parts.append("выбор «%s»: %s" % [c["action"], str(c.get("outcome", c.get("done_text", "")))])
+	if not own.is_empty():
+		parts.push_front(own)
+	return " ".join(parts).strip_edges()
 
 
 ## Every flag the world pack reads or sets (quest facts, closed exits, choices; v0.7.4): only these may be set by

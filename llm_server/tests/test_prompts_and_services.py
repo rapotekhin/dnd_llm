@@ -553,6 +553,25 @@ def test_a_person_sought_by_role_brings_the_people_rules():
     assert "\x08" not in open(prompts.__file__, encoding="utf-8").read()
 
 
+def test_words_of_a_goal_past_its_threshold_want_the_full_prompt():
+    # v0.8.4.42.16, the author: «где дракон?» went by the short prompt with no goal:hint — only «намёк» took the full one
+    from llm_server import router
+    from llm_server.protocol import TurnRequestParams
+    s = snap()
+    s.character.goal = "«Убить дракона» — эпическая, по силам: уровень класса 5 из 5; намёков 1 из 3 перед заданием"
+    params = TurnRequestParams.model_validate({"turn_id": "t-1", "kind": "action", "mode": "social", "npc_id": INNKEEPER,
+                                               "input": "а где дракон-то живёт, знаешь?", "snapshot": s.model_dump()})
+    assert router.by_kind(params) == "full" and "goals" in prompts.auto_topics("social", params.snapshot, params.input)
+    params.input = "Добрый вечер, Бруно"
+    assert router.by_kind(params) == ""
+    params.input = "так где дракон?"
+    params.snapshot.character.goal = "«Убить дракона» — эпическая, рано: уровень класса 2 из 5"
+    assert router.by_kind(params) == ""  # before the threshold the world does not lead to it: the router decides
+    params.snapshot.character.goal = ("«Убить дракона» — эпическая, по силам: уровень класса 5 из 5; намёков 3 из 3 перед заданием;"
+                                      " задание цели: «Логово у Зуба»")
+    assert router.by_kind(params) == ""  # the quest is given: words lead to it
+
+
 def test_an_invisible_hero_brings_the_rules_by_the_engines_condition_id():
     # v0.7.63: the engine sends `invisible`, the topic looked for a Russian word and never came
     s = snap()

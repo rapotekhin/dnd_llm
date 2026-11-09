@@ -1868,6 +1868,7 @@ DC_TIER_HARD,трудная
 DC_TIER_VERY_HARD,очень трудная
 DC_TIER_NEARLY_IMPOSSIBLE,почти невозможная
 JOURNAL_STORY,Из дневника: {text}
+JOURNAL_OUTCOME,Итог: {text}
 JOURNAL_TODAY,Сегодня: {date}
 JOURNAL_FESTIVALS,Праздники впереди
 JOURNAL_MONTHS,Месяцы года

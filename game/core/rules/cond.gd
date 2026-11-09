@@ -48,3 +48,18 @@ static func met(s: GameSession, when: Dictionary, data: Dictionary = {}) -> bool
 ## A record that stands on a condition: no `when` — always.
 static func holds(s: GameSession, record: Dictionary, data: Dictionary = {}) -> bool:
 	return not record.has("when") or met(s, record["when"], data)
+
+
+## The record as the world is now (v0.8.4.42.@): every row of its `variants` [{when, <key>…}] that holds overrides
+## those of `keys`, in order. One road for a room (SceneRules.room), a person (SceneRules.npc) and the pack's lore
+## (TurnSnapshot.world_info): what the pack wrote before the hero's deeds changes by their facts.
+static func overlay(s: GameSession, base: Dictionary, keys: Array, data: Dictionary = {}) -> Dictionary:
+	if not base.has("variants") or s == null:
+		return base
+	var out := base.duplicate()
+	for v: Dictionary in base["variants"]:
+		if holds(s, v, data):
+			for k: String in keys:
+				if v.has(k):
+					out[k] = v[k]
+	return out

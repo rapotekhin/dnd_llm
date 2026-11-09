@@ -39,4 +39,4 @@
 {% endif %}{% if scene.props %}Вокруг: {% for p in scene.props %}{{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %}.
 {% endif %}{% if scene.hooks %}Зацепки: {{ scene.hooks | join("; ") }}.
 {% endif %}{% endif %}{% if character %}Герой: {{ character.name }} — {{ hero_gender(character.gender) }}{% if character.race %}, {{ character.race }}{% endif %}{% if character.class_name %}, {{ character.class_name }} {{ character.level }} уровня{% endif %}{% if character.body %}; облик: {{ character.body }}{% endif %}{% if character.conditions %}; состояния: {{ character.conditions | join(", ") }}{% endif %}.{% if npc %} Таким {{ npc.name }} его и видит.{% endif %}
-{% endif %}
+{% endif %}{% include "_done.md.j2" %}

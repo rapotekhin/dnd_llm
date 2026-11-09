@@ -380,6 +380,8 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 					var what := _todo_text(s, w, str(q["id"]))
 					if not what.is_empty():  # v0.8.4.42.3: what to do there and by which check
 						line += "\n      " + tr("JOURNAL_TODO").format({"what": what})
+				if not str(q.get("outcome", "")).is_empty():  # v0.8.4.42.@: what came of it, as the master knows it
+					line += "\n      " + tr("JOURNAL_OUTCOME").format({"text": q["outcome"]})
 				var story := str(s.summaries.get(QuestRules.STORY + str(q["id"]), ""))
 				if not story.is_empty():  # v0.8.4.30: the hero's own account of it
 					line += "\n      " + tr("JOURNAL_STORY").format({"text": story})

@@ -274,6 +274,9 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			e.append("NPC %s: нужны name и role" % id)
 		if not GENDERS.has(str(n.get("gender", ""))):
 			e.append("NPC %s: gender — одно из %s" % [id, ", ".join(GENDERS)])
+		for v: Variant in n.get("variants", []):  # v0.8.4.42.@: the person by the hero's deeds
+			if not (v is Dictionary) or not _when_ok(v.get("when"), false) or (v as Dictionary).keys().any(func(k: Variant) -> bool: return not (SceneRules.NPC_KEYS + ["when"]).has(str(k))):
+				e.append("NPC %s: вариант — {when, %s}" % [id, ", ".join(SceneRules.NPC_KEYS)])
 		var stock: Variant = n.get("stock", [])
 		if not (stock is Array or stock is Dictionary):
 			e.append("NPC %s: stock — список id или {id: количество}" % id)

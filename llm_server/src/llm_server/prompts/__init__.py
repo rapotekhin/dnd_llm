@@ -188,11 +188,12 @@ class Topic(NamedTuple):
     """A rules topic: the line of the index (when to read it), the effect kinds the engine accepts only after it is read
     or shown, and when it goes into the system prompt by itself (v0.8.4.29.7: one row instead of a branch in auto_topics):
     `alone` — the scene alone needs it; `words` — the player's words name it while `gate` holds (by default: there is a
-    scene), `props` — a container of the scene named counts too; `full` — those words want the full prompt (the router)."""
+    scene), or a function of the snapshot that makes them (v0.8.4.42.16: the words of the hero's own goal), `props` — a
+    container of the scene named counts too; `full` — those words want the full prompt (the router)."""
 
     index: str
     kinds: tuple[str, ...]
-    words: re.Pattern[str] | None = None
+    words: re.Pattern[str] | Callable[[Snapshot], re.Pattern[str] | None] | None = None
     gate: Callable[[Snapshot], bool] | None = None
     alone: Callable[[str, Snapshot, str], bool] | None = None
     props: bool = False
@@ -200,7 +201,26 @@ class Topic(NamedTuple):
 
 
 def _named(t: Topic, snap: Snapshot, said: str) -> bool:
-    return t.words is not None and (t.gate(snap) if t.gate else snap.scene is not None) and mentions(said, t.words, snap.scene if t.props else None)
+    words = t.words(snap) if callable(t.words) else t.words
+    return words is not None and (t.gate(snap) if t.gate else snap.scene is not None) and mentions(said, words, snap.scene if t.props else None)
+
+
+# Words of a goal that say what it is not about: «убить дракона» is about the dragon.
+GOAL_STOP = {"убить", "стать", "найти", "добыт", "сдела", "откры", "постр", "купит", "получ", "завес", "своег", "своей",
+             "котор", "чтобы", "всего", "самый", "самог", "когда", "очень", "много", "иметь", "хочет", "хочу"}
+
+
+def goal_words(snap: Snapshot) -> re.Pattern[str] | None:
+    """The stems of the hero's life goal while the world may lead to it — past its threshold, its quest not given yet
+    (v0.8.4.42.16, the author: «из мастера очень сложно доставать намёки» — «где дракон?» went by the short prompt with
+    no `goal:hint`, only the word «намёк» made the router take the full one). The goal line is GoalRules.text_of:
+    ««Убить дракона» — эпическая, по силам: уровень класса 5 из 5; намёков 1 из 3 перед заданием»."""
+    goal = snap.character.goal if snap.character else ""
+    if "по силам" not in goal or "задание цели:" in goal:
+        return None
+    text = goal.partition("»")[0].lstrip("«")
+    stems = sorted({w[:5].lower() for w in re.findall(r"\w+", text) if len(w) >= 5} - GOAL_STOP)
+    return re.compile("|".join(map(re.escape, stems)), re.IGNORECASE) if stems else None
 
 
 def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
@@ -234,7 +254,8 @@ TOPICS: dict[str, Topic] = {
                "(`grant:discount`, `grant:favor`, `grant:secret`, `grant:follow`, `grant:permit`, `grant:cure`, `shift:reputation`)",
                ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "grant:cure", "shift:reputation"),
                    alone=lambda mode, snap, said: mode in ("social", "trade")),
-    "goals": Topic("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", ()),
+    "goals": Topic("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", (),
+                   words=goal_words, full=lambda snap: True),
     "equip": Topic("надеть, снять, раздеться (`equip`), герою или человеку сцены", ("equip",), words=EQUIP_WORDS),
     "water": Topic("набрать воды в бурдюк, флягу, кувшин, ведро из колодца, ручья, реки; нацедить вина, масла; вылить, облить водой или маслом (`fill`)", ("fill",),
                    words=WATER_WORDS, gate=lambda snap: True),
@@ -380,7 +401,7 @@ def short_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DE
     character = snap.character
     return render("short.md.j2", mode=mode, npc=npc if mode != "exploration" else None, scene=snap.scene, world=snap.world,
                   character=character, tone=tone, gender_rule=gender_rule(character.gender if character else "other"),
-                  npc_gender_rule=npc_gender_rule(npc.gender) if npc else "")
+                  npc_gender_rule=npc_gender_rule(npc.gender) if npc else "", quests=snap.quests)  # «Сделано» (v0.8.4.42.@)
 
 
 def turn_prompt(mode: str, kind: str, player_input: str, snap: Snapshot, npc: SceneNpc | None) -> str:

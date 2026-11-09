@@ -7,24 +7,18 @@ extends RefCounted
 ## NPCs keep hours too (`schedule`, v0.7.14.2): the trader goes home at night, the captain drinks in the tavern.
 
 const KEYS := ["description", "npcs", "hooks", "encounter", "safe"]
-
-
-static func matches(s: GameSession, v: Dictionary) -> bool:
-	return Cond.holds(s, v)
+const NPC_KEYS := ["description", "personality", "role"]
 
 
 ## The room with the variants that hold now.
 static func room(s: GameSession, world: Dictionary, room_id: String) -> Dictionary:
-	var base: Dictionary = world["rooms"].get(room_id, {})
-	if not base.has("variants") or s == null:
-		return base
-	var out := base.duplicate()
-	for v: Dictionary in base["variants"]:
-		if matches(s, v):
-			for k: String in KEYS:
-				if v.has(k):
-					out[k] = v[k]
-	return out
+	return Cond.overlay(s, world["rooms"].get(room_id, {}), KEYS)
+
+
+## A person of the pack as the world is now (v0.8.4.42.@): its `variants` [{when, description?, personality?, role?}] by
+## the hero's deeds — the captain no longer waits for the cult the hero burned out.
+static func npc(s: GameSession, world: Dictionary, npc_id: String) -> Dictionary:
+	return Cond.overlay(s, WorldView.new(world).npc(npc_id), NPC_KEYS)
 
 
 ## The tags of the room by its variants, with those of the places above it (v0.7.66).

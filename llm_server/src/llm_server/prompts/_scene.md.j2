@@ -78,11 +78,12 @@ NPC здесь:
 {% endif %}{% if scene.flags %}Уже произошло: {{ scene.flags | join(", ") }}.
 {% endif %}
 {% endif %}
-{% set taken = quests | rejectattr("offered_by") | list %}{% set offered = quests | selectattr("offered_by") | list %}
+{% set taken = quests | rejectattr("offered_by") | rejectattr("done") | rejectattr("failed") | list %}{% set offered = quests | selectattr("offered_by") | list %}
+{% include "_done.md.j2" %}
 {% if taken +%}
 ## Задания игрока
 
-{% for q in taken %}- {{ q.title }}{% if q.done %} (выполнено){% endif %}: {{ q.description }}{% if q.step %} Сейчас: {{ q.step }}.{% endif %}{% if q.where %} Где это: {{ q.where }} — если герой не там, цели шага в сцене нет: не приводи её рассказом, герою туда ещё идти.{% endif +%}
+{% for q in taken %}- {{ q.title }}: {{ q.description }}{% if q.step %} Сейчас: {{ q.step }}.{% endif %}{% if q.where %} Где это: {{ q.where }} — если герой не там, цели шага в сцене нет: не приводи её рассказом, герою туда ещё идти.{% endif +%}
 {% endfor %}
 Выполняет задание сам игрок (движок отмечает и даёт награду); ты не объявляешь задание выполненным и не даёшь за него опыт или награду сам.
 

@@ -99,7 +99,9 @@ static func add(s: GameSession, data: Dictionary, r: Dictionary) -> Dictionary:
 	return r
 
 
-## The pack's own rumours (world.json `rumors`) put in on the first day; once each.
+## The pack's own rumours (world.json `rumors`) put in on the first day; once each. One with `when` (Cond) waits for its
+## fact and begins the day it holds — the talk of a deed the hero has done (v0.8.4.42.@); `ends` (Cond) — the fact that
+## makes it old news: the fire on the tower is not talked of once the cult that lit it is gone. Run again by `tick`.
 static func seed(s: GameSession, data: Dictionary) -> void:
 	if not on(data):
 		return
@@ -109,15 +111,19 @@ static func seed(s: GameSession, data: Dictionary) -> void:
 		if st["list"].has(id):
 			continue
 		var p: Dictionary = pack[id]
+		if not Cond.holds(s, p, data):
+			continue
 		var r := {"id": id, "text": str(p["text"]), "weight": int(p.get("weight", 1)), "origin": str(p["origin"]),
-			"day": s.day - int(p.get("ago", 0)), "truth": bool(p.get("truth", true)), "notice": bool(p.get("notice", false)),
+			"day": s.day - (0 if p.has("when") else int(p.get("ago", 0))), "truth": bool(p.get("truth", true)), "notice": bool(p.get("notice", false)),
 			"target_room": str(p.get("target_room", "")), "target_secret": str(p.get("target_secret", "")), "source": "pack"}
+		if p.has("ends"):
+			r["ends"] = p["ends"]
 		r["until"] = TimeRules.day_start(int(r["day"]) + int(p["days"]) + 1) if p.has("days") else -1  # the pack's talk lasts until checked
 		add(s, data, r)
 
 
 static func alive(s: GameSession, r: Dictionary) -> bool:
-	return not bool(r.get("refuted", false)) and (int(r.get("until", -1)) < 0 or s.clock < int(r["until"]))
+	return not bool(r.get("refuted", false)) and (int(r.get("until", -1)) < 0 or s.clock < int(r["until"])) and not (r.has("ends") and Cond.met(s, r["ends"]))
 
 
 static func arrived(s: GameSession, r: Dictionary, loc: String) -> bool:
@@ -215,6 +221,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	if not on(data):
 		return lines
+	RumorRules.seed(s, data)  # the pack's talk of a deed done begins (v0.8.4.42.@)
 	var here := _loc(data, s.room_id)
 	for r: Dictionary in _state(s)["list"].values():
 		if int(r.get("fame", 0)) == 0 and str(r.get("crime", "")).is_empty():
