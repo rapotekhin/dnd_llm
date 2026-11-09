@@ -49,14 +49,38 @@ static func known(s: GameSession, world: Dictionary) -> Dictionary:
 static func route(s: GameSession, world: Dictionary, from: String, to: String, data: Dictionary = {}) -> Array[String]:
 	if from == to or not s.visited.has(to):
 		return []
-	var prev := {from: ""}
-	var queue: Array[String] = [from]
+	var path := _path(s, world, [from], to, func(r: String, e: String) -> bool:
+		return s.visited.has(e) and not blocked(s, world, r, e) and (data.is_empty() or WayRules.blocked(s, data, r, e).is_empty()))
+	return path.slice(1)
+
+
+## The way to `to` the hero has not walked (v0.8.4.42.11): the rooms not visited on the shortest way over open exits
+## from the nearest visited room, the last is `to`; [] when `to` is visited or no open way leads there (a hidden way
+## stays hidden). What a quest's step tells the hero of where it leads.
+static func way_to(s: GameSession, world: Dictionary, to: String) -> Array[String]:
+	if s.visited.has(to) or not world["rooms"].has(to):
+		return []
+	var from: Array[String] = []
+	for r: Variant in s.visited:
+		if world["rooms"].has(str(r)) and not from.has(str(r)):
+			from.append(str(r))
+	return _path(s, world, from, to, func(_r: String, e: String) -> bool: return world["rooms"].has(e)) \
+		.filter(func(r: String) -> bool: return not s.visited.has(r))
+
+
+## The shortest way over open exits from any room of `from` to `to`, each step let by `through(room, next)`:
+## [a room of `from`, …, `to`]; [] when there is none.
+static func _path(s: GameSession, world: Dictionary, from: Array[String], to: String, through: Callable) -> Array[String]:
+	var prev := {}
+	for f: String in from:
+		prev[f] = ""
+	var queue: Array[String] = from.duplicate()
 	while not queue.is_empty():
 		var r: String = queue.pop_front()
 		if r == to:
 			break
 		for e: String in WayRules.open_exits(s, world, r):
-			if prev.has(e) or not s.visited.has(e) or blocked(s, world, r, e) or (not data.is_empty() and not WayRules.blocked(s, data, r, e).is_empty()):
+			if prev.has(e) or not through.call(r, e):
 				continue
 			prev[e] = r
 			queue.append(e)
@@ -64,7 +88,7 @@ static func route(s: GameSession, world: Dictionary, from: String, to: String, d
 		return []
 	var out: Array[String] = []
 	var at := to
-	while at != from:
+	while not at.is_empty():
 		out.push_front(at)
 		at = str(prev[at])
 	return out
@@ -86,18 +110,19 @@ static func minutes(s: GameSession, data: Dictionary, from: String, path: Array[
 	return total
 
 
-## Active quests by the visited room where their current step is done or their giver waits for it:
-## {room id: [quest titles]}. Places the hero has not seen are never marked.
+## Active quests by the known room (visited or marked) where their current step is done or their giver waits for it:
+## {room id: [quest titles]}. Places the hero does not know are never marked.
 static func quest_marks(s: GameSession, data: Dictionary) -> Dictionary:
 	var out := {}
 	var world: Dictionary = data["world"]
+	var rooms_known: Array = known(s, world)["rooms"]
 	for qid: Variant in s.quests_active:
 		var q := QuestRules.quest(world, str(qid))
 		var step := QuestRules.current(s, world, str(qid))
 		var rooms: Array[String] = []
 		_step_rooms(s, data, step.get("when", {}), rooms)
 		for r: String in rooms:
-			if s.visited.has(r):
+			if rooms_known.has(r):
 				var list: Array = out.get(r, [])
 				if not list.has(str(q.get("title", qid))):
 					list.append(str(q.get("title", qid)))
@@ -105,12 +130,28 @@ static func quest_marks(s: GameSession, data: Dictionary) -> Dictionary:
 	return out
 
 
-## The known rooms (visited or behind a known exit) of a quest's current step: where the followed quest opens the map.
+## The known rooms (visited, marked or behind a known exit) of a quest's current step: where the followed quest opens
+## the map.
 static func step_rooms(s: GameSession, data: Dictionary, quest_id: String) -> Array[String]:
 	var world: Dictionary = data["world"]
 	var rooms := step_targets(s, data, QuestRules.current(s, world, quest_id).get("when", {}))
-	var frontier: Array = known(s, world)["frontier"]  # a room behind a known exit is shown on the map too
-	return rooms.filter(func(r: String) -> bool: return s.visited.has(r) or frontier.has(r))
+	var k := known(s, world)  # a room behind a known exit or marked by a step, a tip or a pet is shown on the map too
+	return rooms.filter(func(r: String) -> bool: return (k["rooms"] as Array).has(r) or (k["frontier"] as Array).has(r))
+
+
+## Where a quest's current step leads, in words: «room (location)» of each known room of step_rooms — the journal's
+## and the master's line (v0.8.4.42.11).
+static func step_where(s: GameSession, data: Dictionary, quest_id: String) -> Array[String]:
+	var out: Array[String] = []
+	for r: String in step_rooms(s, data, quest_id):
+		out.append(named(data["world"], r))
+	return out
+
+
+## A room in words with its location: «Шатёр вожака (Сумеречная Пуща)».
+static func named(world: Dictionary, room_id: String) -> String:
+	var w := WorldView.new(world)
+	return "%s (%s)" % [w.room(room_id).get("name", room_id), w.location(w.location_id(room_id)).get("name", "")]
 
 
 ## Every room a step's condition leads to, known to the hero or not.

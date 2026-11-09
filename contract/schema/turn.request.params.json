@@ -676,6 +676,11 @@
         "title": {
           "title": "Title",
           "type": "string"
+        },
+        "where": {
+          "default": "",
+          "title": "Where",
+          "type": "string"
         }
       },
       "required": [

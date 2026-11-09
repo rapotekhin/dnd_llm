@@ -166,6 +166,7 @@ static func advance(s: GameSession, data: Dictionary) -> Array[String]:
 			if step.is_empty():
 				break
 			lines.append_array(_let_in(s, data, id, step))
+			lines.append_array(_show_way(s, data, id, step))
 			if _by_button(step["when"]):
 				break
 			lines.append_array(_announce_parts(s, data["world"], id, step))
@@ -259,6 +260,25 @@ static func _let_in(s: GameSession, data: Dictionary, quest_id: String, step: Di
 		if SiteRules.unwelcome(s, data, room) == giver:
 			lines.append_array(SiteRules.grant(s, data, giver, world.site_id(room)))
 	return lines
+
+
+## The step tells the hero where it leads (v0.8.4.42.11, the author's trace: a quest act's lair hung on an edge of the
+## Pushcha, the hero by the swamp knew neither it nor the way, the leader «was never made»): every room the step leads
+## to and the rooms on the open way there from the nearest visited one are marked on the map (Knows.SCOUTED, as a
+## rumour's tip), once. A way behind a hidden or shut door is not told. Lines.
+static func _show_way(s: GameSession, data: Dictionary, quest_id: String, step: Dictionary) -> Array[String]:
+	var world: Dictionary = data["world"]
+	var marked: Array[String] = []
+	for room: String in WorldMap.step_targets(s, data, step["when"]):
+		for r: String in WorldMap.way_to(s, world, room):
+			if not Knows.has(s, Knows.SCOUTED, r):
+				Knows.add(s, Knows.SCOUTED, r)
+				if r == room:
+					marked.append(room)
+	if marked.is_empty():
+		return []
+	return ["«%s»: %s — отмечено на карте" % [quest(world, quest_id)["title"], ", ".join(marked.map(func(r: String) -> String:
+		return WorldMap.named(world, r)))]]
 
 
 ## Parts of an "all" step done just now (in any order): one line each, once.

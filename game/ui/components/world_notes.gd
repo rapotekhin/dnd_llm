@@ -374,8 +374,7 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 					line += "\n      " + h
 				if not str(q.get("step", "")).is_empty():
 					line += "\n      " + tr("JOURNAL_STEP").format({"step": q["step"]})
-					var where := WorldMap.step_rooms(s, Catalog.data, str(q["id"])).map(func(r: String) -> String:  # v0.8.4.30: where to go now
-						return "%s (%s)" % [w.room(r).get("name", r), w.location(w.location_id(r)).get("name", "")])
+					var where := WorldMap.step_where(s, Catalog.data, str(q["id"]))  # v0.8.4.30: where to go now
 					if not where.is_empty():
 						line += "\n      " + tr("JOURNAL_WHERE").format({"where": ", ".join(where)})
 					var what := _todo_text(s, w, str(q["id"]))

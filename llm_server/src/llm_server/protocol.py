@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.120.0"
+PROTOCOL_VERSION = "0.121.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -401,6 +401,7 @@ class QuestInfo(_In):
     done: bool = False
     failed: bool = False  # taken, then its NPC died without an heir (0.19.0)
     step: str = ""  # the current step of a quest with steps (0.9.0); the engine closes steps, not the master
+    where: str = ""  # where the current step leads: «room (location)» the hero knows (0.121.0)
     offered_by: str = ""  # an NPC here offers it and the player has not taken it (0.12.0); taken by the button
     offer_items: list[str] = Field(default_factory=list)  # «name [item_id]» the giver hands over with it (0.12.0)
 

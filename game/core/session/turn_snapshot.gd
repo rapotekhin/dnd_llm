@@ -75,6 +75,9 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"max_effects": int(data["rules"]["turn_limits"]["max_effects"])},
 	}
 	out["quests"] = XpRules.quest_list(s, data["world"])
+	for q: Dictionary in out["quests"]:  # where the current step leads, as the journal says (v0.8.4.42.11)
+		if not str(q.get("step", "")).is_empty() and not bool(q.get("done", false)):
+			q["where"] = ", ".join(WorldMap.step_where(s, data, str(q["id"])))
 	out["quests"].append_array(quest_offers(s, data["world"]))
 	if CombatRules.active(s):
 		out["combat"] = CombatRules.snapshot(s, data)
