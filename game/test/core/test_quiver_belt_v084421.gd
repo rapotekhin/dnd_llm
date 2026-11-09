@@ -89,4 +89,16 @@ func test_a_start_kit_that_shoots_has_its_quiver_on_the_belt() -> void:
 					assert_bool(ItemRules.on_belt(c, data, {}, holder)).override_failure_message("%s: %s not on the belt" % [id, holder]).is_true()
 					assert_int(Gear.ammo_left(data, c, ammo)).override_failure_message("%s: nothing to shoot" % id).is_greater(0)
 		assert_array(shoots).override_failure_message("%s: %s unfed" % [id, shoots]).is_empty()
+		var kinds := (c["inventory"] as Dictionary).keys().filter(func(k: String) -> bool: return bool(ContainerRules.cfg(data)["kinds"].get(k, {}).get("at_hand", false)))
+		assert_array(kinds).override_failure_message("%s: %s" % [id, kinds]).not_contains(["efficient_quiver"])  # v0.8.4.42.5: never a magic one for the bow itself
+		assert_bool(kinds.size() <= 1).override_failure_message("%s: %s" % [id, kinds]).is_true()  # one quiver, not one per weapon
 	assert_int(checked).is_greater_equal(1)  # the ranger's longbow
+
+
+func test_the_creation_shows_what_the_class_always_gives() -> void:
+	var kit := CharacterBuilder.fixed_kit({"class": "ranger"}, data)
+	var ids: Array = kit.map(func(e: Dictionary) -> String: return str(e["id"]))
+	assert_array(ids).contains(["longbow", "arrows", "quiver"])  # v0.8.4.42.5: the bow was never shown at creation
+	assert_array(ids).not_contains(["efficient_quiver"])
+	assert_bool(ContainerRules.at_hand_thing(data, {}, "longbow")).is_false()  # a bow is not ammunition for the belt
+	assert_bool(ContainerRules.at_hand_thing(data, {}, "arrows")).is_true()

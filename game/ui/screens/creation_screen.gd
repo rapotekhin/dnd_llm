@@ -534,6 +534,9 @@ func _draw_equipment() -> void:
 	_heading(_body, "CC_STEP_EQUIPMENT")
 	var sets: Array = CharacterBuilder.klass(choices, data()).get("equipment_choices", [])
 	var picked: Array = choices["equipment"]
+	var fixed := CharacterBuilder.fixed_kit(choices, data())
+	if not fixed.is_empty():  # v0.8.4.42.5: the class's own things, not only its picks
+		_text(_body, tr("CC_EQUIPMENT_CLASS").format({"items": _alt_text({"items": fixed, "picks": []})}), true).name = "EquipFixed"
 	while picked.size() < sets.size():
 		picked.append({"alt": -1, "picks": []})
 	for i in sets.size():

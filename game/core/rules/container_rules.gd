@@ -66,12 +66,14 @@ static func _group(data: Dictionary, session_items: Dictionary, k: Dictionary, i
 
 
 ## A thing kept at hand by a container of its kind (v0.8.4.42.1, the author: arrows and a quiver would not go to the belt):
-## a kind `at_hand` itself (a quiver, a bolt case) or what such a kind holds (arrows, bolts). Read by the belt.
+## a kind `at_hand` itself (a quiver, a bolt case) or the ammunition such a kind holds (arrows, bolts) — never a bow or a
+## spear the efficient quiver keeps too (v0.8.4.42.5). Read by the belt.
 static func at_hand_thing(data: Dictionary, session_items: Dictionary, item_id: String) -> bool:
 	var real := ItemRules.real_id(item_id)
+	var ammo := (ItemRules.cfg(data)["ammo"] as Dictionary).values().has(real)
 	for id: String in cfg(data)["kinds"]:
 		var k: Dictionary = cfg(data)["kinds"][id]
-		if bool(k.get("at_hand", false)) and (id == real or not _group(data, session_items, k, item_id).is_empty()):
+		if bool(k.get("at_hand", false)) and (id == real or (ammo and not _group(data, session_items, k, item_id).is_empty())):
 			return true
 	return false
 
@@ -82,7 +84,8 @@ static func holder_of(data: Dictionary, ammo: String) -> String:
 	var best := ""
 	for id: String in cfg(data)["kinds"]:
 		var k: Dictionary = cfg(data)["kinds"][id]
-		if not bool(k.get("at_hand", false)) or not data["items"]["catalog"].has(id) or _group(data, {}, k, ammo).is_empty():
+		if not bool(k.get("at_hand", false)) or not data["items"]["catalog"].has(id) or _group(data, {}, k, ammo).is_empty() \
+				or data["items"]["catalog"][id].has("rarity"):  # a plain one: never a magic quiver (v0.8.4.42.5)
 			continue
 		if best.is_empty() or int(data["items"]["catalog"][id].get("value_cp", 0)) < int(data["items"]["catalog"][best].get("value_cp", 0)):
 			best = id

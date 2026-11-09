@@ -145,6 +145,7 @@ CC_CLASS_CASTER,"Заклинатель, базовая характеристи
 CC_CLASS_LINE,Кость хитов к{die}. Спасброски: {saves}. Навыков на выбор: {skills}.
 CC_CREATE_OWN,Создать своего персонажа
 CC_EQUIPMENT_BACKGROUND,От предыстории: {items}.
+CC_EQUIPMENT_CLASS,"От класса всегда, без выбора: {items}."
 CC_ERR_ABILITY_CHOICE,Выберите характеристики для бонуса расы
 CC_ERR_ABILITY_RANGE,Значения должны быть от 8 до 15
 CC_ERR_EQUIPMENT,Выберите снаряжение

@@ -92,6 +92,18 @@ func run() -> void:
 	await frames(2)
 	await shot("spells")
 
+	# v0.8.4.42.5, the author: the ranger's bow, arrows and quiver are shown before the picks
+	cs.set("step", "class")
+	cs.call("_redraw")
+	await tap("Pick_ranger")
+	cs.set("step", "equipment")
+	cs.call("_redraw")
+	await frames(2)
+	var fixed: Label = find(cs, "EquipFixed")
+	step("the class's own things shown", fixed != null and fixed.text.contains(ItemRules.display_name(node("Catalog").data["items"], {}, "longbow"))
+		and fixed.text.contains(ItemRules.display_name(node("Catalog").data["items"], {}, "quiver")), fixed.text if fixed != null else "")
+	await shot("ranger_equipment")
+
 	await tap("RandomButton")
 	await shot("random")
 	await tap("StartButton")

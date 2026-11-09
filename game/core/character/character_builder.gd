@@ -48,6 +48,22 @@ static func klass(ch: Dictionary, data: Dictionary) -> Dictionary:
 	return data["classes"]["classes"].get(str(ch.get("class", "")), {})
 
 
+## What a hero of the class always gets beside its picks, for the creation screen (v0.8.4.42.5, the author: the ranger's
+## bow was never shown): the class's fixed things, and for a weapon that shoots its ammunition and quiver (_kit_ammo).
+static func fixed_kit(ch: Dictionary, data: Dictionary) -> Array:
+	var out: Array = (klass(ch, data).get("equipment", []) as Array).duplicate(true)
+	var ids: Array = out.map(func(e: Dictionary) -> String: return str(e["id"]))
+	for e: Dictionary in out.duplicate():
+		var ammo := Gear.ammo_of(data, {}, str(e["id"]))
+		if ammo.is_empty():
+			continue
+		for add: Array in [[ammo, int(ItemRules.cfg(data)["kit_ammo"])], [ContainerRules.holder_of(data, ammo), 1]]:
+			if not str(add[0]).is_empty() and not ids.has(add[0]):
+				out.append({"id": add[0], "qty": add[1]})
+				ids.append(add[0])
+	return out
+
+
 static func background(ch: Dictionary, data: Dictionary) -> Dictionary:
 	return data["backgrounds"].get(str(ch.get("background", "")), {})
 
@@ -511,22 +527,30 @@ static func _merge(into: Array, more: Variant) -> void:
 ## from the belt. Read from the data: the weapon's ammo (Gear.ammo_of), the holder a container kind `at_hand` that holds it.
 static func _kit_ammo(c: Dictionary, data: Dictionary) -> void:
 	var inv: Dictionary = c["inventory"]
+	var ammos: Array[String] = []  # what the weapons of the kit shoot — only these go in a quiver (v0.8.4.42.5: not the bow itself)
 	for id: String in inv.keys():
 		var ammo := Gear.ammo_of(data, {}, id)
-		if not ammo.is_empty() and int(inv.get(ammo, 0)) <= 0:
-			inv[ammo] = int(ItemRules.cfg(data)["kit_ammo"])
-	for ammo: String in inv.keys():
+		if not ammo.is_empty() and not ammos.has(ammo):
+			ammos.append(ammo)
+			if int(inv.get(ammo, 0)) <= 0:
+				inv[ammo] = int(ItemRules.cfg(data)["kit_ammo"])
+	for ammo: String in ammos:
 		var holder := ContainerRules.holder_of(data, ammo)
-		if holder.is_empty() or int(inv.get(holder, 0)) > 0:
+		if holder.is_empty():
 			continue
-		inv[holder] = 1
+		if int(inv.get(holder, 0)) <= 0:
+			inv[holder] = 1
 		ContainerRules.sync_bags(c, data)
 		for bag: String in ContainerRules.bags_of(c, holder):
-			var n := mini(int(inv[ammo]), ContainerRules.room_for(data, {}, {"container": holder, "contents": ContainerRules.bags(c)[bag]["contents"]}, ammo))
-			Thing.take(c, ammo, n)
-			Thing.add(ContainerRules.bags(c)[bag], ammo, n)
-		if ItemRules.belt_why(c, data, {}, holder).is_empty():
+			var n := mini(int(inv.get(ammo, 0)), ContainerRules.room_for(data, {}, {"container": holder, "contents": ContainerRules.bags(c)[bag]["contents"]}, ammo))
+			if n > 0:
+				Thing.take(c, ammo, n)
+				Thing.add(ContainerRules.bags(c)[bag], ammo, n)
+		var why := ItemRules.belt_why(c, data, {}, holder)
+		if why.is_empty():
 			ItemRules.belt_put(c, data, {}, holder)
+		elif why == "BELT_FULL":  # an archer's quiver before the last thing of a full kit (a candle)
+			ItemRules.belt_put(c, data, {}, holder, ItemRules.belt(c, data, {}).size() - 1)
 
 
 static func _add_item(inv: Dictionary, id: String, qty: int) -> void:
