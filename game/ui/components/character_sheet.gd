@@ -605,6 +605,22 @@ func _gear_tab(c: Dictionary) -> void:
 				if not err.is_empty():
 					EventBus.message.emit(tr(err)))
 			acts.add_child(bb)
+		for into: Dictionary in ContainerRules.bags_for(s, Catalog.data, id):  # straight into a quiver or a case (v0.8.4.42.1)
+			var bag := str(into["bag"])
+			var n := mini(int(into["n"]), TradeRules.sellable(s, id, Catalog.data))
+			if n <= 0:
+				continue
+			var name := ContainerRules.bag_name(Catalog.data, c, bag)
+			var tb := Button.new()  # the sheet stays open, as with «На пояс»
+			tb.name = "ToBag_%s_%s" % [bag, id]
+			tb.text = tr("BTN_TO_BAG").format({"name": name.substr(0, 1).to_lower() + name.substr(1)})
+			tb.tooltip_text = tr("BTN_TO_BAG_TIP").format({"n": n})
+			tb.disabled = busy
+			tb.pressed.connect(func() -> void:
+				var err := GameState.container_move(bag, id, n, false)
+				if not err.is_empty():
+					EventBus.message.emit(tr(err)))
+			acts.add_child(tb)
 		var free := ContainerRules.droppable(s, Catalog.data, id)  # big test #10 (v0.7.22.2)
 		if free > 0:
 			_drop_button(acts, id, 1, "Drop_" + id, "BTN_DROP", busy)
@@ -680,6 +696,11 @@ func _belt_cells(details: DetailsPanel, c: Dictionary, busy: bool) -> void:
 	cells.add_theme_constant_override("separation", 6)
 	box.add_child(cells)
 	var belt := ItemRules.belt(c, Catalog.data, s.items)
+	var unfed := Gear.unfed(Catalog.data, s.items, c)  # a bow with nothing to shoot on the belt (v0.8.4.42.1)
+	if not unfed.is_empty():
+		var names := unfed.map(func(id: String) -> String: return ItemRules.display_name(Catalog.data["items"], s.items, id))
+		var warn := _text(box, tr("BELT_NO_AMMO").format({"weapons": ", ".join(names)}), UiTheme.WARN_LABEL)
+		warn.name = "BeltNoAmmo"
 	for i: int in belt.size():
 		var id := belt[i]
 		var card := PanelContainer.new()

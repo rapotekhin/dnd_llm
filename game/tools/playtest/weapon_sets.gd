@@ -80,6 +80,14 @@ func run() -> void:
 		await frames(3)
 	node("EventBus").message.disconnect(hear)
 	step("the bow back in the set", str(CharacterRules.stowed(c)["main_hand"]) == "longbow", "%s %s" % [str(CharacterRules.stowed(c)), str(said)])
+	# v0.8.4.42.1: a shot only from the belt — a bow in a set warns until the arrows are on it
+	step("the bow in a set without arrows on the belt warns", find(screen(), "BeltNoAmmo") != null)
+	var arrows: Button = find(screen(), "BeltPut_arrows")
+	if step("arrows go to the belt", arrows != null and not arrows.disabled):
+		await press(arrows)
+		await frames(3)
+		step("the warning gone with the arrows on the belt", ItemRules.on_belt(c, data, s.items, "arrows") and find(screen(), "BeltNoAmmo") == null)
+	await shot("sheet_belt_arrows")
 	# v0.8.4.25.1: the one sword is never in both sets — to the set put away it leaves the hands, and back
 	c["inventory"][sword] = 1
 	var one := find(screen(), "EquipStowed_main_hand_" + sword)

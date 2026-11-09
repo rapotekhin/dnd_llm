@@ -706,7 +706,7 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	var kind := ItemRules.real_id(str(def.get("base", weapon_id))) if not str(def.get("base", "")).is_empty() else ItemRules.real_id(weapon_id)
 	if ranged and CharacterRules.item_prop(c, "ranged_damage_plus2") and kind in ["longbow", "shortbow"]:
 		bonus += 2  # Bracers of Archery (v0.7.12)
-	var ammo := str(ItemRules.cfg(data)["ammo"].get(ItemRules.real_id(weapon_id), ItemRules.cfg(data)["ammo"].get(kind, ""))) if props.has("ammunition") else ""
+	var ammo := Gear.ammo_of(data, session_items, weapon_id)
 	return SpellEffects.weapon(c, {"name": str(def.get("name", weapon_id)), "to_hit": to_hit, "hit_parts": hit_parts, "dice": dice, "bonus": bonus,
 		"type": str(w.get("damage_type", "bludgeoning")), "melee": not ranged, "range": rng, "light": props.has("light"), "id": weapon_id,
 		"magical": magic > 0 or str(def.get("rarity", "common")) not in ["common", ""], "silvered": props.has("silvered"), "ammo": ammo,

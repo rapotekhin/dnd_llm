@@ -3,7 +3,8 @@ extends RefCounted
 ## One language of conditions (v0.7.68): a quest step's `when` and `needs`, a way's `when`, a room's and a trader's
 ## variant `when`, a row of `requires` (Require) are all read here. One fact: `encounter` (with `defeat` — a fight won, not
 ## slipped past), `secret` "room:id", `room` (been there), `arrive` (there now), `flag`, `not_flag`, `quest` (taken),
-## `quest_done`; `all` / `any` of facts. `item` with `qty` — the hero carries it, beside the fact. Facts of the place, read
+## `quest_done`; `all` / `any` of facts. `item` with `qty` — the hero carries it, beside the fact. `has` — the hero carries
+## this thing: enough by itself, whatever the fact beside it (a quest's find closed by the thing got another way, v0.8.4.42.1). Facts of the place, read
 ## with `data` (v0.8.4.27.4): `terrain` — the location's terrain is one of these, `weather` — today's weather here under the
 ## open sky is one of these (WeatherRules.here).
 ## `talk` and `choice` are closed by a button, never by facts (QuestRules).
@@ -17,6 +18,8 @@ static func met(s: GameSession, when: Dictionary, data: Dictionary = {}) -> bool
 			var w := WorldView.new(data["world"])
 			return (when["terrain"] as Array).has(str(w.location(w.location_id(s.room_id)).get("terrain", "")))
 		return (when["weather"] as Array).has(WeatherRules.here(s, data))
+	if when.has("has") and int(s.character.get("inventory", {}).get(str(when["has"]), 0)) > 0:
+		return true
 	if when.has("item") and not when.has("talk") and int(s.character.get("inventory", {}).get(str(when["item"]), 0)) < int(when.get("qty", 1)):
 		return false  # a thing left at a place (v0.7.34.5): the hero has to bring it
 	if when.has("encounter"):

@@ -65,6 +65,47 @@ static func _group(data: Dictionary, session_items: Dictionary, k: Dictionary, i
 	return {}
 
 
+## A thing kept at hand by a container of its kind (v0.8.4.42.1, the author: arrows and a quiver would not go to the belt):
+## a kind `at_hand` itself (a quiver, a bolt case) or what such a kind holds (arrows, bolts). Read by the belt.
+static func at_hand_thing(data: Dictionary, session_items: Dictionary, item_id: String) -> bool:
+	var real := ItemRules.real_id(item_id)
+	for id: String in cfg(data)["kinds"]:
+		var k: Dictionary = cfg(data)["kinds"][id]
+		if bool(k.get("at_hand", false)) and (id == real or not _group(data, session_items, k, item_id).is_empty()):
+			return true
+	return false
+
+
+## The plain quiver or case for `ammo` ("" — none): a kind `at_hand` of the catalog that holds it, the cheapest — a quiver
+## for arrows, a case for bolts, never the efficient quiver of a start kit.
+static func holder_of(data: Dictionary, ammo: String) -> String:
+	var best := ""
+	for id: String in cfg(data)["kinds"]:
+		var k: Dictionary = cfg(data)["kinds"][id]
+		if not bool(k.get("at_hand", false)) or not data["items"]["catalog"].has(id) or _group(data, {}, k, ammo).is_empty():
+			continue
+		if best.is_empty() or int(data["items"]["catalog"][id].get("value_cp", 0)) < int(data["items"]["catalog"][best].get("value_cp", 0)):
+			best = id
+	return best
+
+
+## The hero's bags with a `holds` of their own (a quiver, a scroll case) that take `item_id` now, with how many of it:
+## [{bag, n}] — the thing's row in the sheet puts it straight in (v0.8.4.42.1).
+static func bags_for(s: GameSession, data: Dictionary, item_id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if is_carried_kind(data, item_id):
+		return out
+	for bag_id: String in bags(s.character):
+		var b: Dictionary = bags(s.character)[bag_id]
+		var k := kind(data, str(b["kind"]))
+		if not k.has("holds"):
+			continue
+		var n := room_for(data, s.items, {"container": b["kind"], "contents": b["contents"]}, item_id)
+		if n > 0:
+			out.append({"bag": bag_id, "n": n})
+	return out
+
+
 ## Why the hero cannot lift the container `p` with what is in it ("" — can): a chest or a barrel with things goes only on
 ## a beast or a cart (size `load`, v0.8.4.27); another kind that is not a bag is emptied first.
 static func load_why(data: Dictionary, p: Dictionary) -> String:

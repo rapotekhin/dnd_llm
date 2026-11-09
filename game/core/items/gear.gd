@@ -347,13 +347,40 @@ static func spend_ammo(s: GameSession, data: Dictionary, f: Dictionary, ammo: St
 
 ## Where a shot takes `ammo` from (v0.8.4.27): the holder's loose things first, then a quiver or a case of
 ## `rules.containers` with `at_hand` — those with some. Anybody's: a foe's record has no bags, only its things.
+## v0.8.4.42.1 (the author): only from the belt — the arrows laid in its cell, or a quiver whose kind is there; arrows
+## in the pack are not shot. A record that never laid its belt carries them there by itself (ItemRules.belt).
 static func quivers(data: Dictionary, holder: Dictionary, ammo: String) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	if Thing.count(holder, ammo) > 0:
+	var belt := ItemRules.belt(holder, data, {})
+	if belt.has(ammo) and Thing.count(holder, ammo) > 0:
 		out.append(holder)
 	for b: Dictionary in (holder.get("bags", {}) as Dictionary).values():
-		if bool(ContainerRules.kind(data, str(b["kind"])).get("at_hand", false)) and Thing.count(b, ammo) > 0:
+		if bool(ContainerRules.kind(data, str(b["kind"])).get("at_hand", false)) and belt.has(str(b["kind"])) and Thing.count(b, ammo) > 0:
 			out.append(b)
+	return out
+
+
+## What a weapon shoots ("" — it shoots nothing): rules.item_rules.ammo by its id or its base kind.
+static func ammo_of(data: Dictionary, session_items: Dictionary, weapon_id: String) -> String:
+	var def := ItemRules.def_of(data["items"], session_items, weapon_id)
+	if not (def.get("properties", []) as Array).has("ammunition"):
+		return ""
+	var by: Dictionary = ItemRules.cfg(data)["ammo"]
+	var kind := ItemRules.real_id(str(def.get("base", weapon_id))) if not str(def.get("base", "")).is_empty() else ItemRules.real_id(weapon_id)
+	return str(by.get(ItemRules.real_id(weapon_id), by.get(kind, "")))
+
+
+## The weapons in either set of anybody that have nothing to shoot on the belt (v0.8.4.42.1, the author: a warning in the
+## sheet) — their ids.
+static func unfed(data: Dictionary, session_items: Dictionary, holder: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for row: String in ["equipped", "stowed"]:
+		var slots: Dictionary = holder.get(row, {})
+		for slot: String in ["main_hand", "off_hand"]:
+			var id := str(slots.get(slot, ""))
+			var ammo := ammo_of(data, session_items, id) if not id.is_empty() else ""
+			if not ammo.is_empty() and ammo_left(data, holder, ammo) <= 0 and not out.has(id):
+				out.append(id)
 	return out
 
 

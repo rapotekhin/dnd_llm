@@ -58,6 +58,7 @@ func test_arrows_are_spent_and_half_come_back() -> void:
 	c["inventory"]["longbow"] = 1
 	c["equipped"]["main_hand"] = "longbow"
 	c["inventory"]["arrows"] = 2
+	c["belt"] = ["arrows", "", "", "", ""]  # v0.8.4.42.1: shot only from the belt — the loose arrows there, not the start quiver
 	var f := _fight(s, "goblin", 2)
 	var arrows := int(c["inventory"]["arrows"])
 	assert_str(Acts.one("attack").can(s, data, CombatRules.player(s), str(f["id"]))).is_empty()

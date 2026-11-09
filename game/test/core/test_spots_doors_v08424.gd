@@ -89,3 +89,27 @@ func test_no_thing_of_any_room_of_the_pack_stands_in_a_doorway() -> void:
 			var c := str((map["rows"] as Array)[at.y])[at.x]
 			assert_bool(ways.has(at) or c == LayoutGen.DOOR).override_failure_message("%s: %s on a way at %s" % [room, t["ref"], at]).is_false()
 		s.props.erase(room)
+
+
+## v0.8.4.42.1 (the author: a person stood in a doorway, the door could not be clicked): no person of any room of the pack
+## stands on a door or a way out, nor one who walked up to the hero there.
+func test_no_person_of_any_room_of_the_pack_stands_in_a_doorway() -> void:
+	var s := _session("brod-tavern-hall")
+	var moved_once := false
+	for room: String in data["world"]["rooms"]:
+		s.room_id = room
+		var map := WalkRules.view(s, data)
+		var ways := _ways(map, room)
+		var people := s.npcs_here(data["world"], room)
+		if not moved_once and not people.is_empty() and not ways.is_empty():
+			var door: Vector2i = ways.keys()[0]  # one walked up to the hero standing in the doorway
+			var on := LayoutGen.on_grid(map, door)
+			s.layouts["moved"] = {str(people[0]): {"room": room, "part": TimeRules.part_name(s, data), "x": on.x, "y": on.y}}
+			moved_once = true
+		for t: Dictionary in MapSpots.of(s, data, map) + MapSpots.foes(s, data, map):
+			if not str(t["kind"]) in ["npc", "foe"]:
+				continue
+			var at := Vector2i(int(t["x"]), int(t["y"]))
+			var c := str((map["rows"] as Array)[at.y])[at.x]
+			assert_bool(ways.has(at) or c == LayoutGen.DOOR).override_failure_message("%s: %s in a doorway at %s" % [room, t["ref"], at]).is_false()
+	assert_bool(moved_once).is_true()

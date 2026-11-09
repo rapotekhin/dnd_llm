@@ -35,16 +35,16 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 	var world := WorldView.new(data["world"])
 	var followers := Being.followers(s)
 	var part := TimeRules.part_name(s, data)
+	var spots := _clear(map, lib, cells)  # nobody and nothing stands in a doorway: a click there opens the door (v0.8.4.42.1)
 	for id: String in _sorted(s.npcs_here(data["world"], s.room_id)):
 		if followers.has(id):
 			continue
-		var at := _npc_cell(s, data, map, s.room_id, cells, taken, id, part)
+		var at := _npc_cell(s, data, map, s.room_id, spots, taken, id, part)
 		taken[at] = true
 		var n := world.npc(id)
 		var t := _token("npc:" + id, "npc", id, str(n.get("name", id)), at)
 		t["attitude"] = s.attitude(id)
 		out.append(t)
-	var spots := _clear(map, lib, cells)  # a creature, a body or a thing never lies in a doorway
 	for c: Dictionary in CreatureRules.here(s, s.room_id):
 		var id := str(c["id"])
 		if str(c["state"]) == PropertyRules.TAME or bool(c.get("led", false)) or bool(c.get("ally", false)):
@@ -88,8 +88,7 @@ static func _npc_cell(s: GameSession, data: Dictionary, map: Dictionary, room: S
 	var moved: Dictionary = (s.layouts.get("moved", {}) as Dictionary).get(id, {})
 	if str(moved.get("room", "")) == room and str(moved.get("part", "")) == part:
 		var at := LayoutGen.off_grid(map, Vector2i(int(moved["x"]), int(moved["y"])))
-		if cells.has(at):
-			return at
+		return at if cells.has(at) else _closest(cells, taken, at)  # walked up to the hero in a doorway: the free square beside it
 	if WorldView.new(data["world"]).is_trader(id):
 		for wanted: String in cfg(data)["trader_marks"]:
 			var at := _mark_cell(map, room, wanted)
@@ -107,7 +106,7 @@ static func others(s: GameSession, data: Dictionary, map: Dictionary) -> Array[D
 	for room: String in map["ids"]:
 		if room == s.room_id or not s.visited.has(room):
 			continue
-		var cells := _cells(map, data["layouts"], room)
+		var cells := _clear(map, data["layouts"], _cells(map, data["layouts"], room))
 		var taken := {}
 		for id: String in _sorted(s.npcs_here(data["world"], room)):
 			if followers.has(id) or cells.is_empty():
@@ -166,7 +165,7 @@ static func foes(s: GameSession, data: Dictionary, _map: Dictionary) -> Array[Di
 ## nobody. One road for the foes on the map and the fight's start (v0.8.4.24). A head with its own square keeps it.
 static func on_lair(s: GameSession, data: Dictionary, key: String, heads: Array) -> Array:
 	var map := LayoutRules.map_of(s, data, s.room_id)
-	var cells := _cells(map, data["layouts"], s.room_id)
+	var cells := _clear(map, data["layouts"], _cells(map, data["layouts"], s.room_id))
 	var lair := _lair(s, data, map, cells, key) if not cells.is_empty() else FightGrid.NONE
 	var taken := {}
 	var out: Array = []

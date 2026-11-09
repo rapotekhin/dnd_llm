@@ -840,7 +840,7 @@ static func _fact(s: GameSession, data: Dictionary, kind: String, target: String
 				var it: Dictionary = (content["items"] as Array).filter(func(x: Dictionary) -> bool: return str(x["key"]) == target)[0]
 				if bool(it.get("given", false)):
 					return {"reason": "вещь %s у героя с начала — её не ищут" % target}
-				w = {"secret": "item:" + target}
+				w = {"secret": "item:" + target, "has": "item:" + target}  # found, or got another way: a body, a trader, the master (v0.8.4.42.1)
 				used.append("item:" + target)
 			else:
 				var room := target.get_slice(":", 0)
@@ -952,7 +952,24 @@ static func _act_step(s: GameSession, data: Dictionary, r: Dictionary, content: 
 		if st["needs"].has("arrive"):  # knowledge is having been there, not standing there now
 			st["needs"] = {"room": st["needs"]["arrive"]}
 		st["needs_text"] = _str(r, "needs_text").strip_edges().left(160) if _str(r, "needs_text").strip_edges().length() >= 5 else "сначала нужно кое-что узнать"
+		var why := _taken_from_foe(st, content)
+		if not why.is_empty():
+			return {"reason": "шаг «%s»: %s" % [text, why]}
 	return st
+
+
+## A thing found after a fight of the act lies where that fight is (v0.8.4.42.1, the author's feedback: a wolf fled, its
+## hide hidden in another glade — nobody to skin, nowhere to look). "" — fine; else the refusal.
+static func _taken_from_foe(st: Dictionary, content: Dictionary) -> String:
+	var key := str(st["when"].get("secret", "")).trim_prefix("item:")
+	var enc := str(st["needs"].get("encounter", "")).trim_prefix("enc:")
+	if not str(st["when"].get("secret", "")).begins_with("item:") or not str(st["needs"].get("encounter", "")).begins_with("enc:"):
+		return ""
+	var item: Array = (content["items"] as Array).filter(func(x: Dictionary) -> bool: return str(x["key"]) == key)
+	var fight: Array = (content["encounters"] as Array).filter(func(x: Dictionary) -> bool: return str(x["key"]) == enc)
+	if item.is_empty() or fight.is_empty() or str(item[0].get("room", "")) == str(fight[0].get("room", "")):
+		return ""
+	return "вещь %s ищут после боя %s — положи её там же, где бой (room %s): враг может сбежать или сдаться, а взятое с него остаётся на месте боя" % [key, enc, fight[0]["room"]]
 
 
 ## The choices of the finale: {choices: [{id, action, done_text, flag, attitude, changes, items?, value_cp}]} or {reason}.
@@ -1113,7 +1130,7 @@ static func _resolve(st: Dictionary, refs: Dictionary, key: String) -> void:
 				w[k][i] = part["x"]
 	if w.has("secret") and str(w["secret"]).begins_with("item:"):
 		w["secret"] = refs["secret:" + str(w["secret"])]
-	for k: String in ["talk", "room", "arrive", "item", "encounter", "choice"]:
+	for k: String in ["talk", "room", "arrive", "item", "has", "encounter", "choice"]:
 		if w.has(k) and refs.has(str(w[k])):
 			w[k] = refs[str(w[k])]
 

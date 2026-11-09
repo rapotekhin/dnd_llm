@@ -480,6 +480,7 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 	c["gold_cp"] = int(background(ch, data).get("gold_cp", 0))
 	if god_ids(data).has(str(ch.get("god", ""))):
 		FaithRules.start(c, str(ch["god"]))  # v0.7.49
+	_kit_ammo(c, data)
 	CharacterRules.auto_equip(c, data)
 	c.erase("hp")
 	CharacterRules.refresh(c, data)
@@ -503,6 +504,29 @@ static func _merge(into: Array, more: Variant) -> void:
 		for x: Variant in more:
 			if not into.has(x):
 				into.append(x)
+
+
+## A start kit that shoots (v0.8.4.42.1, the author): a weapon with ammunition gets its ammunition (rules kit_ammo when the
+## kit has none) and the quiver or case that holds it, the ammunition inside and the quiver on the belt — a shot takes only
+## from the belt. Read from the data: the weapon's ammo (Gear.ammo_of), the holder a container kind `at_hand` that holds it.
+static func _kit_ammo(c: Dictionary, data: Dictionary) -> void:
+	var inv: Dictionary = c["inventory"]
+	for id: String in inv.keys():
+		var ammo := Gear.ammo_of(data, {}, id)
+		if not ammo.is_empty() and int(inv.get(ammo, 0)) <= 0:
+			inv[ammo] = int(ItemRules.cfg(data)["kit_ammo"])
+	for ammo: String in inv.keys():
+		var holder := ContainerRules.holder_of(data, ammo)
+		if holder.is_empty() or int(inv.get(holder, 0)) > 0:
+			continue
+		inv[holder] = 1
+		ContainerRules.sync_bags(c, data)
+		for bag: String in ContainerRules.bags_of(c, holder):
+			var n := mini(int(inv[ammo]), ContainerRules.room_for(data, {}, {"container": holder, "contents": ContainerRules.bags(c)[bag]["contents"]}, ammo))
+			Thing.take(c, ammo, n)
+			Thing.add(ContainerRules.bags(c)[bag], ammo, n)
+		if ItemRules.belt_why(c, data, {}, holder).is_empty():
+			ItemRules.belt_put(c, data, {}, holder)
 
 
 static func _add_item(inv: Dictionary, id: String, qty: int) -> void:

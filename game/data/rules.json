@@ -4574,6 +4574,7 @@
 		"_doc": "Items by 5e (v0.7.12, ItemRules): attunement — up to `attune_max` items, an hour with the item (`attune_minutes`) out of a fight; a found magic item (rarity above common) is unidentified until a short rest with it, an attunement, Identify or a trader's service; ammunition by the weapon (`ammo`), half the spent comes back after the fight (`recover`); `element_dice` — the extra damage of a weapon with fire_damage and the like; `small_races` — heavy weapons with disadvantage; `scrolls` — DC and attack bonus by the circle (DMG); `max_found_rarity` — what the master may hand out at levels 1-5 (quest rewards of the pack excepted).",
 		"attune_max": 3,
 		"attune_minutes": 60,
+		"kit_ammo": 20,
 		"ammo": {"shortbow": "arrows", "longbow": "arrows", "shortbow_plus_1": "arrows", "longbow_plus_1": "arrows", "crossbow_light": "crossbow_bolt", "crossbow_light_plus_1": "crossbow_bolt", "crossbow_hand": "crossbow_bolt", "crossbow_heavy": "crossbow_bolt", "sling": "sling_bullet", "blowgun": "blowgun_needle"},
 		"recover": 0.5,
 		"str_short": {"_doc": "Armour with `str_min` worn by a weaker one (5e, v0.8.4.27): its speed −slow_ft; free_races walk in it freely (the dwarf).", "slow_ft": 10, "free_races": ["dwarf"]},

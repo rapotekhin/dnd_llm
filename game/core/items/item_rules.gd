@@ -203,12 +203,15 @@ static func _artifice_xp(data: Dictionary, source: String) -> int:
 # --- the belt under the doll (v0.8.4.24, as in Pathfinder) -----------------------------------------------------------
 
 
-## A thing for the belt: one used by an act — a potion, a scroll, a wand, a flask — or a light. Food is eaten from the pack; a
-## worn thing with a use (a hat, a circlet) is used where it is worn (`at_hand`, v0.8.4.26).
+## A thing for the belt: one used by an act — a potion, a scroll, a wand, a flask — or a light; ammunition and its quiver
+## (v0.8.4.42.1). Food is eaten from the pack; a worn thing with a use (a hat, a circlet) is used where it is worn
+## (`at_hand`, v0.8.4.26).
 static func belt_fits(data: Dictionary, session_items: Dictionary, id: String) -> bool:
 	var d := def_of(data["items"], session_items, real_id(id))
 	if not CharacterRules.wear_slot(d, data).is_empty():
 		return false
+	if ContainerRules.at_hand_thing(data, session_items, id):
+		return true
 	var fx := consumable(data, id, session_items)
 	if not fx.is_empty() and not fx.has("meal"):
 		return true
@@ -226,9 +229,10 @@ static func belt(c: Dictionary, data: Dictionary, session_items: Dictionary) -> 
 			var id := str((c["belt"] as Array)[i]) if i < (c["belt"] as Array).size() else ""
 			out.append(id if int(inv.get(id, 0)) > 0 else "")
 		return out
-	for id: String in inv:
-		if out.size() < size and int(inv[id]) > 0 and belt_fits(data, session_items, id):
-			out.append(id)
+	for at_hand: bool in [false, true]:  # what is used first, then the arrows and their quiver in the cells left
+		for id: String in inv:
+			if out.size() < size and int(inv[id]) > 0 and belt_fits(data, session_items, id) 					and ContainerRules.at_hand_thing(data, session_items, id) == at_hand:
+				out.append(id)
 	while out.size() < size:
 		out.append("")
 	return out
