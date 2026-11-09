@@ -1038,17 +1038,16 @@ func _plan_quest_give(s: GameSession, data: Dictionary, id: String) -> Dictionar
 ## A thing lying in a hiding place not yet found (a quest's thing, a cache) comes only from finding it: given by
 ## words it skipped the quest's «find» step (v0.7.38.5, the author's white root).
 func _plan_hidden_give(s: GameSession, world: Dictionary, id: String) -> Dictionary:
-	for rid: String in world["rooms"]:
-		for sec: Dictionary in ExplorationRules.secrets(world, rid):
-			if not (sec.get("loot", {}).get("items", {}) as Dictionary).has(id) or Knows.has(s, Knows.SECRET, rid, str(sec["id"])):
-				continue
-			var skill := str(sec.get("skill", "perception"))
-			var how := "request_check %s или investigation" % skill if skill != "investigation" else "request_check investigation"
-			var where := str(world["rooms"][rid].get("name", rid))
-			if rid != s.room_id:
-				return {"reason": "эта вещь спрятана в «%s» — её находят там проверкой (%s), а не move_item:world>hero" % [where, how]}
-			return {"reason": "эта вещь спрятана здесь, в тайнике — её даёт успешная проверка поиска (%s) против его сложности, а не move_item:world>hero; проверка уже провалена или не та — расскажи, что не нашёл" % how}
-	return {}
+	var hid := ExplorationRules.hidden_place(s, world, id)
+	if hid.is_empty():
+		return {}
+	var rid := str(hid["room"])
+	var skill := str(hid["secret"].get("skill", "perception"))
+	var how := "request_check %s или investigation" % skill if skill != "investigation" else "request_check investigation"
+	var where := str(world["rooms"][rid].get("name", rid))
+	if rid != s.room_id:
+		return {"reason": "эта вещь спрятана в «%s» — её находят там проверкой (%s), а не move_item:world>hero" % [where, how]}
+	return {"reason": "эта вещь спрятана здесь, в тайнике — её даёт успешная проверка поиска (%s) против его сложности, а не move_item:world>hero; проверка уже провалена или не та — расскажи, что не нашёл" % how}
 
 
 ## The thing a talk step of an active quest wants: handing it over by words to that NPC closes the step, as its

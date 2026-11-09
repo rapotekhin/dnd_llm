@@ -1067,7 +1067,7 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 			continue
 		var room := str(refs.get(str(it["room"]), it["room"]))
 		var sec := {"id": "q_%s_%s" % [qid, it["key"]], "dc": int(it["dc"]), "text": it["text"], "skill": str(it.get("skill", "perception")),
-			"loot": {"items": {str(it["id"]): 1}}}
+			"loot": {"items": {str(it["id"]): 1}}, "quest": qid}
 		Overlay.add(s, data, EntityRef.room(room), "secrets", sec)
 		refs["secret:item:" + str(it["key"])] = "%s:%s" % [room, sec["id"]]
 	q["items"] = known

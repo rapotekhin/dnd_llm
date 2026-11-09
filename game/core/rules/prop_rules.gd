@@ -188,6 +188,9 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 		var box := ContainerRules.plan_spec(s, data, spec)
 		if box.has("reason"):
 			return {"reason": box["reason"]}
+		var hidden := _hidden_why(s, data, prop["name"], ([item] if not item.is_empty() else []) + (box.get("contents", {}) as Dictionary).keys())
+		if not hidden.is_empty():
+			return {"reason": hidden}
 		if not box.is_empty():
 			for k: String in ["container", "contents", "locked", "lock_dc", "key"]:
 				prop[k] = box[k]
@@ -203,6 +206,17 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 		return {"reason": "ничейное в контейнерах стоит %d мм — больше, чем мастер может дать до долгого отдыха (%d мм); положи меньше или дай им хозяина" % [gift, EffectEngine.budget_left(s, data)]}
 	return {"plan": {"room": room, "props": props, "made": made, "reward": gift, "add": add, "cause": cause},
 		"summary": ("Добавлено в комнату (%s): " % cause if add else "Обстановка: ") + ", ".join(props.map(func(p: Dictionary) -> String: return p["name"]))}
+
+
+## A quest's thing in its hiding place not found yet (the same name gives the same made id) is not laid in the open
+## or in a chest (v0.8.4.42.10, the author's duty roster on the table). "" or the reason for the master.
+static func _hidden_why(s: GameSession, data: Dictionary, name: String, ids: Array) -> String:
+	for id: Variant in ids:
+		var hid := ExplorationRules.hidden_place(s, data["world"], str(id), true)
+		if not hid.is_empty():
+			return "«%s» спрятан в тайнике (%s) и находится только проверкой поиска — убери его из обстановки и не описывай на виду" % [
+				name, WorldView.new(data["world"]).room(str(hid["room"])).get("name", hid["room"])]
+	return ""
 
 
 static func _same(data: Dictionary, a: Dictionary, b: Dictionary) -> bool:

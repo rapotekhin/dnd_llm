@@ -92,6 +92,19 @@ static func secrets(world: Dictionary, room_id: String) -> Array:
 	return world["rooms"].get(room_id, {}).get("secrets", [])
 
 
+## The hiding place not yet found that holds the thing `item_id` (a quest's thing, a cache): {room, secret} or {}. Such a
+## thing comes only from finding it — not given by words (v0.7.38.5); `quest` — only a quest's own hiding place, whose
+## thing is unique: it is not laid in the open by a furnishing either (v0.8.4.42.10).
+static func hidden_place(s: GameSession, world: Dictionary, item_id: String, quest := false) -> Dictionary:
+	for rid: String in world["rooms"]:
+		for sec: Dictionary in secrets(world, rid):
+			if quest and not sec.has("quest"):
+				continue
+			if (sec.get("loot", {}).get("items", {}) as Dictionary).has(item_id) and not Knows.has(s, Knows.SECRET, rid, str(sec["id"])):
+				return {"room": rid, "secret": sec}
+	return {}
+
+
 static func _reveal(s: GameSession, room_id: String, secret: Dictionary) -> bool:
 	return Knows.add(s, Knows.SECRET, room_id, str(secret["id"]))
 

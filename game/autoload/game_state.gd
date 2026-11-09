@@ -3089,6 +3089,8 @@ func _add(entry: Dictionary) -> void:
 	if not session.faith_lines.is_empty() and str(entry.get("kind", "")) == GameSession.KIND_EFFECT:  # v0.7.49: a vow broken by a roll
 		(entry["lines"] as Array).append_array(session.faith_lines)
 		session.faith_lines.clear()
+	if str(entry.get("kind", "")) == GameSession.KIND_EFFECT:  # every deed told closes the quest steps it made true: a quest's
+		(entry["lines"] as Array).append_array(QuestRules.advance(session, Catalog.data))  # thing taken any way (v0.8.4.42.10)
 	session.append(entry)
 	EventBus.chat_appended.emit(entry)
 	if not session.faith_lines.is_empty():
