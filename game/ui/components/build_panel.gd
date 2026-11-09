@@ -43,6 +43,9 @@ func _ready() -> void:
 	_info = UiScenes.need(self, "%BuildInfo")
 	_remove = UiScenes.need(self, "%BuildRemove")
 	(UiScenes.need(self, "%BuildDone") as Button).pressed.connect(func() -> void: visible = false)
+	visibility_changed.connect(func() -> void:
+		if not visible:
+			GameState.build_done())
 	for edit: LineEdit in [_name, _search]:  # what the player types is never translated; the hint is
 		edit.placeholder_text = tr(edit.placeholder_text)
 		edit.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -129,7 +132,8 @@ func _fill_list() -> void:
 		var b := Button.new()
 		b.name = "BuildItem_" + id.validate_node_name()
 		var cost := Money.format(int(r["price_cp"]))
-		b.text = "%s — %s" % [r["name"], tr("BUILD_FROM").format({"price": cost}) if str(r["kind"]) == BuildRules.PASSAGE else cost]
+		var priced := {BuildRules.PASSAGE: "BUILD_FROM", BuildRules.GROW: "BUILD_PER_SQUARE"}
+		b.text = "%s — %s" % [r["name"], tr(priced[r["kind"]]).format({"price": cost}) if priced.has(r["kind"]) else cost]
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.toggle_mode = true
@@ -140,7 +144,8 @@ func _fill_list() -> void:
 		_list.add_child(b)
 	var passage := _pick == BuildRules.PASSAGE and not _remove.button_pressed
 	_name.visible = passage
-	_hint.text = tr("BUILD_HINT_REMOVE" if _remove.button_pressed else "BUILD_HINT_PASSAGE" if passage else "BUILD_HINT")
+	_hint.text = tr("BUILD_HINT_REMOVE" if _remove.button_pressed else "BUILD_HINT_PASSAGE" if passage
+		else "BUILD_HINT_GROW" if _pick == BuildRules.GROW else "BUILD_HINT")
 
 
 func _on_remove(on: bool) -> void:

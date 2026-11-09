@@ -207,7 +207,7 @@ static func _stitch(lib: Dictionary, asks: Array[Dictionary], seed_value: int, p
 	for a: Dictionary in asks:
 		asked[str(a["id"])] = a
 	for id: String in _kept_order(picks, asked):
-		var at := _replace(lib, asked[id], picks[id], grid, free, ids)
+		var at := _replace(lib, asked[id], picks[id], grid, free, ids, owner)
 		if not at.is_empty():
 			_put(id, at, ids, kept, grid, owner, marks, free, doors)
 	var reserved := _reserved(picks, free)
@@ -267,6 +267,8 @@ static func _put(id: String, at: Dictionary, ids: Array[String], kept: Dictionar
 	var index := ids.size()
 	ids.append(id)
 	kept[id] = {"chunk": at["chunk"], "rot": at["rot"], "flip": at["flip"], "x": at["x"], "y": at["y"], "i": index}
+	if at.has("door"):
+		kept[id]["door"] = at["door"]
 	_stamp(at, index, grid, owner, marks, free, doors)
 
 
@@ -299,6 +301,8 @@ static func _ways_of(out: Dictionary, id: String) -> Dictionary:
 				kept[k] = int(e[k]) + origin.x
 			for k: String in ["y", "ay"]:
 				kept[k] = int(e[k]) + origin.y
+			if e.has("box"):
+				kept["box"] = [int(e["box"][0]) + origin.x, int(e["box"][1]) + origin.y, int(e["box"][2]), int(e["box"][3])]
 			ways[str(e["to"])] = kept
 	return ways
 
@@ -365,8 +369,10 @@ static func _wanted_marks(out: Dictionary, ask: Dictionary, index: int, rng: Ran
 	return spots
 
 
-## A room back where a save keeps it, its door on the socket it shares with a linked room.
-static func _replace(lib: Dictionary, ask: Dictionary, pick: Dictionary, grid: Dictionary, free: Array[Dictionary], ids: Array[String]) -> Dictionary:
+## A room back where a save keeps it, its door on the socket it shares with a linked room, or on the square of a wall
+## of a linked room the pick names (`door`: a room the owner built on to it by hand, v0.8.4.42.7).
+static func _replace(lib: Dictionary, ask: Dictionary, pick: Dictionary, grid: Dictionary, free: Array[Dictionary], ids: Array[String],
+		owner: Dictionary = {}) -> Dictionary:
 	var src := _source(lib, ask, str(pick.get("chunk", "")))
 	if src.is_empty():
 		return {}
@@ -380,8 +386,14 @@ static func _replace(lib: Dictionary, ask: Dictionary, pick: Dictionary, grid: D
 		for other: Dictionary in free:
 			if int(other["x"]) == cell.x and int(other["y"]) == cell.y and (ask.get("links", []) as Array).has(ids[int(other["room"])]):
 				join = other
-	return {"chunk": src["id"], "rot": int(pick.get("rot", 0)), "flip": bool(pick.get("flip", false)), "x": pos.x, "y": pos.y, "rows": rows,
+	var out := {"chunk": src["id"], "rot": int(pick.get("rot", 0)), "flip": bool(pick.get("flip", false)), "x": pos.x, "y": pos.y, "rows": rows,
 		"marks": src.get("marks", {}), "join": join}
+	if pick.get("door") is Array:
+		var door := Vector2i(int(pick["door"][0]), int(pick["door"][1]))
+		out["door"] = [door.x, door.y]
+		if _walled(str(grid.get(door, ""))) and owner.has(door) and (ask.get("links", []) as Array).has(ids[int(owner[door])]):
+			out["join"] = {"x": door.x, "y": door.y, "room": int(owner[door])}
+	return out
 
 
 static func _source(lib: Dictionary, ask: Dictionary, id: String) -> Dictionary:
@@ -651,10 +663,20 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 		_scatter(grid, kind.get("scatter", []), int(cfg["noise_cell"]), rng)
 		if tags.has("water"):
 			_pond(grid, float(cfg["pond"]), rng)
+	# rows of its own grown west or north (BuildRules, v0.8.4.42.7): the grid of a save stays, the map's first square moves
+	var origin := Vector2i.ZERO
+	if ask.get("origin") is Array:
+		origin = Vector2i(int(ask["origin"][0]), int(ask["origin"][1]))
 	var center := Vector2i(w / 2, h / 2)
+	if ask.get("center") is Array:
+		center = Vector2i(int(ask["center"][0]), int(ask["center"][1])) - origin
 	var out := {"w": w, "h": h, "ids": [str(ask["id"])], "marks": [] as Array[Dictionary], "doors": [] as Array[Dictionary], "exits": [] as Array[Dictionary],
-		"left": [] as Array[String], "origin": Vector2i.ZERO, "open": true}
-	var landmark := {} if not own.is_empty() else _landmark(lib, kind, kept.get("landmark", {}), w, h, rng)
+		"left": [] as Array[String], "origin": origin, "open": true}
+	var was_landmark: Dictionary = (kept.get("landmark", {}) as Dictionary).duplicate()
+	if was_landmark.has("x"):
+		was_landmark["x"] = int(was_landmark["x"]) - origin.x
+		was_landmark["y"] = int(was_landmark["y"]) - origin.y
+	var landmark := {} if not own.is_empty() and was_landmark.is_empty() else _landmark(lib, kind, was_landmark, w, h, rng)
 	rng.seed = seed_value + 1  # a kept landmark draws nothing: what follows comes out the same after a save
 	var taken := {}  # the squares nothing may wall up: the middle, ways out and what lies before them
 	var boxes := {}  # the walls of the buildings: unlike a ruin's, no way is dug through them
@@ -667,7 +689,7 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 	var picks := {}
 	if not landmark.is_empty():
 		_lay(out, grid, landmark, taken)
-		picks["landmark"] = {"chunk": landmark["chunk"], "rot": landmark["rot"], "flip": landmark["flip"], "x": landmark["x"], "y": landmark["y"]}
+		picks["landmark"] = {"chunk": landmark["chunk"], "rot": landmark["rot"], "flip": landmark["flip"], "x": int(landmark["x"]) + origin.x, "y": int(landmark["y"]) + origin.y}
 	grid[center.y][center.x] = FLOOR
 	var rows: Array[String] = []
 	for line: PackedStringArray in grid:
@@ -796,12 +818,20 @@ static func _exits_open(out: Dictionary, grid: Array[PackedStringArray], ask: Di
 
 
 static func _way_again(out: Dictionary, grid: Array[PackedStringArray], was: Dictionary, taken: Dictionary, boxes: Dictionary) -> void:
+	var origin: Vector2i = out.get("origin", Vector2i.ZERO)  # a save keeps the squares on the grid: an open map grown west or north moves its own
 	var e := was.duplicate()
+	for k: String in ["x", "ax"]:
+		e[k] = int(was[k]) - origin.x
+	for k: String in ["y", "ay"]:
+		e[k] = int(was[k]) - origin.y
 	var at := Vector2i(int(e["x"]), int(e["y"]))
 	if e.has("box"):
-		var b: Array = e["box"]
-		_wall_box(grid, int(b[0]), int(b[1]), int(b[2]), int(b[3]), boxes)
-		grid[at.y][at.x] = DOOR
+		var b: Array = [int(was["box"][0]) - origin.x, int(was["box"][1]) - origin.y, int(was["box"][2]), int(was["box"][3])]
+		e["box"] = b
+		if b[0] >= 0 and b[1] >= 0 and b[0] + b[2] <= grid[0].size() and b[1] + b[3] <= grid.size():
+			_wall_box(grid, b[0], b[1], b[2], b[3], boxes)
+		if at.y >= 0 and at.y < grid.size() and at.x >= 0 and at.x < grid[0].size():
+			grid[at.y][at.x] = DOOR
 	out["exits"].append(e)
 	taken[at] = true
 	taken[Vector2i(int(e["ax"]), int(e["ay"]))] = true

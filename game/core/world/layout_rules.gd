@@ -97,6 +97,9 @@ static func ask(v: WorldView, data: Dictionary, room_id: String, on_map: Array[S
 	if own.has("rows"):
 		out["rows"] = own["rows"]
 		out["marks_own"] = own.get("marks", {})
+		for k: String in ["origin", "center"]:  # an open map grown by the owner's hands (v0.8.4.42.7)
+			if own.has(k):
+				out[k] = own[k]
 	var links: Array[String] = []
 	var ways: Array[Dictionary] = []
 	var link_sides := {}
@@ -181,6 +184,32 @@ static func _part(s: GameSession, rooms: Array) -> void:
 		s.layouts["apart"] = {}
 	for r: Variant in rooms:
 		s.layouts["apart"][str(r)] = true
+
+
+## A room as its map lays it: {rows, marks, x, y} on the grid — its own rows or its chunk's, turned as the save keeps
+## them; an open map — the whole of it without what the hands built, `x`, `y` — its first square. {} — not laid yet.
+static func room_rows(s: GameSession, data: Dictionary, room_id: String) -> Dictionary:
+	var v := WorldView.new(data["world"])
+	var map := map_of(s, data, room_id)
+	if bool(map.get("open", false)):
+		var rows: Array[String] = []
+		rows.assign((map["rows"] as Array).duplicate())
+		var rec := BuildRules.record(v, room_id)
+		for key: String in rec.get("cells", {}):
+			var at := LayoutGen.off_grid(map, Vector2i(int(key.get_slice(",", 0)), int(key.get_slice(",", 1))))
+			if at.y >= 0 and at.y < rows.size() and at.x >= 0 and at.x < rows[at.y].length():
+				rows[at.y] = rows[at.y].substr(0, at.x) + str(rec["cells"][key]["was"]) + rows[at.y].substr(at.x + 1)
+		var o: Vector2i = map.get("origin", Vector2i.ZERO)
+		return {"rows": rows, "marks": {}, "x": o.x, "y": o.y}
+	var pick: Dictionary = s.layouts.get("picks", {}).get(str(map["id"]), {}).get(room_id, {})
+	if pick.is_empty():
+		return {}
+	var own := fields(v.room(room_id))
+	var src: Dictionary = {"rows": own["rows"], "marks": own.get("marks", {})} if own.has("rows") else LayoutGen.chunk(lib(data), str(pick.get("chunk", "")))
+	if src.is_empty():
+		return {}
+	return {"rows": LayoutGen.turned(src["rows"], int(pick.get("rot", 0)), bool(pick.get("flip", false))), "marks": src.get("marks", {}),
+		"x": int(pick.get("x", 0)), "y": int(pick.get("y", 0))}
 
 
 ## Time passes: the map here is remembered, a long rest brings maps back to what was generated.

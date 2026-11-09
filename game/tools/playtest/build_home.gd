@@ -2,7 +2,7 @@ extends "res://tools/playtest/playtest_base.gd"
 ## The build screen (python tools/godot_playtest.py --scenario build_home), v0.8.4.42 «Имущество как в Sims»: the river
 ## house bought, «Обустроить» in «Имущество» opens the map of the room; the list filtered by a group and a search; a wall,
 ## a window in it, a door; a bed that rests the hero, a chest on its square, a workbench that crafts; stairs into
-## «Мансарда»; in the yard a plot «Огород» at the edge and a shed «Сарай» in a drawn wall; the master's chest of 50 pounds
+## «Мансарда»; in the yard a plot «Огород» at the edge and a shed «Сарай» on free ground; the master's chest of 50 pounds
 ## placed by hand; a thing taken back for half its price.
 
 
@@ -140,13 +140,17 @@ func run() -> void:
 	await _click(view, edge)
 	var garden := _room_named(data, "Огород")
 	step("a plot «Огород» at the edge of the yard, under the sky", not garden.is_empty() and LayoutRules.is_open(s, data, garden))
-	var shed_wall := await _put(view, s, data, "wall", 4)
 	await _pick(view, BuildRules.PASSAGE)
 	name.text = "Сарай"
-	await _click(view, shed_wall)
+	var shed_door := Vector2i(-1, -1)  # v0.8.4.42.7: a building on free ground, a box like the pack's, its door on the square
+	for y: int in range(5, int(map["h"]) - 5):
+		for x: int in range(5, int(map["w"]) - 5):
+			if shed_door.x < 0 and BuildRules.build_why(s, data, BuildRules.PASSAGE, Vector2i(x, y), "Сарай").is_empty():
+				shed_door = Vector2i(x, y)
+	await _click(view, shed_door)
 	var shed := _room_named(data, "Сарай")
-	step("a shed «Сарай» behind a door in a drawn wall, a building", not shed.is_empty() and SceneRules.indoor(s, data["world"], shed)
-		and _char(s, data, shed_wall) == "+")
+	step("a shed «Сарай» on free ground, a building", not shed.is_empty() and SceneRules.indoor(s, data["world"], shed)
+		and _char(s, data, shed_door) == "+")
 	await shot("yard_passages")
 
 	var a := fx.validate(s, data, "bh-1", {"kind": "create", "what": "upgrade", "name": "Сундук на 50 фунтов", "text": "Окованный сундук",

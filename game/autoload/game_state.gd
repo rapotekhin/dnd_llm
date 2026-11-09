@@ -41,6 +41,7 @@ var _ahead: Dictionary = {}
 var _ahead_stop := -1
 var _ahead_n := 0  # its own ids, b-N: the session's turn counter counts the player's turns only
 var _act_told: Dictionary = {}  # «the master builds the next act» said once per act (v0.8.4.30)
+var _build_tally: Dictionary = {}  # parts built or taken while the build screen is open: one line when it closes (v0.8.4.42.7)
 
 
 func has_session() -> bool:
@@ -1774,9 +1775,17 @@ func build_act(what: String, id: String, cell: Vector2i, name: String = "") -> S
 		return "BUILD_NOT_NOW"
 	var data := Catalog.data
 	return _act(what, {
-		"build": _row(BuildRules.build_why, BuildRules.build, [session, data, id, cell, name]),
-		"remove": _row(BuildRules.remove_why, BuildRules.remove, [session, data, cell]),
+		"build": [BuildRules.build_why.bindv([session, data, id, cell, name]), BuildRules.build.bindv([session, data, id, cell, name, Being.HERO, _build_tally])],
+		"remove": [BuildRules.remove_why.bindv([session, data, cell]), BuildRules.remove.bindv([session, data, cell, Being.HERO, _build_tally])],
 	}, "BUILD_NOT_NOW")
+
+
+## The build screen closed: one line of what the hands built and took away while it was open.
+func build_done() -> void:
+	var lines := BuildRules.summary(_build_tally)
+	_build_tally.clear()
+	if not lines.is_empty() and has_session():
+		_effect_lines(lines, true)
 
 
 ## Own trade (v0.7.29): put / take (vid, arg — the item, amount — qty), price (arg — the item, amount ±1), collect,

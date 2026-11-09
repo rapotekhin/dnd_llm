@@ -1,8 +1,8 @@
 extends GdUnitTestSuite
 ## The build screen's rules (v0.8.4.42, BuildRules): the catalog with its groups and search, walls, windows and doors on
 ## the squares of the generator, things that work by their rules (a bed, a chest, a station), the master's chest of 50
-## pounds, passages into new rooms of their own name — stairs in a house, a plot at the edge of the yard, a building in a
-## drawn wall — and what is taken back.
+## pounds, passages into new rooms of their own name — stairs in a house, a plot at the edge of the yard, a building on
+## free ground — and what is taken back.
 
 var data: Dictionary
 
@@ -159,7 +159,7 @@ func test_the_masters_chest_of_fifty_pounds_stands_by_hand() -> void:
 
 func test_stairs_into_a_new_room_of_its_own_name() -> void:
 	var s := _home()
-	var at := _spot(s, BuildRules.PASSAGE, "Мансарда")
+	var at := _spot(s, BuildRules.PASSAGE, "Мансарда", [], 1)  # on the floor: an outer wall builds a room on behind it (v0.8.4.42.7)
 	assert_str(BuildRules.build_why(s, data, BuildRules.PASSAGE, at, "")).is_equal("BUILD_NAME")
 	assert_int(BuildRules.price(s, data, BuildRules.PASSAGE, at)).is_equal(1500)
 	BuildRules.build(s, data, BuildRules.PASSAGE, at, "Мансарда")
@@ -185,7 +185,7 @@ func test_stairs_into_a_new_room_of_its_own_name() -> void:
 	assert_str(BuildRules.remove_why(s, data, at)).is_not_empty()
 
 
-func test_a_plot_at_the_edge_and_a_building_in_a_drawn_wall() -> void:
+func test_a_plot_at_the_edge_and_a_building_on_free_ground() -> void:
 	var s := _home("brod-river-yard")
 	var map := _map(s)
 	var edge := Vector2i(-1, -1)
@@ -202,16 +202,14 @@ func test_a_plot_at_the_edge_and_a_building_in_a_drawn_wall() -> void:
 	assert_str(str(garden[0]["kind"])).is_equal("edge")
 	assert_int(int(garden[0]["x"])).is_equal(edge.x)
 	assert_bool(LayoutRules.is_open(s, data, str(garden[0]["to"]))).is_true()
-	var inner := _spot(s, "wall", "", [], 3)
-	assert_str(BuildRules.build_why(s, data, BuildRules.PASSAGE, inner, "Сарай")).is_equal("BUILD_PASSAGE_WALL")  # walls first
-	BuildRules.build(s, data, "wall", inner)
-	assert_str(BuildRules.build_why(s, data, BuildRules.PASSAGE, inner, "Сарай")).is_empty()
+	var inner := _spot(s, BuildRules.PASSAGE, "Сарай", [], 4)  # v0.8.4.42.7: a building on free ground, a box like the pack's
+	assert_int(inner.x).is_greater_equal(0)
 	BuildRules.build(s, data, BuildRules.PASSAGE, inner, "Сарай")
 	var shed: Array = (_map(s)["exits"] as Array).filter(func(e: Dictionary) -> bool: return str(WorldView.new(data["world"]).room(str(e["to"])).get("name", "")) == "Сарай")
 	assert_int(shed.size()).is_equal(1)
 	assert_str(str(shed[0]["kind"])).is_equal("door")
 	assert_str(_char(s, inner)).is_equal("+")
 	assert_bool(bool(WorldView.new(data["world"]).room(str(shed[0]["to"])).get("indoor", false))).is_true()
-	assert_str(BuildRules.remove_why(s, data, inner)).is_equal("BUILD_KEEP_WAY")
+	assert_str(BuildRules.remove_why(s, data, inner)).is_equal("BUILD_NOTHING")
 	var w := WorldGen.merged(TestUtils.data()["world"], s.generated)  # a loaded game keeps the new rooms and their ways
 	assert_array(w["rooms"]["brod-river-yard"]["exits"]).contains([str(shed[0]["to"]), str(garden[0]["to"])])
