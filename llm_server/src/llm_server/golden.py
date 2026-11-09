@@ -103,7 +103,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
         content = settings.get("content", {})
         world = {"dm_style": settings.get("dm_style", "classic"), "violence": content.get("violence", "medium"),
                  "lines": content.get("lines", []), "veils": content.get("veils", []), "wishes": content.get("wishes", []),
-                 "adult": bool(content.get("adult", False))}
+                 "adult": bool(content.get("adult", False)), "slavery": bool(content.get("slavery", False))}
     params = {
         "turn_id": "t-1",
         "mode": mode,

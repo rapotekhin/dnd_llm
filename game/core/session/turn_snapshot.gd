@@ -127,7 +127,7 @@ static func world_info(s: GameSession, data: Dictionary) -> Dictionary:
 	return {"name": str(p.get("name", "")), "lore": str(p.get("lore", "")), "tone": str(p.get("tone", "")),
 		"magic": str(p.get("magic", "")), "dm_style": str(st.get("dm_style", "classic")),
 		"violence": str(st.get("violence", "medium")), "lines": st.get("lines", []), "veils": st.get("veils", []), "wishes": st.get("wishes", []),
-		"adult": bool(st.get("adult", false))}
+		"adult": bool(st.get("adult", false)), "slavery": PropertyRules.slavery(s, data)}
 
 
 

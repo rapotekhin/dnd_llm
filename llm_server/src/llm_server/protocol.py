@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.121.0"
+PROTOCOL_VERSION = "0.122.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -368,6 +368,7 @@ class WorldInfo(_In):
     veils: list[str] = Field(default_factory=list)  # may happen, off screen
     wishes: list[str] = Field(default_factory=list)  # what the player wants to meet in the game (0.12.0)
     adult: bool = False  # 0.76.0: 18+ — intimacy of adults told openly, else off screen
+    slavery: bool = False  # 0.122.0: the world keeps slaves — a thinking prisoner is sold, else handed to the guard
 
 
 class TradeLine(_In):
@@ -2019,8 +2020,8 @@ class NpcFollowEffect(_Out):
 
 class OwnerEffect(_Out):
     """Ownership changes hands by words (0.47.0): `creature_id` — the hero's bound prisoner of the scene goes to the NPC
-    `owner_id` of this room (a sale: `price_cp` the NPC pays, capped by the engine; a thinking one is not sold — no
-    slavery in this world) or free (`owner_id` empty); `item_id` with `owner_id` "hero" — the NPC here gives up to the
+    `owner_id` of this room (a sale: `price_cp` the NPC pays, capped by the engine; a thinking one is sold only where
+    the world keeps slaves, `world.slavery`, else handed over for the guard's bounty) or free (`owner_id` empty); `item_id` with `owner_id` "hero" — the NPC here gives up to the
     hero a thing of its that the hero took without asking."""
 
     kind: Literal["owner"] = "owner"

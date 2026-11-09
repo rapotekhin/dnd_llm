@@ -1413,6 +1413,11 @@
           "title": "Name",
           "type": "string"
         },
+        "slavery": {
+          "default": false,
+          "title": "Slavery",
+          "type": "boolean"
+        },
         "tone": {
           "default": "",
           "title": "Tone",
