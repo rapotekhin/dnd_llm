@@ -247,6 +247,11 @@ static func plan_quest(s: GameSession, data: Dictionary, spec: Dictionary, searc
 		var why := GoalRules.quest_why_not(s.character, data)
 		if not why.is_empty():
 			return {"reason": why}
+		var floor := str(GoalRules.cfg(data).get("quest_difficulty", {}).get(str(GoalRules.goal(s.character).get("scale", "")), ""))
+		var order: Array = (c["difficulties"] as Dictionary).keys()
+		if GoalRules.item_of(s.character).is_empty() and order.find(diff) < order.find(floor):  # v0.8.4.42.19: room for the deed's boss
+			return {"reason": "задание цели «%s» — не легче «%s» (difficulty %s): в его финале сама цель" % [
+				GoalRules.cfg(data)["names"].get(str(GoalRules.goal(s.character)["scale"]), ""), c["difficulties"][floor]["name"], floor]}
 	var follows := _str(spec, "follows")
 	if not follows.is_empty() and not s.quests_done.has(follows):
 		return {"reason": "продолжение — только сделанного задания (find_quests: «сделано»), а %s не сделано" % follows}
@@ -432,6 +437,8 @@ static func goal_lines(s: GameSession, data: Dictionary, q: Dictionary) -> Array
 	var thing := GoalRules.item_line(s, data)
 	if not thing.is_empty():
 		out.append("%s. Это её герой ищет: акт кладёт её в `items` с этим `item_id` (последний акт — непременно, если её ещё не было); другая вещь вместо неё — не цель." % thing)
+	else:
+		out.append("Финал задания — сама цель, а не подготовка к ней: в последнем акте один шаг с `goal: true` её исполняет (у подвига — бой с её врагом, боссом последнего акта: дракон, а не путь к нему); подготовка — ранние акты.")
 	return out
 
 
@@ -528,6 +535,11 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 		steps.append(st)
 	if last and not fails and bool(d["choice"]) and not choice_step:
 		return {"reason": "в финале «%s» задания нужен шаг choice с выборами (choices)" % d["name"]}
+	var goal_steps := steps.filter(func(st: Dictionary) -> bool: return bool(st.get("goal", false))).size()
+	if goal_steps > 0 and (not last or fails or not bool(q.get("for_goal", false))):
+		return {"reason": "goal: true — только у шага последнего акта задания жизненной цели, который её исполняет"}
+	if last and not fails and bool(q.get("for_goal", false)) and GoalRules.item_of(s.character).is_empty() and goal_steps != 1:
+		return {"reason": "это задание жизненной цели «%s»: в последнем акте один шаг с goal: true — тот, что исполняет саму цель (у подвига — бой с её врагом, боссом акта), а не подготовка к ней" % GoalRules.goal(s.character).get("text", "")}
 	if not choice_step and not _arr(spec, "choices").is_empty():
 		return {"reason": "choices — только у шага choice"}
 	for e: Dictionary in content["encounters"]:
@@ -572,7 +584,10 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	tail["xp"] = share
 	if fights > 0:
 		tail["danger"] = true  # class XP of the act at its end (v0.7.19: only the dangerous)
-	var reward_item := _str(spec, "reward_item_id")
+	var reward_made := _reward_made(s, data, spec)
+	if reward_made.has("reason"):
+		return reward_made
+	var reward_item := str(reward_made.get("id", _str(spec, "reward_item_id")))
 	if fails:
 		tail["fail_end"] = true  # the act's end is the quest's failure: no reward, the giver thinks worse of the hero
 		if not reward_item.is_empty():
@@ -586,13 +601,15 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 		if not reward_item.is_empty():
 			if own:
 				return {"reason": "у своего дела нет заказчика — награды-вещи нет"}
-			var item: Dictionary = ItemRules.def_of(data["items"], s.items, reward_item)  # a made book too (v0.7.63)
+			var item: Dictionary = reward_made.get("def", ItemRules.def_of(data["items"], s.items, reward_item))  # a made book too (v0.7.63)
 			if item.is_empty():
-				return {"reason": "награда-вещь — id каталога (find_items)"}
+				return {"reason": "награда-вещь — id каталога (find_items) или новая reward_item"}
 			if int(item.get("value_cp", 0)) > cp:
 				return {"reason": "%s дороже награды за такое задание (%s)" % [item.get("name", reward_item), Money.format(cp)]}
 			cp -= int(item.get("value_cp", 0))
 			tail["items"] = {reward_item: 1}
+			if reward_made.has("def"):
+				tail["made"] = {reward_item: reward_made["def"]}
 		tail["reward_cp"] = maxi(0, cp)
 		if not own:
 			tail["attitude"] = {giver: int(q["attitude"])}
@@ -930,6 +947,8 @@ static func _act_step(s: GameSession, data: Dictionary, r: Dictionary, content: 
 	if text.length() < 3:
 		return {"reason": "у шага нужен текст"}
 	var st := {"text": text}
+	if bool(r.get("goal", false)):
+		st["goal"] = true  # the step that fulfills the hero's life goal (v0.8.4.42.19)
 	var kind := _str(r, "kind")
 	var target := _str(r, "target")
 	match kind:
@@ -1011,6 +1030,19 @@ static func _taken_from_foe(st: Dictionary, content: Dictionary) -> String:
 	return "вещь %s ищут после боя %s — положи её там же, где бой (room %s): враг может сбежать или сдаться, а взятое с него остаётся на месте боя" % [key, enc, fight[0]["room"]]
 
 
+## A reward thing the master made for the finale (`reward_item`, v0.8.4.42.19, the author's trace: «a silver blade» could only
+## be a catalog id, and came as a plain longsword): {id, def} by the engine's check of a new thing, {} — none, or {reason}.
+static func _reward_made(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
+	if not (spec.get("reward_item") is Dictionary):
+		return {}
+	if not _str(spec, "reward_item_id").is_empty():
+		return {"reason": "награда — reward_item_id из каталога или новая reward_item, не обе"}
+	var chk := ItemRules.check_generated(data, spec["reward_item"], _level(s))
+	if not bool(chk["ok"]):
+		return {"reason": "reward_item: %s" % chk["reason"]}
+	return {"id": ItemRules.generated_id(chk["def"]), "def": chk["def"]}
+
+
 ## The choices of the finale: {choices: [{id, action, done_text, flag, attitude, changes, items?, value_cp}]} or {reason}.
 static func _plan_choices(s: GameSession, data: Dictionary, raw: Array, content: Dictionary, qid: String, reward_cp: int) -> Dictionary:
 	var mx: Dictionary = cfg(data)["act_max"]
@@ -1054,14 +1086,19 @@ static func _plan_choices(s: GameSession, data: Dictionary, raw: Array, content:
 		if changes.size() > int(mx["changes"]):
 			return {"reason": "выбор %s: перемен мест — не больше %d" % [id, int(mx["changes"])]}
 		ch["changes"] = changes
-		var item := _str(c, "reward_item_id")
+		var made := _reward_made(s, data, c)
+		if made.has("reason"):
+			return {"reason": "выбор %s: %s" % [id, made["reason"]]}
+		var item := str(made.get("id", _str(c, "reward_item_id")))
 		ch["value_cp"] = 0
 		if not item.is_empty():
-			var def: Dictionary = data["items"]["catalog"].get(item, {})
+			var def: Dictionary = made.get("def", data["items"]["catalog"].get(item, {}))
 			if def.is_empty() or int(def.get("value_cp", 0)) * 2 > reward_cp:
-				return {"reason": "выбор %s: награда-вещь — id каталога не дороже половины награды (%s)" % [id, Money.format(reward_cp / 2)]}
+				return {"reason": "выбор %s: награда-вещь — id каталога или новая reward_item не дороже половины награды (%s)" % [id, Money.format(reward_cp / 2)]}
 			ch["items"] = {item: 1}
 			ch["value_cp"] = int(def.get("value_cp", 0))
+			if made.has("def"):
+				ch["made"] = {item: made["def"]}
 		out.append(ch)
 	return {"choices": out}
 
@@ -1116,6 +1153,10 @@ static func apply_act(s: GameSession, data: Dictionary, plan: Dictionary) -> Arr
 	var steps: Array = (plan["steps"] as Array).duplicate(true)
 	for st: Dictionary in steps:
 		st["act"] = int(plan["act"])
+		for holder: Dictionary in [st] + (st.get("choices", []) as Array):  # a reward of the master's (v0.8.4.42.19)
+			for id: String in holder.get("made", {}):
+				s.items[id] = holder["made"][id]
+			holder.erase("made")
 		_resolve(st, refs, "when")
 		if st.has("needs"):
 			_resolve(st, refs, "needs")

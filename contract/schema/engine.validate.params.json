@@ -51,7 +51,7 @@
     },
     "ActChoice": {
       "additionalProperties": false,
-      "description": "An option of the finale's choice (0.81.0): its button, what came of it, the attitude of people (−2…+2), how places\nchanged, a catalog thing as its reward (no dearer than half the quest's coins). The engine sets its world flag.",
+      "description": "An option of the finale's choice (0.81.0): its button, what came of it, the attitude of people (−2…+2), how places\nchanged, a thing as its reward (no dearer than half the quest's coins): a catalog `reward_item_id` or, 0.125.0, a new\n`reward_item` the engine prices — a silvered longsword is {base: \"longsword\", properties: [\"silvered\"]}. The engine\nsets its world flag.",
       "properties": {
         "action": {
           "maxLength": 80,
@@ -84,6 +84,17 @@
           "pattern": "^[a-z][a-z0-9_]{0,19}$",
           "title": "Id",
           "type": "string"
+        },
+        "reward_item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "reward_item_id": {
           "anyOf": [
@@ -233,6 +244,11 @@
           ],
           "default": null,
           "title": "Defeat"
+        },
+        "goal": {
+          "default": false,
+          "title": "Goal",
+          "type": "boolean"
         },
         "item_id": {
           "anyOf": [
@@ -5158,6 +5174,17 @@
         "quest_id": {
           "title": "Quest Id",
           "type": "string"
+        },
+        "reward_item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "reward_item_id": {
           "anyOf": [

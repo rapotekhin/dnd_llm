@@ -201,6 +201,8 @@ static func frame(s: GameSession, data: Dictionary, job: Dictionary) -> String:
 					lines.append("Зацепки, что герой уже узнал (задание продолжает их, не спорит с ними): %s." % GoalRules.clues_text(c, data))
 				if not GoalRules.item_line(s, data).is_empty():
 					lines.append("%s. Задание ведёт к этой вещи — её и даст его последний акт." % GoalRules.item_line(s, data))
+				else:  # v0.8.4.42.19: the goal itself is the quest's finale
+					lines.append("Финал задания — сама цель: её исполняет последний акт; подготовка (оружие, союзники, путь) — ранние акты, не отдельное задание. Сложность — не легче «%s»." % 						data["rules"]["quest_gen"]["difficulties"].get(str(GoalRules.cfg(data).get("quest_difficulty", {}).get(str(GoalRules.goal(c).get("scale", "")), "")), {}).get("name", ""))
 			lines.append("Заказчик: %s [%s] — %s; %s, %s." % [v.npc_name(npc), npc, n.get("role", ""), v.room(room).get("name", room),
 				v.location(v.location_id(room)).get("name", "")])
 			for k: String in ["personality", "description"]:

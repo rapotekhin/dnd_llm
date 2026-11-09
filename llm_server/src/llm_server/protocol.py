@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.124.0"
+PROTOCOL_VERSION = "0.125.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1122,6 +1122,9 @@ class ActStep(_Out):
     danger: bool = False
     defeat: bool | None = None  # 0.94.0: a `fight` step — only beaten (true) or passing unseen is enough (false)
     cure: bool = False  # 0.96.0: a `talk` step with a sick NPC: closing it ends the illness
+    # 0.125.0: the step of the last act of a quest for the hero's life goal that fulfills the goal itself (one, required
+    # unless the goal is a thing): done with it, the quest fulfills the goal; without one it is only a link toward it
+    goal: bool = False
 
 
 class ActEncounter(_Out):
@@ -1148,7 +1151,9 @@ class ActChange(_Out):
 
 class ActChoice(_Out):
     """An option of the finale's choice (0.81.0): its button, what came of it, the attitude of people (−2…+2), how places
-    changed, a catalog thing as its reward (no dearer than half the quest's coins). The engine sets its world flag."""
+    changed, a thing as its reward (no dearer than half the quest's coins): a catalog `reward_item_id` or, 0.125.0, a new
+    `reward_item` the engine prices — a silvered longsword is {base: "longsword", properties: ["silvered"]}. The engine
+    sets its world flag."""
 
     id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,19}$")
     action: str = Field(min_length=3, max_length=80)
@@ -1156,6 +1161,7 @@ class ActChoice(_Out):
     attitude: dict[str, int] = Field(default_factory=dict)
     changes: list[ActChange] = Field(default_factory=list, max_length=2)
     reward_item_id: str | None = None
+    reward_item: GeneratedItem | None = None
 
 
 class QuestActPlace(_Out):
@@ -1190,6 +1196,7 @@ class QuestActEffect(_Out):
     encounters: list[ActEncounter] = Field(default_factory=list, max_length=4)
     choices: list[ActChoice] = Field(default_factory=list, max_length=3)
     reward_item_id: str | None = None
+    reward_item: GeneratedItem | None = None  # 0.125.0: a new thing as the reward, priced by the engine
     teaches: "ActTeach | None" = None  # 0.82.0: the course at the teacher the hero was sent to find
     # 0.112.0: only an act built again after a failed step («ПРОВАЛ ШАГА» in the frame): a poorer end, or a dead end —
     # the quest ends failed with this act's last step (no way back to the giver, no reward)

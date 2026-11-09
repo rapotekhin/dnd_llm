@@ -11,6 +11,7 @@ static func registry() -> Array[Dictionary]:
 	if _listeners.is_empty():
 		_listeners = [
 			{"id": "memory", "on": ["quest_done"], "run": _memory},
+			{"id": "goal", "on": ["quest_done"], "run": GoalRules.settle},  # the life goal fulfilled, or one link done (v0.8.4.42.19)
 			{"id": "heir", "on": ["dying"], "run": _heir},  # before it is dead: the dead restock nothing
 			{"id": "quests", "on": ["death"], "run": _quests},
 			{"id": "faith", "on": ["deed"], "run": _faith},  # a vow and a commandment hear what the hero did (v0.7.49)

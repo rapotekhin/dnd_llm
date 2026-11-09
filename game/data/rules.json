@@ -1196,6 +1196,8 @@
 		"names": {"easy": "простая", "medium": "непростая", "hard": "трудная", "epic": "великая", "legendary": "легендарная"},
 		"hints": {"easy": 0, "medium": 1, "hard": 2, "epic": 3, "legendary": 3},
 		"max_level": 5,
+		"quest_difficulty": {"easy": "easy", "medium": "medium", "hard": "hard", "epic": "hard", "legendary": "deadly"},
+		"_quest_difficulty": "v0.8.4.42.19, the author's trace (a great goal «найти и убить дракона»: its quest of «hard» forged a blade and ended — no dragon, the goal stuck): the quest of a goal that is a deed is at least this difficulty for the goal's scale (QuestGen.plan_quest) — room for its boss, up to the next tier's threshold (a young dragon at level 5); a goal that is a thing has its own warrant, the thing in the last act, and its last act ends in the goal itself — a step marked `goal` (QuestGen.plan_act); the quest done with it fulfills the goal (GoalRules.settle, `done`). A quest for the goal ended without it (failed, or made before) was a link: the goal is free again, one hint short of the next quest.",
 		"item_scale": {"_doc": "v0.8.4.42.16, the author's trace (an amulet of Blur and one of invisibility asked for, a stealth amulet given twice): a goal that is a thing names it at its assessment (`goal:assess` with `item` — the thing's mechanics in the player's words), the engine prices it without the level gate and the goal is no smaller than its rarity's scale here; the goal's quest gives that very thing (QuestGen.plan_act).", "common": "easy", "uncommon": "medium", "rare": "hard", "very_rare": "epic", "legendary": "legendary"}
 	},
 	"quest_gen": {

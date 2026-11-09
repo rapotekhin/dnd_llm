@@ -129,6 +129,8 @@ static func hints(c: Dictionary) -> int:
 static func hint_why_not(c: Dictionary, data: Dictionary) -> String:
 	if goal(c).is_empty() or not goal(c).has("scale"):
 		return "у героя нет оценённой жизненной цели"
+	if done(c):
+		return "цель героя уже исполнена (день %d): новую игрок пишет сам" % int(goal(c)["done"])
 	if not reached(c, data):
 		return "цель героя ещё не по силам (%s) — до порога мир к ней не ведёт" % text_of(c, data)
 	return ""
@@ -145,6 +147,7 @@ static func quest_why_not(c: Dictionary, data: Dictionary) -> String:
 
 
 static func plan_hint(s: GameSession, data: Dictionary, e: Dictionary = {}) -> Dictionary:
+	settle(s, data)
 	var c := s.character
 	var why := hint_why_not(c, data)
 	if not why.is_empty():
@@ -189,6 +192,33 @@ static func by(c: Dictionary) -> String:
 	return str(goal(c).get("by", ""))
 
 
+## The goal done: the day its quest ended in it (v0.8.4.42.19).
+static func done(c: Dictionary) -> bool:
+	return goal(c).has("done")
+
+
+## The goal's quest ended (a listener of `quest_done`, and on every look at the goal — a failed quest, an old save):
+## done with its goal step (or its goal's thing given) — the goal is fulfilled; ended without it — it was a link, the goal
+## is free again one hint short of the next quest (v0.8.4.42.19, the author's trace: a dragon goal stuck forever after a
+## quest that only forged a blade). Lines.
+static func settle(s: GameSession, data: Dictionary, _fact: Dictionary = {}) -> Array[String]:
+	var c := s.character
+	var id := quest_of(c)
+	if id.is_empty() or done(c) or not (s.quests_done.has(id) or s.quests_failed.has(id)):
+		return []
+	var g := goal(c).duplicate()
+	var q := QuestRules.quest(data["world"], id)
+	if s.quests_done.has(id) and (not item_of(c).is_empty() or (q.get("steps", []) as Array).any(func(st: Dictionary) -> bool: return bool(st.get("goal", false)))):
+		g["done"] = s.day
+		c["goal"] = g
+		return ["Жизненная цель исполнена: «%s»" % g["text"]]
+	g.erase("quest")
+	g["links"] = (g.get("links", []) as Array) + [id]
+	g["hints"] = maxi(0, hints_needed(c, data) - 1)
+	c["goal"] = g
+	return ["Цель «%s» ещё впереди: «%s» было шагом к ней — дальше новый след" % [g["text"], q.get("title", id)]]
+
+
 ## The quest made for the goal ("" — none yet).
 static func quest_of(c: Dictionary) -> String:
 	return str(goal(c).get("quest", ""))
@@ -202,6 +232,7 @@ static func got_quest(c: Dictionary, id: String) -> void:
 ## The quest for the goal is due and nobody made it: the hints are enough. The one to give it — the last clue's giver,
 ## alive; "" — the engine readies none (the master makes it when the player asks).
 static func quest_due(s: GameSession, data: Dictionary) -> String:
+	settle(s, data)
 	var c := s.character
 	if not quest_of(c).is_empty() or not quest_why_not(c, data).is_empty():
 		return ""
