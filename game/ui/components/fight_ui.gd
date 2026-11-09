@@ -431,15 +431,40 @@ func _bodies(s: GameSession, now: Dictionary, open: bool) -> Array[Dictionary]:
 	return out
 
 
-## The fighter on a square, "" — nobody. Those who lie are in the list: a foe down is no target.
+## The fighter on a square, "" — nobody: the first of `_ids_at`.
 func _id_at(cell: Vector2i) -> String:
-	var hero := ""  # a swarm in the hero's square: the click is at the swarm (v0.8.4.27.1)
+	var ids := _ids_at(cell)
+	return ids[0] if not ids.is_empty() else ""
+
+
+## The fighters on a square, the one a click means first: one on its feet (a swarm in the hero's square — the swarm,
+## v0.8.4.27.1), then the hero, then those who lie (v0.8.4.42.20, the author: the hero on a body could not cast on itself,
+## the body took the click).
+func _ids_at(cell: Vector2i) -> Array[String]:
+	var up: Array[String] = []
+	var hero: Array[String] = []
+	var down: Array[String] = []
 	for f: Dictionary in _field.fighters:
 		if FightGrid.body_at(Vector2i(int(f["x"]), int(f["y"])), int(f["span"])).has(cell):
-			if str(f["id"]) != CombatRules.PLAYER:
-				return str(f["id"])
-			hero = CombatRules.PLAYER
-	return hero
+			if str(f["id"]) == CombatRules.PLAYER:
+				hero.append(CombatRules.PLAYER)
+			else:
+				(down if bool(f.get("out", false)) else up).append(str(f["id"]))
+	return up + hero + down
+
+
+## The target of the picked act on a square: the first there it may go at, else the first there ("" — nobody).
+func _target_at(cell: Vector2i) -> String:
+	var ids := _ids_at(cell)
+	for id: String in ids:
+		if str(_pending_check.call(id)).is_empty():
+			return id
+	return ids[0] if not ids.is_empty() else ""
+
+
+## Shift + a click walks onto the square whoever or whatever lies there (v0.8.4.42.20, the author).
+static func onto() -> bool:
+	return Input.is_key_pressed(KEY_SHIFT)
 
 
 ## A click on the field: the picked act goes at the square or the body, a foe opens its acts, else the hero walks.
@@ -454,7 +479,7 @@ func on_cell(cell: Vector2i) -> void:
 			_do(GameState.combat_act(str(_second["act"]), str(_second["to"]), {"at": FightGrid.aim_id(cell)}))
 		return
 	if _pending.is_valid():
-		var target := FightGrid.aim_id(cell) if not _pending_aim.is_empty() else id
+		var target := FightGrid.aim_id(cell) if not _pending_aim.is_empty() else _target_at(cell)
 		if target.is_empty():
 			return
 		var why := str(_pending_check.call(target))
@@ -462,6 +487,9 @@ func on_cell(cell: Vector2i) -> void:
 			EventBus.message.emit(tr(why))
 			return
 		_press(target)
+		return
+	if onto() and _field.routes.has(cell):
+		_do(GameState.combat_act("walk", FightGrid.aim_id(cell)))
 		return
 	if not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
 		_foe_menu(id)
@@ -558,7 +586,7 @@ func on_hover(cell: Vector2i) -> void:
 	var s := GameState.session
 	var data := Catalog.data
 	var me := mine()
-	var id := _id_at(cell)
+	var id := _target_at(cell) if _pending.is_valid() else _id_at(cell)
 	var text := _base_hint(me)
 	_field.blast = {}
 	_field.way = []
@@ -567,6 +595,9 @@ func on_hover(cell: Vector2i) -> void:
 	elif _pending.is_valid() and not id.is_empty():
 		var why := str(_pending_check.call(id))
 		text = "%s: %s" % [_name_of(s, id), tr(why) if not why.is_empty() else _preview_text(_pending_preview.call(id)).replace("\n", " · ")]
+	elif onto() and _field.routes.has(cell):
+		_field.way = FightGrid.route(_field.routes, cell)
+		text = tr("COMBAT_WALK_COST").format({"ft": int(_field.routes[cell][0]) * int(FightGrid.cfg(data)["ft"])})
 	elif not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
 		text = _name_of(s, id)
 	elif _field.routes.has(cell):

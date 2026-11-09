@@ -460,7 +460,7 @@ func _on_cell(cell: Vector2i) -> void:
 	if _rounds and cell == _field.hero_cell():  # the hero stands the round out
 		GameState.sneak_round()
 		return
-	var ref := _field.ref_at(cell)
+	var ref := "" if FightUi.onto() else _field.ref_at(cell)  # Shift: onto the square, past what lies there (v0.8.4.42.20)
 	if not ref.is_empty() and not ref.begins_with("far:"):
 		_touch(ref)
 		return

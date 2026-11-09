@@ -322,7 +322,7 @@ COMBAT_WAIT,Ходят другие…
 COMBAT_WILD_SHAPE,В облике зверя не колдуют
 COMBAT_WILD_SHAPE_LINE,Облик: {beast} — HP {hp}/{max}
 COMBAT_XP,Опыт: +{xp}
-COMBAT_YOUR_TURN,Ваш ход
+COMBAT_YOUR_TURN,"Ваш ход · Shift + клик — встать на клетку, где лежит тело или вещь"
 CONC_NO,Оставить как есть
 CONC_SWITCH,"Прервать «{old}», чтобы сотворить «{new}»? Концентрация держит одно заклинание."
 CONC_SWITCH_AGAIN,Это прервёт концентрацию на «{old}» — нажмите «Сотворить» ещё раз
