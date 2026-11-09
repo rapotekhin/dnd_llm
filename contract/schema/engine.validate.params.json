@@ -2700,6 +2700,17 @@
           "title": "Direction",
           "type": "string"
         },
+        "item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "kind": {
           "const": "goal",
           "default": "goal",

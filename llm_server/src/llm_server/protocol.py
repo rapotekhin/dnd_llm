@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.122.0"
+PROTOCOL_VERSION = "0.123.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1992,6 +1992,9 @@ class GoalAssessEffect(_Out):
     scale: Literal["easy", "medium", "hard", "epic", "legendary"]
     direction: str = "class"
     concepts: list[str] = Field(default_factory=list)
+    # 0.123.0: a goal that is a thing names it — its mechanics in the player's words («постоянная расплывчатость» —
+    # wear.status "spell:blur"); the engine prices it, the goal is no smaller than its rarity, its quest gives this thing
+    item: GeneratedItem | None = None
 
 
 class GoalHintEffect(_Out):
@@ -2291,6 +2294,7 @@ class FoundItem(_In):
     rarity: str = "common"
     value_cp: int = 0
     properties: list[str] = Field(default_factory=list)
+    power: list[str] = Field(default_factory=list)  # 0.123.0: what else it does — on the wearer, its use, spells, a hit
     source: str = "catalog"  # catalog | library
 
 

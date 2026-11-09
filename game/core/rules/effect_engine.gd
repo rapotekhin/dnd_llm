@@ -1467,7 +1467,7 @@ func _do_secret(s: GameSession, plan: Dictionary) -> void:
 
 
 func _do_goal_assess(s: GameSession, plan: Dictionary) -> void:
-	GoalRules.apply_assess(s.character, plan)
+	GoalRules.apply_assess(s, plan)
 
 
 func _do_goal_hint(s: GameSession, plan: Dictionary) -> void:

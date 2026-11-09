@@ -1195,7 +1195,8 @@
 		"thresholds": {"easy": 1, "medium": 2, "hard": 3, "epic": 5, "legendary": 99},
 		"names": {"easy": "простая", "medium": "непростая", "hard": "трудная", "epic": "великая", "legendary": "легендарная"},
 		"hints": {"easy": 0, "medium": 1, "hard": 2, "epic": 3, "legendary": 3},
-		"max_level": 5
+		"max_level": 5,
+		"item_scale": {"_doc": "v0.8.4.42.16, the author's trace (an amulet of Blur and one of invisibility asked for, a stealth amulet given twice): a goal that is a thing names it at its assessment (`goal:assess` with `item` — the thing's mechanics in the player's words), the engine prices it without the level gate and the goal is no smaller than its rarity's scale here; the goal's quest gives that very thing (QuestGen.plan_act).", "common": "easy", "uncommon": "medium", "rare": "hard", "very_rare": "epic", "legendary": "legendary"}
 	},
 	"quest_gen": {
 		"_doc": "Quests the master makes (v0.7.21, QuestGen; v0.7.39.6 — by acts, see _difficulties): from a giver of the scene, 1..max_steps steps (talk, visit, find, fight) on what the world has, plus a return to the giver; at most max_open made quests taken at once and max_offered offered by one giver or board. Batch 2: a quest brings up to max_new_npcs new people, a place on an open edge and its thing in a hiding place; a person a quest made gives quests while its depth is below quest_depth. The reward by scale and the hero's level (1..5): reward_cp, class xp (only when a step is dangerous or the quest major), the giver's attitude.",

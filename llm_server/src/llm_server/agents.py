@@ -45,6 +45,7 @@ from .protocol import (
     EngineLookupResult,
     EngineValidateParams,
     EngineValidateResult,
+    GoalAssessEffect,
     MakeEffect,
     MoveItemEffect,
     RecipeEffect,
@@ -449,6 +450,8 @@ def made_topics(effect: Any) -> tuple[str, list[str]]:
         return "рецепт", (["craft", "items"] if effect.output is not None else ["craft"])
     if isinstance(effect, MoveItemEffect) and effect.item is not None:
         return "новую вещь", ["items"]
+    if isinstance(effect, GoalAssessEffect) and effect.item is not None:  # v0.8.4.42.16: the thing the player's goal is
+        return "вещь жизненной цели", ["items"]
     return "", []
 
 
@@ -655,8 +658,8 @@ async def find_items(ctx: RunContext[TurnContext], query: str, base: str | None 
     if not found:
         return ("Ничего похожего — не ищи это снова. Переносную вещь создай сам: поле `item` (у вещи обстановки, в `contents`, "
                 "в `move_item:world>hero`); неподвижную (мебель, очаг) опиши вещью обстановки без `item_id`.")
-    return "\n".join(f"[{i.item_id}] {i.name} — {i.item_type}, {i.rarity}, {i.value_cp} мм, свойства: {', '.join(i.properties) or 'нет'} ({i.source})"
-                     for i in found[:8])
+    return "\n".join(f"[{i.item_id}] {i.name} — {i.item_type}, {i.rarity}, {i.value_cp} мм, свойства: {', '.join(i.properties) or 'нет'}"
+                     f"{'; ' + '; '.join(i.power) if i.power else ''} ({i.source})" for i in found[:8])
 
 
 # --- agents ---------------------------------------------------------------------

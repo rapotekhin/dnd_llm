@@ -790,6 +790,30 @@ static func display_name(items_data: Dictionary, session_items: Dictionary, id: 
 	return str(def_of(items_data, session_items, id).get("name", id))
 
 
+## What a thing does, in the engine's words, for the master (v0.8.4.42.16, the author's trace: find_items showed a made
+## amulet as «свойства: stealth_advantage» alone and the designer took it for an amulet of invisibility): its properties,
+## what it lays on the wearer (`wear`), its use, its spells and what it lays on a hit. [] — a plain thing.
+static func power_of(def: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for p: Variant in def.get("properties", []):
+		out.append(str(p))
+	var wear: Variant = def.get("wear")
+	if wear is Dictionary:
+		for k: String in wear:
+			out.append("носящему %s" % (str(wear[k]) if k == STATUS else "%s %s" % [k, wear[k]] if not (wear[k] is bool) else k))
+	var use: Variant = def.get("use")
+	if use is Dictionary:
+		out.append("при использовании: %s" % (("заклинание %s%s" % [use["spell"], " (свиток)" if bool(use.get("scroll", false)) else ""]) if use.has("spell")
+			else ", ".join((use as Dictionary).keys())))
+	for sp: Variant in def.get("spells", []):
+		if sp is Dictionary:
+			out.append("заклинание %s ×%d за долгий отдых" % [sp.get("spell", ""), int(sp.get("uses", 1))])
+	var hit: Variant = def.get("hit")
+	if hit is Dictionary:
+		out.append("при попадании: %s" % hit.get("cond", ""))
+	return out
+
+
 ## Catalog + session items matching a free-text query (Russian name or id), a base id and required properties.
 static func find(items_data: Dictionary, session_items: Dictionary, query: String, base: String, properties: Array) -> Array[Dictionary]:
 	var q := query.to_lower().strip_edges()
@@ -811,6 +835,7 @@ static func find(items_data: Dictionary, session_items: Dictionary, query: Strin
 				continue
 			(out if hit else loose).append({"item_id": id, "name": d.get("name", id), "item_type": d.get("item_type", ""),
 				"rarity": d.get("rarity", "common"), "value_cp": int(d.get("value_cp", 0)), "properties": props,
+				"power": power_of(d).filter(func(x: String) -> bool: return not props.has(x)),
 				"source": "catalog" if pool == items_data["catalog"] else "session"})
 	out.append_array(loose)
 	return out
@@ -849,7 +874,11 @@ static func spell_numbers(c: Dictionary, data: Dictionary, session_items: Dictio
 static func generated_id(item: Dictionary) -> String:
 	var props: Array = item.get("properties", []).duplicate()
 	props.sort()
-	return "gen_" + ("%s|%s|%s" % [item.get("name", ""), item.get("base", ""), ",".join(props)]).md5_text().left(10)
+	var key := "%s|%s|%s" % [item.get("name", ""), item.get("base", ""), ",".join(props)]
+	var power := power_of(item).filter(func(x: String) -> bool: return not props.has(x))
+	if not power.is_empty():  # v0.8.4.42.16: one name with another power is another thing, never written over it
+		key += "|" + ",".join(power)
+	return "gen_" + key.md5_text().left(10)
 
 
 ## {"ok": true, "def": normalized definition} or {"ok": false, "reason": text for the master}. What it lays while it works

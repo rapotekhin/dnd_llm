@@ -199,6 +199,8 @@ static func frame(s: GameSession, data: Dictionary, job: Dictionary) -> String:
 					", ".join(GoalRules.goal(c).get("concepts", []))])
 				if not GoalRules.clues(c).is_empty():
 					lines.append("Зацепки, что герой уже узнал (задание продолжает их, не спорит с ними): %s." % GoalRules.clues_text(c, data))
+				if not GoalRules.item_line(s, data).is_empty():
+					lines.append("%s. Задание ведёт к этой вещи — её и даст его последний акт." % GoalRules.item_line(s, data))
 			lines.append("Заказчик: %s [%s] — %s; %s, %s." % [v.npc_name(npc), npc, n.get("role", ""), v.room(room).get("name", room),
 				v.location(v.location_id(room)).get("name", "")])
 			for k: String in ["personality", "description"]:

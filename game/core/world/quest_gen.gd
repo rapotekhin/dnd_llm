@@ -354,6 +354,7 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setbac
 		out.append("Кто стоит за этим: %s" % q["villain"])
 	if not str(q.get("finale", "")).is_empty():
 		out.append("Что решится в финале: %s" % q["finale"])
+	out.append_array(goal_lines(s, data, q))
 	if q.has("follows"):
 		var prev := QuestRules.quest(data["world"], str(q["follows"]))
 		out.append("Продолжение задания «%s»: %s" % [prev.get("title", ""), " ".join(QuestRules.history(s, data["world"], str(q["follows"])))])
@@ -420,6 +421,28 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setbac
 
 ## What a person brings to a quest of its own (v0.8.4.30, the author's feedback): what it remembers of the hero and the
 ## quests it gave or stood in, with what the hero did there — so a new one goes on from what happened, not against it.
+## The goal a quest for the hero's life goal leads to, for the designer (v0.8.4.42.16, the author's trace: the acts saw
+## only the quest's retelling «зыбкий для глаза» and gave a stealth amulet for an amulet of Blur, then the same one for an
+## amulet of invisibility): the player's own words and the goal's thing, which the quest gives and no other.
+static func goal_lines(s: GameSession, data: Dictionary, q: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	if not bool(q.get("for_goal", false)) or GoalRules.goal(s.character).is_empty():
+		return out
+	out.append("Задание жизненной цели героя, его словами: «%s»." % GoalRules.goal(s.character)["text"])
+	var thing := GoalRules.item_line(s, data)
+	if not thing.is_empty():
+		out.append("%s. Это её герой ищет: акт кладёт её в `items` с этим `item_id` (последний акт — непременно, если её ещё не было); другая вещь вместо неё — не цель." % thing)
+	return out
+
+
+## The goal's thing a quest for the goal still has to give: its id, or "" (given in an earlier act or this one, or none).
+static func goal_item_due(s: GameSession, q: Dictionary, content: Dictionary) -> String:
+	var id := GoalRules.item_of(s.character) if bool(q.get("for_goal", false)) else ""
+	if id.is_empty() or (q.get("items", {}) as Dictionary).values().has(id):
+		return ""
+	return "" if (content["items"] as Array).any(func(it: Dictionary) -> bool: return str(it["id"]) == id) else id
+
+
 static func person_past(s: GameSession, data: Dictionary, npc: String) -> Array[String]:
 	var out: Array[String] = []
 	var mem := s.memory_of(npc, int(data["rules"].get("social", {}).get("memory_in_snapshot", 8)))
@@ -516,6 +539,9 @@ static func plan_act(s: GameSession, data: Dictionary, spec: Dictionary) -> Dict
 	for it: Dictionary in content["items"]:
 		if not used.has("item:" + str(it["key"])):
 			return {"reason": "вещь %s не нужна ни одному шагу — find (спрятанная) или item_id в talk / visit" % it["key"]}
+	var due := goal_item_due(s, q, content)
+	if last and not fails and not due.is_empty() and _str(spec, "reward_item_id") != due:
+		return {"reason": "это задание жизненной цели: в последнем акте герой получает вещь цели — `items` с `item_id` %s (спрятанная — шаг find, у человека — talk), а не другую" % due}
 	var fights := used.filter(func(u: String) -> bool: return u.begins_with("enc:") or u.begins_with("pack:")).size()
 	var total := int(q.get("fights", 0)) + fights
 	if fights > act_fights_cap(q, d, last):

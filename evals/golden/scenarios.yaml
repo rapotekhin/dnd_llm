@@ -5050,3 +5050,33 @@ scenarios:
       effects: {forbidden_kinds: [coins, create:service, grant:favor, move_item:world>hero, move_item:hero>world]}
     rubric:
       - "Гуннар соглашается в характере и называет цену 100 зм или отсылает к кнопке «Услуги»; серебрение не проведено словами, денег эффектом нет"
+
+  - id: goal_item_blur
+    title: "Цель — амулет расплывчатости: вещь цели названа в goal:assess со статусом Blur на носящем (v0.8.4.42.16)"
+    category: concepts
+    extends: tavern
+    kind: goal
+    input: "хочу найти амулет расплывчатости, чудесный предмет, надев который получаешь постоянный эффект расплывчатости"
+    snapshot:
+      character:
+        goal: "«хочу найти амулет расплывчатости, чудесный предмет, надев который получаешь постоянный эффект расплывчатости» — ещё не оценена"
+    expect:
+      effects: {required_kinds_any: [goal:assess], forbidden_kinds: [create:quest, create:npc, move_item:world>hero],
+                field_in: {item.wear.status: ["spell:blur"]}}
+    rubric:
+      - "Мастер оценивает цель одним goal:assess с вещью цели `item`, которая даёт носящему расплывчатость (`wear.status` spell:blur), а не преимущество Скрытности или иную силу; в рассказе — мысль героя, без событий"
+
+  - id: goal_item_invisible
+    title: "Цель — амулет невидимости: вещь цели делает носящего невидимым, а не расплывчатым (v0.8.4.42.16)"
+    category: concepts
+    extends: tavern
+    kind: goal
+    input: "теперь мне нужен амулет невидимости. Который делает того, кто его надел, невидимым навсегда"
+    snapshot:
+      character:
+        goal: "«теперь мне нужен амулет невидимости. Который делает того, кто его надел, невидимым навсегда» — ещё не оценена"
+    expect:
+      effects: {required_kinds_any: [goal:assess], forbidden_kinds: [create:quest, create:npc, move_item:world>hero],
+                field_in: {item.wear.status: ["invisible", "spell:invisibility", "spell:greater_invisibility"]}}
+    rubric:
+      - "Мастер оценивает цель одним goal:assess с вещью цели `item`, которая делает носящего невидимым (`wear.status` invisible или spell:invisibility), а не расплывчатым и не преимуществом Скрытности; в рассказе — мысль героя, без событий"

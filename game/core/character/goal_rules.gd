@@ -46,15 +46,57 @@ static func plan_assess(c: Dictionary, data: Dictionary, e: Dictionary) -> Dicti
 	var concepts: Array = (e.get("concepts", []) as Array).slice(0, 6).map(func(x: Variant) -> String: return str(x).left(40)) \
 		if e.get("concepts") is Array else []
 	var plan := {"goal_scale": scale, "direction": dir, "concepts": concepts}
-	return {"plan": plan, "summary": "Цель оценена: %s" % text_of({"goal": goal(c).merged(plan, true)}, data)}
+	var also := ""
+	if e.get("item") is Dictionary:  # v0.8.4.42.16: the thing the goal is, by the engine's price, not the level's gate
+		var chk := ItemRules.check_generated(data, e["item"], NO_GATE)
+		if not bool(chk["ok"]):
+			return {"reason": "вещь цели: %s" % chk["reason"]}
+		var def: Dictionary = chk["def"]
+		var floor := str(cfg(data)["item_scale"].get(str(def["rarity"]), "easy"))
+		if _need(data, floor) > _need(data, scale):
+			plan["goal_scale"] = floor
+		plan["item_id"] = ItemRules.generated_id(def)
+		plan["item_def"] = def
+		also = " · вещь цели «%s» (%s): масштаб цели не меньше «%s»" % [def["name"], TranslationServer.translate("RARITY_" + str(def["rarity"]).to_upper()).to_lower(),
+			cfg(data)["names"].get(floor, floor)]
+	return {"plan": plan, "summary": "Цель оценена: %s%s" % [text_of({"goal": goal(c).merged(plan, true)}, data), also]}
 
 
-static func apply_assess(c: Dictionary, plan: Dictionary) -> void:
+const NO_GATE := 99  ## a level past every rarity's: the goal's thing is priced, its level is the goal's threshold
+
+
+static func _need(data: Dictionary, scale: String) -> int:
+	return int(cfg(data)["thresholds"].get(scale, 0))
+
+
+## Writes the assessment; the goal's thing goes into the game's items and the goal keeps its id (v0.8.4.42.16).
+static func apply_assess(s: GameSession, plan: Dictionary) -> void:
+	var c := s.character
 	var g := goal(c).duplicate()
 	g["scale"] = plan["goal_scale"]
 	g["direction"] = plan["direction"]
 	g["concepts"] = plan["concepts"]
+	g.erase("item")
+	g.erase("item_name")
+	if plan.has("item_id"):
+		s.items[str(plan["item_id"])] = plan["item_def"]
+		g["item"] = str(plan["item_id"])
+		g["item_name"] = str(plan["item_def"].get("name", ""))
 	c["goal"] = g
+
+
+## The thing the goal is ("" — the goal is no thing, or was assessed before v0.8.4.42.16).
+static func item_of(c: Dictionary) -> String:
+	return str(goal(c).get("item", ""))
+
+
+## The goal's thing for the master's frames: «Вещь цели: [id] name — what it does» ("" — none).
+static func item_line(s: GameSession, data: Dictionary) -> String:
+	var id := item_of(s.character)
+	if id.is_empty():
+		return ""
+	return "Вещь цели: [%s] %s — %s" % [id, ItemRules.display_name(data["items"], s.items, id),
+		", ".join(ItemRules.power_of(ItemRules.def_of(data["items"], s.items, id)))]
 
 
 ## The level the goal needs; -1 — not assessed yet.
@@ -184,10 +226,11 @@ static func text_of(c: Dictionary, data: Dictionary, more := true) -> String:
 	var need := threshold(c, data)
 	var dir := str(g.get("direction", "class"))
 	var what := "уровень класса" if dir == "class" else str(DevelopmentRules.direction(data, dir).get("name", dir))
+	var thing := ("; вещь цели: «%s» [%s]" % [g.get("item_name", ""), g["item"]]) if g.has("item") else ""
 	if need > int(cfg(data)["max_level"]):
-		return "«%s» — %s: пока недостижима (%s выше %d)" % [g["text"], cfg(data)["names"].get(g["scale"], g["scale"]), what, int(cfg(data)["max_level"])]
-	var out := "«%s» — %s, %s: %s %d из %d" % [g["text"], cfg(data)["names"].get(g["scale"], g["scale"]),
-		"по силам" if reached(c, data) else "рано", what, level(c, data), need]
+		return "«%s» — %s: пока недостижима (%s выше %d)%s" % [g["text"], cfg(data)["names"].get(g["scale"], g["scale"]), what, int(cfg(data)["max_level"]), thing]
+	var out := "«%s» — %s, %s: %s %d из %d%s" % [g["text"], cfg(data)["names"].get(g["scale"], g["scale"]),
+		"по силам" if reached(c, data) else "рано", what, level(c, data), need, thing]
 	if reached(c, data):
 		out += "; намёков %d из %d перед заданием" % [mini(hints(c), hints_needed(c, data)), hints_needed(c, data)]
 	if not more:  # the sheet lists the clues and the quest itself

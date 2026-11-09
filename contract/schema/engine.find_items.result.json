@@ -15,6 +15,13 @@
           "title": "Name",
           "type": "string"
         },
+        "power": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Power",
+          "type": "array"
+        },
         "properties": {
           "items": {
             "type": "string"

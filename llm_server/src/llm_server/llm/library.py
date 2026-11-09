@@ -74,5 +74,22 @@ class ItemLibrary:
                 continue
             items.append(FoundItem(item_id=d["item_id"], name=d["name"], item_type=d.get("item_type", ""),
                                    rarity=d.get("rarity", "common"), value_cp=int(d.get("value_cp", 0)),
-                                   properties=list(d.get("properties", [])), source="library"))
+                                   properties=list(d.get("properties", [])), power=power_of(d), source="library"))
         return items
+
+
+def power_of(d: dict) -> list[str]:
+    """What a made thing does beyond its properties, as the engine's ItemRules.power_of says it (v0.8.4.42.16, the
+    author's trace: a stealth amulet listed by its properties alone was taken for an amulet of invisibility)."""
+    out: list[str] = []
+    for k, v in (d.get("wear") or {}).items():
+        out.append(f"носящему {v}" if k == "status" else f"носящему {k}" if isinstance(v, bool) else f"носящему {k} {v}")
+    use = {k: v for k, v in (d.get("use") or {}).items() if v is not None}
+    if use:
+        out.append(f"при использовании: заклинание {use['spell']}{'' if use.get('charges') else ' (свиток)'}" if use.get("spell")
+                   else "при использовании: " + ", ".join(use))
+    for sp in d.get("spells") or []:
+        out.append(f"заклинание {sp.get('spell', '')} ×{int(sp.get('uses', 1))} за долгий отдых")
+    if d.get("hit"):
+        out.append(f"при попадании: {d['hit'].get('cond', '')}")
+    return out
