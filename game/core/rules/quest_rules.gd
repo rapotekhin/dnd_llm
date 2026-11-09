@@ -221,8 +221,10 @@ static func setback(s: GameSession, data: Dictionary, quest_id: String, kind: St
 	return ["«%s»: %s — не вышло" % [q["title"], step["text"]], "История задания пойдёт иначе: мастер перестраивает акт «%s»" % q["acts"][act]["title"]]
 
 
-## A check of the hero at this room that missed the secret a quest's step looks for: that step's setback. Lines.
-static func missed(s: GameSession, data: Dictionary, skill: String, total: int) -> Array[String]:
+## A check of the hero at this room that missed the secret a quest's step looks for: that step's setback. Lines. Called after
+## the check revealed what it found (ExplorationRules.active_reveal): missed is what it left unfound — a failed roll of any
+## total too, a natural 1 by the house rule (v0.8.4.42.10.1, the author: 20 against 15 on a 1 failed and went on as if not).
+static func missed(s: GameSession, data: Dictionary, skill: String) -> Array[String]:
 	var lines: Array[String] = []
 	for qid: String in s.quests_active.keys():
 		var step := current(s, data["world"], qid)
@@ -231,7 +233,7 @@ static func missed(s: GameSession, data: Dictionary, skill: String, total: int) 
 			continue
 		for sec: Dictionary in ExplorationRules.secrets(data["world"], s.room_id):
 			if str(sec.get("id", "")) == key.get_slice(":", 1) and not ExplorationRules.is_found(s, s.room_id, sec) \
-					and (str(sec.get("skill", "perception")) == skill or skill == "investigation") and total < int(sec["dc"]):
+					and (str(sec.get("skill", "perception")) == skill or skill == "investigation"):
 				lines.append_array(setback(s, data, qid, "find"))
 	return lines
 

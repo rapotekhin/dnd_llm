@@ -3667,7 +3667,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 				(result["revealed"] as Array).append_array(SocialRules.reveal_by_check(session, Catalog.data, listener_id, skill_id, int(result["total"])))
 	_add(GameSession.check_entry(params, result))
 	if not bool(result.get("blocked", false)) and not skill_id.is_empty():  # a quest's secret missed: its act goes on from the failure (v0.8.4.31)
-		var missed := QuestRules.missed(session, Catalog.data, skill_id, int(result["total"]))
+		var missed := QuestRules.missed(session, Catalog.data, skill_id)
 		if not missed.is_empty():
 			_told(missed)
 	if not (result.get("revealed", []) as Array).is_empty():

@@ -87,3 +87,22 @@ func test_a_furnishing_does_not_lay_the_hidden_quest_thing_in_the_open() -> void
 	assert_str(str(PropRules.plan_furnish(s, Catalog.data, chest).get("reason", ""))).contains("спрятан в тайнике")
 	Knows.add(s, Knows.SECRET, ROOM, "q_%s_roster" % qid)  # found: no longer held back
 	assert_bool(PropRules.plan_furnish(s, Catalog.data, e).has("plan")).is_true()
+
+
+## v0.8.4.42.10.1, the author: «Обыскать» on a natural 1 is a failure whatever the total (the house rule) — the step's
+## hiding place is missed and its act goes on from the failure, as on any failed roll.
+func test_a_search_on_a_natural_1_misses_the_quest_thing_whatever_the_total() -> void:
+	var qid := _quest()
+	s.character["skills"]["investigation"] = 40  # the total passes any DC: only the die fails it
+	var seed_one := 0
+	for seed_try in range(1, 2000):
+		s.rng.seed = seed_try
+		if s.rng.randi_range(1, 20) == 1:
+			seed_one = seed_try
+			break
+	s.rng.seed = seed_one
+	var r := GameState._engine_check({"skill": "investigation", "dc_tier": "medium"})
+	assert_int(int(r["nat"])).is_equal(1)
+	assert_bool(bool(r["success"])).is_false()
+	assert_bool(Knows.has(s, Knows.SECRET, ROOM, "q_%s_roster" % qid)).is_false()
+	assert_str(" ".join(QuestRules.history(s, Catalog.data["world"], qid))).contains("✗ Добыть список нарядов")

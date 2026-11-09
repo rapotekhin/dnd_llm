@@ -107,8 +107,11 @@ func _quest_with_a_find(qid: String) -> void:
 
 func test_a_missed_secret_of_a_step_turns_its_act_to_the_failure() -> void:
 	_quest_with_a_find("gen_quest_t")
-	assert_array(QuestRules.missed(s, data, "perception", 16)).is_empty()  # it would be found: no failure
-	var lines := QuestRules.missed(s, data, "perception", 9)
+	Knows.add(s, Knows.SECRET, s.room_id, "trace")  # found by the check: no failure
+	assert_array(QuestRules.missed(s, data, "perception")).is_empty()
+	s.knows.erase(Knows.SECRET)
+	assert_array(QuestRules.missed(s, data, "athletics")).is_empty()  # not a search for it
+	var lines := QuestRules.missed(s, data, "perception")
 	assert_str(" ".join(lines)).contains("пойдёт иначе")
 	var q: Dictionary = WorldGen.generated(s)["quests"]["gen_quest_t"]
 	assert_int(int(q["built"])).is_equal(0)
