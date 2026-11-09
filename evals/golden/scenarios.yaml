@@ -2890,10 +2890,10 @@ scenarios:
     engine:
       find_npcs: []
     expect:
-      effects: {required_kinds_any: [create:npc]}
+      effects: {required_kinds_any: [create:npc, create:place]}  # v0.8.4.42.15: a bakery with its baker in `npcs` is the same road
       tools_required: [find_npcs]
     rubric:
-      - "Горм отвечает, что пекарь есть, и мастер создаёт его эффектом create:npc (имя, роль пекаря, шаблон commoner или похожий), а не выдумывает словами; где его найти — в этой локации"
+      - "Горм отвечает, что пекарь есть, и мастер создаёт его эффектом create:npc (имя, роль пекаря, шаблон commoner или похожий) или пекарню create:place с пекарем в её npcs, а не выдумывает словами; где его найти — в этой локации"
 
   - id: place_made_at_mention
     title: "Трактирщик называет баню — она создаётся в том же ходе (большой тест, v0.7.22.13)"
@@ -3037,6 +3037,36 @@ scenarios:
       tools_required: [find_npcs]
     rubric:
       - "Горм отсылает к кузнецу Гуннару, которого вернул поиск; нового кузнеца не создаёт"
+
+  - id: wizard_companion_made
+    title: "Игрок ищет волшебника в спутники, а в мире только книжник — create:npc с шаблоном mage (автор, v0.8.4.42.15)"
+    category: concepts
+    extends: tavern
+    mode: social
+    input: "Горм, мне нужен сильный волшебник в спутники — иду на опасное дело, заплачу щедро. Где такого найти?"
+    engine:
+      find_npcs:
+        - {id: npc_scholar, name: "Мэтр Орест", role: "книжник при храме, переписчик", location: "Серое Устье"}
+    expect:
+      effects: {required_kinds_any: [create:npc], field_in: {npc.monster: [mage, archmage]}}
+      tools_required: [find_npcs]
+    rubric:
+      - "Мастер создаёт волшебника эффектом create:npc с шаблоном mage (заклинатель, а не commoner со словом «маг» в роли) в этой локации — в таверне, на постоялом дворе или рядом; Горм называет его и где найти"
+      - "Мастер не отвечает «других чародеев тут нет», не отсылает слухом за край мира и не выдаёт книжника Ореста за спутника в поход"
+
+  - id: wizard_sought_in_town
+    title: "Игрок сам ищет волшебника в городе, поиск пуст — create:npc с шаблоном mage (автор, v0.8.4.42.15)"
+    category: concepts
+    extends: tavern
+    input: "Я очень хочу найти в Устье волшебника — возьму его с собой в поход. Оглядываю зал и спрашиваю у людей."
+    engine:
+      find_npcs: []
+    expect:
+      effects: {required_kinds_any: [create:npc], field_in: {npc.monster: [mage, archmage]}}
+      tools_required: [find_npcs]
+    rubric:
+      - "Мастер создаёт волшебника эффектом create:npc с шаблоном mage в этой локации (здесь, в зале, или в комнате Устья) и рассказывает, как герой его находит или где его искать"
+      - "Волшебник не выдуман только словами и не отложен «до ярмарки» или «за Пущу»"
 
   - id: place_off_the_trail
     title: "Свернуть с тропы на открытом краю — find_places, затем create:place"

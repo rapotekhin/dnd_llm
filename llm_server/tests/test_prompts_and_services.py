@@ -539,6 +539,20 @@ def test_rumors_of_the_place_in_the_prompt_and_the_router():
     assert router.by_kind(params) == ""  # nothing new to tell: the router decides
 
 
+def test_a_person_sought_by_role_brings_the_people_rules():
+    # v0.8.4.42.15, the author: «я никак не могу заставить мастера создать NPC-волшебника» — the topic was an index line only
+    s = snap()
+    for said in ("мне в компаньоны нужен сильный волшебник, где найти такого?", "где волшебника искать?", "нужен маг", "со мной в спутники пойдёшь?"):
+        assert "people" in prompts.auto_topics("social", s, said), said
+    for said in ("магазин тут есть?", "магистр, научи", "добрый вечер"):
+        assert "people" not in prompts.auto_topics("social", s, said), said
+    text = prompts.system_prompt("social", s, s.scene.npcs[0], said="где волшебника искать?")
+    assert "`mage` (волшебник 5-го уровня" in text
+    # the word boundaries of three older lists were backspace bytes: «лаз», «яд» and Mask never matched
+    assert prompts.WAY_WORDS.search("лезу в лаз") and not prompts.WAY_WORDS.search("залазь")
+    assert "\x08" not in open(prompts.__file__, encoding="utf-8").read()
+
+
 def test_an_invisible_hero_brings_the_rules_by_the_engines_condition_id():
     # v0.7.63: the engine sends `invisible`, the topic looked for a Russian word and never came
     s = snap()

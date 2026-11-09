@@ -127,10 +127,10 @@ WEATHER_WORDS = re.compile(r"погод|дожд|ливн|ливен|туман|
 RUMOR_WORDS = re.compile(r"слух|слыха|слышн|прислуш|подслуш|о ч[её]м говор|болтовн|говорят|что нового|новост|сплет|болтают|судачат|толкуют|пустить|распуст|наводк",
                          re.IGNORECASE)  # v0.7.47; a notice is the board's (v0.8.4.29.7)
 FAITH_WORDS = re.compile(r"бог[аиу ]|богин|бож|молит|молюсь|помол|обет|клян|присяг|храм|алтар|святил|святын|жриц|жрец|вер[уыа] |вера$|обращ|"
-                         r"искуп|скверн|заповед|идол|капищ|чонти|сильванус|тир[ау ]|вокин|маск[еуи]|келемвор", re.IGNORECASE)  # v0.7.49; a blessing is `make`, «маскировка» is no Mask (v0.8.4.29.7)
+                         r"искуп|скверн|заповед|идол|капищ|чонти|сильванус|тир[ау ]|вокин|маск[еуи]\b|келемвор", re.IGNORECASE)  # v0.7.49; a blessing is `make`, «маскировка» is no Mask (v0.8.4.29.7)
 FESTIVAL_WORDS = re.compile(r"праздн|ярмар|дожин|гулянь|торговый день|свадьб|пир[ау ]|поминк|календар|какое число|какой день|месяц",
                             re.IGNORECASE)  # v0.7.44
-WAY_WORDS = re.compile(r"лаз|пролом|подкоп|тайн\w* ход|потайн|щел[ьи]|дыр[аую]|прокопа", re.IGNORECASE)  # v0.7.66
+WAY_WORDS = re.compile(r"\bлаз|пролом|подкоп|тайн\w* ход|потайн|щел[ьи]|дыр[аую]|прокопа", re.IGNORECASE)  # v0.7.66
 BOUT_WORDS = re.compile(r"поедин|дуэл|вызыва|вызов|сразимся|сразиться|помахаться|на кулак|до первой крови|до сдачи|арен|бойцов|кровав[аую]+ ям|турнир|ставк",
                         re.IGNORECASE)  # v0.7.45
 WILDS_WORDS = re.compile(r"охот|рыб|удочк|удить|сеть|сети|дич|зверь|звер[яюи]|олен|выслеж|капкан|силк|кабан|заяц|зайц|улов|клюёт|клюет|браконь",
@@ -139,7 +139,7 @@ WILDS_WORDS = re.compile(r"охот|рыб|удочк|удить|сеть|сет
 
 MAKE_WORDS = re.compile(r"проклят|проклин|порч|сглаз|морок|благослов|заговор[её]н|зачарован|научи|обучи|выучи|наставник|"
                         r"свит[оке]|трактат|манускрипт|фолиант|гримуар|неведом|хочу уметь|перенять|придума|сочин|изобрет|вывед|выводу|разработа|"
-                        r"яд|отрав|виски|самогон|настойк|наливк|эликсир|ликёр|ликер|бренди|медовух",
+                        r"\bяд|отрав|виски|самогон|настойк|наливк|эликсир|ликёр|ликер|бренди|медовух",
                         re.IGNORECASE)  # v0.7.63: what the data has not, built of parts; v0.8.4.28.5: a liquid
 SERVICE_WORDS = re.compile(r"посереб|услуг|закал|заточ|освят|оберег|благослов|зачаруй|зачаровать|наложи|наточ", re.IGNORECASE)  # v0.8.4.35
 BANK_WORDS = re.compile(r"ссуд|заём|заем|займ|в долг|залог|ростовщ|кредит|вклад|одолж", re.IGNORECASE)  # v0.7.70.1
@@ -152,6 +152,11 @@ TEACH_WORDS = re.compile(r"научи|обучи|выучи|хочу уметь|
                          re.IGNORECASE)  # v0.8.4.41.1: a request to be taught, checked at the end of the turn
 FIND_WORDS = re.compile(r"обыск|обшар|ищу|искать|поиск|пошар|роюсь|рыться|перерыва|разгреб|вороша|что тут|что здесь|что внутри|"
                         r"натаскал|положили|спрятан|клад|сокровищ", re.IGNORECASE)
+# v0.8.4.42.15: the player looks for a person by role — a companion, a wizard, a guide (the author: «я никак не могу заставить
+# мастера создать NPC-волшебника» — the topic was an index line only, and the master answered «другого чародея нет» nine times).
+PEOPLE_WORDS = re.compile(r"спутник|компаньон|в отряд|с собой взять|взять с собой|наёмник|наемник|проводник|волшеб|чароде|колдун|\bмага?\b|\bмагов\b|"
+                          r"ведун|ведьм|целител|лекар|наставник|где (мне )?(найти|искать|сыскать)|кого (бы )?(найти|позвать)|ищу (человек|кого)",
+                          re.IGNORECASE)
 JOB_WORDS = re.compile(r"работ|наймусь|нанять|найми|вышибал|устроиться", re.IGNORECASE)  # v0.7.70.1
 
 
@@ -235,7 +240,7 @@ TOPICS: dict[str, Topic] = {
                    words=WATER_WORDS, gate=lambda snap: True),
     "invisible": Topic("невидимый герой", (),
                    alone=lambda mode, snap, said: bool(snap.character and "invisible" in snap.character.conditions)),
-    "people": Topic("новый человек (`create:npc`)", ("create:npc",)),
+    "people": Topic("новый человек (`create:npc`): кого нет в мире, спутник, волшебник, наёмник, проводник", ("create:npc",), words=PEOPLE_WORDS),
     "quests": Topic("новое задание: NPC просит о помощи, игрок ищет работу (`create:quest`)", ("create:quest",),
                    alone=lambda mode, snap, said: bool(snap.scene and any(BOARD.search(p.name) for p in snap.scene.props))),
     "languages": Topic("NPC не понимает героя; языки", (),
