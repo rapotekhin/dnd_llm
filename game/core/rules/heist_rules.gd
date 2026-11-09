@@ -101,8 +101,7 @@ static func path(s: GameSession, data: Dictionary, id: String) -> Array[Dictiona
 			how = "на месте: %s, %s" % [target_name(s, data, id), CraftRules.tr_skill(data, str(p.get("skill", "")))]
 		prep_lines.append("%s %s — %s" % ["✓" if step_ok(c, id, str(p["id"])) else "·", p["name"], how])
 	if not prep_lines.is_empty():
-		out.append({"title": "Подготовка — по желанию, +%d к делу за шаг" % int(cfg(data)["prep_bonus"]), "text": "
-".join(prep_lines),
+		out.append({"title": "Подготовка — по желанию, +%d к делу за шаг" % int(cfg(data)["prep_bonus"]), "text": "\n".join(prep_lines),
 			"state": "done" if acted or prep(s, data, id) == prep_lines.size() * int(cfg(data)["prep_bonus"]) else "todo"})
 	var h: Array = d.get("hours", kind(data, str(d["kind"]))["hours"])
 	var where := "вы на месте" if s.room_id == str(d["target"]) else "идите туда"

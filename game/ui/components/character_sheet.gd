@@ -254,9 +254,7 @@ func _stats_tab(c: Dictionary) -> void:
 	chips.refresh()
 	var boons := CharacterRules.item_boons(c, d, GameState.session.items)  # what the worn things give (v0.7.49.4)
 	if not boons.is_empty():
-		_text(box, tr("SHEET_ITEM_BOONS") + "
-" + "
-".join(boons.map(func(b: String) -> String: return "    " + b))).name = "SheetItemBoons"
+		_text(box, tr("SHEET_ITEM_BOONS") + "\n" + "\n".join(boons.map(func(b: String) -> String: return "    " + b))).name = "SheetItemBoons"
 	var resist := HeroDefense.resistances(GameState.session, d)
 	if not resist.is_empty():
 		_text(box, tr("SHEET_RESIST").format({"list": ", ".join(resist.keys().map(func(t: Variant) -> String:
@@ -333,9 +331,7 @@ func _abilities_tab(c: Dictionary) -> void:
 	var bg: Dictionary = d["backgrounds"].get(str(c.get("background", "")), {})
 	if not bg.is_empty():
 		var rule := str(BackgroundRules.spec(c, d).get("master", ""))
-		_entry(box, str(bg["feature"]["name"]), str(bg["feature"]["desc"]) + (("
-
-" + tr("SHEET_BG_IN_GAME").format({"rule": rule})) if not rule.is_empty() else ""))
+		_entry(box, str(bg["feature"]["name"]), str(bg["feature"]["desc"]) + (("\n\n" + tr("SHEET_BG_IN_GAME").format({"rule": rule})) if not rule.is_empty() else ""))
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 	box.add_child(HSeparator.new())
 	_text(box, tr("SHEET_HIT_DICE").format({"left": ExplorationRules.hit_dice_left(c), "max": int(c.get("level", 1))}), UiTheme.MUTED_LABEL)

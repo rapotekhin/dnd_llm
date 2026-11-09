@@ -52,8 +52,7 @@ func _init() -> void:
 				"allies": [] if OS.get_environment("BALANCE_NO_ALLIES") == "1" else enc.get("allies", [])})
 			var log := _play(s, data)
 			if not only.is_empty() and i == 0:
-				print("
-".join(log))
+				print("\n".join(log))
 			if str(s.combat["outcome"]) == "victory":
 				wins += 1
 				hp_left += int(s.character["hp"])

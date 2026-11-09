@@ -817,12 +817,10 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		b.name = "Exit_" + e
 		b.tooltip_text = tr("CRIME_HELD") if CrimeRules.held(s) else room_name
 		if not why.is_empty():
-			b.tooltip_text = "%s
-%s" % [room_name, tr(why)]
+			b.tooltip_text = "%s\n%s" % [room_name, tr(why)]
 		var owner := str(world.site_of(e).get("owner", ""))
 		if private and not CrimeRules.held(s) and not owner.is_empty():
-			b.tooltip_text = "%s
-%s" % [room_name, tr("EXIT_PRIVATE_WELCOME" if SiteRules.unwelcome(s, Catalog.data, e).is_empty() else
+			b.tooltip_text = "%s\n%s" % [room_name, tr("EXIT_PRIVATE_WELCOME" if SiteRules.unwelcome(s, Catalog.data, e).is_empty() else
 				"EXIT_PRIVATE_TIP").format({"owner": world.npc_name(owner)})]
 	for w: Dictionary in WayRules.shut_exits(s, Catalog.data["world"], s.room_id):  # a flooded ford, greyed with why (v0.7.46)
 		var b := _exit_button(_exit_list, "→ %s (%s)" % [world.room(str(w["to"])).get("name", w["to"]), tr("EXIT_SHUT")], func() -> void: pass, false)
@@ -1452,8 +1450,7 @@ func _quest_buttons(s: GameSession, can_act: bool, only_npc: String) -> void:
 				EventBus.message.emit(tr(err)), can_act and near)
 		ab.name = "QuestTake_" + qid
 		var line := QuestGen.difficulty_line(Catalog.data, q)
-		ab.tooltip_text = str(q.get("description", "")) + ("
-" + line if not line.is_empty() else "") + ("" if near else "\n" + tr("QUEST_TAKE_FAR"))
+		ab.tooltip_text = str(q.get("description", "")) + ("\n" + line if not line.is_empty() else "") + ("" if near else "\n" + tr("QUEST_TAKE_FAR"))
 		ab.theme_type_variation = UiTheme.ACCENT_BUTTON
 	for t: Dictionary in QuestRules.talks_here(s, world):
 		if not only_npc.is_empty() and str(t["npc_id"]) != only_npc:

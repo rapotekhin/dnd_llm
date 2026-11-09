@@ -81,7 +81,6 @@ func run() -> void:
 		await press(end)
 		await wait_until(func() -> bool: return (CombatRules.is_player_turn(s) or not str(s.combat.get("outcome", "")).is_empty()) and not gs.is_busy(), 120.0)
 		await frames(3)
-	var log := "
-".join(said)
+	var log := "\n".join(said)
 	step("the allies strike on their own", names.any(func(n: String) -> bool: return said.any(func(l: String) -> bool: return l.begins_with(n))), log.right(600))
 	await shot("rounds")

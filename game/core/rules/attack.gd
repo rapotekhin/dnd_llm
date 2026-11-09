@@ -360,9 +360,7 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 		CombatRules.fx(s, str(t["id"]), "dodge")
 		return none
 	var hurt := _damage(s, data, f, t, b, adv and not dis, dis and not adv, crit)
-	CombatRules.line_tip(s, line, tip + "
-
-Урон: %s" % hurt["tip"])
+	CombatRules.line_tip(s, line, tip + "\n\nУрон: %s" % hurt["tip"])
 	var ctx := {"foe": str(f["id"]), "blow": b, "line": line, "crit": crit, "dmg": int(hurt["dmg"]), "types": hurt["types"], "notes": hurt["notes"], "prone": hurt["prone"],
 		"hit": true, "total": total, "ac": ac, "nat20": nat == 20}
 	if Sheet.is_hero(t):

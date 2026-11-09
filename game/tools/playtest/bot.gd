@@ -175,9 +175,7 @@ func _act() -> String:
 				var at := 0
 				while at < mini(before.length(), after.length()) and before[at] == after[at]:
 					at += 1
-				print("SAVE MISMATCH at %d:
-  before: %s
-  after:  %s" % [at, before.substr(maxi(0, at - 120), 240), after.substr(maxi(0, at - 120), 240)])
+				print("SAVE MISMATCH at %d:\n  before: %s\n  after:  %s" % [at, before.substr(maxi(0, at - 120), 240), after.substr(maxi(0, at - 120), 240)])
 			return "save_load",
 	]
 	for k in tries.size():
