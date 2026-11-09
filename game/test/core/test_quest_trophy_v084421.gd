@@ -28,7 +28,7 @@ func _taken() -> String:
 
 func _act(id: String, room: String) -> Dictionary:
 	var e := {"kind": "quest_act", "quest_id": id, "act": 1,
-		"encounters": [{"key": "wolf", "room": "pushcha-edge", "kind": "ambush", "enemies": [{"monster": "giant_rat", "count": 1}]}],
+		"encounters": [{"key": "wolf", "room": "pushcha-edge", "kind": "ambush", "enemies": [{"monster": "giant_rat", "count": 1}, {"monster": "rat", "count": 1}]}],
 		"items": [{"key": "hide", "item_id": "raw_hide", "room": room, "hint": "под лапником у стоянки", "dc_tier": "easy", "skill": "survival"}],
 		"steps": [{"text": "Одолеть волка на опушке", "kind": "fight", "target": "wolf"},
 			{"text": "Снять шкуру", "kind": "find", "target": "hide", "needs": {"kind": "fight", "target": "wolf"}, "needs_text": "сначала волк"},

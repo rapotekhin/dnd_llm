@@ -21,23 +21,30 @@ func test_one_hero_by_default_and_the_choice_is_kept_in_bounds() -> void:
 
 func test_the_budget_grows_with_the_party() -> void:
 	var s := TestUtils.new_session()
+	s.character["level"] = 3
 	s.settings["party"] = 1
 	var one := QuestGen.tier_xp(s, data, "medium", 3)
-	var cap := DifficultyRules.hard_cap(s, data)
+	assert_that(QuestGen.tier_band(s, data, "medium", 3)).is_equal(Vector2i(150, 224))  # v0.8.4.42.8: the DMG's medium, up to hard
+	assert_int(DifficultyRules.hard_cap(s, data)).is_equal(399)  # a hard fight at most: below deadly 400
 	s.settings["party"] = 3
 	assert_int(QuestGen.tier_xp(s, data, "medium", 3)).is_equal(one * 3)
-	assert_int(DifficultyRules.hard_cap(s, data)).is_equal(cap * 3)
+	assert_that(QuestGen.tier_band(s, data, "medium", 3)).is_equal(Vector2i(450, 674))
+	assert_int(DifficultyRules.hard_cap(s, data)).is_equal(1199)
+	assert_that(QuestGen.tier_band(s, data, "deadly", 3)).is_equal(Vector2i(1200, 1800))
 
 
 func test_a_fight_too_strong_for_one_fits_four() -> void:
 	var s := TestUtils.new_session()
-	var two_goblins := {"enemies": [{"monster": "goblin", "count": 2}]}
-	s.settings["party"] = 1  # 100 XP ×2 (two foes, a step up for one hero) = 200 > medium 50
-	assert_str(str(QuestGen._plan_encounter(s, data, two_goblins, "medium", 1, false, "a").get("reason", ""))).contains("не по силам")
-	s.settings["party"] = 4  # 100 ×1,5 = 150: between easy 100 and medium 200 for four
-	var plan := QuestGen._plan_encounter(s, data, two_goblins, "medium", 1, false, "a")
+	var four_goblins := {"enemies": [{"monster": "goblin", "count": 4}]}
+	s.settings["party"] = 1  # 200 XP ×2,5 (four foes, a step up for one hero) = 500 > 74 below hard 75
+	assert_str(str(QuestGen._plan_encounter(s, data, four_goblins, "medium", 1, false, "a").get("reason", ""))).contains("не по силам")
+	s.settings["party"] = 4  # 200 ×2 = 400: medium 200 … 299 for four? no — hard; three goblins 150 ×2 = 300 also hard
+	var two := {"enemies": [{"monster": "goblin", "count": 2}, {"monster": "kobold", "count": 2}]}  # 150 ×2 = 300 — hard for four
+	assert_str(str(QuestGen._plan_encounter(s, data, two, "medium", 1, false, "a").get("reason", ""))).contains("не по силам")
+	var fits := {"enemies": [{"monster": "goblin", "count": 2}, {"monster": "kobold", "count": 1}]}  # 125 ×2 = 250 of [200, 299]
+	var plan := QuestGen._plan_encounter(s, data, fits, "medium", 1, false, "a")
 	assert_bool(plan.has("reason")).override_failure_message(str(plan)).is_false()
-	var one := {"enemies": [{"monster": "goblin", "count": 1}]}  # 50: too easy for four
+	var one := {"enemies": [{"monster": "goblin", "count": 2}]}  # 100 ×1,5 = 150: easy for four, below medium 200
 	assert_str(str(QuestGen._plan_encounter(s, data, one, "medium", 1, false, "a").get("reason", ""))).contains("лёгкий")
 
 

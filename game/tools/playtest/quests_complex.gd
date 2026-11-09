@@ -68,7 +68,7 @@ func run() -> void:
 	await frames(3)
 	await shot("waits_for_act")
 	var lair := {"room_id": "pushcha-edge", "edge": 0, "rooms": [{"key": "den", "name": "Логово Хорта", "description": "Нора под корнями, пахнет пеплом.",
-		"encounter": {"enemies": [{"monster": "goblin", "name": "Хорт"}], "boss": true}}]}
+		"encounter": {"enemies": [{"monster": "goblin", "name": "Хорт"}, {"monster": "kobold"}], "boss": true}}]}  # the boss's fight is deadly by the DMG (v0.8.4.42.8)
 	var a2 := fx.validate(s, data, "t-a2", {"kind": "quest_act", "quest_id": qid, "act": 2, "new_places": [lair],
 		"steps": [{"text": "Одолеть Хорта", "kind": "fight", "target": "new:den"},
 			{"text": "Решить судьбу логова", "kind": "choice", "target": "new:den"}],

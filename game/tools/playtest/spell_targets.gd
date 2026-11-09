@@ -29,6 +29,10 @@ func run() -> void:
 			return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
 		return
 	await frames(3)
+	for foe_id: String in CombatRules.enemies(s):  # the allies' blows must not end the fight before the hero's next turn
+		var f := CombatRules.fighter(s, foe_id)
+		f["hp"] = 200
+		f["max_hp"] = 200
 	var ids := CombatRules.allies(s)
 	var cast: Button = find(screen(), "Cast_bless")
 	if not step("«Благословение» on the Spells tab", cast != null):

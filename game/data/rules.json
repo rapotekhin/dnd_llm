@@ -1357,7 +1357,8 @@
 				"attitude": 2
 			}
 		},
-		"_encounter_xp": "The DMG thresholds of an encounter for one hero by level 1..5 (raw XP of the foes, as xp_budget_hard): easy, medium, hard, deadly.",
+		"_encounter_xp": "The DMG thresholds of an encounter for one hero by level 1..5: easy, medium, hard, deadly. A fight of a tier weighs (foes' XP × the multiplier of their number, DifficultyRules.weigh) from its threshold up to the next one's (QuestGen.tier_band, v0.8.4.42.8), the deadly up to `deadly_top` of its own; times the party the fights are made for.",
+		"deadly_top": 1.5,
 		"encounter_xp": {
 			"easy": [
 				25,
@@ -3822,13 +3823,6 @@
 		},
 		"morale_dc": 10,
 		"intelligent_int": 6,
-		"xp_budget_hard": {
-			"1": 75,
-			"2": 150,
-			"3": 225,
-			"4": 375,
-			"5": 750
-		},
 		"moves": {
 			"_doc": "Ways of moving (v0.8.4.7, Move): one row is a new way for the hero, a person and a foe at once. `speed` — the key of the SRD template, `default` — without the key, `status` — the key of an effect giving feet (Fly), `word` — on a creature's card, `passes` — flags of the grid it crosses, `flat` — every square costs one, `on` — it goes only on squares with these flags and they cost one there, `air` — out of a blade's reach.",
 			"walk": {"speed": "speed", "default": 30},

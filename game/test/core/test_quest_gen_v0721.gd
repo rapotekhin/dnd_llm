@@ -53,9 +53,13 @@ func _taken(spec: Dictionary) -> String:
 	return id
 
 
-## A foe of a medium fight at level 1 for one hero by the DMG (v0.8.4.38): a giant rat, 25 XP ×1,5 = 38 of (25, 50].
+## Foes of a medium fight at level 1 for one hero by the DMG (v0.8.4.42.8): a giant rat and a rat, 35 XP ×2 = 70 of
+## [50, 74] — from the medium threshold up to the hard one; another monster as asked.
 func _wolf_at(room: String, key := "pack", n := 1, monster := "giant_rat") -> Dictionary:
-	return {"key": key, "room": room, "kind": "ambush", "enemies": [{"monster": monster, "count": n}]}
+	var foes: Array = [{"monster": monster, "count": n}]
+	if monster == "giant_rat" and n == 1:
+		foes.append({"monster": "rat", "count": 1})
+	return {"key": key, "room": room, "kind": "ambush", "enemies": foes}
 
 
 func test_a_skeleton_is_offered_and_waits_for_its_act_when_taken() -> void:
@@ -120,8 +124,9 @@ func test_a_fight_is_checked_by_the_difficulty_and_the_room() -> void:
 	var fight := {"text": "Отбиться", "kind": "fight", "target": "pack"}
 	var act := func(enc: Dictionary) -> String:
 		return str(_act({"quest_id": id, "act": 1, "encounters": [enc], "steps": [talk, fight]}).get("reason", ""))
-	assert_str(act.call(_wolf_at("pushcha-edge", "pack", 3, "bandit"))).contains("не по силам")  # 75 ×2,5 by the DMG > medium 50
-	assert_str(act.call(_wolf_at("pushcha-edge", "pack", 1, "rat"))).contains("слишком лёгкий")  # 10 ×1,5 — easy
+	assert_str(act.call(_wolf_at("pushcha-edge", "pack", 3, "bandit"))).contains("не по силам")  # 75 ×2,5 by the DMG > 74, below hard 75
+	assert_str(act.call(_wolf_at("pushcha-edge", "pack", 1, "rat"))).contains("слишком лёгкий")  # 10 ×1,5 — below medium 50
+	assert_str(act.call(_wolf_at("pushcha-edge", "pack", 1, "wolf"))).contains("не по силам")  # 50 ×1,5 = 75 — a hard fight already
 	assert_str(act.call(_wolf_at("brod-square"))).contains("люди")
 	assert_str(act.call(_wolf_at("pushcha-trail"))).contains("уже ждёт встреча")
 	assert_str(act.call(_wolf_at("brod-tavern-upstairs"))).contains("отдыха")
@@ -154,7 +159,7 @@ func test_a_hard_quest_by_acts_with_parts_a_lair_its_boss_and_the_choice() -> vo
 	assert_array(lines).contains(["«Пепельная стая»: акт «Акт 1» пройден"])
 	assert_array(QuestRules.awaiting(s, data["world"])).contains([id])
 	var lair := {"room_id": "pushcha-edge", "edge": 0, "rooms": [{"key": "den", "name": "Логово Хорта", "description": "Нора под корнями.",
-		"encounter": {"enemies": [{"monster": "goblin", "name": "Хорт"}], "boss": true}}]}
+		"encounter": {"enemies": [{"monster": "goblin", "name": "Хорт"}, {"monster": "kobold"}], "boss": true}}]}  # 75 ×2 = 150: the boss is the deadly fight [100, 150]
 	var act2 := {"quest_id": id, "act": 2, "new_places": [lair],
 		"steps": [{"text": "Одолеть Хорта", "kind": "fight", "target": "new:den"}]}
 	assert_str(str(_act(act2)["reason"])).contains("не меньше 4 шагов")
@@ -302,7 +307,7 @@ func test_a_visit_step_closes_on_arriving_and_never_where_the_hero_stands() -> v
 
 func test_a_part_done_stays_done_when_the_hero_moves_on() -> void:
 	var id := _taken(_skeleton("easy"))
-	var r := _act({"quest_id": id, "act": 1, "encounters": [_wolf_at("pushcha-edge", "pack", 1, "rat")],
+	var r := _act({"quest_id": id, "act": 1, "encounters": [_wolf_at("pushcha-edge", "pack", 1, "kobold")],  # easy: 25 ×1,5 of [25, 49]
 		"steps": [{"text": "Осмотреть штрек и отбить волка", "kind": "all", "parts": [{"text": "штрек", "kind": "visit", "target": "mine-flooded"},
 			{"text": "волк", "kind": "fight", "target": "pack"}]}]})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()
@@ -332,7 +337,7 @@ func test_only_a_named_foe_or_a_boss_must_be_beaten() -> void:
 	var id2 := _taken(_skeleton("medium", 1, "Вожак стаи"))
 	var target := _wolf_at("mine-flooded", "leader")
 	target["kind"] = "target"
-	target["enemies"] = [{"monster": "giant_rat", "name": "Седой"}]
+	target["enemies"] = [{"monster": "giant_rat", "name": "Седой"}, {"monster": "rat"}]
 	r = _act({"quest_id": id2, "act": 1, "encounters": [target], "steps": [{"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"},
 		{"text": "Убить вожака", "kind": "fight", "target": "leader"}]})
 	assert_bool(bool(r["accepted"])).override_failure_message(str(r)).is_true()

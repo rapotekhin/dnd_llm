@@ -162,10 +162,19 @@ static func _level(s: GameSession) -> int:
 	return clampi(int(s.character.get("level", 1)), 1, 5)
 
 
-## The DMG budget of one fight of a tier for the hero's level (raw XP of the foes, as xp_budget_hard), for the party the
-## game's fights are made for (DifficultyRules.party, v0.8.4.37).
+## The DMG threshold of a tier for the hero's level, for the party the game's fights are made for (DifficultyRules.party,
+## v0.8.4.37): a fight of that tier weighs at least this much.
 static func tier_xp(s: GameSession, data: Dictionary, tier: String, level: int) -> int:
 	return DifficultyRules.budget(s, data, int(cfg(data)["encounter_xp"].get(tier, [0, 0, 0, 0, 0])[clampi(level, 1, 5) - 1]))
+
+
+## The weighed XP of a fight of a tier by the DMG (v0.8.4.42.8, the author: a «medium» fight was the DMG's easy one): from
+## its threshold up to the next one's, the deadly up to `deadly_top` of its own. Vector2i(least, most).
+static func tier_band(s: GameSession, data: Dictionary, tier: String, level: int) -> Vector2i:
+	var up := tier_step(data, tier, 1)
+	var low := tier_xp(s, data, tier, level)
+	var top := tier_xp(s, data, up, level) - 1 if not up.is_empty() else int(round(low * float(cfg(data)["deadly_top"])))
+	return Vector2i(low, top)
 
 
 ## The tier one step harder (the boss of the last act) or one step easier (the floor of a fight).
@@ -365,14 +374,17 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setbac
 	var steps_min := maxi(1, int(d["steps"][0]) - int(q.get("made_steps", 0))) if last else 1
 	var fights_min := maxi(0, int(d["fights"][0]) - int(q.get("fights", 0))) if last else 0
 	var tier := str(d["fight"])
-	var floor_tier := tier_step(data, tier, -1)
+	var band := tier_band(s, data, tier, level)
+	var boss_up := tier_step(data, tier, 1)
+	var boss_band := tier_band(s, data, boss_up if not boss_up.is_empty() else tier, level)
 	if last:
 		out.append("Рамка последнего акта %d из %d: шагов в акте %d–%d — сколько нужно, чтобы довести задание до конца; боёв %d–%d." % [n + 1, acts.size(),
 			steps_min, steps_cap, fights_min, fights_cap])
 	else:
 		out.append("Рамка акта %d из %d: шагов в акте 1–%d (по шагу оставлено на каждый следующий акт), боёв 0–%d." % [n + 1, acts.size(), steps_cap, fights_cap])
-	out.append("Бой задания — «%s»: опыт врагов %d–%d на бой по DMG (уровень героя %d%s)%s. Опыт боя — сумма опыта врагов × множитель за их число: %s." % [tier, tier_xp(s, data, floor_tier, level) + 1 if not floor_tier.is_empty() else 1,
-		tier_xp(s, data, tier, level), level, (", бои на %d героев" % DifficultyRules.party(s, data)) if DifficultyRules.party(s, data) > 1 else "", ("; главарь (boss) в последнем акте — до %d" % tier_xp(s, data, tier_step(data, tier, 1) if not tier_step(data, tier, 1).is_empty() else tier, level)) if bool(d["boss"]) else "", DifficultyRules.crowd_line(s, data)])
+	out.append("Бой задания — «%s»: опыт боя %d–%d по DMG (уровень героя %d%s)%s. Опыт боя — сумма опыта врагов × множитель за их число: %s." % [tier,
+		band.x, band.y, level, (", бои на %d героев" % DifficultyRules.party(s, data)) if DifficultyRules.party(s, data) > 1 else "",
+		("; главарь (boss) в последнем акте — бой с ним %d–%d" % [boss_band.x, boss_band.y]) if bool(d["boss"]) else "", DifficultyRules.crowd_line(s, data)])
 	if last and bool(d["choice"]):
 		out.append("Финал: шаг choice с 2–3 выборами обязателен (флаг, отношение, перемена места).")
 	out.append("Награду назначит движок: %s и опыт к концу задания — не указывай её." % Money.format(DifficultyRules.reward(s, data, int(q.get("reward_cp", 0)))))
@@ -393,7 +405,7 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setbac
 	var edges := WorldGen.reach_edges(s, data).map(func(e: Dictionary) -> String: return "[%s] %s, край %d: %s (%s)" % [e["room_id"], e["room"], int(e["edge"]), e["text"], ", ".join(e.get("terrain", []))])
 	if not edges.is_empty():
 		out.append("Открытые края мира (для new_places — room_id и edge): " + "; ".join(edges))
-	var cap := tier_xp(s, data, tier_step(data, tier, 1) if bool(d["boss"]) and not tier_step(data, tier, 1).is_empty() else tier, level)
+	var cap := boss_band.y if bool(d["boss"]) else band.y
 	var foes: Array[String] = []
 	var ids: Array = (data["monsters"] as Dictionary).keys()
 	ids.sort_custom(func(a: String, b: String) -> bool: return int(data["monsters"][a]["xp"]) < int(data["monsters"][b]["xp"]))
@@ -751,16 +763,17 @@ static func _plan_encounter(s: GameSession, data: Dictionary, e: Dictionary, tie
 	if boss and not boss_ok:
 		return {"reason": "бой %s: главарь (boss) — только в последнем акте сложного или почти невозможного задания" % key}
 	var up := tier_step(data, tier, 1)
-	var cap := tier_xp(s, data, up if boss and not up.is_empty() else tier, level)
-	var low := tier_step(data, tier, -1)
-	var floor := tier_xp(s, data, low, level) if not low.is_empty() else 0
+	var band := tier_band(s, data, up if boss and not up.is_empty() else tier, level)
+	var cap := band.y
+	var floor := band.x
 	var weighed := DifficultyRules.of_monsters(data, enemies)  # by the DMG: the XP times the multiplier of their number (v0.8.4.38)
 	var xp := DifficultyRules.weigh(s, data, weighed)
 	if xp > cap:
 		return {"reason": "бой %s не по силам: %s при пределе %d (бой «%s», уровень %d, героев %d) — меньше врагов или слабее" % [key,
 			DifficultyRules.weigh_text(s, data, weighed), cap, tier, level, DifficultyRules.party(s, data)]}
-	if xp <= floor:
-		return {"reason": "бой %s слишком лёгкий для этой сложности: %s, нужно больше %d" % [key, DifficultyRules.weigh_text(s, data, weighed), floor]}
+	if xp < floor:
+		return {"reason": "бой %s слишком лёгкий для этой сложности: %s, нужно не меньше %d (бой «%s», уровень %d, героев %d) — больше врагов или сильнее" % [key,
+			DifficultyRules.weigh_text(s, data, weighed), floor, tier, level, DifficultyRules.party(s, data)]}
 	return {"enemies": enemies, "xp": xp, "boss": boss, "loot": {"coins_cp": 0, "items": {}}, "faction": _str(e, "faction")}
 
 

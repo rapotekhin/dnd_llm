@@ -47,9 +47,10 @@ static func budget(s: GameSession, data: Dictionary, one: int) -> int:
 	return one * party(s, data)
 
 
-## The ceiling of the master's own fights and reinforcements: the hard fight of the hero's level for the party.
+## The ceiling of the master's own fights, reinforcements and made lairs: a hard fight of the hero's level for the party
+## at most, by the DMG — below the deadly threshold (v0.8.4.42.8).
 static func hard_cap(s: GameSession, data: Dictionary) -> int:
-	return budget(s, data, int(CombatRules.cfg(data)["xp_budget_hard"].get(str(int(s.character.get("level", 1))), 750)))
+	return QuestGen.tier_band(s, data, "hard", int(s.character.get("level", 1))).y
 
 
 ## The DMG's multiplier for a fight of `count` foes against the game's party (v0.8.4.38): by `rules.difficulty.crowd`,

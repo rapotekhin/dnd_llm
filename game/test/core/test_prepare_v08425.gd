@@ -175,7 +175,7 @@ func test_the_next_act_is_built_ahead_on_the_last_step_and_laid_when_it_opens() 
 	var one := _lay([{"kind": "quest_act", "quest_id": id, "act": 1, "steps": [{"text": "Расспросить Миру", "kind": "talk", "target": "npc_serving"},
 		{"text": "Осмотреть опушку", "kind": "visit", "target": "pushcha-edge"}]}], "t-a1")
 	assert_array(one).is_not_empty()
-	var two := {"kind": "quest_act", "quest_id": id, "act": 2, "encounters": [{"key": "pack", "room": "pushcha-edge", "kind": "ambush", "enemies": [{"monster": "giant_rat", "count": 1}]}],
+	var two := {"kind": "quest_act", "quest_id": id, "act": 2, "encounters": [{"key": "pack", "room": "pushcha-edge", "kind": "ambush", "enemies": [{"monster": "giant_rat", "count": 1}, {"monster": "rat", "count": 1}]}],
 		"steps": [{"text": "Расспросить Миру снова", "kind": "talk", "target": "npc_serving"}, {"text": "Отбиться от волков", "kind": "fight", "target": "pack"}]}
 	assert_array(PrepareRules.jobs(s, data).filter(func(j: Dictionary) -> bool: return j["kind"] == "act")).has_size(1)  # v0.8.4.30: early
 	data["rules"]["prepare"]["act_steps"] = 1  # only on the last step, as in v0.8.4.25
