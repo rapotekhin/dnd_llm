@@ -180,10 +180,15 @@ async def _a1111(c: httpx.AsyncClient, spec: ImageModel, prompt: str, negative: 
 
 SAFE_TAGS = ("safe",)  # lifted by 18+
 NSFW_NEG = ("nsfw", "explicit", "nude")  # in the negative unless 18+
+MINOR_NEG = ("loli", "shota", "child")  # in the negative always (v0.7.38.7, back in v0.8.4.42.22)
+MINOR_WORDS = ("подрост", "ребён", "ребен", "дитя", "девочк", "мальчик", "child", "teen", "kid")
+
 
 def adult_frame(params: ImageParams) -> bool:
-    """18+ only when the game allows it."""
-    return params.adult
+    """18+ only when the game allows it and no child or teen is in the frame: by the engine's list and by the age words
+    of the lines themselves (v0.7.38.7, back in v0.8.4.42.22)."""
+    lines = " ".join([params.hero, *params.people]).lower()
+    return params.adult and not params.minors and not any(w in lines for w in MINOR_WORDS)
 
 
 def compose(spec: ImageModel, params: ImageParams, prompt: str, negative: str) -> tuple[str, str]:
@@ -200,7 +205,9 @@ def compose(spec: ImageModel, params: ImageParams, prompt: str, negative: str) -
     neg = ", ".join(x for x in (_tags(neg), "" if params.negative_only else _tags(negative)) if x)
     if adult:
         neg = _without(neg, NSFW_NEG)
-    return joined, neg
+    must = MINOR_NEG if adult else NSFW_NEG + MINOR_NEG  # the server's, whatever the player wrote
+    have = {t.strip().lower() for t in neg.split(",")}
+    return joined, ", ".join(x for x in (neg, ", ".join(t for t in must if t not in have)) if x)
 
 
 def _without(text: str, tags: tuple[str, ...]) -> str:
