@@ -155,7 +155,7 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 		var r := Sheet.save(s, data, t, str(fx["save"]["ability"]), int(fx["save"]["dc"]), tag)
 		failed = not bool(r["ok"])
 		margin = int(fx["save"]["dc"]) - int(r["total"])
-		lines.append("%s: спасбросок %s" % [me.get("name", ""), r["text"]])
+		lines.append(str(r["line"]))
 		save_at = lines.size() - 1
 	if fx.has("damage"):
 		var dmg := CombatRules.roll_dice(s.rng, str(fx["damage"]["dice"]))
@@ -344,7 +344,8 @@ static func charge_prone(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 	if spec.is_empty() or not Attack.up(s, t) or ConditionRules.has(me, "prone"):
 		return false
 	var r := Sheet.save(s, data, t, str(spec["save"]["ability"]), int(spec["save"]["dc"]))
-	lines.append("%s (%s): спасбросок %s" % [f["name"], spec["name"], r["text"]])
+	lines.append("%s — %s" % [f["name"], spec["name"]])
+	lines.append(str(r["line"]))
 	if bool(r["ok"]):
 		return false
 	ConditionRules.impose(s, data, {"condition": "prone", "ends": {}, "source": {"kind": "monster", "id": str(f["id"]), "name": "%s — %s" % [f["name"], spec["name"]]}}, t)

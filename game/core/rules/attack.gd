@@ -227,10 +227,10 @@ static func _saves(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 	var notes: Array[String] = []
 	notes.assign(sh["notes"])
 	var name := str(Sheet.holder(s, t).get("name", ""))
-	if (a["damage"] as Array).is_empty():
-		lines.append("%s — %s по %s: спасбросок %s" % [f["name"], a["name"], name, r["text"]])
-	else:
-		lines.append("%s — %s по %s: спасбросок %s, %d урона%s" % [f["name"], a["name"], name, r["text"], dmg, (" (%s)" % ", ".join(notes)) if not notes.is_empty() else ""])
+	lines.append("%s — %s по %s" % [f["name"], a["name"], name])
+	lines.append(str(r["line"]))
+	if not (a["damage"] as Array).is_empty():
+		lines.append("%s: %d урона%s" % [name, dmg, (" (%s)" % ", ".join(notes)) if not notes.is_empty() else ""])
 		Harm.take(s, data, t, dmg, lines, "", false, Sheet.is_hero(f))
 	if not ok and a.has("effect"):
 		MonsterRules.apply_effect(s, data, f, t, a, dmg, lines, {"ok": false, "dc": int(sv["dc"]), "total": int(r["total"])})
@@ -254,7 +254,7 @@ static func swing(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 		FightGrid.keep_seen(f)  # a strike gives an invisible foe away
 	var out := {"hit": false, "crit": false, "damage": 0}
 	var anim := AnimRules.blow(s, data, f, t, b)  # v0.8.4.23: the strike is seen before what comes of it
-	var stop := _stopped(s, data, f, t, blow)
+	var stop := _stopped(s, data, f, t, blow, lines)
 	if stop.is_empty():
 		out = _roll(s, data, f, t, blow, m, lines)
 	else:
@@ -284,7 +284,7 @@ static func _horde(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 
 
 ## What keeps the blow from being rolled at all: a line, or "".
-static func _stopped(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, b: Dictionary) -> String:
+static func _stopped(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, b: Dictionary, lines: Array[String]) -> String:
 	var who := str(Sheet.holder(s, f).get("name", ""))
 	var it := str(Sheet.holder(s, t).get("name", ""))
 	if CombatRules._missed_unseen(s, t):
@@ -293,7 +293,7 @@ static func _stopped(s: GameSession, data: Dictionary, f: Dictionary, t: Diction
 		return "%s бьёт в пустоту — %s нет на этом плане" % [who, it]
 	if bool(b.get("weapon", false)) and shot(f, t, b) and not (b.get("range", []) as Array).is_empty() and not SpellEffects.wall_between(s, data, f, t).is_empty():
 		return "%s — %s: снаряд сносит Стена ветра" % [who, b["name"]]  # v0.7.13.6
-	return SpellEffects.sanctuary(s, data, f, t)  # v0.7.13.2
+	return SpellEffects.sanctuary(s, data, f, t, lines)  # v0.7.13.2
 
 
 static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, b: Dictionary, m: Dictionary, lines: Array[String]) -> Dictionary:
@@ -573,9 +573,8 @@ static func _extras(s: GameSession, data: Dictionary, f: Dictionary, t: Dictiona
 		if not up(s, t):
 			break
 		if not str(x.get("save", "")).is_empty():  # a poison on the blade: the struck one's save, nothing on a success
-			var r := Sheet.save(s, data, t, str(x["save"]), int(x["dc"]), str(x["type"]))
-			if bool(r["ok"]):
-				lines.append("%s: спасбросок %s — яд не подействовал" % [x["name"], r["text"]])
+			if Sheet.saved(s, data, t, str(x["save"]), int(x["dc"]), str(x["type"]), false, lines):
+				lines.append("%s: яд не подействовал" % x["name"])
 				continue
 		if not (x.get("effect", {}) as Dictionary).is_empty():  # a made liquid on the blade (v0.8.4.28.5): a monster's attack's effect
 			MonsterRules.apply_effect(s, data, f, t, {"name": x["name"], "effect": x["effect"]}, 0, lines)

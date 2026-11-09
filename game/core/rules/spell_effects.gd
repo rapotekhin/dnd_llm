@@ -46,8 +46,10 @@ static func picks_count(data: Dictionary, spell_id: String, slot: int) -> int:
 
 ## Reduce on a foe (v0.7.50.1): a CON save or its blows weaken by 1d4 until the concentration ends.
 static func reduce_foe(s: GameSession, data: Dictionary, spell_id: String, f: Dictionary, lines: Array[String]) -> void:
-	var ok := Sheet.saved(s, data, f, "con", CombatRules.spell_dc(s), "magic")
-	lines.append("%s: %s — спасбросок Тел %s" % [data["spells"][spell_id]["name"], f["name"], "успех" if ok else "провал, уменьшается"])
+	lines.append("%s: %s" % [data["spells"][spell_id]["name"], f["name"]])
+	var ok := Sheet.saved(s, data, f, "con", CombatRules.spell_dc(s), "magic", false, lines)
+	if not ok:
+		lines.append("%s уменьшается" % f["name"])
 	if not ok:
 		ConditionRules.add_effect(Sheet.holder(s, f), {"source": {"kind": "spell", "id": spell_id, "name": str(data["spells"][spell_id]["name"])}, "reduced": true, "by": str(CombatRules.caster(s)["id"])})
 
@@ -335,11 +337,12 @@ static func against_attack(s: GameSession, data: Dictionary, f: Dictionary, t: D
 	return ""
 
 
-## Sanctuary on `t`: `f` passes a WIS save against its caster's DC or loses the blow. A line, or "".
-static func sanctuary(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary) -> String:
+## Sanctuary on `t`: `f` passes a WIS save against its caster's DC or loses the blow; the save's line goes to `lines`.
+## The line of the lost blow, or "".
+static func sanctuary(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, lines: Array[String]) -> String:
 	var it := Sheet.holder(s, t)
 	var on := hero_effects(it, "sanctuary")
-	if on.is_empty() or Sheet.saved(s, data, f, "wis", int(on[0].get("dc", 10)), "magic"):
+	if on.is_empty() or Sheet.saved(s, data, f, "wis", int(on[0].get("dc", 10)), "magic", false, lines):
 		return ""
 	return "%s не решается ударить %s — Святилище" % [Sheet.holder(s, f).get("name", ""), it.get("name", "")]
 
@@ -563,9 +566,10 @@ static func curse_foes(s: GameSession, data: Dictionary, spell_id: String, slot:
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
 	var dc := CombatRules.spell_dc(s)
-	var ok := Sheet.saved(s, data, target, str(sp.get("save", "cha")), dc, "magic")
-	lines.append("%s: %s — спасбросок %s против Сл %d %s" % [spell["name"], target["name"], CombatRules.ab_name(str(sp.get("save", "cha"))), dc,
-		"успех" if ok else "провал, %s" % text(data, sp)])
+	lines.append("%s: %s" % [spell["name"], target["name"]])
+	var ok := Sheet.saved(s, data, target, str(sp.get("save", "cha")), dc, "magic", false, lines)
+	if not ok:
+		lines.append("%s: %s" % [target["name"], text(data, sp)])
 	if not ok:
 		ConditionRules.add_effect(Sheet.holder(s, target), {"source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}, "die": str(sp["die"]), "on": ["attack", "save"], "minus": true,
 			"by": str(CombatRules.caster(s)["id"])})
@@ -922,7 +926,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 			var dmg := Sheet.taken(s, data, t, str(sus["type"]), CombatRules.roll_dice(s.rng, str(e["dice"])))
 			lines.append("%s: %s — %d (огонь)" % [name, t["name"], dmg])
 			Harm.take(s, data, t, dmg, lines, str(sus["type"]), false, by_hero)
-			if str(t.get("status")) == "active" and not Sheet.saved(s, data, t, "con", CombatRules.spell_dc(s), "magic"):
+			if str(t.get("status")) == "active" and not Sheet.saved(s, data, t, "con", CombatRules.spell_dc(s), "magic", false, lines):
 				CombatRules._hold(Sheet.holder(s, t), "mocked")  # the burning metal: disadvantage on its next attack
 				lines.append("%s едва держит раскалённое — атака с помехой" % t["name"])
 		"strike":
@@ -937,9 +941,7 @@ static func _hit(s: GameSession, data: Dictionary, spell_id: String, e: Dictiona
 				var f := CombatRules.fighter(s, fid)
 				if not FightGrid.in_cells(f, cells):
 					continue
-				if Sheet.saved(s, data, f, str(sus.get("save", "str")), CombatRules.spell_dc(s), "magic"):
-					lines.append("%s: %s устоял" % [name, f["name"]])
-				else:
+				if not Sheet.saved(s, data, f, str(sus.get("save", "str")), CombatRules.spell_dc(s), "magic", false, lines):
 					FightField.thrust(s, data, f, FightGrid.cell(t) - from, 3, lines)
 					lines.append("%s: %s отброшен на 15 фт" % [name, f["name"]])
 	return lines
@@ -950,10 +952,10 @@ static func _save_hit(s: GameSession, data: Dictionary, name: String, dtype: Str
 	if str(f.get("status")) != "active":
 		return lines
 	var sh := Harm.save_half(s, data, f, save, dc, [{"n": CombatRules.roll_dice(s.rng, dice), "type": dtype}], {"tag": "magic", "half": half})
-	var ok := bool(sh["ok"])
 	var dmg := int(sh["damage"])
-	lines.append("%s: %s — %s%d (%s)" % [name, f["name"], ("спасбросок %s %s, " % [CombatRules.ab_name(save), "успех" if ok else "провал"]) if not save.is_empty() else "",
-		dmg, data["misc"]["damage_types"].get(dtype, dtype)])
+	if not save.is_empty():
+		lines.append(str(sh["save"]["line"]))
+	lines.append("%s: %s — %d (%s)" % [name, f["name"], dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 	if dmg > 0:
 		Harm.take(s, data, f, dmg, lines, dtype, false, by_hero)
 	return lines
@@ -965,9 +967,9 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 	var lines: Array[String] = []
 	if str(f.get("status")) != "active" or str(z["save"]).is_empty():
 		return lines
-	var ok := Sheet.saved(s, data, f, str(z["save"]), int(z["dc"]), HeroDefense.cond_tags(data, [str(z.get("cond", ""))], [str(z.get("tag", "magic"))]))
+	lines.append("%s: %s" % [z["name"], f["name"]])
+	var ok := Sheet.saved(s, data, f, str(z["save"]), int(z["dc"]), HeroDefense.cond_tags(data, [str(z.get("cond", ""))], [str(z.get("tag", "magic"))]), false, lines)
 	if ok:
-		lines.append("%s: %s — спасбросок %s успех" % [z["name"], f["name"], CombatRules.ab_name(str(z["save"]))])
 		if bool(z.get("spare_saved", false)):  # Horrific Appearance: one who saved is not afraid of it again
 			z["spared"] = (z.get("spared", []) as Array) + [str(f["id"])]
 		return lines
@@ -1060,8 +1062,8 @@ static func cast_curse(s: GameSession, data: Dictionary, spell_id: String, slot:
 			var res := Attack.swing(s, data, me, f, Attack.of_spell(name, CombatRules.spell_attack(s), "0", 0, "force", false, int(spell.get("range_ft", 5))).merged({"spell": spell_id}), lines)
 			landed = bool(res["hit"])
 		else:
-			var ok := Sheet.saved(s, data, f, str(cu["save"]), dc, "magic")
-			lines.append("%s: %s — спасбросок %s %s" % [name, f["name"], CombatRules.ab_name(str(cu["save"])), "успех" if ok else "провал"])
+			lines.append("%s: %s" % [name, f["name"]])
+			var ok := Sheet.saved(s, data, f, str(cu["save"]), dc, "magic", false, lines)
 			landed = not ok
 			AnimRules.outcome(s, f, "debuff" if landed else "resist")
 		if not landed:
@@ -1290,7 +1292,7 @@ static func npc_save(s: GameSession, data: Dictionary, spell_id: String, npc_id:
 		return {"ok": false, "line": "%s: на %s не действует" % [spell["name"], name]}
 	var ab := str(sp.get("ability", spell.get("save", {}).get("ability", "wis")))  # Zone of Truth: CHA (v0.8.4.26.3)
 	var dc := CombatRules.spell_dc(s)
-	var r := Sheet.save(s, data, who, ab, dc, "charm,magic")
+	var r := Sheet.save(s, data, who, ab, dc, "charm,magic", false, {"quiet": true})
 	RollParts.note(s, "%s: %s" % [spell["name"], name], r["rolls"], int(r["nat"]), r["parts"], int(r["bonus"]), dc)
 	return {"ok": not bool(r["ok"]), "line": "%s: %s — спасбросок %s — %s" % [spell["name"], name, r["text"], "устоял" if bool(r["ok"]) else "поддался"]}
 

@@ -258,11 +258,23 @@ static func save(s: GameSession, data: Dictionary, who: Dictionary, ab: String, 
 	elif dis and not adv:
 		note += ", с помехой (%s)" % ", ".join(at["dis"])
 	var label := CombatRules.ab_name(ab) if not ab.is_empty() else "от смерти"  # `ab` "" — a death save (v0.8.4.29.2)
-	if hero and not bool(opts.get("quiet", false)):
-		RollParts.note(s, "Спасбросок: " + label, rolls, nat, parts, total - nat, dc)
+	var text := "%s %d против Сл %d%s — %s" % [label, total, dc, note, "успех" if ok else "провал"]
+	var line := "%s — спасбросок %s" % [str(me.get("name", "")), text]
+	if not bool(opts.get("quiet", false)):
+		_told(s, who, line, "Спасбросок: " + label, rolls, nat, parts, total - nat, dc)
 	return {"ok": ok, "total": total, "nat": nat, "rolls": rolls, "bonus": total - nat, "parts": parts,
-		"adv": at["adv"], "dis": at["dis"], "fail": at["fail"],
-		"text": "%s %d против Сл %d%s — %s" % [label, total, dc, note, "успех" if ok else "провал"]}
+		"adv": at["adv"], "dis": at["dis"], "fail": at["fail"], "text": text, "line": line}
+
+
+## Where a save's breakdown goes (v0.8.4.42.12): in a fight the hover of its line in the log, for anybody's save; out of
+## one a roll of the chat's next line of effects — the hero's own, since another's save there is a tick of the world told
+## by no line of its own (its caller notes it when it tells it: a charm on an NPC).
+static func _told(s: GameSession, who: Dictionary, line: String, what: String, rolls: Array, nat: int, parts: Array[Dictionary], bonus: int, dc: int) -> void:
+	if CombatRules.active(s):
+		CombatRules.line_tip(s, line, RollParts.text({"what": what, "rolls": rolls, "nat": nat, "parts": RollParts.fit(parts, bonus),
+			"total": nat + bonus, "dc": dc}))
+	elif is_hero(who):
+		RollParts.note(s, what, rolls, nat, parts, bonus, dc)
 
 
 ## A save's bonus and what it rolls with, nothing rolled or spent (Roll.odds): {bonus, adv, dis, failed}.
@@ -316,8 +328,13 @@ static func _save_parts(s: GameSession, data: Dictionary, who: Dictionary, ab: S
 	return parts
 
 
-static func saved(s: GameSession, data: Dictionary, who: Dictionary, ab: String, dc: int, tag: String = "", dis_extra := false) -> bool:
-	return bool(save(s, data, who, ab, dc, tag, dis_extra)["ok"])
+## Whether `who` passes; `lines` given — the save's own line goes there (one look for every save, v0.8.4.42.12).
+static func saved(s: GameSession, data: Dictionary, who: Dictionary, ab: String, dc: int, tag: String = "", dis_extra := false,
+		lines: Variant = null) -> bool:
+	var r := save(s, data, who, ab, dc, tag, dis_extra)
+	if lines is Array:
+		(lines as Array).append(str(r["line"]))
+	return bool(r["ok"])
 
 
 ## Why it has advantage on this save: names for the line, an empty list when none.

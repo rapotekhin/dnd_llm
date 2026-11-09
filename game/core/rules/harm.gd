@@ -247,8 +247,8 @@ static func survives(s: GameSession, data: Dictionary, who: Dictionary, dmg: int
 	var uf := MonsterRules.trait_of(data, who, "undead_fortitude")
 	if not uf.is_empty() and dtype != "radiant" and not crit:
 		var dc := 5 + dmg
-		if Sheet.saved(s, data, who, "con", dc):
-			lines.append("%s: %s (Тел против Сл %d) — встаёт с 1 HP" % [name, uf["name"], dc])
+		if Sheet.saved(s, data, who, "con", dc, "", false, lines):
+			lines.append("%s: %s — встаёт с 1 HP" % [name, uf["name"]])
 			return true
 	return false
 
@@ -270,7 +270,8 @@ static func _after(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, 
 		lines.append_array(ConditionRules.lose_concentration(s, data, who, "0 HP"))
 		return
 	var r := Sheet.save(s, data, who, "con", maxi(10, dmg / 2), "")
+	lines.append(str(r["line"]))
 	if bool(r["ok"]):
-		lines.append("%s: концентрация удержана (%s)" % [name, r["text"]])
+		lines.append("%s: концентрация удержана" % name)
 	else:
-		lines.append_array(ConditionRules.lose_concentration(s, data, who, r["text"]))
+		lines.append_array(ConditionRules.lose_concentration(s, data, who, "провален спасбросок"))

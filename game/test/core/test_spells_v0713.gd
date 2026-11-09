@@ -389,10 +389,31 @@ func test_sanctuary_holds_and_breaks() -> void:
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
 	_cast_self(s, "sanctuary")
 	s.character["spell_dc"] = 40
-	assert_str(SpellEffects.sanctuary(s, data, f, CombatRules.player(s))).contains("Святилище")
+	var said: Array[String] = []
+	assert_str(SpellEffects.sanctuary(s, data, f, CombatRules.player(s), said)).contains("Святилище")
 	CombatRules.economy(s)["action"] = 1
 	Acts.one("attack").go(s, data, CombatRules.player(s), str(f["id"]))
 	assert_array(SpellEffects.hero_effects(s.character, "sanctuary")).is_empty()
+
+
+## Every save of anybody tells its own line — who, the ability, the total against the DC, the outcome — with its roll on hover;
+## the caller's line tells only what follows (v0.8.4.42.12: the author did not see the foe's Wisdom save against Sanctuary).
+func test_a_save_of_anybody_tells_its_roll_and_dc() -> void:
+	var s := _hero("cleric_branko")
+	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
+	_cast_self(s, "sanctuary")
+	var lines: Array[String] = []
+	assert_str(SpellEffects.sanctuary(s, data, f, CombatRules.player(s), lines)).contains("Святилище")
+	assert_int(lines.size()).is_equal(1)
+	assert_str(lines[0]).starts_with("%s — спасбросок Мдр " % f["name"])
+	var dc := int(SpellEffects.hero_effects(s.character, "sanctuary")[0]["dc"])
+	assert_str(lines[0]).contains("против Сл %d" % dc).ends_with("провал")
+	var tip := CombatRules.tip_for(s, lines[0])
+	assert_str(tip).contains("Спасбросок: Мдр").contains("к20").contains("против Сл %d" % dc)
+	lines.clear()  # a spell's save of a foe: the same line, then what it did
+	assert_bool(Sheet.saved(s, data, f, "dex", 1, "magic", false, lines)).is_true()
+	assert_str(lines[0]).starts_with("%s — спасбросок Лов " % f["name"]).ends_with("успех")
+	assert_str(CombatRules.tip_for(s, lines[0])).contains("против Сл 1")
 
 
 func test_protection_from_energy_picks_the_foes_type() -> void:

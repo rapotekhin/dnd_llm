@@ -303,8 +303,10 @@ static func after_hit(s: GameSession, data: Dictionary, f: Dictionary, b: Dictio
 	if bool(opts.get("stunning", false)) and Stock.left(c, data, "ki") > 0:
 		Stock.use(c, data, "ki", 1, s.rng)
 		var dc := ki_dc(s, data, f)
-		var ok := Sheet.saved(s, data, t, "con", dc)
-		lines.append("Оглушающий удар: %s — спасбросок Тел против Сл %d — %s" % [it, dc, "устоял" if ok else "ошеломлён"])
+		lines.append("Оглушающий удар: %s" % it)
+		var ok := Sheet.saved(s, data, t, "con", dc, "", false, lines)
+		if not ok:
+			lines.append("%s ошеломлён" % it)
 		if not ok and not CombatRules.immune_to(data, t, "stunned"):
 			CombatRules._add_condition(s, data, t, "stunned", {"rounds": 1})
 	var oh := str(opts.get("open_hand", ""))
@@ -355,15 +357,16 @@ static func _open_hand(s: GameSession, data: Dictionary, f: Dictionary, t: Dicti
 	var it := str(Sheet.holder(s, t).get("name", ""))
 	match how:
 		"topple":
-			var ok := Sheet.saved(s, data, t, "dex", dc, HeroDefense.cond_tags(data, ["prone"]))
+			lines.append("Открытая ладонь: %s" % it)
+			var ok := Sheet.saved(s, data, t, "dex", dc, HeroDefense.cond_tags(data, ["prone"]), false, lines)
 			if not ok and not CombatRules.immune_to(data, t, "prone"):
 				CombatRules._hold(t, "prone")
-			lines.append("Открытая ладонь: %s — Лов против Сл %d — %s" % [it, dc, "устоял" if ok else "сбит с ног"])
+				lines.append("%s сбит с ног" % it)
 		"push":
-			var ok := Sheet.saved(s, data, t, "str", dc)
-			if not ok:
+			lines.append("Открытая ладонь: %s" % it)
+			if not Sheet.saved(s, data, t, "str", dc, "", false, lines):
 				CombatRules.push_away(s, data, t, 15)
-			lines.append("Открытая ладонь: %s — Сил против Сл %d — %s" % [it, dc, "устоял" if ok else "отброшен на 15 фт"])
+				lines.append("%s отброшен на 15 фт" % it)
 		"stagger":
 			t["reacted"] = true
 			lines.append("Открытая ладонь: %s до конца хода без реакций" % it)
@@ -714,8 +717,7 @@ static func _turn(s: GameSession, data: Dictionary, f: Dictionary, types: Array,
 		if not types.has(str(m.get("type", ""))) or FightGrid.feet(data, t, f) > 30:
 			continue
 		any = true
-		if Sheet.saved(s, data, t, "wis", dc, "magic"):
-			lines.append("%s выдерживает (Мдр против Сл %d)" % [t["name"], dc])
+		if Sheet.saved(s, data, t, "wis", dc, "magic", false, lines):
 			continue
 		if destroy_cr > 0.0 and float(m.get("cr", 9)) <= destroy_cr:
 			t["hp"] = 0
@@ -1042,10 +1044,10 @@ static func _breath(s: GameSession, data: Dictionary, f: Dictionary, target_id: 
 	var lines: Array[String] = ["%s выдыхает %s (%s)" % [c.get("name", ""), data["misc"]["damage_types"].get(dtype, dtype), dice.replace("d", "к")]]
 	for t: Dictionary in breath_caught(s, data, f, target_id):
 		var sh := Harm.save_half(s, data, t, ab, dc, [{"n": full, "type": dtype}], {"from": FightGrid.cell(f)})
-		var ok := bool(sh["ok"])
 		var dmg := int(sh["damage"])
 		AnimRules.outcome(s, t, "impact" if dmg > 0 else "resist", dtype)
-		lines.append("%s: %s против Сл %d — %s, %d" % [Sheet.holder(s, t).get("name", ""), CombatRules.ab_name(ab), dc, "успех" if ok else "провал", dmg])
+		lines.append(str(sh["save"]["line"]))
+		lines.append("%s: %d урона" % [Sheet.holder(s, t).get("name", ""), dmg])
 		if Sheet.is_hero(f):
 			CombatRules._caught_friend(s, data, t)
 		Harm.take(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(f))

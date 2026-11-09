@@ -963,13 +963,12 @@ static func _condition_on(s: GameSession, data: Dictionary, spell_id: String, sp
 		lines.append("%s: на %s не действует%s" % [name, t["name"], "" if no == "-" else " — " + no])
 		return
 	var ab := str(sp.get("save", {}).get("ability", spec.get("save", "dex")))  # Web asks of who is caught
-	var r := Sheet.save(s, data, t, ab, spell_dc(s), tag, _heighten(s))
-	var ok := bool(r["ok"])
+	lines.append("%s%s: %s" % [name, said, t["name"]])
+	var ok := Sheet.saved(s, data, t, ab, spell_dc(s), tag, _heighten(s), lines)
 	AnimRules.outcome(s, t, "resist" if ok else "debuff")
-	lines.append("%s%s: %s — спасбросок %s против Сл %d %s" % [name, said, t["name"], ab_name(ab), spell_dc(s),
-		"успех" if ok else "провал — " + ", ".join(conds.map(func(x: String) -> String: return cond_name(data, x)))])
 	if ok:
 		return
+	lines.append("%s: %s" % [t["name"], ", ".join(conds.map(func(x: String) -> String: return cond_name(data, x)))])
 	for cond: String in conds:
 		lines.append_array(_add_condition(s, data, t, cond, timer.merged({"tag": tag}, true)))
 	if bool(word.get("drop", false)):
@@ -1247,8 +1246,8 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 				var ok := bool(sh["ok"])
 				var dmg := int(sh["damage"])
 				AnimRules.outcome(s, tg, "impact" if dmg > 0 else "resist", dtype)
-				lines.append("%s: %s — спасбросок %s против Сл %d %s, %d (%s)" % [name, tg["name"], ab_name(save_ab),
-					dc, "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
+				lines.append(str(sh["save"]["line"]))
+				lines.append("%s: %s — %d (%s)" % [name, tg["name"], dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 				if by_hero:
 					_caught_friend(s, data, tg)
 				if dmg > 0:
@@ -1359,9 +1358,9 @@ static func _pick_shot(s: GameSession, data: Dictionary, v: Dictionary, target_i
 		var sp: Dictionary = data["spells"][spell_id]
 		var t := fighter(s, target_id)
 		var dtype := str(sp.get("damage_type", ""))
-		var ok := Sheet.saved(s, data, t, str(sp["save"]["ability"]), spell_dc(s), "magic")
+		var ok := Sheet.saved(s, data, t, str(sp["save"]["ability"]), spell_dc(s), "magic", false, lines)
 		var dmg := 0 if ok else Sheet.taken(s, data, t, dtype, roll_dice(s.rng, _empowered(s, _spell_dice(sp, slot, caster_level(s)))))
-		lines.append("%s: %s — спасбросок %s %s, %d (%s)" % [sp["name"], t["name"], ab_name(str(sp["save"]["ability"])), "успех" if ok else "провал", dmg, data["misc"]["damage_types"].get(dtype, dtype)])
+		lines.append("%s: %s — %d (%s)" % [sp["name"], t["name"], dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 		if dmg > 0:
 			Harm.take(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(caster(s)))
 
@@ -2008,13 +2007,15 @@ static func _death_save(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 		ds.merge({"ok": 0, "fail": 0}, true)
 		if not Sheet.is_hero(f):
 			f["status"] = "active"
-		lines.append("%s: спасбросок от смерти 20 — приходит в себя с 1 HP!" % name)
+		lines.append(str(r["line"]))
+		lines.append("%s приходит в себя с 1 HP!" % name)
 		return
 	if bool(r["ok"]):
 		ds["ok"] = int(ds["ok"]) + 1
 	else:
 		ds["fail"] = int(ds["fail"]) + (2 if roll == 1 else 1)
-	lines.append("%s: спасбросок от смерти %d — успехов %d, провалов %d" % [name, int(r["total"]), mini(3, int(ds["ok"])), mini(3, int(ds["fail"]))])
+	lines.append(str(r["line"]))
+	lines.append("%s: успехов %d, провалов %d" % [name, mini(3, int(ds["ok"])), mini(3, int(ds["fail"]))])
 	if int(ds["fail"]) >= 3:
 		_dies(s, f, lines)
 	elif int(ds["ok"]) >= 3:
@@ -2074,7 +2075,7 @@ static func _fire(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[
 	var burn := Sheet.taken(s, data, f, "fire", roll_dice(s.rng, dice))
 	lines.append("%s горит: %d (огонь)" % [f["name"], burn])
 	Harm.take(s, data, f, burn, lines, "fire")
-	if Attack.up(s, f) and Sheet.saved(s, data, f, str(out["ability"]), int(out["dc"])):
+	if Attack.up(s, f) and Sheet.saved(s, data, f, str(out["ability"]), int(out["dc"]), "", false, lines):
 		LiquidRules.uncoat(h)
 		lines.append("%s сбивает пламя" % f["name"])
 
@@ -2091,7 +2092,7 @@ static func _enemy_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: 
 	# Morale: once, at half HP or less.
 	if not bool(f.get("morale", false)) and int(f["hp"]) * 2 <= int(f["max_hp"]):
 		f["morale"] = true
-		if not Sheet.saved(s, data, f, "wis", int(cfg(data)["morale_dc"]), "fear"):  # its own save: Brave, the statuses
+		if not Sheet.saved(s, data, f, "wis", int(cfg(data)["morale_dc"]), "fear", false, lines):  # its own save: Brave, the statuses
 			if _intelligent(data, f) and FightGrid.touching(f, p):
 				lines.append_array(Acts.one("surrender").go(s, data, f))
 				return

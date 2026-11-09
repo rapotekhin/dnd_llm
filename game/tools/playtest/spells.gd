@@ -65,7 +65,8 @@ func run() -> void:
 		await press(find(ask, "Ask_conc_yes"))
 		await frames(4)
 	step("Bane now, Bless gone", str(c.get("concentration", "")) == "bane" and not SpellEffects.has(c, "die") or 		SpellEffects.hero_effects(c, "die").all(func(e: Dictionary) -> bool: return str(e["source"]["id"]) != "bless"), _tail(4))
-	step("Bane on the goblins", _seen.any(func(l: String) -> bool: return l.contains("Бедствие:") and l.contains("спасбросок")), _tail(6))
+	step("Bane on the goblins, each save its own line", _seen.any(func(l: String) -> bool: return l.contains("Бедствие:"))
+		and _seen.any(func(l: String) -> bool: return l.contains(" — спасбросок Хар ") and l.contains(" против Сл ")), _tail(6))
 	await shot("bane")
 
 	# v0.7.13.2: Shield of Faith asks too — «no» keeps Bane; Sanctuary (a bonus action) goes on.
