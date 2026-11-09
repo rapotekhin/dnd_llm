@@ -3387,8 +3387,10 @@
 		"permit": {"_doc": "The owner's leave (v0.7.39.2, SiteRules.ask / grant): «Попросить впустить» — a check of `skill` against the owner (SocialRules.dc at `tier`), a failure — again tomorrow; the master's `permit` and an organization's paid entry give it too. It lasts while the owner's attitude is not below min_attitude (the author: until a quarrel).", "skill": "persuasion", "tier": "medium", "min_attitude": 0}
 	},
 	"creatures": {
-		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay); a bound one stays and can be led.",
-		"leave_minutes": {"unconscious": 60, "surrendered": 30, "truce": 120, "dead": 4320, "bound": 240},
+		"_doc": "The creatures a fight leaves in the room (v0.7.22.11, CreatureRules): those of a truce, the surrendered and the knocked out stay; unbound they go after leave_minutes of their state (0 — they stay), the knocked out when they come to; a bound one stays and can be led.",
+		"leave_minutes": {"surrendered": 30, "truce": 120, "dead": 4320, "bound": 240},
+		"wake_hours": "1d4",
+		"_v08_4_42_21": "5e: one knocked out lies stable at 0 HP and comes to with 1 HP in wake_hours (rolled once, CreatureRules.comes_to), sooner when a night's rest of the world heals it. Unbound it slips away; bound it stays the hero's prisoner, surrendered, and tries its bonds from then on.",
 		"_v08_4_4": "A fight gives only XP (v0.8.4.4): a dead foe lies where it fell for leave_minutes.dead, what it had is looked through like a chest of body_capacity_lb.",
 		"body_capacity_lb": 2000,
 		"foe_ammo": 6,

@@ -2,7 +2,7 @@ extends "res://tools/playtest/playtest_base.gd"
 ## The prisoner's branch (python tools/godot_playtest.py --scenario captives), v0.7.22.17: «Сдаться» in a fight with
 ## bandits — a captive at once, the things in a chest of the room; broken free, the longsword taken back from it; a
 ## creature of a truce is talked to, not «a prisoner», and its replies go when it is let go; a goblin bound in Brod is
-## handed to the guard for a bounty.
+## handed to the guard for a bounty; a goblin knocked out and bound comes to within 1d4 hours, still bound (v0.8.4.42.21).
 
 
 func run() -> void:
@@ -105,6 +105,58 @@ func run() -> void:
 		await frames(3)
 		step("handed to the guard for a bounty", CreatureRules.find(s, s.room_id, str(gob["id"])).is_empty() and int(s.character["gold_cp"]) > gold, _chat(s))
 		await shot("handed_over")
+
+	await _wakes_bound(gs, s, data)
+
+
+## v0.8.4.42.21 (the author: «пленники остаются без сознания даже после долгого отдыха»): a goblin knocked out in a fight,
+## bound by the button, comes to within 1d4 hours of the «Ждать» window — still bound, the hero's prisoner, and it talks.
+func _wakes_bound(gs: Node, s: GameSession, data: Dictionary) -> void:
+	s.room_id = "outpost-yard"
+	gs.start_combat([{"monster": "goblin", "name": "Гоблин-лазутчик"}], {"room_from": "outpost-road"})
+	if not step("a fight with a goblin", await wait_until(func() -> bool:
+			return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 90.0)):
+		return
+	var fid: String = CombatRules.enemies(s)[0]
+	var f := CombatRules.fighter(s, fid)
+	FightGrid.put(f, FightGrid.free_near(s, data, FightGrid.cell(CombatRules.player(s)), int(f.get("span", 1))))
+	s.combat["nonlethal"] = true
+	s.combat["melee_strike"] = true
+	var lines: Array[String] = []
+	Harm.take(s, data, f, 999, lines)
+	s.combat.erase("melee_strike")
+	CombatRules.after_player_action(s, data)
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	gs.finish_combat()
+	await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)
+	await frames(3)
+	var c := CreatureRules.find(s, s.room_id, fid)
+	if not step("knocked out — it lies at 0 HP", str(c.get("state", "")) == "unconscious" and int(c.get("hp", -1)) == 0, str(c)):
+		return
+	await open_row("CreatureMore_" + fid)
+	var bind: Button = find(screen(), "Creature_bind_" + fid)
+	if not step("bind the knocked-out goblin", bind != null and not bind.disabled):
+		return
+	await press(bind)
+	await frames(3)
+	step("no talk while it lies", find(screen(), "Creature_talk_" + fid) == null)
+	await shot("bound_unconscious")
+	var game := screen()
+	game.get("_side").wait_requested.emit()
+	await frames(3)
+	var dialog: Control = find(game, "WaitView")
+	(find(dialog, "WaitMinutes") as SpinBox).value = 241
+	await frames(2)
+	await press(find(dialog, "DialogConfirm"))
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	await frames(3)
+	c = CreatureRules.find(s, s.room_id, fid)
+	step("came to within 1d4 hours — bound, the hero's prisoner, 1 HP",
+		str(c.get("state", "")) == "surrendered" and bool(c.get("bound", false)) and str(c.get("owner", "")) == OwnerRules.HERO and int(c.get("hp", 0)) >= 1, str(c))
+	step("the chat says it came to bound", _chat(s).contains("приходит в себя — связан"), _chat(s))
+	await open_row("CreatureMore_" + fid)
+	step("awake, it can be talked to", find(screen(), "Creature_talk_" + fid) != null)
+	await shot("bound_awake")
 
 
 func _chat(s: GameSession) -> String:

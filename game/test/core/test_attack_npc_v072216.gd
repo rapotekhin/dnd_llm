@@ -86,6 +86,7 @@ func test_a_knocked_out_npc_lies_as_a_creature_and_is_finished_off() -> void:
 	var s := _hero()
 	var f := _fight(s, [{"monster": "commoner", "name": "Мира", "npc_id": "npc_serving", "by_hero": true, "col": 0}])[0]
 	f["status"] = "unconscious"
+	f["hp"] = 0  # a knock-out leaves it at 0 HP (Harm.take)
 	_end(s, "victory")
 	assert_bool(s.npcs_here(data["world"], s.room_id).has("npc_serving")).is_false()
 	var c: Dictionary = CreatureRules.here(s, s.room_id)[0]
@@ -104,8 +105,9 @@ func test_a_knocked_out_npc_wakes_and_the_assault_is_known() -> void:
 	var s := _hero()
 	var f := _fight(s, [{"monster": "commoner", "name": "Мира", "npc_id": "npc_serving", "by_hero": true, "col": 0}])[0]
 	f["status"] = "unconscious"
+	f["hp"] = 0  # a knock-out leaves it at 0 HP (Harm.take)
 	_end(s, "victory")
-	var lines := TimeRules.advance(s, data, 120)
+	var lines := TimeRules.advance(s, data, 241)  # 5e: it comes to in 1d4 hours (v0.8.4.42.21)
 	assert_str(" · ".join(lines)).contains("приходит в себя")
 	assert_bool(s.held_as_creature("npc_serving")).is_false()
 	assert_int(s.attitude("npc_serving")).is_less(0)

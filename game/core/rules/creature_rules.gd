@@ -4,8 +4,8 @@ extends RefCounted
 ## knock-out no longer wipes the foes away — they stay as creatures of the room: the part `creature` of their record in
 ## s.beings (v0.7.62): {id, name, monster, state: truce | surrendered | unconscious, at, bound, led, since}. The hero ties up the beaten
 ## (`bind`), lets them go, leads a bound one along (it moves with the hero), talks to them (a master's turn) or
-## attacks them again (a fight). Left alone they go: a knocked-out one wakes and slips away, a truce lasts its hours
-## (rules.creatures).
+## attacks them again (a fight). Left alone they go: a knocked-out one comes to in 1d4 hours and slips away, a truce
+## lasts its hours (rules.creatures). v0.8.4.42.21: a bound one comes to as well and stays a prisoner (`comes_to`).
 ## v0.7.22.16 (the author's fixes check #21, #34): a creature keeps its HP and `xp_given` — attacked again it fights
 ## with its wounds and gives no XP twice; the helpless one (knocked out or bound) is finished off without a fight
 ## (5e: a melee blow at the helpless is a critical hit). A pack NPC knocked out lies here as a creature with its
@@ -87,6 +87,7 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String, treas
 			c["faction"] = FactionRules.of_foe(data, SceneRules.room(s, data["world"], room_id).get("encounter", {}), f)
 		if person:
 			c["npc_id"] = npc
+		comes_to(s, data, c, int(c["since"]))  # the hour it comes to is rolled at the blow
 		if state == DEAD:
 			c["name"] = "Тело: " + str(f["name"])
 			var at := FightGrid.cell(f)
@@ -452,8 +453,27 @@ static func _breaks_free(s: GameSession, data: Dictionary, c: Dictionary, now: i
 	return false
 
 
-## Time passes: an unbound knocked-out one wakes and slips away, an unbound surrendered one runs, a truce ends —
-## each after its rules.creatures minutes; a bound one left alone may break free. Lines only for the hero's room.
+## 5e: one lying stable at 0 HP comes to with 1 HP in 1d4 hours (rules.creatures.wake_hours), sooner when its wounds
+## heal (a night's rest of the world, Rest.tick). Any creature of a room, bound or not, a monster or a pack NPC; the
+## minute it wakes is rolled once (`wakes`). Awake it is a beaten one who gave up (`surrendered`), its bonds and owner
+## as they were; its escape counts from now. True when it woke now (v0.8.4.42.21).
+static func comes_to(s: GameSession, data: Dictionary, c: Dictionary, now: int) -> bool:
+	if str(c.get("state", "")) != "unconscious":
+		return false
+	if not c.has("wakes"):
+		c["wakes"] = now + CombatRules.roll_dice(s.rng, str(cfg(data)["wake_hours"])) * 60
+	if int(c.get("hp", 0)) <= 0 and now < int(c["wakes"]):
+		return false
+	c["hp"] = maxi(1, int(c.get("hp", 0)))
+	c["state"] = "surrendered"
+	c["since"] = now
+	c.erase("wakes")
+	return true
+
+
+## Time passes: a knocked-out one comes to (`comes_to`) — unbound it slips away, bound it stays the hero's prisoner; an
+## unbound surrendered one runs, a truce ends — each after its rules.creatures minutes; a bound one left alone may break
+## free. Lines only for the hero's room.
 static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	var now := TimeRules.abs_minute(s)
@@ -462,6 +482,19 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		if str(c["state"]) == DEAD and bool(c.get("kept", false)) and _empty(c):  # a heap taken away
 			remove(s, c)
 			continue
+		if comes_to(s, data, c, now):
+			var here := str(c["at"]) == s.room_id
+			if bool(c.get("bound", false)):
+				if here:
+					lines.append("%s приходит в себя — связан" % c["name"])
+				continue
+			if here:
+				lines.append("%s приходит в себя и уходит" % c["name"])
+			lines.append_array(_npc_back(s, data, c))
+			remove(s, c)
+			continue
+		if str(c["state"]) == "unconscious":
+			continue  # still lying: it neither runs nor tries its bonds
 		if _breaks_free(s, data, c, now):
 			lines.append_array(_npc_back(s, data, c))
 			remove(s, c)
@@ -472,7 +505,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 		if str(c["state"]) == DEAD:
 			_leave_things(s, data, c)
 		if str(c["at"]) == s.room_id and str(c["state"]) != DEAD:
-			lines.append("%s %s" % [c["name"], "приходит в себя и уходит" if str(c["state"]) == "unconscious" else "уходит"])
+			lines.append("%s уходит" % c["name"])
 		lines.append_array(_npc_back(s, data, c))
 		remove(s, c)
 	return lines

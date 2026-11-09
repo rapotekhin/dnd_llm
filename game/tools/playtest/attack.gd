@@ -49,7 +49,7 @@ func run() -> void:
 	await press(find(game, "Creature_search_" + str(c.get("id", ""))))
 	await frames(3)
 	step("searched", " ".join((s.chat.back() as Dictionary).get("lines", [])).contains("Обыскан"), _chat(s))
-	var woke := TimeRules.advance(s, data, 120)
+	var woke := TimeRules.advance(s, data, 241)  # 5e: it comes to in 1d4 hours (v0.8.4.42.21)
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var known := s.crimes.any(func(cr: Dictionary) -> bool: return str(cr.get("kind")) == "assault" and bool(cr["known"]))
