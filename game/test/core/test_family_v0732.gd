@@ -29,7 +29,7 @@ func _home(s: GameSession) -> void:
 	var room := s.room_id
 	PropertyRules.buy(s, data, "river_house")
 	PropertyRules.state(s.character)["river_house"]["deed"] = true
-	PropertyRules.upgrade(s, data, "river_house", "bed")
+	PropertyRules.apply_upgrade(s, data, "river_house", "bed")
 	TimeRules.advance(s, data, 1440)
 	s.room_id = room
 	s.minute = 12 * 60

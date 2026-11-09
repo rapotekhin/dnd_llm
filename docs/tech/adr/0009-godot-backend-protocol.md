@@ -206,6 +206,10 @@ Godot                                     llm_server
 - **`snapshot.combat`** — раунд, враги (id, имя, вид SRD, расстояние в футах, сторона, статус, здоровье словом — без чисел), упал ли герой, строки раунда, итог.
 - **Эффекты:** `damage` и `condition` с `target_id` врага (импровизация в бою); **`start_combat`** (`enemies` [{`monster`, `count`, `name`}]) — мастер зовёт врагов, движок проверяет бюджет опыта уровня. В бою `move`, `coins`, `give_item`, `take_item`, `npc_attitude`, `start_combat` отклоняются. `next_mode = combat` с `npc_id` — нападение на NPC сцены.
 
+### 130. Протокол 0.120.0 (v0.8.4.42.9)
+
+Снят эффект `create:supplier` (`SupplierEffect`): своя торговля вне игры до отладки (`rules.off.systems`, [бэклог](../../production/backlog.md#найм-доход-с-имущества-и-своя-торговля--вне-игры-до-отладки-v084429)). Поля дохода и штата `create:property` / `new_kind` и ключи `income_pct`, `staff_max`, `produce`, `produce_pct` у `UpgradeGives` остаются в схеме: движок отказывает, пока их части в `rules.off.parts`. Строка `character.shop` снимка пуста, пока система выключена.
+
 ### 129. Протокол 0.119.0 (v0.8.4.42)
 
 У `UpgradeGives` (эффект `create:upgrade`, улучшения вида места `new_kind`) новое поле `capacity_lb` (10–2000) — сколько фунтов держит сундук; только вместе со `storage`. Цену ставит движок: `base_cp.storage` и по `base_cp.capacity_lb` за фунт (`rules.property.upgrade_make`). Улучшение, которое даёт `rest`, `storage`, `station` или `object`, — вещь: игрок ставит её на свою клетку в окне «Обустройство» сразу, без срока работ (`BuildRules`); такую вещь можно попросить и на голой земле.

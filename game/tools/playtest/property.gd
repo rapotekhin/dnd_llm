@@ -1,7 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Property (python tools/godot_playtest.py --scenario property), v0.7.27: the clerk's places on sale, buying the house
-## and its deed, «Имущество» on the panel, a bed and a forge ordered and ready days later, a horse from the dealer at
-## the gate, the house on the map as the hero's.
+## and its deed, «Имущество» on the panel — no orders by days, no hiring, «Обустроить» opens the build screen
+## (v0.8.4.42.9), a horse from the dealer at the gate, the house on the map as the hero's.
 
 
 func run() -> void:
@@ -57,25 +57,23 @@ func run() -> void:
 	step("«Имущество» on the panel at home", own != null and own.text.contains("Дом у реки"), own.text if own != null else "")
 	await press(own)
 	await frames(4)
-	await press(find(win, "PropertyUpgrade_bed"))
-	await frames(3)
-	await press(find(win, "PropertyUpgrade_forge"))
-	await frames(4)
-	step("a bed and a forge ordered", not PropertyRules.pending(c, "river_house", "bed").is_empty() and not PropertyRules.pending(c, "river_house", "forge").is_empty())
 	await shot("home_window")
+	var orders := _named(win, ["PropertyUpgrade_", "PropertyBuild_", "PropertyHire_", "PropertyShift_", "PropertySerf_"])
+	step("no orders by days, no hiring, no shift in the window", orders.is_empty(), ", ".join(orders))
+	var furnish: Button = find(win, "PropertyFurnish_river_house")
+	step("«Обустроить» there", furnish != null and not furnish.disabled)
+	if furnish != null:
+		await press(furnish)
+		await frames(6)
+		var view: Control = find(screen(), "BuildView")
+		step("the build screen: a bed, a forge, a stall and a lock among its things", view != null and view.visible and find(view, "BuildItem_bed") != null
+			and find(view, "BuildItem_forge") != null and find(view, "BuildItem_stall") != null and find(view, "BuildItem_lock") != null)
+		await shot("build_screen")
+		if view != null:
+			view.visible = false
 	win.visible = false
 	node("EventBus").state_changed.emit()
 	await frames(2)
-	s.rested_at = TimeRules.abs_minute(s) + 4 * 1440  # the skip is not days without sleep
-	s.chat.append(GameSession.effect_entry(TimeRules.advance(s, data, 4 * 1440)))
-	node("EventBus").state_changed.emit()
-	await frames(3)
-	step("ready after days", PropertyRules.has_upgrade(c, "river_house", "bed") and PropertyRules.has_upgrade(c, "river_house", "forge"))
-	step("a free rest at home", ExplorationRules.can_rest(s, data["world"], data).is_empty())
-	await press(own if is_instance_valid(own) else find(screen(), "PropertyButton"))
-	await frames(4)
-	await shot("home_ready")
-	win.visible = false
 
 	s.room_id = "brod-gate"
 	node("EventBus").state_changed.emit()
@@ -111,6 +109,14 @@ func run() -> void:
 		await press(map)
 		await frames(6)
 		await shot("map")
+
+
+func _named(root: Node, starts: Array[String]) -> Array[String]:
+	var out: Array[String] = []
+	for n: Node in root.find_children("*", "", true, false):
+		if starts.any(func(p: String) -> bool: return str(n.name).begins_with(p)):
+			out.append(str(n.name))
+	return out
 
 
 func _last_effects(s: GameSession) -> String:

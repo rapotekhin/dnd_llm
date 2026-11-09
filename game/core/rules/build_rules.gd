@@ -37,13 +37,8 @@ static func where_why(s: GameSession, data: Dictionary, who: String = Being.HERO
 # --- the catalog -----------------------------------------------------------------------------------------------------
 
 
-## An upgrade that stands on a square: what it gives has a key of `furnish.things`.
-static func is_thing(data: Dictionary, u: Dictionary) -> bool:
-	var g: Dictionary = u.get("gives", {})
-	return (cfg(data)["things"] as Array).any(func(k: Variant) -> bool: return g.has(str(k)))
-
-
-## A thing of this kind is one to a place: a counter makes a shop of its own; an income or a staff place would add up.
+## A thing of this kind is one to a place: a counter makes a shop of its own; a lock, a stall, a porch, an income or a
+## staff place would add up (`furnish.things` — the keys a place may have many of).
 static func _one_only(data: Dictionary, u: Dictionary) -> bool:
 	var g: Dictionary = u.get("gives", {})
 	return g.has("object") or g.keys().any(func(k: Variant) -> bool: return not (cfg(data)["things"] as Array).has(k) and str(k) != "capacity_lb")
@@ -91,7 +86,7 @@ static func catalog(s: GameSession, data: Dictionary, pid: String, who: String =
 	var all_ups := PropertyRules.ups(data)
 	for up: String in all_ups:
 		var u: Dictionary = all_ups[up]
-		if is_thing(data, u) and PropertyRules.fits(s, data, pid, up, who):
+		if PropertyRules.fits(s, data, pid, up, who):  # every upgrade stands on a square (v0.8.4.42.9)
 			out.append({"id": up, "kind": THING, "name": str(u["name"]), "text": str(u.get("text", "")), "price_cp": int(u["price_cp"]),
 				"group": group_of(data, u)})
 	var pg: Dictionary = cfg(data)["passage"]

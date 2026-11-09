@@ -6210,55 +6210,6 @@
       "title": "StoredSpell",
       "type": "object"
     },
-    "SupplierEffect": {
-      "additionalProperties": false,
-      "description": "A wholesale supplier the world lacks (0.61.0): «Ведана, продашь мне травы оптом для моей лавки?». A scene NPC\nsells lots to a hero with the trade charter at `pct` of the value — its own goods or `goods` (catalog ids). The\nlots are bought by the «Опт» button — the engine's act.",
-      "properties": {
-        "goods": {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 12,
-          "title": "Goods",
-          "type": "array"
-        },
-        "kind": {
-          "const": "create",
-          "default": "create",
-          "title": "Kind",
-          "type": "string"
-        },
-        "npc_id": {
-          "title": "Npc Id",
-          "type": "string"
-        },
-        "pct": {
-          "anyOf": [
-            {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Pct"
-        },
-        "what": {
-          "const": "supplier",
-          "default": "supplier",
-          "title": "What",
-          "type": "string"
-        }
-      },
-      "required": [
-        "npc_id"
-      ],
-      "title": "SupplierEffect",
-      "type": "object"
-    },
     "UnlockEffect": {
       "additionalProperties": false,
       "description": "A locked container opens (0.28.0): `key` the hero carries, or after a passed check this turn — `pick`\n(Sleight of Hand with thieves' tools) or `force` (Athletics; it breaks).",
@@ -6906,7 +6857,6 @@
                 "recipe": "#/$defs/RecipeEffect",
                 "service": "#/$defs/ServiceEffect",
                 "stock": "#/$defs/StockEffect",
-                "supplier": "#/$defs/SupplierEffect",
                 "upgrade": "#/$defs/UpgradeEffect",
                 "way": "#/$defs/WayEffect",
                 "wilds": "#/$defs/WildsEffect"
@@ -6934,9 +6884,6 @@
               },
               {
                 "$ref": "#/$defs/WayEffect"
-              },
-              {
-                "$ref": "#/$defs/SupplierEffect"
               },
               {
                 "$ref": "#/$defs/BankEffect"
@@ -7232,7 +7179,6 @@
               "recipe": "#/$defs/RecipeEffect",
               "service": "#/$defs/ServiceEffect",
               "stock": "#/$defs/StockEffect",
-              "supplier": "#/$defs/SupplierEffect",
               "upgrade": "#/$defs/UpgradeEffect",
               "way": "#/$defs/WayEffect",
               "wilds": "#/$defs/WildsEffect"
@@ -7260,9 +7206,6 @@
             },
             {
               "$ref": "#/$defs/WayEffect"
-            },
-            {
-              "$ref": "#/$defs/SupplierEffect"
             },
             {
               "$ref": "#/$defs/BankEffect"

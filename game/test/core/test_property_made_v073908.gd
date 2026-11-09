@@ -8,7 +8,7 @@ var data: Dictionary
 
 
 func before_test() -> void:
-	data = TestUtils.data()
+	data = TestUtils.trade_on(TestUtils.data())  # a made kind's income and staff are out of the game since v0.8.4.42.9
 
 
 func _session() -> GameSession:
@@ -38,8 +38,13 @@ func _made(s: GameSession, kind: Dictionary, price: int = 15000) -> String:
 	return id
 
 
+## The upgrades the place may take (the build screen's things).
+func _ups(s: GameSession, id: String) -> Array:
+	return PropertyRules.ups(data).keys().filter(func(up: String) -> bool: return PropertyRules.fits(s, data, id, up))
+
+
 func _up(s: GameSession, id: String, name: String) -> String:
-	for up: String in PropertyRules.upgrades_for(s, data, id):
+	for up: String in _ups(s, id):
 		if str(PropertyRules.ups(data)[up]["name"]) == name:
 			return up
 	return ""
@@ -47,9 +52,8 @@ func _up(s: GameSession, id: String, name: String) -> String:
 
 func _build(s: GameSession, id: String, name: String) -> String:
 	var up := _up(s, id, name)
-	assert_str(PropertyRules.upgrade_why(s, data, id, up)).override_failure_message(name).is_empty()
-	PropertyRules.upgrade(s, data, id, up)
-	_days(s, int(PropertyRules.ups(data)[up]["days"]))
+	assert_str(up).override_failure_message(name).is_not_empty()
+	PropertyRules.apply_upgrade(s, data, id, up)  # what the build screen lays on a square, at once (v0.8.4.42.9)
 	assert_bool(PropertyRules.has_upgrade(s.character, id, up)).override_failure_message(name).is_true()
 	return up
 
@@ -73,9 +77,9 @@ func test_a_school_of_the_masters_kind_with_its_upgrades() -> void:
 	var s := _session()
 	var id := _made(s, SCHOOL)
 	assert_str(str(PropertyRules.kind(s, data, id)["name"])).is_equal("школа")
-	var mine: Array = PropertyRules.upgrades_for(s, data, id).filter(func(u: String) -> bool: return u.begins_with("gen_u_"))
+	var mine: Array = _ups(s, id).filter(func(u: String) -> bool: return u.begins_with("gen_u_"))
 	assert_int(mine.size()).is_equal(3)
-	assert_bool(PropertyRules.upgrades_for(s, data, id).has("bed")).is_true()  # the common ones work everywhere
+	assert_bool(_ups(s, id).has("bed")).is_true()  # the common ones work everywhere
 	var base := PropertyRules.income_day(s, data, id)
 	assert_int(base).is_equal(40)
 	assert_int(PropertyRules.places(s, data, id)[0]["max"]).is_equal(1)
@@ -153,7 +157,7 @@ func test_a_jewelers_bench_asked_at_home_and_a_ring_made() -> void:
 	assert_bool(CraftRules.station_here(s, data, station)).is_true()
 	var other := _session()  # another place does not see it
 	assert_bool(PropertyRules.ups(data)[up]["places"].has("river_house")).is_true()
-	assert_bool(PropertyRules.upgrades_for(other, data, "old_mill").has(up)).is_false()
+	assert_bool(PropertyRules.fits(other, data, "old_mill", up)).is_false()
 	var rec := engine.validate(s, data, "t-2", {"kind": "create", "what": "recipe", "tool": "jewelers_tools", "station": station, "hours": 2, "dc_tier": "easy",
 		"materials": [{"item_id": "silver_bar", "qty": 1}], "output_id": "silver_ring"})
 	assert_bool(bool(rec["accepted"])).override_failure_message(str(rec.get("reason", ""))).is_true()

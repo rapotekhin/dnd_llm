@@ -1730,7 +1730,7 @@ func job_act(what: String, id: String) -> String:
 	return ""
 
 
-## Property (v0.7.27): buy, deed, collect, shift, worker, serf, upgrade, build, repair, animal, release — the
+## Property (v0.7.27): buy, deed, collect, shift, worker, serf, repair, animal, release — the
 ## engine's acts by the buttons of the property window. "" or a localization key.
 func property_act(what: String, id: String, arg: String = "") -> String:
 	if not _at_leisure():
@@ -1754,8 +1754,6 @@ func property_act(what: String, id: String, arg: String = "") -> String:
 		"hire": _row(PropertyRules.worker_why, PropertyRules.hire_worker, b),
 		"fire": _row(PropertyRules.fire_why, PropertyRules.fire, b),
 		"serf": _row(PropertyRules.serf_why, PropertyRules.set_serf, b),
-		"upgrade": _row(PropertyRules.upgrade_why, PropertyRules.upgrade, b),
-		"build": _row(PropertyRules.build_why, PropertyRules.build, b),
 		"animal": _row(PropertyRules.animal_why, PropertyRules.buy_animal, b),
 		"rent": _row(MountRules.rent_why, MountRules.rent, rent),
 		"sell_animal": _row(MountRules.sell_why, MountRules.sell, b),

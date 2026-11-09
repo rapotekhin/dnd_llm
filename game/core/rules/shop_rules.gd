@@ -8,6 +8,13 @@ extends RefCounted
 ## wholesale at the suppliers; without it the guard fines. The merchant's reputation of a location scales the buyers.
 ## State: c["shop"] {venues: {vid: {stock, prices, cash, last_day, last}}, charters: {loc: day}, rep: {loc: float}};
 ## a venue's id is its property id. Every act is a button (GameState.shop_act).
+## Out of the game since v0.8.4.42.9 (`rules.off.systems`, the backlog of docs/production/roadmap.md): with no
+## `rules.shop` there is no own trade — no charter, stall, counter, shelf, wholesale or supplier of the master.
+
+
+## Whether one's own trade is in the game: `rules.shop` stays unless `rules.off.systems` names it (Catalog.cut).
+static func on(data: Dictionary) -> bool:
+	return data["rules"].has("shop")
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -49,7 +56,7 @@ static func from_till(c: Dictionary, vid: String, sum: int) -> int:
 
 ## The trade of a hero's object: its kind's `trade` ({} — it does not trade).
 static func kind_cfg(s: GameSession, data: Dictionary, vid: String, who: String = Being.HERO) -> Dictionary:
-	if not data["rules"].has("shop") or not PropertyRules.owned(Life.of(s, who, data), vid):
+	if not on(data) or not PropertyRules.owned(Life.of(s, who, data), vid):
 		return {}
 	return PropertyRules.kind(s, data, vid, who).get("trade", {})
 
@@ -69,7 +76,7 @@ static func name_of(s: GameSession, data: Dictionary, vid: String) -> String:
 ## The hero's venues: the objects of trading kinds (a lapsed stall keeps its shelf until taken back).
 static func venues(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Array[String]:
 	var out: Array[String] = []
-	if not data["rules"].has("shop"):
+	if not on(data):
 		return out
 	for id: String in PropertyRules.state(Life.of(s, who, data)):
 		if not kind_cfg(s, data, id, who).is_empty():
@@ -379,7 +386,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 ## One holder's day (v0.8.4.20): the hero's, or a person's who keeps a part of this life.
 static func tick_of(s: GameSession, data: Dictionary, who: String) -> Array[String]:
 	var lines: Array[String] = []
-	if not data["rules"].has("shop") or not Life.of(s, who, data).has("shop"):
+	if not on(data) or not Life.of(s, who, data).has("shop"):
 		return lines
 	for vid: String in venues(s, data, who):
 		var v := venue(Life.of(s, who, data), vid)
@@ -424,7 +431,7 @@ static func _fine_till(s: GameSession, data: Dictionary, vid: String, who: Strin
 
 
 static func _registry_here(s: GameSession, data: Dictionary, npc_id: String, who: String = Being.HERO) -> String:
-	if not data["rules"].has("shop") or not PropertyRules.is_registry(data, npc_id):
+	if not on(data) or not PropertyRules.is_registry(data, npc_id):
 		return "SHOP_NO_SERVICE"
 	return "" if Life.beside(s, data, who, npc_id) else "SHOP_NOT_HERE"
 
@@ -455,7 +462,7 @@ static func charter(s: GameSession, data: Dictionary, _npc_id: String, who: Stri
 
 
 static func is_supplier(s: GameSession, data: Dictionary, npc_id: String) -> bool:
-	if not data["rules"].has("shop"):
+	if not on(data):
 		return false
 	return WorldGen.generated(s).get("suppliers", {}).has(npc_id) or WorldView.new(data["world"]).npc(npc_id).has("wholesale")
 
@@ -508,7 +515,7 @@ static func wholesale(s: GameSession, data: Dictionary, npc_id: String, item_id:
 
 
 static func text(s: GameSession, data: Dictionary) -> String:
-	if not data["rules"].has("shop"):
+	if not on(data):
 		return ""
 	var parts: Array[String] = []
 	for loc: String in _part(s.character, "charters"):
@@ -528,38 +535,3 @@ static func text(s: GameSession, data: Dictionary) -> String:
 	if parts.is_empty():
 		return ""
 	return "Своя торговля (окно «Лавка», грамота и прилавок у писаря, «Опт» у поставщика — кнопки): " + "; ".join(parts)
-
-
-## The master's supplier (effect `supplier`): a scene NPC sells wholesale to a charter holder. {plan, summary} or {reason}.
-static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
-	var m: Dictionary = cfg(data)["make"]
-	var who := str(spec.get("npc_id", ""))
-	if not s.npcs_here(data["world"], s.room_id).has(who):
-		return {"reason": "%s не в сцене — поставщиком становится только тот, кто здесь" % who}
-	if is_supplier(s, data, who):
-		return {"reason": "%s уже продаёт оптом — кнопка «Опт» в его действиях" % WorldView.new(data["world"]).npc_name(who)}
-	var list: Array = []
-	for id: Variant in spec.get("goods", []):
-		if not data["items"]["catalog"].has(str(id)) and not s.items.has(str(id)):
-			return {"reason": "нет вещи %s в каталоге — сначала find_items" % id}
-		if not list.has(str(id)):
-			list.append(str(id))
-	if list.size() > int(m["max_goods"]):
-		return {"reason": "goods — не больше %d" % int(m["max_goods"])}
-	if list.is_empty() and TradeRules.pack_stock(WorldView.new(data["world"]).npc(who), data["rules"]).is_empty():
-		return {"reason": "у %s нет своих товаров — перечисли goods" % who}
-	var pct := int(spec.get("pct", cfg(data)["wholesale"]["pct"])) if spec.get("pct") != null else int(cfg(data)["wholesale"]["pct"])
-	if pct < int(m["pct"][0]) or pct > int(m["pct"][1]):
-		return {"reason": "pct — от %d до %d" % [int(m["pct"][0]), int(m["pct"][1])]}
-	var def := {"pct": pct}
-	if not list.is_empty():
-		def["goods"] = list
-	return {"plan": {"npc": who, "def": def}, "summary": "Опт — %s: %d%% цены" % [WorldView.new(data["world"]).npc_name(who), pct]}
-
-
-static func apply_make(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
-	var gen := WorldGen.generated(s)
-	var sup: Dictionary = gen.get("suppliers", {})
-	sup[str(plan["npc"])] = (plan["def"] as Dictionary).duplicate(true)
-	gen["suppliers"] = sup
-	return ["%s продаёт оптом торговцам с грамотой — кнопка «Опт» в его действиях" % WorldView.new(data["world"]).npc(str(plan["npc"])).get("name", plan["npc"])]

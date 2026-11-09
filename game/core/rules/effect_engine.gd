@@ -231,7 +231,6 @@ func _table() -> Dictionary:
 		"create:job": {"plan": _plan_job, "apply": JobRules.apply_make},
 		"create:course": {"plan": _plan_course, "apply": StudyRules.apply_make},
 		"create:way": {"rule": WayRules.plan_make, "apply": WayRules.apply_make},
-		"create:supplier": {"rule": ShopRules.make, "apply": ShopRules.apply_make},
 		"create:bank": {"rule": BankRules.make, "do": _do_bank},
 		"create:service": {"plan": _plan_service, "do": _do_service},
 		"create:fence": {"rule": FenceRules.make, "apply": FenceRules.apply_make},
@@ -499,9 +498,8 @@ func _plan_upgrade(s: GameSession, data: Dictionary, turn_id: String, e: Diction
 	var up := PropertyRules.plan_asked(s, data, e)
 	if up.has("reason"):
 		return {"reason": up["reason"]}
-	var when := "ставится руками в «Обустройстве»" if BuildRules.is_thing(data, up["def"]) else "%s работы" % CalendarRules.days_count(int(up["def"]["days"]))
-	return {"plan": up, "summary": "Улучшение для «%s»: %s — %s, %s" % [PropertyRules.name_of(s, data, str(up["place"])), up["def"]["name"],
-		Money.format(int(up["def"]["price_cp"])), when]}
+	return {"plan": up, "summary": "Улучшение для «%s»: %s — %s, ставится руками в «Обустройстве»" % [PropertyRules.name_of(s, data, str(up["place"])),
+		up["def"]["name"], Money.format(int(up["def"]["price_cp"]))]}
 
 
 func _plan_course(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
@@ -1239,10 +1237,6 @@ func _do_make(s: GameSession, plan: Dictionary) -> void:
 
 func _do_guise(s: GameSession, plan: Dictionary) -> void:
 	_extra_lines.append_array(Guise.apply(s, _data, plan))
-
-
-func _do_supplier(s: GameSession, plan: Dictionary) -> void:
-	_extra_lines.append_array(ShopRules.apply_make(s, _data, plan))
 
 
 func _do_fence(s: GameSession, plan: Dictionary) -> void:

@@ -1313,7 +1313,6 @@ PROPERTY_TILL,в кассе {money}
 PROPERTY_DEBT,долг по налогу {money}
 PROPERTY_WORKER,"{role}: {name}, {wage} в день"
 PROPERTY_SERF,"{role}: {name}, подневольный, за еду"
-PROPERTY_PENDING,{name} (готово в день {day})
 PROPERTY_UPGRADES,Обустроено: {list}
 PROPERTY_GO_THERE,Делами места займитесь на месте.
 PROPERTY_ANIMALS,Животные: {list}
@@ -1334,8 +1333,6 @@ BTN_PROPERTY_SERF,Приставить к работе: {name}
 BTN_PROPERTY_FIRE,Рассчитать
 PROPERTY_RENT_UNTIL,"Снято до дня {day}"
 BTN_PROPERTY_REPAIR,"Починить — {cost}, {time}"
-BTN_PROPERTY_BUILD,"Построить: {name} — {price}, {days} дн."
-BTN_PROPERTY_UPGRADE,"{name} — {price}, {days} дн."
 BTN_ANIMAL_LEAD,Взять с собой
 BTN_ANIMAL_RELEASE,Отпустить
 CONFIRM_ANIMAL_RELEASE_TITLE,Отпустить: {name}?
@@ -1360,8 +1357,7 @@ PROPERTY_HAS_WORKER,Работник уже есть
 PROPERTY_NO_WORKER,Работника нет
 PROPERTY_NO_SLAVERY,В этом мире нет крепостных и рабов
 PROPERTY_NOT_A_SERF,Это не ваш пленник
-PROPERTY_NO_UPGRADE,Этого здесь не устроить
-PROPERTY_UPGRADE_HAS,Уже есть или строится
+PROPERTY_UPGRADE_HAS,Такое здесь уже стоит
 PROPERTY_NEEDS_ROOF,Нужна крыша — сначала постройте дом
 BTN_PROPERTY_FURNISH,Обустроить
 BTN_PROPERTY_FURNISH_TIP,"Экран строительства: стены, окна, двери, вещи по клеткам и проходы в новые комнаты"
@@ -1383,6 +1379,7 @@ BUILD_GROUP_CRAFT,Ремесло
 BUILD_GROUP_REST,Отдых
 BUILD_GROUP_STORAGE,Хранение
 BUILD_GROUP_TRADE,Торговля
+BUILD_GROUP_YARD,Двор и скот
 BUILD_GROUP_DECOR,Обстановка
 BUILD_GROUP_WAYS,Проходы
 BUILD_NOT_HOME,Обустраивать можно только своё место — встаньте в нём
@@ -1414,8 +1411,6 @@ BUILD_NOTHING,Здесь нет ваших построек
 BUILD_KEEP_OBJECT,Прилавок держит свою лавку — его не убрать
 BUILD_CHEST_FULL,Сначала выньте вещи из сундука
 BUILD_KEEP_WAY,Проход в новую комнату не убрать
-PROPERTY_NOT_LAND,Строятся только на своей земле
-PROPERTY_BUILDING,Стройка уже идёт
 PROPERTY_NO_ANIMAL,Такого животного нет
 NG_SLAVERY,Крепостные и рабы
 NG_SLAVERY_HINT,Жёсткий мир: пленника-человека можно продать или приставить к работе в своём имуществе. По умолчанию выключено.

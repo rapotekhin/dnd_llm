@@ -2,7 +2,8 @@ class_name PropertyPanel
 extends ModalFrame
 ## The property window (roadmap v0.7.27): at a seller — its places on sale and the price; at the registry — the deed
 ## for what the hero bought; at a dealer — animals; from the panel — the hero's own places: the deed, the condition,
-## the till, the worker, upgrades and building, and the acts of the place while the hero is in it. Every act is
+## the tax, what was set up there, the repair and «Обустроить» while the hero is in it (v0.8.4.42.9: every thing and
+## upgrade is set in the build screen at once; hiring and income are out of the game for a while). Every act is
 ## GameState.property_act: the engine decides.
 
 signal furnish_requested  ## the build screen of the place the hero stands in (v0.8.4.42)
@@ -221,7 +222,8 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 		bits.append(tr("PROPERTY_COND").format({"n": int(st.get("cond", 100))}))
 	if PropertyRules.income_day(s, data, id) > 0:
 		bits.append(tr("PROPERTY_INCOME").format({"money": Money.format(PropertyRules.income_day(s, data, id))}))
-	bits.append(tr("PROPERTY_TILL").format({"money": Money.format(int(st.get("cash", 0)))}))
+	if int(st.get("cash", 0)) > 0:
+		bits.append(tr("PROPERTY_TILL").format({"money": Money.format(int(st.get("cash", 0)))}))
 	var debt := Ledger.owed(s, "tax:" + id)
 	if debt > 0:
 		bits.append(tr("PROPERTY_DEBT").format({"money": Money.format(debt)}))
@@ -245,11 +247,6 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 	var ups: Array[String] = []
 	for u: Variant in st.get("upgrades", []):
 		ups.append(str(PropertyRules.ups(data).get(str(u), {}).get("name", u)))
-	for pd: Dictionary in st.get("pending", []):
-		ups.append(tr("PROPERTY_PENDING").format({"name": PropertyRules.ups(data)[str(pd["up"])]["name"], "day": int(pd["ready"])}))
-	var b: Dictionary = st.get("building", {})
-	if not b.is_empty():
-		ups.append(tr("PROPERTY_PENDING").format({"name": PropertyRules.cfg(data)["build"][str(b["id"])]["name"], "day": int(b["ready"])}))
 	if not ups.is_empty():
 		UiParts.label(col, tr("PROPERTY_UPGRADES").format({"list": ", ".join(ups)}), UiTheme.MUTED_LABEL)
 	if debt > 0:
@@ -260,7 +257,8 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 	UiParts.act_button(buttons, "PropertyFurnish_" + id, tr("BTN_PROPERTY_FURNISH"), BuildRules.where_why(s, data), func() -> String:
 		furnish_requested.emit()
 		return "").tooltip_text = tr("BTN_PROPERTY_FURNISH_TIP")
-	UiParts.act_button(buttons, "PropertyCollect_" + id, tr("BTN_PROPERTY_COLLECT"), PropertyRules.collect_why(s, data, id), _act("collect", id))
+	if PropertyRules.collect_why(s, data, id).is_empty():  # what a beast gave, what is left in the till
+		UiParts.act_button(buttons, "PropertyCollect_" + id, tr("BTN_PROPERTY_COLLECT"), "", _act("collect", id))
 	if PropertyRules.income_day(s, data, id) > 0:
 		var sb := UiParts.act_button(buttons, "PropertyShift_" + id, tr("BTN_PROPERTY_SHIFT").format({"time": TimeRules.span(PropertyRules.shift_hours(s, data, id) * 60)}),
 			PropertyRules.shift_why(s, data, id), _act("shift", id))
@@ -277,27 +275,14 @@ func _own(s: GameSession, data: Dictionary, id: String) -> void:
 	offers.name = "PropertyOffers_" + id
 	offers.add_theme_constant_override("separation", 4)
 	col.add_child(offers)
-	for p: Dictionary in PropertyRules.places(s, data, id):  # a hire per role while its places are free
+	for p: Dictionary in PropertyRules.places(s, data, id):  # a hire per role while its places are free (none while staff is off)
 		if int(p["taken"]) < int(p["max"]):
 			_offer(offers, "PropertyHire_" + str(p["role"]).validate_node_name(), tr("BTN_PROPERTY_HIRE").format({"role": p["role"],
 				"wage": Money.format(int(p["wage"])), "taken": int(p["taken"]), "max": int(p["max"])}), PropertyRules.worker_why(s, data, id, str(p["role"])),
 				_act("hire", id, str(p["role"])))
-	if bool(k.get("buildable", false)):
-		for bid: String in PropertyRules.cfg(data)["build"]:
-			var bc: Dictionary = PropertyRules.cfg(data)["build"][bid]
-			_offer(offers, "PropertyBuild_" + bid, tr("BTN_PROPERTY_BUILD").format({"name": bc["name"], "price": Money.format(int(bc["price_cp"])),
-				"days": int(bc["days"])}), PropertyRules.build_why(s, data, id, bid), _act("build", id, bid))
-	for up: String in PropertyRules.upgrades_for(s, data, id):
-		if PropertyRules.has_upgrade(s.character, id, up) or not PropertyRules.pending(s.character, id, up).is_empty():
-			continue
-		var u: Dictionary = PropertyRules.ups(data)[up]
-		var ob := _offer(offers, "PropertyUpgrade_" + up, tr("BTN_PROPERTY_UPGRADE").format({"name": u["name"], "price": Money.format(int(u["price_cp"])),
-			"days": int(u.get("days", 0))}), PropertyRules.upgrade_why(s, data, id, up), _act("upgrade", id, up))
-		if ob.tooltip_text.is_empty():
-			ob.tooltip_text = str(u.get("text", ""))
 
 
-## An upgrade or a building as a small row: its button and price; the reason in the tooltip.
+## A hire as a small row: its button and wage; the reason in the tooltip.
 func _offer(parent: Control, node_name: String, text: String, why: String, action: Callable) -> Button:
 	var b := UiParts.act_button(parent, node_name, text, why, action)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT

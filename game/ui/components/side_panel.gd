@@ -558,7 +558,7 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 	var undeeded := PropertyRules.is_registry(Catalog.data, id) and PropertyRules.state(s.character).values().any(func(p: Dictionary) -> bool: return not bool(p.get("deed", false)))
 	if not PropertyRules.of_seller(s, Catalog.data, id).is_empty() or undeeded:  # v0.7.27
 		_flow(_group(groups, "deals", id), tr("BTN_PROPERTY"), property_requested.emit.bind("seller", id), can_act, "PropertySale_" + id, tr("BTN_PROPERTY_SALE_TIP").format({"name": n.get("name", id)}))
-	if PropertyRules.is_registry(Catalog.data, id) and Catalog.data["rules"].has("shop"):  # v0.7.29: the charter and the stalls
+	if PropertyRules.is_registry(Catalog.data, id) and ShopRules.on(Catalog.data):  # v0.7.29: the charter and the stalls
 		_flow(_group(groups, "deals", id), tr("BTN_SHOP_REGISTRY"), shop_requested.emit.bind("registry", id), can_act, "ShopRegistry_" + id, tr("BTN_SHOP_REGISTRY_TIP"))
 	if ShopRules.is_supplier(s, Catalog.data, id):
 		_flow(_group(groups, "deals", id), tr("BTN_WHOLESALE"), shop_requested.emit.bind("supplier", id), can_act, "Wholesale_" + id, tr("BTN_WHOLESALE_TIP").format({"name": n.get("name", id)}))

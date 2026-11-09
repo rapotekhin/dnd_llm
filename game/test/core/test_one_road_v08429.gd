@@ -64,6 +64,7 @@ func test_the_tills_pay_before_the_purse() -> void:
 
 
 func test_a_shift_pays_by_one_rule() -> void:
+	data = TestUtils.trade_on(data)  # income and one's own trade: out of the game since v0.8.4.42.9
 	var s := _hero("brod-square")
 	var e := JobRules.earned(s.character, data, 100, {"pay": 1.0, "tips": 0.25}, 2.0)
 	assert_int(int(e["pay"])).is_equal(100)

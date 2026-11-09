@@ -1,7 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Own trade (python tools/godot_playtest.py --scenario shop), v0.7.29: the charter and a stall from the clerk, the
 ## stall on the square, rings put out and made cheaper, a shift behind the counter sells them, rope bought wholesale
-## from Fern.
+## from Fern. One's own trade is out of the game since v0.8.4.42.9: this run brings it back (trade_on).
 
 
 func run() -> void:
@@ -14,6 +14,7 @@ func run() -> void:
 	await press(find(screen(), "StartButton"))
 	if not step("game started", await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)):
 		return
+	trade_on(node("Catalog").data)
 	var s: GameSession = gs.session
 	var c := s.character
 	c["gold_cp"] = 20000

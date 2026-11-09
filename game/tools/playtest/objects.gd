@@ -16,6 +16,7 @@ func run() -> void:
 		return
 	var s: GameSession = gs.session
 	var data: Dictionary = node("Catalog").data  # the started game's world (merged with what was made)
+	trade_on(data)  # hiring and one's own trade are out of the game since v0.8.4.42.9: this run brings them back
 	var c := s.character
 	var game := screen()
 	c["gold_cp"] = 100000
@@ -52,8 +53,7 @@ func run() -> void:
 	await key(KEY_ESCAPE)
 	await frames(2)
 
-	PropertyRules.upgrade(s, data, "river_house", "counter")
-	TimeRules.advance(s, data, 2 * 1440)
+	PropertyRules.apply_upgrade(s, data, "river_house", "counter")  # what the build screen lays on a square, at once
 	var cid := ""
 	for id: String in PropertyRules.state(c):
 		if PropertyRules.kind_id(s, data, id) == "counter":

@@ -1,13 +1,14 @@
 extends GdUnitTestSuite
 ## Property (v0.7.27): places on sale at the town hall, buying and the deed, tax and dispute, a worker's income,
 ## upgrades and building on land, animals (riding, feeding, produce, a dog in a fight), serfs while the world allows
-## slavery, the master's place on sale.
+## slavery, the master's place on sale. Hiring and income are out of the game since v0.8.4.42.9 (rules.off.parts):
+## their road is tested here with the parts back; an upgrade is laid at once (the build screen), not ordered by days.
 
 var data: Dictionary
 
 
 func before_test() -> void:
-	data = TestUtils.data()
+	data = TestUtils.trade_on(TestUtils.data())
 
 
 func _owner(room: String = "brod-townhall") -> GameSession:
@@ -117,9 +118,7 @@ func test_repair_and_own_shift() -> void:
 func test_a_bed_lets_the_hero_rest_at_home() -> void:
 	var s := _bought("river_house")
 	assert_str(ExplorationRules.can_rest(s, data["world"], data)).is_equal("REST_NOT_SAFE")
-	PropertyRules.upgrade(s, data, "river_house", "bed")
-	assert_dict(PropertyRules.pending(s.character, "river_house", "bed")).is_not_empty()
-	_days(s, 1)
+	PropertyRules.apply_upgrade(s, data, "river_house", "bed")
 	assert_bool(PropertyRules.has_upgrade(s.character, "river_house", "bed")).is_true()
 	assert_str(ExplorationRules.can_rest(s, data["world"], data)).is_empty()
 	assert_int(int(ExplorationRules.rest_place(data["world"], s.room_id, s, data)["cost_cp"])).is_equal(0)
@@ -127,28 +126,29 @@ func test_a_bed_lets_the_hero_rest_at_home() -> void:
 
 func test_a_forge_and_a_chest_at_home() -> void:
 	var s := _bought("river_house")
-	PropertyRules.upgrade(s, data, "river_house", "forge")
-	PropertyRules.upgrade(s, data, "river_house", "chest")
-	_days(s, 4)
+	PropertyRules.apply_upgrade(s, data, "river_house", "forge")
+	PropertyRules.apply_upgrade(s, data, "river_house", "chest")
 	assert_array(WorldView.new(data["world"]).room(s.room_id).get("tags", [])).contains(["forge"])
 	assert_bool((s.props.get(s.room_id, []) as Array).any(func(p: Dictionary) -> bool: return ContainerRules.is_container(p))).is_true()
-	assert_str(PropertyRules.upgrade_why(s, data, "river_house", "sign")).is_equal("PROPERTY_NO_UPGRADE")  # a house earns nothing
+	assert_bool(PropertyRules.fits(s, data, "river_house", "sign")).is_false()  # a house earns nothing
 
 
-func test_a_house_built_on_the_plot() -> void:
+func test_the_plot_takes_things_and_buildings_by_hand() -> void:
 	var s := _bought("plot")
-	assert_array(PropertyRules.upgrades_for(s, data, "plot")).is_empty()
-	assert_str(PropertyRules.build_why(s, data, "plot", "house")).is_empty()
-	PropertyRules.build(s, data, "plot", "house")
-	_days(s, 5)
-	var rooms := PropertyRules.rooms(s, data, "plot")
-	assert_int(rooms.size()).is_equal(2)
-	assert_str(PropertyRules.kind_id(s, data, "plot")).is_equal("house")
-	var home := PropertyRules.main_room(s, data, "plot")
-	assert_bool(bool(WorldView.new(data["world"]).room(home).get("indoor", false))).is_true()
-	assert_array(WorldView.new(data["world"]).exits("brod-plot")).contains([home])
-	var w := WorldGen.merged(TestUtils.data()["world"], s.generated)
-	assert_array(w["rooms"]["brod-plot"]["exits"]).contains([home])
+	var ids := BuildRules.catalog(s, data, "plot").map(func(r: Dictionary) -> String: return str(r["id"]))
+	assert_array(ids).contains(["bed", "chest", "stall", "porch", BuildRules.PASSAGE])
+
+
+func test_parts_out_of_the_game() -> void:
+	var off := TestUtils.data()
+	var s := _bought("old_mill")
+	assert_int(PropertyRules.income_day(s, off, "old_mill")).is_equal(0)
+	assert_array(PropertyRules.places(s, off, "old_mill")).is_empty()
+	assert_str(PropertyRules.worker_why(s, off, "old_mill")).is_equal("PROPERTY_NO_WORK")
+	assert_str(PropertyRules.shift_why(s, off, "old_mill")).is_equal("PROPERTY_NO_INCOME")
+	assert_bool(PropertyRules.fits(s, off, "old_mill", "sign")).is_false()
+	assert_bool(ShopRules.on(off)).is_false()
+	assert_str(str(PropertyRules.plan_upgrade(s, off, {"name": "Лодка", "gives": {"produce": {"ration": 1}}}, {}).get("reason", ""))).contains("пока нет")
 
 
 func test_a_horse_shortens_the_way_and_must_be_fed() -> void:

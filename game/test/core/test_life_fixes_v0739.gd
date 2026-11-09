@@ -51,6 +51,7 @@ func test_a_course_of_what_the_hero_knows_is_learned_already() -> void:
 
 
 func test_own_shop_shift_grows_trade_by_revenue() -> void:
+	data = TestUtils.trade_on(data)  # income and one's own trade: out of the game since v0.8.4.42.9
 	var s := _hero()
 	PropertyRules.rent(s, data, "npc_clerk", "stall", 7)
 	var vid := PropertyRules.rented(s, data, "stall", "brod")

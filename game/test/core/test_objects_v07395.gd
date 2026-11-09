@@ -7,7 +7,7 @@ var data: Dictionary
 
 
 func before_test() -> void:
-	data = TestUtils.data()
+	data = TestUtils.trade_on(TestUtils.data())  # hiring, income and one's own trade: out of the game since v0.8.4.42.9, their road kept
 
 
 func _owner(room: String = "brod-townhall") -> GameSession:
@@ -58,9 +58,9 @@ func test_more_hands_bring_more() -> void:
 
 func test_the_counter_of_a_house_is_an_object_of_its_own() -> void:
 	var s := _bought("river_house")
-	assert_str(PropertyRules.upgrade_why(s, data, "river_house", "counter")).is_empty()
-	PropertyRules.upgrade(s, data, "river_house", "counter")
-	TimeRules.advance(s, data, 2 * 1440)
+	assert_bool(PropertyRules.fits(s, data, "river_house", "counter")).is_true()
+	assert_bool(PropertyRules.fits(s, TestUtils.data(), "river_house", "counter")).is_false()  # one's own trade is out of the game
+	PropertyRules.apply_upgrade(s, data, "river_house", "counter")
 	var counters := PropertyRules.state(s.character).keys().filter(func(id: String) -> bool: return PropertyRules.kind_id(s, data, id) == "counter")
 	assert_int(counters.size()).is_equal(1)
 	var cid := str(counters[0])
@@ -144,8 +144,7 @@ func test_a_bad_object_is_refused() -> void:
 
 func test_ones_own_bed_in_any_room_of_the_house() -> void:
 	var s := _bought("river_house")
-	PropertyRules.upgrade(s, data, "river_house", "bed")
-	TimeRules.advance(s, data, 1440)
+	PropertyRules.apply_upgrade(s, data, "river_house", "bed")
 	for room: String in PropertyRules.rooms(s, data, "river_house"):
 		assert_bool(bool(ExplorationRules.rest_place(data["world"], room, s, data).get("own", false))).is_true()
 	s.room_id = "brod-square"

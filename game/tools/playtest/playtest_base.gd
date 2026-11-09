@@ -257,3 +257,9 @@ func key(keycode: Key) -> void:
 	up.pressed = false
 	root.push_input(up)
 	await frames(2)
+
+
+## Property's trade as before v0.8.4.42.9 in this run's own game: one's own trade (rules.off.systems), hiring and
+## income (rules.off.parts) — out of the game for the player, their road kept and played here.
+func trade_on(data: Dictionary) -> void:
+	TestUtils.trade_on(data)

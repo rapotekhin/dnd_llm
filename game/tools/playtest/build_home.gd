@@ -1,7 +1,8 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## The build screen (python tools/godot_playtest.py --scenario build_home), v0.8.4.42 «Имущество как в Sims»: the river
 ## house bought, «Обустроить» in «Имущество» opens the map of the room; the list filtered by a group and a search; a wall,
-## a window in it, a door; a bed that rests the hero, a chest on its square, a workbench that crafts; stairs into
+## a window in it, a door; a bed that rests the hero, a chest on its square, a workbench that crafts; a stall for the
+## beasts and a lock on the place at once, no counter (v0.8.4.42.9: every upgrade is a thing here); stairs into
 ## «Мансарда»; in the yard a plot «Огород» at the edge and a shed «Сарай» on free ground; the master's chest of 50 pounds
 ## placed by hand; a thing taken back for half its price.
 
@@ -85,6 +86,17 @@ func run() -> void:
 		return ContainerRules.is_container(p) and p.get("at") is Array))
 	var bench := await _put(view, s, data, "workbench", 1)
 	step("a workbench: crafting here", bench.x >= 0 and CraftRules.station_here(s, data, "workbench"))
+	await press(find(view, "BuildGroup_yard"))
+	await frames(3)
+	step("«Двор и скот»: the stall and the porch, no counter of one's own trade", find(list, "BuildItem_stall") != null
+		and find(list, "BuildItem_porch") != null and find(list, "BuildItem_counter") == null, _items(list))
+	await press(find(view, "BuildGroup_all"))
+	await frames(3)
+	var stall := await _put(view, s, data, "stall", 1)
+	step("a stall on its square: the beasts' feed halved at once", stall.x >= 0 and PropertyRules.has_upgrade(c, "river_house", "stall"))
+	var lock := await _put(view, s, data, "lock", 1)
+	var site := str(PropertyRules.prop(s, data, "river_house")["site"])
+	step("a lock: the house shut to strangers at once", lock.x >= 0 and WorldView.new(data["world"]).site(site).get("public", true) == false)
 	await shot("things_placed")
 
 	await _pick(view, BuildRules.PASSAGE)

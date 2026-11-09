@@ -1,13 +1,13 @@
 extends GdUnitTestSuite
 ## Own trade (v0.7.29): a stall rented at the town hall, the hero's shift sells by the price, the charter and its tax,
 ## the guard's fine without it, a staffed shop selling by days into its till, a tavern sells only food, the merchant's
-## reputation, wholesale at a supplier, the master's supplier.
+## reputation, wholesale at a supplier. Out of the game since v0.8.4.42.9 (rules.off.systems), the road kept and tested here.
 
 var data: Dictionary
 
 
 func before_test() -> void:
-	data = TestUtils.data()
+	data = TestUtils.trade_on(TestUtils.data())  # hiring, income and one's own trade: out of the game since v0.8.4.42.9, their road kept
 
 
 func _hero(room: String = "brod-townhall") -> GameSession:
@@ -142,18 +142,3 @@ func test_dear_sales_spoil_the_merchants_name() -> void:
 	ShopRules.venue(s2.character, vid2)["prices"]["silver_ring"] = 90
 	ShopRules.sell_round(s2, data, vid2, 40)
 	assert_float(ShopRules.rep(s2, "brod")).is_greater(0.0)
-
-
-func test_the_master_makes_a_supplier() -> void:
-	var s := _hero("brod-smithy")
-	var engine := EffectEngine.new()
-	var bad := engine.validate(s, data, "t-1", {"kind": "create", "what": "supplier", "npc_id": "npc_smith", "pct": 50})
-	assert_bool(bool(bad["accepted"])).is_false()  # the smith is already a supplier in the pack
-	s.room_id = "brod-herbalist"
-	var cheap := engine.validate(s, data, "t-1", {"kind": "create", "what": "supplier", "npc_id": "npc_herbalist", "pct": 10})
-	assert_bool(bool(cheap["accepted"])).is_false()
-	var r := engine.validate(s, data, "t-1", {"kind": "create", "what": "supplier", "npc_id": "npc_herbalist", "pct": 70})
-	assert_bool(bool(r["accepted"])).override_failure_message(str(r.get("reason", ""))).is_true()
-	engine.apply(s, "t-1", [r["effect_id"]])
-	assert_bool(ShopRules.is_supplier(s, data, "npc_herbalist")).is_true()
-	assert_str(str(TurnSnapshot.build(s, data, 1000)["character"]["shop"])).contains("оптом продаёт Ведана (70% цены")

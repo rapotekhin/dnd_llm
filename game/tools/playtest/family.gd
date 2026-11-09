@@ -23,7 +23,7 @@ func run() -> void:
 	s.rested_at = TimeRules.abs_minute(s) + 400 * 1440  # the days fly by: no sleep debt
 	PropertyRules.buy(s, data, "river_house")
 	PropertyRules.state(c)["river_house"]["deed"] = true  # without a deed the house is lost in a dispute over the days
-	PropertyRules.upgrade(s, data, "river_house", "bed")
+	PropertyRules.apply_upgrade(s, data, "river_house", "bed")
 	TimeRules.advance(s, data, 1440)
 	s.room_id = "brod-tavern-hall"
 	s.minute = 12 * 60

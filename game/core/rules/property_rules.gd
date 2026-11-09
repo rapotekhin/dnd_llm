@@ -13,14 +13,37 @@ extends RefCounted
 ## each a person of the object paid each day; a trading kind (`trade`) has a shelf (ShopRules); a market stall is an
 ## object of the kind `stall` rented at the registry (`rent`), the counter of a house — an object of its own (`counter`).
 ##
-## c["property"] = {id: {deed, since, cond, cash, debt, stock: {item: qty}, upgrades: [..], pending: [{up, ready}],
-## building: {id, ready}, kind, staff: [{npc | cid, role, wage, serf}], rent_day, last_day, tax_day, shift: {day, n}}}.
+## v0.8.4.42.9 (the author): an upgrade is laid at once on a square of the build screen (BuildRules) — no order by days,
+## no land building by days; hiring and income are out of the game for a while (`rules.off.parts`, part_on).
+##
+## c["property"] = {id: {deed, since, cond, cash, debt, stock: {item: qty}, upgrades: [..], kind,
+## staff: [{npc | cid, role, wage, serf}], rent_day, last_day, tax_day, shift: {day, n}}}.
 
 const TAME := "tame"
 
 
 static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["property"]
+
+
+## Whether a part of property is in the game (v0.8.4.42.9): `staff` — hiring and serfs, `income` — a place's income,
+## its shift and produce. `rules.off.parts` names the parts out of the game.
+static func part_on(data: Dictionary, part: String) -> bool:
+	return not _parts_off(data).has("property." + part)
+
+
+## The keys of `gives` an upgrade may not have while their part is out of the game.
+static func gives_off(data: Dictionary) -> Array:
+	var out: Array = []
+	var off := _parts_off(data)
+	for part: String in off:
+		if part.begins_with("property."):
+			out.append_array(off[part])
+	return out
+
+
+static func _parts_off(data: Dictionary) -> Dictionary:
+	return data["rules"].get("off", {}).get("parts", {})
 
 
 ## The kinds of places: the engine's (rules.property.kinds) and the world's own — the pack's or the master's
@@ -179,7 +202,9 @@ static func _gives(s: GameSession, data: Dictionary, id: String, key: String, ba
 
 ## The income of a day with a worker: the kind's (or the place's own) × the upgrades × the condition when worn.
 static func income_day(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
-	if data["rules"].has("shop") and ShopRules.active(s, id, who):  # a shelf of goods earns by sales instead (v0.7.29)
+	if not part_on(data, "income"):
+		return 0
+	if ShopRules.on(data) and ShopRules.active(s, id, who):  # a shelf of goods earns by sales instead (v0.7.29)
 		return 0
 	var base := int(prop(s, data, id).get("income_cp_day", kind(s, data, id, who).get("income_cp_day", 0)))
 	if base <= 0:
@@ -263,7 +288,7 @@ static func buy(s: GameSession, data: Dictionary, id: String, who: String = Bein
 
 
 static func _fresh(s: GameSession, cond: float) -> Dictionary:
-	return {"deed": false, "since": s.day, "cond": cond, "cash": 0, "stock": {}, "upgrades": [], "pending": [], "building": {},
+	return {"deed": false, "since": s.day, "cond": cond, "cash": 0, "stock": {}, "upgrades": [],
 		"staff": [], "last_day": s.day, "tax_day": s.day}
 
 
@@ -348,11 +373,6 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int, who: St
 	var c := Life.of(s, who, data)
 	var cf := cfg(data)
 	var lines: Array[String] = []
-	for pd: Dictionary in Progress.take_due(st.get("pending", []), day):
-		lines.append_array(apply_upgrade(s, data, id, str(pd["up"]), who))
-	var b: Dictionary = st.get("building", {})
-	if Progress.due(b, day):
-		lines.append_array(_finish_build(s, data, id, str(b["id"]), who))
 	for h: Dictionary in staff(s, id, who).duplicate():
 		if bool(h.get("serf", false)) and s.rng.randf() < float(cf["serfs"]["escape_chance_day"]):
 			lines.append("%s сбежал из %s" % [hand_name(s, data, h), name_of(s, data, id)])
@@ -368,7 +388,7 @@ static func _day(s: GameSession, data: Dictionary, id: String, day: int, who: St
 		st["cond"] = clampf(float(st.get("cond", 100.0)) - rate, 0.0, 100.0)
 	var income := roundi(income_day(s, data, id, who) * staff_mult(data, hands)) if hands > 0 else 0
 	st["cash"] = int(st.get("cash", 0)) + income
-	if hands > 0 or (kind(s, data, id, who).get("staff", []) as Array).is_empty():  # v0.7.39.8: a boat's catch, the hands at work
+	if part_on(data, "income") and (hands > 0 or (kind(s, data, id, who).get("staff", []) as Array).is_empty()):  # v0.7.39.8: a boat's catch, the hands at work
 		var made := produce(s, data, id, who)
 		var stock: Dictionary = st.get("stock", {})
 		for item: String in made:
@@ -491,7 +511,7 @@ static func shift_why(s: GameSession, data: Dictionary, id: String, who: String 
 		return unfree
 	if not owned(Life.of(s, who, data), id) or here(s, data, who) != id:
 		return "PROPERTY_NOT_HERE"
-	if data["rules"].has("shop") and ShopRules.active(s, id, who):
+	if ShopRules.on(data) and ShopRules.active(s, id, who):
 		return "PROPERTY_SHOP_SHIFT"
 	if income_day(s, data, id, who) <= 0:
 		return "PROPERTY_NO_INCOME"
@@ -583,6 +603,8 @@ static func staff(s: GameSession, id: String, who: String = Being.HERO) -> Array
 ## the first role).
 static func places(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
+	if not part_on(data, "staff"):
+		return out
 	for p: Dictionary in kind(s, data, id, who).get("staff", []):
 		out.append({"role": str(p["role"]), "wage": int(p.get("wage_cp_day", 0)), "max": int(p.get("max", 1)), "taken": 0})
 	if not out.is_empty():
@@ -736,22 +758,11 @@ static func set_serf(s: GameSession, data: Dictionary, id: String, cid: String, 
 	return ["%s приставлен к работе в %s — %s, без платы, за еду" % [cr["name"], name_of(s, data, id), p["role"]]]
 
 
-# --- upgrades and building ------------------------------------------------------------------------------------------
+# --- upgrades ------------------------------------------------------------------------------------------
 
 
-## The upgrades the place may take: [id].
-static func upgrades_for(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
-	var out: Array[String] = []
-	if bool(kind(s, data, id, who).get("buildable", false)):
-		return out
-	for up: String in ups(data):
-		if fits(s, data, id, up, who):
-			out.append(up)
-	return out
-
-
-## The upgrade suits the place: asked at it, of its kind, its income or trade, its staff. One filter for the window's
-## orders and the build screen's things (v0.8.4.42), which stand on bare land too.
+## The upgrade suits the place: asked at it, of its kind, its income or trade, its staff, its part in the game. The
+## filter of the build screen's things (v0.8.4.42), which stand on bare land too.
 static func fits(s: GameSession, data: Dictionary, id: String, up: String, who: String = Being.HERO) -> bool:
 	var u: Dictionary = ups(data).get(up, {})
 	var k := kind(s, data, id, who)
@@ -759,43 +770,16 @@ static func fits(s: GameSession, data: Dictionary, id: String, up: String, who: 
 		return false
 	if u.has("kinds") and not (u["kinds"] as Array).has(kind_id(s, data, id, who)):
 		return false
+	var g: Dictionary = u.get("gives", {})
+	if gives_off(data).any(func(key: Variant) -> bool: return g.has(key)):
+		return false
+	if g.has("object") and kind_cfg(data, str(g["object"])).has("trade") and not ShopRules.on(data):  # a counter: one's own trade
+		return false
 	if bool(u.get("income", false)) and int(k.get("income_cp_day", 0)) <= 0 and not k.has("trade"):
 		return false
 	if bool(u.get("trade", false)) and not k.has("trade"):
 		return false
-	return not ((k.get("staff", []) as Array).is_empty() and u.get("gives", {}).has("staff_max"))
-
-
-static func pending(c: Dictionary, id: String, up: String) -> Dictionary:
-	for pd: Dictionary in state(c).get(id, {}).get("pending", []):
-		if str(pd["up"]) == up:
-			return pd
-	return {}
-
-
-static func upgrade_why(s: GameSession, data: Dictionary, id: String, up: String, who: String = Being.HERO) -> String:
-	if not owned(Life.of(s, who, data), id) or here(s, data, who) != id:
-		return "PROPERTY_NOT_HERE"
-	var u: Dictionary = ups(data).get(up, {})
-	if u.is_empty() or not upgrades_for(s, data, id, who).has(up):
-		return "PROPERTY_NO_UPGRADE"
-	if has_upgrade(Life.of(s, who, data), id, up) or not pending(Life.of(s, who, data), id, up).is_empty():
-		return "PROPERTY_UPGRADE_HAS"
-	if bool(u.get("indoor", false)) and not SceneRules.indoor(s, data["world"], main_room(s, data, id)):
-		return "PROPERTY_NEEDS_ROOF"
-	if Ledger.balance(s, who) < int(u["price_cp"]):
-		return "PROPERTY_NO_MONEY"
-	return ""
-
-
-static func upgrade(s: GameSession, data: Dictionary, id: String, up: String, who: String = Being.HERO) -> Array[String]:
-	var u: Dictionary = ups(data)[up]
-	Ledger.add(s, -int(u["price_cp"]), "property:upgrade", who)
-	var days := int(u.get("days", 0))
-	if days <= 0:
-		return apply_upgrade(s, data, id, up, who)
-	(state(Life.of(s, who, data))[id]["pending"] as Array).append(Progress.by_day(s.day + days).merged({"up": up}))
-	return ["%s: заказано «%s» за %s — готово через %s" % [name_of(s, data, id), u["name"], Money.format(int(u["price_cp"])), CalendarRules.days_count(days)]]
+	return not ((k.get("staff", []) as Array).is_empty() and g.has("staff_max"))
 
 
 ## What an upgrade gives laid on the world: in `room` (the main room by default). `thing` — the record of one placed on
@@ -812,7 +796,9 @@ static func apply_upgrade(s: GameSession, data: Dictionary, id: String, up: Stri
 		thing["safe"] = not (WorldView.new(data["world"]).room(room).get("safe") is Dictionary)
 		Overlay.put(s, data, EntityRef.room(room), "safe", {"rest_cost_cp": 0})
 	if bool(g.get("private", false)):
-		Overlay.put(s, data, EntityRef.site(str(prop(s, data, id)["site"])), "public", false)
+		var site := str(prop(s, data, id)["site"])
+		thing["public_was"] = bool(WorldView.new(data["world"]).site(site).get("public", true))  # back when the lock comes off
+		Overlay.put(s, data, EntityRef.site(site), "public", false)
 	if g.has("object"):  # v0.7.39.5: a counter — a trading object of its own beside the house
 		(state(Life.of(s, who, data))[id]["upgrades"] as Array).append(up)
 		var made := new_object(s, data, str(g["object"]), room, "%s: %s" % [name_of(s, data, id), str(kind_cfg(data, str(g["object"])).get("name", ""))], who)
@@ -846,45 +832,12 @@ static func remove_upgrade(s: GameSession, data: Dictionary, id: String, thing: 
 		Overlay.put(s, data, EntityRef.room(room), "tags", tags)
 	if bool(thing.get("safe", false)) and not gives.call("rest", true):
 		Overlay.put(s, data, EntityRef.room(room), "safe", null)
+	if thing.has("public_was") and not gives.call("private", true):
+		Overlay.put(s, data, EntityRef.site(str(prop(s, data, id)["site"])), "public", bool(thing["public_was"]))
 	if thing.has("prop"):
 		var list: Array = s.props.get(room, [])
 		s.props[room] = list.filter(func(p: Dictionary) -> bool: return str(p.get("id", "")) != str(thing["prop"]))
 	(state(Life.of(s, who, data))[id]["upgrades"] as Array).erase(up)
-
-
-static func build_why(s: GameSession, data: Dictionary, id: String, b: String, who: String = Being.HERO) -> String:
-	if not owned(Life.of(s, who, data), id) or here(s, data, who) != id:
-		return "PROPERTY_NOT_HERE"
-	if not bool(kind(s, data, id, who).get("buildable", false)) or not cfg(data)["build"].has(b):
-		return "PROPERTY_NOT_LAND"
-	if not (state(Life.of(s, who, data))[id].get("building", {}) as Dictionary).is_empty():
-		return "PROPERTY_BUILDING"
-	if Ledger.balance(s, who) < int(cfg(data)["build"][b]["price_cp"]):
-		return "PROPERTY_NO_MONEY"
-	return ""
-
-
-static func build(s: GameSession, data: Dictionary, id: String, b: String, who: String = Being.HERO) -> Array[String]:
-	var bc: Dictionary = cfg(data)["build"][b]
-	Ledger.add(s, -int(bc["price_cp"]), "property:build", who)
-	state(Life.of(s, who, data))[id]["building"] = Progress.by_day(s.day + int(bc["days"])).merged({"id": b})
-	return ["%s: заложено «%s» за %s — плотники управятся за %s" % [name_of(s, data, id), bc["name"], Money.format(int(bc["price_cp"])), CalendarRules.days_count(int(bc["days"]))]]
-
-
-## The building stands: its rooms in the land's site, the place of its kind. Lines.
-static func _finish_build(s: GameSession, data: Dictionary, id: String, b: String, who: String = Being.HERO) -> Array[String]:
-	var bc: Dictionary = cfg(data)["build"][b]
-	var st: Dictionary = state(Life.of(s, who, data))[id]
-	var land := main_room(s, data, id)
-	for spec: Dictionary in bc["rooms"]:
-		add_room(s, data, land, spec, str(prop(s, data, id)["site"]))
-	st["building"] = {}
-	st["kind"] = str(bc["kind"])
-	st["cond"] = 100.0
-	return ["%s: построено «%s»" % [name_of(s, data, id), bc["name"]]]
-
-
-# --- objects the engine makes: a counter, a rented stall (v0.7.39.5) ---------------------------------------------
 
 
 static func kind_cfg(data: Dictionary, k: String) -> Dictionary:
@@ -1314,10 +1267,13 @@ static func plan_upgrade(s: GameSession, data: Dictionary, spec: Dictionary, kin
 	var stations := {}
 	var price := 0.0
 	var payback := float(um["payback_days"])
+	var off := gives_off(data)
 	for key: String in g_in:
 		var v: Variant = g_in[key]
 		if v == null or (v is bool and not v):
 			continue
+		if off.has(key):
+			return {"reason": "gives.%s — этой части имущества пока нет в игре (найм работников, доход места)" % key}
 		match key:
 			"rest", "storage", "private":
 				g[key] = true
@@ -1383,8 +1339,7 @@ static func plan_upgrade(s: GameSession, data: Dictionary, spec: Dictionary, kin
 	if g.is_empty():
 		return {"reason": "gives пусто — что улучшение даёт по правилам"}
 	var cp := clampi(roundi(price), int(um["price_cp"][0]), int(um["price_cp"][1]))
-	var days := clampi(roundi(cp / float(um["cp_per_day"])), int(um["days"][0]), int(um["days"][1]))
-	var def := {"name": name, "price_cp": cp, "days": days, "gives": g, "text": str(spec.get("text", "")).strip_edges().left(120), "generated": true}
+	var def := {"name": name, "price_cp": cp, "gives": g, "text": str(spec.get("text", "")).strip_edges().left(120), "generated": true}
 	if bool(spec.get("indoor", false)):
 		def["indoor"] = true
 	return {"id": "gen_u_" + ("%s|%s" % [name, JSON.stringify(g)]).md5_text().left(8), "def": def, "stations": stations}
@@ -1445,14 +1400,12 @@ static func plan_asked(s: GameSession, data: Dictionary, spec: Dictionary, who: 
 		if (all_ups[u].get("places", []) as Array).has(pid):
 			mine += 1
 			if str(all_ups[u]["name"]).to_lower() == str(spec.get("name", "")).strip_edges().to_lower():
-				return {"reason": "«%s» здесь уже можно заказать — кнопка в окне «Имущество»" % all_ups[u]["name"]}
+				return {"reason": "«%s» здесь уже есть в окне «Обустройство»" % all_ups[u]["name"]}
 	if mine >= int(cfg(data)["upgrade_make"]["per_place"]):
 		return {"reason": "у места уже %d своих улучшений — больше нельзя" % mine}
 	var up := plan_upgrade(s, data, spec, kind(s, data, pid, who))
 	if up.has("reason"):
 		return up
-	if bool(kind(s, data, pid, who).get("buildable", false)) and not BuildRules.is_thing(data, up["def"]):  # a thing stands on bare land too (v0.8.4.42)
-		return {"reason": "на голой земле сначала строят — улучшения потом; вещь (кровать, сундук, станок) можно поставить и здесь"}
 	up["def"]["places"] = [pid]
 	up["place"] = pid
 	return up
@@ -1461,12 +1414,9 @@ static func plan_asked(s: GameSession, data: Dictionary, spec: Dictionary, who: 
 static func apply_asked(s: GameSession, data: Dictionary, plan: Dictionary) -> Array[String]:
 	keep_made(s, data, {"upgrades": {str(plan["id"]): plan["def"]}, "stations": plan.get("stations", {})})
 	var u: Dictionary = plan["def"]
-	ObjectRules.note(s, str(prop(s, data, str(plan["place"])).get("site", "")), "можно заказать «%s»" % u["name"])
-	if BuildRules.is_thing(data, u):  # v0.8.4.42: a thing goes on its square by hand, at once
-		return ["%s: «%s» за %s — поставьте на свою клетку в окне «Обустройство»" % [name_of(s, data, str(plan["place"])), u["name"],
-			Money.format(int(u["price_cp"]))]]
-	return ["%s: можно заказать «%s» за %s, работы — %s (кнопка в окне «Имущество»)" % [name_of(s, data, str(plan["place"])), u["name"],
-		Money.format(int(u["price_cp"])), CalendarRules.days_count(int(u["days"]))]]
+	ObjectRules.note(s, str(prop(s, data, str(plan["place"])).get("site", "")), "можно поставить «%s»" % u["name"])
+	return ["%s: «%s» за %s — поставьте на свою клетку в окне «Обустройство»" % [name_of(s, data, str(plan["place"])), u["name"],
+		Money.format(int(u["price_cp"]))]]
 
 
 ## What the place's upgrades bring each working day: {item: qty} (`produce` × `produce_pct`).

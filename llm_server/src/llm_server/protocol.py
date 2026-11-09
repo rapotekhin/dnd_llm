@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.119.0"
+PROTOCOL_VERSION = "0.120.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -1716,18 +1716,6 @@ class OrgEffect(_Out):
     cut_pct: int | None = Field(default=None, ge=1, le=100)
 
 
-class SupplierEffect(_Out):
-    """A wholesale supplier the world lacks (0.61.0): «Ведана, продашь мне травы оптом для моей лавки?». A scene NPC
-    sells lots to a hero with the trade charter at `pct` of the value — its own goods or `goods` (catalog ids). The
-    lots are bought by the «Опт» button — the engine's act."""
-
-    kind: Literal["create"] = "create"
-    what: Literal["supplier"] = "supplier"
-    npc_id: str  # an NPC of the scene
-    goods: list[str] = Field(default_factory=list, max_length=12)
-    pct: int | None = Field(default=None, ge=1, le=100)
-
-
 class BankEffect(_Out):
     """A lender the world lacks (0.60.0): «Горм, ты ведь ссужаешь под залог?». A scene NPC (or `new` — the person
     create:npc made in this turn) takes deposits, lends against a collateral or keeps a vault; rates within
@@ -2057,7 +2045,7 @@ class FlagEffect(_Out):
 
 # 0.101.0: 31 kinds instead of 69. `what` tells the members of a kind apart; each keeps its own fields.
 _CreateEffect = Annotated[
-    CreateNpcEffect | CreatePlaceEffect | CreateQuestEffect | RecipeEffect | JobEffect | CourseEffect | WayEffect | SupplierEffect
+    CreateNpcEffect | CreatePlaceEffect | CreateQuestEffect | RecipeEffect | JobEffect | CourseEffect | WayEffect
     | BankEffect | FenceEffect | HeistEffect | OrgEffect | GodEffect | FestivalEffect | BeastEffect | PropertyEffect
     | UpgradeEffect | StockEffect | WildsEffect | ContestEffect | FactionEffect | ServiceEffect,
     Field(discriminator="what"),

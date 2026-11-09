@@ -46,7 +46,9 @@ func test_the_catalog_has_parts_things_and_a_passage_by_groups() -> void:
 	var rows := BuildRules.catalog(s, data, "river_house")
 	var ids := rows.map(func(r: Dictionary) -> String: return str(r["id"]))
 	assert_array(ids).contains(["wall", "window", "door", "bed", "chest", "hearth", "forge", BuildRules.PASSAGE])
-	assert_array(ids).not_contains(["sign", "lock", "porch"])  # no square for an income or a lock
+	assert_array(ids).contains(["lock", "stall", "porch"])  # every upgrade is a thing of a square (v0.8.4.42.9)
+	assert_array(ids).not_contains(["sign", "shelves", "counter"])  # income, hiring and one's own trade are out of the game
+	assert_array(BuildRules.view(rows, "", "yard").map(func(r: Dictionary) -> String: return str(r["id"]))).contains_exactly_in_any_order(["stall", "porch"])
 	var craft := BuildRules.view(rows, "", "craft").map(func(r: Dictionary) -> String: return str(r["id"]))
 	assert_array(craft).contains(["hearth", "workbench", "forge", "alchemy"])
 	assert_array(craft).not_contains(["bed"])
@@ -119,6 +121,23 @@ func test_a_bed_on_its_square_rests_the_hero_and_comes_off() -> void:
 	assert_int(int(s.character["gold_cp"])).is_equal(gold + 150)
 	assert_bool(PropertyRules.has_upgrade(s.character, "river_house", "bed")).is_false()
 	assert_str(ExplorationRules.can_rest(s, data["world"], data)).is_equal("REST_NOT_SAFE")
+
+
+## v0.8.4.42.9: a lock, a stall and a porch are things of a square, laid at once, one to a place, taken back by «Убрать».
+func test_a_lock_and_a_stall_at_once_and_off_again() -> void:
+	var s := _home()
+	var site := str(PropertyRules.prop(s, data, "river_house")["site"])
+	var before: Variant = WorldView.new(data["world"]).site(site).get("public", true)
+	var lock := _spot(s, "lock")
+	BuildRules.build(s, data, "lock", lock)
+	assert_bool(WorldView.new(data["world"]).site(site).get("public", true)).is_false()
+	assert_str(BuildRules.build_why(s, data, "lock", _spot(s, "bed", "", [lock]))).is_equal("PROPERTY_UPGRADE_HAS")  # one to a place
+	var stall := _spot(s, "stall", "", [lock])
+	BuildRules.build(s, data, "stall", stall)
+	assert_bool(PropertyRules.has_upgrade(s.character, "river_house", "stall")).is_true()
+	BuildRules.remove(s, data, lock)
+	assert_that(WorldView.new(data["world"]).site(site).get("public", true)).is_equal(before)
+	assert_bool(PropertyRules.has_upgrade(s.character, "river_house", "lock")).is_false()
 
 
 func test_a_station_crafts_and_a_chest_stores_on_its_square() -> void:

@@ -43,6 +43,16 @@ static func system_on(d: Dictionary, id: String) -> Dictionary:
 	return d
 
 
+## A part out of the game (rules.off.parts, v0.8.4.42.9: "property.staff", "property.income") back in `d`.
+static func part_on(d: Dictionary, part: String) -> Dictionary:
+	(d["rules"]["off"]["parts"] as Dictionary).erase(part)
+	return d
+
+
+## Property as it was before v0.8.4.42.9: hiring, income and one's own trade back in `d`, for their own tests.
+static func trade_on(d: Dictionary) -> Dictionary:
+	return part_on(part_on(system_on(d, "shop"), "property.staff"), "property.income")
+
 ## The start pack's first ready-made character (Айра, fighter 1).
 static func preset_choices() -> Dictionary:
 	return CharacterBuilder.preset_choices(data()["presets"][0])

@@ -1,7 +1,8 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## The master's places and upgrades (python tools/godot_playtest.py --scenario property_made), v0.7.39.8: a fishing pier
-## of the master's own kind on sale at the innkeeper, bought by the button, its boat and nets ordered in «Имущество», a
-## fisher hired, the catch collected; at the river house a jeweler's bench asked by words, ordered and built.
+## of the master's own kind on sale at the innkeeper, bought by the button, its boat and nets among the build screen's
+## things and laid at once (v0.8.4.42.9), a fisher hired, the catch collected; at the river house a jeweler's bench asked
+## by words and set up. Hiring and income are out of the game since v0.8.4.42.9: this run brings them back (trade_on).
 
 
 const PIER := {"name": "рыбацкий причал", "income_cp_day": 20, "skill": "survival", "hours": 8,
@@ -24,6 +25,7 @@ func run() -> void:
 		return
 	var s: GameSession = gs.session
 	var data: Dictionary = node("Catalog").data
+	trade_on(data)
 	var c := s.character
 	var fx: EffectEngine = gs.effects
 	c["gold_cp"] = 200000
@@ -60,14 +62,15 @@ func run() -> void:
 	await frames(4)
 	var boat := _up(s, data, id, "Лодка")
 	var nets := _up(s, data, id, "Сети")
-	step("the pier's own upgrades in the window", find(win, "PropertyUpgrade_" + boat) != null and find(win, "PropertyUpgrade_" + nets) != null
-		and find(win, "PropertyUpgrade_" + _up(s, data, id, "Коптильня")) != null)
+	var view := await _build_screen(id)
+	step("the pier's own upgrades among the build screen's things", view != null and find(view, "BuildItem_" + boat) != null
+		and find(view, "BuildItem_" + nets) != null and find(view, "BuildItem_" + _up(s, data, id, "Коптильня")) != null)
 	await shot("pier_upgrades")
-	await press(find(win, "PropertyUpgrade_" + boat))
-	await frames(3)
-	await press(find(win, "PropertyUpgrade_" + nets))
-	await frames(3)
-	step("the boat and the nets ordered", not PropertyRules.pending(c, id, boat).is_empty() and not PropertyRules.pending(c, id, nets).is_empty())
+	if view != null:
+		view.visible = false
+	PropertyRules.apply_upgrade(s, data, id, boat)  # what the build screen lays on a square, at once
+	PropertyRules.apply_upgrade(s, data, id, nets)
+	step("the boat and the nets set up at once", PropertyRules.has_upgrade(c, id, boat) and PropertyRules.has_upgrade(c, id, nets))
 	win.visible = false
 	PropertyRules.hire_worker(s, data, id)
 	_days(s, data, 3)
@@ -98,13 +101,13 @@ func run() -> void:
 	await press(find(screen(), "PropertyButton"))
 	await frames(4)
 	var bench := _up(s, data, "river_house", "Станок ювелира")
-	var ob: Button = find(win, "PropertyUpgrade_" + bench)
-	if step("the bench offered in «Имущество»", ob != null and not ob.disabled):
+	var bv := await _build_screen("river_house")
+	if step("the bench among the build screen's things", bv != null and find(bv, "BuildItem_" + bench) != null):
 		await shot("bench_offered")
-		await press(ob)
-		await frames(3)
+	if bv != null:
+		bv.visible = false
 	win.visible = false
-	_days(s, data, int(PropertyRules.ups(data)[bench]["days"]))
+	PropertyRules.apply_upgrade(s, data, "river_house", bench)
 	var station := str(PropertyRules.ups(data)[bench]["gives"]["station"])
 	step("the bench built: a jeweler's station at home", PropertyRules.has_upgrade(c, "river_house", bench) and CraftRules.station_here(s, data, station))
 	await press(find(screen(), "PropertyButton"))
@@ -112,8 +115,20 @@ func run() -> void:
 	await shot("bench_ready")
 
 
+## The build screen of the place the hero stands in, from «Обустроить» of its «Имущество».
+func _build_screen(id: String) -> Control:
+	var furnish: Button = find(screen(), "PropertyFurnish_" + id)
+	if furnish == null:
+		return null
+	await press(furnish)
+	await frames(6)
+	return find(screen(), "BuildView")
+
+
 func _up(s: GameSession, data: Dictionary, id: String, name: String) -> String:
-	for up: String in PropertyRules.upgrades_for(s, data, id):
+	for up: String in PropertyRules.ups(data):
+		if not PropertyRules.fits(s, data, id, up):
+			continue
 		if str(PropertyRules.ups(data)[up]["name"]) == name:
 			return up
 	return ""
