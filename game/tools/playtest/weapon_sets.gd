@@ -87,6 +87,10 @@ func run() -> void:
 		await press(arrows)
 		await frames(3)
 		step("the warning gone with the arrows on the belt", ItemRules.on_belt(c, data, s.items, "arrows") and find(screen(), "BeltNoAmmo") == null)
+		var shots: Label = find(screen(), "StowedShots_main_hand")  # v0.8.4.42.6: the shots at hand by the bow
+		step("the bow says its shots at hand", shots != null and shots.text.contains("20"), shots.text if shots != null else "")
+		var set_b: Button = find(screen(), "WeaponSetStowed")
+		step("and so does its weapon set", set_b == null or set_b.text.ends_with("· 20"), set_b.text if set_b != null else "")
 	await shot("sheet_belt_arrows")
 	# v0.8.4.25.1: the one sword is never in both sets — to the set put away it leaves the hands, and back
 	c["inventory"][sword] = 1

@@ -392,6 +392,14 @@ static func ammo_left(data: Dictionary, holder: Dictionary, ammo: String) -> int
 	return n
 
 
+## The shots a weapon has at hand (v0.8.4.42.6, the author: seen without opening the quiver): its ammunition loose on
+## the belt and in every quiver on the belt — a quiver of 15 and one of 5 are 20, a quiver of 20 and one arrow are 21.
+## -1 — the weapon shoots nothing.
+static func ready_shots(data: Dictionary, session_items: Dictionary, holder: Dictionary, weapon_id: String) -> int:
+	var ammo := ammo_of(data, session_items, weapon_id)
+	return -1 if ammo.is_empty() else ammo_left(data, holder, ammo)
+
+
 ## Ammunition picked up after a fight: into a quiver that takes it while there is room, the rest loose.
 static func stow_ammo(s: GameSession, data: Dictionary, holder: Dictionary, ammo: String, qty: int) -> void:
 	for id: String in (holder.get("bags", {}) as Dictionary):

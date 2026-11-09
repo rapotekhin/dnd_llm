@@ -45,5 +45,7 @@ func _label(c: Dictionary, hands: Dictionary) -> String:
 	for slot: String in CharacterRules.HANDS:
 		var id := str(hands.get(slot, ""))
 		if not id.is_empty():
-			return ItemRules.display_name(Catalog.data["items"], GameState.session.items, id)
+			var name := ItemRules.display_name(Catalog.data["items"], GameState.session.items, id)
+			var shots := Gear.ready_shots(Catalog.data, GameState.session.items, c, id)
+			return name if shots < 0 else "%s · %d" % [name, shots]  # v0.8.4.42.6: the shots at hand
 	return "—"

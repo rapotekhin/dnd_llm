@@ -102,3 +102,23 @@ func test_the_creation_shows_what_the_class_always_gives() -> void:
 	assert_array(ids).not_contains(["efficient_quiver"])
 	assert_bool(ContainerRules.at_hand_thing(data, {}, "longbow")).is_false()  # a bow is not ammunition for the belt
 	assert_bool(ContainerRules.at_hand_thing(data, {}, "arrows")).is_true()
+
+
+## v0.8.4.42.6, the author: the shots at hand of a bow, without opening the quiver.
+func test_the_shots_at_hand_count_every_quiver_and_the_loose_arrows_on_the_belt() -> void:
+	var s := TestUtils.new_session()
+	var c := s.character
+	ItemRules.add(c, "quiver", 2)
+	ContainerRules.sync_bags(c, data)
+	var qs := ContainerRules.bags_of(c, "quiver")
+	Thing.add(ContainerRules.bags(c)[qs[0]], "arrows", 15)
+	c["belt"] = ["quiver", "", "", "", ""]
+	assert_int(Gear.ready_shots(data, s.items, c, "longbow")).is_equal(15)
+	Thing.add(ContainerRules.bags(c)[qs[1]], "arrows", 5)
+	assert_int(Gear.ready_shots(data, s.items, c, "longbow")).is_equal(20)  # two quivers of 15 and 5
+	Thing.add(ContainerRules.bags(c)[qs[1]], "arrows", 15)
+	ItemRules.add(c, "arrows", 6)
+	assert_int(Gear.ready_shots(data, s.items, c, "longbow")).is_equal(35)  # the pack's six are not at hand
+	c["belt"] = ["quiver", "arrows", "", "", ""]
+	assert_int(Gear.ready_shots(data, s.items, c, "longbow")).is_equal(41)
+	assert_int(Gear.ready_shots(data, s.items, c, "longsword")).is_equal(-1)  # a sword shoots nothing

@@ -840,6 +840,12 @@ func _slot_card(parent: Control, details: DetailsPanel, c: Dictionary, slot: Str
 	if slot == "main_hand" and grip:
 		head.text += " · " + tr("SLOT_GRIP_BOTH")
 	_item_button(row, details, c, id, ItemRules.display_name(Catalog.data["items"], GameState.session.items, id), ("Stowed_" if spare else "Slot_") + slot)
+	var shots := Gear.ready_shots(Catalog.data, GameState.session.items, c, id)
+	if shots >= 0:  # v0.8.4.42.6: the shots at hand, without opening the quiver
+		var sl := _text(row, tr("AMMO_READY").format({"n": shots}), UiTheme.MUTED_LABEL if shots > 0 else UiTheme.WARN_LABEL)
+		sl.name = ("StowedShots_" if spare else "Shots_") + slot
+		sl.tooltip_text = tr("AMMO_READY_TIP")
+		sl.mouse_filter = Control.MOUSE_FILTER_PASS
 	var b := Button.new()
 	b.text = "BTN_UNEQUIP"
 	b.name = ("UnequipStowed_" if spare else "Unequip_") + slot
