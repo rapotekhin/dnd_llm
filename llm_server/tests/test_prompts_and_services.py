@@ -566,7 +566,7 @@ def test_words_of_a_goal_past_its_threshold_want_the_full_prompt():
     assert router.by_kind(params) == ""
     params.input = "так где дракон?"
     params.snapshot.character.goal = "«Убить дракона» — эпическая, рано: уровень класса 2 из 5"
-    assert router.by_kind(params) == ""  # before the threshold the world does not lead to it: the router decides
+    assert router.by_kind(params) == "full"  # before the threshold too: the full prompt says the world does not lead to it yet
     params.snapshot.character.goal = ("«Убить дракона» — эпическая, по силам: уровень класса 5 из 5; намёков 3 из 3 перед заданием;"
                                       " задание цели: «Логово у Зуба»")
     assert router.by_kind(params) == ""  # the quest is given: words lead to it

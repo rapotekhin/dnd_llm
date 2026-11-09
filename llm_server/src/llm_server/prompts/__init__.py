@@ -211,12 +211,13 @@ GOAL_STOP = {"убить", "стать", "найти", "добыт", "сдела
 
 
 def goal_words(snap: Snapshot) -> re.Pattern[str] | None:
-    """The stems of the hero's life goal while the world may lead to it — past its threshold, its quest not given yet
-    (v0.8.4.42.16, the author: «из мастера очень сложно доставать намёки» — «где дракон?» went by the short prompt with
-    no `goal:hint`, only the word «намёк» made the router take the full one). The goal line is GoalRules.text_of:
-    ««Убить дракона» — эпическая, по силам: уровень класса 5 из 5; намёков 1 из 3 перед заданием»."""
+    """The stems of the hero's life goal while its quest is not given (v0.8.4.42.16, the author: «из мастера очень сложно
+    доставать намёки» — «где дракон?» went by the short prompt with no `goal:hint`, only the word «намёк» made the router
+    take the full one). Before the threshold too: the short prompt has no goal and its innkeeper sent a novice to a
+    dragon's witness. The goal line is GoalRules.text_of: ««Убить дракона» — эпическая, по силам: уровень класса 5 из 5;
+    намёков 1 из 3 перед заданием»; «… — ещё не оценена» has no scale yet."""
     goal = snap.character.goal if snap.character else ""
-    if "по силам" not in goal or "задание цели:" in goal:
+    if not goal or "ещё не оценена" in goal or "задание цели:" in goal:
         return None
     text = goal.partition("»")[0].lstrip("«")
     stems = sorted({w[:5].lower() for w in re.findall(r"\w+", text) if len(w) >= 5} - GOAL_STOP)

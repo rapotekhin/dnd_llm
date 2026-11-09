@@ -406,11 +406,11 @@
 
 - **Оценка:** игрок пишет цель в листе → `kind: goal` → `goal:assess {scale, direction, concepts[], item?}`; порог ставит движок ([GoalRules.plan_assess](../../game/core/character/goal_rules.gd#L33)).
 - **До порога:** мир не ведёт к цели (ответы по логике мира: новичку о драконе — смех и совет подрасти).
-- **За порогом, на вопрос игрока:** `goal:hint` (один за ход) → после достаточных намёков `create:quest {for_goal: true}`.
+- **За порогом, на вопрос игрока:** `goal:hint` (один за ход) → после достаточных намёков `create:quest {for_goal: true}`. Вопрос — любыми словами («где дракон?»), без слова «намёк»: основы слов цели (`prompts.goal_words`, тема `goals`) ведут ход полным промптом с правилом цели и до порога, и после, пока задания цели нет (v0.8.4.42.17); зацепку NPC произносит в рассказе.
 - **Зацепки и задание цели (v0.8.4.36):** у намёка `clue` и `npc` — движок кладёт зацепку в цель (`GoalRules.apply_hint`), её видит игрок на вкладке «Развитие» и мастер в цели героя. Намёков довольно — новый `goal:hint` отказан с подсказкой о задании; вторая линия (`PrepareRules.jobs`, работа `goal`, кадр `[prepare quest | giver … | goal]`) готовит `create:quest` с `for_goal` от автора последней зацепки, и игра сразу кладёт его как задание этого человека (`GameState._prepare_one`, не чаще `rules.prepare.goal_per_day` попыток в день).
 - **Вещь цели (v0.8.4.42.16):** цель-вещь мастер называет в той же оценке — `goal:assess.item` с механикой словами игрока (`wear.status: "spell:blur"` для расплывчатости, `invisible` для невидимости, `spells`, `use`, `properties`); второй взгляд модели сверяет её со словами цели; движок ценит её без порога уровня и поднимает масштаб цели до её редкости (`rules.goal.item_scale`: очень редкая — великая, легендарная — пока недостижима). Вещь кладётся в игру, цель хранит её id; рамки задания цели (`QuestGen.goal_lines`, кадр второй линии) несут слова игрока и «Вещь цели», последний акт без неё отказан. `find_items` показывает, что вещь даёт носящему (`power`), — вещь с другим действием под похожим именем не берётся.
 - **Правила:** тема `goals`.
-- **Golden:** `goal_assessed`, `goal_novice_and_the_dragon`, `goal_not_brought_up`, `goal_hint_after_the_threshold`, `goal_quest_after_hints`, `goal_no_hint_in_the_wrong_place`, `high_goal_is_a_path`, `goal_item_blur`, `goal_item_invisible`.
+- **Golden:** `goal_assessed`, `goal_novice_and_the_dragon`, `goal_not_brought_up`, `goal_hint_after_the_threshold`, `goal_hint_without_the_word`, `goal_hint_from_the_guard`, `goal_no_hint_before_the_threshold` (с `--route`), `goal_quest_after_hints`, `goal_no_hint_in_the_wrong_place`, `high_goal_is_a_path`, `goal_item_blur`, `goal_item_invisible`.
 
 ---
 
