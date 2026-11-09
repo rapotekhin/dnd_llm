@@ -54,6 +54,20 @@ static func def_of(items_data: Dictionary, session_items: Dictionary, id: String
 	return d
 
 
+## The plain thing under a made, magic or fine one (v0.8.4.42.14, one place): a fine storm longsword stands on a storm
+## longsword that stands on `longsword` — its kind for what is read by id: a sprite, a shot, ammunition, a proficiency,
+## Shillelagh. `id` itself when it has no base.
+static func plain_of(items_data: Dictionary, session_items: Dictionary, id: String) -> String:
+	var at := real_id(id)
+	for i in 8:
+		var d: Dictionary = items_data["catalog"].get(at, session_items.get(at, {}))
+		var base := real_id(str(d.get("base", "")))
+		if base.is_empty() or base == at or not (items_data["catalog"].has(base) or session_items.has(base)):
+			return at
+		at = base
+	return at
+
+
 ## A property of parts (v0.7.65) among `added` adds the engine's own tokens to `d`; the rest are tokens themselves.
 static func _expand(items_data: Dictionary, d: Dictionary, added: Array) -> void:
 	var built: Dictionary = items_data.get("built", {})

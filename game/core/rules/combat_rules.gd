@@ -671,9 +671,10 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	var w: Dictionary = def.get("weapon", {})
 	var props: Array = def.get("properties", [])
 	var ranged := str(w.get("range", "melee")) == "ranged"
+	var kind := ItemRules.plain_of(data["items"], session_items, weapon_id)  # a fine storm longsword is a longsword
 	var monk := not martial.is_empty() and FeatureRules.monk_weapon(def) and not ranged
 	var mod := dex_mod if ranged else (maxi(str_mod, dex_mod) if props.has("finesse") or monk else str_mod)
-	var proficient := weapon_proficient(c, w, weapon_id) or FeatureRules.is_pact(c, weapon_id)  # the pact weapon alone (v0.8.4.33)
+	var proficient := weapon_proficient(c, w, kind) or FeatureRules.is_pact(c, weapon_id)  # the pact weapon alone (v0.8.4.33)
 	var to_hit := mod + (prof if proficient else 0)
 	var hit_parts: Array[Dictionary] = [RollParts.part(RollParts.ability_name("dex" if mod == dex_mod and mod != str_mod else "str"), mod)]
 	RollParts.add(hit_parts, "владение оружием", prof if proficient else 0)
@@ -703,7 +704,6 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	if not rng.is_empty():
 		rng = [int(rng[0]), int(rng[1])]
 	var two_hands := props.has("two_handed") or (w.has("versatile") and dice == str(w["versatile"]))
-	var kind := ItemRules.real_id(str(def.get("base", weapon_id))) if not str(def.get("base", "")).is_empty() else ItemRules.real_id(weapon_id)
 	if ranged and CharacterRules.item_prop(c, "ranged_damage_plus2") and kind in ["longbow", "shortbow"]:
 		bonus += 2  # Bracers of Archery (v0.7.12)
 	var ammo := Gear.ammo_of(data, session_items, weapon_id)
@@ -1140,7 +1140,7 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 		return splashed
 	var t := fighter(s, target_id)
 	var dex := Sheet.ability_mod(s, data, f, "dex")
-	var proficient := bool(fx.get("weapon", false)) and weapon_proficient(c, ItemRules.def_of(data["items"], s.items, ItemRules.real_id(item_id)), ItemRules.real_id(item_id))
+	var proficient := bool(fx.get("weapon", false)) and weapon_proficient(c, ItemRules.def_of(data["items"], s.items, item_id).get("weapon", {}), ItemRules.plain_of(data["items"], s.items, item_id))
 	var to_hit := dex + (Sheet.prof(s, data, f) if proficient else 0)
 	var near := int(fx.get("range", 20))
 	var blow := {"name": name, "to_hit": to_hit, "pieces": [], "melee": false, "range": [near, 60 if bool(fx.get("improvised", false)) else near], "str_based": false}

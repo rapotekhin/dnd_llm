@@ -366,8 +366,7 @@ static func ammo_of(data: Dictionary, session_items: Dictionary, weapon_id: Stri
 	if not (def.get("properties", []) as Array).has("ammunition"):
 		return ""
 	var by: Dictionary = ItemRules.cfg(data)["ammo"]
-	var kind := ItemRules.real_id(str(def.get("base", weapon_id))) if not str(def.get("base", "")).is_empty() else ItemRules.real_id(weapon_id)
-	return str(by.get(ItemRules.real_id(weapon_id), by.get(kind, "")))
+	return str(by.get(ItemRules.real_id(weapon_id), by.get(ItemRules.plain_of(data["items"], session_items, weapon_id), "")))
 
 
 ## The weapons in either set of anybody that have nothing to shoot on the belt (v0.8.4.42.1, the author: a warning in the

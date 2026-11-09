@@ -545,24 +545,13 @@ static func abandon(s: GameSession, data: Dictionary) -> Array[String]:
 ## salvage.extra; a magic thing adds arcane dust by its rarity (v0.7.39.1). {} — none.
 static func salvage_yield(s: GameSession, data: Dictionary, item_id: String) -> Dictionary:
 	var def := ItemRules.def_of(data["items"], s.items, item_id)
-	var base := _root_base(data, s, item_id)
+	var base := ItemRules.plain_of(data["items"], s.items, item_id)
 	var out := _base_yield(s, data, base)
 	var dust := magic_dust(s, data, item_id)
 	if dust > 0:
 		var key := str(cfg(data)["dust"])
 		out[key] = int(out.get(key, 0)) + dust
 	return out if not def.is_empty() else {}
-
-
-## The mundane thing under a made or magic one: a +1 sword's, an elemental blade's, a fine dagger's base.
-static func _root_base(data: Dictionary, s: GameSession, item_id: String) -> String:
-	var id := item_id
-	for i in 3:
-		var d := ItemRules.def_of(data["items"], s.items, id)
-		if str(d.get("base", "")).is_empty():
-			return id
-		id = str(d["base"])
-	return id
 
 
 static func _base_yield(s: GameSession, data: Dictionary, base: String) -> Dictionary:

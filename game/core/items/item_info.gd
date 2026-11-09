@@ -34,7 +34,7 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 		meta.append(Money.format(int(def["value_cp"])))
 	if not meta.is_empty():
 		out.append(" · ".join(meta))
-	var prof := proficiency_line(c, def, id)
+	var prof := proficiency_line(c, def, ItemRules.plain_of(data["items"], session_items, id))
 	if not prof.is_empty():
 		out.append(prof)
 	var use := use_line(data, id, session_items)
@@ -157,14 +157,13 @@ static func mark_name(data: Dictionary, p: String) -> String:
 	return p if n == key else n.get_slice(":", 0)
 
 
-## Weapons and armor the hero is not trained with: no proficiency bonus / disadvantage and no spells in armor.
+## Weapons and armor the hero is not trained with: no proficiency bonus / disadvantage and no spells in armor. `id` is the
+## plain kind of the thing (`ItemRules.plain_of`): a fine storm longsword asks the longsword.
 static func proficiency_line(c: Dictionary, def: Dictionary, id: String) -> String:
 	if c.is_empty():
 		return ""
 	if def.has("weapon"):
-		var profs: Array = c.get("weapon_profs", [])
-		var base := str(def.get("base", id))
-		if not (profs.has(str(def["weapon"].get("category", ""))) or profs.has(id) or profs.has(base)):
+		if not CombatRules.weapon_proficient(c, def["weapon"], id):
 			return TranslationServer.translate("ITEM_NO_PROF_WEAPON")
 	elif def.has("armor"):
 		var cat := str(def["armor"]["category"])

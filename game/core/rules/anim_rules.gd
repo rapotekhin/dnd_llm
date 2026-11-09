@@ -83,12 +83,14 @@ static func of_blow(s: GameSession, data: Dictionary, f: Dictionary, t: Dictiona
 		return {"anim": of_spell(data, str(b["spell"])), "dtype": dtype if not dtype.is_empty() else "magic", "proj": "", "sprite": ""}
 	var a: Dictionary = b.get("act", {})
 	var item := str(a.get("item", "")) if not a.is_empty() else str(b.get("id", ""))
-	var out := {"anim": "", "dtype": dtype, "proj": "", "sprite": sprite_of(data, item)}
+	var items: Dictionary = s.items if s != null else {}
+	var kind := ItemRules.plain_of(data["items"], items, item)  # a fine storm longsword is a longsword
+	var out := {"anim": "", "dtype": dtype, "proj": "", "sprite": sprite_of(data, item, items)}
 	if not item.is_empty() and s != null and Attack.shot(f, t, b) and bool(b.get("melee", false)):
 		out["anim"] = "throw"  # a dagger or a javelin out of the hand
-	elif not item.is_empty() and (c["shots"] as Dictionary).has(_base(data, item)):
-		out["anim"] = "throw" if item == "dart" else "shot"
-		out["proj"] = str(c["shots"][_base(data, item)])
+	elif not item.is_empty() and (c["shots"] as Dictionary).has(kind):
+		out["anim"] = "throw" if kind == "dart" else "shot"
+		out["proj"] = str(c["shots"][kind])
 	elif not item.is_empty() and not str(out["sprite"]).is_empty():
 		out["anim"] = str(c["weapon_by_dtype"].get(dtype, "swing"))
 	elif not item.is_empty():
@@ -113,16 +115,9 @@ static func _plain(name_en: String) -> String:
 	return name_en.get_slice(" (", 0)
 
 
-## The catalog weapon a +1 or a made thing stands on.
-static func _base(data: Dictionary, item: String) -> String:
-	var cat: Dictionary = data["items"]["catalog"]
-	var def: Dictionary = cat.get(item, {})
-	return str(def["base"]) if def.has("base") and cat.has(str(def["base"])) else item
-
-
-## The sprite of a thing in the hand, "" — none (an empty hand, a dart, a net).
-static func sprite_of(data: Dictionary, item: String) -> String:
-	return "" if item.is_empty() else str(cfg(data)["weapons"].get(_base(data, item), ""))
+## The sprite of a thing in the hand by its plain kind through every base, "" — none (an empty hand, a dart, a net).
+static func sprite_of(data: Dictionary, item: String, items: Dictionary) -> String:
+	return "" if item.is_empty() else str(cfg(data)["weapons"].get(ItemRules.plain_of(data["items"], items, item), ""))
 
 
 ## What a fighter shows on its token: {shield: bool, sprite: "", item: ""}. The hero's hands, anybody's things in a fight.
@@ -144,7 +139,7 @@ static func gear(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 			if not item.is_empty() and (inv.is_empty() or int(inv.get(item, 0)) > 0):
 				out["item"] = item
 				break
-	out["sprite"] = sprite_of(data, str(out["item"]))
+	out["sprite"] = sprite_of(data, str(out["item"]), s.items)
 	return out
 
 
