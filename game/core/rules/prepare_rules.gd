@@ -190,7 +190,7 @@ static func frame(s: GameSession, data: Dictionary, job: Dictionary) -> String:
 			lines.append("Округа: %s" % v.location(v.location_id(room)).get("description", ""))
 		"quest", "goal":
 			var npc := str(job["npc"])
-			var n := SceneRules.npc(s, data["world"], npc)  # as the world is now (v0.8.4.42.@)
+			var n := SceneRules.npc(s, data["world"], npc)  # as the world is now (v0.8.4.42.18)
 			var room := str(job["room"])
 			lines.append("[prepare quest | giver %s%s]" % [npc, " | goal" if job["kind"] == "goal" else ""])
 			if job["kind"] == "goal":

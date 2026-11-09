@@ -100,7 +100,7 @@ static func add(s: GameSession, data: Dictionary, r: Dictionary) -> Dictionary:
 
 
 ## The pack's own rumours (world.json `rumors`) put in on the first day; once each. One with `when` (Cond) waits for its
-## fact and begins the day it holds — the talk of a deed the hero has done (v0.8.4.42.@); `ends` (Cond) — the fact that
+## fact and begins the day it holds — the talk of a deed the hero has done (v0.8.4.42.18); `ends` (Cond) — the fact that
 ## makes it old news: the fire on the tower is not talked of once the cult that lit it is gone. Run again by `tick`.
 static func seed(s: GameSession, data: Dictionary) -> void:
 	if not on(data):
@@ -221,7 +221,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	if not on(data):
 		return lines
-	RumorRules.seed(s, data)  # the pack's talk of a deed done begins (v0.8.4.42.@)
+	RumorRules.seed(s, data)  # the pack's talk of a deed done begins (v0.8.4.42.18)
 	var here := _loc(data, s.room_id)
 	for r: Dictionary in _state(s)["list"].values():
 		if int(r.get("fame", 0)) == 0 and str(r.get("crime", "")).is_empty():

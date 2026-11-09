@@ -668,6 +668,11 @@
           "title": "Offered By",
           "type": "string"
         },
+        "outcome": {
+          "default": "",
+          "title": "Outcome",
+          "type": "string"
+        },
         "step": {
           "default": "",
           "title": "Step",

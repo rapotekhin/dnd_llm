@@ -15,7 +15,7 @@ static func room(s: GameSession, world: Dictionary, room_id: String) -> Dictiona
 	return Cond.overlay(s, world["rooms"].get(room_id, {}), KEYS)
 
 
-## A person of the pack as the world is now (v0.8.4.42.@): its `variants` [{when, description?, personality?, role?}] by
+## A person of the pack as the world is now (v0.8.4.42.18): its `variants` [{when, description?, personality?, role?}] by
 ## the hero's deeds — the captain no longer waits for the cult the hero burned out.
 static func npc(s: GameSession, world: Dictionary, npc_id: String) -> Dictionary:
 	return Cond.overlay(s, WorldView.new(world).npc(npc_id), NPC_KEYS)

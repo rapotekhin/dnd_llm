@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## The world after the hero's deed (v0.8.4.42.@, the author's trace: after «Пепел над Маркой» Brod still talked of the
+## The world after the hero's deed (v0.8.4.42.18, the author's trace: after «Пепел над Маркой» Brod still talked of the
 ## fire on the tower and the missing as of now). What came of a finished quest goes to the master (`outcome`, the
 ## «Сделано» of the prompt) and the journal; the pack's records change by its facts through one road, Cond.overlay:
 ## a room's hooks, a person's character, the pack's lore; the pack's talk ends (`ends`) or begins (`when`) by them.

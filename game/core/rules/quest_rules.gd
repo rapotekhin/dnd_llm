@@ -571,7 +571,7 @@ static func info(s: GameSession, world: Dictionary) -> Array[Dictionary]:
 	return out
 
 
-## What came of a finished quest, for the master and the journal (v0.8.4.42.@): the quest's own `outcome` (what the
+## What came of a finished quest, for the master and the journal (v0.8.4.42.18): the quest's own `outcome` (what the
 ## world knows now) or the `done_text` of its last step, and the finale's choice the hero made — the choice whose flag
 ## is set, by its `outcome` or `done_text`. "" while the quest goes on or when it failed without words.
 static func outcome(s: GameSession, world: Dictionary, quest_id: String) -> String:

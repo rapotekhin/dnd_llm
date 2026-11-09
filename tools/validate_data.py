@@ -57,7 +57,7 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
 
 def check_rumors(world, rooms, items: set | None = None) -> list[str]:
     """v0.7.47: the pack's own rumours — a text, a weight 1–3, an origin location, a tip's room and secret of the world;
-    v0.8.4.42.@: `when` — the talk begins when its fact holds, `ends` — the fact that makes it old news (Cond)."""
+    v0.8.4.42.18: `when` — the talk begins when its fact holds, `ends` — the fact that makes it old news (Cond)."""
     errors: list[str] = []
     locs = set(world.get("locations", {}))
     for rid, r in world.get("rumors", {}).items():
@@ -477,7 +477,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         diseases = set(load(DATA / "rules.json")["diseases"]["catalog"]) | set(world.get("diseases", {}))
         if npc.get("sick") and npc["sick"] not in diseases:  # v0.7.23.1: a sick NPC passes its disease on
             errors.append(f"NPC {nid}: sick — болезнь из {', '.join(sorted(diseases))}")
-        for i, nv in enumerate(npc.get("variants", [])):  # v0.8.4.42.@: the person by the hero's deeds (SceneRules.NPC_KEYS)
+        for i, nv in enumerate(npc.get("variants", [])):  # v0.8.4.42.18: the person by the hero's deeds (SceneRules.NPC_KEYS)
             where = f"NPC {nid}, variants[{i}]"
             if not isinstance(nv.get("when"), dict) or set(nv) - {"when", "description", "personality", "role"}:
                 errors.append(f"{where}: ключи when, description, personality, role")

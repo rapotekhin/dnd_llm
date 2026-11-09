@@ -15,7 +15,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 		exits.append({"room_id": e, "name": world.room(e).get("name", e), "door": WayRules.describe(s, data, s.room_id, e)})
 	var npcs: Array[Dictionary] = []
 	for id: String in s.npcs_here(world.world, s.room_id):
-		var n := SceneRules.npc(s, data["world"], id)  # the person as the world is now (v0.8.4.42.@)
+		var n := SceneRules.npc(s, data["world"], id)  # the person as the world is now (v0.8.4.42.18)
 		npcs.append({"npc_id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 			"body": BodyRules.npc_text(data, id, n),
 			"gender": n.get("gender", "other"), "description": str(n.get("description", "")) + _sick(s, data, id, n) + _hungry(s, id) + _wounds(s, data, id) + Guise.seen_by(s, id) + _statuses(s, data, id),
@@ -122,7 +122,7 @@ static func quest_offers(s: GameSession, world: Dictionary) -> Array[Dictionary]
 
 ## The world pack and the master settings of this game (ADR-0010 §1, §3).
 static func world_info(s: GameSession, data: Dictionary) -> Dictionary:
-	var p: Dictionary = Cond.overlay(s, data.get("pack", {}), ["lore"], data)  # the lore after the hero's deeds (v0.8.4.42.@)
+	var p: Dictionary = Cond.overlay(s, data.get("pack", {}), ["lore"], data)  # the lore after the hero's deeds (v0.8.4.42.18)
 	var st := s.settings if not s.settings.is_empty() else WorldPack.default_settings(p)
 	return {"name": str(p.get("name", "")), "lore": str(p.get("lore", "")), "tone": str(p.get("tone", "")),
 		"magic": str(p.get("magic", "")), "dm_style": str(st.get("dm_style", "classic")),

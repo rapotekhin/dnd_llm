@@ -1,4 +1,4 @@
-{# What the hero has finished (v0.8.4.42.@): the done and failed quests with what came of them, for the full and the short prompt. #}{% set finished = (quests or []) | rejectattr("offered_by") | selectattr("done") | list + (quests or []) | rejectattr("offered_by") | selectattr("failed") | rejectattr("done") | list %}{% if finished %}
+{# What the hero has finished (v0.8.4.42.18): the done and failed quests with what came of them, for the full and the short prompt. #}{% set finished = (quests or []) | rejectattr("offered_by") | selectattr("done") | list + (quests or []) | rejectattr("offered_by") | selectattr("failed") | rejectattr("done") | list %}{% if finished %}
 ## Сделано
 
 {% for q in finished %}- «{{ q.title }}» — {% if q.done %}выполнено{% else %}провалено{% endif %}{% if q.outcome %}: {{ q.outcome }}{% endif +%}

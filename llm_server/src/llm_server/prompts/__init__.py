@@ -402,7 +402,7 @@ def short_prompt(mode: str, snap: Snapshot, npc: SceneNpc | None, tone: str = DE
     character = snap.character
     return render("short.md.j2", mode=mode, npc=npc if mode != "exploration" else None, scene=snap.scene, world=snap.world,
                   character=character, tone=tone, gender_rule=gender_rule(character.gender if character else "other"),
-                  npc_gender_rule=npc_gender_rule(npc.gender) if npc else "", quests=snap.quests)  # «Сделано» (v0.8.4.42.@)
+                  npc_gender_rule=npc_gender_rule(npc.gender) if npc else "", quests=snap.quests)  # «Сделано» (v0.8.4.42.18)
 
 
 def turn_prompt(mode: str, kind: str, player_input: str, snap: Snapshot, npc: SceneNpc | None) -> str:

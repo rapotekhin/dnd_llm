@@ -40,7 +40,7 @@ static func find(s: GameSession, data: Dictionary, kind: String, id: String) -> 
 		"npc":
 			var world := WorldView.new(data["world"])
 			if s.npcs_here(world.world, s.room_id).has(id):
-				var n := SceneRules.npc(s, data["world"], id)  # as the world is now (v0.8.4.42.@)
+				var n := SceneRules.npc(s, data["world"], id)  # as the world is now (v0.8.4.42.18)
 				var out := {"id": id, "name": n.get("name", id), "role": n.get("role", ""), "race": n.get("race", ""),
 					"description": n.get("description", ""), "personality": n.get("personality", ""),
 					"attitude": s.attitude(id), "trader": bool(n.get("trader", false))}
