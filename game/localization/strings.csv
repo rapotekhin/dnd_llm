@@ -1110,6 +1110,9 @@ COMBAT_ALLY_ABOUT,"На вашей стороне — ходит сам, по п
 SIDE_WITH_YOU,С вами
 BTN_FOLLOWER_STAY,Ждать здесь
 BTN_FOLLOWER_LEAD,Вести с собой
+BTN_GROW,Новый уровень
+BTN_GROW_TIP,"{name}: опыта хватает на новый уровень — хиты по кости класса и умения уровня"
+GROW_NOT_READY,Опыта на новый уровень ещё мало
 BTN_FOLLOWER_LET_GO,Отпустить
 BTN_FOLLOWER_LET_GO_TIP,Спутник уходит к себе домой
 BTN_FOLLOWER_STAY_TIP,Спутник остаётся в этом месте и ждёт

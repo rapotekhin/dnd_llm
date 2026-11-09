@@ -65,7 +65,7 @@ func _rebuild() -> void:
 		_box.add_child(HSeparator.new())
 		UiParts.label(_box, str(q["title"]))
 		UiParts.label(_box, str(q.get("description", "")), UiTheme.MUTED_LABEL)
-		UiParts.label(_box, tr("BOARD_ORDER_LINE").format({"who": world.npc(str(q.get("giver", ""))).get("name", "—"), "reward": Money.format(QuestGen.reward_cp(q))}), UiTheme.MUTED_LABEL)
+		UiParts.label(_box, tr("BOARD_ORDER_LINE").format({"who": world.npc(str(q.get("giver", ""))).get("name", "—"), "reward": Money.format(DifficultyRules.reward(s, Catalog.data, QuestGen.reward_cp(q)))}), UiTheme.MUTED_LABEL)
 		if not QuestGen.difficulty_line(data, q).is_empty():
 			UiParts.label(_box, QuestGen.difficulty_line(data, q), UiTheme.MUTED_LABEL)
 		var why := QuestGen.can_take(s, data, qid)

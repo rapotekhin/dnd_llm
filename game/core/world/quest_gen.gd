@@ -375,7 +375,7 @@ static func act_frame(s: GameSession, data: Dictionary, quest_id: String, setbac
 		tier_xp(s, data, tier, level), level, (", бои на %d героев" % DifficultyRules.party(s, data)) if DifficultyRules.party(s, data) > 1 else "", ("; главарь (boss) в последнем акте — до %d" % tier_xp(s, data, tier_step(data, tier, 1) if not tier_step(data, tier, 1).is_empty() else tier, level)) if bool(d["boss"]) else "", DifficultyRules.crowd_line(s, data)])
 	if last and bool(d["choice"]):
 		out.append("Финал: шаг choice с 2–3 выборами обязателен (флаг, отношение, перемена места).")
-	out.append("Награду назначит движок: %s и опыт к концу задания — не указывай её." % Money.format(int(q.get("reward_cp", 0))))
+	out.append("Награду назначит движок: %s и опыт к концу задания — не указывай её." % Money.format(DifficultyRules.reward(s, data, int(q.get("reward_cp", 0)))))
 	var c := s.character
 	out.append("Герой: %s, %s %d ур., ОЗ %d/%d." % [c.get("name", ""), c.get("class", ""), level, int(c.get("hp", 0)), int(c.get("max_hp", 0))])
 	out.append("Герой сейчас: %s [%s]." % [world.room(s.room_id).get("name", s.room_id), s.room_id])

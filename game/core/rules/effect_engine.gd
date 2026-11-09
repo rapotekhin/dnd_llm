@@ -102,7 +102,7 @@ func reward_left(s: GameSession, data: Dictionary, turn_id: String, pending: Arr
 static func budget_left(s: GameSession, data: Dictionary) -> int:
 	var per: Dictionary = data["rules"]["reward_budget"]["per_rest_cp"]
 	var level := clampi(int(s.character.get("level", 1)), 1, per.size())
-	return maxi(0, int(per[str(level)]) - s.reward_spent)
+	return maxi(0, DifficultyRules.reward(s, data, int(per[str(level)])) - s.reward_spent)  # the party's treasure (v0.8.4.42.2)
 
 
 func validate(s: GameSession, data: Dictionary, turn_id: String, effect: Dictionary) -> Dictionary:

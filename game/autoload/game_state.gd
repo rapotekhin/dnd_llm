@@ -1459,8 +1459,7 @@ func _combat_outcome() -> void:
 	var outcome := str(s.combat["outcome"])
 	if outcome in ["victory", "truce"]:
 		CombatRules.results(s, Catalog.data)
-		var xp_lines := XpRules.award(s.character, Catalog.data, int(s.combat["xp"]), "бой")
-		xp_lines.append_array(GrowthRules.share(s, Catalog.data, GrowthRules.fought(s), int(s.combat["xp"])))  # who fought beside grows too (v0.8.4.11)
+		var xp_lines := XpRules.share(s, Catalog.data, int(s.combat["xp"]), "бой", GrowthRules.fought(s))  # split with the followers who fought (v0.8.4.42.2)
 		_combat_log(xp_lines)
 	var log: Array = s.combat.get("log", [])
 	s.combat["log"] = []
@@ -2727,6 +2726,13 @@ func escape_captivity(how: String) -> String:
 
 ## A follower by the buttons, without the master (v0.7.22.22, #25): `what` stay (waits here), lead (one left here
 ## goes again), let_go (goes home). "" or a key.
+## The follower's next level by the player's button (v0.8.4.42.2).
+func follower_grow(npc_id: String) -> String:
+	if not _idle():
+		return "WAIT_BUSY"
+	return _act("grow", {"grow": [GrowthRules.grow_why.bind(session, Catalog.data, npc_id), GrowthRules.grow.bind(session, Catalog.data, npc_id)]})
+
+
 func follower_act(npc_id: String, what: String) -> String:
 	if not _idle():
 		return "WAIT_BUSY"

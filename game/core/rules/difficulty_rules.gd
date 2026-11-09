@@ -31,6 +31,12 @@ static func party(s: GameSession, data: Dictionary) -> int:
 	return clampi(n, 1, int(p["max"]))
 
 
+## A reward made for the party (v0.8.4.42.2, the author): a quest's coins and experience and the master's treasure budget
+## are those of the whole party the fights are made for — one hero in a game for four takes the four's.
+static func reward(s: GameSession, data: Dictionary, base: int) -> int:
+	return base * party(s, data)
+
+
 ## The party sizes to choose from: 1..party.max.
 static func party_sizes(data: Dictionary) -> Array:
 	return range(1, int(cfg(data).get("party", {"max": 1})["max"]) + 1)

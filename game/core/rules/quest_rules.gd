@@ -463,7 +463,7 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 		s.flags.append(flag)
 	if r.has("cure_npc"):  # v0.7.50.1: the quest's remedy works, whatever the illness
 		lines.append_array(DiseaseRules.cure_npc(s, data, str(r["cure_npc"]), "magic"))
-	var cp := int(r.get("reward_cp", 0))
+	var cp := DifficultyRules.reward(s, data, int(r.get("reward_cp", 0)))  # the party's (v0.8.4.42.2)
 	if cp > 0:
 		Ledger.add(s, cp, "quest:reward")
 		lines.append("+" + Money.format(cp))
@@ -477,8 +477,7 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 		s.shift_attitude(npc, int(att[npc]), data)
 		lines.append("%s: отношение %s" % [world.npc_name(npc), "лучше" if int(att[npc]) > 0 else "хуже"])
 	if class_xp:
-		lines.append_array(XpRules.award(c, data, int(r.get("xp", 0)), "задание"))
-		lines.append_array(GrowthRules.share(s, data, GrowthRules.company(s), int(r.get("xp", 0))))  # and who walked it with the hero (v0.8.4.11)
+		lines.append_array(XpRules.share(s, data, DifficultyRules.reward(s, data, int(r.get("xp", 0))), "задание", GrowthRules.company(s)))  # the party's, split with who walked it (v0.8.4.42.2)
 
 
 ## Taken quests for the snapshot and the journal: [{id, title, description, done, failed, step}]; failed ones —

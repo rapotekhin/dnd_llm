@@ -17,6 +17,18 @@ static func combat_xp(data: Dictionary, crs: Array) -> int:
 	return total
 
 
+## Experience of a fight or a quest split evenly between the hero and the members of its party beside it (v0.8.4.42.2, 5e):
+## the followers who fought or walked it. Each takes its share; a follower grows by GrowthRules. Lines.
+static func share(s: GameSession, data: Dictionary, amount: int, source: String, members: Array) -> Array[String]:
+	var lines: Array[String] = []
+	if amount <= 0:
+		return lines
+	var each := floori(float(amount) / (1 + members.size()))
+	lines.append_array(award(s.character, data, each, source if members.is_empty() else "%s, доля одного из %d" % [source, 1 + members.size()]))
+	lines.append_array(GrowthRules.share(s, data, members, each))
+	return lines
+
+
 ## Adds experience; returns the chat lines (with «можно повысить уровень» when it is time).
 static func award(c: Dictionary, data: Dictionary, amount: int, source: String) -> Array[String]:
 	var lines: Array[String] = []
@@ -62,12 +74,12 @@ static func complete(s: GameSession, data: Dictionary, quest_id: String) -> Arra
 	var q: Dictionary = quests(data["world"])[quest_id]
 	s.quests_done.append(quest_id)
 	var lines: Array[String] = ["Задание выполнено: %s" % q["title"]]
-	var cp := int(q.get("reward_cp", 0))
+	var cp := DifficultyRules.reward(s, data, int(q.get("reward_cp", 0)))  # the party's (v0.8.4.42.2)
 	if cp > 0:
 		Ledger.add(s, cp, "xp:complete")
 		lines.append("+" + Money.format(cp))
 	if QuestRules.dangerous(q, q):  # v0.7.19: class experience only for the dangerous
-		lines.append_array(award(s.character, data, int(q.get("xp", 0)), "задание"))
+		lines.append_array(share(s, data, DifficultyRules.reward(s, data, int(q.get("xp", 0))), "задание", GrowthRules.company(s)))
 	return lines
 
 

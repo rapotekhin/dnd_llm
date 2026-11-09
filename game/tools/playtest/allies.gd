@@ -32,6 +32,19 @@ func run() -> void:
 			await press(lead)
 			await frames(3)
 			step("goes with the hero again", Being.follows(s, "npc_mercenary"))
+	# v0.8.4.42.2: its share of experience past the threshold — the player raises its level by a button
+	var lv := GrowthRules.level(s, data, "npc_mercenary")
+	GrowthRules.gain(s, data, "npc_mercenary", LevelUp.xp_for(data, lv + 1) - LevelUp.xp_for(data, lv))
+	step("the follower waits for its level", GrowthRules.level(s, data, "npc_mercenary") == lv and GrowthRules.ready(s, data, "npc_mercenary"))
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	await open_row("More_npc_mercenary")
+	var grow: Button = find(screen(), "Grow_npc_mercenary")
+	if step("«Новый уровень» at the follower", grow != null and not grow.disabled):
+		await shot("follower_grow")
+		await press(grow)
+		await frames(3)
+		step("its level rose by the button", GrowthRules.level(s, data, "npc_mercenary") == lv + 1 and find(screen(), "Grow_npc_mercenary") == null)
 
 	AllyRules.summon(s, data, "find_familiar")
 	node("EventBus").state_changed.emit()

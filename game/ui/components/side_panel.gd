@@ -611,6 +611,8 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 		follow = [["lead", "BTN_FOLLOWER_LEAD"], ["let_go", "BTN_FOLLOWER_LET_GO"]]
 	if Being.follows(s, id):  # v0.8.4.40: what it wears, by the hero's rules
 		_flow(_group(groups, "life", id), tr("BTN_GEAR"), gear_requested.emit.bind(id), can_act, "Gear_" + id, tr("BTN_GEAR_TIP"))
+	if Being.follows(s, id) and GrowthRules.ready(s, Catalog.data, id):  # v0.8.4.42.2: its level by the player, as the hero's — in the row itself, seen at once
+		_flow(acts, tr("BTN_GROW"), _try.bind(GameState.follower_grow.bind(id)), can_act, "Grow_" + id, tr("BTN_GROW_TIP").format({"name": n.get("name", id)}))
 	for fa: Array in follow:
 		var what: String = fa[0]
 		var fb := _flow(_group(groups, "life", id), tr(fa[1]), _try.bind(GameState.follower_act.bind(id, what)), can_act, "Follower_%s_%s" % [what, id])
