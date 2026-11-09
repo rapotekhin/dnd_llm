@@ -291,6 +291,61 @@ static func history(s: GameSession, world: Dictionary, quest_id: String) -> Arra
 	return out
 
 
+## What the current step asks, for the journal (v0.8.4.42.3, the author: not only where, but what to do and by which
+## check): a row per fact of its `when` — {do: find | fight | talk | go | choose, or?: a part of `any` after the first,
+## room?, skill?, dc?, item? (find: or got another way; talk: to give; go: to bring), npc?, foes?, defeat?}. A part
+## already done is left out.
+static func todo(s: GameSession, data: Dictionary, quest_id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var step := current(s, data["world"], quest_id)
+	if not step.is_empty():
+		_todo(s, data, step["when"], out, false)
+	return out
+
+
+static func _todo(s: GameSession, data: Dictionary, when: Dictionary, out: Array[Dictionary], alt: bool) -> void:
+	for k: String in ["all", "any"]:
+		var first := true
+		for sub: Variant in when.get(k, []):
+			if sub is Dictionary and not Cond.met(s, sub, data):
+				_todo(s, data, sub, out, k == "any" and not first)
+				first = false
+	var r := {}
+	if when.has("talk"):
+		r = {"do": "talk", "npc": str(when["talk"])}
+		if when.has("item"):
+			r["item"] = str(when["item"])
+	elif when.has("secret"):
+		var room := str(when["secret"]).get_slice(":", 0)
+		r = {"do": "find", "room": room}
+		for sec: Dictionary in ExplorationRules.secrets(data["world"], room):
+			if str(sec.get("id", "")) == str(when["secret"]).get_slice(":", 1):
+				r["skill"] = str(sec.get("skill", "perception"))
+				r["dc"] = int(sec["dc"])
+		if when.has("has"):
+			r["item"] = str(when["has"])
+	elif when.has("encounter"):
+		var room := EncounterRules.room_of(s, data, str(when["encounter"]))
+		var foes: Array[String] = []
+		for e: Dictionary in SceneRules.room(s, data["world"], room).get("encounter", {}).get("enemies", []) if not room.is_empty() else []:
+			var n := int(e.get("count", 1))
+			foes.append(str(e.get("name", data["monsters"].get(str(e.get("monster", "")), {}).get("name", ""))) + (" ×%d" % n if n > 1 else ""))
+		r = {"do": "fight", "room": room, "foes": foes, "defeat": bool(when.get("defeat", false))}
+	elif when.has("room") or when.has("arrive"):
+		r = {"do": "go", "room": str(when.get("room", when.get("arrive", "")))}
+		if when.has("item"):
+			r["item"] = str(when["item"])
+	elif when.has("choice"):
+		r = {"do": "choose", "room": str(when["choice"])}
+	if r.is_empty():
+		return
+	if when.has("qty"):
+		r["qty"] = int(when["qty"])
+	if alt:
+		r["or"] = true
+	out.append(r)
+
+
 ## The step text with its parts: «Разузнать… (✓ застава; шахта)».
 static func step_text(s: GameSession, world: Dictionary, quest_id: String) -> String:
 	var step := current(s, world, quest_id)

@@ -43,6 +43,22 @@ func run() -> void:
 	step("the designer built its act on taking", await wait_until(func() -> bool:
 		return int(QuestRules.quest(data["world"], qid).get("built", 0)) == 1 and not gs.is_busy(), 60.0),
 		str(QuestRules.quest(data["world"], qid).get("steps", [])))
+	# v0.8.4.42.3, the author: a quest in the journal folds to its title and says what to do and by which check
+	await press(find(game, "JournalButton"))
+	await frames(5)
+	var head: Button = find(screen(), "JournalQuest_" + qid)
+	if step("the followed quest in the journal, open", head != null and find(screen(), "JournalQuestBody_" + qid) != null):
+		var body: Label = find(screen(), "JournalQuestBody_" + qid)
+		step("its step says what to do", body.text.contains(tr("JOURNAL_TODO").get_slice("{", 0).strip_edges()), body.text.c_escape().right(400))
+		await shot("journal_quest_open")
+		await press(head)
+		await frames(3)
+		step("folded to its title", find(screen(), "JournalQuestBody_" + qid) == null and find(screen(), "JournalQuest_" + qid) != null)
+		await shot("journal_quest_folded")
+		await press(find(screen(), "JournalQuest_" + qid))
+		await frames(3)
+	await key(KEY_ESCAPE)
+	await frames(3)
 	var gold := int(s.character["gold_cp"])
 	for i in 6:  # the act's steps by their buttons; a fight the real designer adds is won by the engine's fact
 		await frames(3)

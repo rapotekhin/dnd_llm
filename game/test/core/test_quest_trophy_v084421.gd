@@ -56,3 +56,24 @@ func test_a_find_closes_when_the_hero_has_the_thing_by_any_way() -> void:
 	ItemRules.add(s.character, "raw_hide", 1)  # the master handed one from the camp, not the hidden one
 	QuestRules.advance(s, data)
 	assert_int(int(s.quests_active[id])).is_equal(2)  # the find is done: take it to Bruno
+
+
+func test_the_journal_says_what_a_step_asks_and_by_which_check() -> void:
+	var id := _taken()
+	assert_bool(bool(_act(id, "pushcha-edge")["accepted"])).is_true()
+	var now := QuestRules.todo(s, data, id)
+	assert_str(str(now[0]["do"])).is_equal("fight")
+	assert_bool(bool(now[0]["defeat"])).is_false()  # a beast of an ambush may be slipped past
+	assert_str(str(now[0]["room"])).is_equal("pushcha-edge")
+	var q := QuestRules.quest(data["world"], id)
+	s.encounters_passed.append(str(q["steps"][0]["when"]["encounter"]))
+	QuestRules.advance(s, data)
+	now = QuestRules.todo(s, data, id)
+	assert_str(str(now[0]["do"])).is_equal("find")
+	assert_str(str(now[0]["skill"])).is_equal("survival")
+	assert_int(int(now[0]["dc"])).is_equal(int(data["rules"]["dc_tiers"]["easy"]))
+	assert_str(str(now[0]["item"])).is_equal("raw_hide")
+	ItemRules.add(s.character, "raw_hide", 1)
+	QuestRules.advance(s, data)
+	now = QuestRules.todo(s, data, id)
+	assert_dict(now[0]).contains_key_value("do", "talk").contains_key_value("npc", "npc_innkeeper").contains_key_value("item", "raw_hide")

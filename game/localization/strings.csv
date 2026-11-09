@@ -1841,6 +1841,24 @@ JOURNAL_TAB_RECIPES,Рецепты
 JOURNAL_EMPTY_RECIPES,Вы пока не знаете ни одного рецепта: их дают владение инструментом, уроки и книги
 JOURNAL_RECIPES_NO_TOOL,Без инструмента
 JOURNAL_WHERE,Где: {where}
+JOURNAL_TODO,Что сделать: {what}
+TODO_FIND,обыскать «{room}»
+TODO_CHECK," — проверка: {skill}, Сл {dc}{tier}"
+TODO_OR_GET,", или раздобыть иначе: {item}"
+TODO_FIGHT,одолеть: {foes}
+TODO_FIGHT_PASS,одолеть или пройти незаметно: {foes}
+TODO_TALK,поговорить: {who}
+TODO_GIVE,отдать {who}: {item}
+TODO_GO,прийти: {room}
+TODO_BRING,принести в «{room}»: {item}
+TODO_CHOOSE,"решить, как быть, в «{room}»"
+TODO_OR,или
+DC_TIER_VERY_EASY,очень лёгкая
+DC_TIER_EASY,лёгкая
+DC_TIER_MEDIUM,средняя
+DC_TIER_HARD,трудная
+DC_TIER_VERY_HARD,очень трудная
+DC_TIER_NEARLY_IMPOSSIBLE,почти невозможная
 JOURNAL_STORY,Из дневника: {text}
 JOURNAL_TODAY,Сегодня: {date}
 JOURNAL_FESTIVALS,Праздники впереди

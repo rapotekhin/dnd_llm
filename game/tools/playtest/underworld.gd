@@ -193,7 +193,8 @@ func run() -> void:
 
 
 func _texts(n: Node) -> String:
-	return " ".join(n.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text))
+	return " ".join(n.find_children("*", "Control", true, false).filter(func(l: Node) -> bool: return l is Label or l is Button)  # a quest's title is its fold button (v0.8.4.42.3)
+		.map(func(l: Node) -> String: return str(l.get("text"))))
 
 
 func _go(s: GameSession, room: String, hour: int) -> void:

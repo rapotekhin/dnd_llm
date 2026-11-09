@@ -258,13 +258,45 @@ func _draw_journal() -> void:
 		var ids: Array = g.get("ids", [])
 		var followed := QuestRules.tracked(s, Catalog.data["world"])
 		for i in (g["lines"] as Array).size():
-			var line_l := _text("   " + str(g["lines"][i]), UiTheme.MUTED_LABEL)
 			var qid := str(ids[i]) if i < ids.size() else ""
+			var line := str(g["lines"][i])
+			var body := ""
+			if _tab == "quests" and line.contains("\n"):  # v0.8.4.42.3, the author: a quest folds to its title
+				body = line.substr(line.find("\n") + 1)
+				line = line.left(line.find("\n"))
+			var line_l: Control = _text("   " + line, UiTheme.MUTED_LABEL)
+			if not body.is_empty():
+				line_l.queue_free()
+				var lkey := "%s|line|%s" % [_tab, qid if not qid.is_empty() else line.md5_text()]
+				var shut := bool(_folded.get(lkey, qid != followed and not (i < ids.size() and qid.is_empty())))  # the followed quest and a job in work open, the rest by their title
+				var fold := Button.new()
+				fold.name = "JournalQuest_" + (qid if not qid.is_empty() else line.md5_text().left(6))
+				fold.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+				fold.flat = true
+				fold.alignment = HORIZONTAL_ALIGNMENT_LEFT
+				fold.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+				fold.text = "   " + ("▸ " if shut else "▾ ") + line
+				fold.pressed.connect(func() -> void:
+					_folded[lkey] = not shut
+					_rebuild())
+				_box.add_child(fold)
+				line_l = fold
+				if not shut:
+					var rows: Array[String] = []
+					for b: String in body.split("\n", false):  # the indent is the margin's: spaces in a wrapped label break its rows
+						rows.append(b.strip_edges())
+					var pad := MarginContainer.new()
+					pad.add_theme_constant_override("margin_left", 44)
+					_box.add_child(pad)
+					var body_l := _text("\n".join(rows), UiTheme.MUTED_LABEL)
+					body_l.reparent(pad)
+					body_l.name = "JournalQuestBody_" + (qid if not qid.is_empty() else line.md5_text().left(6))
 			if qid.is_empty():
 				continue
 			var row := HBoxContainer.new()  # «Следить» beside a quest with a step (П11)
 			row.add_theme_constant_override("separation", 12)
 			_box.add_child(row)
+			_box.move_child(row, line_l.get_index())
 			line_l.reparent(row)
 			line_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			var tb := Button.new()
@@ -275,6 +307,39 @@ func _draw_journal() -> void:
 			tb.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 			tb.pressed.connect(GameState.track_quest.bind(qid))
 			row.add_child(tb)
+
+
+## What the current step of a quest asks, in words (v0.8.4.42.3): «обыскать «Тёмная лощина» — проверка: Выживание, Сл 10
+## (лёгкая), или раздобыть иначе: Сырая шкура». "" — nothing to say.
+func _todo_text(s: GameSession, w: WorldView, qid: String) -> String:
+	var tiers: Dictionary = Catalog.data["rules"]["dc_tiers"]
+	var bits: Array[String] = []
+	for r: Dictionary in QuestRules.todo(s, Catalog.data, qid):
+		var room := str(w.room(str(r["room"])).get("name", r["room"])) if not str(r.get("room", "")).is_empty() else ""
+		var item := ""
+		if r.has("item"):
+			item = ItemRules.display_name(Catalog.data["items"], s.items, str(r["item"])) + (" ×%d" % int(r["qty"]) if int(r.get("qty", 1)) > 1 else "")
+		var t := ""
+		match str(r["do"]):
+			"find":
+				t = tr("TODO_FIND").format({"room": room})
+				if r.has("skill"):
+					var tier := str(tiers.find_key(int(r["dc"]))) if tiers.find_key(int(r["dc"])) != null else ""
+					t += tr("TODO_CHECK").format({"skill": tr("SKILL_" + str(r["skill"]).to_upper()), "dc": int(r["dc"]),
+						"tier": (" (%s)" % tr("DC_TIER_" + tier.to_upper())) if not tier.is_empty() else ""})
+				if not item.is_empty():
+					t += tr("TODO_OR_GET").format({"item": item})
+			"fight":
+				t = tr("TODO_FIGHT" if bool(r["defeat"]) else "TODO_FIGHT_PASS").format({"foes": ", ".join(r["foes"]) if not (r["foes"] as Array).is_empty() else room})
+			"talk":
+				t = tr("TODO_GIVE" if not item.is_empty() else "TODO_TALK").format({"who": w.npc_name(str(r["npc"])), "item": item})
+			"go":
+				t = tr("TODO_BRING" if not item.is_empty() else "TODO_GO").format({"room": room, "item": item})
+			"choose":
+				t = tr("TODO_CHOOSE").format({"room": room})
+		if not t.is_empty():
+			bits.append((tr("TODO_OR") + " " if r.has("or") else "") + t)
+	return "; ".join(bits)
 
 
 ## The entries of a tab: the people met, or the lines of its groups.
@@ -304,7 +369,7 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 			var open_ids: Array[String] = []
 			var done: Array[String] = []
 			for q: Dictionary in XpRules.quest_list(s, Catalog.data["world"]):
-				var line := ("%s — %s" % [q["title"], q["description"]]) if not str(q["description"]).is_empty() else str(q["title"])
+				var line := str(q["title"]) + ("\n      " + str(q["description"]) if not str(q["description"]).is_empty() else "")  # the title alone when folded (v0.8.4.42.3)
 				for h: String in QuestRules.history(s, Catalog.data["world"], str(q["id"])):  # what was done (v0.7.22.7)
 					line += "\n      " + h
 				if not str(q.get("step", "")).is_empty():
@@ -312,12 +377,13 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 					var where := WorldMap.step_rooms(s, Catalog.data, str(q["id"])).map(func(r: String) -> String:  # v0.8.4.30: where to go now
 						return "%s (%s)" % [w.room(r).get("name", r), w.location(w.location_id(r)).get("name", "")])
 					if not where.is_empty():
-						line += "
-      " + tr("JOURNAL_WHERE").format({"where": ", ".join(where)})
+						line += "\n      " + tr("JOURNAL_WHERE").format({"where": ", ".join(where)})
+					var what := _todo_text(s, w, str(q["id"]))
+					if not what.is_empty():  # v0.8.4.42.3: what to do there and by which check
+						line += "\n      " + tr("JOURNAL_TODO").format({"what": what})
 				var story := str(s.summaries.get(QuestRules.STORY + str(q["id"]), ""))
 				if not story.is_empty():  # v0.8.4.30: the hero's own account of it
-					line += "
-      " + tr("JOURNAL_STORY").format({"text": story})
+					line += "\n      " + tr("JOURNAL_STORY").format({"text": story})
 				if bool(q.get("failed", false)):  # v0.7.14: its NPC died
 					done.append("✗ %s — %s" % [q["title"], tr("JOURNAL_FAILED")])
 					continue
@@ -336,8 +402,7 @@ func _groups(s: GameSession, w: WorldView, tab: String = "") -> Array[Dictionary
 					var hl := "• " + title
 					for p: Dictionary in HeistRules.path(s, Catalog.data, hid):
 						var mark: String = {"done": "✓", "now": "→", "failed": "✗"}.get(str(p["state"]), "·")
-						hl += "
-      %s %s" % [mark, p["title"]]
+						hl += "\n      %s %s" % [mark, p["title"]]
 					open.append(hl)
 					open_ids.append("")
 			if not open.is_empty():
