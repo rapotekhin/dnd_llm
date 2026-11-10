@@ -58,19 +58,13 @@ const NAME_COLOR := Color("#e6c47e")
 const SPEECH_COLOR := Color("#cfd8b8")
 
 
-## The frame colour of a spell by its school (v0.7.22.21, #20): the eight schools of 5e, muted to the «dark book».
-const SCHOOL_COLORS := {
-	"abjuration": Color("#6f9fc0"), "conjuration": Color("#c99a4a"), "divination": Color("#b9b0d8"),
-	"enchantment": Color("#c77fa8"), "evocation": Color("#d0704f"), "illusion": Color("#8a7fc8"),
-	"necromancy": Color("#7fa07a"), "transmutation": Color("#c8b45a"),
-}
-
-
-## A spell's button framed in the colour of its school ("" — no frame).
+## A spell's button framed in the colour of its school ("" — no frame): `schools` of data/icons.json, the same colour as
+## the spell's icon (v0.7.22.21, #20; one place since v0.8.4.43).
 static func school_frame(b: Button, school_id: String) -> void:
-	if not SCHOOL_COLORS.has(school_id):
+	var hex := IconRules.school_color((Engine.get_main_loop() as SceneTree).root.get_node("Catalog").data, school_id)  # no autoload name: a playtest's script compiles this before the autoloads
+	if hex.is_empty():
 		return
-	var c: Color = SCHOOL_COLORS[school_id]
+	var c := Color(hex)
 	b.add_theme_stylebox_override("normal", box(PANEL_RAISED, c.darkened(0.15), 2, 10, 4))
 	b.add_theme_stylebox_override("hover", box(PANEL_RAISED.lightened(0.08), c, 2, 10, 4))
 

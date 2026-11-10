@@ -39,6 +39,8 @@ var image_prompts: Dictionary = {}
 var dev_mode: bool = OS.is_debug_build()
 ## The sheet's things (v0.8.4.32): the group shown, the sort, the order turned round — {group, sort, reverse}.
 var inventory_view: Dictionary = {}
+## The hotbar's layout (v0.8.4.43, as in BG3): where each icon stands, the rows, the dividers — `HotbarLayout`.
+var hotbar: Dictionary = {}
 const COMBAT_SPEEDS := {"slow": 1.0, "normal": 0.6, "fast": 0.25, "instant": 0.0}
 const UI_SCALES: Array[float] = [0.85, 1.0, 1.15, 1.3]
 
@@ -183,6 +185,7 @@ func load_settings() -> void:
 		image_prompts = cfg.get_value("images", "prompts", {})
 		dev_mode = bool(cfg.get_value("game", "dev_mode", OS.is_debug_build()))
 		inventory_view = cfg.get_value("ui", "inventory", {})
+		hotbar = cfg.get_value("ui", "hotbar", {})
 	Hotkeys.apply(keys)
 
 
@@ -202,6 +205,7 @@ func save_settings() -> void:
 	cfg.set_value("images", "prompts", image_prompts)
 	cfg.set_value("keys", "keys", keys)
 	cfg.set_value("ui", "inventory", inventory_view)
+	cfg.set_value("ui", "hotbar", hotbar)
 	cfg.set_value("game", "dev_mode", dev_mode)
 	cfg.save(settings_path)
 

@@ -23,7 +23,7 @@ func run() -> void:
 		return
 	for room: String in (ROAD_PATH if road else PATH):
 		if road and room == "outpost-road":
-			var sneak: CheckButton = find(screen(), "SneakToggle")
+			var sneak: BaseButton = find(screen(), "SneakToggle")
 			if step("sneak toggle", sneak != null and not sneak.disabled):
 				sneak.button_pressed = true
 				await frames(2)

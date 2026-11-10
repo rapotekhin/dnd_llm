@@ -35,94 +35,104 @@ theme_override_constants/margin_bottom = 14
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Side" type="PanelContainer" parent="Margin/Row"]
+[node name="Main" type="VBoxContainer" parent="Margin/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="Upper" type="HBoxContainer" parent="Margin/Row/Main"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="Side" type="PanelContainer" parent="Margin/Row/Main/Upper"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 script = ExtResource("2")
 
-[node name="FightSide" type="PanelContainer" parent="Margin/Row"]
+[node name="FightSide" type="PanelContainer" parent="Margin/Row/Main/Upper"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 theme_type_variation = &"SidePanel"
 
-[node name="Col" type="VBoxContainer" parent="Margin/Row/FightSide"]
+[node name="Col" type="VBoxContainer" parent="Margin/Row/Main/Upper/FightSide"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Portrait" type="VBoxContainer" parent="Margin/Row/FightSide/Col"]
+[node name="Portrait" type="VBoxContainer" parent="Margin/Row/Main/Upper/FightSide/Col"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="FoeScroll" type="ScrollContainer" parent="Margin/Row/FightSide/Col"]
+[node name="FoeScroll" type="ScrollContainer" parent="Margin/Row/Main/Upper/FightSide/Col"]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="FoeList" type="VBoxContainer" parent="Margin/Row/FightSide/Col/FoeScroll"]
+[node name="FoeList" type="VBoxContainer" parent="Margin/Row/Main/Upper/FightSide/Col/FoeScroll"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Centre" type="VBoxContainer" parent="Margin/Row"]
+[node name="Centre" type="VBoxContainer" parent="Margin/Row/Main/Upper"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 10
 
-[node name="StripPanel" type="PanelContainer" parent="Margin/Row/Centre"]
+[node name="StripPanel" type="PanelContainer" parent="Margin/Row/Main/Upper/Centre"]
 layout_mode = 2
 theme_type_variation = &"CardPanel"
 
-[node name="Strip" type="HBoxContainer" parent="Margin/Row/Centre/StripPanel"]
+[node name="Strip" type="HBoxContainer" parent="Margin/Row/Main/Upper/Centre/StripPanel"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="Queue" type="HBoxContainer" parent="Margin/Row/Centre/StripPanel"]
+[node name="Queue" type="HBoxContainer" parent="Margin/Row/Main/Upper/Centre/StripPanel"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="FieldBox" type="PanelContainer" parent="Margin/Row/Centre"]
+[node name="FieldBox" type="PanelContainer" parent="Margin/Row/Main/Upper/Centre"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"CardPanel"
 
-[node name="Field" type="Control" parent="Margin/Row/Centre/FieldBox"]
+[node name="Field" type="Control" parent="Margin/Row/Main/Upper/Centre/FieldBox"]
 unique_name_in_owner = true
 layout_mode = 2
 script = ExtResource("3")
 
-[node name="Dim" type="ColorRect" parent="Margin/Row/Centre/FieldBox"]
+[node name="Dim" type="ColorRect" parent="Margin/Row/Main/Upper/Centre/FieldBox"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 mouse_filter = 2
 color = Color(0.05, 0.04, 0.03, 0.74)
 
-[node name="TalkCard" type="CenterContainer" parent="Margin/Row/Centre/FieldBox"]
+[node name="TalkCard" type="CenterContainer" parent="Margin/Row/Main/Upper/Centre/FieldBox"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 mouse_filter = 2
 
-[node name="PartnerCard" type="VBoxContainer" parent="Margin/Row/Centre/FieldBox/TalkCard"]
+[node name="PartnerCard" type="VBoxContainer" parent="Margin/Row/Main/Upper/Centre/FieldBox/TalkCard"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(560, 0)
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="PartnerToken" type="PanelContainer" parent="Margin/Row/Centre/FieldBox/TalkCard/PartnerCard"]
+[node name="PartnerToken" type="PanelContainer" parent="Margin/Row/Main/Upper/Centre/FieldBox/TalkCard/PartnerCard"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(190, 190)
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="PartnerMark" type="Label" parent="Margin/Row/Centre/FieldBox/TalkCard/PartnerCard/PartnerToken"]
+[node name="PartnerMark" type="Label" parent="Margin/Row/Main/Upper/Centre/FieldBox/TalkCard/PartnerCard/PartnerToken"]
 unique_name_in_owner = true
 auto_translate_mode = 2
 layout_mode = 2
@@ -130,14 +140,14 @@ theme_type_variation = &"HeadingLabel"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="PartnerName" type="Label" parent="Margin/Row/Centre/FieldBox/TalkCard/PartnerCard"]
+[node name="PartnerName" type="Label" parent="Margin/Row/Main/Upper/Centre/FieldBox/TalkCard/PartnerCard"]
 unique_name_in_owner = true
 auto_translate_mode = 2
 layout_mode = 2
 theme_type_variation = &"HeadingLabel"
 horizontal_alignment = 1
 
-[node name="PartnerLine" type="Label" parent="Margin/Row/Centre/FieldBox/TalkCard/PartnerCard"]
+[node name="PartnerLine" type="Label" parent="Margin/Row/Main/Upper/Centre/FieldBox/TalkCard/PartnerCard"]
 unique_name_in_owner = true
 auto_translate_mode = 2
 layout_mode = 2
@@ -145,12 +155,7 @@ theme_type_variation = &"MutedLabel"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Bar" type="PanelContainer" parent="Margin/Row/Centre"]
-unique_name_in_owner = true
-layout_mode = 2
-script = ExtResource("4")
-
-[node name="Hint" type="Label" parent="Margin/Row/Centre"]
+[node name="Hint" type="Label" parent="Margin/Row/Main/Upper/Centre"]
 unique_name_in_owner = true
 auto_translate_mode = 2
 visible = false
@@ -158,39 +163,10 @@ layout_mode = 2
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="FightBar" type="PanelContainer" parent="Margin/Row/Centre"]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(0, 250)
-layout_mode = 2
-theme_type_variation = &"SidePanel"
-
-[node name="Row" type="HBoxContainer" parent="Margin/Row/Centre/FightBar"]
-layout_mode = 2
-theme_override_constants/separation = 14
-
-[node name="Tabs" type="TabContainer" parent="Margin/Row/Centre/FightBar/Row"]
+[node name="Bar" type="PanelContainer" parent="Margin/Row/Main"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Turn" type="VBoxContainer" parent="Margin/Row/Centre/FightBar/Row"]
-custom_minimum_size = Vector2(190, 0)
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="Economy" type="VBoxContainer" parent="Margin/Row/Centre/FightBar/Row/Turn"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 4
-
-[node name="EndTurnButton" type="Button" parent="Margin/Row/Centre/FightBar/Row/Turn"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(190, 80)
-layout_mode = 2
-theme_type_variation = &"AccentButton"
-text = "BTN_END_TURN"
+script = ExtResource("4")
 
 [node name="Right" type="PanelContainer" parent="Margin/Row"]
 custom_minimum_size = Vector2(570, 0)

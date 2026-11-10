@@ -58,7 +58,7 @@ func test_the_exits_and_looks_are_on_the_bar() -> void:  # v0.8.1
 	var bar := panel.find_child("ActionBar", true, false) as Control
 	assert_object(bar.find_child("LookButton", true, false)).is_not_null()
 	assert_object(bar.find_child("SneakToggle", true, false)).is_not_null()
-	var exits := bar.find_children("Exit_*", "Button", true, false)
+	var exits := panel.find_children("Exit_*", "Button", true, false)  # v0.8.4.43: under «Выходы ▾» over the map
 	assert_int(exits.size()).is_equal(WayRules.open_exits(GameState.session, data["world"], "brod-tavern-hall").size())
 	assert_object(panel.find_child("ExitsGrid", true, false)).is_null()
 

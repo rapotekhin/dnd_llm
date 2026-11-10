@@ -20,7 +20,7 @@ func run() -> void:
 	s.character["equipped"]["armor"] = ""  # no mail: the roll is about invisibility, not the armour's disadvantage
 	CharacterRules.refresh(s.character, data, s.items)
 	step("invisible", ConditionRules.invisible(s.character, data))
-	var sneak: CheckButton = find(screen(), "SneakToggle")
+	var sneak: BaseButton = find(screen(), "SneakToggle")
 	sneak.button_pressed = true
 	await frames(2)
 	await _walk(gs, "brod-gate")

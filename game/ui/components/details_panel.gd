@@ -144,6 +144,9 @@ func _unlight() -> void:
 func hook(control: Control, title_text: String, body_text: String) -> void:
 	if body_text.is_empty() and title_text.is_empty():
 		return
+	if control is IconSlot:  # an icon tells what it is at the cursor (v0.8.4.43, as in BG3)
+		(control as IconSlot).tip_title = title_text
+		(control as IconSlot).tip_body = body_text
 	var shown := func() -> void:
 		if _pinned.is_empty():
 			_shown = control

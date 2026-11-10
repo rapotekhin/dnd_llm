@@ -1,65 +1,176 @@
 class_name ActionBar
 extends PanelContainer
-## Under the field (v0.8.1): tabs of acts on the left, the windows on the right. No hotbar and no key numbers: the keys are
-## in the tooltips. The side panel fills the pages; in a conversation the tabs give way to the acts with the partner, and
-## in the fight of v0.8.4 they become the fight's own.
+## The hotbar as in BG3 (v0.8.4.43, the author's layout of 2026-11-10), one in a fight and out of it, left to right:
+## the hero's portrait — the weapons of both hands with the set switch under them — the grid of icons in rows, cut into
+## sections by dividers that move — the round button (end the turn in a fight, wait out of it) — the short and the long
+## rest. Over the grid the counters: the action, the bonus action, the reaction, the move, the class's own stocks, the
+## spell slots by circle (a press picks the circle in a fight); under it the tabs of kinds. Only icons: what a cell is
+## shows at the cursor. Cells go where `HotbarLayout` puts them; one is dragged to another slot, off the bar, or onto it
+## from the sheet; the layout is the profile's (SaveManager.hotbar). The side panel fills the peace's cells, `FightUi`
+## the fight's: each into `section(key)`, then `tidy()`. In a conversation the bar gives way to the acts with the partner.
 
-const PLACE := 0
-const EXITS := 1
-const DEEDS := 2
-const TITLES := ["BAR_PLACE", "SIDE_EXITS", "BAR_DEEDS"]
+signal circle_picked(circle: int)
 
-var windows: HBoxContainer  ## the sheet, the map, the journal, the menu
+## The keys owners fill → [mode, kind of the grid].
+const GROUP := "hotbar"  ## the bar's group: a window that keeps it in sight (the sheet) finds it
+const KEYS := {"BAR_PLACE": ["peace", "common"], "BAR_CLASS": ["peace", "class"], "BAR_ITEMS": ["peace", "items"],
+	"BAR_DEEDS": ["peace", "deeds"], "BAR_REST": ["peace", "rest"], "COMBAT_TAB_WEAPONS": ["fight", "common"],
+	"COMBAT_TAB_COMMON": ["fight", "common"], "COMBAT_TAB_SPELLS": ["fight", "class"], "COMBAT_TAB_FEATURES": ["fight", "class"],
+	"COMBAT_TAB_ITEMS": ["fight", "items"], "COMBAT_TAB_WATCH": ["fight", "common"]}
+const PLACE := "BAR_PLACE"
+const CLASS := "BAR_CLASS"
+const ITEMS := "BAR_ITEMS"
+const DEEDS := "BAR_DEEDS"
+const REST := "BAR_REST"
+const KIND_TITLES := {"common": "BAR_KIND_COMMON", "class": "BAR_KIND_CLASS", "items": "BAR_KIND_ITEMS", "deeds": "BAR_DEEDS"}
+const CELL := 56
+const GAP := 4
+const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
+
+var windows: GridContainer  ## the sheet, the map, the journal, the menu — icons in the corner
 var talk: HBoxContainer  ## the acts of a conversation
 var talk_acts: VBoxContainer
+var end_turn: Button  ## the round button of a fight
+var picked_circle := 0  ## the circle the next spell is cast at in a fight; 0 — the lowest that fits
 
-var _tabs: TabBar
-var _scrolls: Array[ScrollContainer] = []
-var _pages: Array[Container] = []
+var _body: HBoxContainer
+var _portrait: Button
+var _hands: GridContainer
+var _sets: HBoxContainer
+var _counters: HBoxContainer
+var _grid_scroll: ScrollContainer
+var _grid: HBoxContainer
+var _tabs: HBoxContainer
+var _round: CenterContainer
+var _rests: VBoxContainer
+var _stage := {}  # key of KEYS → hidden Container the owner fills
+var _laid_cols := -1  # the columns of the last laying
+var _park: Control  # hidden: the cells not on the grid now wait here, never freed with a slot
+var _fight := false
 var _talking := false
+var _filter := ""  # a kind shown alone, "" — the player's own bar
 
 
 func _init() -> void:
 	name = "ActionBar"
+	add_to_group(GROUP)
+	_park = Control.new()
+	_park.name = "Parked"
+	_park.visible = false
+	add_child(_park)
 	theme_type_variation = UiTheme.CARD
-	custom_minimum_size = Vector2(0, 182)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 6)
+	col.add_theme_constant_override("separation", 0)
 	add_child(col)
-	var head := HBoxContainer.new()
-	col.add_child(head)
-	_tabs = TabBar.new()
-	_tabs.name = "ActionTabs"
-	_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_tabs.tab_alignment = TabBar.ALIGNMENT_LEFT
-	for title: String in TITLES:
-		_tabs.add_tab(title)
-	_tabs.tab_changed.connect(func(_i: int) -> void: _show())
-	head.add_child(_tabs)
-	windows = HBoxContainer.new()
+	_body = HBoxContainer.new()
+	_body.name = "Hotbar"
+	_body.add_theme_constant_override("separation", 10)
+	col.add_child(_body)
+	_portrait = Button.new()
+	_portrait.name = "HeroPortrait"
+	_portrait.custom_minimum_size = Vector2(112, 112)
+	_portrait.focus_mode = Control.FOCUS_NONE
+	_portrait.flat = true
+	_portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_portrait.draw.connect(_draw_portrait)
+	_body.add_child(_portrait)
+	var weapons := VBoxContainer.new()
+	weapons.add_theme_constant_override("separation", GAP)
+	weapons.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_body.add_child(weapons)
+	_hands = GridContainer.new()
+	_hands.name = "Hands"
+	_hands.columns = 2
+	_hands.add_theme_constant_override("h_separation", GAP)
+	weapons.add_child(_hands)
+	_sets = HBoxContainer.new()
+	_sets.name = "Sets"
+	_sets.add_theme_constant_override("separation", GAP)
+	weapons.add_child(_sets)
+	var centre := VBoxContainer.new()
+	centre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	centre.add_theme_constant_override("separation", 4)
+	_body.add_child(centre)
+	_counters = HBoxContainer.new()
+	_counters.name = "Counters"
+	_counters.add_theme_constant_override("separation", 14)
+	_counters.custom_minimum_size = Vector2(0, 26)
+	centre.add_child(_counters)
+	var grid_row := HBoxContainer.new()
+	grid_row.add_theme_constant_override("separation", 4)
+	centre.add_child(grid_row)
+	_grid_scroll = ScrollContainer.new()
+	_grid_scroll.name = "Cells"
+	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_grid_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_grid_scroll.resized.connect(func() -> void:  # only a new count of columns lays the bar again: a laying that
+		if _columns() != _laid_cols:  # changes a size by a pixel must not lay it once more, for ever
+			_relay())
+	grid_row.add_child(_grid_scroll)
+	_grid = HBoxContainer.new()
+	_grid.name = "Grid"
+	_grid.add_theme_constant_override("separation", 0)
+	_grid_scroll.add_child(_grid)
+	var rows := VBoxContainer.new()  # more or fewer rows of slots, as the BG3 forum asked
+	rows.add_theme_constant_override("separation", 2)
+	grid_row.add_child(rows)
+	for spec: Array in [["RowsMore", "+", 1, "BAR_ROWS_MORE"], ["RowsLess", "−", -1, "BAR_ROWS_LESS"]]:
+		var b := Button.new()
+		b.name = spec[0]
+		b.text = spec[1]
+		b.flat = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.tooltip_text = spec[3]
+		b.custom_minimum_size = Vector2(22, 22)
+		var d: int = spec[2]
+		b.pressed.connect(func() -> void:
+			HotbarLayout.set_rows(SaveManager.hotbar, HotbarLayout.rows(SaveManager.hotbar) + d)
+			SaveManager.save_settings()
+			_relay())
+		rows.add_child(b)
+	_tabs = HBoxContainer.new()
+	_tabs.name = "KindTabs"
+	_tabs.add_theme_constant_override("separation", 6)
+	_tabs.alignment = BoxContainer.ALIGNMENT_CENTER
+	centre.add_child(_tabs)
+	_round = CenterContainer.new()
+	_round.name = "Round"
+	_round.custom_minimum_size = Vector2(92, 0)
+	_body.add_child(_round)
+	end_turn = Button.new()
+	end_turn.name = "EndTurnButton"
+	end_turn.text = "BTN_END_TURN"
+	end_turn.focus_mode = Control.FOCUS_NONE
+	end_turn.theme_type_variation = UiTheme.ACCENT_BUTTON
+	end_turn.custom_minimum_size = Vector2(88, 88)
+	end_turn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	end_turn.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+	end_turn.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.ACCENT.darkened(0.55), UiTheme.ACCENT, 3, 6, 44))
+	end_turn.add_theme_stylebox_override("hover", UiTheme.box(UiTheme.ACCENT.darkened(0.4), UiTheme.ACCENT_BRIGHT, 3, 6, 44))
+	end_turn.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.ACCENT.darkened(0.3), UiTheme.ACCENT_BRIGHT, 3, 6, 44))
+	end_turn.add_theme_stylebox_override("disabled", UiTheme.box(UiTheme.PANEL, UiTheme.BORDER, 3, 6, 44))
+	_round.add_child(end_turn)
+	_rests = VBoxContainer.new()
+	_rests.name = "Rests"
+	_rests.add_theme_constant_override("separation", GAP)
+	_rests.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_body.add_child(_rests)
+	windows = GridContainer.new()
 	windows.name = "Windows"
-	windows.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_END
-	windows.add_theme_constant_override("separation", 4)
-	head.add_child(windows)
-	for i: int in TITLES.size():
-		var scroll := ScrollContainer.new()
-		scroll.name = "ExitsScroll" if i == EXITS else "Page_%d" % i
-		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		col.add_child(scroll)
-		_scrolls.append(scroll)
-		var page: Container = _flow() if i == PLACE else VBoxContainer.new()
-		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		scroll.add_child(page)
-		_pages.append(page)
+	windows.columns = 2
+	windows.add_theme_constant_override("h_separation", GAP)
+	windows.add_theme_constant_override("v_separation", GAP)
+	windows.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_body.add_child(windows)
 	talk = HBoxContainer.new()
 	talk.name = "TalkActs"
 	talk.add_theme_constant_override("separation", 8)
 	talk.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(talk)
-	var acts := ScrollContainer.new()  # as tall as the tabs: the map does not jump when a talk starts
+	var acts := ScrollContainer.new()
 	acts.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	acts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	acts.custom_minimum_size = Vector2(0, 150)
 	talk.add_child(acts)
 	talk_acts = VBoxContainer.new()
 	talk_acts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -67,30 +178,55 @@ func _init() -> void:
 	_show()
 
 
-func _flow() -> HFlowContainer:
-	var f := HFlowContainer.new()
-	f.add_theme_constant_override("h_separation", 6)
-	f.add_theme_constant_override("v_separation", 6)
-	return f
+func _mode() -> String:
+	return "fight" if _fight else "peace"
 
 
-func page(index: int) -> Container:
-	return _pages[index]
+## The hidden box an owner fills with the cells of `key` (a key of KEYS); `tidy` lays them on the grid.
+func section(key: String) -> Container:
+	if not _stage.has(key):
+		var f := VBoxContainer.new()
+		f.name = "Section_" + key.to_lower()
+		f.visible = false
+		add_child(f)
+		_stage[key] = f
+	return _stage[key]
 
 
-func current() -> int:
-	return _tabs.current_tab
-
-
-func select(index: int) -> void:
-	_tabs.current_tab = index
-
-
-func clear() -> void:
-	for box: Container in _pages + ([talk_acts] as Array[Container]):
-		for c: Node in box.get_children():
-			box.remove_child(c)
+## Empties the boxes of `keys` — the peace's when none — and the talk. A cell is freed wherever it stands now.
+func clear(keys: Array = []) -> void:
+	var which: Array = keys if not keys.is_empty() else KEYS.keys().filter(func(k: String) -> bool: return KEYS[k][0] == "peace")
+	for k: String in which:
+		_free_cells(k)
+	if keys.is_empty():
+		for c: Node in talk_acts.get_children():
+			talk_acts.remove_child(c)
 			c.queue_free()
+
+
+## The fight's boxes are filled again each redraw.
+func clear_fight() -> void:
+	for k: String in KEYS:
+		if KEYS[k][0] == "fight":
+			_free_cells(k)
+
+
+func _free_cells(key: String) -> void:
+	var box := section(key)
+	for c: Variant in (box.get_meta("cells", []) as Array) + box.get_children():
+		if is_instance_valid(c) and not (c as Node).is_queued_for_deletion():
+			if (c as Node).get_parent() != null:
+				(c as Node).get_parent().remove_child(c)
+			(c as Node).queue_free()
+	box.set_meta("cells", [])
+
+
+func set_fight(on: bool) -> void:
+	if on != _fight:
+		_fight = on
+		_filter = ""
+		_show()
+		_relay()
 
 
 func set_talk(on: bool) -> void:
@@ -99,24 +235,386 @@ func set_talk(on: bool) -> void:
 		_show()
 
 
-## A button of a page is as wide as its text, never cut.
+## A kind of the grid shown alone (the playtests too; an old tab key works); "" — the player's own bar.
+func set_filter(key: String) -> void:
+	_filter = str(KEYS[key][1]) if KEYS.has(key) else key
+	_relay()
+
+
+func current() -> String:
+	return _filter
+
+
+## After a fill: the cells take their icons and their slots.
 func tidy() -> void:
-	for box: Container in _pages + ([talk_acts] as Array[Container]):
-		for b: Node in box.find_children("*", "BaseButton", true, false):
-			var button := b as BaseButton
-			button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-			if button is Button:
-				(button as Button).clip_text = false
-				(button as Button).text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-				(button as Button).autowrap_mode = TextServer.AUTOWRAP_OFF
-	var empty := _pages[DEEDS].get_child_count() == 0
-	_tabs.set_tab_hidden(DEEDS, empty)
-	if empty and _tabs.current_tab == DEEDS:
-		_tabs.current_tab = PLACE
+	for k: String in _stage:
+		var box: Control = _stage[k]
+		var cells: Array = box.get_meta("cells", [])
+		for c: Node in box.get_children():
+			if c is Control and not cells.has(c):
+				cells.append(c)
+		cells = cells.filter(func(c: Variant) -> bool: return is_instance_valid(c) and not (c as Node).is_queued_for_deletion())
+		box.set_meta("cells", cells)
+		for c: Node in cells:
+			if c is IconSlot and str((c as IconSlot).spec.get("ref", "")).is_empty():
+				(c as IconSlot).set_icon(IconRules.button(Catalog.data, str(c.name)))
+	for b: Node in talk_acts.find_children("*", "Button", true, false):
+		var button := b as Button
+		button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		button.clip_text = false
+		button.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_show()
+	_relay()
 
 
 func _show() -> void:
-	_tabs.visible = not _talking
+	_body.visible = not _talking
 	talk.visible = _talking
-	for i: int in _scrolls.size():
-		_scrolls[i].visible = not _talking and i == _tabs.current_tab
+	end_turn.visible = _fight
+
+
+func _relay() -> void:
+	if not is_queued_for_deletion():
+		_lay.call_deferred()
+
+
+## The cells of the grid now: key → [kind, cell].
+func _cells() -> Dictionary:
+	var out := {}
+	for k: String in _stage:
+		if KEYS.get(k, ["", ""])[0] != _mode() or KEYS[k][1] == "rest":
+			continue
+		for c: Variant in _cells_of(k):
+			var key := str((c as Node).name)
+			if _fight and key in ["Attack_main", "Attack_off"]:  # they stand in the hands
+				continue
+			out[key] = [str(KEYS[k][1]), c]
+	return out
+
+
+func _cells_of(key: String) -> Array:
+	if not _stage.has(key):
+		return []
+	return ((_stage[key] as Node).get_meta("cells", []) as Array).filter(func(c: Variant) -> bool: return is_instance_valid(c) and not (c as Node).is_queued_for_deletion())
+
+
+## Lays the whole bar out again: portrait, hands, counters, grid, tabs, round button, rests.
+func _lay() -> void:
+	if not is_inside_tree() or GameState.session == null:
+		return
+	_portrait.queue_redraw()
+	_portrait.tooltip_text = _hero_tip()
+	_lay_hands()
+	_lay_counters()
+	_lay_grid()
+	_lay_tabs()
+	_lay_rests()
+
+
+func _detach(cell: Node) -> void:
+	if cell.get_parent() != null:
+		cell.get_parent().remove_child(cell)
+
+
+func _lay_grid() -> void:
+	var cells := _cells()
+	for slot: Node in _grid.find_children("*", "HotSlot", true, false):  # every cell out before its slot goes: the
+		for ch: Node in slot.get_children():  # other mode's too — a cell is freed only by the box that made it
+			slot.remove_child(ch)
+			_park.add_child(ch)
+	for c: Node in _grid.get_children():
+		_grid.remove_child(c)
+		c.queue_free()
+	var total := _columns()
+	_laid_cols = total
+	var rows := HotbarLayout.rows(SaveManager.hotbar)
+	_grid_scroll.custom_minimum_size = Vector2(0, rows * (CELL + GAP))
+	var kinds := {}
+	for key: String in cells:
+		kinds[key] = cells[key][0]
+	var sections: Array
+	if _filter.is_empty() or not kinds.values().has(_filter):
+		_filter = ""
+		sections = HotbarLayout.place(SaveManager.hotbar, _mode(), kinds, total)
+	else:  # one kind alone, in its own order, the bar's whole width
+		var slots: Array = kinds.keys().filter(func(k: String) -> bool: return kinds[k] == _filter)
+		while slots.size() < rows * total or slots.size() % total != 0:
+			slots.append("")
+		sections = [{"kind": _filter, "cols": total, "slots": slots}]
+	for i in sections.size():
+		var sec: Dictionary = sections[i]
+		if i > 0:
+			_grid.add_child(_divider(i - 1))
+		var g := GridContainer.new()
+		g.name = "Kind_" + str(sec["kind"])
+		g.columns = int(sec["cols"])
+		g.add_theme_constant_override("h_separation", GAP)
+		g.add_theme_constant_override("v_separation", GAP)
+		_grid.add_child(g)
+		var slots: Array = sec["slots"]
+		for j in slots.size():
+			var slot := HotSlot.new()
+			slot.custom_minimum_size = Vector2(CELL, CELL)
+			slot.section = i
+			slot.index = j
+			slot.dropped.connect(_on_drop)
+			g.add_child(slot)
+			var key := str(slots[j])
+			if cells.has(key):
+				var cell: Control = cells[key][1]
+				cell.custom_minimum_size = Vector2(CELL, CELL)
+				_detach(cell)
+				slot.add_child(cell)
+				cell.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+				if cell is IconSlot:
+					var ic := cell as IconSlot
+					ic.drag_key = key if _filter.is_empty() else ""
+					if not ic.dropped_off.is_connected(_on_off):
+						ic.dropped_off.connect(_on_off)
+
+
+## The columns the grid has room for.
+func _columns() -> int:
+	return maxi(1, int((_grid_scroll.size.x - 8) / (CELL + GAP)) - 1)
+
+
+func _divider(i: int) -> Control:
+	var pad := MarginContainer.new()
+	pad.name = "Divider_%d" % i
+	pad.add_theme_constant_override("margin_left", 3)
+	pad.add_theme_constant_override("margin_right", 3)
+	var d := ColorRect.new()
+	d.color = UiTheme.BAD.darkened(0.3)
+	d.custom_minimum_size = Vector2(5, 0)
+	d.mouse_default_cursor_shape = Control.CURSOR_HSIZE
+	d.tooltip_text = tr("BAR_DIVIDER_TIP")
+	pad.add_child(d)
+	var start := [0.0]
+	d.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			start[0] = (e as InputEventMouseButton).global_position.x
+		elif e is InputEventMouseMotion and ((e as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+			var cols := int(((e as InputEventMouseMotion).global_position.x - start[0]) / (CELL + GAP))
+			if cols != 0:
+				start[0] += cols * (CELL + GAP)
+				HotbarLayout.shift(SaveManager.hotbar, _mode(), i, cols)
+				SaveManager.save_settings()
+				_relay())
+	return pad
+
+
+func _on_drop(key: String, sec: int, index: int) -> void:
+	HotbarLayout.move(SaveManager.hotbar, _mode(), cell_key(key, _fight), sec, index)
+	SaveManager.save_settings()
+	_relay()
+
+
+## The bar's key of a cell dragged from the sheet: «spell:<id>», «feature:<resource>» — a cast or a feature's use in a
+## fight, a pin to the words out of it; a key of the bar's own stays as it is.
+static func cell_key(key: String, fight: bool) -> String:
+	var kind := key.get_slice(":", 0)
+	if key.find(":") < 0 or not kind in ["spell", "feature", "item"]:
+		return key
+	var id := key.get_slice(":", 1)
+	if not fight:
+		return "Pin_%s_%s" % [kind, id]
+	return {"spell": "Cast_", "feature": "Feature_", "item": "Use_"}[kind] + id
+
+
+func _on_off(key: String) -> void:
+	HotbarLayout.hide(SaveManager.hotbar, _mode(), key)
+	SaveManager.save_settings()
+	_relay()
+
+
+func _lay_tabs() -> void:
+	var kinds := {}
+	for v: Array in _cells().values():
+		kinds[v[0]] = true
+	if _tabs.get_child_count() == 0:  # made once: a filter pressed is never freed under its own signal
+		for k: String in ["", "common", "class", "items", "deeds"]:
+			var b := Button.new()
+			b.name = "Filter_" + (k if k != "" else "all")
+			b.text = KIND_TITLES.get(k, "BAR_ALL")
+			b.flat = true
+			b.toggle_mode = true
+			b.focus_mode = Control.FOCUS_NONE
+			b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+			b.add_theme_color_override("font_color", UiTheme.MUTED)
+			b.add_theme_color_override("font_pressed_color", UiTheme.ACCENT_BRIGHT)
+			b.set_meta("kind", k)
+			b.pressed.connect(func() -> void:
+				_filter = k
+				_relay.call_deferred())
+			_tabs.add_child(b)
+	for b: Button in _tabs.get_children():
+		var k := str(b.get_meta("kind"))
+		b.visible = k == "" or kinds.has(k)
+		b.set_pressed_no_signal(k == _filter)
+
+
+## The weapons of both hands of the set in hand — in a fight a press strikes with it (the fight's own cell) — and the
+## set switch under them, as in BG3: the set in hand lit, the other a press away.
+func _lay_hands() -> void:
+	var s := GameState.session
+	var c := s.character
+	var fight: Array = _cells_of("COMBAT_TAB_WEAPONS") if _fight else []
+	for n: Node in _hands.get_children():
+		_hands.remove_child(n)
+		if not fight.has(n):
+			n.queue_free()
+	var held: Dictionary = c.get("equipped", {})
+	for spec: Array in [["main_hand", "Attack_main", "HeldMain"], ["off_hand", "Attack_off", "HeldOff"]]:
+		var cell: Control = null
+		for f: Control in fight:
+			if str(f.name) == spec[1]:
+				cell = f
+		if cell != null:
+			_detach(cell)
+		else:
+			var id := str(held.get(spec[0], ""))
+			var shown := IconSlot.make("items/" + id if not id.is_empty() else "acts/attack",
+				ItemRules.display_name(Catalog.data["items"], s.items, id) if not id.is_empty() else tr("SLOT_EMPTY_HAND"), CELL + 8)
+			shown.name = spec[2]
+			if not id.is_empty():
+				shown.tip_body = DetailsPanel.item_text(c, Catalog.data, s.items, id)
+			cell = shown
+		cell.custom_minimum_size = Vector2(CELL + 8, CELL + 8)
+		_hands.add_child(cell)
+	for n: Node in _sets.get_children():
+		_sets.remove_child(n)
+		n.queue_free()
+	var why := Acts.one("swap").can(s, Catalog.data, Sheet.HERO)
+	for i in 2:
+		var b := Button.new()
+		b.name = "WeaponSetHeld" if i == 0 else "WeaponSetStowed"
+		var hands: Dictionary = held if i == 0 else CharacterRules.stowed(c)
+		b.text = "➶" if CharacterRules.hands_kind(hands, Catalog.data, s.items) == "ranged" else "⚔"
+		for slot: String in CharacterRules.HANDS:  # the shots at hand of the set's bow (v0.8.4.42.6)
+			var shots := Gear.ready_shots(Catalog.data, s.items, c, str(hands.get(slot, ""))) if str(hands.get(slot, "")) != "" else -1
+			if shots >= 0:
+				b.text += " · %d" % shots
+				break
+		b.toggle_mode = true
+		b.button_pressed = i == 0
+		b.focus_mode = Control.FOCUS_NONE
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.custom_minimum_size = Vector2(CELL + 8, 26)
+		b.tooltip_text = _set_tip(hands) + "\n" + (tr("SET_IN_HAND") if i == 0 else (Hotkeys.tip(tr("SWAP_WEAPONS"), "swap_weapons", SaveManager.keys) if why.is_empty() else tr(why)))
+		if i == 0:
+			b.pressed.connect(func() -> void: b.button_pressed = true)
+		else:
+			b.disabled = not why.is_empty()
+			b.pressed.connect(func() -> void:
+				(func() -> void:  # the hands are laid again: never under the press
+					var err := GameState.swap_weapons()
+					if not err.is_empty():
+						EventBus.message.emit(tr(err))).call_deferred())
+		_sets.add_child(b)
+
+
+func _set_tip(hands: Dictionary) -> String:
+	var names: Array[String] = []
+	for slot: String in CharacterRules.HANDS:
+		var id := str(hands.get(slot, ""))
+		if not id.is_empty():
+			names.append(ItemRules.display_name(Catalog.data["items"], GameState.session.items, id))
+	return ", ".join(names) if not names.is_empty() else "—"
+
+
+## Over the grid: in a fight the action, the bonus action, the reaction and the move; the class's stocks; the spell
+## slots by circle.
+func _lay_counters() -> void:
+	for n: Node in _counters.get_children():
+		_counters.remove_child(n)
+		n.queue_free()
+	var s := GameState.session
+	var c := s.character
+	if _fight and CombatRules.active(s):
+		var e := CombatRules.economy(s)
+		_counter("EcoAction", "●", int(e.get("action", 0)) + int(e.get("attacks", 0)), UiTheme.OK, tr("COMBAT_ACTION"))
+		_counter("EcoBonus", "▲", int(e.get("bonus", 0)), UiTheme.WARN, tr("COMBAT_BONUS"))
+		_counter("EcoReaction", "◆", 0 if bool(CombatRules.player(s).get("reacted", false)) else 1, Color("#b98fd8"), tr("BAR_REACTION"))
+		var mv := int(e.get("move", 0))
+		_counter("EcoMove", "➜ %d" % mv, mv, UiTheme.ACCENT_BRIGHT, tr("COMBAT_MOVE").format({"n": mv}))
+	for r: Dictionary in Stock.lines(c, Catalog.data):
+		_counter("Stock_" + str(r["id"]), "◈ %d/%d" % [int(r["left"]), int(r["max"])], int(r["left"]), UiTheme.TEMP_HP,
+			"%s: %d/%d" % [r["name"], r["left"], r["max"]])
+	var most: Array = c.get("slots_max", [])
+	for lv in range(1, mini(6, most.size() + 1)):
+		var full := int(most[lv - 1])
+		if full <= 0:
+			continue
+		var left := SpellRules.slots_left(c, lv)
+		var b := Button.new()
+		b.name = "CastCircle_%d" % lv
+		b.flat = true
+		b.toggle_mode = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.text = "%s %s%s" % [ROMAN[lv], "●".repeat(left), "○".repeat(maxi(0, full - left))]
+		b.button_pressed = _fight and picked_circle == lv
+		b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+		b.add_theme_color_override("font_color", UiTheme.TEMP_HP)
+		b.tooltip_text = tr("COMBAT_SLOT_CIRCLE").format({"n": lv, "left": left}) + ("\n" + tr("COMBAT_SLOT_PICK_TIP") if _fight else "")
+		b.disabled = not _fight
+		b.pressed.connect(func() -> void:
+			picked_circle = 0 if picked_circle == lv else lv
+			circle_picked.emit.call_deferred(picked_circle))  # the counters are laid again: never under the press
+		_counters.add_child(b)
+
+
+func _counter(node_name: String, text: String, n: int, color: Color, tip: String) -> void:
+	var l := Label.new()
+	l.name = node_name
+	l.text = text.repeat(n) if text.length() == 1 and n > 1 else text
+	l.tooltip_text = tip
+	l.mouse_filter = Control.MOUSE_FILTER_STOP
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	l.add_theme_color_override("font_color", color if n > 0 else UiTheme.MUTED.darkened(0.4))
+	_counters.add_child(l)
+
+
+## The round button: the end of the turn in a fight, the wait out of it; the short and the long rest beside.
+func _lay_rests() -> void:
+	for n: Node in _rests.get_children():
+		_rests.remove_child(n)
+	for n: Node in _round.get_children():
+		if n != end_turn:
+			_round.remove_child(n)
+	for cell: Control in _cells_of(REST):
+		_detach(cell)
+		if str(cell.name) == "WaitButton":
+			if not _fight:
+				cell.custom_minimum_size = Vector2(80, 80)
+				_round.add_child(cell)
+			continue
+		cell.custom_minimum_size = Vector2(CELL - 8, CELL - 8)
+		if _fight and cell is BaseButton:
+			(cell as BaseButton).disabled = true
+		_rests.add_child(cell)
+
+
+## The portrait: the hero's letter on its ring of HP, the HP under it.
+func _draw_portrait() -> void:
+	var s := GameState.session
+	if s == null:
+		return
+	var c := s.character
+	var r := _portrait.size
+	var centre := r / 2
+	var rad := minf(r.x, r.y) / 2 - 4
+	var hp := int(c.get("hp", 0))
+	var top := maxi(1, int(c.get("max_hp", 1)))
+	_portrait.draw_circle(centre, rad, UiTheme.PANEL_RAISED)
+	_portrait.draw_arc(centre, rad, 0, TAU, 48, UiTheme.BORDER, 3.0)
+	_portrait.draw_arc(centre, rad, -PI / 2, -PI / 2 + TAU * clampf(float(hp) / top, 0, 1), 48, UiTheme.hp_color(float(hp) / top), 4.0)
+	var font := _portrait.get_theme_font("font")
+	_portrait.draw_string(font, centre + Vector2(-rad, 12), str(c.get("name", "?")).left(1), HORIZONTAL_ALIGNMENT_CENTER, rad * 2, 44, UiTheme.ACCENT_BRIGHT)
+	_portrait.draw_string(font, centre + Vector2(-rad, rad - 12), "%d/%d" % [hp, top], HORIZONTAL_ALIGNMENT_CENTER, rad * 2, 15, UiTheme.TEXT)
+
+
+func _hero_tip() -> String:
+	var c := GameState.session.character
+	return "%s\nHP %d/%d · КД %d" % [c.get("name", ""), int(c.get("hp", 0)), int(c.get("max_hp", 0)), int(c.get("ac", 10))]

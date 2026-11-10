@@ -91,7 +91,7 @@ func run() -> void:
 		await wait_until(func() -> bool: return s.in_conversation() and not gs.is_busy(), 60.0)
 		await frames(3)
 		step("the map dims under the partner", (find(screen(), "Dim") as Control).is_visible_in_tree() and (find(screen(), "PartnerCard") as Control).is_visible_in_tree())
-		step("the bar gives way to the talk", (find(screen(), "TalkActs") as Control).is_visible_in_tree() and not (find(screen(), "ActionTabs") as Control).is_visible_in_tree())
+		step("the bar gives way to the talk", (find(screen(), "TalkActs") as Control).is_visible_in_tree() and not (find(screen(), "Hotbar") as Control).is_visible_in_tree())
 		var cell: Vector2i = field.hero_cell()
 		await _click(_far(s.room_id, lib))
 		step("the map takes no clicks in a talk", not field.walking() and field.hero_cell() == cell)

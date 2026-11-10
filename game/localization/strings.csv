@@ -85,6 +85,7 @@ OWN_BED_TIP,Долгий отдых дома: бесплатно и без ла�
 BTN_LOOK,Осмотреться
 BTN_LOOK_TIP,"Проверка Внимательности по этой комнате: заметить то, что на виду. Повтор без перемен — прежний итог"
 BTN_MAP,Карта
+BAR_ALL,Всё
 BAR_DEEDS,Дела
 BAR_PLACE,Место
 BTN_MENU,Меню
@@ -248,8 +249,8 @@ COMBAT_BONUS,Бонус
 COMBAT_BONUS_SHORT, [бонус]
 COMBAT_CHARMED,Вы очарованы им и не можете напасть
 COMBAT_DEATH_SAVES,"Спасброски от смерти: успехов {ok}, провалов {fail}"
-COMBAT_SLOT_LOWEST,Ячейка: наименьшая подходящая
 COMBAT_SLOT_CIRCLE,Ячейка {n} круга (осталось {left})
+COMBAT_SLOT_PICK_TIP,"Нажмите — следующее заклинание этим кругом; ещё раз — наименьшим подходящим"
 COMBAT_NO_SURRENDER,Сдаваться некому: среди врагов нет разумных
 COMBAT_FEATURE_TAB,Это — кнопками на вкладке «Умения»
 COMBAT_FOE_SURPRISED,врасплох
@@ -1213,7 +1214,6 @@ NG_NEEDS_HINT,"Герой голодает, хочет пить и спать: �
 OPT_NEEDS,"Нужды: еда, вода, сон"
 OPT_ADULT,Контент 18+
 SHEET_NEEDS,Нужды
-
 SERVICE_HERBS_CANNOT,"Травы эту болезнь не берут — нужна магия: жрица или «Малое восстановление»"
 BTN_CRAFT,Ремесло
 BTN_CRAFT_WORK,Ремесло · {n}%
@@ -2101,3 +2101,14 @@ CREATURE_TYPE_OOZE,слизь
 CREATURE_TYPE_PLANT,растение
 CREATURE_TYPE_UNDEAD,нежить
 CREATURE_TYPE_SWARM,рой
+BAR_KIND_COMMON,Общие
+BAR_KIND_CLASS,Класс
+BAR_KIND_ITEMS,Вещи
+BAR_ROWS_MORE,Больше рядов ячеек
+BAR_ROWS_LESS,Меньше рядов ячеек
+BAR_DIVIDER_TIP,Тяните — сдвинуть границу между группами
+BAR_REACTION,Реакция
+BAR_PIN_TIP,"Нажмите — прикрепить к словам для мастера; перетащите — переставить, за край — убрать с панели"
+SET_IN_HAND,Этот набор в руках
+SLOT_EMPTY_HAND,Пустая рука
+SIDE_EXITS_N,Выходы ({n}) ▾

@@ -73,11 +73,12 @@ func run() -> void:
 	s.room_id = "brod-square"
 	node("EventBus").state_changed.emit()
 	await frames(6)
-	(find(screen(), "ActionTabs") as TabBar).current_tab = 1
+	(find(screen(), "ExitsButton") as Button).pressed.emit()  # v0.8.4.43.1: the ways are a list under «Выходы ▾»
 	await frames(4)
 	var ex: ScrollContainer = find(screen(), "ExitsScroll")
 	var sheet_b: Button = find(screen(), "SheetButton")
-	step("16 exits scroll inside the bar", ex != null and ex.is_visible_in_tree() and ex.get_v_scroll_bar().visible, str(ex.size) if ex else "")
+	step("16 exits scroll inside the list", ex != null and ex.is_visible_in_tree() and ex.get_v_scroll_bar().visible
+		and ex.get_global_rect().end.y <= ex.get_viewport_rect().size.y, str(ex.size) if ex else "")
 	step("the sheet button stays on screen", sheet_b != null and sheet_b.get_global_rect().end.y <= sheet_b.get_viewport_rect().size.y)
 	await shot("many_exits")
 	room["exits"] = exits_before

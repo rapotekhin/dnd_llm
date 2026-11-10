@@ -87,7 +87,7 @@ func required() -> Dictionary:
 		"%Bar": "PanelContainer", "%OfflineBanner": "Label", "%QuestTrack": "Button", "%Chat": "ScrollContainer", "%Thinking": "Label", "%Cancel": "Button",
 		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "TextEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HBoxContainer", "%ThingMenu": "PanelContainer", "%ThingActs": "VBoxContainer",
 		"%FightUi": "Control", "%FightSide": "PanelContainer", "%Portrait": "VBoxContainer", "%FoeList": "VBoxContainer", "%Queue": "HBoxContainer", "%Hint": "Label",
-		"%FightBar": "PanelContainer", "%Economy": "VBoxContainer", "%Tabs": "TabContainer", "%EndTurnButton": "Button", "%FightLogBox": "VBoxContainer"}
+		"%FightLogBox": "VBoxContainer"}
 
 
 func _ready() -> void:

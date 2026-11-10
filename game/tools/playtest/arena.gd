@@ -51,7 +51,7 @@ func run() -> void:
 		return
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)
-	var nl: CheckButton = find(screen(), "NonlethalToggle")
+	var nl: BaseButton = find(screen(), "NonlethalToggle")
 	step("knocking out only, by the rule", nl != null and nl.disabled and nl.button_pressed)
 	step("the bet left the purse", int(c["gold_cp"]) == gold_before - 100, Money.format(int(c["gold_cp"])))
 	await shot("arena_fight")

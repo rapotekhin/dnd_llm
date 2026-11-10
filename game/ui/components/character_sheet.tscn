@@ -7,6 +7,7 @@
 [node name="CharacterSheet" instance=ExtResource("1")]
 script = ExtResource("2")
 width = 0.0
+above_bar = true
 
 [node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
 text = "BTN_CHARACTER_SHEET"

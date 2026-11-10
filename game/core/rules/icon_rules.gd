@@ -65,6 +65,23 @@ static func has_file(path: String) -> bool:
 	return _exists[path]
 
 
+## The icon of a button of the interface by its node name (`buttons` of icons.json, a key «X_*» for every «X_…»):
+## "ui/<id>", or "ui/default" for a name the table does not know.
+static func button(data: Dictionary, node_name: String) -> String:
+	var table: Dictionary = cfg(data).get("buttons", {})
+	if table.has(node_name):
+		return "ui/" + str(table[node_name])
+	for k: String in table:
+		if k.ends_with("*") and node_name.begins_with(k.trim_suffix("*")):
+			return "ui/" + str(table[k])
+	return "ui/default"
+
+
+## The colour of a school of magic, "#hex" or "" for none.
+static func school_color(data: Dictionary, school_id: String) -> String:
+	return "" if school_id.begins_with("_") else str(cfg(data).get("schools", {}).get(school_id, ""))
+
+
 ## A file put in while the game runs (the build screen, a test) is seen again.
 static func forget() -> void:
 	_exists.clear()
@@ -101,7 +118,7 @@ static func _spell(data: Dictionary, id: String, out: Dictionary) -> void:
 	out["path"] = own(data, ref("spells", id))
 	out["real"] = out["path"] != ""
 	if out["path"] == "":
-		out["tint"] = str(c.get("schools", {}).get(str(sp.get("school_id", "")), ""))
+		out["tint"] = school_color(data, str(sp.get("school_id", "")))
 		out["path"] = blank(data, "spells")
 
 

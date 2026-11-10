@@ -12,8 +12,7 @@ var _details: DetailsPanel  # v0.7.7 fixes: what a spell, feature, item or foe i
 var _queue: HBoxContainer
 var _foes: VBoxContainer
 var _portrait: VBoxContainer
-var _economy: VBoxContainer
-var _tabs: TabContainer
+var _bar: ActionBar  # the hotbar under the map, one in a fight and out of it (v0.8.4.43)
 var _fx_layer: Control  # floating numbers over the field
 var _anims: FightAnims  # the strikes, spells and moves on the map (v0.8.4.23)
 var _block: VBoxContainer  # the round's engine lines (Б6)
@@ -41,12 +40,11 @@ var _act_sub := ""
 var _pop: PopupMenu  # a foe's menu
 var _pop_acts: Array[Dictionary] = []  # what its lines do
 var _second := {}  # {act, to}: the next click picks a square of the act
-var _tab := ""  # the open tab by its title: a new turn keeps it however the tabs changed (v0.8.4.30)
 var _redrawing := false
 var _on := false
 var _parts: Array[Control] = []  # shown only in a fight
 var _peace: Array[Control] = []  # hidden in a fight
-var _cast_circle := 0  # v0.7.22.19 (#19): the slot circle the player picked; 0 — the lowest that fits
+  # v0.7.22.19 (#19): the slot circle the player picked; 0 — the lowest that fits
 
 
 func _ready() -> void:
@@ -87,17 +85,14 @@ func setup(screen: Control) -> void:
 	_queue = UiScenes.need(screen, "%Queue")
 	_foes = UiScenes.need(screen, "%FoeList")
 	_portrait = UiScenes.need(screen, "%Portrait")
-	_economy = UiScenes.need(screen, "%Economy")
-	_tabs = UiScenes.need(screen, "%Tabs")
-	_tabs.tab_changed.connect(func(t: int) -> void:
-		if not _redrawing and _tabs.get_tab_control(t) != null:
-			_tab = _tabs.get_tab_title(t))
+	_bar = UiScenes.need(screen, "%Bar")
+	_bar.circle_picked.connect(func(_c: int) -> void: refresh())
 	_hint = UiScenes.need(screen, "%Hint")
 	_hint.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
-	end_turn = UiScenes.need(screen, "%EndTurnButton")
+	end_turn = _bar.end_turn  # the round button of the hotbar
 	end_turn.pressed.connect(func() -> void: _do(GameState.combat_end_turn()))
-	_parts.assign([UiScenes.need(screen, "%FightSide"), UiScenes.need(screen, "%FightBar"), _queue, _hint, UiScenes.need(screen, "%FightLogBox")])
-	_peace.assign([UiScenes.need(screen, "%Side"), UiScenes.need(screen, "%Bar"), UiScenes.need(screen, "%Strip"), UiScenes.need(screen, "%Chat")])
+	_parts.assign([UiScenes.need(screen, "%FightSide"), _queue, _hint, UiScenes.need(screen, "%FightLogBox")])
+	_peace.assign([UiScenes.need(screen, "%Side"), UiScenes.need(screen, "%Strip"), UiScenes.need(screen, "%Chat")])
 	var box: VBoxContainer = UiScenes.need(screen, "%FightLogBox")
 	# The right side: a third — the static details, two thirds — the log (the author, v0.7.22.13).
 	_details = DetailsPanel.new(Vector2(0, 120))
@@ -214,11 +209,9 @@ func cancel() -> bool:
 	return true
 
 
-## Opens the tab by its title key; the playtests call it too.
+## Opens a section of the hotbar by its title key; the playtests call it too.
 func set_filter(key: String) -> void:
-	for i in _tabs.get_tab_count():
-		if _tabs.get_tab_title(i) == tr(key):
-			_tabs.current_tab = i
+	_bar.set_filter(key)
 
 
 ## The focus to the next foe card that can be pressed now.
@@ -261,7 +254,9 @@ func refresh() -> void:
 	for p: Control in _peace:
 		p.visible = not on
 	visible = on
+	_bar.set_fight(on)
 	if not on:
+		_bar.clear_fight()
 		_field.fighters = []
 		_field.routes = {}
 		_field.zones = []
@@ -929,7 +924,6 @@ func _draw_portrait(s: GameSession, data: Dictionary) -> void:
 			"hp": int(Guise.body(c)["hp"]), "max": int(Guise.body(c)["max_hp"])})).add_theme_color_override("font_color", UiTheme.ACCENT)
 	if bool(CombatRules.player(s).get("reckless", false)):
 		_line(_portrait, tr("COMBAT_RECKLESS")).add_theme_color_override("font_color", UiTheme.BAD)
-	_portrait.add_child(WeaponSets.new())
 	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
 	chips.compact = true  # small, the description in the panel (Б3)
 	_portrait.add_child(chips)
@@ -975,27 +969,17 @@ func _line(parent: Control, text: String) -> Label:
 func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 	_acts.clear()
 	_redrawing = true  # removing the pages switches the tab: the player's pick is kept by its title
-	var e := CombatRules.economy(s)
-	_clear(_economy)
 	if ArenaRules.watching(s):  # v0.8.4.5: from the fence nothing is in the hero's hands
-		_clear(_tabs)
+		_bar.clear_fight()
 		var note := Label.new()
 		note.name = "WatchNote"
 		note.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		note.text = tr("COMBAT_WATCHING").format({"name": str(s.combat["arena"]["pick"])})
 		_tab_box("COMBAT_TAB_WATCH").add_child(note)
+		_bar.tidy()
 		_redrawing = false
 		return
-	for spec: Array in [["EcoAction", "● " + tr("COMBAT_ACTION"), int(e.get("action", 0)) + int(e.get("attacks", 0))],
-			["EcoBonus", "▲ " + tr("COMBAT_BONUS"), int(e.get("bonus", 0))],
-			["EcoMove", tr("COMBAT_MOVE").format({"n": int(e.get("move", 0))}), int(e.get("move", 0))]]:
-		var el := Label.new()
-		el.name = spec[0]
-		el.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		el.text = spec[1]
-		el.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT if int(spec[2]) > 0 else UiTheme.MUTED.darkened(0.35))
-		_economy.add_child(el)
-	_clear(_tabs)
+	_bar.clear_fight()
 	var c := s.character
 	# Weapons.
 	var w := _tab_box("COMBAT_TAB_WEAPONS")
@@ -1035,14 +1019,14 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "fists"}),
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "fists"}),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false, true))
-	var nl := CheckButton.new()  # knock out, not kill (v0.7.22.11, big test #44)
+	var nl := IconSlot.make("ui/nonlethal", tr("COMBAT_NONLETHAL"), ActionBar.CELL)  # knock out, not kill (v0.7.22.11, big test #44)
 	nl.name = "NonlethalToggle"
-	nl.text = "COMBAT_NONLETHAL"
-	nl.tooltip_text = "COMBAT_NONLETHAL_TIP"
+	nl.toggle_mode = true
+	nl.tooltip_text = tr("COMBAT_NONLETHAL_TIP")
 	nl.button_pressed = bool(s.combat.get("nonlethal", false))
 	if ArenaRules.yield_bout(s):  # v0.7.45: a bout to surrender — only knocking out
 		nl.disabled = true
-		nl.tooltip_text = "COMBAT_NONLETHAL_ARENA"
+		nl.tooltip_text = tr("COMBAT_NONLETHAL_ARENA")
 	nl.toggled.connect(func(on: bool) -> void: GameState.combat_nonlethal(on))
 	w.add_child(nl)
 	var off := str(c.get("equipped", {}).get("off_hand", ""))
@@ -1073,22 +1057,6 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			mb.button_pressed = str(CombatRules.player(s).get("metamagic", "")) == mid
 			mb.tooltip_text = tr("META_TIP_" + mid.to_upper())
 			mb.pressed.connect(func() -> void: GameState.combat_metamagic(mid))
-		var circles: Array[int] = []
-		for lv in range(1, 6):
-			if SpellRules.slots_left(c, lv) > 0:
-				circles.append(lv)
-		if circles.size() > 1:
-			var cp := OptionButton.new()
-			cp.name = "CastCircle"
-			cp.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			cp.add_item(tr("COMBAT_SLOT_LOWEST"), 0)
-			for lv: int in circles:
-				cp.add_item(tr("COMBAT_SLOT_CIRCLE").format({"n": lv, "left": SpellRules.slots_left(c, lv)}), lv)
-			cp.select(maxi(0, cp.get_item_index(_cast_circle)))
-			cp.item_selected.connect(func(i: int) -> void:
-				_cast_circle = cp.get_item_id(i)
-				refresh())
-			sp.add_child(cp)
 		for id: String in SpellRules.ready(c):
 			var spell: Dictionary = data["spells"].get(id, {})
 			var lv := int(spell.get("level", 0))
@@ -1097,7 +1065,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			var cost := tr("COMBAT_BONUS_SHORT") if CombatRules.spell_cost(data, id) == "bonus" else ""
 			var label := "%s%s%s%s" % [spell.get("name", id), (" (%d)" % slot) if slot > 0 else "", tr("SPELL_AT_WILL_SHORT") if free else "", cost]
 			if lv > 0 and slot == 0 and not free:
-				_disabled(sp, label)
+				_disabled(sp, label, "spells/" + id)
 				continue
 			_act_sub = tr("DETAILS_CANTRIP") if lv == 0 else tr("DETAILS_CIRCLE").format({"n": lv})
 			var ab := _spell_action(s, data, sp, "Cast_" + id, label, me, id,
@@ -1189,11 +1157,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 	for act: Act in Acts.on_tab(s, data, hero, "common"):
 		for row: Dictionary in act.buttons(s, data, hero):
 			_act_button(g, act, row, me)
-	var keep := 0
-	for i in _tabs.get_tab_count():
-		if _tabs.get_tab_title(i) == _tab:
-			keep = i
-	_tabs.current_tab = keep
+	_bar.tidy()  # the open filter is kept by its key however the sections changed
 	_redrawing = false
 
 
@@ -1227,8 +1191,8 @@ func _pending_spell(s: GameSession, data: Dictionary) -> String:
 
 ## The picked circle when it fits the spell and has a slot left, else the lowest that fits.
 func _slot_for(c: Dictionary, data: Dictionary, id: String) -> int:
-	if _cast_circle >= maxi(1, SpellRules.level_of(data, id)) and SpellRules.slots_left(c, _cast_circle) > 0:
-		return _cast_circle
+	if _bar.picked_circle >= maxi(1, SpellRules.level_of(data, id)) and SpellRules.slots_left(c, _bar.picked_circle) > 0:
+		return _bar.picked_circle
 	return SpellRules.lowest_slot(c, data, id)
 
 
@@ -1237,35 +1201,70 @@ func _dmg_text(w: Dictionary) -> String:
 	return "%s%s" % [str(w["dice"]).replace("d", tr("DICE_D")), ("%+d" % b) if b != 0 else ""]
 
 
-func _tab_box(title: String) -> HFlowContainer:
+## A section of the hotbar by its title key (v0.8.4.43): the cells of one kind, its filter beside.
+func _tab_box(title: String) -> Container:
 	_act_tab = title
 	_act_sub = ""
-	var scroll := ScrollContainer.new()
-	scroll.name = tr(title)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var flow := HFlowContainer.new()
-	flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	flow.add_theme_constant_override("h_separation", 10)
-	flow.add_theme_constant_override("v_separation", 10)
-	scroll.add_child(flow)
-	_tabs.add_child(scroll)
-	return flow
+	return _bar.section(title)
 
 
-func _button(parent: Control, node_name: String, text: String, enabled: bool) -> Button:
-	var b := Button.new()
+## A button of the fight: in a section of the hotbar a cell with its icon and short name (v0.8.4.43) — the whole line,
+## its chance and why not in the tooltip; elsewhere (a friend's pick, a question) a plain button.
+func _button(parent: Control, node_name: String, text: String, enabled: bool, icon := "") -> Button:
+	var b: Button
+	if str(parent.name).begins_with("Section_"):
+		var look := _icon_of(node_name, text) if icon.is_empty() else [icon, text.get_slice(" (", 0).trim_suffix(tr("COMBAT_BONUS_SHORT"))]
+		var cell := IconSlot.make(str(look[0]), str(look[1]), ActionBar.CELL)
+		cell.tooltip_text = text
+		if text.ends_with(tr("COMBAT_BONUS_SHORT")):
+			cell.cost = "bonus"
+		var count := RegEx.create_from_string("(\\d+/\\d+)\\)|×(\\d+)").search(text)  # charges or uses «(1/3)», a stack «×2»
+		if count != null:
+			cell.badge = count.get_string(1) if count.get_string(1) != "" else "×" + count.get_string(2)
+		b = cell
+	else:
+		b = Button.new()
+		b.text = text
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.custom_minimum_size = Vector2(0, 52)
 	if not node_name.is_empty():
 		b.name = node_name
-	b.text = text
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.custom_minimum_size = Vector2(0, 52)
 	b.disabled = not enabled
 	parent.add_child(b)
 	return b
 
 
-func _disabled(parent: Control, text: String) -> void:
-	_button(parent, "", text, false)
+## [icon ref, short name] of a cell by its node: what a weapon blow strikes with, the spell, the thing, the feature.
+func _icon_of(node_name: String, text: String) -> Array:
+	var s := GameState.session
+	var data := Catalog.data
+	var c := s.character
+	var kind := node_name.get_slice("_", 0)
+	var rest := node_name.trim_prefix(kind + "_")
+	var short := text.get_slice(" (", 0).trim_suffix(tr("COMBAT_BONUS_SHORT"))
+	var held: Dictionary = c.get("equipped", {})
+	match kind:
+		"Attack", "Throw":
+			var item := str({"main": held.get("main_hand", ""), "frenzy": held.get("main_hand", ""), "off": held.get("off_hand", ""),
+				"stowed": CharacterRules.stowed(c).get("main_hand", "")}.get(rest, ""))
+			if item.is_empty():
+				return ["acts/attack", short.get_slice(": ", 1) if short.contains(": ") else short]
+			return ["items/" + item, ItemRules.display_name(data["items"], s.items, item)]
+		"Cast", "Feat":
+			if data["spells"].has(rest):
+				return ["spells/" + rest, str(data["spells"][rest].get("name", rest))]
+			return ["features/" + rest, short]
+		"Item":
+			return ["items/" + rest, ItemRules.display_name(data["items"], s.items, rest)]
+		"Feature", "Meta":
+			return ["features/" + rest, short.trim_prefix("✦ ")]
+		"Volley":
+			return ["spells/" + str(CombatRules.volley(s).get("spell", "")), short]
+	return ["ui/" + node_name.to_snake_case(), short]
+
+
+func _disabled(parent: Control, text: String, icon := "") -> void:
+	_button(parent, "", text, false, icon)
 
 
 ## The button of an act: at once, or armed for a foe, or for a square after it.
@@ -1285,9 +1284,9 @@ func _act_button(parent: Control, act: Act, row: Dictionary, me: bool) -> void:
 					_second = {"act": id, "to": t}
 					return ""
 				return GameState.combat_act(id, t, how),
-			func(t: String) -> String: return act.can(s, data, hero, t, how), func(_t: String) -> Dictionary: return {})
+			func(t: String) -> String: return act.can(s, data, hero, t, how), func(_t: String) -> Dictionary: return {}, "", 0, "acts/" + id)
 	elif act.second():
-		b = _button(parent, str(row["name"]), text, me and stop.is_empty())
+		b = _button(parent, str(row["name"]), text, me and stop.is_empty(), "acts/" + id)
 		b.toggle_mode = true
 		b.button_pressed = str(_second.get("act", "")) == id
 		b.pressed.connect(func() -> void:
@@ -1295,7 +1294,7 @@ func _act_button(parent: Control, act: Act, row: Dictionary, me: bool) -> void:
 			_pending = Callable()
 			refresh())
 	else:
-		b = _button(parent, str(row["name"]), text, me and stop.is_empty())
+		b = _button(parent, str(row["name"]), text, me and stop.is_empty(), "acts/" + id)
 		var ask := act.confirm()
 		b.pressed.connect(func() -> void:
 			if ask.is_empty():
@@ -1306,8 +1305,8 @@ func _act_button(parent: Control, act: Act, row: Dictionary, me: bool) -> void:
 
 
 ## A button that needs a target: pressing it lights the bodies that can be hit. `aims` — the spell whose target is a square.
-func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "", feet := 0) -> Button:
-	var b := _button(parent, node_name, text, enabled)
+func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "", feet := 0, icon := "") -> Button:
+	var b := _button(parent, node_name, text, enabled, icon)
 	_acts.append({"tab": _act_tab, "sub": _act_sub, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims})
 	b.toggle_mode = true
 	b.button_pressed = _pending.is_valid() and _pending_name == node_name

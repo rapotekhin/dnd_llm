@@ -48,4 +48,4 @@ func test_the_lock_unpins_and_a_pin_survives_a_rebuild() -> void:
 func test_a_spell_names_its_school() -> void:
 	var data := TestUtils.data()
 	assert_str(DetailsPanel.spell_text(data, "fire_bolt")).contains("Воплощение")
-	assert_bool(UiTheme.SCHOOL_COLORS.has(str(data["spells"]["fire_bolt"]["school_id"]))).is_true()
+	assert_str(IconRules.school_color(data, str(data["spells"]["fire_bolt"]["school_id"]))).is_not_empty()

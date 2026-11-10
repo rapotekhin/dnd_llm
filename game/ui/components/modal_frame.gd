@@ -12,6 +12,7 @@ const FRAME_SCENE := "res://ui/components/modal_frame.tscn"
 const MARGIN := 24
 
 @export var width := 640.0  ## the panel in pixels; 0 — the whole screen but a margin (the sheet, the map)
+@export var above_bar := false  ## the window ends over the hotbar: its icons are dragged onto the bar (the sheet, as in BG3)
 
 var title: Label
 var close_x: Button
@@ -127,6 +128,14 @@ func _fit() -> void:
 	_queued = false
 	if size.y <= 0.0:
 		return
+	if above_bar:
+		var bar := get_tree().get_first_node_in_group(ActionBar.GROUP) as Control
+		var inset := 0.0
+		if bar != null and bar.is_visible_in_tree():
+			inset = maxf(0.0, get_viewport_rect().size.y - bar.get_global_rect().position.y)
+		if absf(offset_bottom + inset) > 0.5:
+			offset_bottom = -inset
+			return  # resized: fits again
 	var full := width <= 0.0
 	var w := size.x - 2 * MARGIN if full else minf(width, size.x - 2 * MARGIN)
 	var cap := size.y - 2 * MARGIN

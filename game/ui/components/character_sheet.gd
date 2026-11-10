@@ -342,8 +342,10 @@ func _abilities_tab(c: Dictionary) -> void:
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 12)
 			box.add_child(row)
-			_text(row, tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"],
+			var rl := _text(row, tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"],
 				"rest": tr("REST_KIND_" + str(r["recharge"]).to_upper())}))
+			rl.mouse_filter = Control.MOUSE_FILTER_STOP
+			_hotbar_drag(rl, "feature", str(r["id"]), "features/" + str((d["rules"]["resources"].get(str(r["id"]), {}).get("features", [r["id"]]) as Array)[0]))
 			if Stock.table(d, c)[str(r["id"])].has("spell"):  # spent by casting its spell (v0.8.4.26.1)
 				continue
 			if str(r["id"]) == "sorcery_points":  # Font of Magic: slots and points (v0.7.10)
@@ -401,6 +403,7 @@ func _abilities_tab(c: Dictionary) -> void:
 			var b := _entry(box, "%s — %s, %s" % [s.get("name", id), s.get("casting_time", ""), s.get("range", "")], DetailsPanel.spell_text(d, str(id)), str(s.get("name", id)))
 			UiTheme.school_frame(b, str(s.get("school_id", "")))
 			b.name = "Spell_" + str(id)
+			_hotbar_drag(b, "spell", str(id), "spells/" + str(id))
 			if list != "known" and ready_ids.has(str(id)):
 				_cast_row(box, c, str(id), 0 if list == "free" else lv, can_act)
 
@@ -494,6 +497,17 @@ func _liquid_buttons(row: Control, c: Dictionary, id: String, busy: bool) -> voi
 				EventBus.message.emit(tr(err)))
 		row.add_child(mb)
 	_action(row, "PourOut_" + id, "BTN_LIQUID_POUR_OUT", not busy, GameState.liquid_act.bind("pour_out", key))
+
+
+## A spell or a feature's uses dragged from the sheet onto a slot of the hotbar (v0.8.4.43.1, as in BG3): the bar takes
+## «<kind>:<id>» as its own cell (`ActionBar.cell_key`).
+func _hotbar_drag(node: Control, kind: String, id: String, icon: String) -> void:
+	node.set_drag_forwarding(func(_at: Vector2) -> Variant:
+		var ghost := IconSlot.make(icon, "")
+		ghost.size = Vector2(IconSlot.SIZE, IconSlot.SIZE)
+		ghost.modulate = Color(1, 1, 1, 0.8)
+		node.set_drag_preview(ghost)
+		return {"hotbar": "%s:%s" % [kind, id]}, Callable(), Callable())
 
 
 ## A feature, a trait or a spell as one line: its text is in the description panel (hover; the right button pins it).
