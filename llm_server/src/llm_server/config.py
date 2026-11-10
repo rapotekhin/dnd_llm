@@ -38,8 +38,13 @@ PROVIDERS: dict[str, tuple[tuple[str, str], ...]] = {
                                 ("google-ai-studio/priority", "Google AI Studio (priority)")),
 }
 
-# No provider is pinned first (v0.7.34.1, was Relace from 2026-10-24): the picker ranks them by the real cost of our
-# turn, with the cache and each provider's own bills (llm/providers.py).
+# The master's provider by default (v0.8.4.42.25, the author: «relace по умолчанию везде… без динамического выбора»):
+# a model that has it goes only to it, in the game, its summaries, the second line and the goldens alike, with no picking
+# and no fallback; a model without it (the judge, an image model) is left to the picker. `LLM_SERVER_PROVIDER` — another
+# tag, or `auto` for the picker by the real cost of our turn (llm/providers.py, v0.7.34.1); the player's pin in the
+# settings — `auto` as well — goes before it.
+DEFAULT_PROVIDER = "relace"
+AUTO_PROVIDER = "auto"
 
 
 

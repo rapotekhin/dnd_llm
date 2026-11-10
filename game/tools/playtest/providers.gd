@@ -17,11 +17,13 @@ func run() -> void:
 	await frames(3)
 	await shot("providers_closed")
 	var real := OS.get_environment("BTR_PLAYTEST_REAL") == "1"
-	step("every provider of the model is listed", list.item_count > (5 if real else 1), "%d rows" % list.item_count)
+	step("Relace by default, «Авто» next (v0.8.4.42.25)", list.get_item_text(0) == tr("OPT_PROVIDER_DEFAULT") and list.get_item_text(1) == tr("OPT_PROVIDER_AUTO")
+		and (node("SaveManager").master_providers.get(node("SaveManager").master_model, "") != "" or list.selected == 0), list.get_item_text(0))
+	step("every provider of the model is listed", list.item_count > (6 if real else 2), "%d rows" % list.item_count)
 	if real:
-		step("a row has the cost of 1000 turns", list.get_item_text(1).contains("1000"), list.get_item_text(1))
-		step("the first rows are the server's picks", list.get_item_text(1).contains(tr("OPT_PROVIDER_PICKED").strip_edges()),
-			list.get_item_text(1))
+		step("a row has the cost of 1000 turns", list.get_item_text(2).contains("1000"), list.get_item_text(2))
+		step("the first rows are the server's picks", list.get_item_text(2).contains(tr("OPT_PROVIDER_PICKED").strip_edges()),
+			list.get_item_text(2))
 	list.show_popup()
 	await frames(5)
 	await shot("providers_ours")
@@ -30,7 +32,7 @@ func run() -> void:
 	sort.item_selected.emit(2)  # speed
 	await frames(3)
 	if real:
-		step("by speed the measured ones come first", not list.get_item_text(1).contains(tr("OPT_PROVIDER_SPEED_NONE")), list.get_item_text(1))
+		step("by speed the measured ones come first", not list.get_item_text(2).contains(tr("OPT_PROVIDER_SPEED_NONE")), list.get_item_text(2))
 	list.show_popup()
 	await frames(5)
 	await shot("providers_speed")

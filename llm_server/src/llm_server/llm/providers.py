@@ -305,9 +305,24 @@ PINNED: ContextVar[str | None] = ContextVar("pinned_provider", default=None)
 
 def pinned_for(model_id: str, wish: str | None) -> str | None:
     """The player's provider when the model has it (another model was picked since — None): any endpoint of the model
-    with tools (v0.7.34.1), or one of the config's short list before OpenRouter's list is loaded."""
-    from ..config import PROVIDERS
+    with tools (v0.7.34.1), or one of the config's short list before OpenRouter's list is loaded; `auto` — the picker."""
+    from ..config import AUTO_PROVIDER, PROVIDERS
 
     if not wish:
         return None
+    if wish == AUTO_PROVIDER:
+        return AUTO_PROVIDER
     return wish if PICKER.knows(model_id, wish) or any(tag == wish for tag, _ in PROVIDERS.get(model_id, ())) else None
+
+
+def default_pin(model_id: str) -> str | None:
+    """The provider a request of `model_id` goes to when nobody pinned one (v0.8.4.42.25): config.DEFAULT_PROVIDER or
+    `LLM_SERVER_PROVIDER`, if the model has it; None — the picker (`auto`, or a model without it)."""
+    import os
+
+    from ..config import AUTO_PROVIDER, DEFAULT_PROVIDER
+
+    wish = os.environ.get("LLM_SERVER_PROVIDER", DEFAULT_PROVIDER).strip() or DEFAULT_PROVIDER
+    pin = pinned_for(model_id, wish)
+    return None if pin == AUTO_PROVIDER else pin
+

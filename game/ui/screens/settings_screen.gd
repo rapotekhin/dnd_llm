@@ -415,12 +415,14 @@ func _fill_models() -> void:
 	_fill_image_models()
 
 
-## The providers of the chosen model (session.hello): «Авто» — the server picks the cheapest fast one and may change it.
+## The providers of the chosen model (session.hello): «По умолчанию» — the server's own, Relace (v0.8.4.42.25, the
+## author); «Авто» — the server picks the cheapest fast one and may change it.
 func _fill_providers() -> void:
 	if _provider == null:
 		return
 	_provider.clear()
-	_provider_tags = [""]
+	_provider_tags = ["", "auto"]
+	_provider.add_item(tr("OPT_PROVIDER_DEFAULT"))
 	_provider.add_item(tr("OPT_PROVIDER_AUTO"))
 	var id := SaveManager.master_model if not SaveManager.master_model.is_empty() else Backend.default_model()
 	for m: Variant in Backend.models():
@@ -431,7 +433,7 @@ func _fill_providers() -> void:
 				_provider.set_item_tooltip(_provider.item_count - 1, provider_tooltip(p))
 	var pinned := str(SaveManager.master_providers.get(SaveManager.master_model, ""))
 	_provider.selected = maxi(0, _provider_tags.find(pinned))
-	_provider.disabled = _provider_tags.size() < 2
+	_provider.disabled = _provider_tags.size() < 3
 
 
 ## One row of the provider list (v0.7.34.1): the name with its tag, the cost of 1000 turns and our measured speed.

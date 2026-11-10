@@ -22,7 +22,8 @@ from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
 
 from . import prompts
-from .llm.providers import PICKER, PINNED, min_tps
+from .config import AUTO_PROVIDER
+from .llm.providers import PICKER, PINNED, default_pin, min_tps
 from .protocol import (
     DcTier,
     Effect,
@@ -119,6 +120,10 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
         # Their endpoints reject `temperature`: with require_parameters no provider is left (HTTP 404, v0.7.7).
         settings.pop("temperature", None)
     pinned = PINNED.get()
+    if pinned is None and getattr(model, "system", "") == "openrouter":  # nobody pinned: Relace by default (v0.8.4.42.25)
+        pinned = default_pin(model.model_name)
+    if pinned == AUTO_PROVIDER:  # the player's «Авто»: the picker
+        pinned = None
     if pinned and getattr(model, "system", "") == "openrouter":  # the player's provider and no other (v0.7.20.5)
         settings["openrouter_provider"] = {"only": [pinned], "order": [pinned], "allow_fallbacks": False, "require_parameters": True}
         return settings  # type: ignore[return-value]
