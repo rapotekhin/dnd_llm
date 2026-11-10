@@ -96,7 +96,7 @@ func run() -> void:
 	step("the child named", WorldView.name_of(data, kid) == "Светозар")
 	await shot("family")
 
-	s.day += 160
+	s.day += 210  # 21 years: an adult (v0.8.4.42.23)
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	step("the grown child is the heir", FamilyRules.heir(s, data) == kid)

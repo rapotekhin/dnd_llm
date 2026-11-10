@@ -201,6 +201,11 @@ static func _role(data: Dictionary, gender: String, st: Dictionary) -> String:
 	return "%s героя, %s" % ["дочь" if gender == "female" else "сын", st["name"]]
 
 
+## The body's age of a stage (rules.family.stages[].age): a child and a teen are minors (BodyRules.minor).
+static func _age_of(st: Dictionary) -> String:
+	return str(st.get("age", "child"))
+
+
 ## A child is born at home: an NPC of the engine. Lines.
 static func _birth(s: GameSession, data: Dictionary, day: int) -> Array[String]:
 	var c := s.character
@@ -214,7 +219,7 @@ static func _birth(s: GameSession, data: Dictionary, day: int) -> Array[String]:
 		name = str(pool[s.rng.randi_range(0, pool.size() - 1)])
 	var st: Dictionary = cfg(data)["stages"][0]
 	var room := str(f.get("home_room", s.room_id))
-	var def := {"name": name, "role": _role(data, gender, st), "gender": gender, "race": str(c.get("race_name", "")),
+	var def := {"name": name, "role": _role(data, gender, st), "age": _age_of(st), "gender": gender, "race": str(c.get("race_name", "")),
 		"monster": "commoner", "tags": ["commoner"], "description": "Ребёнок героя и %s." % WorldView.name_of(data, spouse(s)),
 		"child": {"born": day, "parents": ["hero", spouse(s)]},
 		"faction": FactionRules.folk_of(s, data, WorldView.new(data["world"]).location_id(room))}
@@ -236,8 +241,13 @@ static func _grow(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	for id: String in children(s):
 		var n: Dictionary = data["world"]["npcs"].get(id, {})
-		var role := _role(data, str(n.get("gender", "male")), stage(s, data, id))
-		if n.is_empty() or str(n.get("role", "")) == role:
+		var st := stage(s, data, id)
+		var role := _role(data, str(n.get("gender", "male")), st)
+		if n.is_empty():
+			continue
+		if str(n.get("age", "")) != _age_of(st):  # an old save's child had none (v0.8.4.42.23)
+			Overlay.put(s, data, EntityRef.npc(id), "age", _age_of(st))
+		if str(n.get("role", "")) == role:
 			continue
 		Overlay.put(s, data, EntityRef.npc(id), "role", role)
 		lines.append("%s подрос%s: %s" % [n["name"], "ла" if str(n.get("gender", "")) == "female" else "", stage(s, data, id)["name"]])

@@ -116,11 +116,13 @@ func test_a_child_is_born_and_grows() -> void:
 	assert_int(int(BondRules.npc_def(s, data, kid)["child"]["born"])).is_equal(due)
 	assert_array(data["world"]["rooms"][s.room_id]["npcs"]).contains([kid])
 	assert_str(str(FamilyRules.stage(s, data, kid)["id"])).is_equal("infant")
+	assert_bool(_minor(s, kid)).is_true()  # a baby is a child for the master and the brush (v0.8.4.42.23)
 	s.minute = 12 * 60
 	TimeRules.advance(s, data, 30 * 1440)
 	assert_int(FamilyRules.years(s, data, kid)).is_equal(3)
 	assert_str(str(FamilyRules.stage(s, data, kid)["id"])).is_equal("child")
 	assert_str(str(BondRules.npc_def(s, data, kid)["role"])).contains("ребёнок")
+	assert_bool(_minor(s, kid)).is_true()
 	FamilyRules.rename(s, data, kid, "  Велимир ")
 	assert_str(WorldView.name_of(data, kid)).is_equal("Велимир")
 	assert_str(FamilyRules.text(s, data)).contains("Велимир")
@@ -171,7 +173,15 @@ func test_the_adult_heir_takes_the_place() -> void:
 	FamilyRules.tick(s, data)
 	var kid := FamilyRules.children(s)[0]
 	assert_str(FamilyRules.heir(s, data)).is_empty()
-	s.day += 160
+	s.day += 170  # 17: a teen, a minor, no heir yet (v0.8.4.42.23, the author: a teen from 16, an adult from 21)
+	FamilyRules.tick(s, data)
+	assert_str(str(FamilyRules.stage(s, data, kid)["id"])).is_equal("teen")
+	assert_bool(_minor(s, kid)).is_true()
+	assert_str(FamilyRules.heir(s, data)).is_empty()
+	s.day += 40  # 21
+	FamilyRules.tick(s, data)
+	assert_bool(_minor(s, kid)).is_false()
+	assert_array(TurnSnapshot.minors(s, data)).not_contains([WorldView.name_of(data, kid)])
 	assert_str(FamilyRules.heir(s, data)).is_equal(kid)
 	var ch := FamilyRules.heir_choices(s, data)
 	assert_str(str(ch["name"])).is_equal(WorldView.name_of(data, kid))
@@ -188,3 +198,8 @@ func test_the_adult_heir_takes_the_place() -> void:
 	s.character = heir_c
 	s.minute = 22 * 60
 	assert_array(SceneRules.npcs(s, data["world"], str(heir_c["family"]["home_room"]))).contains(["npc_herbalist"])
+
+
+## A child or a teen by its body's age, as the master's and the brush's minors read it.
+func _minor(s: GameSession, id: String) -> bool:
+	return BodyRules.minor(data, BodyRules.npc(data, id, BondRules.npc_def(s, data, id)))
