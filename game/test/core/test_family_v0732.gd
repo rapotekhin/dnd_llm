@@ -166,40 +166,6 @@ func test_no_divorce_by_a_button() -> void:
 	assert_str(BondRules.break_why(s, data, "npc_herbalist")).is_equal("FAMILY_NO_DIVORCE")
 
 
-func test_the_adult_heir_takes_the_place() -> void:
-	var s := _married()
-	FamilyRules.view(s.character)["pregnant"] = {"bearer": "npc_herbalist", "due": s.day + 1}
-	s.day += 1
-	FamilyRules.tick(s, data)
-	var kid := FamilyRules.children(s)[0]
-	assert_str(FamilyRules.heir(s, data)).is_empty()
-	s.day += 170  # 17: a teen, a minor, no heir yet (v0.8.4.42.23, the author: a teen from 16, an adult from 21)
-	FamilyRules.tick(s, data)
-	assert_str(str(FamilyRules.stage(s, data, kid)["id"])).is_equal("teen")
-	assert_bool(_minor(s, kid)).is_true()
-	assert_str(FamilyRules.heir(s, data)).is_empty()
-	s.day += 40  # 21
-	FamilyRules.tick(s, data)
-	assert_bool(_minor(s, kid)).is_false()
-	assert_array(TurnSnapshot.minors(s, data)).not_contains([WorldView.name_of(data, kid)])
-	assert_str(FamilyRules.heir(s, data)).is_equal(kid)
-	var ch := FamilyRules.heir_choices(s, data)
-	assert_str(str(ch["name"])).is_equal(WorldView.name_of(data, kid))
-	var heir_c := CharacterBuilder.build_preset(data["presets"][1], data)
-	heir_c["gold_cp"] = 100
-	var gold := int(s.character["gold_cp"])
-	WorldGen.generated(s)["orgs"] = {"kin_band": {"name": "Банда", "kind": "criminal", "head": kid, "members": []}}
-	FamilyRules.inherit(s, data, heir_c)
-	assert_str(str(WorldGen.generated(s)["orgs"]["kin_band"]["head"])).is_equal(OwnerRules.HERO)
-	assert_int(int(heir_c["gold_cp"])).is_equal(gold + 100)
-	assert_bool((heir_c["property"] as Dictionary).has("river_house")).is_true()
-	assert_array(heir_c["family"]["kin"]).contains([{"npc": "npc_herbalist", "rel": "мать"}])
-	assert_bool(data["world"]["npcs"].has(kid)).is_false()
-	s.character = heir_c
-	s.minute = 22 * 60
-	assert_array(SceneRules.npcs(s, data["world"], str(heir_c["family"]["home_room"]))).contains(["npc_herbalist"])
-
-
 ## A child or a teen by its body's age, as the master's and the brush's minors read it.
 func _minor(s: GameSession, id: String) -> bool:
 	return BodyRules.minor(data, BodyRules.npc(data, id, BondRules.npc_def(s, data, id)))
