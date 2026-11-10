@@ -700,6 +700,17 @@ func npcs_here(world: Dictionary, room_id: String) -> Array[String]:
 	return npcs_alive(SceneRules.npcs(self, world, room_id)).filter(func(id: String) -> bool: return not held_as_creature(id))
 
 
+## Who of the room hears and remembers (v0.8.4.42.26): the people of the scene and a pack NPC held here as a creature
+## while awake — a prisoner who surrendered or was bound and came to remembers, takes offence and gives up a secret.
+func minds_here(world: Dictionary, room_id: String) -> Array[String]:
+	var ids := npcs_here(world, room_id)
+	for c: Dictionary in CreatureRules.here(self, room_id):
+		var npc := str(c.get("npc_id", ""))
+		if not npc.is_empty() and not ids.has(npc) and not str(c.get("state", "")) in ["unconscious", CreatureRules.DEAD]:
+			ids.append(npc)
+	return ids
+
+
 ## A pack NPC knocked out in a fight lies as a creature of a room (v0.7.22.16): not a person of the scene till it wakes.
 func held_as_creature(npc_id: String) -> bool:
 	return Being.view(self, npc_id).has("creature")

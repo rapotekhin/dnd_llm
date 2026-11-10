@@ -415,7 +415,7 @@ func _fill_models() -> void:
 	_fill_image_models()
 
 
-## The providers of the chosen model (session.hello): «По умолчанию» — the server's own, Relace (v0.8.4.42.25, the
+## The providers of the chosen model (session.hello): «По умолчанию» — the server's own, Wafer (v0.8.4.42.26, the
 ## author); «Авто» — the server picks the cheapest fast one and may change it.
 func _fill_providers() -> void:
 	if _provider == null:

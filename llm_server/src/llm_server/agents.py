@@ -120,7 +120,7 @@ def settings_for(model: Model, base: ModelSettings = MODEL_SETTINGS) -> ModelSet
         # Their endpoints reject `temperature`: with require_parameters no provider is left (HTTP 404, v0.7.7).
         settings.pop("temperature", None)
     pinned = PINNED.get()
-    if pinned is None and getattr(model, "system", "") == "openrouter":  # nobody pinned: Relace by default (v0.8.4.42.25)
+    if pinned is None and getattr(model, "system", "") == "openrouter":  # nobody pinned: config.DEFAULT_PROVIDER, Wafer (v0.8.4.42.26)
         pinned = default_pin(model.model_name)
     if pinned == AUTO_PROVIDER:  # the player's «Авто»: the picker
         pinned = None

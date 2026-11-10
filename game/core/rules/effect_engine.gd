@@ -435,7 +435,7 @@ func _plan_take_item(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 func _plan_npc_attitude(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var world := WorldView.new(data["world"])
 	var npc_id := str(e.get("npc_id", ""))
-	if not s.npcs_here(world.world, s.room_id).has(npc_id):
+	if not s.minds_here(world.world, s.room_id).has(npc_id):
 		return {"reason": "NPC %s нет в этой комнате" % npc_id}
 	var delta := clampi(int(e.get("delta", 0)), -2, 2)
 	if delta == 0:
@@ -656,7 +656,7 @@ func _plan_reputation(s: GameSession, data: Dictionary, turn_id: String, e: Dict
 func _plan_reveal_secret(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var world := WorldView.new(data["world"])
 	var who := str(e.get("npc_id", ""))
-	if not s.npcs_here(world.world, s.room_id).has(who):
+	if not s.minds_here(world.world, s.room_id).has(who):
 		return {"reason": "NPC %s нет в этой комнате" % who}
 	return SocialRules.plan_secret(s, data, who, str(e.get("secret_id", "")))
 
@@ -695,7 +695,7 @@ func _plan_note(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary
 		return {"reason": "пустая заметка"}
 	var about := str(e.get("npc_id", "")) if e.get("npc_id") != null else ""
 	if not about.is_empty():  # v0.7.15: the NPC of the scene remembers it
-		if not s.npcs_here(world.world, s.room_id).has(about):
+		if not s.minds_here(world.world, s.room_id).has(about):
 			return {"reason": "NPC %s нет в этой комнате: память — о тех, кто здесь" % about}
 		return {"plan": {"text": text.left(200), "npc_id": about},
 			"summary": "%s запомнит: %s" % [world.npc_name(about), text.left(200)]}

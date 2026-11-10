@@ -226,8 +226,8 @@ def test_openrouter_takes_the_cheapest_provider(monkeypatch):
     from llm_server.agents import settings_for
 
     model = OpenRouterModel("deepseek/deepseek-v4.1-flash-1017", provider=OpenRouterProvider(api_key="test"))
-    # v0.8.4.42.25, the author: Relace by default, no picking — a model that has it goes only to it
-    assert settings_for(model)["openrouter_provider"] == {"only": ["relace"], "order": ["relace"], "allow_fallbacks": False,
+    # v0.8.4.42.26, the author: Wafer by default, no picking — a model that has it goes only to it
+    assert settings_for(model)["openrouter_provider"] == {"only": ["wafer"], "order": ["wafer"], "allow_fallbacks": False,
                                                         "require_parameters": True}
     monkeypatch.setenv("LLM_SERVER_PROVIDER", "auto")
     # v0.7.34.1: the picker on `auto`; with nothing picked yet, plain price sorting
@@ -351,7 +351,7 @@ def test_the_picked_providers_go_into_the_request(monkeypatch):
     model = OpenRouterModel(model_id, provider=OpenRouterProvider(api_key="test"))
     monkeypatch.setitem(PICKER._ranked, model_id, [("a", "A"), ("b", "B"), ("c", "C"), ("d", "D")])
     monkeypatch.setenv("LLM_SERVER_MIN_TPS", "40")
-    monkeypatch.setenv("LLM_SERVER_PROVIDER", "auto")  # the picker, not the default Relace (v0.8.4.42.25)
+    monkeypatch.setenv("LLM_SERVER_PROVIDER", "auto")  # the picker, not the default Wafer (v0.8.4.42.26)
     # 2026-11-01: `order`, not `sort`: with `sort` OpenRouter took its own cheapest of the three and never ours
     assert settings_for(model)["openrouter_provider"] == {"order": ["a", "b", "c"], "only": ["a", "b", "c"], "require_parameters": True,
                                                         "allow_fallbacks": True, "preferred_min_throughput": {"p50": 40.0}}
@@ -379,7 +379,7 @@ def test_a_pinned_provider_is_the_only_one(monkeypatch):
     finally:
         PINNED.reset(token)
     infos = {m.id: m for m in ModelCatalog(("deepseek/deepseek-v4.1-flash-1017", "openrouter/free"), model_id).infos()}
-    assert [p.name for p in infos[model_id].providers] == ["Relace", "OpenInference", "DeepInfra (flex)"]
+    assert [p.name for p in infos[model_id].providers] == ["Wafer", "Relace", "OpenInference", "DeepInfra (flex)"]
     assert infos["openrouter/free"].providers == []
 
 

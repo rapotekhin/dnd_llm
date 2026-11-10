@@ -17,7 +17,7 @@ func run() -> void:
 	await frames(3)
 	await shot("providers_closed")
 	var real := OS.get_environment("BTR_PLAYTEST_REAL") == "1"
-	step("Relace by default, «Авто» next (v0.8.4.42.25)", list.get_item_text(0) == tr("OPT_PROVIDER_DEFAULT") and list.get_item_text(1) == tr("OPT_PROVIDER_AUTO")
+	step("Wafer by default, «Авто» next (v0.8.4.42.25)", list.get_item_text(0) == tr("OPT_PROVIDER_DEFAULT") and list.get_item_text(1) == tr("OPT_PROVIDER_AUTO")
 		and (node("SaveManager").master_providers.get(node("SaveManager").master_model, "") != "" or list.selected == 0), list.get_item_text(0))
 	step("every provider of the model is listed", list.item_count > (6 if real else 2), "%d rows" % list.item_count)
 	if real:

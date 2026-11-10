@@ -29,7 +29,7 @@ DEFAULT_MODELS = (
 # the fastest and cheapest for a ~20k-token turn by OpenRouter's stats of 2026-10-22 (DeepSeek's — the author's pick).
 # Pinned, a request goes only to that provider; free models are left to OpenRouter.
 PROVIDERS: dict[str, tuple[tuple[str, str], ...]] = {
-    "deepseek/deepseek-v4.1-flash-1017": (("relace", "Relace"), ("open-inference/fp4", "OpenInference"),
+    "deepseek/deepseek-v4.1-flash-1017": (("wafer", "Wafer"), ("relace", "Relace"), ("open-inference/fp4", "OpenInference"),
                                           ("deepinfra/fp8/flex", "DeepInfra (flex)")),
     "anthropic/claude-haiku-5.5": (("google-vertex/global", "Google Vertex"), ("google-vertex/us", "Google Vertex (US)"),
                                    ("anthropic", "Anthropic")),
@@ -38,12 +38,13 @@ PROVIDERS: dict[str, tuple[tuple[str, str], ...]] = {
                                 ("google-ai-studio/priority", "Google AI Studio (priority)")),
 }
 
-# The master's provider by default (v0.8.4.42.25, the author: «relace по умолчанию везде… без динамического выбора»):
+# The master's provider by default (v0.8.4.42.25, the author: «relace по умолчанию везде… без динамического выбора»;
+# v0.8.4.42.26, the author: «поставь wafer дефолтным провайдером» — `wafer`, both its endpoints, `wafer/us` and `wafer/mxfp4`):
 # a model that has it goes only to it, in the game, its summaries, the second line and the goldens alike, with no picking
 # and no fallback; a model without it (the judge, an image model) is left to the picker. `LLM_SERVER_PROVIDER` — another
 # tag, or `auto` for the picker by the real cost of our turn (llm/providers.py, v0.7.34.1); the player's pin in the
 # settings — `auto` as well — goes before it.
-DEFAULT_PROVIDER = "relace"
+DEFAULT_PROVIDER = "wafer"
 AUTO_PROVIDER = "auto"
 
 
