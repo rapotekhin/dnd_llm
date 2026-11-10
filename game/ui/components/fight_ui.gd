@@ -191,8 +191,8 @@ func _round_block() -> VBoxContainer:
 	return _block
 
 
-## v0.7.22.27 (as in BG3), outside the input: Space ends the turn, 1–0 press the buttons of the open tab, Tab picks
-## the next foe that can be hit (Enter strikes it). True — the key was the fight's.
+## v0.7.22.27 (as in BG3), outside the input: Space ends the turn, Tab picks the next foe that can be hit (Enter strikes
+## it); the acts have no keys (v0.8.4.43, the author: «не нужны»). True — the key was the fight's.
 func key(event: InputEvent) -> bool:
 	if event.is_action_pressed("end_turn"):
 		if not end_turn.disabled:
@@ -201,17 +201,7 @@ func key(event: InputEvent) -> bool:
 	if event.is_action_pressed("next_target"):
 		_next_target()
 		return true
-	var buttons := _tab_buttons()
-	var hit := false
-	for i in buttons.size():
-		if event.is_action_pressed("action_%d" % (i + 1)):
-			hit = true
-			if not buttons[i].disabled:
-				if buttons[i] is CheckButton:
-					buttons[i].button_pressed = not buttons[i].button_pressed
-				else:
-					buttons[i].pressed.emit()
-	return hit
+	return false
 
 
 ## Esc lets a picked act go. True — there was one.
@@ -222,26 +212,6 @@ func cancel() -> bool:
 	_second = {}
 	refresh()
 	return true
-
-
-## The buttons of a tab (the open one by default) in their order: the keys 1–0.
-func _tab_buttons(page: Control = null) -> Array[BaseButton]:
-	var out: Array[BaseButton] = []
-	if page == null:
-		page = _tabs.get_current_tab_control()
-	if page == null:
-		return out
-	for b: Node in page.find_children("*", "BaseButton", true, false):
-		if (b as BaseButton).visible and out.size() < 10:
-			out.append(b as BaseButton)
-	return out
-
-
-func _number_actions() -> void:
-	for page: Node in _tabs.get_children():
-		var buttons := _tab_buttons(page as Control)
-		for i in buttons.size():
-			buttons[i].tooltip_text = Hotkeys.tip(buttons[i].tooltip_text, "action_%d" % (i + 1), SaveManager.keys)
 
 
 ## Opens the tab by its title key; the playtests call it too.
@@ -316,7 +286,6 @@ func refresh() -> void:
 	_play_fx(s)
 	_draw_portrait(s, data)
 	_draw_actions(s, data, me)
-	_number_actions()
 	end_turn.tooltip_text = Hotkeys.tip("", "end_turn", SaveManager.keys)
 	_hint.text = _base_hint(me)
 	_draw_results(s, data)

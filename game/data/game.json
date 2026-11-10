@@ -36,17 +36,7 @@
 		"quick_save": ["F5", "game"],
 		"quick_load": ["F9", "game"],
 		"end_turn": ["Space", "combat"],
-		"next_target": ["Tab", "combat"],
-		"action_1": ["1", "combat"],
-		"action_2": ["2", "combat"],
-		"action_3": ["3", "combat"],
-		"action_4": ["4", "combat"],
-		"action_5": ["5", "combat"],
-		"action_6": ["6", "combat"],
-		"action_7": ["7", "combat"],
-		"action_8": ["8", "combat"],
-		"action_9": ["9", "combat"],
-		"action_10": ["0", "combat"]
+		"next_target": ["Tab", "combat"]
 	},
 	"ui": {
 		"default_resolution": [

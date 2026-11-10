@@ -1,0 +1,88 @@
+{
+	"_doc": "Icons (v0.8.4.43), read only by IconRules.of. An icon is a file assets/icons/<kind>/<id>.png; `shared` gives one file to several ids, `source` says where a file came from. With no file: an item takes its plain base's icon (ItemRules.plain_of) with the marks below, else its group's; a spell is the blank of its kind in its school's colour with marks of its damage and shape; anything else the blank of its kind, then _blank/default.png. Marks and colours are drawn by the interface, no picture is needed for them; a file assets/icons/marks/<what>/<id>.png replaces a mark's dot.",
+	"root": "res://assets/icons/",
+	"kinds": ["items", "spells", "features", "traits", "conditions", "acts", "groups", "ui"],
+	"shared": {
+		"_doc": "\"<kind>/<id>\": \"<kind>/<id>\" — the second's file stands for the first."
+	},
+	"source": {
+		"_doc": "\"<kind>/<id>\": where its file came from — forge (tools/anima), hand, or a licence line (CC BY …)."
+	},
+	"ui": {
+		"_doc": "Icons of the interface itself: window buttons, needs, acts of a place. The id is the file ui/<id>.png, the value its subject for the artist.",
+		"sheet": "character sheet: a scroll with a portrait",
+		"inventory": "a leather backpack",
+		"spellbook": "an open spellbook",
+		"map": "a folded map",
+		"journal": "a journal with a quill",
+		"menu": "a gear wheel",
+		"deeds": "a bundle of tools: hammer, quill and coin",
+		"food": "a loaf of bread",
+		"water": "a waterskin",
+		"sleep": "a crescent moon",
+		"sneak": "a hooded figure crouching",
+		"look": "an open eye",
+		"search": "a magnifying glass",
+		"wait": "an hourglass",
+		"rest_short": "a campfire",
+		"rest_long": "a bedroll under stars",
+		"camp": "a tent",
+		"end_turn": "an hourglass with an arrow",
+		"weapon_set": "two crossed swords with an arrow",
+		"all": "four small squares",
+		"common": "a hand",
+		"class": "a shield with a star",
+		"passive": "a closed eye",
+		"talk": "a speech bubble",
+		"trade": "a pair of scales",
+		"attack": "a fist"
+	},
+	"rarity": {
+		"_doc": "The frame of an item by its rarity; none for a common thing.",
+		"uncommon": "#3fa34d",
+		"rare": "#3a6fd8",
+		"very_rare": "#8a4fd8",
+		"legendary": "#d89a2a",
+		"artifact": "#c8553d"
+	},
+	"schools": {
+		"_doc": "The tint of a spell's icon with no file of its own, by `school_id`.",
+		"abjuration": "#5aa0d8",
+		"conjuration": "#d8b23a",
+		"divination": "#c8c8e8",
+		"enchantment": "#d86aa8",
+		"evocation": "#d8643a",
+		"illusion": "#8a6ad8",
+		"necromancy": "#6a9a5a",
+		"transmutation": "#c88a3a"
+	},
+	"elements": {
+		"_doc": "A mark of a damage type: on an item by its property <type>_damage, on a spell by `damage_type`.",
+		"fire": "#e8642a",
+		"cold": "#7ac8e8",
+		"lightning": "#e8d84a",
+		"thunder": "#9a8ad8",
+		"acid": "#8ad83a",
+		"poison": "#5aa83a",
+		"radiant": "#f8e8a0",
+		"necrotic": "#5a4a6a",
+		"force": "#c87ae8",
+		"psychic": "#e87ac8"
+	},
+	"materials": {
+		"_doc": "A mark of a material: by an item's property, its `material` or the start of its id (adamantine_…).",
+		"silvered": "#d8dce8",
+		"adamantine": "#4a6a5a",
+		"mithral": "#a8c8e8",
+		"masterwork": "#e8c86a",
+		"crude": "#8a6a4a"
+	},
+	"shapes": {
+		"_doc": "A mark of a spell's area by `area.type`.",
+		"sphere": "#e8e8e8",
+		"cylinder": "#e8e8e8",
+		"cube": "#e8e8e8",
+		"cone": "#e8e8e8",
+		"line": "#e8e8e8"
+	}
+}

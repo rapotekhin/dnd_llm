@@ -33,7 +33,7 @@ func test_keys_go_into_the_input_map_by_place() -> void:
 	Hotkeys.apply({})
 	assert_bool(_pressed(KEY_I).is_action("inventory")).is_true()
 	assert_bool(_pressed(KEY_SPACE).is_action("end_turn")).is_true()
-	assert_bool(_pressed(KEY_0).is_action("action_10")).is_true()
+	assert_bool(InputMap.has_action("action_1")).is_false()  # v0.8.4.43: the acts of a fight have no keys
 	Hotkeys.apply({"inventory": "B"})
 	assert_bool(_pressed(KEY_B).is_action("inventory")).is_true()
 	assert_bool(_pressed(KEY_I).is_action("inventory")).is_false()
@@ -44,7 +44,7 @@ func test_a_key_of_the_same_place_clashes() -> void:
 	assert_str(Hotkeys.clash("inventory", "M", {})).is_equal("map")
 	assert_str(Hotkeys.clash("inventory", "Escape", {})).is_equal("pause_menu")  # Esc is everywhere
 	assert_str(Hotkeys.clash("option_1", "1", {})).is_empty()  # the fight's «1» never meets the game screen's
-	assert_str(Hotkeys.clash("end_turn", "1", {})).is_equal("action_1")
+	assert_str(Hotkeys.clash("end_turn", "Tab", {})).is_equal("next_target")
 
 
 func test_the_question_runs_the_act_only_on_yes() -> void:

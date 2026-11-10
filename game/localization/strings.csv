@@ -1166,16 +1166,6 @@ KEY_ACT_QUICK_SAVE,Быстрое сохранение
 KEY_ACT_QUICK_LOAD,Быстрая загрузка
 KEY_ACT_END_TURN,Бой: конец хода
 KEY_ACT_NEXT_TARGET,Бой: следующая цель
-KEY_ACT_ACTION_1,Бой: кнопка 1
-KEY_ACT_ACTION_2,Бой: кнопка 2
-KEY_ACT_ACTION_3,Бой: кнопка 3
-KEY_ACT_ACTION_4,Бой: кнопка 4
-KEY_ACT_ACTION_5,Бой: кнопка 5
-KEY_ACT_ACTION_6,Бой: кнопка 6
-KEY_ACT_ACTION_7,Бой: кнопка 7
-KEY_ACT_ACTION_8,Бой: кнопка 8
-KEY_ACT_ACTION_9,Бой: кнопка 9
-KEY_ACT_ACTION_10,Бой: кнопка 10
 OPTION_CHECK_TIP,"{skill} {bonus} против Сл {dc} — шанс {chance}%"
 SHORT_REST_FULL,"Здоровье полное: отдых вернёт только умения"
 SHORT_REST_EXPECT,≈ +{hp} HP
