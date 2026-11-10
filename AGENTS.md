@@ -42,7 +42,7 @@ Backend and Godot (details in [connectivity-spike.md](docs/tech/connectivity-spi
 ```bash
 uv sync --project llm_server && cd llm_server && uv run pytest && cd ..   # backend protocol + contract tests (own .venv; run from llm_server/)
 uv run --project llm_server python -m llm_server.contract            # regenerate contract/schema/ after changing protocol models
-uv run --project llm_server python -m llm_server.golden              # golden LLM scenarios on the real model + judge → build/evals/ (cents; --model, --only, --repeat, --route, --provider relace --no-judge to compare runs on one provider)
+uv run --project llm_server python -m llm_server.golden              # golden LLM scenarios on the real model + judge → build/evals/ (cents; --model, --only, --repeat, --route, --provider relace to compare runs on one provider of the master, the judge unpinned)
 python tools/connectivity_e2e.py                                      # Godot <-> Caddy wss:// <-> llm_server end to end (Docker; --no-proxy without it)
 python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/ (takes the next free port when 8765 is busy)
 python tools/playtest_all.py                                          # every stub scenario in a pack: one import, one server, 6 games side by side, game time off the frames (--jobs, --only a,b, --slow); use it for wide checks

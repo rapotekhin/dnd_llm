@@ -396,7 +396,12 @@ def _tagged(out: dict[str, Any]) -> list[str]:
 
 
 async def judge(model: Model, sc: dict[str, Any], out: dict[str, Any], engine: MockEngine) -> list[Verdict]:
-    agent = Agent(model, output_type=JudgeOutput, instructions=JUDGE_INSTRUCTIONS, model_settings=settings_for(model, {"temperature": 0}))
+    pin = PINNED.set(None)  # `--provider` pins the master's requests, never the judge's: another model (v0.8.4.42.24)
+    try:
+        settings = settings_for(model, {"temperature": 0})
+    finally:
+        PINNED.reset(pin)
+    agent = Agent(model, output_type=JudgeOutput, instructions=JUDGE_INSTRUCTIONS, model_settings=settings)
     prompt = (
         f"Ситуация: {sc.get('title')}\nВвод игрока: {sc.get('input') or '(нет: ' + sc.get('kind', '') + ')'}\n"
         f"Ответ движка на проверку (если была): {json.dumps(sc.get('engine', {}).get('check', {}), ensure_ascii=False)}\n\n"
@@ -596,10 +601,8 @@ def main() -> None:
     parser.add_argument("--only", default="", help="comma-separated scenario ids")
     parser.add_argument("--route", action="store_true", help="the game's way: the router and the short prompt (v0.7.20.4)")
     parser.add_argument("--repeat", type=int, default=1, help="run every scenario N times (models are not deterministic)")
-    parser.add_argument("--provider", default="", help="pin the OpenRouter provider tag (e.g. relace); needs --no-judge")
+    parser.add_argument("--provider", default="", help="pin the OpenRouter provider tag of the master's model (e.g. relace); the judge goes its own way")
     opts = parser.parse_args()
-    if opts.provider and not opts.no_judge:
-        parser.error("--provider pins every request, the judge's as well: run it with --no-judge")
     from .config import DEFAULT_MODEL
 
     model_id = opts.model or os.environ.get("LLM_SERVER_MODEL") or DEFAULT_MODEL

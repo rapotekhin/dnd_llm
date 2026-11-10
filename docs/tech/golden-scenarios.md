@@ -110,6 +110,12 @@ uv run python -m llm_server.golden --no-judge                       # тольк
 uv run --project llm_server python -m llm_server.golden --only "$(cat evals/golden/subset_prompt_opt.txt)" --repeat 3
 ```
 
+Один провайдер мастера для сравнимых прогонов — `--provider <тег>` (теги — `config.PROVIDERS`, например `relace`); судья при этом идёт своим путём, без пина (v0.8.4.42.24, раньше требовался `--no-judge`):
+
+```bash
+uv run --project llm_server python -m llm_server.golden --only content_intimacy_on_screen --provider relace --repeat 3
+```
+
 Разброс DeepSeek на подмножестве — ±7 из 192 (та же база дала 142, 154 и 156). Опыты и итоги — [prompt-experiments-2026-10-26.md](prompt-experiments-2026-10-26.md); полный прогон GLM-5.3-Flash против DeepSeek — [model-comparison-2026-10-26.md](model-comparison-2026-10-26.md).
 
 ## Что раннер уже нашёл (v0.4.2)

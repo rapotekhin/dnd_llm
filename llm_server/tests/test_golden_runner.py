@@ -94,3 +94,34 @@ def test_scripted_failure_is_reported():
     assert any("create_item" in f for f in o.fails)
     md = golden.report_markdown("m", None, [o])
     assert "`item_dedupe`" in md and "✗" in md
+
+
+def test_the_provider_pin_is_the_masters_not_the_judges(monkeypatch):
+    """v0.8.4.42.24: `--provider relace` pins the master's requests; the judge (another model) goes its own way, so a
+    run with the judge on one provider works."""
+    from llm_server.agents import settings_for
+    from llm_server.llm.catalog import openrouter_factory
+    from llm_server.llm.providers import PINNED
+
+    seen = {}
+
+    class Fake:
+        def __init__(self, model, **kw):
+            seen.update(kw.get("model_settings") or {})
+
+        async def run(self, prompt):
+            class R:
+                output = golden.JudgeOutput(verdicts=[])
+            return R()
+
+    monkeypatch.setattr(golden, "Agent", Fake)
+    make = openrouter_factory("sk-test")
+    token = PINNED.set("relace")
+    try:
+        master = settings_for(make("deepseek/deepseek-v4.1-flash-1017"), {})
+        asyncio.run(golden.judge(make("google/gemini-3.8-flash"), {"rubric": ["x"]}, {}, golden.MockEngine({})))
+        assert PINNED.get() == "relace"  # the master's pin stays for the next turn
+    finally:
+        PINNED.reset(token)
+    assert master["openrouter_provider"]["only"] == ["relace"]
+    assert seen.get("openrouter_provider", {}).get("only") != ["relace"]
