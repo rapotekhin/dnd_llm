@@ -21,9 +21,9 @@ func test_off_by_default_and_on_by_the_setting() -> void:
 	assert_bool(bool(TurnSnapshot.world_info(s, data)["adult"])).is_true()
 
 
-func test_a_teen_hero_is_a_minor_for_the_master() -> void:
+func test_a_child_hero_is_a_minor_for_the_master() -> void:
 	assert_array(TurnSnapshot.world_info(s, data)["minors"]).is_empty()
-	s.character["body"]["age"] = "teen"
+	s.character["body"]["age"] = "child"
 	var minors: Array = TurnSnapshot.world_info(s, data)["minors"]
 	assert_int(minors.size()).is_equal(1)
 	assert_str(str(minors[0])).contains(str(s.character["name"]))
@@ -42,7 +42,7 @@ func test_a_child_npc_here_is_a_minor_for_the_master_and_the_brush() -> void:
 	assert_array(p["minors"]).contains([name])
 
 
-func test_only_children_and_teens_are_minors() -> void:
+func test_only_children_are_minors() -> void:
 	for age: String in BodyRules.options(data, "age"):
 		var minor := BodyRules.minor(data, {"age": age})
-		assert_bool(minor).override_failure_message(age).is_equal(age in ["child", "teen"])
+		assert_bool(minor).override_failure_message(age).is_equal(age in ["child"])

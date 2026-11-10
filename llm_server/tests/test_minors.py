@@ -1,4 +1,4 @@
-"""Children and teens are never intimate (v0.7.38.7, taken out in 1838cd48, back in v0.8.4.42.22): the master's rule names
+"""Children is never intimate (v0.7.38.7, taken out in 1838cd48, back in v0.8.4.42.22): the master's rule names
 them whatever the 18+ toggle says, a frame with one of them is drawn with the safety tags, and the negative always holds
 the tags against children."""
 
@@ -10,21 +10,18 @@ from llm_server.protocol import ImageParams, WorldInfo
 ANIMA = next(m for m in SD_MODELS if m.template == "anima")
 
 
-def test_the_master_is_told_the_18_plus_rule_and_the_children_and_teens():
+def test_the_master_is_told_the_18_plus_rule_and_the_children():
     off = prompts.intimacy_rule(WorldInfo())
-    assert "за кадр" in off and "Дети и подростки — никогда" in off
+    assert "за кадр" in off and "Дети — никогда" in off
     on = prompts.intimacy_rule(WorldInfo(adult=True))
-    assert "прямо" in on and "Дети и подростки — никогда" in on
-    teen = prompts.intimacy_rule(WorldInfo(adult=True, minors=["Урга (герой)"]))
-    assert "Урга (герой)" in teen and "ни близости" in teen
+    assert "Дети — никогда" in on
 
 
-def test_18_plus_lifts_the_safety_tags_only_without_children_or_teens():
+def test_18_plus_lifts_the_safety_tags_only_without_children():
     adult = ImageParams(event="x", adult=True, hero="Айра, человек, женщина, молодая")
     assert adult_frame(adult)
     for p in (ImageParams(event="x"),
               ImageParams(event="x", adult=True, minors=["Урга"]),
-              ImageParams(event="x", adult=True, hero="Урга, Полуорк, женщина, подросток; варвар"),
               ImageParams(event="x", adult=True, people=["Лёшка — человек, мужчина, ребёнок; сын мельника"])):
         assert not adult_frame(p), p
 

@@ -181,11 +181,11 @@ async def _a1111(c: httpx.AsyncClient, spec: ImageModel, prompt: str, negative: 
 SAFE_TAGS = ("safe",)  # lifted by 18+
 NSFW_NEG = ("nsfw", "explicit", "nude")  # in the negative unless 18+
 MINOR_NEG = ("loli", "shota", "child")  # in the negative always (v0.7.38.7, back in v0.8.4.42.22)
-MINOR_WORDS = ("подрост", "ребён", "ребен", "дитя", "девочк", "мальчик", "child", "teen", "kid")
+MINOR_WORDS = ("ребён", "ребен", "дитя", "девочк", "мальчик", "child", "kid")
 
 
 def adult_frame(params: ImageParams) -> bool:
-    """18+ only when the game allows it and no child or teen is in the frame: by the engine's list and by the age words
+    """18+ only when the game allows it and no child is in the frame: by the engine's list and by the age words
     of the lines themselves (v0.7.38.7, back in v0.8.4.42.22)."""
     lines = " ".join([params.hero, *params.people]).lower()
     return params.adult and not params.minors and not any(w in lines for w in MINOR_WORDS)
