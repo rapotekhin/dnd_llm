@@ -32,6 +32,22 @@ func test_the_owners_leave_lasts_until_a_quarrel() -> void:
 	assert_str(SiteRules.unwelcome(s, data, "brod-tavern-kitchen")).is_equal("npc_innkeeper")
 
 
+## v0.8.4.42.27 (the author's trace: Сыч at −2 «разрешает входить», yet the den's door stayed shut, only «Постучать»
+## again, and inside the hero was a stranger): the leave of an owner at odds lifts its attitude to the threshold.
+func test_a_leave_from_an_owner_at_odds_holds() -> void:
+	var s := _hero("brod-mill")
+	s.shift_attitude("npc_guildhead", -2 - s.attitude("npc_guildhead"), data)
+	assert_str(WayRules.blocked(s, data, "brod-mill", "brod-den")).is_equal("DOOR_PRIVATE")
+	var lines := SiteRules.grant(s, data, "npc_guildhead")
+	assert_str(" ".join(lines)).contains("разрешает входить")
+	assert_int(s.attitude("npc_guildhead")).is_equal(int(SiteRules.cfg(data)["permit"]["min_attitude"]))
+	assert_str(WayRules.blocked(s, data, "brod-mill", "brod-den")).is_empty()  # the way is open: walked by the exit
+	assert_str(SiteRules.unwelcome(s, data, "brod-den")).is_empty()
+	assert_array(SiteRules.closed_to_hero(s, data, "npc_guildhead")).is_empty()  # no knock offered again
+	s.shift_attitude("npc_guildhead", -1, data)  # a quarrel after it
+	assert_str(SiteRules.unwelcome(s, data, "brod-den")).is_equal("npc_guildhead")
+
+
 func test_a_refused_ask_waits_a_day() -> void:
 	var s := _hero("brod-tavern-hall")
 	var lines := SiteRules.ask(s, data, "npc_innkeeper")

@@ -150,7 +150,15 @@ static func grant(s: GameSession, data: Dictionary, npc_id: String, site_id: Str
 		s.permits[sid] = npc_id
 	s.permit_asked.erase(npc_id)
 	s.remember(npc_id, "пустил героя к себе: %s" % names)
-	return ["%s разрешает входить: %s — пока вы не поссоритесь" % [WorldView.name_of(data, npc_id), names]]
+	var lines: Array[String] = ["%s разрешает входить: %s — пока вы не поссоритесь" % [WorldView.name_of(data, npc_id), names]]
+	# v0.8.4.42.27 (the author: «можно только получить разрешение, но кнопка пройти не появляется»): the leave holds while
+	# the attitude is not below min_attitude, so one given by an owner at odds with the hero lifts it there — talked round,
+	# not friends; a quarrel after it ends the leave. Before, a leave won from Сыч at −2 was void at once.
+	var floor := int(cfg(data)["permit"]["min_attitude"])
+	if s.attitude(npc_id) < floor:
+		s.shift_attitude(npc_id, floor - s.attitude(npc_id), data)
+		lines.append("%s больше не держит на вас зла" % WorldView.name_of(data, npc_id))
+	return lines
 
 
 ## The master's `permit` (v0.7.39.2, protocol 0.78.0): the owner of the scene agreed by words to let the hero in.
