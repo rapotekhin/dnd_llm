@@ -43,7 +43,7 @@ For each entry give:
 - "sentence": 1-2 plain English sentences, at most 35 words, starting with "A single". Describe how it looks: its
   shape, its 2-3 main colors, how it is turned. Never a name the model cannot know (no D&D, spell or monster proper
   names — not «Bigby's hand», but «a huge blue glowing open hand of force»), never a story or a use.
-- "green": true when the object's main color is green (it is then drawn on a magenta background).
+- "dark": true when the object's main color is black or very dark (it is then drawn on grey, not on dark).
 
 Rules:
 1. One simple object or emblem with a big readable outline, never a scene, never two objects. Small details vanish
@@ -63,25 +63,25 @@ Rules:
    warm white with a small plus sign.
 
 Examples (key → answer):
-items/longsword → {"tags": "longsword, sword, steel blade, crossguard, brown handle, diagonal", "sentence": "A single straight steel longsword lying diagonally, blade up and to the right, with a short crossguard and a brown leather grip.", "green": false}
-items/chain_mail → {"tags": "chainmail, armor, sleeved shirt, grey metal, front view", "sentence": "A single grey chainmail shirt with short sleeves and a round neck, seen from the front, lying flat with no body inside.", "green": false}
-items/healing_potion → {"tags": "potion, round bottle, red liquid, cork, glass", "sentence": "A single round glass flask with a narrow neck, filled with bright red liquid and closed with a brown cork.", "green": false}
-items/hempen_rope → {"tags": "rope, coiled rope, hemp, brown", "sentence": "A single coil of thick light-brown hemp rope, wound in a neat circle with one loose end.", "green": false}
-items/thieves_tools → {"tags": "lockpick, key ring, small tools, grey metal", "sentence": "A single iron ring holding three thin grey lockpicks and a small hooked pick, fanned out.", "green": false}
-spells/fireball → {"tags": "fireball, fire, flame, orange, glowing", "sentence": "A single round ball of orange fire with a bright yellow core and a few flame tongues licking upward.", "green": false}
-spells/shield → {"tags": "magic shield, hexagon, barrier, blue, glowing", "sentence": "A single glowing blue hexagonal barrier of light, slightly transparent, with a brighter edge.", "green": false}
-spells/cure_wounds → {"tags": "heart, glowing, plus sign, green, sparkle", "sentence": "A single green glowing heart with a small white plus sign in its middle and a few sparkles around it.", "green": true}
-features/second_wind → {"tags": "wind, swirl, spiral, plus sign, green", "sentence": "A single green spiral gust of wind curling around a small white plus sign.", "green": true}
-features/rage → {"tags": "wolf, wolf head, snarling, fangs, red", "sentence": "A single red snarling wolf head seen from the front, fangs bared, ears back.", "green": false}
-features/sneak_attack → {"tags": "dagger, dark, purple glow, diagonal", "sentence": "A single black dagger pointing down diagonally, its edge trailing a thin purple glow.", "green": false}
-traits/darkvision → {"tags": "eye, glowing eye, purple, night", "sentence": "A single wide open eye with a glowing violet iris on a dark round field.", "green": false}
-conditions/poisoned → {"tags": "skull, poison, drop, green, purple", "sentence": "A single green drop of poison with a small white skull on it.", "green": true}
-conditions/prone → {"tags": "arrow, down arrow, grey, broken line", "sentence": "A single thick grey arrow bending down to a flat line, a symbol of falling to the ground.", "green": false}
-acts/dash → {"tags": "boot, winged boots, speed lines, brown", "sentence": "A single brown leather boot with a small white wing at the heel and three speed lines behind it.", "green": false}
-acts/hide → {"tags": "hood, cloak, dark, shadow, grey", "sentence": "A single empty dark grey hooded cloak, the hood's opening black, with no one inside.", "green": false}
-groups/weapon → {"tags": "crossed swords, sword, steel, x shape", "sentence": "A single pair of steel swords crossed in an X, hilts down, as one emblem.", "green": false}
+items/longsword → {"tags": "longsword, sword, steel blade, crossguard, brown handle, diagonal", "sentence": "A single straight steel longsword lying diagonally, blade up and to the right, with a short crossguard and a brown leather grip.", "dark": false}
+items/chain_mail → {"tags": "chainmail, armor, sleeved shirt, grey metal, front view", "sentence": "A single grey chainmail shirt with short sleeves and a round neck, seen from the front, lying flat with no body inside.", "dark": false}
+items/healing_potion → {"tags": "potion, round bottle, red liquid, cork, glass", "sentence": "A single round glass flask with a narrow neck, filled with bright red liquid and closed with a brown cork.", "dark": false}
+items/hempen_rope → {"tags": "rope, coiled rope, hemp, brown", "sentence": "A single coil of thick light-brown hemp rope, wound in a neat circle with one loose end.", "dark": false}
+items/thieves_tools → {"tags": "lockpick, key ring, small tools, grey metal", "sentence": "A single iron ring holding three thin grey lockpicks and a small hooked pick, fanned out.", "dark": false}
+spells/fireball → {"tags": "fireball, fire, flame, orange, glowing", "sentence": "A single round ball of orange fire with a bright yellow core and a few flame tongues licking upward.", "dark": false}
+spells/shield → {"tags": "magic shield, hexagon, barrier, blue, glowing", "sentence": "A single glowing blue hexagonal barrier of light, slightly transparent, with a brighter edge.", "dark": false}
+spells/cure_wounds → {"tags": "heart, glowing, plus sign, green, sparkle", "sentence": "A single green glowing heart with a small white plus sign in its middle and a few sparkles around it.", "dark": false}
+features/second_wind → {"tags": "wind, swirl, spiral, plus sign, green", "sentence": "A single green spiral gust of wind curling around a small white plus sign.", "dark": false}
+features/rage → {"tags": "wolf, wolf head, snarling, fangs, red", "sentence": "A single red snarling wolf head seen from the front, fangs bared, ears back.", "dark": false}
+features/sneak_attack → {"tags": "dagger, dark, purple glow, diagonal", "sentence": "A single black dagger pointing down diagonally, its edge trailing a thin purple glow.", "dark": true}
+traits/darkvision → {"tags": "eye, glowing eye, purple, night", "sentence": "A single wide open eye with a glowing violet iris on a dark round field.", "dark": false}
+conditions/poisoned → {"tags": "skull, poison, drop, green, purple", "sentence": "A single green drop of poison with a small white skull on it.", "dark": false}
+conditions/prone → {"tags": "arrow, down arrow, grey, broken line", "sentence": "A single thick grey arrow bending down to a flat line, a symbol of falling to the ground.", "dark": false}
+acts/dash → {"tags": "boot, winged boots, speed lines, brown", "sentence": "A single brown leather boot with a small white wing at the heel and three speed lines behind it.", "dark": false}
+acts/hide → {"tags": "hood, cloak, dark, shadow, grey", "sentence": "A single empty dark grey hooded cloak, the hood's opening black, with no one inside.", "dark": true}
+groups/weapon → {"tags": "crossed swords, sword, steel, x shape", "sentence": "A single pair of steel swords crossed in an X, hilts down, as one emblem.", "dark": false}
 
-Answer JSON only: {"<key>": {"tags": "...", "sentence": "...", "green": false}, ...} with every key given.
+Answer JSON only: {"<key>": {"tags": "...", "sentence": "...", "dark": false}, ...} with every key given.
 Entries:
 """
 
@@ -150,9 +150,24 @@ def describe(batch: list[dict], key: str) -> dict:
     req = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}",
                                           "X-Title": "Between the Rolls: icon subjects"})
-    with urllib.request.urlopen(req, timeout=300) as resp:
-        text = json.load(resp)["choices"][0]["message"]["content"]
-    return json.loads(text[text.find("{"):text.rfind("}") + 1])
+    for attempt in range(3):  # an empty or broken answer now and then: ask again, then leave the batch for the next run
+        try:
+            with urllib.request.urlopen(req, timeout=300) as resp:
+                text = json.load(resp)["choices"][0]["message"]["content"] or ""
+            return json.loads(text[text.find("{"):text.rfind("}") + 1])
+        except (OSError, ValueError, KeyError, IndexError) as exc:
+            print(f"  attempt {attempt + 1}: {str(exc)[:120]}", flush=True)
+    return {}
+
+
+def key_of(s: dict) -> str:
+    """The background of a job: the author's own `key`, else grey for a dark object (the dark background's cut would
+    eat its edge), else the generator's dark one. A black or dark grey object by its sentence too: the
+    model's flag misses some."""
+    if s.get("key"):
+        return str(s["key"])
+    dark = bool(s.get("dark")) or bool(re.search(r"\b(black|dark grey|dark gray)\b", s["sentence"].lower()))
+    return "grey" if dark else ""
 
 
 def main() -> None:
@@ -175,7 +190,7 @@ def main() -> None:
                 k = f"{e['kind']}/{e['id']}"
                 s = got.get(k)
                 if isinstance(s, dict) and s.get("tags") and s.get("sentence"):
-                    subjects[k] = {"tags": str(s["tags"]), "sentence": str(s["sentence"]), "green": bool(s.get("green"))}
+                    subjects[k] = {"tags": str(s["tags"]), "sentence": str(s["sentence"]), "dark": bool(s.get("dark"))}
             SUBJECTS.write_text(json.dumps(subjects, ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8")
             print(f"described {min(i + BATCH, len(todo))}/{len(todo)}", flush=True)
 
@@ -185,9 +200,9 @@ def main() -> None:
         if s is None:
             fallback += 1
             name = (e["en"] or e["id"].replace("_", " ")).lower()
-            s = {"tags": name, "sentence": f"A single {name}, a simple emblem.", "green": False}
+            s = {"tags": name, "sentence": f"A single {name}, a simple emblem."}
         jobs.append({"id": e["id"], "kind": e["kind"], "name": e["name"], "tags": s["tags"], "sentence": s["sentence"],
-                     "key": "magenta" if s.get("green") else ""})
+                     "key": key_of(s)})
     JOBS.parent.mkdir(parents=True, exist_ok=True)
     JOBS.write_text(json.dumps({"jobs": jobs}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     kinds: dict[str, int] = {}

@@ -14,7 +14,7 @@ so a stopped run goes on from where it stopped.
 The prompt follows the Anima card (huggingface.co/circlestone-labs/Anima): quality tags first, the object in tags,
 then at least two plain sentences; ER SDE, CFG 4–5. The object is drawn on a flat background, which is cut out into a
 transparent PNG: its colour is the median of the border and the cut is a flood fill from the border, so any flat
-colour works; a green object goes on magenta (`key` of a job).
+colour works. The background is dark; a dark object goes on grey (`key` of a job), so the cut keeps its edge.
 
 What is written (per kind, e.g. out/items/):
     raw/<id>__<seed>.png      the frame as Forge drew it
@@ -43,14 +43,22 @@ HERE = Path(__file__).resolve().parent
 
 CHECKPOINT = "anima-aesthetic"  # a part of the checkpoint's title on Forge
 MODULES = ("qwen_image_vae.safetensors", "qwen_3_06b_base.safetensors")  # what an Anima checkpoint needs on Forge
-HEAD = "masterpiece, best quality, safe, no humans, {bg} background, simple background, solid background, flat color, minimalism, icon, "
-TAIL = ("It is a game icon from a fantasy RPG, drawn in a minimalist style as one bold silhouette with clean sharp "
-        "edges and a dark outline, in a simple palette of a few flat colors with no texture. The single object is "
-        "centered and fills most of the square, on a plain solid {bg} background.")
+# The A/B of 2026-11-10 (one seed, one change at a time): a dark background with no tag of its own draws the object
+# biggest and boldest; a solid green, grey or magenta one shrinks it and spoils abstract emblems, and «a dark outline»
+# draws thick black contours. So the dark one by default, another only for a dark object the cut would eat.
+HEAD = "masterpiece, best quality, safe, no humans, simple background, {tag}flat color, minimalism, icon, "
+TAIL = ("It is a game icon from a fantasy RPG, drawn in a minimalist style as one bold flat silhouette with clean "
+        "sharp edges, in a simple palette of two or three colors with no shading and no texture. The single object "
+        "is centered and fills most of the square, on a plain {word} background.")
 NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, "
             "chromatic aberration, text, letters, watermark, signature, border, frame, multiple objects, duplicate, "
-            "human, person, face, hands, realistic, photo, 3d, gradient background, shadow")
-KEYS = {"green": "green", "magenta": "magenta", "grey": "grey", "white": "white"}  # a job's key → the word in the prompt
+            "human, person, face, hands, realistic, photo, 3d, detailed texture, gradient, noise")
+KEYS = {  # a job's key → (a tag of the head, the word of the tail)
+    "dark": ("", "dark"),
+    "grey": ("grey background, ", "solid grey"),
+    "white": ("white background, ", "solid white"),
+    "green": ("green background, ", "solid green"),
+}
 ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
@@ -79,13 +87,14 @@ def model_settings(url: str, checkpoint: str) -> dict:
     return {"sd_model_checkpoint": found[0], "forge_additional_modules": [paths[m] for m in MODULES]}
 
 
-def prompt_of(job: dict, bg: str) -> str:
-    return HEAD.format(bg=bg) + job["tags"] + ".\n" + job["sentence"] + " " + TAIL.format(bg=bg)
+def prompt_of(job: dict, key: str) -> str:
+    tag, word = KEYS[key]
+    return HEAD.format(tag=tag) + job["tags"] + ".\n" + job["sentence"] + " " + TAIL.format(word=word)
 
 
 def draw(url: str, settings: dict, job: dict, seed: int, a: argparse.Namespace) -> Image.Image:
-    bg = KEYS.get(job.get("key") or a.bg, a.bg)
-    body = {"prompt": prompt_of(job, bg), "negative_prompt": NEGATIVE, "steps": a.steps, "cfg_scale": a.cfg,
+    key = job.get("key") if job.get("key") in KEYS else a.bg
+    body = {"prompt": prompt_of(job, key), "negative_prompt": NEGATIVE, "steps": a.steps, "cfg_scale": a.cfg,
             "sampler_name": a.sampler, "width": a.side, "height": a.side, "seed": seed,
             "override_settings": settings, "override_settings_restore_afterwards": False}
     for attempt in range(5):  # Forge restarted or busy: wait and try again
@@ -203,7 +212,7 @@ def main() -> None:
     p.add_argument("--cfg", type=float, default=4.5)
     p.add_argument("--sampler", default="ER SDE")
     p.add_argument("--seeds", default="11,22", help="one variant per seed")
-    p.add_argument("--bg", default="green", choices=sorted(KEYS), help="the background where a job names none")
+    p.add_argument("--bg", default="dark", choices=sorted(KEYS), help="the background where a job names none")
     p.add_argument("--only", default="", help="kinds, comma-separated")
     p.add_argument("--ids", default="", help="ids, comma-separated")
     p.add_argument("--redraw", action="store_true", help="draw the chosen ones again")
@@ -223,7 +232,7 @@ def main() -> None:
         return sheets(a.out, jobs, seeds)
 
     todo = [(j, n, s) for j in jobs for n, s in enumerate(seeds, 1) if a.redraw or not paths(a.out, j, n, s)[1].exists()]
-    print(f"{len(jobs)} icons × {len(seeds)} variants: {len(todo)} to draw at {a.side}px, {a.steps} steps", flush=True)
+    print(f"{len(jobs)} icons x {len(seeds)} variants: {len(todo)} to draw at {a.side}px, {a.steps} steps", flush=True)
     if not todo:
         return sheets(a.out, jobs, seeds)
     settings = model_settings(a.url, a.checkpoint)
