@@ -51,8 +51,8 @@
  },
  "acts/flee": {
   "dark": false,
-  "sentence": "A single brown leather boot seen from the side, tilted forward with three white speed lines behind it.",
-  "tags": "boot, running boot, speed lines, brown, from side"
+  "sentence": "A single open grey stone doorway with a green arrow pointing out through it to the right.",
+  "tags": "door, doorway, arrow, green, exit"
  },
  "acts/frenzy": {
   "dark": false,
@@ -116,8 +116,8 @@
  },
  "acts/shape": {
   "dark": false,
-  "sentence": "A single green glowing geometric symbol made of a circle and a triangle overlapping at the center.",
-  "tags": "geometric symbol, circle, triangle, green, glowing"
+  "sentence": "A single green glowing paw print inside a swirling ring of small leaves.",
+  "tags": "paw print, leaves, swirl, green, glowing"
  },
  "acts/shove": {
   "dark": false,
@@ -321,13 +321,13 @@
  },
  "features/barbarian_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single green upward arrow with a small white plus sign at its base and a soft white outline.",
-  "tags": "up arrow, plus sign, green, glowing, front view"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/barbarian_extra_attack": {
   "dark": false,
-  "sentence": "A single steel double-headed battleaxe lying diagonally, blade up and to the right, with a brown handle.",
-  "tags": "battleaxe, double-headed axe, steel, brown handle, diagonal"
+  "sentence": "A single steel sword pointing diagonally up to the right, with a faint second copy of its blade beside it and two short white motion lines.",
+  "tags": "sword, steel blade, afterimage, motion lines, diagonal"
  },
  "features/barbarian_unarmored_defense": {
   "dark": false,
@@ -336,8 +336,8 @@
  },
  "features/bard_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single green upward arrow with a small white plus sign at its base and a soft white outline.",
-  "tags": "up arrow, plus sign, green, glowing, front view"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/bard_college": {
   "dark": false,
@@ -456,8 +456,8 @@
  },
  "features/cleric_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single thick golden arrow pointing straight up, with a soft glow and a simple chevron shape.",
-  "tags": "up arrow, gold, glowing, chevron, front view"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/cunning_action": {
   "dark": false,
@@ -596,8 +596,8 @@
  },
  "features/druid_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single thick green upward arrow with a soft white glow, pointing straight up.",
-  "tags": "up arrow, arrow, green, glowing, white"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/druid_circle": {
   "dark": false,
@@ -726,8 +726,8 @@
  },
  "features/extra_attack_1": {
   "dark": false,
-  "sentence": "A single steel sword pointing diagonally up to the right, with two pale motion lines behind its blade.",
-  "tags": "sword, steel, motion lines, diagonal"
+  "sentence": "A single steel sword pointing diagonally up to the right, with a faint second copy of its blade beside it and two short white motion lines.",
+  "tags": "sword, steel blade, afterimage, motion lines, diagonal"
  },
  "features/fast_hands": {
   "dark": false,
@@ -816,8 +816,8 @@
  },
  "features/fighter_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single blue gem with a white plus sign on its front face, glowing softly.",
-  "tags": "gem, blue, plus sign, glowing, front view"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/fighter_fighting_style": {
   "dark": false,
@@ -981,8 +981,8 @@
  },
  "features/metamagic_heightened_spell": {
   "dark": false,
-  "sentence": "A single glowing violet eye with a red diagonal slash across it and a bright white pupil.",
-  "tags": "eye, glowing, violet, red slash, white pupil"
+  "sentence": "A single violet glowing magic circle with a bold white arrow rising up through its center.",
+  "tags": "magic circle, up arrow, violet, glowing"
  },
  "features/metamagic_quickened_spell": {
   "dark": false,
@@ -1006,13 +1006,13 @@
  },
  "features/monk_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single thick golden up arrow with a small white plus sign in its center.",
-  "tags": "up arrow, arrow, gold, glowing, plus sign"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/monk_extra_attack": {
   "dark": false,
-  "sentence": "A single steel sword pointing up diagonally, with two white speed lines behind its blade.",
-  "tags": "sword, steel blade, speed lines, diagonal"
+  "sentence": "A single steel sword pointing diagonally up to the right, with a faint second copy of its blade beside it and two short white motion lines.",
+  "tags": "sword, steel blade, afterimage, motion lines, diagonal"
  },
  "features/monk_unarmored_defense": {
   "dark": false,
@@ -1111,13 +1111,13 @@
  },
  "features/paladin_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single thick gold arrow pointing straight up with a soft white glow, seen from the front.",
-  "tags": "up arrow, gold, glowing, front view"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/paladin_extra_attack": {
   "dark": false,
-  "sentence": "A single pair of steel swords crossed in an X, hilts down, with a faint gold glow.",
-  "tags": "crossed swords, sword, steel, x shape, gold glow"
+  "sentence": "A single steel sword pointing diagonally up to the right, with a faint second copy of its blade beside it and two short white motion lines.",
+  "tags": "sword, steel blade, afterimage, motion lines, diagonal"
  },
  "features/paladin_fighting_style": {
   "dark": false,
@@ -1146,8 +1146,8 @@
  },
  "features/ranger_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single thick green arrow pointing straight up with a soft white glow, seen from the front.",
-  "tags": "up arrow, green, glowing, front view"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/ranger_archetype": {
   "dark": false,
@@ -1156,8 +1156,8 @@
  },
  "features/ranger_extra_attack": {
   "dark": false,
-  "sentence": "A single pair of arrows crossed in an X, steel tips down, with green fletching.",
-  "tags": "crossed arrows, arrow, green fletching, steel tip, x shape"
+  "sentence": "A single steel sword pointing diagonally up to the right, with a faint second copy of its blade beside it and two short white motion lines.",
+  "tags": "sword, steel blade, afterimage, motion lines, diagonal"
  },
  "features/ranger_fighting_style": {
   "dark": false,
@@ -1191,8 +1191,8 @@
  },
  "features/rogue_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single thick purple arrow pointing straight up with a soft white glow, seen from the front.",
-  "tags": "up arrow, purple, glowing, front view"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/rogue_expertise_1": {
   "dark": false,
@@ -1331,8 +1331,8 @@
  },
  "features/sorcerer_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single pink crystal arrow pointing straight up, a bright white star at its tip.",
-  "tags": "arrow, up arrow, pink, star, glowing"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/sorcerous_origin": {
   "dark": false,
@@ -1401,8 +1401,8 @@
  },
  "features/warlock_ability_score_improvement_1": {
   "dark": true,
-  "sentence": "A single dark purple crystal arrow pointing straight up, with a pale white star at its tip.",
-  "tags": "arrow, up arrow, dark purple, star, glowing"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "features/wild_shape_cr_1_2_or_below_no_flying_speed": {
   "dark": false,
@@ -1416,8 +1416,8 @@
  },
  "features/wizard_ability_score_improvement_1": {
   "dark": false,
-  "sentence": "A single blue crystal arrow pointing straight up, with a small white star at its tip.",
-  "tags": "arrow, up arrow, blue, star, glowing"
+  "sentence": "A single thick golden arrow pointing straight up, with a small white plus sign at its base and a soft glow.",
+  "tags": "arrow, up arrow, gold, plus sign, glowing"
  },
  "groups/ammo": {
   "dark": false,
@@ -2051,8 +2051,8 @@
  },
  "items/disguise_kit": {
   "green": false,
-  "sentence": "A single black domino mask with two eye holes, seen from the front.",
-  "tags": "mask, domino mask, black, disguise, front view"
+  "sentence": "A single small open wooden box of face paints with four round pots of color, seen from above.",
+  "tags": "face paint, paint box, wooden box, colorful"
  },
  "items/dried_fish": {
   "green": false,
