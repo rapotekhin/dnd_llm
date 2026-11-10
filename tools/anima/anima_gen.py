@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Game icons drawn by Anima on a Forge (AUTOMATIC1111 API), self-contained: Python 3.9+ and Pillow, nothing of the
 repo. Copy this folder to the machine with Forge and run it there under nohup or tmux; it draws only what is missing,
-so a stopped run goes on from where it stopped.
+so a stopped run goes on from where it stopped, and after a `git pull` the same command redraws only the icons whose
+subject (or settings) changed: each variant keeps the prompt it was drawn from beside it.
 
     python3 anima_gen.py jobs/icons.json                       # draw everything missing → out/
     python3 anima_gen.py jobs/icons.json --only items,spells   # some kinds
@@ -18,7 +19,7 @@ colour works. The background is dark; a dark object goes on grey (`key` of a job
 
 What is written (per kind, e.g. out/items/):
     raw/<id>__<seed>.png      the frame as Forge drew it
-    variants/<id>__<n>.png    cut out, ICON px, one per seed
+    variants/<id>__<n>.png    cut out, ICON px, one per seed; <id>__<n>.txt — the prompt it was drawn from
     <id>.png                  the icon: variant 1, or the one picked by --pick
     sheet_<kind>_<page>.png   contact sheets: a row per icon, a column per variant, on a dark slot
 """
@@ -92,9 +93,22 @@ def prompt_of(job: dict, key: str) -> str:
     return HEAD.format(tag=tag) + job["tags"] + ".\n" + job["sentence"] + " " + TAIL.format(word=word)
 
 
+def full_prompt(job: dict, a: argparse.Namespace) -> str:
+    return prompt_of(job, job.get("key") if job.get("key") in KEYS else a.bg)
+
+
+def stale(out: Path, job: dict, n: int, seed: int, prompt: str) -> bool:
+    """Not drawn yet, or drawn from another prompt: its subject was edited after a `git pull`. A variant drawn
+    before the stamps existed counts as current."""
+    v = paths(out, job, n, seed)[1]
+    if not v.exists():
+        return True
+    stamp = v.with_suffix(".txt")
+    return stamp.exists() and stamp.read_text(encoding="utf-8") != prompt
+
+
 def draw(url: str, settings: dict, job: dict, seed: int, a: argparse.Namespace) -> Image.Image:
-    key = job.get("key") if job.get("key") in KEYS else a.bg
-    body = {"prompt": prompt_of(job, key), "negative_prompt": NEGATIVE, "steps": a.steps, "cfg_scale": a.cfg,
+    body = {"prompt": full_prompt(job, a), "negative_prompt": NEGATIVE, "steps": a.steps, "cfg_scale": a.cfg,
             "sampler_name": a.sampler, "width": a.side, "height": a.side, "seed": seed,
             "override_settings": settings, "override_settings_restore_afterwards": False}
     for attempt in range(5):  # Forge restarted or busy: wait and try again
@@ -231,7 +245,7 @@ def main() -> None:
     if a.sheets:
         return sheets(a.out, jobs, seeds)
 
-    todo = [(j, n, s) for j in jobs for n, s in enumerate(seeds, 1) if a.redraw or not paths(a.out, j, n, s)[1].exists()]
+    todo = [(j, n, s) for j in jobs for n, s in enumerate(seeds, 1) if a.redraw or stale(a.out, j, n, s, full_prompt(j, a))]
     print(f"{len(jobs)} icons x {len(seeds)} variants: {len(todo)} to draw at {a.side}px, {a.steps} steps", flush=True)
     if not todo:
         return sheets(a.out, jobs, seeds)
@@ -246,6 +260,7 @@ def main() -> None:
         raw = draw(a.url, settings, job, seed, a)
         raw.save(raw_path)
         cut(raw).save(cut_path)
+        cut_path.with_suffix(".txt").write_text(full_prompt(job, a), encoding="utf-8")  # the stamp: redrawn when it changes
         icon = a.out / job["kind"] / f"{job['id']}.png"
         if n == 1 or not icon.exists():
             shutil.copyfile(cut_path, icon)

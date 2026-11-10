@@ -388,8 +388,8 @@
    "id": "carpenters_tools",
    "kind": "items",
    "name": "Инструменты плотника",
-   "tags": "saw, hand saw, steel blade, wooden handle, side view",
-   "sentence": "A single grey metal hand saw with a brown wooden handle, seen from the side.",
+   "tags": "hand plane, wood plane, wooden, steel blade",
+   "sentence": "A single wooden carpenter's hand plane with a steel blade and a round front knob, seen from the side.",
    "key": ""
   },
   {
@@ -1156,8 +1156,8 @@
    "id": "jewelers_tools",
    "kind": "items",
    "name": "Инструменты ювелира",
-   "tags": "tool roll, small tools, jeweler tools, brown leather, grey metal, front view",
-   "sentence": "A single brown leather tool roll partly open, showing three small grey metal jeweler tools.",
+   "tags": "tweezers, gem, blue gem, steel",
+   "sentence": "A single pair of fine steel tweezers holding a small sparkling blue gem at their tips, angled diagonally.",
    "key": ""
   },
   {
@@ -1244,8 +1244,8 @@
    "id": "leatherworkers_tools",
    "kind": "items",
    "name": "Инструменты кожевника",
-   "tags": "tool roll, awl, knife, leather, brown, grey metal",
-   "sentence": "A single brown leather tool roll partly open, showing a grey metal awl and a small knife.",
+   "tags": "knife, crescent blade, wooden handle, leather",
+   "sentence": "A single leatherworker's knife with a wide half-moon steel blade and a short brown wooden handle, seen from the side.",
    "key": ""
   },
   {
@@ -1356,8 +1356,8 @@
    "id": "masons_tools",
    "kind": "items",
    "name": "Инструменты каменщика",
-   "tags": "tools, trowel, chisel, mallet, grey metal, wooden handle",
-   "sentence": "A single set of masonry tools with a grey metal trowel, a chisel, and a small wooden mallet, laid together.",
+   "tags": "trowel, mason trowel, steel, wooden handle, diagonal",
+   "sentence": "A single steel mason's trowel with a flat diamond-shaped blade and a short brown wooden handle, angled diagonally.",
    "key": ""
   },
   {
@@ -1740,8 +1740,8 @@
    "id": "potters_tools",
    "kind": "items",
    "name": "Инструменты гончара",
-   "tags": "pottery wheel, wheel, brown, clay, grey metal, front view",
-   "sentence": "A single round brown pottery wheel with a grey metal frame and a raised clay center, seen from the front.",
+   "tags": "clay pot, pottery, terracotta, round",
+   "sentence": "A single round unglazed orange-brown clay pot with a wide rim and a narrow base, seen from the side.",
    "key": ""
   },
   {
@@ -2092,8 +2092,8 @@
    "id": "smiths_tools",
    "kind": "items",
    "name": "Инструменты кузнеца",
-   "tags": "smith's tools, hammer, tongs, crossed, steel, wooden handle",
-   "sentence": "A single pair of crossed smith's tools, a steel hammer and dark iron tongs, handles down, as one emblem.",
+   "tags": "tongs, blacksmith tongs, iron, glowing metal",
+   "sentence": "A single pair of long dark iron blacksmith tongs gripping a small glowing orange bar of hot metal.",
    "key": ""
   },
   {
@@ -2484,8 +2484,8 @@
    "id": "tinkers_tools",
    "kind": "items",
    "name": "Инструменты жестянщика",
-   "tags": "pliers, tool, grey metal, red handle, diagonal",
-   "sentence": "A single pair of grey metal pliers with red handles, lying diagonally.",
+   "tags": "gear, cogwheel, brass, round",
+   "sentence": "A single brass cogwheel with square teeth and a round hole in its center, seen from the front.",
    "key": ""
   },
   {
@@ -2964,8 +2964,8 @@
    "id": "cloth_bolt",
    "kind": "items",
    "name": "Отрез холста",
-   "tags": "cloth, fabric, bolt of cloth, beige, rolled, side view",
-   "sentence": "A single rolled bolt of beige cloth, tightly wound around a brown cardboard core, seen from the side.",
+   "tags": "cloth, fabric roll, beige, rolled",
+   "sentence": "A single rolled bolt of beige linen cloth wound around a wooden core, seen from the side.",
    "key": ""
   },
   {
@@ -3004,8 +3004,8 @@
    "id": "prayer_book",
    "kind": "items",
    "name": "Молитвенник",
-   "tags": "book, prayer book, dark red, gold cross, front view",
-   "sentence": "A single small dark red prayer book with a gold cross on its cover and a cream page edge, seen from the front.",
+   "tags": "book, prayer book, dark red, gold sun",
+   "sentence": "A single small dark red prayer book with a gold sun symbol on its cover and a cream page edge, seen from the front.",
    "key": ""
   },
   {
@@ -3596,8 +3596,8 @@
    "id": "blink",
    "kind": "spells",
    "name": "Мерцание",
-   "tags": "spiral, green, brown, glowing, motion lines",
-   "sentence": "A single green spiral with brown edges and a few short motion lines around it.",
+   "tags": "star, sparkle, teal, glowing, motion lines",
+   "sentence": "A single teal glowing four-pointed star flickering, with a few short motion lines around it.",
    "key": ""
   },
   {
@@ -3724,8 +3724,8 @@
    "id": "create_or_destroy_water",
    "kind": "spells",
    "name": "Создание или уничтожение воды",
-   "tags": "water drop, blue, green-brown, glowing, swirl",
-   "sentence": "A single bright blue water drop with a small green-brown swirl at its center.",
+   "tags": "water drop, blue, sparkle",
+   "sentence": "A single bright blue water drop with a small white sparkle at its upper left.",
    "key": ""
   },
   {
@@ -4052,16 +4052,16 @@
    "id": "gust_of_wind",
    "kind": "spells",
    "name": "Порыв ветра",
-   "tags": "wind, swirl, orange, glowing, from side",
-   "sentence": "A single orange swirling gust of wind made of curved lines, blowing from left to right.",
+   "tags": "wind, swirl, gust, pale blue, white",
+   "sentence": "A single pale blue gust of wind made of three curved white-edged lines, blowing from left to right.",
    "key": ""
   },
   {
    "id": "haste",
    "kind": "spells",
    "name": "Ускорение",
-   "tags": "lightning bolt, wing, green, brown, speed lines",
-   "sentence": "A single green lightning bolt with brown edges, a small white wing, and three speed lines behind it, angled diagonally.",
+   "tags": "lightning bolt, wing, yellow, speed lines",
+   "sentence": "A single bright yellow lightning bolt with a small white wing on its side and three speed lines behind it.",
    "key": ""
   },
   {
@@ -4244,8 +4244,8 @@
    "id": "magic_mouth",
    "kind": "spells",
    "name": "Волшебный рот",
-   "tags": "lips, violet, glowing, front view",
-   "sentence": "A single pair of violet glowing lips, slightly open, seen from the front.",
+   "tags": "seashell, spiral shell, violet, glowing",
+   "sentence": "A single violet glowing spiral seashell with a soft white sparkle at its opening, seen from the side.",
    "key": ""
   },
   {
@@ -4724,8 +4724,8 @@
    "id": "wind_wall",
    "kind": "spells",
    "name": "Стена ветра",
-   "tags": "wind, wall, pale blue, orange, swirl, front view",
-   "sentence": "A single pale blue wall of swirling wind with a soft orange glow along its edges.",
+   "tags": "wind, tornado, swirl, pale blue, white",
+   "sentence": "A single tall pale blue column of swirling wind with white streaks, standing upright.",
    "key": ""
   },
   {

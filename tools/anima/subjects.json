@@ -1816,8 +1816,8 @@
  },
  "items/carpenters_tools": {
   "green": false,
-  "sentence": "A single grey metal hand saw with a brown wooden handle, seen from the side.",
-  "tags": "saw, hand saw, steel blade, wooden handle, side view"
+  "sentence": "A single wooden carpenter's hand plane with a steel blade and a round front knob, seen from the side.",
+  "tags": "hand plane, wood plane, wooden, steel blade"
  },
  "items/cartographers_tools": {
   "green": false,
@@ -1926,8 +1926,8 @@
  },
  "items/cloth_bolt": {
   "green": false,
-  "sentence": "A single rolled bolt of beige cloth, tightly wound around a brown cardboard core, seen from the side.",
-  "tags": "cloth, fabric, bolt of cloth, beige, rolled, side view"
+  "sentence": "A single rolled bolt of beige linen cloth wound around a wooden core, seen from the side.",
+  "tags": "cloth, fabric roll, beige, rolled"
  },
  "items/cloth_scrap": {
   "green": false,
@@ -2431,8 +2431,8 @@
  },
  "items/jewelers_tools": {
   "green": false,
-  "sentence": "A single brown leather tool roll partly open, showing three small grey metal jeweler tools.",
-  "tags": "tool roll, small tools, jeweler tools, brown leather, grey metal, front view"
+  "sentence": "A single pair of fine steel tweezers holding a small sparkling blue gem at their tips, angled diagonally.",
+  "tags": "tweezers, gem, blue gem, steel"
  },
  "items/jug_or_pitcher": {
   "green": false,
@@ -2516,8 +2516,8 @@
  },
  "items/leatherworkers_tools": {
   "green": false,
-  "sentence": "A single brown leather tool roll partly open, showing a grey metal awl and a small knife.",
-  "tags": "tool roll, awl, knife, leather, brown, grey metal"
+  "sentence": "A single leatherworker's knife with a wide half-moon steel blade and a short brown wooden handle, seen from the side.",
+  "tags": "knife, crescent blade, wooden handle, leather"
  },
  "items/ledger": {
   "green": false,
@@ -2606,8 +2606,8 @@
  },
  "items/masons_tools": {
   "green": false,
-  "sentence": "A single set of masonry tools with a grey metal trowel, a chisel, and a small wooden mallet, laid together.",
-  "tags": "tools, trowel, chisel, mallet, grey metal, wooden handle"
+  "sentence": "A single steel mason's trowel with a flat diamond-shaped blade and a short brown wooden handle, angled diagonally.",
+  "tags": "trowel, mason trowel, steel, wooden handle, diagonal"
  },
  "items/maul": {
   "green": false,
@@ -2921,8 +2921,8 @@
  },
  "items/potters_tools": {
   "green": false,
-  "sentence": "A single round brown pottery wheel with a grey metal frame and a raised clay center, seen from the front.",
-  "tags": "pottery wheel, wheel, brown, clay, grey metal, front view"
+  "sentence": "A single round unglazed orange-brown clay pot with a wide rim and a narrow base, seen from the side.",
+  "tags": "clay pot, pottery, terracotta, round"
  },
  "items/pouch": {
   "green": false,
@@ -2931,8 +2931,8 @@
  },
  "items/prayer_book": {
   "green": false,
-  "sentence": "A single small dark red prayer book with a gold cross on its cover and a cream page edge, seen from the front.",
-  "tags": "book, prayer book, dark red, gold cross, front view"
+  "sentence": "A single small dark red prayer book with a gold sun symbol on its cover and a cream page edge, seen from the front.",
+  "tags": "book, prayer book, dark red, gold sun"
  },
  "items/quarterstaff": {
   "green": false,
@@ -3191,8 +3191,8 @@
  },
  "items/smiths_tools": {
   "green": false,
-  "sentence": "A single pair of crossed smith's tools, a steel hammer and dark iron tongs, handles down, as one emblem.",
-  "tags": "smith's tools, hammer, tongs, crossed, steel, wooden handle"
+  "sentence": "A single pair of long dark iron blacksmith tongs gripping a small glowing orange bar of hot metal.",
+  "tags": "tongs, blacksmith tongs, iron, glowing metal"
  },
  "items/soap": {
   "green": false,
@@ -3486,8 +3486,8 @@
  },
  "items/tinkers_tools": {
   "green": false,
-  "sentence": "A single pair of grey metal pliers with red handles, lying diagonally.",
-  "tags": "pliers, tool, grey metal, red handle, diagonal"
+  "sentence": "A single brass cogwheel with square teeth and a round hole in its center, seen from the front.",
+  "tags": "gear, cogwheel, brass, round"
  },
  "items/torch": {
   "green": false,
@@ -3741,8 +3741,8 @@
  },
  "spells/blink": {
   "green": true,
-  "sentence": "A single green spiral with brown edges and a few short motion lines around it.",
-  "tags": "spiral, green, brown, glowing, motion lines"
+  "sentence": "A single teal glowing four-pointed star flickering, with a few short motion lines around it.",
+  "tags": "star, sparkle, teal, glowing, motion lines"
  },
  "spells/blur": {
   "green": false,
@@ -3821,8 +3821,8 @@
  },
  "spells/create_or_destroy_water": {
   "green": false,
-  "sentence": "A single bright blue water drop with a small green-brown swirl at its center.",
-  "tags": "water drop, blue, green-brown, glowing, swirl"
+  "sentence": "A single bright blue water drop with a small white sparkle at its upper left.",
+  "tags": "water drop, blue, sparkle"
  },
  "spells/cure_wounds": {
   "green": true,
@@ -4026,13 +4026,13 @@
  },
  "spells/gust_of_wind": {
   "green": false,
-  "sentence": "A single orange swirling gust of wind made of curved lines, blowing from left to right.",
-  "tags": "wind, swirl, orange, glowing, from side"
+  "sentence": "A single pale blue gust of wind made of three curved white-edged lines, blowing from left to right.",
+  "tags": "wind, swirl, gust, pale blue, white"
  },
  "spells/haste": {
   "green": true,
-  "sentence": "A single green lightning bolt with brown edges, a small white wing, and three speed lines behind it, angled diagonally.",
-  "tags": "lightning bolt, wing, green, brown, speed lines"
+  "sentence": "A single bright yellow lightning bolt with a small white wing on its side and three speed lines behind it.",
+  "tags": "lightning bolt, wing, yellow, speed lines"
  },
  "spells/healing_word": {
   "green": true,
@@ -4146,8 +4146,8 @@
  },
  "spells/magic_mouth": {
   "green": false,
-  "sentence": "A single pair of violet glowing lips, slightly open, seen from the front.",
-  "tags": "lips, violet, glowing, front view"
+  "sentence": "A single violet glowing spiral seashell with a soft white sparkle at its opening, seen from the side.",
+  "tags": "seashell, spiral shell, violet, glowing"
  },
  "spells/magic_weapon": {
   "green": false,
@@ -4446,8 +4446,8 @@
  },
  "spells/wind_wall": {
   "dark": false,
-  "sentence": "A single pale blue wall of swirling wind with a soft orange glow along its edges.",
-  "tags": "wind, wall, pale blue, orange, swirl, front view"
+  "sentence": "A single tall pale blue column of swirling wind with white streaks, standing upright.",
+  "tags": "wind, tornado, swirl, pale blue, white"
  },
  "spells/zone_of_truth": {
   "dark": false,
