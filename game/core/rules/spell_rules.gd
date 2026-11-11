@@ -170,11 +170,26 @@ static func long_cast(sp: Dictionary) -> bool:
 ## What a healing spell of a caster `c` gives at this slot (v0.8.4.29.3, one count for a fight and out of it): its dice with
 ## `mod`, all of them for Supreme Healing, Disciple of Life on top.
 static func heal_points(data: Dictionary, c: Dictionary, spell_id: String, slot: int, mod: int, rng: RandomNumberGenerator) -> int:
-	var expr := str(data["spells"][spell_id]["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
+	var expr := _heal_dice(data, spell_id, slot)
 	var points := CombatRules.max_dice(expr, mod) if SpellEffects.max_heal(c) else CombatRules.roll_dice(rng, expr, false, mod)
-	if CharacterRules.has_feature(c, "disciple_of_life") and slot > 0:
-		points += 2 + slot
-	return points
+	return points + _heal_plus(c, slot)
+
+
+## What a healing spell of `c` may give at this slot, [least, most] — the same count as `heal_points` (a window's hint,
+## v0.8.4.43.8).
+static func heal_range(data: Dictionary, c: Dictionary, spell_id: String, slot: int, mod: int) -> Array[int]:
+	var r := CombatRules.dice_range(_heal_dice(data, spell_id, slot), mod)
+	var lo := r[1] if SpellEffects.max_heal(c) else r[0]
+	return [lo + _heal_plus(c, slot), r[1] + _heal_plus(c, slot)]
+
+
+static func _heal_dice(data: Dictionary, spell_id: String, slot: int) -> String:
+	return str(data["spells"][spell_id]["heal_at_slot"].get(str(maxi(1, slot)), "1d8+MOD"))
+
+
+## Disciple of Life on top of a healing spell of a slot.
+static func _heal_plus(c: Dictionary, slot: int) -> int:
+	return 2 + slot if CharacterRules.has_feature(c, "disciple_of_life") and slot > 0 else 0
 
 
 ## Healing the hero out of a fight (v0.7.13): a healing spell cast on themselves rolls its dice (Disciple of Life too).

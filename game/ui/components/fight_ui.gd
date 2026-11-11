@@ -89,6 +89,12 @@ func setup(screen: Control) -> void:
 	_hint = UiScenes.need(screen, "%Hint")
 	_hint.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 	end_turn = _bar.end_turn  # the round button of the hotbar
+	var face := _bar.hero_portrait()  # the hero by its portrait (v0.8.4.43.8)
+	face.mouse_entered.connect(func() -> void: point_at(CombatRules.PLAYER))
+	face.mouse_exited.connect(func() -> void: point_at(""))
+	face.pressed.connect(func() -> void:
+		if active():
+			on_fighter(CombatRules.PLAYER))
 	end_turn.pressed.connect(func() -> void: _do(GameState.combat_end_turn()))
 	_parts.assign([UiScenes.need(screen, "%FightSide"), _queue, _hint, UiScenes.need(screen, "%FightLogBox")])
 	_peace.assign([UiScenes.need(screen, "%Side"), UiScenes.need(screen, "%Strip"), UiScenes.need(screen, "%Chat")])
@@ -256,6 +262,7 @@ func refresh() -> void:
 	_bar.set_fight(on)
 	if not on:
 		_bar.clear_fight()
+		_bar.hero_portrait().modulate = Color.WHITE
 		_field.fighters = []
 		_field.routes = {}
 		_field.zones = []
@@ -271,11 +278,14 @@ func refresh() -> void:
 		_pending_check = func(t: String) -> String: return Acts.one("volley").can(s, data, CombatRules.player(s), t)
 		_pending_preview = func(_t: String) -> Dictionary: return {}
 		_pending_name = "Volley"
+		_pending_text = ""
 		_pending_aim = ""
 		_pending_feet = int(data["spells"].get(str(CombatRules.volley(s)["spell"]), {}).get("range_ft", 0))
 	end_turn.disabled = not me
 	_draw_queue(s)
 	_draw_list(s, data, me)
+	var face := _bar.hero_portrait()  # grey while the picked act cannot go at the hero
+	face.modulate = Color(1, 1, 1, 0.42) if _pending.is_valid() and not str(_pending_check.call(_target_of(CombatRules.PLAYER))).is_empty() else Color.WHITE
 	_draw_map(s, data, me)
 	_play_fx(s)
 	_draw_portrait(s, data)
@@ -444,13 +454,8 @@ func on_cell(cell: Vector2i) -> void:
 		return
 	if _pending.is_valid():
 		var target := FightGrid.aim_id(cell) if not _pending_aim.is_empty() else _target_at(cell)
-		if target.is_empty():
-			return
-		var why := str(_pending_check.call(target))
-		if not why.is_empty():
-			EventBus.message.emit(tr(why))
-			return
-		_press(target)
+		if not target.is_empty():
+			_aim(target)
 		return
 	if onto() and _field.routes.has(cell):
 		_do(GameState.combat_act("walk", FightGrid.aim_id(cell)))
@@ -475,6 +480,72 @@ func on_cell(cell: Vector2i) -> void:
 ## The right button lets the picked act go.
 func on_right(_cell: Vector2i) -> void:
 	cancel()
+
+
+## A fighter picked by its portrait — in the queue, the fight's list or the hotbar (v0.8.4.43.8, as in BG3): the picked act
+## goes at it as at its token (an area at its square), else what a click on its token does — a foe's menu, an ally's card.
+func on_fighter(id: String) -> void:
+	if id.is_empty() or not _second.is_empty():
+		return
+	var f := CombatRules.fighter(GameState.session, id)
+	if _pending.is_valid() and mine():
+		_aim(_target_of(id))
+	elif str(f.get("side")) == "enemy":
+		if mine():
+			_foe_menu(id)
+	elif id != CombatRules.PLAYER:  # an ally's card is a look, free at any turn
+		EventBus.card_requested.emit(id)
+
+
+## What the picked act aims at for a fighter: its square for an area, else the fighter.
+func _target_of(id: String) -> String:
+	return FightGrid.aim_id(FightGrid.shown(CombatRules.fighter(GameState.session, id))) if not _pending_aim.is_empty() else id
+
+
+## The picked act at `target` (a fighter or a square): the one road of a click on a token and on a portrait.
+func _aim(target: String) -> void:
+	var why := str(_pending_check.call(target))
+	if not why.is_empty():
+		EventBus.message.emit(tr(why))
+		return
+	_press(target)
+
+
+## The mouse over a fighter's portrait (v0.8.4.43.8): its token ringed on the map, the hint says what the picked act would
+## do to it — its chance, the area and who is caught, or why not; "" — the mouse left it.
+func point_at(id: String) -> void:
+	if not active():
+		return
+	var s := GameState.session
+	_field.blast = {}
+	_field.way = []
+	if id.is_empty():
+		_field.pointed = FightGrid.NONE
+		_hint.text = _base_hint(mine())
+	else:
+		var cell := FightGrid.shown(CombatRules.fighter(s, id))
+		_field.pointed = cell
+		var text := _about(s, Catalog.data, cell, id)
+		_hint.text = text if not text.is_empty() else _name_of(s, id)
+	_field.queue_redraw()
+
+
+## What the picked act would do at `id` on `cell`: the area and who is caught, its chance, or why not; "" — no act picked.
+func _about(s: GameSession, data: Dictionary, cell: Vector2i, id: String) -> String:
+	if not _pending.is_valid():
+		return ""
+	if not _pending_aim.is_empty():
+		return _aim_hint(s, data, cell, id, _base_hint(mine()))
+	if id.is_empty():
+		return ""
+	return "%s: %s" % [_name_of(s, id), _said_at(id).replace("\n", " · ")]
+
+
+## What the picked act says at `id`: why not, its chance or what it gives, else the act's own caption.
+func _said_at(id: String) -> String:
+	var why := str(_pending_check.call(id))
+	var said := tr(why) if not why.is_empty() else _preview_text(_pending_preview.call(id))
+	return said if not said.is_empty() else _pending_text
 
 
 ## The square before the way out shown at `cell`, FightGrid.NONE — no way out there.
@@ -528,11 +599,9 @@ func on_hover(cell: Vector2i) -> void:
 	var text := _base_hint(me)
 	_field.blast = {}
 	_field.way = []
-	if not _pending_aim.is_empty() and _pending.is_valid():
-		text = _aim_hint(s, data, cell, id, text)
-	elif _pending.is_valid() and not id.is_empty():
-		var why := str(_pending_check.call(id))
-		text = "%s: %s" % [_name_of(s, id), tr(why) if not why.is_empty() else _preview_text(_pending_preview.call(id)).replace("\n", " · ")]
+	var about := _about(s, data, cell, id)
+	if not about.is_empty():
+		text = about
 	elif onto() and _field.routes.has(cell):
 		_field.way = FightGrid.route(_field.routes, cell)
 		text = tr("COMBAT_WALK_COST").format({"ft": int(_field.routes[cell][0]) * int(FightGrid.cfg(data)["ft"])})
@@ -672,6 +741,8 @@ func _base_hint(me: bool) -> String:
 func _preview_text(pv: Dictionary) -> String:
 	if pv.is_empty():
 		return ""
+	if bool(pv.get("heal", false)):
+		return tr("HINT_HEAL").format({"min": int(pv["min"]), "max": int(pv["max"])})
 	if pv.has("condition"):
 		if bool(pv.get("immune", false)):
 			return tr("HINT_IMMUNE")
@@ -714,6 +785,7 @@ func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
 	var p := PanelContainer.new()
 	p.name = "Turn_" + id
 	p.tooltip_text = str(f["name"])
+	_targets(p, id, out)  # v0.8.4.43.8: a target by its portrait, as in BG3
 	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_RAISED if now else UiTheme.PANEL, col if not out else UiTheme.MUTED, 3 if now else 2, 4, 8))
 	p.custom_minimum_size = Vector2(64, 64) if now else Vector2(46, 46)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -752,6 +824,24 @@ func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
 		_queue.add_child(name_l)
 
 
+## A portrait of a fighter as a target (v0.8.4.43.8): the mouse over it rings its token and says the chance, a click aims the
+## picked act at it (on_fighter); with an act picked it is grey with why when the act cannot go at it.
+func _targets(c: Control, id: String, out: bool) -> void:
+	c.mouse_filter = Control.MOUSE_FILTER_STOP
+	c.mouse_entered.connect(point_at.bind(id))
+	c.mouse_exited.connect(point_at.bind(""))
+	c.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			on_fighter(id))
+	if not _pending.is_valid() or out:
+		return
+	var why := str(_pending_check.call(_target_of(id)))
+	if not why.is_empty():
+		c.modulate = Color(1, 1, 1, 0.42)
+	if not why.is_empty() or _pending_aim.is_empty():
+		c.tooltip_text = "%s\n%s" % [c.tooltip_text, tr(why) if not why.is_empty() else _said_at(id)]
+
+
 func _chip(parent: Control, text: String, now: bool, dim: bool) -> void:
 	var p := PanelContainer.new()
 	p.theme_type_variation = UiTheme.CARD
@@ -771,6 +861,8 @@ func _draw_list(s: GameSession, data: Dictionary, me: bool) -> void:
 	_clear(_foes)
 	var chip := PanelContainer.new()
 	chip.name = "Foe_" + CombatRules.PLAYER
+	chip.tooltip_text = str(s.character["name"])
+	_targets(chip, CombatRules.PLAYER, false)
 	_foes.add_child(chip)
 	var hero := Label.new()
 	hero.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -818,9 +910,9 @@ func _ally_row(s: GameSession, data: Dictionary, id: String, me: bool) -> void:
 		("\n\n" + str(a["desc"]) if not str(a.get("desc", "")).is_empty() else "")
 	al.mouse_entered.connect(func() -> void: _details.show_text(ally_name, ally_about))
 	al.tooltip_text = tr("BTN_CARD_TIP")
-	al.gui_input.connect(func(ev: InputEvent) -> void:  # v0.8.4.41: a click opens its card
-		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-			EventBus.card_requested.emit(id))
+	al.mouse_filter = Control.MOUSE_FILTER_PASS  # its row takes the click: a target with an act picked, else its card (v0.8.4.41)
+	ally.tooltip_text = ally_name
+	_targets(ally, id, str(a["status"]) != "active" and str(a["status"]) != "down")
 	ally.add_child(al)
 	_friend_pick(s, data, _foes, id, me)
 
@@ -868,9 +960,8 @@ func _foe_row(s: GameSession, data: Dictionary, id: String, f: Dictionary, me: b
 		var hint := _preview_text(_pending_preview.call(id)) if _pending_preview.is_valid() and _pending.is_valid() else _foe_hint(s, data, id)
 		if not hint.is_empty():
 			card.tooltip_text = hint + ("\n\n" + card.tooltip_text if not card.tooltip_text.is_empty() else "")
-			var title := str(f["name"])
-			card.mouse_entered.connect(func() -> void: _hint.text = title)
-			card.mouse_exited.connect(func() -> void: _hint.text = _base_hint(me))
+	card.mouse_entered.connect(point_at.bind(id))  # its token ringed, the hint says the chance (v0.8.4.43.8)
+	card.mouse_exited.connect(point_at.bind(""))
 	card.pressed.connect(_press.bind(id))
 	_foes.add_child(card)
 	if card.has_node("FoeHp"):  # the text ends above the bar (the theme's boxes are known only in the tree)
@@ -1296,6 +1387,7 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 			_pending_check = check
 			_pending_preview = preview
 			_pending_name = node_name
+			_pending_text = text
 			_pending_aim = aims
 			_pending_feet = feet
 		refresh())
@@ -1313,6 +1405,7 @@ func _blow_far(w: Dictionary) -> int:
 
 
 var _pending_name := ""
+var _pending_text := ""  ## the picked act's caption: what a hint says at a target it has no numbers for (v0.8.4.43.8)
 
 
 ## A concentration spell while another one is held (v0.7.13.1, as in BG3): «Прервать «Благословение»?» first.

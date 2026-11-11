@@ -51,7 +51,7 @@ func run() -> void:
 	step("the turn queue as portraits, the current one first", queue != null and queue.get_index() == 1)
 	var atk := find(screen(), "Attack_main") as Button
 	step("the action buttons stay on tabs, without numbers in the text", atk != null and not atk.text.begins_with("1 · ")
-		and not screen().find_children("*", "TabContainer", true, false).is_empty(), atk.text if atk != null else "")
+		and find(screen(), "Filter_class") != null, atk.text if atk != null else "")  # the hotbar's kind tabs (v0.8.4.43.1)
 	await _map_anims(s, foe)
 
 

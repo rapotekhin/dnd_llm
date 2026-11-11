@@ -244,7 +244,7 @@ COMBAT_TOO_HEAVY,Слишком тяжело
 COMBAT_BLOCK_STUCK,Вещи некуда сдвинуться
 COMBAT_AREA_CAUGHT,Попадут: {names}
 COMBAT_PICK_SIDE,Толчок: выберите клетку
-COMBAT_BAD_TARGET,Эта цель уже вне боя
+COMBAT_BAD_TARGET,Не та цель для этого действия
 COMBAT_BONUS,Бонус
 COMBAT_BONUS_SHORT, [бонус]
 COMBAT_CHARMED,Вы очарованы им и не можете напасть
@@ -2167,3 +2167,9 @@ BTN_OK,Готово
 GEAR_THINGS_OF,Вещи: {name}
 BTN_PUT_IN_STACK,Положить всё
 CONTAINER_HERO_THINGS,Ваши вещи
+ATTACH_AIM_NONE,Сначала прикрепите заклинание для своих
+ATTACH_AIM_NOT_HERE,"Вне боя заклинание ложится на героя и людей рядом, не на это существо"
+ATTACH_AIM_FULL,"Целей уже столько, сколько берёт заклинание: снимите одну"
+ATTACH_AIM_TIP,«{spell}»: щелчок — сделать целью
+ATTACH_AIM_ON,«{spell}»: уже цель
+HINT_HEAL,Лечение {min}–{max} хитов

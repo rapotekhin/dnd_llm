@@ -60,7 +60,7 @@ var trade_toggle: Button
 var leave_button: Button
 var trade_panel: TradePanel
 var _attach_menu: MenuButton  # v0.7.7: a spell, feature or consumable pinned to the message
-var _attach_chip: HBoxContainer
+var _attach_chip: HFlowContainer  ## wraps its boxes when many people are here (v0.8.4.43.8)
 var _attach_choices: Array[Dictionary] = []
 var _check_choices: Array[Dictionary] = []
 var _typed := true  # the last turn came from the input: its focus comes back after the turn (v0.7.22.27)
@@ -87,7 +87,7 @@ func required() -> Dictionary:
 	return {"%Side": "PanelContainer", "%Strip": "HBoxContainer", "%Field": "Control", "%Dim": "ColorRect", "%TalkCard": "CenterContainer",
 		"%PartnerCard": "VBoxContainer", "%PartnerToken": "PanelContainer", "%PartnerMark": "Label", "%PartnerName": "Label", "%PartnerLine": "Label",
 		"%Bar": "PanelContainer", "%OfflineBanner": "Label", "%QuestTrack": "Button", "%Chat": "ScrollContainer", "%Thinking": "Label", "%Cancel": "Button",
-		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "TextEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HBoxContainer", "%ThingMenu": "PanelContainer", "%ThingActs": "VBoxContainer",
+		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "TextEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HFlowContainer", "%ThingMenu": "PanelContainer", "%ThingActs": "VBoxContainer",
 		"%FightUi": "Control", "%FightSide": "PanelContainer", "%Portrait": "VBoxContainer", "%FoeList": "VBoxContainer", "%Queue": "HBoxContainer", "%Hint": "Label",
 		"%FightLogBox": "VBoxContainer"}
 
@@ -153,6 +153,9 @@ func _ready() -> void:
 	side.walk_out_requested.connect(_leave_to)
 	side.touch_requested.connect(_touch)
 	side.context_requested.connect(_context)
+	side.pointed.connect(func(ref: String) -> void:  # a portrait under the mouse rings its token (v0.8.4.43.8)
+		_field.pointed = Vector2i(-1, -1) if ref == "-" else _field.hero_cell() if ref.is_empty() else _field.cell_of(ref)
+		_field.queue_redraw())
 	side.seen = func(ref: String) -> bool: return _field.things.any(func(t: Dictionary) -> bool: return str(t["ref"]) == ref)
 	side.wait_requested.connect(func() -> void: _wait.open())
 	side.menu_requested.connect(func() -> void: _pause.open())
@@ -875,14 +878,7 @@ func _attach_boxes(npcs: Array, limit: int, names: Dictionary) -> void:
 		box.text = tr("ATTACH_SELF") if id == GameState.SELF_TARGET else str(names.get(id, id))
 		box.button_pressed = picked.has(id)
 		box.disabled = not picked.has(id) and picked.size() >= limit
-		box.toggled.connect(func(on: bool) -> void:
-			var now: Array = GameState.attached.get("targets", [])
-			if on and not now.has(id):
-				now.append(id)
-			elif not on:
-				now.erase(id)
-			GameState.attached["targets"] = now
-			EventBus.state_changed.emit())
+		box.toggled.connect(func(_on: bool) -> void: GameState.aim_attached(id))  # one road with the portraits (v0.8.4.43.8)
 		_attach_chip.add_child(box)
 
 

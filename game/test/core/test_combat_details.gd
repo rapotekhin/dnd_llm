@@ -321,7 +321,9 @@ func test_the_spell_preview_attack_or_save() -> void:
 	var darts := CombatRules.cast_preview(s, data, "magic_missile", 1, TestUtils.foe(s, 1))
 	assert_int(darts["chance"]).is_equal(100)
 	assert_int(darts["count"]).is_equal(3)
-	assert_dict(CombatRules.cast_preview(s, data, "cure_wounds", 1, TestUtils.foe(s, 1))).is_empty()
+	var cure := CombatRules.cast_preview(s, data, "cure_wounds", 1, TestUtils.foe(s, 1))  # what it gives (v0.8.4.43.8)
+	assert_bool(cure["heal"]).is_true()
+	assert_int(cure["max"]).is_greater(cure["min"])
 
 
 # --- sneaking outside a fight and the save -------------------------------------------------------

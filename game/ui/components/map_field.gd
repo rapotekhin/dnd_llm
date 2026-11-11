@@ -26,6 +26,7 @@ var lib: Dictionary = {}
 var names: Dictionary = {}  ## the name of a way out by the room it leads to
 var hero_mark := ""  ## the hero's letter; empty — no hero on this map (the author's preview)
 var hero_face := ""  ## the hero's face (PortraitRules.of, v0.8.4.43.5.2); "" — its letter
+var pointed := Vector2i(-1, -1)  ## a token pointed at from its portrait (v0.8.4.43.8): a bright ring and its name
 var clicks := true  ## false while a conversation holds the field
 var things: Array[Dictionary] = []  ## those who stand on the map and what lies on it: MapSpots.of (v0.8.2)
 var labels := false  ## every name is written while the key is held
@@ -480,6 +481,8 @@ func _fighter(f: Dictionary) -> void:
 		mid.y -= r * 0.35
 	if bool(f["now"]):
 		draw_arc(mid, r + maxf(3.0, t * 0.1), 0.0, TAU, 40, UiTheme.ACCENT_BRIGHT, maxf(1.5, t * 0.05), true)
+	if Vector2i(cell) == pointed:
+		_ring(mid, r)
 	var flat := states.has("prone") or states.has("down") or states.has("dead")
 	draw_set_transform(mid, 0.0, Vector2(1.0, 0.6 if flat else 1.0))  # one who lies is a flattened token
 	draw_circle(Vector2.ZERO, r, Color(UiTheme.PANEL, colour.a))
@@ -508,8 +511,8 @@ func _fighter(f: Dictionary) -> void:
 			draw_string(font, mid + Vector2(-w2 / 2.0, r * 0.38), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, colour)
 		elif mark.length() > 1 and mark.right(1).is_valid_int():  # «В2» of the numbered ones: the number over the face
 			_tag(mid + Vector2(r * 0.62, -r * 0.62), mark.substr(1), colour)
-		if labels or Vector2i(cell) == _hover:
-			_name(mid + Vector2(0.0, r + 22.0), str(f["name"]), Vector2i(cell) == _hover)
+		if labels or Vector2i(cell) == _hover or Vector2i(cell) == pointed:
+			_name(mid + Vector2(0.0, r + 22.0), str(f["name"]), Vector2i(cell) == _hover or Vector2i(cell) == pointed)
 
 
 ## What is in the hands (v0.8.4.23): a shield as a stick on the left, the weapon's sprite on the right — the row's texture, else
@@ -563,7 +566,7 @@ func _texture(path: String, box: Rect2) -> bool:
 ## A person is a round token, a beast a smaller one, a thing a square. The name shows under the cursor or while the key is held.
 func _thing(th: Dictionary) -> void:
 	var cell := Vector2i(int(th["x"]), int(th["y"]))
-	var name_on := labels or cell == _hover
+	var name_on := labels or cell == _hover or cell == pointed
 	var label := str(th["name"]) if name_on else ""
 	match str(th["kind"]):
 		"npc":
@@ -620,6 +623,8 @@ func _token(pos: Vector2, mark: String, label: String, colour: Color, part: floa
 	draw_circle(mid, r, UiTheme.PANEL)
 	var drawn := t >= LABEL_FROM and Portrait.face(self, face, mid, r)
 	draw_arc(mid, r, 0.0, TAU, 32, colour, maxf(1.5, t * 0.07), true)
+	if Vector2i(pos.round()) == pointed:
+		_ring(mid, r)
 	if t < LABEL_FROM:
 		return
 	if not drawn:
@@ -628,7 +633,7 @@ func _token(pos: Vector2, mark: String, label: String, colour: Color, part: floa
 		var w := font.get_string_size(mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
 		draw_string(font, mid + Vector2(-w / 2.0, r * 0.38), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, colour)
 	if not label.is_empty():
-		_name(mid + Vector2(0.0, r + 16.0), label, Vector2i(pos.round()) == _hover)
+		_name(mid + Vector2(0.0, r + 16.0), label, Vector2i(pos.round()) in [_hover, pointed])
 
 
 ## A name to write under a token at `at` (its baseline's middle); `first` — the hovered one, laid first and always.
@@ -664,6 +669,11 @@ func _lay_names() -> void:
 		draw_string_outline(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, UiTheme.BG)
 		draw_string(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.TEXT)
 	_names.clear()
+
+
+## The bright ring of a token pointed at from its portrait.
+func _ring(mid: Vector2, r: float) -> void:
+	draw_arc(mid, r + maxf(5.0, _tile * 0.16), 0.0, TAU, 40, UiTheme.ACCENT_BRIGHT, maxf(2.5, _tile * 0.08), true)
 
 
 ## A small number on a token's corner (a numbered foe whose face hides its letter).

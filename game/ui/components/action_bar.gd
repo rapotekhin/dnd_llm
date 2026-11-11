@@ -300,6 +300,11 @@ func _cells_of(key: String) -> Array:
 	return ((_stage[key] as Node).get_meta("cells", []) as Array).filter(func(c: Variant) -> bool: return is_instance_valid(c) and not (c as Node).is_queued_for_deletion())
 
 
+## The hero's big portrait at the bar's left (v0.8.4.43.8: in a fight a target of the picked act, as in BG3).
+func hero_portrait() -> Portrait:
+	return _portrait
+
+
 ## Lays the whole bar out again: portrait, hands, counters, grid, tabs, round button, rests.
 func _lay() -> void:
 	if not is_inside_tree() or GameState.session == null:

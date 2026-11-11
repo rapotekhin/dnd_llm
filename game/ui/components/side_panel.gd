@@ -11,6 +11,7 @@ signal approach_requested(ref: String, reach: String, act: Callable)  ## v0.8.2:
 signal walk_out_requested(to: String)  ## v0.8.4.2: the exit button walks there
 signal touch_requested(ref: String)  ## v0.8.4.2: the hero walks up to a thing of the map, its menu opens
 signal context_requested(ref: String)  ## v0.8.4.43.4: the right button on a portrait — its one menu
+signal pointed(ref: String)  ## v0.8.4.43.8: the mouse over a portrait — its token ringed on the map; "-" — it left
 signal wait_requested
 signal sheet_requested
 signal map_requested
@@ -531,10 +532,16 @@ func _member(box: VBoxContainer, s: GameSession, who: Dictionary, title: String,
 	p.name = "Portrait_" + (ref.get_slice(":", 1) if not ref.is_empty() else "hero")
 	p.show_of(s, Catalog.data, who, title)
 	row.add_child(p)
+	var aim := Being.HERO if ref.is_empty() else ref.get_slice(":", 1) if ref.begins_with("npc:") else ref
+	var why := GameState.attach_aim_why(aim)  # a pinned spell of the hero's side aims by the portrait (v0.8.4.43.8)
+	if why != "ATTACH_AIM_NONE":
+		_aim_look(p, aim, why)
+	p.mouse_entered.connect(pointed.emit.bind(ref))
+	p.mouse_exited.connect(pointed.emit.bind("-"))
 	if ref.is_empty():
-		p.pressed.connect(sheet_requested.emit)
+		p.pressed.connect(func() -> void: _aim_or(aim, sheet_requested.emit))
 	else:
-		p.pressed.connect(func() -> void: touch_requested.emit(ref))
+		p.pressed.connect(func() -> void: _aim_or(aim, touch_requested.emit.bind(ref)))
 		_on_right(p, context_requested.emit.bind(ref))
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -558,6 +565,31 @@ func _member(box: VBoxContainer, s: GameSession, who: Dictionary, title: String,
 	info.add_child(chips)
 	chips.refresh()
 	return info
+
+
+## A portrait while a spell of the hero's side is pinned (v0.8.4.43.8): ringed when it is a target, grey with why when it
+## cannot be one, the card at the cursor says what a click does.
+func _aim_look(p: Portrait, aim: String, why: String) -> void:
+	var spell := str(Catalog.data["spells"].get(str(GameState.attached["id"]), {}).get("name", ""))
+	p.picked = GameState.attach_aimed(aim)
+	if not why.is_empty():
+		p.modulate = Color(1, 1, 1, 0.42)
+		p.tip_body += "\n\n" + tr(why)
+	else:
+		p.tip_body += "\n\n" + tr("ATTACH_AIM_ON" if p.picked else "ATTACH_AIM_TIP").format({"spell": spell})
+
+
+## A click on a portrait: the pinned spell aimed at it, else its own act.
+func _aim_or(aim: String, own: Callable) -> void:
+	var why := GameState.attach_aim_why(aim)
+	if why == "ATTACH_AIM_NONE":
+		own.call()
+	elif not why.is_empty():
+		EventBus.message.emit(tr(why))
+	else:
+		var err := GameState.aim_attached(aim)
+		if not err.is_empty():
+			EventBus.message.emit(tr(err))
 
 
 ## Who is in the room but not drawn on the map now (v0.8.4.43.4, the author: «люди сцены — только на карте; список — для

@@ -336,6 +336,50 @@ func detach() -> void:
 	EventBus.state_changed.emit()
 
 
+## Whom the spell pinned to the words may be aimed at by a portrait out of a fight (v0.8.4.43.8, as in BG3): the hero
+## (Being.HERO or SELF_TARGET) or a person here. "" — it may; ATTACH_AIM_NONE — no spell of the hero's side is pinned, the
+## portrait does its own act; else why not.
+func attach_aim_why(id: String) -> String:
+	if str(attached.get("kind", "")) != "spell" or not SpellEffects.picks_side(Catalog.data, str(attached.get("id", ""))) in ["friend", "any"]:
+		return "ATTACH_AIM_NONE"
+	if id != Being.HERO and id != SELF_TARGET and not attach_targets().any(func(t: Dictionary) -> bool: return str(t["id"]) == id):
+		return "ATTACH_AIM_NOT_HERE"
+	return ""
+
+
+## Whether `id` is a target of the pinned spell now: one of its ticks, else its one target — none set is the hero.
+func attach_aimed(id: String) -> bool:
+	var me := SELF_TARGET if id == Being.HERO else id
+	var many: Array = attached.get("targets", [])
+	if not many.is_empty():
+		return many.has(me)
+	var one := str(attached.get("target", ""))
+	return one == id or (one.is_empty() and me == SELF_TARGET)
+
+
+## The pinned spell aimed at `id` by its portrait or by the chip's box: one of several ticked or unticked, or its one target
+## set (v0.8.4.43.8). "" — done, else why not.
+func aim_attached(id: String) -> String:
+	var why := attach_aim_why(id)
+	if not why.is_empty():
+		return why
+	var me := SELF_TARGET if id == Being.HERO else id
+	var n := SpellEffects.picks_count(Catalog.data, str(attached["id"]), int(attached.get("slot", 0)))
+	if n > 1:
+		var now: Array = attached.get("targets", [])
+		if now.has(me):
+			now.erase(me)
+		elif now.size() >= n:
+			return "ATTACH_AIM_FULL"
+		else:
+			now.append(me)
+		attached["targets"] = now
+	else:
+		attached["target"] = "" if me == SELF_TARGET else id
+	EventBus.state_changed.emit()
+	return ""
+
+
 func pin_check(kind: String, id: String) -> void:
 	pinned_check = {kind: id}
 	EventBus.state_changed.emit()

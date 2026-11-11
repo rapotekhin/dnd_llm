@@ -2515,8 +2515,12 @@ static func attack_preview(s: GameSession, data: Dictionary, target_id: String, 
 static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slot: int, target_id: String) -> Dictionary:
 	var sp: Dictionary = data["spells"].get(spell_id, {})
 	var t := fighter(s, target_id)
-	if sp.is_empty() or t.is_empty() or sp.has("heal_at_slot") or not is_engine_spell(data, spell_id):
+	if sp.is_empty() or t.is_empty() or not is_engine_spell(data, spell_id):
 		return {}
+	if sp.has("heal_at_slot"):  # what it gives, as a blow says its damage (v0.8.4.43.8)
+		var me := caster(s)
+		var hr := SpellRules.heal_range(data, Sheet.holder(s, me), spell_id, maxi(slot, int(sp.get("level", 0))), Sheet.ability_mod(s, data, me, spell_ability(s)))
+		return {"heal": true, "min": hr[0], "max": hr[1], "chance": 100, "adv": [], "dis": []}
 	var cspec: Dictionary = cfg(data)["condition_spells"].get(spell_id, {})
 	if not cspec.is_empty():
 		var conds := ", ".join((cspec["conditions"] as Array).map(func(x: String) -> String: return cond_name(data, x)))
