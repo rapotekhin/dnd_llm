@@ -22,7 +22,7 @@ func _ready() -> void:
 	toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	toast.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	EventBus.navigate.connect(_go)
-	EventBus.session_started.connect(_go.bind("game", {}))
+	EventBus.session_started.connect(_on_session_started)
 	EventBus.session_closed.connect(_go.bind("menu", {}))
 	_go("menu", {})
 	if Preview.requested():  # straight into a screen with a ready state (--preview=<name>)
@@ -36,6 +36,11 @@ func preview(which: String) -> void:
 
 func preview_names() -> Array:
 	return Preview.SCREENS.keys()
+
+
+func _on_session_started() -> void:
+	var to := GameEntry.opened(GameState.session)
+	_go(str(to["screen"]), to["args"])
 
 
 func _go(screen: String, args: Dictionary) -> void:

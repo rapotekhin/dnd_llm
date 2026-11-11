@@ -3270,27 +3270,26 @@ func _request(kind: String, input: String) -> void:
 	var turn_kind := _last_kind
 	_last_kind = ""
 	var follow_up := _apply_result(s, turn_id, call.result, turn_kind)
+	if kind == "death":
+		s.epitaph = str(call.result.get("narration", ""))  # the save keeps it: loaded, the game opens on this death
 	EventBus.turn_finished.emit(turn_id, true)
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	if follow_up != "combat":
+		_opening = {}
+	if kind == "death":  # in a fight or out of it (v0.8.4.43.9): only the death screen, the one a load of this save opens
+		EventBus.navigate.emit("death", {"epitaph": s.epitaph})
+		return
 	_maybe_summarize_location()
 	_maybe_tell_quests()
 	_prepare()
-	if follow_up != "combat":
-		_opening = {}
-	if kind == "death" and s.mode != GameSession.MODE_COMBAT:
-		EventBus.navigate.emit("death", {"epitaph": str(call.result.get("narration", ""))})
-		return
 	if follow_up == "combat":
 		_start_pending_fight()
 	elif not follow_up.is_empty():
 		_request(follow_up, "")
 	elif s.mode == GameSession.MODE_COMBAT:
 		_show_start_lines()
-		if str(s.combat.get("outcome", "")) == "dead" and kind == "death":
-			EventBus.navigate.emit("death", {"epitaph": str(call.result.get("narration", ""))})
-		else:
-			_combat_continue()
+		_combat_continue()
 	else:
 		_after_turn(s, kind)
 
@@ -3384,7 +3383,7 @@ func _lay_prepared(s: GameSession, raw: Array) -> Array[String]:
 ## soon — up to `parallel` turns at once, out of a fight; the server refuses them near the end of the daily limit.
 func _prepare() -> void:
 	var s := session
-	if s == null or not Backend.is_ready() or _ahead_stop == s.day or s.mode == GameSession.MODE_COMBAT:
+	if s == null or not Backend.is_ready() or _ahead_stop == s.day or s.mode == GameSession.MODE_COMBAT or s.hero_dead():
 		return
 	var busy: Array = _ahead.values().map(func(j: Dictionary) -> String: return "%s:%s" % [j["kind"], j["key"]])
 	for job: Dictionary in PrepareRules.jobs(s, Catalog.data, busy):

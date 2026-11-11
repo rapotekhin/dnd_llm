@@ -80,6 +80,16 @@ static func roll_line(parent: Control, text: String, tip: String = "") -> Label:
 	return l
 
 
+## The height of the first `n` rows of a list as they are drawn — fonts, margins and the interface size included; a list
+## of more scrolls under it (v0.8.4.43.9: a fixed 38 px a row showed two and a half ways out of three).
+static func rows_height(list: BoxContainer, n: int) -> float:
+	var rows := list.get_children().filter(func(r: Node) -> bool: return r is Control and (r as Control).visible).slice(0, n)
+	var h := 0.0
+	for r: Control in rows:
+		h += r.get_combined_minimum_size().y
+	return h + list.get_theme_constant("separation") * maxi(0, rows.size() - 1)
+
+
 ## «Броски раунда (n)» (Б6): a round's rolls under a fold — the head opens and shuts its lines. The fight's log and the
 ## chat after the fight (v0.8.4.21.1) build it here.
 static func rolls_block(folded: bool) -> VBoxContainer:

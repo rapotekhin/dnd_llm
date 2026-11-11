@@ -45,6 +45,8 @@ func run() -> void:
 	step("info: start", true, " | ".join(s.combat.get("log", [])) if not (s.combat.get("log", []) as Array).is_empty() else str(s.chat.slice(-3).map(func(e: Dictionary) -> String: return str(e.get("text", e.get("lines", ""))))))
 	if not OS.get_environment("GODOT_COMBAT_HP").is_empty():  # to see the death saves and the death screen
 		s.character["hp"] = int(OS.get_environment("GODOT_COMBAT_HP"))
+		for id: String in CombatRules.enemies(s):  # a foe that outlasts the hero: the death comes, not a lucky win at 1 HP
+			CombatRules.fighter(s, id)["hp"] = 200
 		node("EventBus").state_changed.emit()
 	await shot("combat_start")
 	step("info: order", true, str(s.combat["order"].map(func(id: String) -> String: return "%s %d" % [CombatRules.fighter(s, id)["name"], CombatRules.fighter(s, id)["init"]])))
@@ -73,6 +75,7 @@ func run() -> void:
 	if outcome == "dead":
 		step("death screen", await wait_until(func() -> bool: return screen_is("DeathScreen"), 60.0))
 		await shot("death")
+		await _death_autosave(gs)
 		# v0.7.2: loading the pre-fight save used to leave the hero in the room with the fight skipped
 		var load_btn: Button = find(screen(), "LoadBeforeFight")
 		if step("load before the fight", load_btn != null and not load_btn.disabled):
@@ -82,6 +85,8 @@ func run() -> void:
 			step("the same fight starts again", await wait_until(fighting, 60.0), "room %s, encounters done %s" % [again.room_id, again.encounters_done])
 			await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 			await shot("fight_again")
+			gs.close_session()  # the fight begun again ends with the run, not torn down by the quit mid-turn
+			await frames(5)
 		return
 	var finish: Button = find(screen(), "FinishCombat")
 	if step("results panel", finish != null and finish.is_visible_in_tree()):
@@ -99,6 +104,26 @@ func run() -> void:
 			step("a fold opens with its lines", (folds.back().get_node("Lines") as Control).visible and folds.back().get_node("Lines").get_child_count() > 0)
 		await shot("after_combat")
 	_dump(s)
+
+
+## v0.8.4.43.9, the author's finding: the death screen, «В меню» with no loading, then the autosave from the slots — it
+## was written after the death and hung on a fight that waited for nothing; now it opens on the death screen again.
+func _death_autosave(gs: Node) -> void:
+	var epitaph: String = gs.session.epitaph
+	step("the master's words kept for the save", not epitaph.is_empty())
+	await press(find(screen(), "ToMenu"))
+	if not step("to the menu without loading", await wait_until(func() -> bool: return screen_is("MainMenu"), 10.0)):
+		return
+	await tap("LoadButton")
+	var slot: Button = find(screen(), node("SaveManager").AUTOSAVE)
+	if not step("the autosave is in the slots", slot != null):
+		return
+	await press(slot)
+	var dead := func() -> bool: return screen_is("DeathScreen") and gs.has_session() and gs.session.hero_dead()
+	step("the autosave opens on the death screen, not a fight that waits", await wait_until(dead, 30.0), "screen %s" % screen().name)
+	step("with the same words of the master", find(screen(), "Epitaph") != null and (find(screen(), "Epitaph") as Label).text == epitaph)
+	step("no fight to hang on", not screen_is("fight") and not gs.is_busy())
+	await shot("death_loaded")
 
 
 ## The fighter's turn by the buttons: step toward the nearest wolf if none is in reach, attack while possible, end.

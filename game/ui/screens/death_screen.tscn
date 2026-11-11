@@ -42,9 +42,15 @@ text = "Айра, человек, воин 3 уровня"
 horizontal_alignment = 1
 theme_type_variation = &"HeadingLabel"
 
-[node name="Epitaph" type="Label" parent="Center/Panel/Col"]
+[node name="EpitaphScroll" type="ScrollContainer" parent="Center/Panel/Col"]
 unique_name_in_owner = true
 layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Epitaph" type="Label" parent="Center/Panel/Col/EpitaphScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
 auto_translate_mode = 2
 text = "Здесь эпитафия мастера: как пал герой."
 autowrap_mode = 3

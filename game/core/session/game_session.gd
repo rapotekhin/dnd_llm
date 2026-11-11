@@ -39,6 +39,8 @@ var option_costs: Array[int] = []
 var option_checks: Array = []
 ## The quest the player follows (v0.7.22.32, П11); "" — the last one taken.
 var tracked_quest := ""
+## The master's words over the dead hero (v0.8.4.43.9): kept with the game, so a save of it opens on its death screen.
+var epitaph := ""
 var created_at: String = ""
 
 ## The world pack of this game and its version when the game started.
@@ -406,6 +408,12 @@ func in_conversation() -> bool:
 	return mode == MODE_SOCIAL or mode == MODE_TRADE
 
 
+## The hero is dead (v0.8.4.43.9): three failed death saves or the blood pit in a fight, the sixth exhaustion out of it.
+## Such a game goes on only from its death screen — a save of it never opens on a fight that waits for nothing.
+func hero_dead() -> bool:
+	return str(combat.get("outcome", "")) == "dead" or ConditionRules.dead(character)
+
+
 ## Foes the master summoned this turn (effect start_combat): the fight starts after the turn. Not saved.
 var pending_fight: Array = []
 
@@ -504,6 +512,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"option_costs": option_costs,
 		"option_checks": option_checks,
 		"tracked_quest": tracked_quest,
+		"epitaph": epitaph,
 		"created_at": created_at,
 		"world_id": world_id,
 		"world_version": world_version,
@@ -587,6 +596,7 @@ static func from_dict(saved: Dictionary) -> GameSession:
 	for c: Variant in d.get("option_costs", []):
 		s.option_costs.append(int(c))
 	s.tracked_quest = str(d.get("tracked_quest", ""))
+	s.epitaph = str(d.get("epitaph", ""))
 	for ch: Variant in d.get("option_checks", []):
 		s.option_checks.append(ch if ch is Dictionary else {})
 	s.created_at = str(d.get("created_at", ""))

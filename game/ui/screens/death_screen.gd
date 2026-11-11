@@ -4,6 +4,7 @@ extends Control
 ## before the fight or go to the menu. «Одна жизнь» (no loading) — M5.
 
 const SCENE := "res://ui/screens/death_screen.tscn"
+const EDGE := 40.0  ## room left above and below the panel
 
 var epitaph: String
 
@@ -15,8 +16,8 @@ static func make(text: String) -> DeathScreen:
 
 
 func required() -> Dictionary:
-	return {"%Who": "Label", "%Epitaph": "Label", "%PathLabel": "Label", "%LoadBeforeFight": "Button", "%HeirButton": "Button",
-		"%ToMenu": "Button"}
+	return {"%Who": "Label", "%EpitaphScroll": "ScrollContainer", "%Epitaph": "Label", "%PathLabel": "Label",
+		"%LoadBeforeFight": "Button", "%HeirButton": "Button", "%ToMenu": "Button"}
 
 
 func _ready() -> void:
@@ -26,6 +27,7 @@ func _ready() -> void:
 	who.visible = s != null
 	path.visible = s != null
 	(UiScenes.need(self, "%Epitaph") as Label).text = epitaph
+	_fit_epitaph()
 	var heir_id := ""
 	if s != null:
 		var c := s.character
@@ -45,3 +47,17 @@ func _ready() -> void:
 		heir.pressed.connect(func() -> void:
 			EventBus.navigate.emit("creation", {"settings": s.settings, "heir": FamilyRules.heir_choices(s, Catalog.data)}))
 	(UiScenes.need(self, "%ToMenu") as Button).pressed.connect(GameState.close_session)
+
+
+## A long epitaph scrolls in its own box and the buttons stay on the screen (v0.8.4.43.9: a whole fight told pushed them
+## off it). A wrapped label learns its height only after a layout at its width: fit for a few frames.
+func _fit_epitaph() -> void:
+	var scroll: ScrollContainer = UiScenes.need(self, "%EpitaphScroll")
+	var text: Label = UiScenes.need(self, "%Epitaph")
+	var panel := scroll.get_parent().get_parent() as Control
+	for i in 3:
+		await get_tree().process_frame
+		if not is_inside_tree():
+			return
+		var rest := panel.get_combined_minimum_size().y - scroll.custom_minimum_size.y
+		scroll.custom_minimum_size.y = clampf(text.get_combined_minimum_size().y, 0.0, maxf(80.0, size.y - EDGE * 2 - rest))

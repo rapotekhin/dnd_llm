@@ -23,3 +23,11 @@ static func perform(action: Dictionary) -> void:
 			if not err.is_empty():
 				EventBus.message.emit(TranslationServer.translate(err))
 				EventBus.navigate.emit("menu", {})
+
+
+## The screen a game opens on, new, loaded or the heir's (v0.8.4.43.9): a game whose hero is dead — only its death screen
+## with the master's words; the autosave after a death opened on a fight that waited for nothing.
+static func opened(s: GameSession) -> Dictionary:
+	if s != null and s.hero_dead():
+		return {"screen": "death", "args": {"epitaph": s.epitaph}}
+	return {"screen": "game", "args": {}}

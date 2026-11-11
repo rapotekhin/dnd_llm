@@ -43,6 +43,8 @@ signal letter_requested(npc_id: String)  # v0.7.48
 signal faith_requested  # v0.7.49
 signal arena_requested(site_id: String)  # v0.7.45
 
+## Ways out seen at once under «Выходы ▾» (the author, 2026-11-11: two and a half were seen); more scroll inside.
+const EXITS_SHOWN := 5
 ## What a mark of the map offers: the buttons of the bar it stands for, by the start of their names (v0.8.2).
 const MARK_ACTS := {"forge": ["CraftButton"], "anvil": ["CraftButton"], "bench": ["CraftButton"], "hearth": ["CraftButton"], "altar": ["FaithButton"],
 	"stage": ["PerformButton"], "vein": ["Gather_"], "water": ["FillWater", "DrinkButton"], "bed": ["OwnBedButton", "RestButton"], "camp": ["RestButton"]}
@@ -496,7 +498,6 @@ func _rebuild() -> void:
 		for b: Node in _exit_list.get_children():
 			(b as Button).alignment = HORIZONTAL_ALIGNMENT_LEFT
 			(b as Button).custom_minimum_size = Vector2(300, 34)
-		(_exit_list.get_parent() as Control).custom_minimum_size = Vector2(330, mini(_exit_list.get_child_count() * 38, 420))
 
 
 ## The hero and those with it as portraits, as in BG3 (v0.8.4.43.4, the author): the ring of HP, the AC on a shield, the
@@ -972,7 +973,8 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 	_exit_list.name = "ExitsList"
 	_exit_list.custom_minimum_size = Vector2(320, 0)
 	scroll.add_child(_exit_list)
-	ways.pressed.connect(func() -> void:
+	ways.pressed.connect(func() -> void:  # sized when open, by the rows as they are drawn at this interface size
+		scroll.custom_minimum_size = Vector2(330, UiParts.rows_height(_exit_list, EXITS_SHOWN))
 		pop.popup(Rect2i(Vector2i(ways.get_screen_position()) + Vector2i(0, int(ways.size.y)), Vector2i.ZERO)))
 	var trapped := {}
 	for ft: Dictionary in ExplorationRules.found_traps(s, Catalog.data["world"], s.room_id):

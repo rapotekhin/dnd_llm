@@ -118,7 +118,28 @@ func run() -> void:
 	await frames(5)
 	step("fast travel puts the hero on a free square", WalkRules.room_of(field.map, field.hero_cell()) == s.room_id and WalkRules.passable(field.map, lib, field.hero_cell()))
 	await shot("travelled")
+	await _exits_list()
 	await _folded(s, gs)
+
+
+## v0.8.4.43.9, the author's finding: «Выходы ▾» shows up to five ways out whole (it showed two and a half), more scroll.
+func _exits_list() -> void:
+	var ways: Button = find(screen(), "ExitsButton")
+	if not step("«Выходы ▾» over the map", ways != null):
+		return
+	await press(ways)
+	await frames(3)
+	var list: Control = find(screen(), "ExitsList")
+	var scroll: Control = find(screen(), "ExitsScroll")
+	var rows: Array = list.get_children() if list != null else []
+	var shown := 0
+	for r: Control in rows:
+		if r.position.y + r.size.y <= scroll.size.y + 1.0:
+			shown += 1
+	step("up to five ways out seen whole", rows.size() > 0 and shown == mini(rows.size(), 5), "%d of %d seen" % [shown, rows.size()])
+	await shot("exits_list")
+	(find(screen(), "ExitsPopup") as Window).hide()
+	await frames(2)
 
 
 ## v0.8.4.43.5.1: the engine's lines are quiet, one look; the same one said three times is one line «×3».

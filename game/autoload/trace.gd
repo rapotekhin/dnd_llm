@@ -56,7 +56,7 @@ func _on_session_started() -> void:
 		if _file != null:
 			_file.seek_end()
 	_last_digest = ""
-	_screen = "game"  # main.gd opens the game screen on session_started itself, not through navigate
+	_screen = str(GameEntry.opened(s)["screen"])  # main.gd opens it on session_started itself, not through navigate
 	_write({"ev": "session", "what": "start" if s.turn_counter == 0 else "load", "version": str(ProjectSettings.get_setting("application/config/version")),
 		"world": s.world_id, "seed": s.game_seed, "character": {"name": s.character.get("name", ""), "race": s.character.get("race_name", ""),
 		"class": s.character.get("class_name", ""), "level": s.character.get("level", 1)}, "settings": s.settings})
