@@ -258,6 +258,13 @@ COMBAT_FOE_UNKNOWN,"Вид не изучен. «Присмотреться» (б
 COMBAT_FRIGHTENED,Страх не пускает ближе к его источнику
 COMBAT_FT,{ft} фт
 COMBAT_HIDDEN,Спрятан — враги не видят
+COMBAT_HIDDEN_MARK,Спрятан
+COMBAT_SURPRISED_TIP,"Застигнут врасплох: в первом раунде не ходит и не отвечает реакцией"
+COMBAT_RAGING_TIP,"Ярость: урон оружием сильнее, дробящий, колющий и рубящий урон по нему вдвое меньше"
+COMBAT_RECKLESS_MARK,Безрассудная атака
+COMBAT_DODGING,Уклонение
+COMBAT_DODGING_TIP,"Уклоняется до своего хода: атаки по нему с помехой, спасброски Ловкости с преимуществом"
+COMBAT_SHAPE_MARK,Облик зверя
 COMBAT_HIDE_SEEN,Враг вплотную — спрятаться не выйдет
 COMBAT_INCOMING,"{names}
 через {n} р."
@@ -2172,4 +2179,7 @@ ATTACH_AIM_NOT_HERE,"Вне боя заклинание ложится на ге
 ATTACH_AIM_FULL,"Целей уже столько, сколько берёт заклинание: снимите одну"
 ATTACH_AIM_TIP,«{spell}»: щелчок — сделать целью
 ATTACH_AIM_ON,«{spell}»: уже цель
+ATTACH_AIM_CAST,«{spell}»: щелчок — сотворить на него
+ATTACH_CAST,Сотворить
+ATTACH_CAST_TIP,"Сотворить сейчас на выбранных — как «Колдовать» в книге; без цели — на себя"
 HINT_HEAL,Лечение {min}–{max} хитов

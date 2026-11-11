@@ -39,22 +39,22 @@ func run() -> void:
 		return
 	await press(cast)
 	await frames(3)
-	var pick: Button = find(screen(), "Pick_" + ids[0])
-	var me: Button = find(screen(), "Pick_" + CombatRules.PLAYER)
-	if not step("friends get «Выбрать»: the hero too", pick != null and me != null and not pick.disabled):
+	var pick: Button = find(screen(), "Turn_" + ids[0])  # a friend by its face in the queue (v0.8.4.43.10: no «Выбрать» rows)
+	var me: Button = find(find(screen(), "Party"), "Portrait_hero")
+	if not step("friends are targets by their faces: the hero too", pick != null and me != null and pick.modulate.a == 1.0 and me.modulate.a == 1.0):
 		return
 	await shot("pick_first")
 	await press(pick)
 	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 	await frames(3)
 	step("the first ally is blessed, two left", (SpellEffects.boon(CombatRules.fighter(s, ids[0]), "die") != null) and int(CombatRules.volley(s).get("left", 0)) == 2)
-	var used: Button = find(screen(), "Pick_" + ids[0])
-	step("the same one cannot be picked again", used != null and used.disabled)
+	var used: Button = find(screen(), "Turn_" + ids[0])
+	step("the same one cannot be picked again", used != null and used.modulate.a < 1.0, used.tooltip_text if used != null else "")
 	await shot("pick_next")
-	await press(find(screen(), "Pick_" + ids[1]))
+	await press(find(screen(), "Turn_" + ids[1]))
 	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 	await frames(3)
-	await press(find(screen(), "Pick_" + CombatRules.PLAYER))
+	await press(find(find(screen(), "Party"), "Portrait_hero"))
 	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 	await frames(3)
 	step("all three blessed, no more picks", CombatRules.volley(s).is_empty() and (SpellEffects.boon(CombatRules.fighter(s, ids[1]), "die") != null)
@@ -76,7 +76,7 @@ func run() -> void:
 		return
 	await press(find(screen(), "Cast_fireball"))
 	await frames(3)
-	await press(find(screen(), "Foe_" + foe))
+	await press(find(screen(), "Turn_" + foe))
 	await frames(3)
 	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
 	await frames(3)

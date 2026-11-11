@@ -99,7 +99,7 @@ func run() -> void:
 	if flask != null:
 		await press(flask)
 		await frames(2)
-		await press(find(cs, "Foe_" + str(ogre["id"])))
+		await press(find(cs, "Turn_" + str(ogre["id"])))
 		await frames(4)
 	step("the flask was thrown", _seen.any(func(l: String) -> bool: return l.contains("Алхимический огонь")), _tail(3))
 	await press(find(screen(), "EndTurnButton"))
@@ -113,7 +113,7 @@ func run() -> void:
 		if step("the wand on the Items tab", wand != null, wand.text if wand != null else ""):
 			await press(wand)
 			await frames(2)
-			await press(find(cs, "Foe_" + str(ogre["id"])))
+			await press(find(cs, "Turn_" + str(ogre["id"])))
 			await frames(4)
 		step("the wand hit and spent a charge", int(ogre["hp"]) < hp and ItemRules.charges_left(c, ItemRules.def_of(data["items"], s.items, "wand_of_magic_missiles"), "wand_of_magic_missiles") == 6, _tail(3))
 		await shot("wand")

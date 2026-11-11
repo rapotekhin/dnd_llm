@@ -210,7 +210,7 @@ func _fight(gs: Node, s: GameSession) -> String:
 			if atk == null or atk.disabled:
 				break
 			await press(atk)
-			var card: Button = find(screen(), "Foe_" + near)
+			var card: Button = find(screen(), "Turn_" + near)
 			if card == null or card.disabled:
 				break
 			await press(card)

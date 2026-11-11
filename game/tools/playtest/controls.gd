@@ -118,7 +118,7 @@ func run() -> void:
 	await frames(3)
 	await _key(KEY_TAB)
 	var focus := root.gui_get_focus_owner()
-	step("Tab — a foe's card", focus != null and str(focus.name).begins_with("Foe_"), str(focus.name) if focus else "")
+	step("Tab — a foe's card", focus != null and str(focus.name).begins_with("Turn_"), str(focus.name) if focus else "")
 	await shot("tab_target")
 	var round := int(s.combat.get("round", 1))
 	await _key(KEY_SPACE)

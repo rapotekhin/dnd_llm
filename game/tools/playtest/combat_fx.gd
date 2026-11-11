@@ -22,7 +22,7 @@ func run() -> void:
 	var foe := str(CombatRules.enemies(s)[0])
 	var cases := [["hit", foe], ["heal", CombatRules.PLAYER], ["dodge", foe], ["crit", CombatRules.PLAYER], ["spell", foe]]
 	for c: Array in cases:
-		var n := find(screen(), "Foe_" + str(c[1])) as Control
+		var n := find(screen(), "Turn_" + str(c[1])) as Control
 		if not step("the chip of " + str(c[1]), n != null):
 			continue
 		CombatFx.play(n, str(c[0]))
@@ -32,7 +32,7 @@ func run() -> void:
 	CombatRules.player(s)["hidden"] = true
 	node("EventBus").state_changed.emit()
 	await frames(5)
-	var me := find(screen(), "Foe_" + CombatRules.PLAYER) as Control
+	var me := find(find(screen(), "Party"), "Portrait_hero") as Control  # the party column (v0.8.4.43.10)
 	step("the hidden hero is grey", me != null and me.modulate.a < 0.9, str(me.modulate) if me != null else "")
 	await shot("hidden")
 

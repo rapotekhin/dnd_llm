@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://ui/screens/game_screen.gd" id="1"]
 [ext_resource type="Script" path="res://ui/components/side_panel.gd" id="2"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://ui/components/brush_button.gd" id="7"]
 [ext_resource type="Script" path="res://ui/components/fight_ui.gd" id="8"]
 [ext_resource type="Script" path="res://ui/components/chat_input.gd" id="9"]
+[ext_resource type="Script" path="res://ui/components/party_column.gd" id="10"]
 
 [node name="GameScreen" type="Control"]
 layout_mode = 3
@@ -45,33 +46,39 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="Side" type="PanelContainer" parent="Margin/Row/Main/Upper"]
-unique_name_in_owner = true
+[node name="Left" type="VBoxContainer" parent="Margin/Row/Main/Upper"]
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
-script = ExtResource("2")
+theme_override_constants/separation = 10
 
-[node name="FightSide" type="PanelContainer" parent="Margin/Row/Main/Upper"]
+[node name="PartyBox" type="PanelContainer" parent="Margin/Row/Main/Upper/Left"]
 unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 theme_type_variation = &"SidePanel"
 
-[node name="Col" type="VBoxContainer" parent="Margin/Row/Main/Upper/FightSide"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="Portrait" type="VBoxContainer" parent="Margin/Row/Main/Upper/FightSide/Col"]
+[node name="Party" type="VBoxContainer" parent="Margin/Row/Main/Upper/Left/PartyBox"]
 unique_name_in_owner = true
 layout_mode = 2
+script = ExtResource("10")
 
-[node name="FoeScroll" type="ScrollContainer" parent="Margin/Row/Main/Upper/FightSide/Col"]
+[node name="Side" type="PanelContainer" parent="Margin/Row/Main/Upper/Left"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+script = ExtResource("2")
+
+[node name="FightSide" type="PanelContainer" parent="Margin/Row/Main/Upper/Left"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"SidePanel"
+
+[node name="IncomingScroll" type="ScrollContainer" parent="Margin/Row/Main/Upper/Left/FightSide"]
+layout_mode = 2
 horizontal_scroll_mode = 0
 
-[node name="FoeList" type="VBoxContainer" parent="Margin/Row/Main/Upper/FightSide/Col/FoeScroll"]
+[node name="Incoming" type="VBoxContainer" parent="Margin/Row/Main/Upper/Left/FightSide/IncomingScroll"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

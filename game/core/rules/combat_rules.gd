@@ -864,6 +864,18 @@ static func foe_conditions(s: GameSession, data: Dictionary, f: Dictionary) -> A
 	return out
 
 
+## What the fight lays on `f` beside its statuses, for its portrait (v0.8.4.43.10): «hidden», «surprised», «raging»,
+## «reckless», «dodging», «shape» (a beast's form). A status of its record is `ConditionRules.shown`'s, not one of these.
+static func marks(s: GameSession, f: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for k: String in ["hidden", "surprised", "raging", "reckless", "dodging"]:
+		if bool(f.get(k, false)):
+			out.append(k)
+	if Guise.has_body(Sheet.holder(s, f)):
+		out.append("shape")
+	return out
+
+
 ## Its turn in this round is still ahead (or going on): a status counted in its turns ends a round sooner on the clock.
 static func _yet_to_act(s: GameSession, f: Dictionary) -> bool:
 	return (s.combat.get("order", []) as Array).find(str(f.get("id", ""))) >= int(s.combat.get("turn", 0))

@@ -41,7 +41,7 @@ func run() -> void:
 	await frames(4)
 	var cs := screen()
 	step("the web holds the hero", ConditionRules.has(c, "restrained"), ", ".join(lines))
-	var card: Control = find(cs, "Foe_" + str(spider["id"]))
+	var card: Control = find(cs, "Turn_" + str(spider["id"]))
 	if card != null:
 		card.mouse_entered.emit()
 	var details: Control = find(cs, "CombatDetails")

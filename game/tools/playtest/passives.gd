@@ -89,7 +89,7 @@ func run() -> void:
 	await frames(2)
 	await press(find(cs, "Attack_main"))
 	await frames(2)
-	await press(find(cs, "Foe_" + str(goblin["id"])))
+	await press(find(cs, "Turn_" + str(goblin["id"])))
 	await frames(6)
 	step("the first blow is reckless by itself", bool(CombatRules.player(s).get("reckless", false)) and _seen.any(func(l: String) -> bool: return l.contains("безрассудно")),
 		_tail(4))

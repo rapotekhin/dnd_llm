@@ -14,7 +14,9 @@ var ac := -1  ## its armour class on a shield at the corner; below 0 — none
 var up := false  ## a level waits: an arrow over the ring
 var numbers := false  ## «12/12» under the letter (the hotbar's big portrait)
 var picture := ""  ## the face's res:// path (PortraitRules.of); "" — the letter
-var picked := false  ## a bright rim: the one chosen (the creation screen's faces)
+var picked := false  ## a bright rim: the one chosen (the creation screen's faces), whose turn it is in a fight
+var down := false  ## at 0 HP or out of the fight: the face greyed (v0.8.4.43.10)
+var saves := {}  ## its death saves while it lies dying: {ok, fail} as three green and three red dots, as in BG3
 
 
 static func of(name_text: String, side: int) -> Portrait:
@@ -39,6 +41,9 @@ func show_of(s: GameSession, data: Dictionary, who: Dictionary, name_text: Strin
 	ac = Sheet.ac(s, who, data)
 	up = Sheet.is_hero(who) and LevelUp.can_level_up(s.character, data)
 	picture = PortraitRules.of(s, data, who)
+	var fighting := CombatRules.active(s) and who.has("side")
+	down = hp <= 0 or (fighting and not Sheet.is_hero(who) and str(who.get("status", "active")) != "active")
+	saves = CombatRules.saves_of(s, who) if fighting and CombatRules.dying(s, who) else {}
 	tip_title = name_text
 	tooltip_text = name_text
 	tip_body = hero_tip(s, data) if Sheet.is_hero(who) else _tr("SIDE_HP_AC").format({"hp": hp, "max": top, "ac": ac}) \
@@ -77,7 +82,7 @@ func _draw() -> void:
 	var rad := minf(size.x, size.y) / 2 - 4
 	var share := clampf(float(hp) / maxi(1, top), 0.0, 1.0)
 	draw_circle(centre, rad, UiTheme.PANEL_RAISED)
-	var drawn := face(self, picture, centre, rad - 1.5)
+	var drawn := face(self, picture, centre, rad - 1.5, Color(0.42, 0.42, 0.42) if down else Color.WHITE)
 	if picked:
 		draw_arc(centre, rad + 2.5, 0, TAU, 48, UiTheme.ACCENT_BRIGHT, 3.0)
 	draw_arc(centre, rad, 0, TAU, 48, UiTheme.BORDER, 3.0)
@@ -96,6 +101,8 @@ func _draw() -> void:
 		draw_string(font, at, "%d/%d" % [hp, top], HORIZONTAL_ALIGNMENT_CENTER, rad * 2, 15, UiTheme.TEXT)
 	if ac >= 0:
 		_shield(Vector2(size.x - w, size.y - rad * 0.4), w, font)
+	if not saves.is_empty():
+		_saves(centre, rad)
 	if up:
 		var at := Vector2(size.x - rad * 0.3, rad * 0.32)
 		var a := rad * 0.22
@@ -133,6 +140,20 @@ static func square(path: String, side: float, dim := false) -> TextureRect:
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pic.modulate = Color(0.5, 0.5, 0.5) if dim else Color.WHITE
 	return pic
+
+
+## The death saves over the bottom of the face: three for successes on the left, three for failures on the right.
+func _saves(centre: Vector2, rad: float) -> void:
+	var r := maxf(3.0, rad * 0.09)
+	var y := centre.y + rad * 0.55
+	for i in 3:
+		for side: int in [-1, 1]:
+			var ok := side < 0
+			var lit := i < int(saves.get("ok" if ok else "fail", 0))
+			var at := Vector2(centre.x + side * (r * 1.6 + i * r * 2.6), y)
+			var col := UiTheme.OK if ok else UiTheme.BAD
+			draw_circle(at, r, col if lit else UiTheme.BG)
+			draw_arc(at, r, 0, TAU, 16, col, 1.5)
 
 
 ## The AC on a small shield, as BG3 draws it beside the portrait.

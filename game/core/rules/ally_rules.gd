@@ -317,3 +317,40 @@ static func summon_lines(s: GameSession, data: Dictionary) -> Array[String]:
 		var left := "до конца концентрации" if bool(m["concentration"]) else _left_text(int(m["until"]) - now) if int(m["until"]) >= 0 else "пока не отпустят"
 		out.append("%s (%s, %s)" % [m["name"], source_name(data, str(m["spell"]), s.items), left])
 	return out
+
+
+## Of the hero's party in a fight (v0.8.4.43.10, as in BG3): a follower, a beast of its own or led along, one it called or
+## one its party called — not an ally of the encounter, the militia or one a foe called.
+static func of_party(s: GameSession, f: Dictionary) -> bool:
+	if Sheet.is_hero(f):
+		return true
+	if str(f.get("side", "")) != "ally" or not str(f.get("ally", "")) in ["follower", "summon", "animal"]:
+		return false
+	var by := str(f.get("called_by", ""))
+	return by.is_empty() or by == CombatRules.PLAYER or of_party(s, CombatRules.fighter(s, by))
+
+
+## The hero's party as the left column draws it (v0.8.4.43.10, the author: «только союзников … как в BG3»): the hero first,
+## then those who go with it — its followers, the summoned, its beasts and those led along; in a fight their fighters still
+## on the field. [{ref, who, name}]: out of a fight `ref` is "" for the hero, "npc:<id>", "summon:<id>" or "cr:<id>"; in a
+## fight the fighter's id.
+static func party(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var hero := str(s.character.get("name", ""))
+	if CombatRules.active(s):
+		out.append({"ref": CombatRules.PLAYER, "who": CombatRules.player(s), "name": hero})
+		for id: String in CombatRules.allies(s, false):
+			var f := CombatRules.fighter(s, id)
+			if of_party(s, f) and not str(f.get("status", "")) in ["gone", "left", "away"]:
+				out.append({"ref": id, "who": f, "name": str(f.get("name", id))})
+		return out
+	out.append({"ref": "", "who": Sheet.HERO, "name": hero})
+	var world := WorldView.new(data["world"])
+	for id: String in Being.followers(s):
+		out.append({"ref": "npc:" + id, "who": Sheet.who(s, data, id), "name": world.npc_name(id)})
+	for m: Dictionary in called(s):
+		out.append({"ref": "summon:" + str(m["id"]), "who": m, "name": str(m["name"])})
+	for cr: Dictionary in CreatureRules.here(s, s.room_id):
+		if CreatureRules.with_hero(cr):
+			out.append({"ref": "cr:" + str(cr["id"]), "who": cr, "name": str(cr["name"])})
+	return out

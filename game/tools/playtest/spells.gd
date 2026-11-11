@@ -56,7 +56,7 @@ func run() -> void:
 	if step("Bane on the tab", bane != null):
 		await press(bane)
 		await frames(2)
-		await press(find(cs, "Foe_" + str(goblin["id"])))
+		await press(find(cs, "Turn_" + str(goblin["id"])))
 		await frames(4)
 	var ask: Control = find(screen(), "CombatAsk")
 	step("the concentration question", ask != null and ask.visible and find(ask, "Ask_conc_yes") != null, "")
@@ -148,7 +148,7 @@ func run() -> void:
 	if step("Hunter's Mark on the tab", hm != null):
 		await press(hm)
 		await frames(2)
-		await press(find(cs, "Foe_" + str(wolf["id"])))
+		await press(find(cs, "Turn_" + str(wolf["id"])))
 		await frames(3)
 		var yes: Button = find(screen(), "Ask_conc_yes")
 		if yes != null:
@@ -179,7 +179,7 @@ func run() -> void:
 	if step("Moonbeam on the tab", mb != null):
 		await press(mb)
 		await frames(2)
-		await press(find(cs, "Foe_" + str(wolf["id"])))
+		await press(find(cs, "Turn_" + str(wolf["id"])))
 		await frames(3)
 		var yes2: Button = find(screen(), "Ask_conc_yes")
 		if yes2 != null:
@@ -195,7 +195,7 @@ func run() -> void:
 	if step("Spiritual Weapon on the tab", sw != null):
 		await press(sw)
 		await frames(2)
-		await press(find(screen(), "Foe_" + str(wolf["id"])))
+		await press(find(screen(), "Turn_" + str(wolf["id"])))
 		await frames(4)
 	_tab(screen(), "COMBAT_TAB_SPELLS")
 	await frames(2)
@@ -217,7 +217,7 @@ func run() -> void:
 	if step("Grease on the tab", gr != null):
 		await press(gr)
 		await frames(2)
-		await press(find(cs, "Foe_" + str(wolf["id"])))
+		await press(find(cs, "Turn_" + str(wolf["id"])))
 		await frames(4)
 	step("Grease on the field, Moonbeam kept", _zones_on(s, wolf).size() >= 2 and str(c.get("concentration", "")) == "moonbeam",
 		", ".join(_zones_on(s, wolf)) + " | " + _tail(3))

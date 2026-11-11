@@ -138,9 +138,10 @@ func run() -> void:
 	var attack: Control = find(cs, "Attack_main")
 	var tip := str(attack.get("tip_body")) if attack != null else ""  # v0.8.4.43.3: the icon's own card at the cursor
 	step("the attack's weapon in its card", cd != null and tip.contains("1к8"), tip.left(160))
-	for card: Node in cs.find_children("Foe_*", "Button", true, false):
-		(card as Control).mouse_entered.emit()
-		break
+	for card: Node in cs.find_children("Turn_*", "Button", true, false):  # a foe's face in the queue (v0.8.4.43.10)
+		if CombatRules.enemies(s).has(str(card.name).trim_prefix("Turn_")):
+			(card as Control).mouse_entered.emit()
+			break
 	step("an unknown foe says how to learn it", cd != null and _text_of(cd).contains("Осмотреть"), _text_of(cd).left(160) if cd != null else "")
 	await shot("combat_details")
 

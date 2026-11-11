@@ -52,6 +52,7 @@ const MARK_ACTS := {"forge": ["CraftButton"], "anvil": ["CraftButton"], "bench":
 var _content: Container
 var _scroll: ScrollContainer
 var _bar: ActionBar
+var _party: PartyColumn  ## the hero and its party, one column in a fight and out of it (v0.8.4.43.10)
 var _strip: HBoxContainer  # over the field: the place, the hour, the weather
 var _exit_list: Container  ## the ways out, under «Выходы ▾» on the strip
 var _open := ""  # the row whose acts are open ("npc:<id>", "cr:<id>"), closed when the hero leaves the room
@@ -67,9 +68,20 @@ func _ready() -> void:
 	if owner != null:
 		_bar = owner.get_node_or_null("%Bar")
 		_strip = owner.get_node_or_null("%Strip")
+		_party = owner.get_node_or_null("%Party")
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 12)
 	add_child(col)
+	if _party == null:  # the panel alone: the column on its top
+		_party = PartyColumn.new()
+		col.add_child(_party)
+	_party.clicked.connect(_party_click)
+	_party.context.connect(func(ref: String) -> void:
+		if not _fighting() and not ref.is_empty():
+			context_requested.emit(ref))
+	_party.pointed.connect(func(ref: String) -> void:
+		if not _fighting():
+			pointed.emit(ref))
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -356,7 +368,11 @@ func _rebuild() -> void:
 	var world := GameState.world()
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 
-	_party(s, world, can_act)
+	if not CombatRules.active(s):  # in a fight the column is FightUi's
+		_party.now = ""
+		_party.refresh(_dress)
+	if NeedRules.on(s):
+		_need_acts(s, can_act)
 	var column := _content
 	_content = _bar.section(ActionBar.DEEDS)
 	_craft_row(s, can_act)
@@ -500,97 +516,82 @@ func _rebuild() -> void:
 			(b as Button).custom_minimum_size = Vector2(300, 34)
 
 
-## The hero and those with it as portraits, as in BG3 (v0.8.4.43.4, the author): the ring of HP, the AC on a shield, the
-## statuses and the needs as icons; the coins, the experience and the festival at the cursor of the hero's portrait. The
-## hero's portrait opens the sheet; a companion's acts on the left button as on the map (a follower talks), its menu on
-## the right one.
-func _party(s: GameSession, world: WorldView, can_act: bool) -> void:
-	var data := Catalog.data
-	var box := VBoxContainer.new()
-	box.name = "Party"
-	box.add_theme_constant_override("separation", 8)
-	_content.add_child(box)
-	var hero := _member(box, s, Sheet.HERO, str(s.character.get("name", "")), "", 96)
-	if NeedRules.on(s):
-		_needs(s, hero, can_act)
-	for id: String in Being.followers(s):
-		_member(box, s, Sheet.who(s, data, id), world.npc_name(id), "npc:" + id, 56)
-	for m: Dictionary in AllyRules.called(s):  # v0.7.22.22: the creatures a spell called
-		_member(box, s, m, str(m["name"]), "summon:" + str(m["id"]), 48)
-	for cr: Dictionary in CreatureRules.here(s, s.room_id):  # the hero's beasts and those led along walk with it
-		if CreatureRules.with_hero(cr):
-			_member(box, s, cr, str(cr["name"]), "cr:" + str(cr["id"]), 48)
+## A fight is on: the party column is FightUi's.
+func _fighting() -> bool:
+	return GameState.has_session() and CombatRules.active(GameState.session)
 
 
-## One of the party: its portrait, its name, a bar of HP and its statuses as icons. The hero's info column; `ref` "" —
-## the hero.
-func _member(box: VBoxContainer, s: GameSession, who: Dictionary, title: String, ref: String, side: int) -> VBoxContainer:
-	var row := HBoxContainer.new()
-	row.name = "Member_" + (ref.replace(":", "_") if not ref.is_empty() else "hero")
-	row.add_theme_constant_override("separation", 10)
-	box.add_child(row)
-	var p := Portrait.of(title, side)
-	p.name = "Portrait_" + (ref.get_slice(":", 1) if not ref.is_empty() else "hero")
-	p.show_of(s, Catalog.data, who, title)
-	row.add_child(p)
-	var aim := Being.HERO if ref.is_empty() else ref.get_slice(":", 1) if ref.begins_with("npc:") else ref
-	var why := GameState.attach_aim_why(aim)  # a pinned spell of the hero's side aims by the portrait (v0.8.4.43.8)
+## Whom a portrait of the column is for a pinned spell: the hero, a follower by its id, else its ref.
+static func aim_of(ref: String) -> String:
+	return Being.HERO if ref.is_empty() else ref.get_slice(":", 1) if ref.begins_with("npc:") else ref
+
+
+## A portrait of the party column out of a fight (v0.8.4.43.8): its look while a spell of the hero's side is pinned.
+func _dress(p: Portrait, ref: String) -> void:
+	var aim := aim_of(ref)
+	var why := GameState.attach_aim_why(aim)
 	if why != "ATTACH_AIM_NONE":
 		_aim_look(p, aim, why)
-	p.mouse_entered.connect(pointed.emit.bind(ref))
-	p.mouse_exited.connect(pointed.emit.bind("-"))
-	if ref.is_empty():
-		p.pressed.connect(func() -> void: _aim_or(aim, sheet_requested.emit))
-	else:
-		p.pressed.connect(func() -> void: _aim_or(aim, touch_requested.emit.bind(ref)))
-		_on_right(p, context_requested.emit.bind(ref))
-	var info := VBoxContainer.new()
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	info.add_theme_constant_override("separation", 4)
-	row.add_child(info)
-	var name_l := UiParts.label(info, title, UiTheme.HEADING if ref.is_empty() else "")
-	name_l.name = "Name_" + p.name.trim_prefix("Portrait_")
-	name_l.autowrap_mode = TextServer.AUTOWRAP_OFF
-	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	name_l.clip_text = true
-	var bar := UiParts.hp_line(p.hp, p.top, p.temp, 10.0 if ref.is_empty() else 7.0, 2)  # temporary hits in blue (v0.8.4.30)
-	bar.name = "HeroBar" if ref.is_empty() else "Bar_" + p.name.trim_prefix("Portrait_")
-	info.add_child(bar)
-	var chips := EffectChips.new()  # what is on it (v0.8.1), icons since v0.8.4.43.4
-	chips.icons = 30 if ref.is_empty() else 24
-	chips.who = {} if ref.is_empty() else who
-	if not ref.is_empty():
-		chips.name = "EffectChips_" + p.name.trim_prefix("Portrait_")
-	chips.add_theme_constant_override("h_separation", 4)
-	info.add_child(chips)
-	chips.refresh()
-	return info
+
+
+## A click on a portrait of the party out of a fight: the pinned spell aimed at it, else the hero's sheet or the
+## companion's own act as on the map (a follower talks).
+func _party_click(ref: String) -> void:
+	if _fighting():
+		return
+	_aim_or(aim_of(ref), sheet_requested.emit if ref.is_empty() else touch_requested.emit.bind(ref))
 
 
 ## A portrait while a spell of the hero's side is pinned (v0.8.4.43.8): ringed when it is a target, grey with why when it
-## cannot be one, the card at the cursor says what a click does.
+## cannot be one, the card at the cursor says what a click does — aims it, or casts it when that is its last target.
 func _aim_look(p: Portrait, aim: String, why: String) -> void:
 	var spell := str(Catalog.data["spells"].get(str(GameState.attached["id"]), {}).get("name", ""))
 	p.picked = GameState.attach_aimed(aim)
 	if not why.is_empty():
 		p.modulate = Color(1, 1, 1, 0.42)
 		p.tip_body += "\n\n" + tr(why)
-	else:
-		p.tip_body += "\n\n" + tr("ATTACH_AIM_ON" if p.picked else "ATTACH_AIM_TIP").format({"spell": spell})
+		return
+	var n := SpellEffects.picks_count(Catalog.data, str(GameState.attached["id"]), int(GameState.attached.get("slot", 0)))
+	var last := n <= 1 or (not p.picked and (GameState.attached.get("targets", []) as Array).size() + 1 >= n)
+	p.tip_body += "\n\n" + tr("ATTACH_AIM_ON" if p.picked and n > 1 else "ATTACH_AIM_CAST" if last else "ATTACH_AIM_TIP").format({"spell": spell})
 
 
 ## A click on a portrait: the pinned spell aimed at it, else its own act.
 func _aim_or(aim: String, own: Callable) -> void:
+	if GameState.attach_aim_why(aim) == "ATTACH_AIM_NONE":
+		own.call()
+	else:
+		aim_at(aim)
+
+
+## The pinned spell of the hero's side aimed at `aim` (the hero is Being.HERO, a person its id) by its portrait or its token,
+## and cast at once once it has all its targets, as «Колдовать» in the book (v0.8.4.43.10). False — nothing of the hero's
+## side is pinned: the click is the portrait's or the token's own.
+func aim_at(aim: String) -> bool:
 	var why := GameState.attach_aim_why(aim)
 	if why == "ATTACH_AIM_NONE":
-		own.call()
-	elif not why.is_empty():
+		return false
+	if why.is_empty():
+		why = GameState.aim_attached(aim)
+	if not why.is_empty():
 		EventBus.message.emit(tr(why))
-	else:
-		var err := GameState.aim_attached(aim)
+	elif GameState.attach_ready():
+		cast_attached()
+	return true
+
+
+## The pinned spell of the hero's side cast now; a concentration held asks first (v0.7.13.1, as the fight asks).
+func cast_attached() -> void:
+	var go := func() -> void:
+		var err := GameState.cast_attached()
 		if not err.is_empty():
 			EventBus.message.emit(tr(err))
+	var spell := str(GameState.attached.get("id", ""))
+	var held := GameState.concentration_conflict(spell)
+	if held.is_empty():
+		go.call()
+	else:
+		ConfirmBox.ask(self, tr("CONC_SWITCH").format({"old": held, "new": Catalog.data["spells"][spell]["name"]}), "", tr("CONC_YES"), go)
 
 
 ## Who is in the room but not drawn on the map now (v0.8.4.43.4, the author: «люди сцены — только на карте; список — для
@@ -1006,27 +1007,9 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		b.tooltip_text = str(w["text"])
 
 
-## Food, water, sleep as three icons under the hero (v0.7.23; icons with their fill since v0.8.4.43.4), «Поесть» and
-## «Попить» on the hotbar.
-func _needs(s: GameSession, info: VBoxContainer, can_act: bool) -> void:
+## «Поесть», «Попить», «Набрать воды» on the hotbar while they do good (v0.7.23); the needs' icons are the party column's.
+func _need_acts(s: GameSession, can_act: bool) -> void:
 	var data := Catalog.data
-	var row := HBoxContainer.new()
-	row.name = "Needs"
-	row.add_theme_constant_override("separation", 4)
-	info.add_child(row)
-	for need: String in NeedRules.KINDS:
-		var v := NeedRules.value(s, data, need)
-		var st := NeedRules.stage(s, data, need)
-		var title := str(NeedRules.cfg(data)[need]["name"])
-		var cell := IconSlot.make("ui/" + need, "%s %d/100" % [title, roundi(v)], 30)
-		cell.name = "Need_" + need
-		cell.tip_title = title
-		cell.tooltip_text = "%d/100%s" % [roundi(v), (" — " + str(st["chip"])) if not st.is_empty() else ""]
-		cell.meter = v / 100.0
-		cell.meter_color = UiTheme.hp_color(v / 100.0)  # what is left, on the scale of a bar of HP
-		if not st.is_empty():
-			cell.badge = "!"
-		row.add_child(cell)
 	# Only the acts that do good now: the row takes no height when there is nothing to do.
 	var specs: Array = []
 	if NeedRules.can_eat(s, data).is_empty():

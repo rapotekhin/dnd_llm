@@ -131,7 +131,7 @@ func _player_turn(gs: Node, s: GameSession) -> void:
 	var game := screen()
 	if not _hinted and not CombatRules.enemies(s).is_empty():
 		_hinted = true
-		var card: Button = find(game, "Foe_" + CombatRules.enemies(s)[0])
+		var card: Button = find(game, "Turn_" + CombatRules.enemies(s)[0])
 		if card != null:
 			card.mouse_entered.emit()
 			await frames(2)
@@ -177,7 +177,7 @@ func _player_turn(gs: Node, s: GameSession) -> void:
 		if atk == null or atk.disabled:
 			break
 		await press(atk)
-		var card: Button = find(screen(), "Foe_" + target)
+		var card: Button = find(screen(), "Turn_" + target)
 		if card == null or card.disabled:
 			break
 		await press(card)

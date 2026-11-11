@@ -380,6 +380,28 @@ func aim_attached(id: String) -> String:
 	return ""
 
 
+## The pinned spell of the hero's side has all its targets (v0.8.4.43.10): its one target set — none is the hero — or as many
+## ticked as it takes. A click on a portrait or a token that makes it so casts it.
+func attach_ready() -> bool:
+	if attach_aim_why(Being.HERO) == "ATTACH_AIM_NONE":
+		return false
+	var n := SpellEffects.picks_count(Catalog.data, str(attached["id"]), int(attached.get("slot", 0)))
+	return n <= 1 or (attached.get("targets", []) as Array).size() >= n
+
+
+## The pinned spell of the hero's side cast now on whom it is aimed at (v0.8.4.43.10, the author: «выбрать "лечение ран" —
+## навести на иконку игрока … либо на жетон на карте — заклинание не применяется»): the road of «Колдовать» in the book —
+## the engine checks and spends, the master tells it. "" or why not.
+func cast_attached() -> String:
+	if attach_aim_why(Being.HERO) == "ATTACH_AIM_NONE":
+		return "ATTACH_AIM_NONE"
+	var err := _use_alone(attached.duplicate())
+	if err.is_empty():
+		attached = {}
+		EventBus.state_changed.emit()
+	return err
+
+
 func pin_check(kind: String, id: String) -> void:
 	pinned_check = {kind: id}
 	EventBus.state_changed.emit()

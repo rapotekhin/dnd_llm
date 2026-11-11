@@ -1,8 +1,8 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## A spell aimed at a portrait, as in BG3 (python tools/godot_playtest.py --scenario portrait_aim), v0.8.4.43.8, the
-## author: «а как же Нацелить заклинание или умение на портрет». Out of a fight: Cure Wounds pinned to the words, the
-## follower's portrait in the party column rings her token under the mouse and becomes the target by a click; Bless ticks
-## the hero and her. In a fight: Cure Wounds picked — the foes' faces in the queue grey, the follower's face rings her
+## author: «а как же Нацелить заклинание или умение на портрет». Out of a fight (v0.8.4.43.10): Cure Wounds pinned, the
+## follower's portrait in the party column rings her token under the mouse and a click casts the heal on her at once; a
+## click on the hero's token heals the hero; Bless ticks the hero and her, «Сотворить» on the chip casts it. In a fight: Cure Wounds picked — the foes' faces in the queue grey, the follower's face rings her
 ## token and says the heal, a click on it heals her; Sacred Flame picked — the wolf's face in the queue says its save,
 ## a click casts at it.
 
@@ -27,27 +27,39 @@ func run() -> void:
 	await frames(4)
 	var field: Control = find(screen(), "Field")
 
-	# Out of a fight: a pinned heal aimed by the follower's portrait.
+	# Out of a fight: a pinned heal cast by the follower's portrait at once (v0.8.4.43.10, the author: «заклинание не
+	# применяется; применить можно только в диалоге с мастером»).
+	Being.of(s, FOLLOWER)["hp"] = 2
+	var slots_before := Stock.spent(s.character, "slot_1")
 	gs.attach("spell", "cure_wounds", 1)
 	await frames(4)
 	var her: Control = find(screen(), "Portrait_" + FOLLOWER)
 	if not step("the follower's portrait in the party column", her != null):
 		return
-	step("its card says a click aims the heal", str(her.get("tip_body")).contains("сделать целью"), str(her.get("tip_body")))
+	step("its card says a click casts the heal", str(her.get("tip_body")).contains("сотворить"), str(her.get("tip_body")))
 	her.mouse_entered.emit()
 	await frames(2)
 	step("the mouse over it rings her token", field.get("pointed") == field.call("cell_of", "npc:" + FOLLOWER) and (field.get("pointed") as Vector2i).x >= 0,
 		"%s / %s" % [field.get("pointed"), field.call("cell_of", "npc:" + FOLLOWER)])
-	await press(her as BaseButton)
-	await frames(4)
-	step("a click makes her the heal's target", str(gs.attached.get("target", "")) == FOLLOWER, str(gs.attached))
-	var pick: OptionButton = find(screen(), "AttachTarget")
-	step("the chip at the input says her too", pick != null and pick.get_item_text(pick.selected) == str(data["world"]["npcs"][FOLLOWER]["name"]))
-	her = find(screen(), "Portrait_" + FOLLOWER)
-	her.mouse_entered.emit()
-	await frames(2)
 	await shot("peace_heal_her")
 	her.mouse_exited.emit()
+	await press(her as BaseButton)
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	await frames(4)
+	step("a click on her portrait casts the heal on her at once", gs.attached.is_empty() and Stock.spent(s.character, "slot_1") == slots_before + 1
+		and int(Being.view(s, FOLLOWER).get("hp", 99)) > 2, "%s, slot %d → %d, hp %s" % [gs.attached, slots_before, Stock.spent(s.character, "slot_1"), Being.view(s, FOLLOWER).get("hp", "full")])
+	await shot("peace_healed")
+	# The hero's own token on the map: Cure Wounds pinned, a click on the hero casts it on the hero.
+	s.character["hp"] = maxi(1, int(s.character["max_hp"]) - 6)
+	var hero_hurt := int(s.character["hp"])
+	gs.attach("spell", "cure_wounds", 1)
+	await frames(3)
+	field.cell_clicked.emit(field.call("hero_cell"))
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	await frames(4)
+	step("a click on the hero's token heals the hero", gs.attached.is_empty() and int(s.character["hp"]) > hero_hurt, "%s, hp %d → %d" % [gs.attached, hero_hurt, int(s.character["hp"])])
+	# Bless takes three: two ticked by the portraits stay pinned, «Сотворить» on the chip casts it on them.
+	Stock.give(s.character, "slot_1", 2)  # a cleric of the 1st level has two: the two heals spent them
 	gs.attach("spell", "bless", 1)
 	await frames(3)
 	await press(find(screen(), "Portrait_hero") as BaseButton)
@@ -57,6 +69,17 @@ func run() -> void:
 	step("Bless ticks the hero and her by their portraits", (gs.attached.get("targets", []) as Array) == [gs.SELF_TARGET, FOLLOWER], str(gs.attached))
 	step("the chip's boxes agree", (find(screen(), "AttachPick_" + FOLLOWER) as CheckBox).button_pressed and (find(screen(), "AttachPick_self") as CheckBox).button_pressed)
 	await shot("peace_bless_two")
+	var cast_now: Button = find(screen(), "AttachCast")
+	if step("«Сотворить» on the chip", cast_now != null and not cast_now.disabled):
+		var said: Array[String] = []
+		var heard := func(t: String) -> void: said.append(t)
+		node("EventBus").message.connect(heard)
+		await press(cast_now)
+		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+		await frames(3)
+		node("EventBus").message.disconnect(heard)
+		step("Bless cast on the two", gs.attached.is_empty() and ConditionRules.effects(s.character).any(func(e: Dictionary) -> bool: return str(e.get("source", {}).get("id", "")) == "bless"),
+			"%s %s" % [gs.attached, said])
 	gs.detach()
 	await frames(2)
 	await press(find(screen(), "Portrait_" + FOLLOWER) as BaseButton)  # nothing pinned: its own act — the hero walks up and talks
@@ -65,6 +88,7 @@ func run() -> void:
 	await frames(2)
 
 	# In a fight: the queue's faces.
+	Stock.give(s.character, "slot_1", 2)
 	gs.start_combat([{"monster": "wolf", "name": "Волк", "count": 2}], {})
 	if not step("a fight with the wolves, the follower beside", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 90.0)):
 		return
@@ -80,7 +104,8 @@ func run() -> void:
 	var hurt := int(a["hp"])
 	var wolf: String = CombatRules.enemies(s)[0]
 	var cure: Button = find(screen(), "Cast_cure_wounds")
-	if not step("Cure Wounds on the bar", cure != null and not cure.disabled):
+	if not step("Cure Wounds on the bar", cure != null and not cure.disabled, "%s, disabled %s, mode %s, slots %s, talk %s" % [cure != null,
+			cure.disabled if cure != null else "-", s.mode, SpellRules.slots_left(s.character, 1), gs.get("talking")]):
 		return
 	await press(cure)
 	await frames(4)
@@ -95,7 +120,7 @@ func run() -> void:
 	step("the mouse over it rings her token", field.get("pointed") == FightGrid.shown(a), "%s / %s" % [field.get("pointed"), FightGrid.shown(a)])
 	step("the hint says what the heal gives her", hint != null and hint.text.contains(str(a["name"])) and hint.text.contains("Лечение"), hint.text if hint != null else "")
 	await shot("fight_heal_hover")
-	await _click(face)
+	await press(face as BaseButton)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(4)
 	step("a click on her face heals her", int(CombatRules.fighter(s, ally)["hp"]) > hurt, "%d → %d" % [hurt, int(CombatRules.fighter(s, ally)["hp"])])
@@ -126,18 +151,9 @@ func run() -> void:
 	await shot("fight_flame_hover")
 	var log_n: int = (s.combat.get("log", []) as Array).size()
 	var wolf_hp := int(f["hp"])
-	await _click(wolf_face)
+	await press(wolf_face as BaseButton)
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(4)
 	var said := " | ".join((s.combat.get("log", []) as Array).slice(log_n))
 	step("a click on the wolf's face casts Sacred Flame at it", said.contains("Священное пламя") or int(CombatRules.fighter(s, wolf).get("hp", wolf_hp)) < wolf_hp, said.left(300))
 	await shot("fight_flame_cast")
-
-
-## A left click on a control as the player's.
-func _click(c: Control) -> void:
-	var ev := InputEventMouseButton.new()
-	ev.button_index = MOUSE_BUTTON_LEFT
-	ev.pressed = true
-	c.gui_input.emit(ev)
-	await frames(3)

@@ -70,7 +70,7 @@ func run() -> void:
 	await frames(3)
 	var ids := CombatRules.allies(s, false)
 	step("four allies: the militia, the follower, the owl", ids.size() == 4, str(ids.map(func(id: String) -> String: return CombatRules.fighter(s, id)["name"])))
-	step("their chips on the field", ids.all(func(id: String) -> bool: return find(screen(), "Foe_" + id) != null))
+	step("their chips on the field", ids.all(func(id: String) -> bool: return find(screen(), "Turn_" + id) != null))
 	await shot("burrow")
 	var names: Array = ids.map(func(id: String) -> String: return str(CombatRules.fighter(s, id)["name"]))
 	var said: Array[String] = []  # the fight may end within the rounds: its log goes with it

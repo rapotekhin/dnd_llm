@@ -37,7 +37,7 @@ func run() -> void:
 	for i in 4:  # a natural 1 misses even AC 1: the next turn tries again
 		await press(find(cs, "Attack_main"))
 		await frames(2)
-		await press(find(cs, "Foe_" + str(ogre["id"])))
+		await press(find(cs, "Turn_" + str(ogre["id"])))
 		await frames(4)
 		if s.combat.has("prompt"):
 			break

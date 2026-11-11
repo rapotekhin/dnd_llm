@@ -88,7 +88,7 @@ func required() -> Dictionary:
 		"%PartnerCard": "VBoxContainer", "%PartnerToken": "PanelContainer", "%PartnerMark": "Label", "%PartnerName": "Label", "%PartnerLine": "Label",
 		"%Bar": "PanelContainer", "%OfflineBanner": "Label", "%QuestTrack": "Button", "%Chat": "ScrollContainer", "%Thinking": "Label", "%Cancel": "Button",
 		"%Options": "VBoxContainer", "%AttachButton": "MenuButton", "%Input": "TextEdit", "%SendButton": "Button", "%BrushButton": "Button", "%AttachChip": "HFlowContainer", "%ThingMenu": "PanelContainer", "%ThingActs": "VBoxContainer",
-		"%FightUi": "Control", "%FightSide": "PanelContainer", "%Portrait": "VBoxContainer", "%FoeList": "VBoxContainer", "%Queue": "HBoxContainer", "%Hint": "Label",
+		"%FightUi": "Control", "%FightSide": "PanelContainer", "%Party": "VBoxContainer", "%Incoming": "VBoxContainer", "%Queue": "HBoxContainer", "%Hint": "Label",
 		"%FightLogBox": "VBoxContainer"}
 
 
@@ -476,6 +476,9 @@ func _on_cell(cell: Vector2i) -> void:
 		GameState.sneak_round()
 		return
 	var ref := "" if FightUi.onto() else _field.ref_at(cell)  # Shift: onto the square, past what lies there (v0.8.4.42.20)
+	# A spell of the hero's side pinned: the hero's or a person's token is its target, as a portrait is (v0.8.4.43.10).
+	if (ref.begins_with("npc:") or ref.is_empty() and cell == _field.hero_cell() and not FightUi.onto()) and _side.aim_at(SidePanel.aim_of(ref)):
+		return
 	if not ref.is_empty() and not ref.begins_with("far:"):
 		_touch(ref)
 		return
@@ -939,6 +942,14 @@ func _refresh_attach(s: GameSession, busy: bool, online: bool) -> void:
 		who.item_selected.connect(func(i: int) -> void:
 			GameState.attached["target"] = ids[i])
 		_attach_chip.add_child(who)
+	if GameState.attach_aim_why(Being.HERO) != "ATTACH_AIM_NONE":  # a spell of the hero's side: cast it now (v0.8.4.43.10)
+		var cast := Button.new()
+		cast.name = "AttachCast"
+		cast.text = "ATTACH_CAST"
+		cast.tooltip_text = "ATTACH_CAST_TIP"
+		cast.disabled = busy or not online
+		cast.pressed.connect(_side.cast_attached)
+		_attach_chip.add_child(cast)
 	var drop := Button.new()
 	drop.name = "AttachRemove"
 	drop.text = "✕"

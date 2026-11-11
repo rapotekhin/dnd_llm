@@ -1,7 +1,8 @@
 class_name FightUi
 extends Control
-## The fight on the one screen (v0.8.4): the place's own map is the field. The queue over it, the hero and those in the fight
-## on the left, the acts on tabs under it, the log on the right; the windows of a choice and the results stand over all.
+## The fight on the one screen (v0.8.4): the place's own map is the field. The queue over it — every fighter's face, the foes
+## too; on the left the party column of the peace (v0.8.4.43.10, as in BG3: the hero and its party, never a foe), the acts on
+## the hotbar under it, the log on the right; the windows of a choice and the results stand over all.
 ## An act that needs a target lights it: a click on a body or a line of the list does it, an area follows the mouse and a
 ## click lays it on the square. A click on a free square walks, on a foe opens its acts. The screen only shows and sends:
 ## every rule is in `core/`, FightGrid and CombatRules.
@@ -10,8 +11,8 @@ var _screen: Control
 var _field: MapField
 var _details: DetailsPanel  # v0.7.7 fixes: what a spell, feature, item or foe is (hover or press)
 var _queue: HBoxContainer
-var _foes: VBoxContainer
-var _portrait: VBoxContainer
+var _party: PartyColumn  ## the hero and its party, the same column as out of a fight (v0.8.4.43.10)
+var _incoming: VBoxContainer  ## who is on the way to the fight
 var _bar: ActionBar  # the hotbar under the map, one in a fight and out of it (v0.8.4.43)
 var _fx_layer: Control  # floating numbers over the field
 var _anims: FightAnims  # the strikes, spells and moves on the map (v0.8.4.23)
@@ -82,8 +83,17 @@ func setup(screen: Control) -> void:
 	_anims.setup(_field, Catalog.data.get("anims", {}))
 	_field.anim_lib = Catalog.data.get("anims", {})
 	_queue = UiScenes.need(screen, "%Queue")
-	_foes = UiScenes.need(screen, "%FoeList")
-	_portrait = UiScenes.need(screen, "%Portrait")
+	_party = UiScenes.need(screen, "%Party")
+	_party.clicked.connect(func(id: String) -> void:  # a target by its portrait, else its card (v0.8.4.43.8)
+		if active():
+			on_fighter(id))
+	_party.context.connect(func(id: String) -> void:
+		if active() and id != CombatRules.PLAYER:
+			EventBus.card_requested.emit(id))
+	_party.pointed.connect(func(id: String) -> void:
+		if active():
+			point_at("" if id == "-" else id))
+	_incoming = UiScenes.need(screen, "%Incoming")
 	_bar = UiScenes.need(screen, "%Bar")
 	_bar.circle_picked.connect(func(_c: int) -> void: refresh())
 	_hint = UiScenes.need(screen, "%Hint")
@@ -219,11 +229,12 @@ func set_filter(key: String) -> void:
 	_bar.set_filter(key)
 
 
-## The focus to the next foe card that can be pressed now.
+## The focus to the next foe's face in the queue (Tab, as in BG3).
 func _next_target() -> void:
 	var cards: Array[Button] = []
-	for n: Node in _foes.find_children("Foe_*", "Button", true, false):
-		cards.append(n as Button)  # a disabled card still takes focus: Tab reads a foe before the attack is picked
+	for n: Node in _queue.find_children("Turn_*", "Button", true, false):
+		if str(CombatRules.fighter(GameState.session, str(n.name).trim_prefix("Turn_")).get("side", "")) == "enemy" and not bool(n.get_meta("out", false)):
+			cards.append(n as Button)
 	if cards.is_empty():
 		return
 	var card := cards[(cards.find(get_viewport().gui_get_focus_owner()) + 1) % cards.size()]
@@ -283,12 +294,12 @@ func refresh() -> void:
 		_pending_feet = int(data["spells"].get(str(CombatRules.volley(s)["spell"]), {}).get("range_ft", 0))
 	end_turn.disabled = not me
 	_draw_queue(s)
-	_draw_list(s, data, me)
+	_draw_incoming(s)
 	var face := _bar.hero_portrait()  # grey while the picked act cannot go at the hero
 	face.modulate = Color(1, 1, 1, 0.42) if _pending.is_valid() and not str(_pending_check.call(_target_of(CombatRules.PLAYER))).is_empty() else Color.WHITE
 	_draw_map(s, data, me)
+	_draw_party(s)
 	_play_fx(s)
-	_draw_portrait(s, data)
 	_draw_actions(s, data, me)
 	end_turn.tooltip_text = Hotkeys.tip("", "end_turn", SaveManager.keys)
 	_hint.text = _base_hint(me)
@@ -697,7 +708,7 @@ func _play_fx(s: GameSession) -> void:
 	if not deltas.is_empty():
 		_numbers(deltas)
 	for who: String in kinds:
-		var node := _foes.find_child("Foe_" + who, true, false) as Control
+		var node := _portrait_of(who)
 		for k: Variant in kinds[who]:
 			CombatFx.play(node, str(k))
 
@@ -720,7 +731,7 @@ func _pin(id: String) -> Control:
 	for f: Dictionary in _field.fighters:
 		if str(f["id"]) == id:
 			at = Vector2i(int(f["x"]), int(f["y"]))
-	var card := _foes.find_child("Foe_" + id, true, false) as Control
+	var card := _portrait_of(id)
 	pin.size = Vector2(_field.tile(), _field.tile())
 	if at != FightGrid.NONE:
 		pin.global_position = _field.global_position + _field.cell_point(at) - pin.size / 2.0
@@ -764,7 +775,8 @@ func _preview_text(pv: Dictionary) -> String:
 
 
 ## The queue as portraits (Б4, П3): the current one larger and first, then the order; the colour of the frame is the
-## side (foes red). Its face (PortraitRules, v0.8.4.43.5.2), else the token of its look.
+## side (foes red). Its face (PortraitRules, v0.8.4.43.5.2), else the token of its look; a bar of its HP under it, as in BG3.
+## The foes are here and on the map only (v0.8.4.43.10): the left column is the hero's party.
 func _draw_queue(s: GameSession) -> void:
 	_clear(_queue)
 	var cur := CombatRules.current(s)
@@ -776,21 +788,28 @@ func _draw_queue(s: GameSession) -> void:
 		var f := CombatRules.fighter(s, id)
 		if str(f.get("status", "active")) in ["gone", "left", "away"]:
 			continue
-		_face(id, f, id == cur, str(f.get("status", "active")) != "active")
+		_face(s, id, f, id == cur, str(f.get("status", "active")) != "active")
 
 
-func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
+func _face(s: GameSession, id: String, f: Dictionary, now: bool, out: bool) -> void:
+	var data := Catalog.data
 	var side := str(f.get("side", "enemy"))
 	var col := UiTheme.ACCENT_BRIGHT if side == "player" else UiTheme.OK if side == "ally" else UiTheme.BAD
-	var p := PanelContainer.new()
+	var p := Button.new()
 	p.name = "Turn_" + id
-	p.tooltip_text = str(f["name"])
-	_targets(p, id, out)  # v0.8.4.43.8: a target by its portrait, as in BG3
-	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_RAISED if now else UiTheme.PANEL, col if not out else UiTheme.MUTED, 3 if now else 2, 4, 8))
+	p.set_meta("out", out)
+	p.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	p.focus_mode = Control.FOCUS_ALL  # Tab walks the foes' faces
+	var frame := UiTheme.box(UiTheme.PANEL_RAISED if now else UiTheme.PANEL, col if not out else UiTheme.MUTED, 3 if now else 2, 4, 8)
+	for st: String in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
+		p.add_theme_stylebox_override(st, frame)
+	p.add_theme_stylebox_override("focus", UiTheme.box(Color.TRANSPARENT, UiTheme.ACCENT_BRIGHT, 2, 0, 8))
 	p.custom_minimum_size = Vector2(64, 64) if now else Vector2(46, 46)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.tooltip_text = _face_tip(s, data, id, f)
 	var l := Label.new()
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var nm := str(f["name"])
 	var tail := nm.get_slice(" ", nm.get_slice_count(" ") - 1)
 	l.text = Look.token(f, nm) + (tail if tail.is_valid_int() else "")  # «В1», «В2» for the numbered ones
@@ -798,9 +817,10 @@ func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", 32 if now else 22)
 	l.add_theme_color_override("font_color", UiTheme.MUTED if out else col)
-	var pic := Portrait.square(PortraitRules.of(GameState.session, Catalog.data, f), 0.0, out)
+	var pic := Portrait.square(PortraitRules.of(s, data, f), 0.0, out)
 	if pic != null:
 		p.add_child(pic)
+		_fill(pic, 3)
 		if l.text.right(1).is_valid_int():  # «В2»: the number stays over the face
 			l.text = l.text.substr(1)
 			l.add_theme_font_size_override("font_size", 16)
@@ -809,10 +829,28 @@ func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
 			l.add_theme_constant_override("outline_size", 4)
 			l.add_theme_color_override("font_outline_color", UiTheme.BG)
 			p.add_child(l)
+			_fill(l, 4)
 		else:
 			l.free()
 	else:
 		p.add_child(l)
+		_fill(l, 3)
+	if not out:  # its health at a glance, as BG3's queue shows it
+		var bar := UiParts.hp_bar(Sheet.hp(s, data, f), Sheet.max_hp(s, data, f), 5.0, 1)
+		bar.name = "FaceHp"
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p.add_child(bar)
+		bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		bar.offset_left = 4
+		bar.offset_right = -4
+		bar.offset_top = -9
+		bar.offset_bottom = -4
+	if bool(f.get("hidden", false)) and not out:
+		CombatFx.look(p, "hidden")
+	if side == "enemy":  # what it is, in the card at the cursor (big test #35)
+		var about := _foe_about(s, data, f)
+		p.mouse_entered.connect(func() -> void: _details.show_text(nm, about))
+	_targets(p, id, out)  # v0.8.4.43.8: a target by its portrait, as in BG3
 	_queue.add_child(p)
 	if now:
 		var name_l := Label.new()
@@ -824,15 +862,58 @@ func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
 		_queue.add_child(name_l)
 
 
+## A child of a face fills it, `inset` pixels in from the frame.
+static func _fill(c: Control, inset: int) -> void:
+	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	c.offset_left = inset
+	c.offset_top = inset
+	c.offset_right = -inset
+	c.offset_bottom = -inset
+
+
+## The line of a face: the name; of a foe its health, its numbers once known, its conditions, what the main blow would do.
+func _face_tip(s: GameSession, data: Dictionary, id: String, f: Dictionary) -> String:
+	var lines: Array[String] = [str(f["name"])]
+	if str(f.get("side", "")) != "enemy":
+		return lines[0]
+	lines.append(tr(CombatRules.health_key(f)))
+	if not CombatRules.monster_card(s, data, f).is_empty():
+		lines.append("HP %d/%d · КД %d" % [int(f["hp"]), int(f["max_hp"]), CombatRules.ac_of(f)])
+	var conds: Array = CombatRules.foe_conditions(s, data, f)
+	if bool(f.get("surprised", false)):
+		conds.append(tr("COMBAT_FOE_SURPRISED"))
+	if not conds.is_empty():
+		lines.append(", ".join(conds))
+	if str(f.get("status")) == "active" and not _pending.is_valid():
+		var hint := _foe_hint(s, data, id)
+		if not hint.is_empty():
+			lines.append(hint)
+	return "\n".join(lines)
+
+
+## What a foe is: what the hero knows of its kind, its faction, its own words.
+func _foe_about(s: GameSession, data: Dictionary, f: Dictionary) -> String:
+	var lore := CombatRules.monster_card(s, data, f)
+	var about := lore if not lore.is_empty() else tr("COMBAT_FOE_UNKNOWN")
+	var fa := FactionRules.def(s, data, FactionRules.of_foe(data, SceneRules.room(s, data["world"], s.room_id).get("encounter", {}), f))  # v0.7.50
+	if not fa.is_empty():
+		about += "\n\n" + tr("COMBAT_FOE_FACTION").format({"name": fa["name"]})
+	if not str(f.get("desc", "")).is_empty():
+		about += "\n\n" + str(f["desc"])
+	return about
+
+
 ## A portrait of a fighter as a target (v0.8.4.43.8): the mouse over it rings its token and says the chance, a click aims the
-## picked act at it (on_fighter); with an act picked it is grey with why when the act cannot go at it.
-func _targets(c: Control, id: String, out: bool) -> void:
-	c.mouse_filter = Control.MOUSE_FILTER_STOP
+## picked act at it (on_fighter).
+func _targets(c: BaseButton, id: String, out: bool) -> void:
 	c.mouse_entered.connect(point_at.bind(id))
 	c.mouse_exited.connect(point_at.bind(""))
-	c.gui_input.connect(func(ev: InputEvent) -> void:
-		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-			on_fighter(id))
+	c.pressed.connect(on_fighter.bind(id))
+	_target_look(c, id, out)
+
+
+## A fighter's portrait while an act is picked: grey with why when the act cannot go at it, its line says why or what it gives.
+func _target_look(c: Control, id: String, out: bool) -> void:
 	if not _pending.is_valid() or out:
 		return
 	var why := str(_pending_check.call(_target_of(id)))
@@ -856,31 +937,18 @@ func _chip(parent: Control, text: String, now: bool, dim: bool) -> void:
 	parent.add_child(p)
 
 
-## The list of those in the fight: the hero, the allies, the foes with what is known of them. The animations play on its lines.
-func _draw_list(s: GameSession, data: Dictionary, me: bool) -> void:
-	_clear(_foes)
-	var chip := PanelContainer.new()
-	chip.name = "Foe_" + CombatRules.PLAYER
-	chip.tooltip_text = str(s.character["name"])
-	_targets(chip, CombatRules.PLAYER, false)
-	_foes.add_child(chip)
-	var hero := Label.new()
-	hero.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	hero.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hero.text = "(%s)" % s.character["name"]
-	hero.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
-	chip.add_child(hero)
-	if bool(CombatRules.player(s).get("hidden", false)):
-		CombatFx.look(chip, "hidden")
-	_friend_pick(s, data, _foes, CombatRules.PLAYER, me)
-	for id: String in CombatRules.allies(s, false):  # v0.7.22.22: the hero's side, not a target of the buttons
-		if str(CombatRules.fighter(s, id)["status"]) in ["gone", "left", "away"]:
-			continue
-		_ally_row(s, data, id, me)
-	for id: String in s.combat.get("order", []):
+## The party column in a fight (v0.8.4.43.10): the same as out of it; the one whose turn it is lit, each a target of the
+## picked act.
+func _draw_party(s: GameSession) -> void:
+	_party.now = CombatRules.current(s)
+	_party.refresh(func(p: Portrait, id: String) -> void:
 		var f := CombatRules.fighter(s, id)
-		if str(f.get("side")) == "enemy" and not str(f.get("status")) in ["left", "away"]:
-			_foe_row(s, data, id, f, me)
+		_target_look(p, id, not Sheet.is_hero(f) and not str(f.get("status", "")) in ["active", "down"]))
+
+
+## Who is on the way: the reinforcements and the round they come in.
+func _draw_incoming(s: GameSession) -> void:
+	_clear(_incoming)
 	for w: Dictionary in s.combat.get("incoming", []):
 		var ghost := Label.new()
 		ghost.name = "Incoming"
@@ -889,151 +957,14 @@ func _draw_list(s: GameSession, data: Dictionary, me: bool) -> void:
 		ghost.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		ghost.add_theme_color_override("font_color", UiTheme.MUTED)
 		ghost.text = tr("COMBAT_INCOMING").format({"names": "\n".join(w["names"]), "n": maxi(1, int(w["at"]) - int(s.combat.get("round", 1)))})
-		_foes.add_child(ghost)
+		_incoming.add_child(ghost)
 
 
-func _ally_row(s: GameSession, data: Dictionary, id: String, me: bool) -> void:
-	var a := CombatRules.fighter(s, id)
-	var ally := PanelContainer.new()
-	ally.name = "Foe_" + id
-	_foes.add_child(ally)
-	var al := Label.new()
-	al.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	al.mouse_filter = Control.MOUSE_FILTER_STOP
-	al.text = "%s\nHP %d/%d · КД %d%s" % [a["name"], int(a["hp"]), int(a["max_hp"]), CombatRules.ac_of(a),
-		("\n" + tr("COMBAT_ALLY_DOWN")) if str(a["status"]) == "down" else ""]
-	al.add_theme_color_override("font_color", UiTheme.OK if str(a["status"]) == "active" else UiTheme.MUTED)
-	var ally_name := str(a["name"])
-	var ally_about := tr("COMBAT_ALLY_ABOUT").format({"monster": CombatRules.monster_card(s, data, a)}) + \
-		("\n\n" + str(a["desc"]) if not str(a.get("desc", "")).is_empty() else "")
-	al.mouse_entered.connect(func() -> void: _details.show_text(ally_name, ally_about))
-	al.tooltip_text = tr("BTN_CARD_TIP")
-	al.mouse_filter = Control.MOUSE_FILTER_PASS  # its row takes the click: a target with an act picked, else its card (v0.8.4.41)
-	ally.tooltip_text = ally_name
-	_targets(ally, id, str(a["status"]) != "active" and str(a["status"]) != "down")
-	ally.add_child(al)
-	_friend_pick(s, data, _foes, id, me)
-
-
-func _foe_row(s: GameSession, data: Dictionary, id: String, f: Dictionary, me: bool) -> void:
-	var card := Button.new()
-	card.name = "Foe_" + id
-	if bool(f.get("hidden", false)) and str(f.get("status")) == "active":
-		CombatFx.look(card, "hidden")
-	card.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	card.custom_minimum_size = Vector2(0, 76)
-	var conds: Array = CombatRules.foe_conditions(GameState.session, data, f)
-	if bool(f.get("surprised", false)):
-		conds.append(tr("COMBAT_FOE_SURPRISED"))
-	card.text = "%s\n%s" % [f["name"], tr(CombatRules.health_key(f))]
-	if str(f.get("status")) == "active":
-		var fbar := UiParts.hp_line(int(f["hp"]), int(f["max_hp"]), int(f.get("temp_hp", 0)), 8.0)
-		fbar.name = "FoeHp"
-		card.add_child(fbar)
-		fbar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-		fbar.offset_left = 10
-		fbar.offset_right = -10
-		fbar.offset_top = -16
-		fbar.offset_bottom = -8
-	card.tooltip_text = ""  # what the foe is — in the details panel only (big test #35, v0.7.22.5)
-	var lore := CombatRules.monster_card(s, data, f)
-	var about := lore if not lore.is_empty() else tr("COMBAT_FOE_UNKNOWN")
-	var fa := FactionRules.def(s, data, FactionRules.of_foe(data, SceneRules.room(s, data["world"], s.room_id).get("encounter", {}), f))  # v0.7.50
-	if not fa.is_empty():
-		about += "\n\n" + tr("COMBAT_FOE_FACTION").format({"name": fa["name"]})
-	if not str(f.get("desc", "")).is_empty():
-		about += "\n\n" + str(f["desc"])
-	var foe_name := str(f["name"])
-	card.mouse_entered.connect(func() -> void: _details.show_text(foe_name, about))
-	if not lore.is_empty():
-		card.text += "\nHP %d/%d · КД %d" % [int(f["hp"]), int(f["max_hp"]), CombatRules.ac_of(f)]
-	var why := "COMBAT_NO_ACTION"
-	if _pending.is_valid() and str(f.get("status")) == "active":
-		why = str(_pending_check.call(id))
-	card.disabled = not (me and _pending.is_valid() and why.is_empty())
-	if _pending.is_valid() and not why.is_empty() and str(f.get("status")) == "active":
-		card.tooltip_text = tr(why)
-	elif str(f.get("status")) == "active":
-		var hint := _preview_text(_pending_preview.call(id)) if _pending_preview.is_valid() and _pending.is_valid() else _foe_hint(s, data, id)
-		if not hint.is_empty():
-			card.tooltip_text = hint + ("\n\n" + card.tooltip_text if not card.tooltip_text.is_empty() else "")
-	card.mouse_entered.connect(point_at.bind(id))  # its token ringed, the hint says the chance (v0.8.4.43.8)
-	card.mouse_exited.connect(point_at.bind(""))
-	card.pressed.connect(_press.bind(id))
-	_foes.add_child(card)
-	if card.has_node("FoeHp"):  # the text ends above the bar (the theme's boxes are known only in the tree)
-		for st: String in ["normal", "hover", "pressed", "disabled", "focus", "hover_pressed"]:
-			var sb := card.get_theme_stylebox(st).duplicate() as StyleBox
-			sb.content_margin_bottom = maxf(sb.content_margin_bottom, 0.0) + 18.0
-			card.add_theme_stylebox_override(st, sb)
-	if not conds.is_empty():  # the foe's conditions as small chips (Б1)
-		var cflow := HFlowContainer.new()
-		cflow.name = "FoeConds_" + id
-		cflow.add_theme_constant_override("h_separation", 4)
-		cflow.add_theme_constant_override("v_separation", 4)
-		for cn: Variant in conds:
-			var cl := Label.new()
-			cl.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-			cl.text = str(cn)
-			cl.add_theme_font_size_override("font_size", 15)
-			cl.add_theme_color_override("font_color", UiTheme.WARN)
-			cl.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.PANEL_RAISED, UiTheme.BORDER, 1, 3, 4))
-			cflow.add_child(cl)
-		_foes.add_child(cflow)
-
-
-func _draw_portrait(s: GameSession, data: Dictionary) -> void:
-	_clear(_portrait)
-	var c := s.character
-	var name_l := Label.new()
-	name_l.text = str(c["name"])
-	name_l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	name_l.theme_type_variation = UiTheme.HEADING
-	_portrait.add_child(name_l)
-	var bars := UiParts.hp_line(int(c["hp"]), int(c["max_hp"]), int(c.get("temp_hp", 0)))
-	bars.name = "HeroHp"
-	_portrait.add_child(bars)
-	_line(_portrait, tr("SIDE_HP_AC").format({"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}) \
-		+ ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""))
-	if Guise.has_body(c):  # v0.7.10
-		_line(_portrait, tr("COMBAT_WILD_SHAPE_LINE").format({"beast": data["monsters"].get(str(Guise.body(c)["monster"]), {}).get("name", ""),
-			"hp": int(Guise.body(c)["hp"]), "max": int(Guise.body(c)["max_hp"])})).add_theme_color_override("font_color", UiTheme.ACCENT)
-	if bool(CombatRules.player(s).get("reckless", false)):
-		_line(_portrait, tr("COMBAT_RECKLESS")).add_theme_color_override("font_color", UiTheme.BAD)
-	var chips := EffectChips.new()  # conditions, boons, exhaustion, concentration (v0.7.8)
-	chips.compact = true  # small, the description in the panel (Б3)
-	_portrait.add_child(chips)
-	chips.refresh()
-	for chip: Node in chips.get_children():
-		var title := str(chip.get_meta("title", ""))
-		var about := str(chip.get_meta("about", ""))
-		(chip as Control).mouse_entered.connect(func() -> void: _details.show_text(title, about))
-	if bool(CombatRules.player(s).get("raging", false)):
-		_line(_portrait, tr("COMBAT_RAGING")).add_theme_color_override("font_color", UiTheme.BAD)
-	if bool(CombatRules.player(s).get("hidden", false)):
-		_line(_portrait, tr("COMBAT_HIDDEN")).add_theme_color_override("font_color", UiTheme.ACCENT)
-	if bool(CombatRules.player(s).get("surprised", false)):
-		_line(_portrait, tr("COMBAT_SURPRISED")).add_theme_color_override("font_color", UiTheme.WARN)
-	if int(c["hp"]) <= 0:
-		var ds: Dictionary = s.combat.get("death_saves", {})
-		_line(_portrait, tr("COMBAT_DEATH_SAVES").format({"ok": int(ds.get("ok", 0)), "fail": int(ds.get("fail", 0))})).add_theme_color_override("font_color", UiTheme.BAD)
-
-
-## The button that picks the hero or an ally for an armed spell of the hero's side (v0.7.50.1).
-func _friend_pick(s: GameSession, data: Dictionary, box: Control, id: String, me: bool) -> void:
-	var spell := _pending_spell(s, data)
-	var side := CombatRules.volley_side(data, CombatRules.volley(s)) if _pending_name == "Volley" else SpellEffects.picks_side(data, spell)
-	if not _pending.is_valid() or not side in ["friend", "any"]:
-		return
-	box.add_theme_constant_override("separation", 2)  # a column of three friends and their buttons still fits
-	var why := str(_pending_check.call(id))
-	var b := _button(box, "Pick_" + id, tr("COMBAT_PICK_FRIEND"), me and why.is_empty())
-	if not why.is_empty():
-		b.tooltip_text = tr(why)
-	b.pressed.connect(_press.bind(id))
+## A fighter's portrait on the screen: its face in the party column, else in the queue (an animation plays on it).
+func _portrait_of(id: String) -> Control:
+	var key := "hero" if id == CombatRules.PLAYER else id
+	var p := _party.find_child("Portrait_" + key, true, false) as Control
+	return p if p != null else _queue.find_child("Turn_" + id, true, false) as Control
 
 
 func _line(parent: Control, text: String) -> Label:
