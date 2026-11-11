@@ -333,6 +333,41 @@ static func race_name(c: Dictionary, data: Dictionary) -> String:
 	return str(races["races"].get(str(c.get("race", "")), {}).get("name", c.get("race", "")))
 
 
+## The race's id of races.json of anybody's record (v0.8.4.43.5.2): the hero's `race`, a made person's `race_id`, else a pack
+## person's word («полуэльфийка», «высшая эльфийка») by the stems of `rules.race_words`, the races' and subraces' own
+## names; "" — not a race of the game (a gnoll, a goblin). The one reader of a race's word.
+static func race_id(data: Dictionary, rec: Dictionary) -> String:
+	var races: Dictionary = data["races"]["races"]
+	for k: String in ["race_id", "race"]:
+		if races.has(str(rec.get(k, ""))):
+			return str(rec[k])
+	var text := str(rec.get("race", "")).to_lower().replace("ё", "е")
+	if text.is_empty():
+		return ""
+	var stems := {}  # stem → race id
+	for id: String in (data["rules"].get("race_words", {}) as Dictionary):
+		if races.has(id):
+			for w: Variant in data["rules"]["race_words"][id]:
+				stems[str(w).to_lower().replace("ё", "е")] = id
+	for id: String in races:
+		stems[str(races[id].get("name", id)).to_lower().replace("ё", "е")] = id
+	for sub: Dictionary in (data["races"].get("subraces", {}) as Dictionary).values():
+		if races.has(str(sub.get("race", ""))):
+			stems[str(sub.get("name", "")).to_lower().replace("ё", "е")] = str(sub["race"])
+	var best := ""
+	var out := ""
+	for word: String in text.replace(",", " ").replace("-", " ").split(" ", false):
+		for stem: String in stems:
+			if not stem.contains(" ") and stem.length() > best.length() and word.begins_with(stem):
+				best = stem
+				out = stems[stem]
+	for stem: String in stems:  # a subrace's name of two words («высший эльф») as it is
+		if stem.contains(" ") and stem.length() > best.length() and text.contains(stem):
+			best = stem
+			out = stems[stem]
+	return out
+
+
 static func class_name_of(c: Dictionary, data: Dictionary) -> String:
 	return str(class_def(c, data).get("name", c.get("class", "")))
 

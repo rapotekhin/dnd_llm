@@ -22,7 +22,7 @@ static func of(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
 	var known := CombatRules.known(s, who)
 	var out := {"id": str(who.get("id", "")), "name": name_of(s, data, who), "known": known, "size": Sheet.size(s, data, who),
 		"type": str(m.get("type", "humanoid")), "health": CombatRules.health_key({"status": _state(who), "hp": hp, "max_hp": top}),
-		"worn": worn(s, data, who), "statuses": ConditionRules.shown(s, data, who)}
+		"worn": worn(s, data, who), "statuses": ConditionRules.shown(s, data, who), "portrait": PortraitRules.of(s, data, who)}
 	if not known:
 		out["lore"] = {"skill": CombatRules.lore_skill(data, who), "dc": CombatRules.lore_dc(data, who)}
 		return out

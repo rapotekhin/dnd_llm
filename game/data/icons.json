@@ -1,6 +1,12 @@
 {
 	"_doc": "Icons (v0.8.4.43), read only by IconRules.of. An icon is a file assets/icons/<kind>/<id>.png; `shared` gives one file to several ids, `source` says where a file came from. With no file: an item takes its plain base's icon (ItemRules.plain_of) with the marks below, else its group's; a spell is the blank of its kind in its school's colour with marks of its damage and shape; anything else the blank of its kind, then _blank/default.png. Marks and colours are drawn by the interface, no picture is needed for them; a file assets/icons/marks/<what>/<id>.png replaces a mark's dot.",
 	"root": "res://assets/icons/",
+	"portraits": {
+		"_doc": "v0.8.4.43.5.2, read only by PortraitRules.of: a face for a token, a portrait and a card. A person of a race of the game is people/<race>/<male|female>/<age>__<n>.webp (race — an id of races.json, age — a key of rules.body.age), anybody else its template's monsters/<template>__<n>.webp; n from 1 to the `variants` of its age (`by_age` overrides), chosen by the id, so a person keeps one face. A record's own `look.portrait` comes first. No file — the letter. Drawn by tools/anima, 256 px, a square with the face in the middle (the ring cuts a circle).",
+		"root": "res://assets/portraits/",
+		"people": {"variants": 5, "by_age": {"child": 1}},
+		"monsters": {"variants": 5}
+	},
 	"kinds": [
 		"items",
 		"spells",

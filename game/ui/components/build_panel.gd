@@ -86,6 +86,7 @@ func _rebuild() -> void:
 	_field.names = names
 	_field.show_map(map, data["layouts"])
 	_field.things = BuildRules.tokens(data, map)
+	_field.hero_face = PortraitRules.of(s, data, Sheet.HERO)
 	_field.place_hero(WalkRules.settle(s, data, map), str(s.character.get("name", "?")).left(1), [] as Array[Dictionary])
 	var why := BuildRules.where_why(s, data)
 	set_note(tr(why) if not why.is_empty() else "")

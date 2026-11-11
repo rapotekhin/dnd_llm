@@ -11,8 +11,9 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["map"]
 
 
-## The tokens of the room now: {"ref", "kind", "id", "name", "mark", "x", "y", "attitude"}. Those who walk with the hero
-## are not here: they stand by the hero.
+## The tokens of the room now: {"ref", "kind", "id", "name", "mark", "portrait", "x", "y", "attitude"} — `portrait` the face
+## of a person, a creature or a foe (PortraitRules, "" — the letter). Those who walk with the hero are not here: they stand
+## by the hero.
 static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dictionary]:
 	var lib: Dictionary = data["layouts"]
 	var cells := _cells(map, lib, s.room_id)
@@ -44,6 +45,7 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 		var n := world.npc(id)
 		var t := _token("npc:" + id, "npc", id, str(n.get("name", id)), at)
 		t["attitude"] = s.attitude(id)
+		t["portrait"] = PortraitRules.of(s, data, {"npc_id": id})
 		out.append(t)
 	for c: Dictionary in CreatureRules.here(s, s.room_id):
 		var id := str(c["id"])
@@ -52,7 +54,10 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 		var fell := Vector2i(int(c.get("x", -1)), int(c.get("y", -1)))
 		var at := _closest(spots, taken, fell) if cells.has(fell) else _seeded(spots, taken, "%d|%s" % [s.game_seed, id])
 		taken[at] = true
-		out.append(_token("cr:" + id, "body" if str(c["state"]) == CreatureRules.DEAD else "creature", id, str(c["name"]), at))
+		var tc := _token("cr:" + id, "body" if str(c["state"]) == CreatureRules.DEAD else "creature", id, str(c["name"]), at)
+		if str(tc["kind"]) == "creature":
+			tc["portrait"] = PortraitRules.of(s, data, c)
+		out.append(tc)
 	for b: Dictionary in CrimeRules.bodies_here(s, data):
 		var id := str(b["npc_id"])
 		var at := _seeded(spots, taken, "%d|%s" % [s.game_seed, id])
@@ -73,7 +78,7 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 
 
 static func _token(ref: String, kind: String, id: String, name: String, at: Vector2i) -> Dictionary:
-	return {"ref": ref, "kind": kind, "id": id, "name": name, "mark": name.left(1), "x": at.x, "y": at.y, "attitude": 0}
+	return {"ref": ref, "kind": kind, "id": id, "name": name, "mark": name.left(1), "portrait": "", "x": at.x, "y": at.y, "attitude": 0}
 
 
 ## Furniture and decor stay words; on the map is what can be taken or used.
@@ -156,6 +161,9 @@ static func foes(s: GameSession, data: Dictionary, _map: Dictionary) -> Array[Di
 			continue
 		var t := _token("foe:" + EncounterRules.foe_id(e), "foe", EncounterRules.foe_id(e), str(e.get("name", e.get("monster", ""))), Vector2i(int(p["x"]), int(p["y"])))
 		t["record"] = e
+		var w := e.duplicate()
+		w["id"] = EncounterRules.foe_id(e)
+		t["portrait"] = PortraitRules.of(s, data, w)
 		out.append(t)
 	return out
 

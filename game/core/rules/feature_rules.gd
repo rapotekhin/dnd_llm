@@ -65,10 +65,9 @@ static func give_class(data: Dictionary, f: Dictionary, spec: Dictionary) -> voi
 		if not m.has("spellcasting"):
 			f["slots_max"] = CharacterRules.slots_max(f, data)
 	MonsterRules.own_slots(data, f)
-	var word := str(npc.get("race", "")).to_lower()
-	for id: String in data["races"]["races"]:
-		if not word.is_empty() and str(data["races"]["races"][id].get("name", "")).to_lower() == word:
-			f["traits"] = CharacterBuilder.race_traits({"race": id}, data)
+	var race := CharacterRules.race_id(data, npc)  # «полуэльфийка», «гномка» too (v0.8.4.43.5.2)
+	if not race.is_empty():
+		f["traits"] = CharacterBuilder.race_traits({"race": race}, data)
 	if f.has("class") or f.has("traits"):
 		f["abilities"] = (m["abilities"] as Dictionary).duplicate()
 

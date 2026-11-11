@@ -420,6 +420,8 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 	}
 	# Age, build, height (v0.7.22.5): what the player chose (v0.7.22.15), the rest the engine picks.
 	c["body"] = BodyRules.make(data, c["gender"], BodyRules.fit(data, ch.get("body", {}) if ch.get("body") is Dictionary else {}, c["gender"]), "hero:" + str(c["name"]), true)
+	if int(ch.get("portrait", 0)) > 0:  # the face picked at creation (v0.8.4.43.5.2), else PortraitRules picks by the name
+		c["portrait"] = int(ch["portrait"])
 	var skills := fixed_skills(ch, data)
 	for s: String in all_skills(ch):
 		if not skills.has(s):

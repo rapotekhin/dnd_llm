@@ -352,6 +352,7 @@ static func heir_choices(s: GameSession, data: Dictionary) -> Dictionary:
 	ch["gender"] = str(n.get("gender", "male"))
 	ch["race"] = str(s.character.get("race", ""))
 	ch["subrace"] = str(s.character.get("subrace", ""))
+	ch["portrait"] = PortraitRules.variant_of(data, str(BodyRules.npc(data, h, n).get("age", "")), EntityRef.npc(h))  # the face it had
 	return ch
 
 

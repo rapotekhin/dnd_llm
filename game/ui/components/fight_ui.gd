@@ -386,6 +386,7 @@ func _bodies(s: GameSession, now: Dictionary, open: bool) -> Array[Dictionary]:
 		var nm := str(f.get("name", s.character.get("name", "?")))
 		var tail := nm.get_slice(" ", nm.get_slice_count(" ") - 1)
 		out.append({"id": id, "ref": "fight:" + id, "mark": nm.left(1) if hero else Look.token(f, nm) + (tail if tail.is_valid_int() else ""), "name": nm,
+			"portrait": PortraitRules.of(s, Catalog.data, f),
 			"colour": UiTheme.ACCENT_BRIGHT if hero else UiTheme.OK if side == "ally" else UiTheme.BAD,
 			"span": int(f.get("span", 1)), "x": at.x, "y": at.y, "hp": int(s.character["hp"]) if hero else int(f.get("hp", 0)),
 			"most": int(s.character["max_hp"]) if hero else int(f.get("max_hp", 1)), "out": status != "active" or (hero and int(s.character["hp"]) <= 0),
@@ -692,7 +693,7 @@ func _preview_text(pv: Dictionary) -> String:
 
 
 ## The queue as portraits (Б4, П3): the current one larger and first, then the order; the colour of the frame is the
-## side (foes red). No sprites yet — the token of its look.
+## side (foes red). Its face (PortraitRules, v0.8.4.43.5.2), else the token of its look.
 func _draw_queue(s: GameSession) -> void:
 	_clear(_queue)
 	var cur := CombatRules.current(s)
@@ -725,7 +726,21 @@ func _face(id: String, f: Dictionary, now: bool, out: bool) -> void:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", 32 if now else 22)
 	l.add_theme_color_override("font_color", UiTheme.MUTED if out else col)
-	p.add_child(l)
+	var pic := Portrait.square(PortraitRules.of(GameState.session, Catalog.data, f), 0.0, out)
+	if pic != null:
+		p.add_child(pic)
+		if l.text.right(1).is_valid_int():  # «В2»: the number stays over the face
+			l.text = l.text.substr(1)
+			l.add_theme_font_size_override("font_size", 16)
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+			l.add_theme_constant_override("outline_size", 4)
+			l.add_theme_color_override("font_outline_color", UiTheme.BG)
+			p.add_child(l)
+		else:
+			l.free()
+	else:
+		p.add_child(l)
 	_queue.add_child(p)
 	if now:
 		var name_l := Label.new()

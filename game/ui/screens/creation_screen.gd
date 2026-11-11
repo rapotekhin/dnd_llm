@@ -605,6 +605,7 @@ func _draw_details() -> void:
 	_body.add_child(name_edit)
 	_radio(_body, "gender", [{"id": "male", "label": tr("CC_GENDER_MALE")}, {"id": "female", "label": tr("CC_GENDER_FEMALE")}], 2)
 	_draw_body_picks()
+	_draw_faces()
 	_draw_god()
 	_text(_body, tr("CC_STORY"), true)
 	var story := TextEdit.new()
@@ -682,6 +683,36 @@ func _draw_body_picks() -> void:
 			choices["body"] = b
 			_redraw())
 		grid.add_child(ob)
+
+
+## The hero's face (v0.8.4.43.5.2): the variants of its race, sex and age (PortraitRules); a click picks one, none picked — the
+## one the game gives by the name, shown lit. A variant not drawn yet shows its number.
+func _draw_faces() -> void:
+	var d := data()
+	var race := str(choices.get("race", ""))
+	if race.is_empty():
+		return
+	var gender := str(choices.get("gender", "male"))
+	var seed_text := "hero:" + str(choices.get("name", ""))
+	var age := str(BodyRules.make(d, gender, BodyRules.fit(d, _body_picks(), gender), seed_text, true).get("age", ""))
+	var paths := PortraitRules.variants(d, race, gender, age)
+	_text(_body, tr("CC_PORTRAIT"), true)
+	var row := HBoxContainer.new()
+	row.name = "PortraitPicks"
+	row.add_theme_constant_override("separation", 10)
+	_body.add_child(row)
+	var mine := int(choices.get("portrait", 0))
+	var lit := mine if mine > 0 else PortraitRules.variant_of(d, age, seed_text)
+	for i in paths.size():
+		var p := Portrait.of(str(i + 1), 76)
+		p.name = "Portrait_%d" % (i + 1)
+		p.letter = str(i + 1)
+		p.picture = paths[i] if PortraitRules.has_file(paths[i]) else ""
+		p.picked = lit == i + 1
+		p.tip_title = tr("CC_PORTRAIT").get_slice(" —", 0)
+		p.tip_body = tr("CC_PORTRAIT_TIP")
+		p.pressed.connect(func() -> void: _changed("portrait", i + 1))
+		row.add_child(p)
 
 
 func _draw_summary() -> void:

@@ -413,10 +413,11 @@ func _refresh_field(s: GameSession) -> void:
 	var walkers: Array[Dictionary] = []
 	for id: String in Being.followers(s):
 		var who := str(GameState.world().npc(id).get("name", id))
-		walkers.append({"ref": "npc:" + id, "mark": who.left(1), "name": who.get_slice(" ", 0)})
+		walkers.append({"ref": "npc:" + id, "mark": who.left(1), "name": who.get_slice(" ", 0), "portrait": PortraitRules.of(s, Catalog.data, {"npc_id": id})})
 	for cr: Dictionary in CreatureRules.here(s, s.room_id):  # the hero's animals walk along
 		if CreatureRules.with_hero(cr):
-			walkers.append({"ref": "cr:" + str(cr["id"]), "mark": str(cr["name"]).left(1), "name": str(cr["name"]).get_slice(" ", 0)})
+			walkers.append({"ref": "cr:" + str(cr["id"]), "mark": str(cr["name"]).left(1), "name": str(cr["name"]).get_slice(" ", 0),
+				"portrait": PortraitRules.of(s, Catalog.data, cr)})
 	_things = MapSpots.of(s, Catalog.data, view).filter(func(t: Dictionary) -> bool:
 		return str(t["kind"]) != "station" or _side.mark_has_acts(str(t["id"])))
 	_things.append_array(MapSpots.foes(s, Catalog.data, view))
@@ -431,6 +432,7 @@ func _refresh_field(s: GameSession) -> void:
 			_field.instant = GameState.instant_walk
 			_field.walk(steps)
 	_field_room = s.room_id
+	_field.hero_face = PortraitRules.of(s, Catalog.data, Sheet.HERO)
 	_field.place_hero(at, str(s.character.get("name", "?")).left(1), walkers)
 	_look(s, at if not _field.walking() else _field.hero_cell())
 	if _acts_menu != null and _acts_menu.visible:

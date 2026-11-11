@@ -25,6 +25,7 @@ var map: Dictionary = {}
 var lib: Dictionary = {}
 var names: Dictionary = {}  ## the name of a way out by the room it leads to
 var hero_mark := ""  ## the hero's letter; empty — no hero on this map (the author's preview)
+var hero_face := ""  ## the hero's face (PortraitRules.of, v0.8.4.43.5.2); "" — its letter
 var clicks := true  ## false while a conversation holds the field
 var things: Array[Dictionary] = []  ## those who stand on the map and what lies on it: MapSpots.of (v0.8.2)
 var labels := false  ## every name is written while the key is held
@@ -34,7 +35,7 @@ var dim := false  ## what is out of view is dimmed (the author's preview has non
 var fit_most := BASE_TILE  ## the biggest tile a whole map is fitted at (the build screen comes closer, v0.8.4.42)
 var now: Dictionary = {}  ## the squares seen right now: SightRules (v0.8.3)
 var cones: Dictionary = {}  ## the squares under watch while sneaking
-var fighters: Array[Dictionary] = []  ## the bodies of a fight: {"id", "mark", "name", "colour", "span", "x", "y", "hp", "most", "out", "now", "dim", "gear", "states"}
+var fighters: Array[Dictionary] = []  ## the bodies of a fight: {"id", "mark", "portrait", "name", "colour", "span", "x", "y", "hp", "most", "out", "now", "dim", "gear", "states"}
 var anim_lib: Dictionary = {}  ## data/anims.json: the art of a weapon, a shield and a state over a token (v0.8.4.23)
 var routes: Dictionary = {}  ## where the hero can walk this turn: FightGrid.reach
 var way: Array[Vector2i] = []  ## the path under the mouse
@@ -58,7 +59,10 @@ var _in_fight := false  ## a fight's close view: only the player moves it then
 var _pos := Vector2.ZERO  ## the hero, in squares
 var _path: Array[Vector2i] = []
 var _trail: Array[Vector2] = []
-var _tokens: Array[Dictionary] = []  ## those who walk with the hero: {"mark", "name", "pos"}
+var _tokens: Array[Dictionary] = []  ## those who walk with the hero: {"ref", "mark", "portrait", "name", "pos"}
+var _names: Array[Dictionary] = []  ## the names of this drawing, laid last so none covers another: {"at", "text", "first"}
+var laid_names: Array[Rect2] = []  ## where the last drawing wrote its names (a playtest checks that none covers another)
+var _exit_boxes: Array[Rect2] = []  ## the ways out's labels of this drawing: a name does not go over them
 var _hover := Vector2i(-1, -1)
 var _pressed := false
 var _dragged := false
@@ -99,7 +103,7 @@ func place_hero(cell: Vector2i, mark: String, walkers: Array[Dictionary]) -> voi
 		_seat(walkers)
 	else:
 		for i: int in walkers.size():
-			_tokens[i].merge({"ref": walkers[i]["ref"], "mark": walkers[i]["mark"], "name": walkers[i]["name"]}, true)
+			_tokens[i].merge({"ref": walkers[i]["ref"], "mark": walkers[i]["mark"], "portrait": str(walkers[i].get("portrait", "")), "name": walkers[i]["name"]}, true)
 	_aim()
 	queue_redraw()
 
@@ -109,7 +113,7 @@ func _seat(walkers: Array[Dictionary]) -> void:
 	var spots := WalkRules.around(map, lib, Vector2i(_pos), walkers.size()) if not map.is_empty() else ([] as Array[Vector2i])
 	for i: int in walkers.size():
 		var at := Vector2(spots[i]) if i < spots.size() else _pos
-		_tokens.append({"ref": walkers[i]["ref"], "mark": walkers[i]["mark"], "name": walkers[i]["name"], "pos": at})
+		_tokens.append({"ref": walkers[i]["ref"], "mark": walkers[i]["mark"], "portrait": str(walkers[i].get("portrait", "")), "name": walkers[i]["name"], "pos": at})
 
 
 func walking() -> bool:
@@ -356,6 +360,8 @@ func _press(b: InputEventMouseButton) -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), UiTheme.BG)
+	_names.clear()
+	_exit_boxes.clear()
 	if map.is_empty():
 		return
 	var t := _tile
@@ -392,11 +398,12 @@ func _draw() -> void:
 	for th: Dictionary in things:
 		_thing(th)
 	for tok: Dictionary in _tokens:
-		_token(tok["pos"], str(tok["mark"]), str(tok["name"]), UiTheme.OK, 0.34)
+		_token(tok["pos"], str(tok["mark"]), str(tok["name"]), UiTheme.OK, 0.34, str(tok.get("portrait", "")))
 	if not hero_mark.is_empty():
-		_token(_pos, hero_mark, "", UiTheme.ACCENT_BRIGHT, 0.4)
+		_token(_pos, hero_mark, "", UiTheme.ACCENT_BRIGHT, 0.4, hero_face)
 	for f: Dictionary in fighters:
 		_fighter(f)
+	_lay_names()
 
 
 ## The zones under the bodies, where the hero can walk, the area and the path under the mouse.
@@ -476,6 +483,8 @@ func _fighter(f: Dictionary) -> void:
 	var flat := states.has("prone") or states.has("down") or states.has("dead")
 	draw_set_transform(mid, 0.0, Vector2(1.0, 0.6 if flat else 1.0))  # one who lies is a flattened token
 	draw_circle(Vector2.ZERO, r, Color(UiTheme.PANEL, colour.a))
+	var shade := Color(0.55, 0.55, 0.55, colour.a) if bool(f["out"]) else Color(1, 1, 1, colour.a)
+	var drawn := t >= LABEL_FROM and Portrait.face(self, str(f.get("portrait", "")), Vector2.ZERO, r, shade)
 	draw_arc(Vector2.ZERO, r, 0.0, TAU, 40, colour, maxf(1.5, t * 0.08), true)
 	draw_set_transform(Vector2.ZERO)
 	_gear(f, mid, r)
@@ -491,13 +500,16 @@ func _fighter(f: Dictionary) -> void:
 		draw_rect(bar, UiTheme.BG)
 		draw_rect(Rect2(bar.position, Vector2(w * share, bar.size.y)), UiTheme.hp_color(share))
 	if t >= LABEL_FROM:
-		var font := get_theme_default_font()
 		var mark := str(f["mark"])
-		var size_px := int(r * 0.9 if mark.length() > 1 else r)
-		var w2 := font.get_string_size(mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
-		draw_string(font, mid + Vector2(-w2 / 2.0, r * 0.38), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, colour)
+		if not drawn:
+			var font := get_theme_default_font()
+			var size_px := int(r * 0.9 if mark.length() > 1 else r)
+			var w2 := font.get_string_size(mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
+			draw_string(font, mid + Vector2(-w2 / 2.0, r * 0.38), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, colour)
+		elif mark.length() > 1 and mark.right(1).is_valid_int():  # «В2» of the numbered ones: the number over the face
+			_tag(mid + Vector2(r * 0.62, -r * 0.62), mark.substr(1), colour)
 		if labels or Vector2i(cell) == _hover:
-			_name(mid + Vector2(0.0, r + 22.0), str(f["name"]))
+			_name(mid + Vector2(0.0, r + 22.0), str(f["name"]), Vector2i(cell) == _hover)
 
 
 ## What is in the hands (v0.8.4.23): a shield as a stick on the left, the weapon's sprite on the right — the row's texture, else
@@ -556,18 +568,18 @@ func _thing(th: Dictionary) -> void:
 	match str(th["kind"]):
 		"npc":
 			var a := int(th["attitude"])
-			_token(Vector2(cell), str(th["mark"]), label, UiTheme.BAD if a <= -2 else UiTheme.OK if a >= 2 else UiTheme.TEXT, 0.38)
+			_token(Vector2(cell), str(th["mark"]), label, UiTheme.BAD if a <= -2 else UiTheme.OK if a >= 2 else UiTheme.TEXT, 0.38, str(th.get("portrait", "")))
 		"creature":
-			_token(Vector2(cell), str(th["mark"]), label, UiTheme.WARN, 0.32)
+			_token(Vector2(cell), str(th["mark"]), label, UiTheme.WARN, 0.32, str(th.get("portrait", "")))
 		"foe":
-			_token(Vector2(cell), str(th["mark"]), label, UiTheme.BAD, 0.36)
+			_token(Vector2(cell), str(th["mark"]), label, UiTheme.BAD, 0.36, str(th.get("portrait", "")))
 		"trap":
 			var mid := cell_point(cell)
 			var half := _tile * 0.28
 			draw_line(mid - Vector2(half, half), mid + Vector2(half, half), UiTheme.BAD, maxf(2.0, _tile * 0.08))
 			draw_line(mid + Vector2(-half, half), mid + Vector2(half, -half), UiTheme.BAD, maxf(2.0, _tile * 0.08))
 			if not label.is_empty():
-				_name(mid + Vector2(0.0, half + 16.0), label)
+				_name(mid + Vector2(0.0, half + 16.0), label, cell == _hover)
 		_:
 			var mid := cell_point(cell)
 			var half := _tile * 0.24
@@ -575,7 +587,7 @@ func _thing(th: Dictionary) -> void:
 			draw_rect(Rect2(mid - Vector2(half, half), Vector2(half, half) * 2.0), Color(UiTheme.PANEL, 0.9))
 			draw_rect(Rect2(mid - Vector2(half, half), Vector2(half, half) * 2.0), colour, false, maxf(1.5, _tile * 0.06))
 			if not label.is_empty():
-				_name(mid + Vector2(0.0, half + 16.0), label)
+				_name(mid + Vector2(0.0, half + 16.0), label, cell == _hover)
 
 
 func _draw_path(t: float) -> void:
@@ -595,31 +607,72 @@ func _exit_label(e: Dictionary, t: float) -> void:
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 	var mid := _corner + Vector2(int(e["x"]) + 0.5, int(e["y"])) * t
 	var box := Rect2(mid.x - w / 2.0 - 6.0, mid.y - 26.0, w + 12.0, 22.0)
+	_exit_boxes.append(box)
 	draw_rect(box, Color(UiTheme.BG, 0.88))
 	draw_string(font, Vector2(box.position.x + 6.0, box.position.y + 16.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, UiTheme.ACCENT_BRIGHT)
 
 
-func _token(pos: Vector2, mark: String, label: String, colour: Color, part: float) -> void:
+## A round token: its face in the ring (PortraitRules), else its letter; its name under it while hovered or the key is held.
+func _token(pos: Vector2, mark: String, label: String, colour: Color, part: float, face := "") -> void:
 	var t := _tile
 	var mid := _corner + (pos + Vector2(0.5, 0.5)) * t
 	var r := t * part
 	draw_circle(mid, r, UiTheme.PANEL)
+	var drawn := t >= LABEL_FROM and Portrait.face(self, face, mid, r)
 	draw_arc(mid, r, 0.0, TAU, 32, colour, maxf(1.5, t * 0.07), true)
 	if t < LABEL_FROM:
 		return
-	var font := get_theme_default_font()
-	var size_px := int(r)
-	var w := font.get_string_size(mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
-	draw_string(font, mid + Vector2(-w / 2.0, r * 0.38), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, colour)
+	if not drawn:
+		var font := get_theme_default_font()
+		var size_px := int(r)
+		var w := font.get_string_size(mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
+		draw_string(font, mid + Vector2(-w / 2.0, r * 0.38), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, colour)
 	if not label.is_empty():
-		_name(mid + Vector2(0.0, r + 16.0), label)
+		_name(mid + Vector2(0.0, r + 16.0), label, Vector2i(pos.round()) == _hover)
 
 
-func _name(at: Vector2, text: String) -> void:
+## A name to write under a token at `at` (its baseline's middle); `first` — the hovered one, laid first and always.
+func _name(at: Vector2, text: String, first := false) -> void:
+	_names.append({"at": at, "text": text, "first": first})
+
+
+## The names of this drawing so that none covers another or a way out's label (v0.8.4.43.5.2, the author: «имена не
+## наезжают»): the hovered one first where it belongs, each other at its place or a line or two lower, and one with no
+## room left unwritten — a crowd under the key shows those it can.
+func _lay_names() -> void:
 	var font := get_theme_default_font()
-	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x
-	draw_string_outline(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2, 3, UiTheme.BG)
-	draw_string(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2, UiTheme.TEXT)
+	var fs := FONT_SIZE - 2
+	var line := float(fs) + 3.0
+	var laid: Array[Rect2] = []
+	laid_names = laid
+	var order := _names.filter(func(n: Dictionary) -> bool: return bool(n["first"]))
+	order.append_array(_names.filter(func(n: Dictionary) -> bool: return not bool(n["first"])))
+	for n: Dictionary in order:
+		var text := str(n["text"])
+		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var at: Vector2 = n["at"]
+		var free := false
+		for k in 3:
+			var box := Rect2(at.x - w / 2.0 - 2.0, at.y - fs + k * line, w + 4.0, line)
+			if bool(n["first"]) or not (laid + _exit_boxes).any(func(o: Rect2) -> bool: return o.intersects(box)):
+				at.y += k * line
+				laid.append(box)
+				free = true
+				break
+		if not free:
+			continue
+		draw_string_outline(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, UiTheme.BG)
+		draw_string(font, at - Vector2(w / 2.0, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.TEXT)
+	_names.clear()
+
+
+## A small number on a token's corner (a numbered foe whose face hides its letter).
+func _tag(at: Vector2, text: String, colour: Color) -> void:
+	var font := get_theme_default_font()
+	var fs := maxi(10, int(_tile * 0.28))
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	draw_circle(at, fs * 0.62, UiTheme.BG)
+	draw_string(font, at + Vector2(-w / 2.0, fs * 0.36), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, colour)
 
 
 ## Another body stands in the square of `f`.

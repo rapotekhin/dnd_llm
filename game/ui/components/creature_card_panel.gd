@@ -51,6 +51,11 @@ func _rebuild() -> void:
 ## The card's sections into `box`: one drawing for every place that shows a creature.
 static func fill(box: VBoxContainer, c: Dictionary) -> void:
 	var known := bool(c["known"])
+	var pic := Portrait.square(str(c.get("portrait", "")), 128.0)
+	if pic != null:  # its face is seen before its numbers are known (v0.8.4.43.5.2)
+		pic.name = "CardPortrait"
+		pic.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		box.add_child(pic)
 	var kind := "%s %s" % [_t("SIZE_" + str(c["size"]).to_upper()), _t("CREATURE_TYPE_" + str(c["type"]).to_upper()).to_lower()]
 	if known and c.get("cr") != null:
 		kind += " · " + _t("CARD_CR").format({"cr": _cr(c["cr"])})

@@ -1,18 +1,13 @@
 class_name AnimArt
 extends RefCounted
-## What a token and a strike draw alike (v0.8.4.23): one cache of the rows' textures and one weapon, so a sword on the token and
-## the same sword in its swing are one picture — the row's `texture` of `data/anims.json`, else a stub of its length and head.
-
-static var _cache := {}
+## What a token and a strike draw alike (v0.8.4.23): the rows' textures (through the interface's one cache, IconSlot.texture)
+## and one weapon, so a sword on the token and the same sword in its swing are one picture — the row's `texture` of
+## `data/anims.json`, else a stub of its length and head.
 
 
 ## The texture at `path`, null without one; loaded once for the whole fight.
 static func texture(path: String) -> Texture2D:
-	if path.is_empty():
-		return null
-	if not _cache.has(path):
-		_cache[path] = load(path) if ResourceLoader.exists(path) else null
-	return _cache[path]
+	return IconSlot.texture(path)  # one cache of the interface's pictures
 
 
 ## A weapon of `sprite` held at `base` and pointed at `angle`, `t` a square; no sprite — a fist. `lib` is data/anims.json or a

@@ -3078,6 +3078,18 @@
 		"eldritch_invocation_sign_of_ill_omen": ["bestow_curse"],
 		"eldritch_invocation_thief_of_five_fates": ["bane"]
 	},
+	"race_words": {
+		"_doc": "v0.8.4.43.5.2: the stems of a person's race in words («полуэльфийка», «высшая эльфийка», «дроу») by the race's id of races.json — read by CharacterRules.race_id for a pack's or a made person whose `race` is a word: a word of the text that begins with a stem, the longest stem winning (so «полуэльф» is not «эльф»). The race's own name in races.json and its subraces' names count too.",
+		"dragonborn": ["драконорожд", "драконид"],
+		"dwarf": ["дварф", "дворф"],
+		"elf": ["эльф", "дроу"],
+		"gnome": ["гном"],
+		"half_elf": ["полуэльф"],
+		"half_orc": ["полуорк", "полуорч"],
+		"halfling": ["полурослик", "полурослиц", "халфлинг"],
+		"human": ["человек"],
+		"tiefling": ["тифлинг"]
+	},
 	"body": {
 		"_doc": "Age, build and height of the hero and the NPCs (v0.7.22.5, BodyRules, the author's choice: words, not numbers): the engine picks each by `weight` (the hero — by `hero_weight`), its own word for men and women; an id without a female or male word is not offered to that gender. A child and a teenager (weight 0) come only when a pack or the master sets them. v0.7.22.15: the player may choose each word at the creation of the hero — any of its gender's list but those with `hero: false`; what is not chosen the engine picks.",
 		"age": {
