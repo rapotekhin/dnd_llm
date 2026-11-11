@@ -3,7 +3,7 @@ extends "res://tools/playtest/playtest_base.gd"
 ## буквы на аватарки-портреты NPC и монстров, сгенеренные Анимой». Until tools/anima lays the files, the scenario lays plain
 ## stand-in faces in the cache (squares of colour: a head, eyes, hair) on the very paths PortraitRules asks for, so the
 ## screenshots show where a face goes: the creation screen's five picks, the map's people and the hero, the names under the
-## key that do not cover one another, the fight's bodies and its queue, the creature's card.
+## key that do not cover one another, the fight's bodies and its queue, the creature's card. A face drawn already is shown.
 
 const SLOT := "res://ui/components/icon_slot.gd"
 
@@ -100,10 +100,13 @@ func run() -> void:
 	await shot("card_face")
 
 
-## Stand-in faces on `paths`: a picture in the interface's cache, the file «drawn» for PortraitRules.
+## Stand-in faces on `paths` not drawn yet: a picture in the interface's cache, the file «drawn» for PortraitRules; a
+## face tools/anima has laid is shown as it is.
 func _lay(paths: Array) -> void:
 	var cache: Dictionary = load(SLOT).get("_textures")
 	for p: String in paths:
+		if ResourceLoader.exists(p):
+			continue
 		cache[p] = ImageTexture.create_from_image(_face(p))
 		PortraitRules._exists[p] = true
 

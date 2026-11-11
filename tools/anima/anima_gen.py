@@ -79,7 +79,7 @@ P_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist nam
               "chromatic aberration, text, letters, watermark, signature, border, frame, multiple people, 2girls, "
               "2boys, nsfw, nude, full body, cropped head, hands, weapon in front of face, blood, gore, "
               "loli, shota, child")  # the last three as in the event images' MINOR_NEG (llm_server images.py)
-FACE = (0.2, 0.04, 0.8, 0.64)
+FACE = (0.14, 0.02, 0.86, 0.74)  # a fixed square over the head and a little of the shoulders (the author, 2026-11-11)
 PORTRAIT = 256
 
 
@@ -258,6 +258,18 @@ def sheets(out: Path, jobs: list[dict], seeds: list[int]) -> None:
             print("sheet", name, flush=True)
 
 
+def recut(out: Path, jobs: list[dict], seeds: list[int]) -> None:
+    """Every variant cut again from its raw frame (a changed FACE or cut), the stamps kept: nothing is drawn."""
+    done = 0
+    for j in jobs:
+        for n, seed in enumerate(seeds_of(j, seeds), 1):
+            raw_path, cut_path = paths(out, j, n, seed)
+            if raw_path.exists():
+                save_variant(Image.open(raw_path), j, cut_path)
+                done += 1
+    print(f"{done} variants cut again", flush=True)
+
+
 def pick(out: Path, jobs: list[dict], seeds: list[int], picks: str) -> None:
     by_id = {j["id"]: j for j in jobs}
     for one in filter(None, picks.split(",")):
@@ -293,6 +305,7 @@ def main() -> None:
     p.add_argument("--first", type=int, default=0, help="only the first N variants of each job (a trial)")
     p.add_argument("--redraw", action="store_true", help="draw the chosen ones again")
     p.add_argument("--sheets", action="store_true", help="only the contact sheets")
+    p.add_argument("--recut", action="store_true", help="cut the variants again from the raw frames, nothing drawn")
     p.add_argument("--pick", default="", help="id=n,…: variant n becomes the icon")
     a = p.parse_args()
 
@@ -306,6 +319,8 @@ def main() -> None:
         return pick(a.out, jobs, seeds, a.pick)
     if a.sheets:
         return sheets(a.out, jobs, seeds)
+    if a.recut:
+        return recut(a.out, jobs, seeds)
 
     todo = [(j, n, s) for j in jobs for n, s in enumerate(seeds_of(j, seeds), 1)
             if (not a.first or n <= a.first) and (a.redraw or stale(a.out, j, n, s, stamp_of(j, n, a)))]

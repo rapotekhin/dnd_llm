@@ -85,6 +85,7 @@ python tools/anima/install.py            # out/<вид>/variants/<id>__<n>.png �
 python tools/anima/make_jobs.py --portraits --describe     # описания монстров, которых ещё нет (центы), → jobs/portraits.json
 nohup python3 anima_gen.py jobs/portraits.json --steps 24 > portraits.log 2>&1 &   # на сервере: 1308 кадров, ~8 ч
 python3 anima_gen.py jobs/portraits.json --ids human/male/young,goblin --first 2 --steps 24   # проба: два варианта
+python3 anima_gen.py jobs/portraits.json --recut   # перерезать все варианты из сырых кадров (сменили FACE), без рисования
 python tools/anima/install.py --jobs tools/anima/jobs/portraits.json   # → game/assets/portraits/
 ```
 
