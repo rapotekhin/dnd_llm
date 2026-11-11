@@ -4033,6 +4033,10 @@
 			"giant": "history",
 			"humanoid": "insight"
 		},
+		"bar": {
+			"_doc": "The fight's acts that stand on the hotbar out of a fight too, grey in the section «Боевые» (v0.8.4.43.14, as in BG3: one bar in a fight and out of it). An id of core/acts/; its cell is «Do_<id>».",
+			"acts": ["dash", "disengage", "dodge", "help", "hide", "shove", "grapple", "jump"]
+		},
 		"help_delay": 2,
 		"reinforce_delay": 1,
 		"parley": {

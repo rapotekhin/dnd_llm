@@ -6,11 +6,27 @@ extends RefCounted
 ## section; one dragged elsewhere stays where it was put, in any section; one dragged off the bar is hidden until it is
 ## dragged back from the sheet. A slot keeps its key while the act is not offered (a spent scroll, a fight's act out of
 ## a fight), so it comes back to its place. Pure data: the state is a Dictionary the profile keeps (SaveManager.hotbar).
-## {rows, modes: {<mode>: {sections: [{kind, cols, slots: [key|""]}], hidden: [key]}}}
+## {rows, modes: {<mode>: {sections: [{kind, cols, width, fixed, slots: [key|""]}], hidden: [key]}}}
+## v0.8.4.43.14 (the author: «вся эта панель должна быть идентична как в бою, так и вне боя»): the bar has one layout, `BAR`,
+## in a fight and out of it, and a section «Боевые» (`combat`) of the fight's acts. `cols` is what is drawn now, `width`
+## what the player set by a divider: a bar too narrow for it draws less this time and never forgets it.
 
 const ROWS := 2
 const MAX_ROWS := 4
-const KINDS := {"peace": ["common", "class", "items", "deeds", "passive"], "fight": ["common", "class", "items", "passive"]}
+const BAR := "bar"  ## the one layout of the bar, in a fight and out of it
+const KINDS := {"bar": ["common", "combat", "class", "items", "deeds", "passive"],
+	"peace": ["common", "class", "items", "deeds", "passive"], "fight": ["common", "class", "items", "passive"]}
+
+
+## The key of a cell in the layout, one in a fight and out of it (v0.8.4.43.14): a spell is «spell:<id>» whether it is cast
+## (Cast_) or pinned to the words (Pin_spell_), a use of a feature «feature:<id>», a thing «item:<id>»; any other cell
+## is its node's name («Do_dash», «LookButton»). A key that is already one stays as it is.
+static func key_of(name: String) -> String:
+	for pair: Array in [["Pin_spell_", "spell:"], ["Cast_", "spell:"], ["Pin_feature_", "feature:"], ["Feature_", "feature:"],
+			["Pin_item_", "item:"], ["Item_", "item:"]]:
+		if name.begins_with(pair[0]):
+			return str(pair[1]) + name.trim_prefix(pair[0])
+	return name
 
 
 static func rows(state: Dictionary) -> int:
@@ -26,15 +42,24 @@ static func mode(state: Dictionary, m: String) -> Dictionary:
 		state["modes"] = {}
 	if not (state["modes"] as Dictionary).has(m):
 		var sections: Array = []
+		var hidden: Array = []
+		var old: Dictionary = state["modes"].get("peace", {}) if m == BAR else {}
+		for sec: Dictionary in old.get("sections", []):  # the bar of the days of two layouts: its peace's arrangement kept
+			sections.append({"kind": str(sec["kind"]), "cols": 0, "slots": (sec["slots"] as Array).map(func(k: Variant) -> String: return key_of(str(k)))})
+		for k: Variant in old.get("hidden", []):
+			hidden.append(key_of(str(k)))
 		for k: String in KINDS.get(m, ["common"]):
-			sections.append({"kind": k, "cols": 0, "slots": []})
-		state["modes"][m] = {"sections": sections, "hidden": []}
+			if not sections.any(func(sec: Dictionary) -> bool: return str(sec["kind"]) == k):
+				sections.append({"kind": k, "cols": 0, "slots": []})
+		state["modes"][m] = {"sections": sections, "hidden": hidden}
 	return state["modes"][m]
 
 
 ## The sections as they are to be drawn: each {kind, cols, slots} with the cells of `cells` ({key: kind}) in their
-## slots; `total` — the columns the bar has room for. A section with no cell and no kept slot takes no column.
-static func place(state: Dictionary, m: String, cells: Dictionary, total: int) -> Array:
+## slots; `total` — the columns the bar has room for. A section with no cell and no kept slot takes no column. `side` —
+## "fight" or "peace" for the one bar of both (v0.8.4.43.14): a section is as wide as the larger of its two sides needs,
+## so the dividers stand where they stood when a fight begins and ends.
+static func place(state: Dictionary, m: String, cells: Dictionary, total: int, side := "") -> Array:
 	var md := mode(state, m)
 	var hidden: Array = md["hidden"]
 	var sections: Array = md["sections"]
@@ -53,7 +78,7 @@ static func place(state: Dictionary, m: String, cells: Dictionary, total: int) -
 			slots[free] = key
 		else:
 			slots.append(key)
-	_fit(state, sections, cells, total)
+	_fit(state, sections, cells, total, side)
 	var out: Array = []
 	for sec: Dictionary in sections:
 		if int(sec["cols"]) > 0:
@@ -68,13 +93,21 @@ static func place(state: Dictionary, m: String, cells: Dictionary, total: int) -
 
 
 ## Moves `key` into slot `index` of section `to` (an index into the drawn sections): whatever stood there goes to where
-## `key` was, a key from the hidden list takes its place on the bar again.
-static func move(state: Dictionary, m: String, key: String, to: int, index: int) -> void:
+## `key` was, a key from the hidden list takes its place on the bar again. `packed` — a drop on a tab of one kind, which
+## lays the section out at the bar's whole width (v0.8.4.43.14): past the section's last cell it goes right after it, so it
+## is not left out of sight of the whole bar.
+static func move(state: Dictionary, m: String, key: String, to: int, index: int, packed := false) -> void:
 	var md := mode(state, m)
 	var sections := _drawn(md["sections"])
 	if to < 0 or to >= sections.size() or index < 0:
 		return
 	var target: Array = sections[to]["slots"]
+	if packed:
+		var last := -1
+		for j in target.size():
+			if str(target[j]) not in ["", key]:
+				last = j
+		index = mini(index, last + 1)
 	while target.size() <= index:
 		target.append("")
 	var was := str(target[index])
@@ -98,18 +131,27 @@ static func hide(state: Dictionary, m: String, key: String) -> void:
 
 
 ## The divider after drawn section `i` moves by `delta` columns: the section on its left takes them from the one on
-## its right (each keeps at least one).
+## its right (each keeps at least one); both keep the width the player gave them.
 static func shift(state: Dictionary, m: String, i: int, delta: int) -> void:
 	var sections := _drawn(mode(state, m)["sections"])
 	if i < 0 or i + 1 >= sections.size() or delta == 0:
 		return
 	var a: Dictionary = sections[i]
 	var b: Dictionary = sections[i + 1]
-	var d := clampi(delta, 1 - int(a["cols"]), int(b["cols"]) - 1)
+	var d := reach(state, m, i, delta)
 	a["cols"] = int(a["cols"]) + d
 	b["cols"] = int(b["cols"]) - d
-	a["fixed"] = true
-	b["fixed"] = true
+	for sec: Dictionary in [a, b]:
+		sec["width"] = int(sec["cols"])
+		sec["fixed"] = true
+
+
+## How far the divider after drawn section `i` may go of `delta` columns: each side keeps one.
+static func reach(state: Dictionary, m: String, i: int, delta: int) -> int:
+	var sections := _drawn(mode(state, m)["sections"])
+	if i < 0 or i + 1 >= sections.size():
+		return 0
+	return clampi(delta, 1 - int(sections[i]["cols"]), int(sections[i + 1]["cols"]) - 1)
 
 
 static func _drawn(sections: Array) -> Array:
@@ -140,8 +182,9 @@ static func _where(sections: Array, key: String) -> Array:
 
 
 ## The columns of each section: a section with something to show gets at least one; the rest of `total` goes by how
-## many cells each holds, and a width the player set by a divider is kept while the bar's width allows.
-static func _fit(state: Dictionary, sections: Array, cells: Dictionary, total: int) -> void:
+## many cells each holds — on the larger of the two `side`s it was last laid on — and a width the player set by a
+## divider is kept while the bar's width allows.
+static func _fit(state: Dictionary, sections: Array, cells: Dictionary, total: int, side := "") -> void:
 	var r := rows(state)
 	var live: Array = []
 	for sec: Dictionary in sections:
@@ -149,24 +192,31 @@ static func _fit(state: Dictionary, sections: Array, cells: Dictionary, total: i
 		for k: Variant in sec["slots"]:
 			if cells.has(str(k)):
 				n += 1
-		sec["_n"] = n
 		if n > 0:
 			live.append(sec)
 		else:
 			sec["cols"] = 0
+		if side != "":
+			if not sec.has("need"):
+				sec["need"] = {}
+			sec["need"][side] = n
+			for v: Variant in (sec["need"] as Dictionary).values():
+				n = maxi(n, int(v)) if n > 0 else 0
+		sec["_n"] = n
 	if live.is_empty():
 		return
 	total = maxi(total, live.size())
 	var fixed_sum := 0
-	for sec: Dictionary in live:
-		if bool(sec.get("fixed", false)) and int(sec["cols"]) > 0:
-			fixed_sum += int(sec["cols"])
-	var free: Array = live.filter(func(sec: Dictionary) -> bool: return not bool(sec.get("fixed", false)) or int(sec["cols"]) <= 0)
-	if fixed_sum + free.size() > total:  # the bar got narrower than the player's widths: all by need again
-		for sec: Dictionary in live:
-			sec.erase("fixed")
+	var fixed: Array = live.filter(func(sec: Dictionary) -> bool: return bool(sec.get("fixed", false)) and int(sec.get("width", 0)) > 0)
+	for sec: Dictionary in fixed:
+		fixed_sum += int(sec["width"])
+	var free: Array = live.filter(func(sec: Dictionary) -> bool: return not fixed.has(sec))
+	if fixed_sum + free.size() > total:  # the bar is narrower than the player's widths: by need this time, the widths kept
 		free = live
 		fixed_sum = 0
+	else:
+		for sec: Dictionary in fixed:
+			sec["cols"] = int(sec["width"])
 	var room := total - fixed_sum
 	var need := 0
 	for sec: Dictionary in free:

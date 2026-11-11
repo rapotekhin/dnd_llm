@@ -69,12 +69,17 @@ static func has_file(path: String) -> bool:
 ## "ui/<id>", or "ui/default" for a name the table does not know.
 static func button(data: Dictionary, node_name: String) -> String:
 	var table: Dictionary = cfg(data).get("buttons", {})
+	var row := ""
 	if table.has(node_name):
-		return "ui/" + str(table[node_name])
-	for k: String in table:
-		if k.ends_with("*") and node_name.begins_with(k.trim_suffix("*")):
-			return "ui/" + str(table[k])
-	return "ui/default"
+		row = str(table[node_name])
+	else:
+		for k: String in table:
+			if k.ends_with("*") and node_name.begins_with(k.trim_suffix("*")):
+				row = str(table[k])
+				break
+	if row.is_empty():
+		return "ui/default"
+	return row if row.contains("/") else "ui/" + row  # a whole ref: a gathering spot by its thing (v0.8.4.43.14)
 
 
 ## The colour of a school of magic, "#hex" or "" for none.

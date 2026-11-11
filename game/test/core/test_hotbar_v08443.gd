@@ -70,16 +70,19 @@ func test_rows() -> void:
 	assert_int((out[0]["slots"] as Array).size()).is_equal(5 * HotbarLayout.MAX_ROWS)
 
 
-## A spell or a feature dragged from the sheet is the bar's own cell: a cast in a fight, a pin out of it.
+## A spell or a feature dragged from the sheet is the bar's own cell, by one key in a fight and out of it (v0.8.4.43.14).
 func test_a_sheet_key_is_a_cell_of_the_bar() -> void:
-	assert_str(ActionBar.cell_key("spell:fire_bolt", true)).is_equal("Cast_fire_bolt")
-	assert_str(ActionBar.cell_key("spell:fire_bolt", false)).is_equal("Pin_spell_fire_bolt")
-	assert_str(ActionBar.cell_key("feature:second_wind", true)).is_equal("Feature_second_wind")
-	assert_str(ActionBar.cell_key("Do_dash", true)).is_equal("Do_dash")
+	assert_str(ActionBar.cell_key("spell:fire_bolt")).is_equal("spell:fire_bolt")
+	assert_str(ActionBar.cell_key("Cast_fire_bolt")).is_equal("spell:fire_bolt")
+	assert_str(ActionBar.cell_key("Pin_spell_fire_bolt")).is_equal("spell:fire_bolt")
+	assert_str(ActionBar.cell_key("Feature_second_wind")).is_equal("feature:second_wind")
+	assert_str(ActionBar.cell_key("Pin_item_rope_hempen_50_feet")).is_equal("item:rope_hempen_50_feet")
+	assert_str(ActionBar.cell_key("Item_potion_of_healing")).is_equal("item:potion_of_healing")
+	assert_str(ActionBar.cell_key("Do_dash")).is_equal("Do_dash")
 	var st := {}
-	var cells := {"Do_dash": "common", "Cast_fire_bolt": "class", "Cast_shield": "class"}
+	var cells := {"Do_dash": "common", "spell:fire_bolt": "class", "spell:shield": "class"}
 	HotbarLayout.place(st, "fight", cells, 10)
-	HotbarLayout.move(st, "fight", ActionBar.cell_key("spell:shield", true), 0, 0)
+	HotbarLayout.move(st, "fight", ActionBar.cell_key("spell:shield"), 0, 0)
 	var out := HotbarLayout.place(st, "fight", cells, 10)
-	assert_str(str(out[0]["slots"][0])).is_equal("Cast_shield")
+	assert_str(str(out[0]["slots"][0])).is_equal("spell:shield")
 	assert_bool(str(out[0]["slots"]).contains("Do_dash") or str(out[1]["slots"]).contains("Do_dash")).is_true()

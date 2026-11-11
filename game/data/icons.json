@@ -146,7 +146,7 @@
 		"line": "#e8e8e8"
 	},
 	"buttons": {
-		"_doc": "A button of the interface by its node name → its icon ui/<id>; a key ending with «*» takes every name that begins so.",
+		"_doc": "A button of the interface by its node name → its icon ui/<id>, or a whole ref «<kind>/<id>» (a gathering spot by its thing, v0.8.4.43.14); a key ending with «*» takes every name that begins so.",
 		"SheetButton": "sheet",
 		"MapButton": "map",
 		"JournalButton": "journal",
@@ -168,8 +168,8 @@
 		"FillWater": "fill",
 		"Exit_*": "exit",
 		"CraftButton": "craft",
-		"Gather_*": "gather",
-		"Wilds_*": "wilds",
+		"Gather_ore": "items/iron_ore", "Gather_herbs": "items/herbs", "Gather_timber": "items/timber", "Gather_forage": "items/mushrooms", "Gather_clay": "items/clay", "Gather_sand": "items/little_bag_of_sand", "Gather_stone": "items/stone", "Gather_*": "gather",
+		"Wilds_fish": "items/fresh_fish", "Wilds_*": "wilds",
 		"WorkShift_*": "work",
 		"StudyButton": "study",
 		"FamilyButton": "family",

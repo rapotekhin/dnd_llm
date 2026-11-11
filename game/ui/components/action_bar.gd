@@ -9,23 +9,28 @@ extends PanelContainer
 ## from the sheet; the layout is the profile's (SaveManager.hotbar). The side panel fills the peace's cells, `FightUi`
 ## the fight's: each into `section(key)`, then `tidy()`; the passives (v0.8.4.43.7) the bar lays itself, in both. In a
 ## conversation the bar gives way to the acts with the partner.
+## v0.8.4.43.14, as in BG3: one layout in a fight and out of it (`HotbarLayout.BAR`), a cell by one key in both
+## (`HotbarLayout.key_of`); the fight's acts have a section of their own, «Боевые». What the other mode offers stands in its
+## slot grey with why: out of a fight the fight's acts (`rules.combat.bar`) «только в бою», in a fight the place's acts
+## «не в бою». A cell is dragged in any tab of kinds; a divider follows the mouse and snaps to the nearest column.
 
 signal circle_picked(circle: int)
 
 ## The keys owners fill → [mode, kind of the grid].
 const GROUP := "hotbar"  ## the bar's group: a window that keeps it in sight (the sheet) finds it
 const KEYS := {"BAR_PLACE": ["peace", "common"], "BAR_CLASS": ["peace", "class"], "BAR_ITEMS": ["peace", "items"],
-	"BAR_DEEDS": ["peace", "deeds"], "BAR_REST": ["peace", "rest"], "COMBAT_TAB_WEAPONS": ["fight", "common"],
-	"COMBAT_TAB_COMMON": ["fight", "common"], "COMBAT_TAB_SPELLS": ["fight", "class"], "COMBAT_TAB_FEATURES": ["fight", "class"],
-	"COMBAT_TAB_ITEMS": ["fight", "items"], "COMBAT_TAB_WATCH": ["fight", "common"], "BAR_PASSIVE": ["both", "passive"]}
+	"BAR_DEEDS": ["peace", "deeds"], "BAR_REST": ["peace", "rest"], "COMBAT_TAB_WEAPONS": ["fight", "combat"],
+	"COMBAT_TAB_COMMON": ["fight", "combat"], "COMBAT_TAB_SPELLS": ["fight", "class"], "COMBAT_TAB_FEATURES": ["fight", "class"],
+	"COMBAT_TAB_ITEMS": ["fight", "items"], "COMBAT_TAB_WATCH": ["fight", "combat"], "BAR_PASSIVE": ["both", "passive"]}
 const PLACE := "BAR_PLACE"
 const CLASS := "BAR_CLASS"
 const ITEMS := "BAR_ITEMS"
 const DEEDS := "BAR_DEEDS"
 const REST := "BAR_REST"
 const PASSIVE := "BAR_PASSIVE"
-const KIND_TITLES := {"common": "BAR_KIND_COMMON", "class": "BAR_KIND_CLASS", "items": "BAR_KIND_ITEMS", "deeds": "BAR_DEEDS",
-	"passive": "BAR_KIND_PASSIVE"}
+const KIND_TITLES := {"common": "BAR_KIND_COMMON", "combat": "BAR_KIND_COMBAT", "class": "BAR_KIND_CLASS", "items": "BAR_KIND_ITEMS",
+	"deeds": "BAR_DEEDS", "passive": "BAR_KIND_PASSIVE"}
+const TABS := ["", "common", "combat", "class", "items", "deeds", "passive"]
 const CELL := 56
 const GAP := 4
 const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
@@ -57,6 +62,9 @@ var _fight := false
 var _talking := false
 var _filter := ""  # a kind shown alone, "" — the player's own bar
 var _toggles := {}  # id of rules.toggles → its cell, kept while the hero has it
+var _ghosts: Array[Control] = []  # the other mode's acts drawn grey this laying, freed by the next
+var _drawn_kinds := {}  # the kinds of the sections on the bar now: their tabs
+var _dragging_divider := false  # a divider in the hand: the grid is not laid again under it
 
 
 func _init() -> void:
@@ -231,7 +239,6 @@ func set_fight(on: bool) -> void:
 		who = Sheet.HERO
 	if on != _fight:
 		_fight = on
-		_filter = ""
 		_show()
 		_relay()
 
@@ -286,18 +293,51 @@ func _relay() -> void:
 		_lay.call_deferred()
 
 
-## The cells of the grid now: key → [kind, cell].
+## The cells of the grid now: the layout's key → [kind, cell]. The mode's own first; then what the other mode offers,
+## grey in its slot (`_ghost`): in a fight the place's acts the side panel has made, out of it the fight's acts of
+## `rules.combat.bar`.
 func _cells() -> Dictionary:
 	var out := {}
+	var other := []
 	for k: String in _stage:
-		if not KEYS.get(k, ["", ""])[0] in [_mode(), "both"] or KEYS[k][1] == "rest":
+		var m := str(KEYS.get(k, ["", ""])[0])
+		if m.is_empty() or str(KEYS[k][1]) == "rest":
 			continue
 		for c: Variant in _cells_of(k):
-			var key := str((c as Node).name)
-			if _fight and key in ["Attack_main", "Attack_off"]:  # they stand in the hands
+			var key := HotbarLayout.key_of(str((c as Node).name))
+			if key in ["Attack_main", "Attack_off"]:  # they stand in the hands
 				continue
-			out[key] = [str(KEYS[k][1]), c]
+			if m in [_mode(), "both"]:
+				out[key] = [str(KEYS[k][1]), c]
+			else:
+				other.append([key, str(KEYS[k][1]), c])
+	for o: Array in other:
+		if not out.has(o[0]) and o[2] is IconSlot:
+			var src := o[2] as IconSlot
+			out[o[0]] = [str(o[1]), _ghost(str(o[0]), src.spec, src.tip_title if not src.tip_title.is_empty() else src.text.get_slice("\n", 0), src.tip_body)]
+	if not _fight:
+		for id: Variant in CombatRules.cfg(Catalog.data).get("bar", {}).get("acts", []):
+			var act := Acts.one(str(id))
+			if act != null and not out.has("Do_" + str(id)):
+				out["Do_" + str(id)] = ["combat", _ghost("Do_" + str(id), IconRules.of(Catalog.data, {}, "acts/" + str(id)), act.title(), act.tip())]
 	return out
+
+
+## A grey cell of an act the other mode offers: its look, «только в бою» or «не в бою»; dragged like any cell.
+func _ghost(key: String, look: Dictionary, title: String, body: String) -> IconSlot:
+	var g := IconSlot.new()
+	g.name = "Ghost_" + key.replace(":", "_")
+	g.spec = look
+	g.tip_title = title
+	g.tip_body = body
+	g.text = title
+	g.tooltip_text = "%s\n%s" % [title, tr("BAR_NOT_IN_FIGHT" if _fight else "BAR_ONLY_FIGHT")]
+	g.disabled = true
+	g.focus_mode = Control.FOCUS_NONE
+	g.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_park.add_child(g)
+	_ghosts.append(g)
+	return g
 
 
 func _cells_of(key: String) -> Array:
@@ -330,7 +370,8 @@ func _detach(cell: Node) -> void:
 
 
 func _lay_grid() -> void:
-	var cells := _cells()
+	if _dragging_divider or _grid_scroll.size.x < CELL * 2:  # under the hand, or not sized yet: `resized` lays it then
+		return
 	for slot: Node in _grid.find_children("*", "HotSlot", true, false):  # every cell out before its slot goes: the
 		for ch: Node in slot.get_children():  # other mode's too — a cell is freed only by the box that made it
 			slot.remove_child(ch)
@@ -338,6 +379,12 @@ func _lay_grid() -> void:
 	for c: Node in _grid.get_children():
 		_grid.remove_child(c)
 		c.queue_free()
+	for g: Control in _ghosts:
+		if is_instance_valid(g):
+			_detach(g)
+			g.queue_free()
+	_ghosts.clear()
+	var cells := _cells()
 	var total := _columns()
 	_laid_cols = total
 	var rows := HotbarLayout.rows(SaveManager.hotbar)
@@ -345,30 +392,39 @@ func _lay_grid() -> void:
 	var kinds := {}
 	for key: String in cells:
 		kinds[key] = cells[key][0]
-	var sections: Array
-	if _filter.is_empty() or not kinds.values().has(_filter):
-		_filter = ""
-		sections = HotbarLayout.place(SaveManager.hotbar, _mode(), kinds, total)
-	else:  # one kind alone, in its own order, the bar's whole width
-		var slots: Array = kinds.keys().filter(func(k: String) -> bool: return kinds[k] == _filter)
-		while slots.size() < rows * total or slots.size() % total != 0:
-			slots.append("")
-		sections = [{"kind": _filter, "cols": total, "slots": slots}]
+	var sections := HotbarLayout.place(SaveManager.hotbar, HotbarLayout.BAR, kinds, total, "fight" if _fight else "peace")
+	_drawn_kinds = {}
+	var shown := []  # [the section's index in the layout, the section] to draw
 	for i in sections.size():
-		var sec: Dictionary = sections[i]
-		if i > 0:
-			_grid.add_child(_divider(i - 1))
+		_drawn_kinds[str(sections[i]["kind"])] = true
+		if _filter.is_empty() or str(sections[i]["kind"]) == _filter:
+			shown.append([i, sections[i]])
+	if shown.is_empty():
+		_filter = ""
+		shown = []
+		for i in sections.size():
+			shown.append([i, sections[i]])
+	for n in shown.size():
+		var at := int(shown[n][0])  # a drop goes into the layout's own section and slot, whichever tab shows it
+		var sec: Dictionary = shown[n][1]
+		var slots: Array = (sec["slots"] as Array).duplicate()
+		var cols := int(sec["cols"])
+		if not _filter.is_empty():  # one kind alone: its own slots in their order, the bar's whole width
+			cols = total
+			while slots.size() < rows * total or slots.size() % total != 0:
+				slots.append("")
+		if n > 0:
+			_grid.add_child(_divider(at - 1))
 		var g := GridContainer.new()
 		g.name = "Kind_" + str(sec["kind"])
-		g.columns = int(sec["cols"])
+		g.columns = cols
 		g.add_theme_constant_override("h_separation", GAP)
 		g.add_theme_constant_override("v_separation", GAP)
 		_grid.add_child(g)
-		var slots: Array = sec["slots"]
 		for j in slots.size():
 			var slot := HotSlot.new()
 			slot.custom_minimum_size = Vector2(CELL, CELL)
-			slot.section = i
+			slot.section = at
 			slot.index = j
 			slot.dropped.connect(_on_drop)
 			g.add_child(slot)
@@ -376,12 +432,14 @@ func _lay_grid() -> void:
 			if cells.has(key):
 				var cell: Control = cells[key][1]
 				cell.custom_minimum_size = Vector2(CELL, CELL)
+				if cell is Button:  # one square whatever its owner set: a cell's text is never drawn (v0.8.4.43.14)
+					(cell as Button).clip_text = true
 				_detach(cell)
 				slot.add_child(cell)
 				cell.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 				if cell is IconSlot:
 					var ic := cell as IconSlot
-					ic.drag_key = key if _filter.is_empty() else ""
+					ic.drag_key = key
 					if not ic.dropped_off.is_connected(_on_off):
 						ic.dropped_off.connect(_on_off)
 
@@ -391,61 +449,85 @@ func _columns() -> int:
 	return maxi(1, int((_grid_scroll.size.x - 8) / (CELL + GAP)) - 1)
 
 
+## The divider after the layout's section `i` (v0.8.4.43.14, the author: «плавными как в BG3, лёгкими на движение»): the
+## line follows the mouse while it is held — the grid is not laid again under it — and when let go it goes to the
+## nearest boundary of a column, as far as each side keeps one.
 func _divider(i: int) -> Control:
 	var pad := MarginContainer.new()
 	pad.name = "Divider_%d" % i
 	pad.add_theme_constant_override("margin_left", 3)
 	pad.add_theme_constant_override("margin_right", 3)
 	var d := ColorRect.new()
+	d.name = "Line"
 	d.color = UiTheme.BAD.darkened(0.3)
 	d.custom_minimum_size = Vector2(5, 0)
 	d.mouse_default_cursor_shape = Control.CURSOR_HSIZE
 	d.tooltip_text = tr("BAR_DIVIDER_TIP")
 	pad.add_child(d)
+	var held := ColorRect.new()  # the line in the hand, over the grid
+	held.name = "Held"
+	held.top_level = true
+	held.visible = false
+	held.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	held.color = UiTheme.ACCENT_BRIGHT
+	pad.add_child(held)
 	var start := [0.0]
 	d.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-			start[0] = (e as InputEventMouseButton).global_position.x
-		elif e is InputEventMouseMotion and ((e as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
-			var cols := int(((e as InputEventMouseMotion).global_position.x - start[0]) / (CELL + GAP))
-			if cols != 0:
-				start[0] += cols * (CELL + GAP)
-				HotbarLayout.shift(SaveManager.hotbar, _mode(), i, cols)
-				SaveManager.save_settings()
-				_relay())
+			var x := (e as InputEventMouseButton).global_position.x
+			if (e as InputEventMouseButton).pressed:
+				start[0] = x
+				_dragging_divider = true
+				var seen := _grid_scroll.get_global_rect()  # the line as tall as the grid in sight, not the rows under it
+				held.size = Vector2(d.size.x, minf(d.size.y, seen.size.y))
+				held.global_position = Vector2(d.global_position.x, maxf(d.global_position.y, seen.position.y))
+				held.visible = true
+				d.modulate.a = 0.35
+			elif _dragging_divider:
+				_dragging_divider = false
+				held.visible = false
+				d.modulate.a = 1.0
+				var cols := HotbarLayout.reach(SaveManager.hotbar, HotbarLayout.BAR, i, snap(x - start[0]))
+				if cols != 0:
+					HotbarLayout.shift(SaveManager.hotbar, HotbarLayout.BAR, i, cols)
+					SaveManager.save_settings()
+				_relay()
+		elif e is InputEventMouseMotion and _dragging_divider:
+			var step := float(CELL + GAP)
+			var lo := HotbarLayout.reach(SaveManager.hotbar, HotbarLayout.BAR, i, -99) * step
+			var hi := HotbarLayout.reach(SaveManager.hotbar, HotbarLayout.BAR, i, 99) * step
+			var dx := clampf((e as InputEventMouseMotion).global_position.x - start[0], lo, hi)
+			held.global_position.x = d.global_position.x + dx)
 	return pad
 
 
+## The columns a divider let go `dx` pixels away moves: to the nearest boundary of a column.
+static func snap(dx: float) -> int:
+	return roundi(dx / float(CELL + GAP))
+
+
 func _on_drop(key: String, sec: int, index: int) -> void:
-	HotbarLayout.move(SaveManager.hotbar, _mode(), cell_key(key, _fight), sec, index)
+	HotbarLayout.move(SaveManager.hotbar, HotbarLayout.BAR, cell_key(key), sec, index, not _filter.is_empty())
 	SaveManager.save_settings()
 	_relay()
 
 
-## The bar's key of a cell dragged from the sheet: «spell:<id>», «feature:<resource>» — a cast or a feature's use in a
-## fight, a pin to the words out of it; a key of the bar's own stays as it is.
-static func cell_key(key: String, fight: bool) -> String:
-	var kind := key.get_slice(":", 0)
-	if key.find(":") < 0 or not kind in ["spell", "feature", "item"]:
-		return key
-	var id := key.get_slice(":", 1)
-	if not fight:
-		return "Pin_%s_%s" % [kind, id]
-	return {"spell": "Cast_", "feature": "Feature_", "item": "Use_"}[kind] + id
+## The layout's key of a cell dragged onto the bar — from a slot, from the sheet's book («spell:<id>»,
+## «feature:<resource>», «item:<id>») or an act's button name («Do_dash»): one in a fight and out of it.
+static func cell_key(key: String) -> String:
+	return HotbarLayout.key_of(key)
 
 
 func _on_off(key: String) -> void:
-	HotbarLayout.hide(SaveManager.hotbar, _mode(), key)
+	HotbarLayout.hide(SaveManager.hotbar, HotbarLayout.BAR, key)
 	SaveManager.save_settings()
 	_relay()
 
 
 func _lay_tabs() -> void:
-	var kinds := {}
-	for v: Array in _cells().values():
-		kinds[v[0]] = true
+	var kinds := _drawn_kinds
 	if _tabs.get_child_count() == 0:  # made once: a filter pressed is never freed under its own signal
-		for k: String in ["", "common", "class", "items", "deeds", "passive"]:
+		for k: String in TABS:
 			var b := Button.new()
 			b.name = "Filter_" + (k if k != "" else "all")
 			b.text = KIND_TITLES.get(k, "BAR_ALL")

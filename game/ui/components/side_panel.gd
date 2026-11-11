@@ -1044,18 +1044,12 @@ func _craft_row(s: GameSession, can_act: bool) -> void:
 		var label := tr("BTN_CRAFT") if p.is_empty() else tr("BTN_CRAFT_WORK").format({"n": CraftRules.progress(s.character)})
 		var cb := _row_button(acts, label, craft_requested.emit, not GameState.is_busy())
 		cb.name = "CraftButton"
-		cb.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		cb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		cb.tooltip_text = tr("BTN_CRAFT_TIP")
 	for tag: String in spots:
 		var g: Dictionary = CraftRules.cfg(data)["gather"][tag]
 		var why := CraftRules.gather_why(s, data, tag)
 		var gb := _row_button(acts, str(g["name"]), _try.bind(GameState.craft_act.bind("gather", tag)), can_act and why.is_empty())
 		gb.name = "Gather_" + tag
-		gb.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		gb.clip_text = false
-		gb.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-		gb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		gb.tooltip_text = tr(why) if not why.is_empty() else tr("GATHER_TIP").format({"time": TimeRules.span(int(g["minutes"])),
 			"skill": CraftRules.tr_skill(data, str(g["skill"])), "dc": int(g["dc"])})
 	for k: String in grounds:
@@ -1063,10 +1057,6 @@ func _craft_row(s: GameSession, can_act: bool) -> void:
 		var wwhy := WildsRules.why_not(s, data, k)
 		var wb := _row_button(acts, str(wd["act"]), wilds_requested.emit.bind(k), can_act and wwhy.is_empty())
 		wb.name = "Wilds_" + k
-		wb.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		wb.clip_text = false
-		wb.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-		wb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		wb.tooltip_text = wwhy if not wwhy.is_empty() else tr("WILDS_TIP").format({"skill": CraftRules.tr_skill(data, str(wd["skill"])),
 			"dc": int(wd["dc"]), "n": WildsRules.stock(s, data, k)})
 
@@ -1085,10 +1075,6 @@ func _work_row(s: GameSession, can_act: bool) -> void:
 		var j := JobRules.job(s, data, id)
 		var b := _row_button(acts, tr("BTN_WORK_SHIFT").format({"name": JobRules.rank_name(s, data, id, JobRules.rank(s.character, id))}), _try.bind(GameState.job_act.bind("shift", id)), can_act and JobRules.shift_why(s, data, id).is_empty())
 		b.name = "WorkShift_" + id
-		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		b.clip_text = false
-		b.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-		b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		b.tooltip_text = tr("BTN_WORK_SHIFT_TIP").format({"job": j.get("name", id), "time": TimeRules.span(JobRules.hours(s, data, id) * 60),
 			"chance": JobRules.shift_chance(s, data, id), "pay": Money.format(JobRules.pay(s, data, id))})
 		var npc := str(j.get("employer", ""))
@@ -1129,8 +1115,6 @@ func _study_row(s: GameSession, can_act: bool) -> void:
 	var acts := _content
 	var b := _row_button(acts, tr("BTN_STUDY_MINE"), study_requested.emit.bind(""), can_act)
 	b.name = "StudyButton"
-	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	b.tooltip_text = tr("BTN_STUDY_MINE_TIP")
 
 
@@ -1142,8 +1126,6 @@ func _family_row(s: GameSession, can_act: bool) -> void:
 	var acts := _content
 	var b := _row_button(acts, tr("BTN_FAMILY"), family_requested.emit, can_act)
 	b.name = "FamilyButton"
-	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	b.tooltip_text = tr("BTN_FAMILY_TIP")
 
 
@@ -1166,21 +1148,15 @@ func _underworld_row(s: GameSession, can_act: bool) -> void:
 	if not entry.is_empty():
 		var eb := _row_button(acts, tr("BTN_ORG_ENTRY").format({"money": Money.format(int(OrgRules.def(s, Catalog.data, entry)["entry_cp"]))}), _try.bind(GameState.org_act.bind("entry", entry)), can_act and ew.is_empty())
 		eb.name = "OrgEntry_" + entry
-		eb.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		eb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		eb.tooltip_text = tr(ew) if not ew.is_empty() else tr("BTN_ORG_ENTRY_TIP").format({"org": OrgRules.org_name(s, Catalog.data, entry)})
 	if not jobs.is_empty():
 		var h := _row_button(acts, tr("BTN_HEISTS"), heist_requested.emit, can_act)
 		h.name = "HeistButton"
-		h.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		h.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		h.tooltip_text = tr("BTN_HEISTS_TIP")
 	if not mine.is_empty() or founding:
 		var label := tr("BTN_ORG") if mine.size() != 1 else str(OrgRules.word(s, Catalog.data, str(mine[0]))["nom"]).capitalize()  # v0.7.39.1: «Артель»
 		var o := _row_button(acts, label, org_requested.emit.bind(mine[0] if not mine.is_empty() else ""), can_act)
 		o.name = "OrgButton"
-		o.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		o.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		o.tooltip_text = tr("BTN_ORG_TIP")
 
 
@@ -1193,8 +1169,6 @@ func _office_row(s: GameSession, can_act: bool) -> void:
 	var acts := _content
 	var b := _row_button(acts, tr("BTN_OFFICE"), office_requested.emit.bind(""), can_act)
 	b.name = "OfficeButton"
-	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	b.tooltip_text = tr("BTN_OFFICE_TIP")
 
 
@@ -1208,8 +1182,6 @@ func _faith_row(s: GameSession, can_act: bool) -> void:
 	var acts := _content
 	var b := _row_button(acts, tr("BTN_FAITH").format({"god": FaithRules.god_name(s, Catalog.data, str(sh["god"]))}), faith_requested.emit, can_act)
 	b.name = "FaithButton"
-	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	b.tooltip_text = tr("BTN_FAITH_TIP").format({"name": sh.get("name", "")})
 
 
@@ -1222,8 +1194,6 @@ func _property_row(s: GameSession) -> void:
 	if not venue.is_empty():
 		var sb := _row_button(acts, tr("BTN_SHOP"), shop_requested.emit.bind("venue", venue), not GameState.is_busy())
 		sb.name = "ShopButton"
-		sb.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		sb.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		sb.tooltip_text = tr("BTN_SHOP_TIP")
 	if PropertyRules.state(s.character).is_empty() and PropertyRules.animals(s).is_empty():
 		return
@@ -1231,10 +1201,6 @@ func _property_row(s: GameSession) -> void:
 	var label := tr("BTN_PROPERTY") if here.is_empty() else tr("BTN_PROPERTY_HERE").format({"name": PropertyRules.name_of(s, Catalog.data, here)})
 	var b := _row_button(acts, label, property_requested.emit.bind("mine", ""), not GameState.is_busy())
 	b.name = "PropertyButton"
-	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b.clip_text = false
-	b.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-	b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	b.tooltip_text = tr("BTN_PROPERTY_TIP")
 
 
