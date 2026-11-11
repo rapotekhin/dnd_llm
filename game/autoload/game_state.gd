@@ -609,10 +609,10 @@ func read_notices() -> void:
 
 
 ## The name of the spell the hero concentrates on that this one would break (v0.7.13.1), or "".
-func concentration_conflict(spell_id: String) -> String:
+func concentration_conflict(spell_id: String, who: Dictionary = Sheet.HERO) -> String:
 	if session == null or not bool(Catalog.data["spells"].get(spell_id, {}).get("concentration", false)):
 		return ""
-	var held := str(session.character.get("concentration", ""))
+	var held := str(Sheet.holder(session, who).get("concentration", ""))
 	return "" if held.is_empty() or held == spell_id else str(Catalog.data["spells"].get(held, {}).get("name", held))
 
 
@@ -684,6 +684,7 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 	SaveManager.save_slot(COMBAT_SAVE, session)  # loading it starts this fight again (a lost fight is not skipped)
 	session.fight_on_load = {}
 	var lines := CombatRules.start(session, Catalog.data, foes, source)
+	session.combat["drive"] = true  # the party's turns are the player's (v0.8.4.43.11, CombatRules.driven)
 	lines.append_array(_opening_strike(source.get("opening", {})))
 	session.mode = GameSession.MODE_COMBAT
 	session.npc_id = ""
@@ -778,7 +779,14 @@ func _combat_log(lines: Array[String]) -> void:
 
 
 func _combat_ready() -> bool:
-	return session != null and CombatRules.player_can_act(session) and not is_busy() and Backend.is_ready()
+	return session != null and not CombatRules.actor(session).is_empty() and not is_busy() and Backend.is_ready()
+
+
+## Who presses the fight's buttons now: the hero, or one of its party in its turn (v0.8.4.43.11, CombatRules.actor); the hero
+## when nobody, so a button says «not your turn» by the act's own `can`.
+func fight_actor() -> Dictionary:
+	var f := CombatRules.actor(session)
+	return f if not f.is_empty() else CombatRules.player(session)
 
 
 ## One player command in a fight: `why` "" means do it; the lines go to the log; an outcome ends the fight.
@@ -789,8 +797,9 @@ func _combat_do(why: String, act: Callable) -> String:
 		return "COMBAT_ANSWER_FIRST"
 	if not why.is_empty():
 		return why
+	var who := CombatRules.actor(session)
 	var lines: Array[String] = act.call()
-	if not _after_deed(lines) and int(session.character["hp"]) <= 0:  # dropped on its own turn (an attack of opportunity): the turn is over
+	if not _after_deed(lines) and CombatRules.current(session) == str(who["id"]) and not Attack.up(session, who):  # dropped on its own turn (an attack of opportunity): the turn is over
 		_combat_log(CombatRules.end_player_turn(session, Catalog.data))
 		_combat_continue()
 	return ""
@@ -822,7 +831,7 @@ func combat_cast(spell_id: String, slot: int, target_id: String) -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
 	var act := Acts.one("cast")
-	var hero := CombatRules.player(session)
+	var hero := fight_actor()
 	var how := {"spell": spell_id, "slot": slot}
 	var why := act.can(session, Catalog.data, hero, target_id, how)
 	var sp: Dictionary = Catalog.data["spells"].get(spell_id, {})
@@ -843,7 +852,7 @@ func combat_cast(spell_id: String, slot: int, target_id: String) -> String:
 func combat_act(id: String, to: String = "", how: Dictionary = {}) -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
-	var hero := CombatRules.player(session)
+	var hero := fight_actor()
 	var act := Acts.one(id)
 	return _combat_do(act.can(session, Catalog.data, hero, to, how), func() -> Array[String]:
 		var lines := act.go(session, Catalog.data, hero, to, how)
@@ -929,7 +938,7 @@ func choose_familiar(form: String) -> String:
 func combat_metamagic(id: String) -> void:
 	if session == null or not CombatRules.active(session):
 		return
-	var hero := CombatRules.player(session)
+	var hero := fight_actor()
 	if str(hero.get("metamagic", "")) == id or id.is_empty():
 		hero.erase("metamagic")
 	else:
@@ -1493,7 +1502,7 @@ func _combat_continue() -> void:
 			combat_playing = false
 			_combat_outcome()
 			return
-		if CombatRules.player_can_act(s):
+		if not CombatRules.actor(s).is_empty():  # the hero's turn, or one of its party's (v0.8.4.43.11)
 			break
 		var lines := CombatRules.next_actor(s, Catalog.data)
 		CharacterRules.refresh(s.character, Catalog.data, s.items)
@@ -3045,8 +3054,9 @@ func swap_weapons() -> String:
 		return "EQUIP_BUSY"
 	if not _idle() and not CombatRules.active(session):
 		return "EQUIP_BUSY"
-	return _act("swap", {"swap": [func() -> String: return Acts.one("swap").can(session, Catalog.data, Sheet.HERO),
-		func() -> Array[String]: return Acts.one("swap").go(session, Catalog.data, Sheet.HERO)]})
+	var who := fight_actor() if CombatRules.active(session) else Sheet.HERO  # one of the party in its turn: its sets (v0.8.4.43.11)
+	return _act("swap", {"swap": [func() -> String: return Acts.one("swap").can(session, Catalog.data, who),
+		func() -> Array[String]: return Acts.one("swap").go(session, Catalog.data, who)]})
 
 
 ## The «Снаряжение» window of a follower (v0.8.4.40): a thing handed over either way, the sets swapped. Equip's rules.

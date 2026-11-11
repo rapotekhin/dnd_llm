@@ -531,6 +531,21 @@ static func player_can_act(s: GameSession) -> bool:
 	return is_player_turn(s) and not player_skips(s)
 
 
+## One of the hero's party the player moves in its turn as the hero (v0.8.4.43.11, as in BG3): a follower, its own beast, a
+## creature it called — never an ally of the encounter nor the militia, never from the arena's fence. Only in the game's own
+## fight (`drive`, GameState.start_combat): a test's or a balance run's fight keeps the AI.
+static func driven(s: GameSession, f: Dictionary) -> bool:
+	return bool(s.combat.get("drive", false)) and not Sheet.is_hero(f) and AllyRules.of_party(s, f) and not ArenaRules.watching(s)
+
+
+## The fighter whose turn the player plays now: the hero, or one of its party it moves; {} — nobody's buttons now.
+static func actor(s: GameSession) -> Dictionary:
+	if player_can_act(s):
+		return player(s)
+	var f := fighter(s, current(s))
+	return f if not f.is_empty() and driven(s, f) and can_act(s, f) else {}
+
+
 ## The start of anybody's turn, one road (v0.8.4.13): its points and reaction come back, what lasted until now goes, what
 ## it stands in or burns with strikes, a spell's after-effects and recharges. What it then does is its own: the player's
 ## buttons, the AI.
@@ -1797,11 +1812,12 @@ static func can_react(s: GameSession, data: Dictionary, r: Dictionary, t: Dictio
 	return FightGrid.veiled(s, data, r, t).is_empty() and not ConditionRules.invisible(Sheet.holder(s, t), data)
 
 
-## The rest of the turn is skipped: next fighter (the UI plays the others one by one via next_actor()).
-## Returns the lines of the turn's end and a new round's start (reinforcements arriving).
+## The rest of the turn is skipped: next fighter (the UI plays the others one by one via next_actor()). Whoever's turn the
+## player plays — the hero or one of its party (v0.8.4.43.11). Returns the lines of the turn's end and a new round's start
+## (reinforcements arriving).
 static func end_player_turn(s: GameSession, data: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
-	_finish(s, data, player(s), lines)
+	_finish(s, data, fighter(s, current(s)), lines)
 	return lines
 
 
@@ -1811,7 +1827,7 @@ static func _finish(s: GameSession, data: Dictionary, f: Dictionary, lines: Arra
 	var me := Sheet.holder(s, f)
 	if str(f.get("status")) == "active":
 		lines.append_array(volley_flush(s, data))  # darts left fly at the last target (v0.7.22.4)
-		if not Sheet.is_hero(f) and Attack.up(s, f):
+		if not Sheet.is_hero(f) and not driven(s, f) and Attack.up(s, f):
 			FightAI.last(s, data, f, lines)
 		ConditionRules.remove(me, "mocked")
 		_burn(s, data, f, lines)
@@ -1945,6 +1961,8 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 		elif incapacitated(f):
 			lines.append("%s не может действовать: %s" % [f["name"], ", ".join(foe_conditions(s, data, f))])
 			MonsterRules.release(s, data, f, lines)
+		elif driven(s, f):  # the player's buttons, as the hero's (v0.8.4.43.11): `actor` is it
+			return lines
 		elif _has(f, "charmed"):
 			lines.append("%s очарован и не нападает" % f["name"])
 		elif str(f.get("side")) == "ally":
@@ -2244,7 +2262,7 @@ static func summon_for(s: GameSession, data: Dictionary, f: Dictionary, spell_id
 	var foe := str(f.get("side")) == "enemy"
 	var specs: Array = []
 	for i in int(sp.get("count", 1)):
-		var spec := {"monster": mon, "spell": spell_id, "called_by": str(f["id"]), "no_xp": true}
+		var spec := {"monster": mon, "spell": spell_id, "called_by": str(f["id"]), "no_xp": true, "helper": bool(sp.get("helper", false))}  # a familiar called in a fight helps, as one called before it (v0.8.4.43.11)
 		if not foe:
 			spec["ally"] = "summon"
 		specs.append(spec)
@@ -2501,20 +2519,25 @@ static func dice_range(expr: String, mod: int = 0) -> Array[int]:
 ## A weapon attack at `target_id` before the click: {chance, min, max, adv: [reasons], dis: [reasons]}. AC stays
 ## hidden: only the percent.
 static func attack_preview(s: GameSession, data: Dictionary, target_id: String, offhand: bool = false, unarmed: bool = false, throw: bool = false) -> Dictionary:
-	var c := s.character
+	return blow_preview(s, data, player(s), target_id, {"hand": "off" if offhand else "fists" if unarmed else "", "throw": throw})
+
+
+## A blow of anybody at `target_id` before the click (v0.8.4.43.11, one road): `how` as the act «Атака» takes it — a hand of
+## one with hands, an action of its template; {chance, min, max, adv, dis, sneak}, {} with nothing to strike or a save's blow.
+static func blow_preview(s: GameSession, data: Dictionary, f: Dictionary, target_id: String, how: Dictionary) -> Dictionary:
 	var t := fighter(s, target_id)
-	if t.is_empty():
+	var b := Attack.way(s, data, f, how)
+	if t.is_empty() or b.is_empty() or str((b.get("act", {}) as Dictionary).get("kind", "")) == "save":
 		return {}
-	var w := weapon_profile(c, data, s.items, "" if unarmed else str(c.get("equipped", {}).get("off_hand" if offhand else "main_hand", "")), offhand)
-	var b := Attack.of_weapon(w)
-	if throw:
-		b["thrown"] = true  # v0.8.4.31: the throw's own button
-	var mods := Attack.odds(s, data, player(s), t, b)  # the roll's own reasons and cover (v0.8.4.29.3)
+	var mods := Attack.odds(s, data, f, t, b)  # the roll's own reasons and cover (v0.8.4.29.3)
 	var adv := not (mods["adv"] as Array).is_empty()
 	var dis := not (mods["dis"] as Array).is_empty()
-	var r := dice_range(str(w["dice"]))
-	var bonus := int(w["bonus"]) + FeatureRules.rage_bonus(s, data, player(s), b, t)
-	var sneak := FeatureRules.sneak_dice(s, data, player(s), b, adv, dis, t)
+	var r: Array[int] = [0, 0]
+	for p: Dictionary in b.get("pieces", []):
+		var pr := dice_range(str(p["dice"]))
+		r = [r[0] + pr[0], r[1] + pr[1]]
+	var bonus := int(b.get("bonus", 0)) + FeatureRules.rage_bonus(s, data, f, b, t)
+	var sneak := FeatureRules.sneak_dice(s, data, f, b, adv, dis, t)
 	var sr: Array[int] = [0, 0]
 	if not sneak.is_empty():
 		sr = dice_range(sneak)

@@ -59,8 +59,8 @@ func run() -> void:
 	s.character["hp"] = 200
 	s.character["max_hp"] = 200
 	gs.start_combat([{"monster": "goblin", "count": 1}], {"room_from": "brod-square"})
-	if not step("a fight", await wait_until(func() -> bool:
-			return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
+	await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy() and not CombatRules.actor(s).is_empty(), 120.0)
+	if not step("a fight", await hero_turn(120.0)):  # the follower's turn is the player's too (v0.8.4.43.11)
 		return
 	var ally := CombatRules.fighter(s, "npc_mercenary")
 	var acts: Array = Sheet.template(data, ally)["actions"]

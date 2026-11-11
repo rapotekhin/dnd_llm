@@ -35,6 +35,10 @@ var talk: HBoxContainer  ## the acts of a conversation
 var talk_acts: VBoxContainer
 var end_turn: Button  ## the round button of a fight
 var picked_circle := 0  ## the circle the next spell is cast at in a fight; 0 — the lowest that fits
+## Whose bar it is (v0.8.4.43.11): the hero, or in a fight the one of its party whose turn the player plays — its face, its
+## hands and sets, its points, stocks and slots, its passives. `FightUi` sets it before it fills the cells; out of a fight
+## the hero.
+var who: Dictionary = Sheet.HERO
 
 var _body: HBoxContainer
 var _portrait: Portrait
@@ -223,6 +227,8 @@ func _free_cells(key: String) -> void:
 
 
 func set_fight(on: bool) -> void:
+	if not on:
+		who = Sheet.HERO
 	if on != _fight:
 		_fight = on
 		_filter = ""
@@ -309,7 +315,7 @@ func hero_portrait() -> Portrait:
 func _lay() -> void:
 	if not is_inside_tree() or GameState.session == null:
 		return
-	_portrait.show_of(GameState.session, Catalog.data, Sheet.HERO, str(GameState.session.character.get("name", "")))
+	_portrait.show_of(GameState.session, Catalog.data, who, str(Sheet.holder(GameState.session, who).get("name", "")))
 	_lay_hands()
 	_lay_counters()
 	_lay_passives()
@@ -467,15 +473,16 @@ func _lay_passives() -> void:
 	var box := section(PASSIVE)
 	var cells: Array = box.get_meta("cells", [])
 	var have := {}
-	for t: Dictionary in ToggleRules.of(s, Catalog.data, Sheet.HERO):
+	for t: Dictionary in ToggleRules.of(s, Catalog.data, who):
 		var id := str(t["id"])
 		have[id] = true
 		if not _toggles.has(id) or not is_instance_valid(_toggles[id]):
 			var made := IconSlot.make("toggles/" + id, str(t["name"]), CELL)
 			made.name = "Toggle_" + id
 			made.toggle_mode = true
-			made.pressed.connect(func() -> void:  # the engine's state turned round, whatever the button shows
-				var why := GameState.set_toggle(id, not ToggleRules.on(GameState.session, Catalog.data, Sheet.HERO, id))
+			made.pressed.connect(func() -> void:  # the engine's state turned round, whatever the button shows; whose bar it is now
+				var mine := str(who.get("id", Being.HERO))
+				var why := GameState.set_toggle(id, not ToggleRules.on(GameState.session, Catalog.data, who, id), mine)
 				if not why.is_empty():
 					EventBus.message.emit(tr(why))
 				_relay())
@@ -504,7 +511,7 @@ func _lay_passives() -> void:
 ## set switch under them, as in BG3: the set in hand lit, the other a press away.
 func _lay_hands() -> void:
 	var s := GameState.session
-	var c := s.character
+	var c := Sheet.holder(s, who)
 	var fight: Array = _cells_of("COMBAT_TAB_WEAPONS") if _fight else []
 	for n: Node in _hands.get_children():
 		_hands.remove_child(n)
@@ -531,7 +538,7 @@ func _lay_hands() -> void:
 	for n: Node in _sets.get_children():
 		_sets.remove_child(n)
 		n.queue_free()
-	var why := Acts.one("swap").can(s, Catalog.data, Sheet.HERO)
+	var why := Acts.one("swap").can(s, Catalog.data, who)
 	for i in 2:
 		var b := Button.new()
 		b.name = "WeaponSetHeld" if i == 0 else "WeaponSetStowed"
@@ -576,12 +583,13 @@ func _lay_counters() -> void:
 		_counters.remove_child(n)
 		n.queue_free()
 	var s := GameState.session
-	var c := s.character
+	var c := Sheet.holder(s, who)
 	if _fight and CombatRules.active(s):
-		var e := CombatRules.economy(s)
+		var f := who if who.has("side") else CombatRules.player(s)  # the fighter whose bar it is
+		var e: Dictionary = f.get("points", {})
 		_counter("EcoAction", "●", int(e.get("action", 0)) + int(e.get("attacks", 0)), UiTheme.OK, tr("COMBAT_ACTION"))
 		_counter("EcoBonus", "▲", int(e.get("bonus", 0)), UiTheme.WARN, tr("COMBAT_BONUS"))
-		_counter("EcoReaction", "◆", 0 if bool(CombatRules.player(s).get("reacted", false)) else 1, Color("#b98fd8"), tr("BAR_REACTION"))
+		_counter("EcoReaction", "◆", 0 if bool(f.get("reacted", false)) else 1, Color("#b98fd8"), tr("BAR_REACTION"))
 		var mv := int(e.get("move", 0))
 		_counter("EcoMove", "➜ %d" % mv, mv, UiTheme.ACCENT_BRIGHT, tr("COMBAT_MOVE").format({"n": mv}))
 	for r: Dictionary in Stock.lines(c, Catalog.data):

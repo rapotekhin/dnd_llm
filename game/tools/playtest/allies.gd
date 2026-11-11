@@ -1,7 +1,8 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Allies in a fight (python tools/godot_playtest.py --scenario allies), v0.7.22.22: a follower told to wait and led
 ## again by the buttons, a summoned owl let go and called again, then the burrow of the Ash Priest with the two
-## militia, the follower and the owl on the hero's side; a few rounds go by, the allies strike on their own.
+## militia, the follower and the owl on the hero's side; a few rounds go by, the militia strike on their own (the follower
+## and the owl are the player's in their turns, v0.8.4.43.11: ended by «Конец хода» here).
 
 
 func run() -> void:
@@ -64,8 +65,8 @@ func run() -> void:
 	s.character["hp"] = 200
 	s.character["max_hp"] = 200
 	gs.start_combat(enc["enemies"], {"encounter": "burrow_priest", "room_from": "pushcha-glade", "allies": [{"monster": "scout", "name": "Ждан из ополчения"}, {"monster": "guard", "name": "Влада из ополчения"}], "parley": "hard"})
-	if not step("the burrow fight", await wait_until(func() -> bool:
-			return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 120.0)):
+	await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy() and not CombatRules.actor(s).is_empty(), 120.0)
+	if not step("the burrow fight", await hero_turn(120.0)):
 		return
 	await frames(3)
 	var ids := CombatRules.allies(s, false)
@@ -80,8 +81,8 @@ func run() -> void:
 		if end == null or not str(s.combat.get("outcome", "")).is_empty():
 			break
 		await press(end)
-		await wait_until(func() -> bool: return (CombatRules.is_player_turn(s) or not str(s.combat.get("outcome", "")).is_empty()) and not gs.is_busy(), 120.0)
+		await hero_turn(120.0)
 		await frames(3)
 	var log := "\n".join(said)
-	step("the allies strike on their own", names.any(func(n: String) -> bool: return said.any(func(l: String) -> bool: return l.begins_with(n))), log.right(600))
+	step("the militia strike on their own", names.any(func(n: String) -> bool: return said.any(func(l: String) -> bool: return l.begins_with(n))), log.right(600))
 	await shot("rounds")

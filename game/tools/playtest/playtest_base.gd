@@ -293,3 +293,21 @@ func drag(cell: Control, onto: Control, split := false) -> bool:
 	onto._drop_data(Vector2.ZERO, d)
 	await frames(3)
 	return true
+
+
+## Waits for the hero's own turn in a fight, ending on the way the turns of its party the player moves (v0.8.4.43.11:
+## a follower, its own beast, a creature it called waits for the buttons as the hero does). False when the fight ended or
+## the time ran out first.
+func hero_turn(timeout_s: float = 90.0) -> bool:
+	var gs := node("GameState")
+	var s: GameSession = gs.session
+	var until := Time.get_ticks_msec() + int(timeout_s * 1000.0)
+	while Time.get_ticks_msec() < until:
+		if not CombatRules.active(s) or not str(s.combat.get("outcome", "")).is_empty():
+			return false
+		if not gs.is_busy() and CombatRules.is_player_turn(s):
+			return true
+		if not gs.is_busy() and not CombatRules.actor(s).is_empty():
+			gs.combat_end_turn()
+		await frames(2)
+	return false

@@ -90,7 +90,8 @@ func run() -> void:
 	# In a fight: the queue's faces.
 	Stock.give(s.character, "slot_1", 2)
 	gs.start_combat([{"monster": "wolf", "name": "Волк", "count": 2}], {})
-	if not step("a fight with the wolves, the follower beside", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy() and CombatRules.is_player_turn(s), 90.0)):
+	await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy() and not CombatRules.actor(s).is_empty(), 90.0)
+	if not step("a fight with the wolves, the follower beside", await hero_turn(90.0)):  # her own turn is the player's (v0.8.4.43.11)
 		return
 	await frames(4)
 	var ally := ""
@@ -129,7 +130,7 @@ func run() -> void:
 	# Sacred Flame at the wolf's face: the next turn of the hero.
 	if CombatRules.is_player_turn(s):  # the heal took the action: the turn ends
 		await press(find(screen(), "EndTurnButton"))
-		await wait_until(func() -> bool: return not CombatRules.active(s) or (CombatRules.is_player_turn(s) and not gs.is_busy()), 90.0)
+		await hero_turn(90.0)
 	s.character["hp"] = int(s.character["max_hp"])  # the wolves' bites must not end the scenario
 	if not step("the hero's turn again", CombatRules.active(s) and CombatRules.is_player_turn(s)):
 		return

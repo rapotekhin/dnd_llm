@@ -99,12 +99,12 @@ func setup(screen: Control) -> void:
 	_hint = UiScenes.need(screen, "%Hint")
 	_hint.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 	end_turn = _bar.end_turn  # the round button of the hotbar
-	var face := _bar.hero_portrait()  # the hero by its portrait (v0.8.4.43.8)
-	face.mouse_entered.connect(func() -> void: point_at(CombatRules.PLAYER))
+	var face := _bar.hero_portrait()  # whose bar it is by its portrait (v0.8.4.43.8; one of the party in its turn, v0.8.4.43.11)
+	face.mouse_entered.connect(func() -> void: point_at(_bar_id()))
 	face.mouse_exited.connect(func() -> void: point_at(""))
 	face.pressed.connect(func() -> void:
 		if active():
-			on_fighter(CombatRules.PLAYER))
+			on_fighter(_bar_id()))
 	end_turn.pressed.connect(func() -> void: _do(GameState.combat_end_turn()))
 	_parts.assign([UiScenes.need(screen, "%FightSide"), _queue, _hint, UiScenes.need(screen, "%FightLogBox")])
 	_peace.assign([UiScenes.need(screen, "%Side"), UiScenes.need(screen, "%Strip"), UiScenes.need(screen, "%Chat")])
@@ -134,7 +134,12 @@ func active() -> bool:
 
 
 func mine() -> bool:
-	return active() and CombatRules.player_can_act(GameState.session) and not GameState.is_busy() and Backend.is_ready()
+	return active() and not CombatRules.actor(GameState.session).is_empty() and not GameState.is_busy() and Backend.is_ready()
+
+
+## The fighter of the bar's portrait: the one whose turn the player plays, else the hero.
+func _bar_id() -> String:
+	return str(_bar.who.get("id", CombatRules.PLAYER))
 
 
 func _on_lines(lines: Array[String]) -> void:
@@ -293,10 +298,11 @@ func refresh() -> void:
 		_pending_aim = ""
 		_pending_feet = int(data["spells"].get(str(CombatRules.volley(s)["spell"]), {}).get("range_ft", 0))
 	end_turn.disabled = not me
+	_bar.who = GameState.fight_actor()  # whose turn the player plays: its face, hands and points (v0.8.4.43.11)
 	_draw_queue(s)
 	_draw_incoming(s)
-	var face := _bar.hero_portrait()  # grey while the picked act cannot go at the hero
-	face.modulate = Color(1, 1, 1, 0.42) if _pending.is_valid() and not str(_pending_check.call(_target_of(CombatRules.PLAYER))).is_empty() else Color.WHITE
+	var face := _bar.hero_portrait()  # grey while the picked act cannot go at the one of the bar
+	face.modulate = Color(1, 1, 1, 0.42) if _pending.is_valid() and not str(_pending_check.call(_target_of(_bar_id()))).is_empty() else Color.WHITE
 	_draw_map(s, data, me)
 	_draw_party(s)
 	_play_fx(s)
@@ -330,8 +336,8 @@ func _draw_map(s: GameSession, data: Dictionary, me: bool) -> void:
 	_field.fighters = _bodies(s, now, open)
 	_field.things = _scene(s, data, map, now, open)
 	_field.play(FightField.take_moves(s))
-	_field.routes = Move.routes(s, data, CombatRules.player(s)) if me and not _pending.is_valid() and _second.is_empty() else {}
-	_field.lit = Acts.one(str(_second["act"])).squares(s, data, CombatRules.player(s), str(_second["to"])) if not _second.is_empty() else {}
+	_field.routes = Move.routes(s, data, GameState.fight_actor()) if me and not _pending.is_valid() and _second.is_empty() else {}
+	_field.lit = Acts.one(str(_second["act"])).squares(s, data, GameState.fight_actor(), str(_second["to"])) if not _second.is_empty() else {}
 	_field.reach = _in_range(s, data) if _pending.is_valid() and _pending_feet > 0 else {}
 	_field.over = _over(s)
 	_field.zones = SpellEffects.zone_view(s, data)
@@ -340,10 +346,10 @@ func _draw_map(s: GameSession, data: Dictionary, me: bool) -> void:
 	_field.queue_redraw()
 
 
-## The squares the picked act gets to from the hero, a clear line to them (v0.8.4.3).
+## The squares the picked act gets to from the one who moves, a clear line to them (v0.8.4.3).
 func _in_range(s: GameSession, data: Dictionary) -> Dictionary:
 	var g := FightGrid.grid(s, data)
-	var me := CombatRules.player(s)
+	var me := GameState.fight_actor()
 	var from := FightGrid.cell(me)
 	var far := FightGrid.squares_of(data, _pending_feet)
 	var out := {}
@@ -479,7 +485,7 @@ func on_cell(cell: Vector2i) -> void:
 		return
 	var way := _way_out_at(s, data, cell)
 	if way != FightGrid.NONE:
-		if way == FightGrid.cell(CombatRules.player(s)):
+		if way == FightGrid.cell(GameState.fight_actor()):
 			_do(GameState.combat_act("flee"))
 		else:
 			_do(GameState.combat_act("walk", FightGrid.aim_id(way)))
@@ -632,10 +638,11 @@ func _name_of(s: GameSession, id: String) -> String:
 
 
 func _foe_hint(s: GameSession, data: Dictionary, id: String) -> String:
-	var reach := Acts.one("attack").can(s, data, CombatRules.player(s), id)
+	var me := GameState.fight_actor()  # the hero's main blow, or the blow of the one of the party in its turn
+	var reach := Acts.one("attack").can(s, data, me, id)
 	if reach in ["COMBAT_OUT_OF_REACH", "COMBAT_OUT_OF_RANGE", "COMBAT_NO_LINE"]:
 		return tr(reach)
-	return _preview_text(CombatRules.attack_preview(s, data, id)).replace("\n", " · ")
+	return _preview_text(CombatRules.blow_preview(s, data, me, id, {})).replace("\n", " · ")
 
 
 ## The area of the picked spell under the mouse: its squares lit, who is caught in them.
@@ -649,7 +656,7 @@ func _aim_hint(s: GameSession, data: Dictionary, cell: Vector2i, id: String, tex
 	if sp.has("area"):
 		cells = CombatRules.area_cells(s, data, sp, CombatRules.aimed(s, aim))
 	elif FeatureRules.aims(data, _pending_aim):  # a feature laid as an area: a dragonborn's breath (v0.8.4.24)
-		cells = FeatureRules.aim_cells(s, data, CombatRules.player(s), _pending_aim, aim)
+		cells = FeatureRules.aim_cells(s, data, GameState.fight_actor(), _pending_aim, aim)
 	else:
 		return text
 	var caught: Array[String] = []
@@ -743,9 +750,14 @@ func _pin(id: String) -> Control:
 func _base_hint(me: bool) -> String:
 	if not _second.is_empty():
 		return tr("COMBAT_PICK_JUMP" if str(_second["to"]).is_empty() else "COMBAT_PICK_SIDE")
-	if me and not _pending.is_valid() and Move.why(GameState.session, Catalog.data, CombatRules.player(GameState.session)) == "COMBAT_PRONE":
+	var who := GameState.fight_actor()
+	if me and not _pending.is_valid() and Move.why(GameState.session, Catalog.data, who) == "COMBAT_PRONE":
 		return tr("COMBAT_PRONE")
-	return tr("COMBAT_PICK_TARGET") if _pending.is_valid() else (tr("COMBAT_YOUR_TURN") if me else tr("COMBAT_WAIT"))
+	if _pending.is_valid():
+		return tr("COMBAT_PICK_TARGET")
+	if me and not Sheet.is_hero(who):  # one of the party in its turn (v0.8.4.43.11)
+		return tr("COMBAT_TURN_OF").format({"name": str(who.get("name", ""))})
+	return tr("COMBAT_YOUR_TURN") if me else tr("COMBAT_WAIT")
 
 
 ## The hint text: «Попадание 65% · урон 4–11» (or the chance the foe fails its save), why advantage / disadvantage.
@@ -990,6 +1002,19 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 		_redrawing = false
 		return
 	_bar.clear_fight()
+	var who := GameState.fight_actor()
+	var c := Sheet.holder(s, who)
+	if not Sheet.is_hero(who):  # one of the party in its turn: its template's blows and spells (v0.8.4.43.11)
+		_draw_companion(s, data, who, me)
+	else:
+		_draw_hero(s, data, me)
+	_draw_shared(s, data, who, c, me)
+	_bar.tidy()  # the open filter is kept by its key however the sections changed
+	_redrawing = false
+
+
+## The hero's weapons by its hands and its spells by its sheet.
+func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 	var c := s.character
 	# Weapons.
 	var w := _tab_box("COMBAT_TAB_WEAPONS")
@@ -1086,10 +1111,59 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 				var sub := _button(sp, "Feat_" + said, slabel, me and swhy.is_empty())
 				sub.tooltip_text = str(sa["tip"])
 				sub.pressed.connect(func() -> void: _do(GameState.combat_feature(said)))
+
+
+## One of the hero's party in its turn (v0.8.4.43.11, as in BG3): its template's blows by what it holds (`Gear.actions`), a
+## Multiattack one press; the spells its template casts (`MonsterRules.castable`) — the same the AI picks from, on the same acts.
+func _draw_companion(s: GameSession, data: Dictionary, who: Dictionary, me: bool) -> void:
+	var w := _tab_box("COMBAT_TAB_WEAPONS")
+	for a: Dictionary in Sheet.template(data, who).get("actions", []):
+		var kind := str(a.get("kind", ""))
+		if not kind in ["melee", "ranged", "save"] or (kind == "save" and not MonsterRules.available(who, a)):
+			continue
+		var en := str(a["name_en"])
+		var b := Attack.of_action(data, who, a)
+		var n := FightAI.blows(data, who, a)
+		var dmg := " + ".join((b["pieces"] as Array).map(func(p: Dictionary) -> String: return str(p["dice"]).replace("d", tr("DICE_D"))))
+		var nm := str(a.get("name", en)) + (" ×%d" % n if n > 1 else "")
+		var text := tr("COMBAT_ATTACK").format({"name": nm, "hit": "%+d" % int(b["to_hit"]), "dmg": dmg}) if kind != "save" else nm
+		var rider := MonsterRules.effect_text(data, a)
+		var icon := "items/" + str(a["item"]) if not str(a.get("item", "")).is_empty() else "acts/attack"
+		var far := 0 if kind != "ranged" else int((a.get("range", [0, 0]) as Array)[1])
+		for how: Dictionary in [{"action": en}, {"action": en, "throw": true}]:
+			var thrown := bool(how.get("throw", false))
+			if thrown and not (kind == "melee" and Attack.throwable(b)):
+				continue
+			var cell := _action(w, ("BlowThrow_" if thrown else "Blow_") + en, text if not thrown else tr("COMBAT_THROW").format({"name": nm, "hit": "%+d" % int(b["to_hit"]), "dmg": dmg}), me,
+				func(t: String) -> String: return GameState.combat_act("attack", t, how),
+				func(t: String) -> String: return Acts.one("attack").can(s, data, who, t, how),
+				func(t: String) -> Dictionary: return CombatRules.blow_preview(s, data, who, t, how), "", far if not thrown else int((a.get("range", [0, 0]) as Array)[1]), icon)
+			_details.hook(cell, nm, text + ("\n" + rider if not rider.is_empty() else ""))
+	var casts := MonsterRules.castable(data, who)
+	if casts.is_empty() or Guise.has_body(who):
+		return
+	var sp := _tab_box("COMBAT_TAB_SPELLS")
+	for o: Dictionary in casts:
+		var id := str(o["id"])
+		var spell: Dictionary = data["spells"][id]
+		var slot := int(o["slot"])
+		var how := {"spell": id, "slot": slot, "per_day": bool(o.get("per_day", false))}
+		var label := "%s%s%s" % [spell.get("name", id), (" (%d)" % slot) if slot > 0 else "", tr("COMBAT_BONUS_SHORT") if CombatRules.spell_cost(data, id) == "bonus" else ""]
+		_act_sub = tr("DETAILS_CANTRIP") if int(spell.get("level", 0)) == 0 else tr("DETAILS_CIRCLE").format({"n": int(spell.get("level", 0))})
+		var ab := _spell_action(s, data, sp, "Cast_" + id, label, me, id,
+			func(t: String) -> String: return GameState.combat_act("cast", t, how),
+			func(t: String) -> String: return Acts.one("cast").can(s, data, who, t, how),
+			func(t: String) -> Dictionary: return ActionRules.as_by(s, data, who, id, {}, func() -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t)))
+		_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
+	_act_sub = ""
+
+
+## What anybody of the bar has alike: its features and stocks, the things at hand, the common acts.
+func _draw_shared(s: GameSession, data: Dictionary, who: Dictionary, c: Dictionary, me: bool) -> void:
 	# Features: limited uses with an action of their own, then the feature actions (v0.7.10).
 	var res := Stock.lines(c, data).filter(func(r: Dictionary) -> bool:
 		return str(Stock.table(data, c).get(str(r["id"]), {}).get("combat_cost", "action")) != "never")
-	var feats := FeatureRules.actions(s, data).filter(func(a: Dictionary) -> bool: return not str(a["id"]).begins_with("spell_"))
+	var feats := FeatureRules.actions(s, data, who).filter(func(a: Dictionary) -> bool: return not Sheet.is_hero(who) or not str(a["id"]).begins_with("spell_"))
 	if not res.is_empty() or not feats.is_empty():
 		var fb := _tab_box("COMBAT_TAB_FEATURES")
 		for fa: Dictionary in feats:
@@ -1098,12 +1172,12 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			if bool(fa["target"]):
 				var area := FeatureRules.aims(data, fid)
 				var tb := _action(fb, "Feat_" + fid, label, me, func(t: String) -> String: return GameState.combat_feature(fid, t),
-					func(t: String) -> String: return Acts.one("feature").can(s, data, CombatRules.player(s), t, {"id": fid}), func(_t: String) -> Dictionary: return {},
-					fid if area else "", FeatureRules.aim_ft(s, data, CombatRules.player(s), fid) if area else 0)
+					func(t: String) -> String: return Acts.one("feature").can(s, data, who, t, {"id": fid}), func(_t: String) -> Dictionary: return {},
+					fid if area else "", FeatureRules.aim_ft(s, data, who, fid) if area else 0)
 				tb.tooltip_text = str(fa["tip"])
 				_details.hook(tb, str(fa["name"]), str(fa["tip"]))
 			else:
-				var why := Acts.one("feature").can(s, data, CombatRules.player(s), "", {"id": fid})
+				var why := Acts.one("feature").can(s, data, who, "", {"id": fid})
 				var ub := _button(fb, "Feat_" + fid, label, me and why.is_empty())
 				ub.tooltip_text = str(fa["tip"]) + (("\n" + tr(why)) if not why.is_empty() and why != "COMBAT_NOT_YOUR_TURN" else "")
 				_details.hook(ub, str(fa["name"]), str(fa["tip"]))
@@ -1133,14 +1207,14 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			if fx.has("throw"):  # v0.7.12: flasks and the net at a foe
 				var spills := ItemRules.spills(fx["throw"])  # v0.8.4: a flask goes on a square too
 				item_btn = _action(ib, "Item_" + id, label, me, func(t: String) -> String: return GameState.combat_act("throw", t, {"item": id}),
-					func(t: String) -> String: return Acts.one("throw").can(s, data, CombatRules.player(s), t, {"item": id}), func(_t: String) -> Dictionary: return {}, id if spills else "",
+					func(t: String) -> String: return Acts.one("throw").can(s, data, who, t, {"item": id}), func(_t: String) -> Dictionary: return {}, id if spills else "",
 					60 if bool(fx["throw"].get("improvised", false)) else int(fx["throw"].get("range", 15)))
 			elif not sp_id.is_empty() and CombatRules.is_engine_spell(data, sp_id):  # v0.8.4.29.6: aimed as the spell is — a square, a friend, the chance
 				var by := ItemRules.spell_numbers(c, data, s.items, id)
 				item_btn = _spell_action(s, data, ib, "Item_" + id, label, me, sp_id,
 					func(t: String) -> String: return GameState.combat_act("item_spell", t, {"item": id}),
-					func(t: String) -> String: return Acts.one("item_spell").can(s, data, CombatRules.player(s), t, {"item": id}),
-					func(t: String) -> Dictionary: return ActionRules.as_by(s, data, CombatRules.player(s), sp_id, by,
+					func(t: String) -> String: return Acts.one("item_spell").can(s, data, who, t, {"item": id}),
+					func(t: String) -> Dictionary: return ActionRules.as_by(s, data, who, sp_id, by,
 						func() -> Dictionary: return CombatRules.cast_preview(s, data, sp_id, int(by["level"]), t)))
 			elif not sp_id.is_empty():
 				item_btn = _button(ib, "Item_" + id, label, me)
@@ -1153,12 +1227,9 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			_details.hook(item_btn, str(d.get("name", id)), DetailsPanel.item_text(c, data, s.items, id))
 	# Common.
 	var g := _tab_box("COMBAT_TAB_COMMON")
-	var hero := CombatRules.player(s)
-	for act: Act in Acts.on_tab(s, data, hero, "common"):
-		for row: Dictionary in act.buttons(s, data, hero):
+	for act: Act in Acts.on_tab(s, data, who, "common"):
+		for row: Dictionary in act.buttons(s, data, who):
 			_act_button(g, act, row, me)
-	_bar.tidy()  # the open filter is kept by its key however the sections changed
-	_redrawing = false
 
 
 ## The button of a spell of the hero or of a thing (v0.8.4.29.6, one maker for the Spells and the Items tab): no target — a press
@@ -1167,7 +1238,7 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 func _spell_action(s: GameSession, data: Dictionary, box: Control, node: String, label: String, me: bool, id: String, cast: Callable, can: Callable, preview: Callable) -> Button:
 	var spell: Dictionary = data["spells"].get(id, {})
 	var side := SpellEffects.picks_side(data, id)  # v0.7.50.1: a choice of friends, or of either side
-	var friends := side == "any" or (side == "friend" and not CombatRules.allies(s, false).is_empty())
+	var friends := side == "any" or (side == "friend" and (not CombatRules.allies(s, false).is_empty() or not Sheet.is_hero(GameState.fight_actor())))
 	var alone := side == "friend" and not friends
 	var jump := SpellEffects.spec(data, id).has("teleport")  # Misty Step: a square, not a body
 	if not jump and (alone or not friends and spell.has("heal_at_slot") or not friends and SpellEffects.self_spell(data, id) \
@@ -1238,7 +1309,7 @@ func _button(parent: Control, node_name: String, text: String, enabled: bool, ic
 func _icon_of(node_name: String, text: String) -> Array:
 	var s := GameState.session
 	var data := Catalog.data
-	var c := s.character
+	var c := Sheet.holder(s, GameState.fight_actor())
 	var kind := node_name.get_slice("_", 0)
 	var rest := node_name.trim_prefix(kind + "_")
 	var short := text.get_slice(" (", 0).trim_suffix(tr("COMBAT_BONUS_SHORT"))
@@ -1271,7 +1342,7 @@ func _disabled(parent: Control, text: String, icon := "") -> void:
 func _act_button(parent: Control, act: Act, row: Dictionary, me: bool) -> void:
 	var s := GameState.session
 	var data := Catalog.data
-	var hero := CombatRules.player(s)
+	var hero := GameState.fight_actor()
 	var id := act.id
 	var how: Dictionary = row["how"]
 	var text := str(row["text"]) + (tr("COMBAT_BONUS_SHORT") if act.cost(s, data, hero, how) == "bonus" else "")
@@ -1341,7 +1412,7 @@ var _pending_text := ""  ## the picked act's caption: what a hint says at a targ
 
 ## A concentration spell while another one is held (v0.7.13.1, as in BG3): «Прервать «Благословение»?» first.
 func _conc_guard(spell_id: String, go: Callable) -> String:
-	var held := GameState.concentration_conflict(spell_id)
+	var held := GameState.concentration_conflict(spell_id, GameState.fight_actor())
 	if held.is_empty():
 		return go.call()
 	_conc_ask = {"text": tr("CONC_SWITCH").format({"old": held, "new": Catalog.data["spells"][spell_id]["name"]}), "go": go}

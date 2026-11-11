@@ -20,6 +20,14 @@ func cost(_s: GameSession, _data: Dictionary, _f: Dictionary, how: Dictionary) -
 	return "bonus" if str(how.get("hand", "")) in ["off", "frenzy"] else "attack"
 
 
+## A familiar that only helps (5e: it cannot attack) does not strike in its own turn; its master's Pact of the Chain strikes
+## with it by `familiar_strike`, which asks `why`, not this.
+func can(s: GameSession, data: Dictionary, f: Dictionary, to: String = "", how: Dictionary = {}) -> String:
+	if bool(f.get("helper", false)):
+		return "COMBAT_HELPER_NO_ATTACK"
+	return super(s, data, f, to, how)
+
+
 func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dictionary) -> String:
 	var hand := str(how.get("hand", ""))
 	if hand == "off" and bool(CombatRules.cfg(data).get("offhand_needs_attack", true)) and not bool(CombatRules.points(s, data, f).get("attacked", false)):
