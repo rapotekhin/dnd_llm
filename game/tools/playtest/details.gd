@@ -27,6 +27,12 @@ func run() -> void:
 	var panel: DetailsPanel = sheet.find_children("ItemDetails", "PanelContainer", true, false)[0]
 	var a: Button = spells[0]
 	var b: Button = spells[1]
+	var scroll := a.get_parent()
+	while scroll != null and not scroll is ScrollContainer:
+		scroll = scroll.get_parent()
+	if scroll != null:
+		(scroll as ScrollContainer).ensure_control_visible(a)
+		await frames(2)
 	a.mouse_entered.emit()
 	await frames(2)
 	var title_a := panel.title()
@@ -38,6 +44,10 @@ func run() -> void:
 	await frames(2)
 	step("pinned: another hover does not change it", panel.title() == title_a and panel.pinned() == title_a, panel.title())
 	step("the pinned row is lit, the lock shows", a.modulate != Color.WHITE and find(panel, "DetailsUnpin").visible)
+	var ra := a.get_global_rect()  # v0.8.4.43.3: a card at the cursor; pinned with the cursor elsewhere — beside its row
+	var pr := panel.get_global_rect()
+	step("the pinned card stands beside its row, on the screen", panel.visible and (pr.position.x >= ra.end.x or pr.end.x <= ra.position.x)
+		and Rect2(Vector2.ZERO, panel.get_viewport_rect().size).encloses(pr) and pr.size.y < 560.0, "%s by %s" % [pr, ra])
 	await shot("sheet_pinned")
 	await press(find(panel, "DetailsUnpin"))
 	b.mouse_entered.emit()

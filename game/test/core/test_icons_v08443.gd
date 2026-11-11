@@ -8,6 +8,18 @@ var data: Dictionary
 func before_test() -> void:
 	data = Catalog.load_all()
 	IconRules.forget()
+	_no_art()
+
+
+## As before any art: the drawn files are not there for these tests (Anima draws them as it goes), the blanks are.
+func _no_art() -> void:
+	var root := IconRules.root(data)
+	for kind: String in DirAccess.get_directories_at(root):
+		if kind.begins_with("_") or kind == "marks":
+			continue
+		for f: String in DirAccess.get_files_at(root + kind):
+			if f.ends_with(".png"):
+				IconRules._exists[root + kind + "/" + f] = false
 
 
 func after_test() -> void:

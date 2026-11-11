@@ -42,7 +42,7 @@ func _ready() -> void:
 	_tabs = UiScenes.need(self, "%SheetTabs")
 	for i in TAB_TITLES.size():
 		_tabs.set_tab_title(i, tr(TAB_TITLES[i]))
-	_details = DetailsPanel.new(Vector2(0, 160))
+	_details = DetailsPanel.new(Vector2(0, 160), true)  # a card at the cursor (v0.8.4.43.3)
 	_details.name = "ItemDetails"
 	split.add_child(_details.column(ChatView.new(), 460))
 	_inv_setup()

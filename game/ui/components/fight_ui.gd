@@ -95,7 +95,7 @@ func setup(screen: Control) -> void:
 	_peace.assign([UiScenes.need(screen, "%Side"), UiScenes.need(screen, "%Strip"), UiScenes.need(screen, "%Chat")])
 	var box: VBoxContainer = UiScenes.need(screen, "%FightLogBox")
 	# The right side: a third — the static details, two thirds — the log (the author, v0.7.22.13).
-	_details = DetailsPanel.new(Vector2(0, 120))
+	_details = DetailsPanel.new(Vector2(0, 120), true)  # a card at the cursor, the column is the log's (v0.8.4.43.3)
 	_details.name = "CombatDetails"
 	_details.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_details.size_flags_stretch_ratio = 1.0

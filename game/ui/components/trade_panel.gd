@@ -69,7 +69,7 @@ func _ready() -> void:
 	deal_button = UiScenes.need(self, "%DealButton")
 	deal_button.pressed.connect(_on_deal)
 
-	_info = DetailsPanel.new(Vector2(0, 160))
+	_info = DetailsPanel.new(Vector2(0, 160), true)  # a card at the cursor (v0.8.4.43.3)
 	_info.name = "TradeItemInfo"
 	var chat := ChatView.new()  # the talk with the trader stays in view (the author)
 	chat.name = "TradeChat"

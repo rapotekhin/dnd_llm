@@ -35,7 +35,8 @@ func run() -> void:
 		if b != null:
 			await press(b)
 	await frames(2)
-	step("the details panel keeps its size", details != null and details.size.is_equal_approx(box_size), "%s → %s" % [box_size, details.size if details != null else Vector2.ZERO])
+	step("the card at the cursor stays on the screen", details != null and Rect2(Vector2.ZERO, details.get_viewport_rect().size).encloses(details.get_global_rect()),  # v0.8.4.43.3: sized by its text
+		"%s → %s" % [box_size, details.get_global_rect() if details != null else Rect2()])
 	var weight: Label = find(sheet, "CarriedWeight")
 	step("carried weight", weight != null and weight.text.contains("фнт"), weight.text if weight != null else "")
 	await shot("sheet_gear")
@@ -142,9 +143,8 @@ func run() -> void:
 	var cs := screen()
 	var cd: Control = find(cs, "CombatDetails")
 	var attack: Control = find(cs, "Attack_main")
-	if attack != null:
-		attack.mouse_entered.emit()
-	step("the attack's weapon in the details", cd != null and _text_of(cd).contains("1к8"), _text_of(cd).left(160) if cd != null else "")
+	var tip := str(attack.get("tip_body")) if attack != null else ""  # v0.8.4.43.3: the icon's own card at the cursor
+	step("the attack's weapon in its card", cd != null and tip.contains("1к8"), tip.left(160))
 	for card: Node in cs.find_children("Foe_*", "Button", true, false):
 		(card as Control).mouse_entered.emit()
 		break
