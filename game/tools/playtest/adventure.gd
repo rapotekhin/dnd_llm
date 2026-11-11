@@ -103,6 +103,7 @@ func run() -> void:
 	s.minute = 23 * 60
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	await stage("npc:npc_merchant")  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var trade: Button = find(screen(), "Trade_npc_merchant")
 	var away := SceneRules.absent(s, node("Catalog").data["world"], s.room_id)  # v0.7.14.2: at night he is at home
 	step("at night the trader is at home", trade == null and " ".join(away).contains("Ферн"), " ".join(away))

@@ -41,9 +41,11 @@ func run() -> void:
 	await frames(3)
 	step("a murder before witnesses", _chat(s).contains("Убийство: Кейра — видели"), _chat(s))
 	step("the Brod knows, the hero is wanted", s.wanted.has("brod") and s.attitude("npc_innkeeper") <= -3, "Бруно %d" % s.attitude("npc_innkeeper"))
+	await stage("npc:npc_innkeeper")  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var trade: Button = find(screen(), "Trade_npc_innkeeper")
 	step("Bruno does not trade", trade != null and trade.disabled and trade.tooltip_text == tr("SHOP_CLOSED_WANTED"), trade.tooltip_text if trade else "")
-	var body: Button = find(screen(), "Body_npc_mercenary")
+	await stage("body:npc_mercenary")  # v0.8.4.43.4: the body on the map — its menu's «Обыскать»
+	var body: Button = find(screen(), "BodySearch_npc_mercenary")
 	step("the body is here", body != null, "")
 	if body != null:
 		await press(body)

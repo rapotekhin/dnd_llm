@@ -30,6 +30,7 @@ func run() -> void:
 			item = id
 	var full := TradeRules.buy_price(s, data, "npc_merchant", item)
 	SocialRules.grant_discount(s, data, {"discount": "npc_merchant", "pct": 20, "until_day": s.day + 6})
+	await stage("npc:npc_merchant")  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var trade: Button = find(game, "Trade_npc_merchant")
 	if step("the merchant trades", trade != null and not trade.disabled):
 		await press(trade)
@@ -65,6 +66,7 @@ func run() -> void:
 	Being.of(s, "npc_merchant")["attitude"] = -3
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	await stage("npc:npc_merchant")  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var talk: Button = find(game, "Talk_npc_merchant")
 	var deal_b: Button = find(game, "Trade_npc_merchant")
 	step("a hostile merchant will not talk", talk != null and talk.disabled and talk.tooltip_text.contains("Враждебен"), talk.tooltip_text if talk != null else "")

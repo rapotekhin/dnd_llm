@@ -70,6 +70,7 @@ func run() -> void:
 			await press(exit)
 			await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	game = screen()
+	await stage("npc:npc_priestess")  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var trade: Button = find(game, "Trade_npc_priestess")
 	if step("trade with the priestess", trade != null and not trade.disabled):
 		await press(trade)

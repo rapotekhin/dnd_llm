@@ -5,6 +5,10 @@ extends RefCounted
 
 
 ## A wrapped line of the game's own words (never translated) in `parent`; with a null parent it is only made.
+## The words of a thing's acts (`PropRules.acts`): one table for the place window and the map's menu (v0.8.4.43.4).
+const THING_ACTS := {"read": "BTN_BOARD_READ", "open": "BTN_OPEN_SHORT", "take": "BTN_TAKE", "look": "BTN_LOOK_AT"}
+
+
 static func label(parent: Control, text: String, variation: String = "") -> Label:
 	var l := Label.new()
 	l.text = text

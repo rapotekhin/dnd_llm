@@ -82,6 +82,7 @@ func run() -> void:
 			return
 		await press(exit)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	await stage("npc:npc_smith")  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var trade: Button = find(game, "Trade_npc_smith")
 	if step("the smith trades", trade != null and not trade.disabled):
 		await press(trade)

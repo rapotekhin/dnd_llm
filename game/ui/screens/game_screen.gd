@@ -76,6 +76,8 @@ var _after := Callable()  # the act at the end of the walk (v0.8.2)
 var _menu: PanelContainer
 var _menu_box: VBoxContainer
 var _menu_ref := ""
+var _acts_menu: ActsMenu  ## the one menu of the map, read off the buttons staged in %ThingActs (v0.8.4.43.4)
+var _seen_refs := ""  ## who is drawn on the map now: the column lists the rest
 var _side: SidePanel
 var _field_room := ""  # the room the field showed last: a move inside it is walked, not jumped
 var _fight: FightUi
@@ -98,7 +100,7 @@ func _ready() -> void:
 	_fight = UiScenes.need(self, "%FightUi")
 	_fight.setup(self)
 	_field.cell_hovered.connect(_fight.on_hover)
-	_field.cell_right.connect(_fight.on_right)
+	_field.cell_right.connect(_on_right)
 	_dim = UiScenes.need(self, "%Dim")
 	_talk_card = UiScenes.need(self, "%TalkCard")
 	_partner_mark = UiScenes.need(self, "%PartnerMark")
@@ -150,6 +152,8 @@ func _ready() -> void:
 	side.approach_requested.connect(_approach)
 	side.walk_out_requested.connect(_leave_to)
 	side.touch_requested.connect(_touch)
+	side.context_requested.connect(_context)
+	side.seen = func(ref: String) -> bool: return _field.things.any(func(t: Dictionary) -> bool: return str(t["ref"]) == ref)
 	side.wait_requested.connect(func() -> void: _wait.open())
 	side.menu_requested.connect(func() -> void: _pause.open())
 	side.sheet_requested.connect(func() -> void: _sheet.open())
@@ -411,7 +415,7 @@ func _refresh_field(s: GameSession) -> void:
 		var who := str(GameState.world().npc(id).get("name", id))
 		walkers.append({"ref": "npc:" + id, "mark": who.left(1), "name": who.get_slice(" ", 0)})
 	for cr: Dictionary in CreatureRules.here(s, s.room_id):  # the hero's animals walk along
-		if str(cr["state"]) == PropertyRules.TAME or bool(cr.get("led", false)) or bool(cr.get("ally", false)):
+		if CreatureRules.with_hero(cr):
 			walkers.append({"ref": "cr:" + str(cr["id"]), "mark": str(cr["name"]).left(1), "name": str(cr["name"]).get_slice(" ", 0)})
 	_things = MapSpots.of(s, Catalog.data, view).filter(func(t: Dictionary) -> bool:
 		return str(t["kind"]) != "station" or _side.mark_has_acts(str(t["id"])))
@@ -429,8 +433,10 @@ func _refresh_field(s: GameSession) -> void:
 	_field_room = s.room_id
 	_field.place_hero(at, str(s.character.get("name", "?")).left(1), walkers)
 	_look(s, at if not _field.walking() else _field.hero_cell())
-	if _menu.visible:
+	if _acts_menu != null and _acts_menu.visible:
 		_show_menu(_menu_ref)
+	elif _menu_box.get_child_count() > 0:  # the staged buttons follow the world, as the open row did (v0.8.4.43.4)
+		_stage(_menu_ref)
 
 
 ## What the hero sees from `cell`: the rest of the map is dimmed (v0.8.3). A foe or a person shows only in view, a thing
@@ -446,6 +452,10 @@ func _look(s: GameSession, cell: Vector2i) -> void:
 		return now.has(at) or str(t["kind"]) in ["station", "prop", "trap"])
 	_rounds = WatchRules.by_rounds(s, Catalog.data, _field.map, now)
 	_field.queue_redraw()
+	var refs := ",".join(_field.things.map(func(t: Dictionary) -> String: return str(t["ref"])))
+	if refs != _seen_refs:  # one comes into sight or goes out of it: the column's list of the unseen follows (v0.8.4.43.4)
+		_seen_refs = refs
+		_side.refresh.call_deferred()
 
 
 ## A click on the map: the hero walks there by himself; a door is crossed by GameState.go, as the buttons do.
@@ -479,18 +489,48 @@ func _on_cell(cell: Vector2i) -> void:
 	_walk(plan["path"])
 
 
-## A click on someone or something: a person's menu opens from where it can be spoken to, a thing is used from beside it.
+## The left button on someone or something (v0.8.4.43.4, as in BG3): its main act — a person is talked to, a body
+## searched, a door passed, a station used, a thing opened or looked over in the place's window; the hero walks up first.
+## No main act (a foe, a trap, one who will not talk) — its menu.
 func _touch(ref: String) -> void:
-	var thing := ref.begins_with("prop:")
-	_menu.visible = false
+	_close_menu()
+	if ref.begins_with("prop:"):
+		_approach(ref, "touch", _side.use_thing.bind(ref))
+		return
+	if not _stage(ref):
+		return
+	var main := SidePanel.main_of(_menu_box, ref)
+	if main != null:
+		ActsMenu.press(main)
+		return
+	_context(ref)
+
+
+## The right button on someone or something (v0.8.4.43.4): its one menu. A door, a trap or a body is walked up to first —
+## their acts are done from beside them; the rest walk up when an act is picked.
+func _context(ref: String) -> void:
+	_close_menu()
 	if ref.begins_with("door:") or ref.begins_with("trap:") or ref.begins_with("body:"):
 		_approach(ref, "touch", _show_menu.bind(ref))
-	elif thing:
-		_approach(ref, "touch", _side.use_thing.bind(ref))
-	elif ref.begins_with("foe:"):  # v0.8.4.30: its menu — the blow, a look, a spell aimed at it
-		_show_menu(ref)
 	else:
-		_approach(ref, "touch" if ref.begins_with("station:") else "talk", _show_menu.bind(ref))
+		_show_menu(ref)
+
+
+## The right button on the map: the fight lets its picked act go; out of it the menu of what stands on the square.
+func _on_right(cell: Vector2i) -> void:
+	if _fight.active():
+		_fight.on_right(cell)
+		return
+	var s := GameState.session if GameState.has_session() else null
+	if s == null or s.in_conversation():
+		return
+	var ref := _field.ref_at(cell)
+	if ref.is_empty() or ref.begins_with("far:"):
+		var door := WalkRules.way_at(_field.map, s.room_id, cell)
+		if door.is_empty():
+			return
+		ref = "door:" + door
+	_context(ref)
 
 
 ## The hero walks into reach of `ref`, then the act. No way there or a talk going on — the act from where the hero stands.
@@ -549,33 +589,37 @@ func _leave_to(to: String) -> void:
 	_walk(plan["path"])
 
 
-func _show_menu(ref: String) -> void:
+## The buttons of `ref`'s menu built hidden in %ThingActs: the menu reads them, the left button presses its main one.
+func _stage(ref: String) -> bool:
 	_menu_ref = ref
 	for c: Node in _menu_box.get_children():
 		_menu_box.remove_child(c)
 		c.queue_free()
-	if not _side.menu(_menu_box, ref):
-		_menu.visible = false
+	_menu.visible = false
+	return _side.menu(_menu_box, ref)
+
+
+## The one menu of `ref` as a list with lists inside (v0.8.4.43.4), at its token on the map or at the cursor.
+func _show_menu(ref: String) -> void:
+	if not _stage(ref):
+		_close_menu()
 		return
-	for b: Node in _menu_box.find_children("*", "BaseButton", true, false):
-		if str(b.name).begins_with("Fold_"):  # a group's head opens its list in the menu, it does not close it (v0.8.4.36, the author's feedback)
-			(b as BaseButton).toggled.connect(func(_on: bool) -> void: _place_menu(ref))
-			continue
-		(b as BaseButton).pressed.connect(_close_menu)
-	_menu.visible = true
-	_place_menu(ref)
-
-
-## The menu fitted to what it shows now and kept on the screen beside `ref`.
-func _place_menu(ref: String) -> void:
-	await get_tree().process_frame  # a flow knows its height only after a layout
-	_menu.reset_size()
-	var at := _field.global_position + _field.cell_point(_cell_of(ref)) + Vector2(28, -20)
-	_menu.global_position = at.clamp(Vector2(8, 8), get_viewport_rect().size - _menu.size - Vector2(8, 8))
+	_close_menu()
+	_acts_menu = ActsMenu.of(_menu_box)
+	add_child(_acts_menu)
+	var cell := _cell_of(ref)
+	var at := get_global_mouse_position() + get_screen_position() - global_position
+	if cell.x >= 0:
+		at = _field.get_screen_position() + _field.cell_point(cell) + Vector2(_field.tile() / 2.0, 0)
+	_acts_menu.popup(Rect2i(Vector2i(at), Vector2i.ZERO))
 
 
 func _close_menu() -> void:
 	_menu.visible = false
+	if _acts_menu != null:
+		_acts_menu.hide()
+		_acts_menu.queue_free()
+		_acts_menu = null
 
 
 func _walk(steps: Array[Vector2i]) -> void:

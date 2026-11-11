@@ -204,6 +204,12 @@ static func joinable(c: Dictionary) -> bool:
 	return bool(c.get("kept", false)) and not bool(c.get("bound", false))
 
 
+## With the hero (v0.8.4.43.4): its own beast, one it leads, an ally — drawn beside the hero, a portrait of the party,
+## not a token of the room.
+static func with_hero(c: Dictionary) -> bool:
+	return str(c.get("state", "")) == PropertyRules.TAME or bool(c.get("led", false)) or bool(c.get("ally", false))
+
+
 ## Helpless: knocked out or bound — finished off without a fight.
 static func helpless(c: Dictionary) -> bool:
 	return str(c.get("state", "")) == "unconscious" or bool(c.get("bound", false))

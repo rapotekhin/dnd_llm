@@ -73,11 +73,13 @@ static func lowest_slot(c: Dictionary, data: Dictionary, spell_id: String, pendi
 
 
 static func slots_left(c: Dictionary, circle: int) -> int:
+	var most: Array = c.get("slots_max", [0, 0, 0, 0, 0])
 	if circle < 1 or circle > 5:
 		return 0
+	var top := int(most[circle - 1]) if circle <= most.size() else 0  # a short list has no higher circles
 	if Cheats.on(c, "slots"):  # the dev console's endless slots: one of every circle, never spent
-		return maxi(1, int(c.get("slots_max", [0, 0, 0, 0, 0])[circle - 1]))
-	return int(c.get("slots_max", [0, 0, 0, 0, 0])[circle - 1]) - Stock.spent(c, "slot_%d" % circle)
+		return maxi(1, top)
+	return top - Stock.spent(c, "slot_%d" % circle)
 
 
 ## {"spell_id", "slot"} when the cast can go (slot 0 = a cantrip), or {"reason"} for the master.

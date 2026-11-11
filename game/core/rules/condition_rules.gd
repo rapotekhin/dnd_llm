@@ -770,8 +770,8 @@ static func _blows_text(row_of: Dictionary) -> Array[String]:
 
 
 ## The statuses of anybody for the chips, the master and the card (v0.8.4.41: any creature, `who` of Sheet):
-## [{name, left, source, kind, text, does, condition}] — `does` is what its numbers do (boon_text), `kind` where it comes from
-## (a spell, a worn thing, a trait…). A trait's status counts even when nothing laid it yet (ItemRules.born_effects).
+## [{name, left, source, kind, text, does, condition, icon}] — `does` is what its numbers do (boon_text), `kind` where it comes
+## from (a spell, a worn thing, a trait…), `icon` its ref for IconRules (v0.8.4.43.4), `count` the level of exhaustion. A trait's status counts even when nothing laid it yet (ItemRules.born_effects).
 static func shown(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> Array[Dictionary]:
 	var c := Sheet.holder(s, who)
 	var out: Array[Dictionary] = []
@@ -791,15 +791,17 @@ static func shown(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO
 			text = SpellEffects.text(data, SpellEffects.spec(data, str(e["source"].get("id", ""))))
 		if text.is_empty():
 			text = ", ".join(does)
+		var icon := IconRules.ref("spells", str(e["source"].get("id", ""))) if id.is_empty() and kind == "spell" else IconRules.ref("conditions", id)
 		out.append({"condition": id, "name": title, "left": left_text(s, e), "source": str(e.get("source", {}).get("name", "")), "kind": kind,
-			"text": text, "does": ", ".join(does)})
+			"text": text, "does": ", ".join(does), "icon": icon})
 	if exhaustion(c) > 0:
 		out.append({"condition": "exhaustion", "name": "Истощение %d" % exhaustion(c), "left": "до долгого отдыха", "source": "", "kind": "engine",
-			"text": exhaustion_text(exhaustion(c)), "does": ""})
+			"text": exhaustion_text(exhaustion(c)), "does": "", "icon": IconRules.ref("conditions", "exhaustion"), "count": exhaustion(c)})
 	if not str(c.get("concentration", "")).is_empty():
 		var sp := str(c["concentration"])
 		var ends := int(c.get("concentration_ends", -1))
 		out.append({"condition": "concentration", "name": "Концентрация: %s" % data["spells"].get(sp, {}).get("name", sp),
 			"left": left_text(s, {"ends": {"at": ends}} if ends >= 0 else {"ends": {}}).replace("пока не снимут", "пока держится"),
-			"source": "", "kind": "spell", "does": "", "text": "Урон — спасбросок Телосложения (Сл 10 или половина урона), иначе заклинание прервётся."})
+			"source": "", "kind": "spell", "does": "", "text": "Урон — спасбросок Телосложения (Сл 10 или половина урона), иначе заклинание прервётся.",
+			"icon": IconRules.ref("spells", sp)})
 	return out

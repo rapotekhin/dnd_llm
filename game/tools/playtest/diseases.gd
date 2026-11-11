@@ -99,6 +99,7 @@ func _last_effects(s: GameSession) -> String:
 
 
 func _trade(gs: Node, npc: String) -> bool:
+	await stage("npc:" + npc)  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var trade: Button = find(screen(), "Trade_" + npc)
 	if not step("trade with " + npc, trade != null and not trade.disabled):
 		await shot("no_trade_" + npc)

@@ -30,7 +30,7 @@ func run() -> void:
 	var chips: Control = find(game, "EffectChips")
 	step("the poison chip over the input", chips != null and chips.visible and _text_of(chips).contains("Отравлен · 1 ч"), _text_of(chips) if chips != null else "")
 	var chip: Control = find(chips, "Chip_poisoned") if chips != null else null
-	step("its tooltip names the cause", chip != null and chip.tooltip_text.contains("яд в кружке"), chip.tooltip_text if chip != null else "")
+	step("its card names the cause", chip != null and (chip as IconSlot).tip_body.contains("яд в кружке"), (chip as IconSlot).tip_body if chip != null else "")
 	await shot("poison_chip")
 	step("wait an hour", str(gs.wait("hour")).is_empty())
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
@@ -194,6 +194,8 @@ func _text_of(n: Node) -> String:
 	var out := ""
 	for l: Node in n.find_children("*", "Label", true, false):
 		out += (l as Label).text + "\n"
+	for b: Node in n.find_children("*", "IconSlot", true, false):  # a status as an icon: its line «Отравлен · 1 ч» (v0.8.4.43.4)
+		out += (b as Button).text + "\n"
 	return out
 
 

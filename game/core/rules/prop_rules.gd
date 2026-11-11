@@ -283,6 +283,21 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		"summary": "Взято: %s%s" % [p["name"], (" — на глазах у хозяина" if seen else "")]}
 
 
+## What can be done with a thing of the room (v0.8.4.43.4): one list for the place window and the map's menu —
+## [{"act": "read" | "open" | "take" | "look", "why": ""}]. A board is read, a container opened, a thing taken (`why` — why
+## not, by plan_take), anything looked at closer by the master.
+static func acts(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if QuestGen.is_board(data, p):
+		out.append({"act": "read", "why": ""})
+	if ContainerRules.is_container(p):
+		out.append({"act": "open", "why": ""})
+	if not str(p.get("item_id", "")).is_empty():
+		out.append({"act": "take", "why": str(plan_take(s, data, {"prop_id": str(p["id"])}).get("reason", ""))})
+	out.append({"act": "look", "why": ""})
+	return out
+
+
 ## «Забрать всё» (просьба автора, after v0.7.8): the portable things of the room nobody owns, in order, as long as the
 ## hero can carry them (CharacterRules.capacity). {"take": [prop], "left": [prop too heavy]}.
 static func take_all_plan(s: GameSession, data: Dictionary) -> Dictionary:

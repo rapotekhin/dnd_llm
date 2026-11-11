@@ -47,7 +47,7 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 		out.append(t)
 	for c: Dictionary in CreatureRules.here(s, s.room_id):
 		var id := str(c["id"])
-		if str(c["state"]) == PropertyRules.TAME or bool(c.get("led", false)) or bool(c.get("ally", false)):
+		if CreatureRules.with_hero(c):
 			continue
 		var fell := Vector2i(int(c.get("x", -1)), int(c.get("y", -1)))
 		var at := _closest(spots, taken, fell) if cells.has(fell) else _seeded(spots, taken, "%d|%s" % [s.game_seed, id])

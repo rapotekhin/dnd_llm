@@ -85,11 +85,19 @@ func run() -> void:
 	s.room_id = "brod-tavern-hall"
 	node("EventBus").state_changed.emit()
 	await frames(3)
-	var talk := screen().find_children("Talk_*", "Button", true, false)
-	if step("someone to talk to", not talk.is_empty()):
-		await press(talk[0] as Button)
+	var person := {}
+	for th: Dictionary in field.things:
+		if str(th["kind"]) == "npc" and person.is_empty():
+			person = th
+	step("people stand on the map, not in the column", not person.is_empty() and screen().find_children("More_*", "Button", true, false).is_empty())
+	if step("someone to talk to", not person.is_empty()):
+		var at := Vector2i(int(person["x"]), int(person["y"]))
+		await _click(at)  # v0.8.4.43.4, as in BG3: the left button talks
 		await wait_until(func() -> bool: return s.in_conversation() and not gs.is_busy(), 60.0)
 		await frames(3)
+		step("a click on a person talks to it", s.in_conversation() and s.npc_id == str(person["id"]), s.npc_id)
+		var reach := int(node("Catalog").data["rules"]["map"]["reach"]["talk"])
+		step("the hero stopped in speaking reach", WalkRules.distance(field.hero_cell(), at) <= reach, str(WalkRules.distance(field.hero_cell(), at)))
 		step("the map dims under the partner", (find(screen(), "Dim") as Control).is_visible_in_tree() and (find(screen(), "PartnerCard") as Control).is_visible_in_tree())
 		step("the bar gives way to the talk", (find(screen(), "TalkActs") as Control).is_visible_in_tree() and not (find(screen(), "Hotbar") as Control).is_visible_in_tree())
 		var cell: Vector2i = field.hero_cell()
@@ -112,11 +120,12 @@ func run() -> void:
 	await shot("travelled")
 
 
-## v0.8.2: a click on a person walks up into speaking reach and opens the menu; a trade needs the hero right beside.
+## v0.8.4.43.4: the right button on a person opens its one menu where the hero stands — a list with lists inside; a trade
+## picked there walks right up (v0.8.2).
 func _people(s: GameSession, gs: Node, lib: Dictionary) -> void:
 	var trader := {}
 	for th: Dictionary in field.things:
-		if str(th["kind"]) == "npc" and find(screen(), "Trade_" + str(th["id"])) != null:
+		if str(th["kind"]) == "npc" and gs.world().is_trader(str(th["id"])):
 			trader = th
 	if not step("the trader stands on the map", not trader.is_empty(), str(field.things.size())):
 		return
@@ -128,20 +137,24 @@ func _people(s: GameSession, gs: Node, lib: Dictionary) -> void:
 	await frames(1)
 	await shot("people")
 	field.labels = false
-	await _click(at)
-	await wait_until(func() -> bool: return not field.walking(), 20.0)
-	await frames(2)
-	var menu: Control = find(screen(), "ThingMenu")
-	step("a click on a person opens the menu", menu.visible)
-	var reach := int(node("Catalog").data["rules"]["map"]["reach"]["talk"])
-	step("the hero stopped in speaking reach", WalkRules.distance(field.hero_cell(), at) == reach, str(WalkRules.distance(field.hero_cell(), at)))
+	var stood: Vector2i = field.hero_cell()
+	field.cell_right.emit(at)
+	await frames(3)
+	var menu := acts_menu() as ActsMenu
+	step("the right button on a person opens its menu", menu != null)
+	if menu == null:
+		return
+	step("the hero stays where it stood", not field.walking() and field.hero_cell() == stood)
+	step("a title and lists inside", menu.is_item_separator(0) and not menu.find_children("List_*", "PopupMenu", false, false).is_empty())
 	await shot("menu")
-	var trade: Button = find(menu, "Trade_" + str(trader["id"]))
-	await press(trade)
+	var trade: Button = find(find(screen(), "ThingActs"), "Trade_" + str(trader["id"]))
+	if not step("«Торговать» in the menu", trade != null and menu.id_of(trade) >= 0):
+		return
+	menu.id_pressed.emit(menu.id_of(trade))
 	await wait_until(func() -> bool: return not field.walking() and s.mode == GameSession.MODE_TRADE and not gs.is_busy(), 30.0)
 	await frames(2)
 	step("trade: the hero walks right up", WalkRules.distance(field.hero_cell(), at) <= 1 and s.mode == GameSession.MODE_TRADE, str(WalkRules.distance(field.hero_cell(), at)))
-	step("the menu closed", not menu.visible)
+	step("the menu closed", acts_menu() == null)
 	gs.leave_conversation()
 	await wait_until(func() -> bool: return not s.in_conversation() and not gs.is_busy(), 30.0)
 	await frames(2)

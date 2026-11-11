@@ -49,6 +49,7 @@ func run() -> void:
 	AllyRules.summon(s, data, "find_familiar")
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	await stage("summon:" + str(AllyRules.called(s)[0]["id"]))  # v0.8.4.43.4: the owl's portrait — its menu
 	var dismiss: Button = find(screen(), "Dismiss_" + str(AllyRules.called(s)[0]["id"]))
 	if step("the owl with the hero, «Отпустить»", dismiss != null):
 		await shot("summon")

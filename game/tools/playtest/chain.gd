@@ -23,6 +23,7 @@ func run() -> void:
 	if not await _walk(gs, ["brod-square", "brod-gate"]):
 		return
 	# playtest-2: the quest buttons vanished while talking to the giver — take it inside the conversation
+	await stage("npc:npc_captain")  # v0.8.4.43.4: a person on the map — its menu's buttons
 	if not await _press(gs, "Talk_npc_captain", "talk to the captain"):
 		return
 	step("in conversation with the captain", s.in_conversation() and s.npc_id == "npc_captain")

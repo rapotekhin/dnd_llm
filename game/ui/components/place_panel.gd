@@ -105,16 +105,18 @@ func _rebuild() -> void:
 		info.add_child(UiParts.label(null, head))
 		if not str(p.get("description", "")).is_empty():
 			info.add_child(UiParts.label(null, str(p["description"]), UiTheme.MUTED_LABEL))
-		if ContainerRules.is_container(p):
-			_button(row, "Container_" + pid, tr("BTN_OPEN_SHORT"), not GameState.is_busy(), func() -> String:
-				container_requested.emit(pid)
-				return "")
-		var take_why := str(PropRules.plan_take(s, data, {"prop_id": pid}).get("reason", ""))
-		if not str(p.get("item_id", "")).is_empty():
-			var t := _button(row, "Take_" + pid, tr("BTN_TAKE"), can_act and take_why.is_empty(), GameState.take_prop.bind(pid))
-			t.tooltip_text = take_why if not take_why.is_empty() else (tr("PLACE_TAKE_OWNED") if not owner.is_empty() else "")
-		_button(row, "Look_" + pid, tr("BTN_LOOK_AT"), can_act, func() -> String:
-			return "" if GameState.submit(tr("PLACE_LOOK_SAY").format({"name": p["name"]})) else "WAIT_BUSY")
+		for a: Dictionary in PropRules.acts(s, data, p):  # one list with the map's menu of a thing (v0.8.4.43.4)
+			var take_why := str(a["why"])
+			match str(a["act"]):
+				"open":
+					_button(row, "Container_" + pid, tr(UiParts.THING_ACTS["open"]), not GameState.is_busy(), func() -> String:
+						container_requested.emit(pid)
+						return "")
+				"take":
+					var t := _button(row, "Take_" + pid, tr(UiParts.THING_ACTS["take"]), can_act and take_why.is_empty(), GameState.take_prop.bind(pid))
+					t.tooltip_text = take_why if not take_why.is_empty() else (tr("PLACE_TAKE_OWNED") if not owner.is_empty() else "")
+				"look":
+					_button(row, "Look_" + pid, tr(UiParts.THING_ACTS["look"]), can_act, GameState.look_at.bind(pid))
 	for corpse: Dictionary in bodies:
 		_box.add_child(HSeparator.new())
 		var row := HBoxContainer.new()

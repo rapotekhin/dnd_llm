@@ -20,6 +20,8 @@ var cost := ""  ## "bonus" — a triangle in the corner, as the bonus action's m
 var tip_title := ""  ## the card's title; the text's first line when empty
 var tip_body := ""  ## the card's description under the line
 var drag_key := ""  ## the hotbar's key of this cell; "" — not dragged
+var meter := -1.0  ## 0…1: a bar along the bottom — a need's fill (v0.8.4.43.4); below 0 — none
+var meter_color := Color.WHITE
 var _dragging := false
 
 
@@ -144,6 +146,10 @@ func _draw() -> void:
 		var p := Vector2(r.end.x - w - 5, r.end.y - 5)
 		draw_rect(Rect2(p - Vector2(2, small), Vector2(w + 4, small + 3)), Color(0, 0, 0, 0.6))
 		draw_string(font, p, badge, HORIZONTAL_ALIGNMENT_LEFT, -1, small, UiTheme.ACCENT_BRIGHT * dim)
+	if meter >= 0.0:
+		var bar := Rect2(inner.position.x, r.end.y - 6, inner.size.x, 4)
+		draw_rect(bar, Color(0, 0, 0, 0.6))
+		draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(meter, 0.0, 1.0), bar.size.y)), meter_color * dim)
 	if cost == "bonus":
 		var o := Vector2(5, 5)
 		draw_colored_polygon(PackedVector2Array([o + Vector2(5, 0), o + Vector2(10, 9), o + Vector2(0, 9)]), UiTheme.WARN * dim)

@@ -97,9 +97,9 @@ func run() -> void:
 	await wait_until(func() -> bool: return not field.call("walking"), 20.0)
 	await frames(4)
 	step("a plain click walks up to it, not onto it", field.call("hero_cell") != at, "%s / %s" % [field.call("hero_cell"), at])
-	var thing: Node = find(screen(), "ThingMenu")
-	if thing != null:
-		thing.hide()
+	screen().call("_close_menu")
+	for w: Node in screen().find_children("*", "ModalFrame", true, false):  # the left button searched it: its window shut
+		(w as Control).visible = false
 	await _shift(true)
 	await click_cell(at)
 	await _shift(false)

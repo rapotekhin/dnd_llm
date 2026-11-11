@@ -28,6 +28,7 @@ func run() -> void:
 	step("info: checks so far", true, str(_count(gs, GameSession.KIND_CHECK)))
 	await shot("action")
 
+	await stage("npc:" + INNKEEPER)  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var talk: Button = find(screen(), "Talk_" + INNKEEPER)
 	if not step("talk button for the innkeeper", talk != null and not talk.disabled):
 		return
@@ -71,6 +72,7 @@ func run() -> void:
 
 
 func _trade(gs: Node) -> void:
+	await stage("npc:" + INNKEEPER)  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var trade: Button = find(screen(), "Trade_" + INNKEEPER)
 	if not step("trade button", trade != null and not trade.disabled):
 		return

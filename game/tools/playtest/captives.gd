@@ -96,6 +96,7 @@ func run() -> void:
 	if step("bind the goblin", bind != null and not bind.disabled):
 		await press(bind)
 		await frames(3)
+	await open_row("CreatureMore_" + str(gob["id"]))  # v0.8.4.43.4: its menu built again, as the right button builds it
 	var hand: Button = find(screen(), "Creature_hand_over_" + str(gob["id"]))
 	step("bound — the hero's prisoner, the guard can take it", str(gob.get("owner", "")) == OwnerRules.HERO and hand != null and not hand.disabled)
 	await shot("prisoner")

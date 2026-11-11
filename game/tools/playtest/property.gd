@@ -91,10 +91,10 @@ func run() -> void:
 		node("EventBus").state_changed.emit()
 		await frames(3)
 		var horse := str(PropertyRules.animals(s)[0]["id"]) if not PropertyRules.animals(s).is_empty() else ""
-		step("the horse's row on the panel", find(screen(), "CreatureLine_" + horse) != null)
+		step("the horse's portrait in the party", find(screen(), "Portrait_" + horse) != null)  # v0.8.4.43.4
 		await open_row("CreatureMore_" + horse)
 		step("its buttons: stay, let go", find(screen(), "Creature_lead_" + horse) != null and find(screen(), "Creature_release_" + horse) != null)
-		var line: Control = find(screen(), "CreatureLine_" + horse)
+		var line: Control = find(screen(), "Portrait_" + horse)
 		if line != null:
 			var sc := line.get_parent()
 			while sc != null and not (sc is ScrollContainer):

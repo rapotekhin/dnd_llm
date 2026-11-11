@@ -547,14 +547,17 @@ static func walk_of(c: Dictionary, data: Dictionary) -> int:
 ## the same rules as a spell's (Move, SightRules, WatchRules); a light lays its own only lit on the belt. Called by the sheet's
 ## refresh and the fighter's gear (Gear.follow).
 static func wear(c: Dictionary, data: Dictionary, session_items: Dictionary) -> void:
+	var was := {}  # "kind|id" → the uids it had: laid again, a status keeps its uid — a refresh, a load change nothing
 	for e: Dictionary in ConditionRules.effects(c).duplicate():
 		if str(e.get("source", {}).get("kind", "")) in [WORN, BORN]:
+			var key := "%s|%s" % [e["source"]["kind"], e["source"].get("id", "")]
+			was[key] = (was.get(key, []) as Array) + [int(e["uid"])]
 			ConditionRules.remove_effect(c, int(e["uid"]))
 	var born := born_rows(c, data, data["monsters"].get(str(c.get("monster", "")), {}))
 	for fid: String in born:  # a feature's or a trait's own (v0.8.4.26.1)
 		var own := wear_spec(c, data, {"wear": born[fid]["row"]})
 		own.merge({"condition": "", "ends": {}, "source": {"kind": BORN, "id": fid, "name": str(born[fid]["name"])}})
-		ConditionRules.add_effect(c, own)
+		_lay_again(c, own, was)
 	_thing_spells(c, data, session_items)
 	var lit := belt(c, data, session_items)
 	for id: String in CharacterRules.working_ids(c, data, session_items):
@@ -563,7 +566,21 @@ static func wear(c: Dictionary, data: Dictionary, session_items: Dictionary) -> 
 			continue
 		var e := wear_spec(c, data, d)
 		e.merge({"condition": "", "ends": {}, "source": {"kind": WORN, "id": real_id(id), "name": str(d.get("name", ""))}})
-		ConditionRules.add_effect(c, e)
+		_lay_again(c, e, was)
+
+
+## Lays a worn or a born status with the uid it had before the refresh, when it had one.
+static func _lay_again(c: Dictionary, e: Dictionary, was: Dictionary) -> void:
+	var key := "%s|%s" % [e["source"]["kind"], e["source"].get("id", "")]
+	var next := int(c.get("next_effect", 1))
+	var uid := ConditionRules.add_effect(c, e)
+	var old: Array = was.get(key, [])
+	if old.is_empty():
+		return
+	for x: Dictionary in ConditionRules.effects(c):
+		if int(x["uid"]) == uid:
+			x["uid"] = int(old.pop_front())
+			c["next_effect"] = next
 
 
 ## Regeneration (v0.8.4.36): a thing with the property heals its holder — in a fight at the start of its turn, `f` its fighter.

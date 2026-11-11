@@ -66,6 +66,7 @@ func run() -> void:
 	s.minute = 13 * 60
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	await stage("npc:npc_innkeeper")  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var trade: Button = find(screen(), "Trade_npc_innkeeper")
 	if step("trade with the innkeeper", trade != null and not trade.disabled):
 		await press(trade)

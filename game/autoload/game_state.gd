@@ -924,6 +924,12 @@ func take_all() -> String:
 	return ""
 
 
+## «Осмотреть» a thing of the room (the place window, the map's menu): the master looks closer. "" or a key.
+func look_at(prop_id: String) -> String:
+	var p := PropRules.find(session, session.room_id, prop_id)
+	return "" if submit(tr("PLACE_LOOK_SAY").format({"name": p.get("name", prop_id)})) else "WAIT_BUSY"
+
+
 ## «Взять» in the place window (v0.7.22.7): one thing of the room by the engine; the master narrates only an owner who
 ## saw it (v0.7.22.20, #6). "" or a localization key.
 func take_prop(prop_id: String) -> String:

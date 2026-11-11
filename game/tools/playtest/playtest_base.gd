@@ -176,19 +176,36 @@ func press(button: BaseButton) -> void:
 	await frames(2)
 
 
-## The hero walks up to a person of the map as after a click, the menu that opens is shut again (v0.8.4.2).
+## The hero walks up to a person of the map into speaking reach (v0.8.4.2), nothing else: a click would talk (v0.8.4.43.4).
 func go_to(ref: String) -> void:
-	screen().call("_touch", ref)
+	screen().call("_approach", ref, "talk", func() -> void: pass)
 	await frames(3)
-	(find(screen(), "ThingMenu") as Control).visible = false
 
 
-## Opens the acts of a row of the side panel (v0.7.22.23): «More_<npc>» or «CreatureMore_<creature>».
+## Opens the acts of a person or a creature (v0.7.22.23): its row of the side panel («More_<npc>», «CreatureMore_<id>»)
+## when the map does not draw it; else its menu's buttons, built as the right button builds them (v0.8.4.43.4).
 func open_row(node_name: String) -> void:
 	var b := find(screen(), node_name) as BaseButton
+	if b == null and (node_name.begins_with("More_") or node_name.begins_with("CreatureMore_")):
+		await stage(("cr:" + node_name.trim_prefix("CreatureMore_")) if node_name.begins_with("CreatureMore_") else "npc:" + node_name.trim_prefix("More_"))
+		return
 	if b != null and b.text != "▴":
 		await press(b)
 		await frames(2)
+
+
+## The buttons of `ref`'s one menu built (v0.8.4.43.4) without the list shown: a playtest presses them as a pick would.
+func stage(ref: String) -> void:
+	screen().call("_stage", ref)
+	await frames(2)
+
+
+## The map's one menu when it is open (v0.8.4.43.4), else null.
+func acts_menu() -> PopupMenu:
+	var m: Variant = screen().get("_acts_menu")
+	if m == null or not is_instance_valid(m) or not (m as PopupMenu).visible:
+		return null
+	return m as PopupMenu
 
 
 ## Presses the control named `node_name` on the current screen; false if there is none or it is disabled.

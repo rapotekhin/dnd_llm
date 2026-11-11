@@ -43,8 +43,8 @@ func run() -> void:
 	step("the kitchen's door is shut to a stranger", kitchen != null and kitchen.text.contains("заперто"), kitchen.text if kitchen else "")
 	await press(kitchen)
 	await frames(4)
-	var menu: Control = find(game, "ThingMenu")
-	step("the exit walks up to the door and opens its menu", s.room_id == "brod-tavern-hall" and menu.visible and find(menu, "DoorWay_force") != null)
+	var menu: Control = find(game, "ThingActs")  # v0.8.4.43.4: the one menu, read off these buttons
+	step("the exit walks up to the door and opens its menu", s.room_id == "brod-tavern-hall" and acts_menu() != null and find(menu, "DoorWay_force") != null)
 	step("a knock, for the owner is near", find(menu, "DoorWay_ask") != null)
 	step("no fire or force left on the exits tab", find(find(game, "Bar"), "DoorWay_force") == null)
 	await shot("door_menu")
@@ -55,7 +55,7 @@ func run() -> void:
 	s.permits.clear()
 	node("EventBus").state_changed.emit()
 	await frames(3)
-	menu.visible = false
+	screen().call("_close_menu")
 
 	s.options.assign(["Спросить про эль"])
 	var at := s.minute

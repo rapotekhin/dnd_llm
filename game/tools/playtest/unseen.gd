@@ -38,6 +38,7 @@ func run() -> void:
 	await _say(gs, "Осматриваюсь у ворот: что тут плохо лежит?")
 	step("no attitude change for looking", s.attitude("npc_captain") == att, "attitude %d → %d" % [att, s.attitude("npc_captain")])
 	step("info: the master", true, _last_master(s))
+	await stage("npc:npc_captain")  # v0.8.4.43.4: a person on the map — its menu's buttons
 	await press(find(screen(), "Talk_npc_captain"))
 	await wait_until(func() -> bool: return not gs.is_busy(), 120.0)
 	step("still invisible in the conversation", ConditionRules.invisible(s.character, data))

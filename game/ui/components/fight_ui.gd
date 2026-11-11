@@ -37,8 +37,7 @@ var _pending_feet := 0  # how far the picked act gets, 0 — no rim on the map
 var _acts: Array[Dictionary] = []  # the acts with a target of this redraw: the tabs below and a foe's menu
 var _act_tab := ""  # the tab being drawn, and the list inside it for a foe's menu
 var _act_sub := ""
-var _pop: PopupMenu  # a foe's menu
-var _pop_acts: Array[Dictionary] = []  # what its lines do
+var _pop: ActsMenu  # a foe's menu, the one menu's builder (v0.8.4.43.4)
 var _second := {}  # {act, to}: the next click picks a square of the act
 var _redrawing := false
 var _on := false
@@ -494,53 +493,27 @@ func _foe_menu(id: String) -> void:
 		_pop.queue_free()
 	var f := CombatRules.fighter(GameState.session, id)
 	var aim := FightGrid.aim_id(FightGrid.shown(f))
-	_pop = PopupMenu.new()
+	_pop = ActsMenu.new()
 	_pop.name = "FoeMenu"
-	_pop.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	add_child(_pop)
 	_pop.add_separator(str(f.get("name", "")))
-	_pop_acts = []
-	_pop.id_pressed.connect(_foe_pick)
-	_pop.add_item(tr("BTN_CARD"), 0)  # v0.8.4.41: its card, free — a look is no act
-	_pop.set_item_tooltip(_pop.item_count - 1, tr("BTN_CARD_TIP"))
-	_pop_acts.append({"act": func(to: String) -> String:
-		EventBus.card_requested.emit(to)
-		return "", "target": id})
-	var lists := {}
+	_pop.add_act(_pop, tr("BTN_CARD"), tr("BTN_CARD_TIP"), false, _foe_pick.bind(func(to: String) -> String:  # v0.8.4.41: its card,
+		EventBus.card_requested.emit(to)  # free — a look is no act
+		return "", id))
 	for row: Dictionary in _acts:
 		var target := aim if not str(row["aims"]).is_empty() else id
 		var why := str((row["check"] as Callable).call(target))
 		if not bool(row["on"]) or why == "COMBAT_BAD_TARGET":
 			continue
-		var list := _pop_list(_pop_list(_pop, lists, tr(str(row["tab"]))), lists, str(row["sub"]))
-		list.add_item(str(row["text"]), _pop_acts.size())
-		var at := list.item_count - 1
-		list.set_item_disabled(at, not why.is_empty())
-		list.set_item_tooltip(at, tr(why) if not why.is_empty() else _preview_text((row["preview"] as Callable).call(target)))
-		_pop_acts.append({"act": row["act"], "target": target})
+		_pop.add_act(_pop.list_of([tr(str(row["tab"])), str(row["sub"])]), str(row["text"]),
+			tr(why) if not why.is_empty() else _preview_text((row["preview"] as Callable).call(target)), not why.is_empty(), _foe_pick.bind(row["act"], target))
 	var cell := FightGrid.shown(f)
 	_pop.popup(Rect2i(Vector2i(_field.get_screen_position() + _field.cell_point(cell) + Vector2(_field.tile() / 2.0, 0)), Vector2i.ZERO))
 
 
-## The list `title` inside `parent`, made at first need; no title — `parent` itself.
-func _pop_list(parent: PopupMenu, lists: Dictionary, title: String) -> PopupMenu:
-	if title.is_empty():
-		return parent
-	var key := str(parent.get_instance_id()) + title
-	if not lists.has(key):
-		var list := PopupMenu.new()
-		list.name = "FoeList_" + title
-		list.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		list.id_pressed.connect(_foe_pick)
-		parent.add_child(list)
-		parent.add_submenu_node_item(title, list)
-		lists[key] = list
-	return lists[key]
-
-
-func _foe_pick(i: int) -> void:
-	_pending = _pop_acts[i]["act"]
-	_press(str(_pop_acts[i]["target"]))
+func _foe_pick(act: Callable, target: String) -> void:
+	_pending = act
+	_press(target)
 
 
 ## The mouse over a square: the path and its cost, the area of the picked spell, what a blow would do.

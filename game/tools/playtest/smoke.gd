@@ -112,6 +112,7 @@ func _sheet(gs: Node, game: Control) -> void:
 
 func _trade(gs: Node, game: Control) -> void:
 	var npc := "npc_innkeeper"
+	await stage("npc:" + npc)  # v0.8.4.43.4: a person on the map — its menu's buttons
 	var trade: Button = find(game, "Trade_" + npc)
 	if not step("trade button for the innkeeper", trade != null and not trade.disabled):
 		return

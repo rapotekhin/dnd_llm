@@ -45,7 +45,7 @@ func run() -> void:
 		if i == 0:
 			await shot("cellar_ways")
 		var force: Button = find(screen(), "DoorWay_force")
-		if force == null or not (find(screen(), "ThingMenu") as Control).visible:
+		if force == null or acts_menu() == null:
 			break
 		await press(force)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)

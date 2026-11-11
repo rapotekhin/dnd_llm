@@ -6,6 +6,8 @@ extends HFlowContainer
 
 
 var compact := false  ## small chips with the name only; the time and the cause go to the meta for a panel (v0.7.22.30)
+var icons := 0  ## icons of this side instead of chips (v0.8.4.43.4, as in BG3): the name, the time and the cause at the cursor
+var who: Dictionary = {}  ## whose statuses: the hero when empty, else `who` of Sheet (a companion)
 
 
 func _init() -> void:
@@ -21,9 +23,12 @@ func refresh() -> void:
 	visible = false
 	if not GameState.has_session():
 		return
-	var list := ConditionRules.shown(GameState.session, Catalog.data)
+	var list := ConditionRules.shown(GameState.session, Catalog.data, Sheet.HERO if who.is_empty() else who)
 	visible = not list.is_empty()
 	for e: Dictionary in list:
+		if icons > 0:
+			_icon(e)
+			continue
 		var chip := PanelContainer.new()
 		chip.name = "Chip_" + (str(e["condition"]) if not str(e["condition"]).is_empty() else "boon")
 		chip.theme_type_variation = UiTheme.CARD
@@ -47,3 +52,22 @@ func refresh() -> void:
 		l.add_theme_color_override("font_color", UiTheme.ACCENT if cond.is_empty() else UiTheme.MUTED if cond == "concentration" else UiTheme.WARN)
 		chip.add_child(l)
 		add_child(chip)
+
+
+## A status as an icon (v0.8.4.43.4): «Отравлен · 1 ч» is its line, the cause and what it does the card's body.
+func _icon(e: Dictionary) -> void:
+	var cond := str(e["condition"])
+	var cell := IconSlot.make(str(e.get("icon", IconRules.ref("conditions", cond))), "%s · %s" % [e["name"], e["left"]], icons)
+	cell.name = "Chip_" + (cond if not cond.is_empty() else "boon")
+	cell.tip_title = str(e["name"])
+	cell.tooltip_text = str(e["left"])
+	var body: Array[String] = []
+	if not str(e["source"]).is_empty():
+		body.append(tr("EFFECT_SOURCE").format({"source": e["source"]}))
+	if not str(e["text"]).is_empty():
+		body.append(str(e["text"]))
+	cell.tip_body = "\n".join(body)
+	if e.has("count"):
+		cell.badge = str(e["count"])
+	cell.focus_mode = Control.FOCUS_NONE
+	add_child(cell)

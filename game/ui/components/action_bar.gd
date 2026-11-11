@@ -34,7 +34,7 @@ var end_turn: Button  ## the round button of a fight
 var picked_circle := 0  ## the circle the next spell is cast at in a fight; 0 — the lowest that fits
 
 var _body: HBoxContainer
-var _portrait: Button
+var _portrait: Portrait
 var _hands: GridContainer
 var _sets: HBoxContainer
 var _counters: HBoxContainer
@@ -66,13 +66,10 @@ func _init() -> void:
 	_body.name = "Hotbar"
 	_body.add_theme_constant_override("separation", 10)
 	col.add_child(_body)
-	_portrait = Button.new()
+	_portrait = Portrait.of("", 112)  # one drawing with the left column's portraits (v0.8.4.43.4)
 	_portrait.name = "HeroPortrait"
-	_portrait.custom_minimum_size = Vector2(112, 112)
-	_portrait.focus_mode = Control.FOCUS_NONE
-	_portrait.flat = true
+	_portrait.numbers = true
 	_portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_portrait.draw.connect(_draw_portrait)
 	_body.add_child(_portrait)
 	var weapons := VBoxContainer.new()
 	weapons.add_theme_constant_override("separation", GAP)
@@ -303,8 +300,7 @@ func _cells_of(key: String) -> Array:
 func _lay() -> void:
 	if not is_inside_tree() or GameState.session == null:
 		return
-	_portrait.queue_redraw()
-	_portrait.tooltip_text = _hero_tip()
+	_portrait.show_of(GameState.session, Catalog.data, Sheet.HERO, str(GameState.session.character.get("name", "")))
 	_lay_hands()
 	_lay_counters()
 	_lay_grid()
@@ -595,26 +591,3 @@ func _lay_rests() -> void:
 			(cell as BaseButton).disabled = true
 		_rests.add_child(cell)
 
-
-## The portrait: the hero's letter on its ring of HP, the HP under it.
-func _draw_portrait() -> void:
-	var s := GameState.session
-	if s == null:
-		return
-	var c := s.character
-	var r := _portrait.size
-	var centre := r / 2
-	var rad := minf(r.x, r.y) / 2 - 4
-	var hp := int(c.get("hp", 0))
-	var top := maxi(1, int(c.get("max_hp", 1)))
-	_portrait.draw_circle(centre, rad, UiTheme.PANEL_RAISED)
-	_portrait.draw_arc(centre, rad, 0, TAU, 48, UiTheme.BORDER, 3.0)
-	_portrait.draw_arc(centre, rad, -PI / 2, -PI / 2 + TAU * clampf(float(hp) / top, 0, 1), 48, UiTheme.hp_color(float(hp) / top), 4.0)
-	var font := _portrait.get_theme_font("font")
-	_portrait.draw_string(font, centre + Vector2(-rad, 12), str(c.get("name", "?")).left(1), HORIZONTAL_ALIGNMENT_CENTER, rad * 2, 44, UiTheme.ACCENT_BRIGHT)
-	_portrait.draw_string(font, centre + Vector2(-rad, rad - 12), "%d/%d" % [hp, top], HORIZONTAL_ALIGNMENT_CENTER, rad * 2, 15, UiTheme.TEXT)
-
-
-func _hero_tip() -> String:
-	var c := GameState.session.character
-	return "%s\nHP %d/%d · КД %d" % [c.get("name", ""), int(c.get("hp", 0)), int(c.get("max_hp", 0)), int(c.get("ac", 10))]

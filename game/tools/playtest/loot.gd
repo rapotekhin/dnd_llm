@@ -46,9 +46,9 @@ func run() -> void:
 	if not step("the body lies here", not body.is_empty(), str(CreatureRules.here(s, s.room_id))):
 		return
 	var cid := str(body["id"])
-	screen().call("_touch", "cr:" + cid)
-	await wait_until(func() -> bool: return find(screen(), "ThingMenu").visible, 10.0)
-	var act: Button = find(find(screen(), "ThingMenu"), "Creature_search_" + cid)
+	screen().call("_context", "cr:" + cid)  # v0.8.4.43.4: the right button — its one menu
+	await wait_until(func() -> bool: return acts_menu() != null, 10.0)
+	var act: Button = find(find(screen(), "ThingActs"), "Creature_search_" + cid)
 	if not step("its menu says «Обыскать»", act != null):
 		return
 	step("and «Спрятать»", find(screen(), "Creature_hide_" + cid) != null)

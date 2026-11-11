@@ -10,6 +10,7 @@ signal menu_requested
 signal approach_requested(ref: String, reach: String, act: Callable)  ## v0.8.2: the hero walks up, then the act
 signal walk_out_requested(to: String)  ## v0.8.4.2: the exit button walks there
 signal touch_requested(ref: String)  ## v0.8.4.2: the hero walks up to a thing of the map, its menu opens
+signal context_requested(ref: String)  ## v0.8.4.43.4: the right button on a portrait — its one menu
 signal wait_requested
 signal sheet_requested
 signal map_requested
@@ -53,6 +54,9 @@ var _exit_list: Container  ## the ways out, under «Выходы ▾» on the st
 var _open := ""  # the row whose acts are open ("npc:<id>", "cr:<id>"), closed when the hero leaves the room
 var _open_room := ""
 var _near_ref := ""  # the person whose acts are being built: its buttons walk up first
+## Is a ref drawn on the map now (v0.8.4.43.4)? Set by the screen; the people it shows stay off the list — the map is
+## where they are. Unset (the panel alone): everybody is listed.
+var seen := Callable()
 
 
 func _ready() -> void:
@@ -114,13 +118,26 @@ func menu(box: Container, ref: String) -> bool:
 		var n := GameState.world().npc(id)
 		var a := s.attitude(id)
 		var att := GameSession.attitude_word(Catalog.data, a)
+		_line(str(n.get("name", id)), false)  # the menu's title, then who it is (v0.8.4.43.4)
+		_line(UiParts.partner_line(s, Catalog.data, id), true).name = "Role_" + id
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
 		box.add_child(row)
-		_npc_head(row, s, n, id, a, att, SocialRules.refuses(s, Catalog.data, id), can_act)
-		_line("%s · %s" % [n.get("role", ""), att], true)
+		(_npc_head(row, s, n, id, a, att, SocialRules.refuses(s, Catalog.data, id), can_act) as Button).text = tr("BTN_TALK")
 		_npc_acts(s, n, id, can_act)
 		ok = true
+	elif ref.begins_with("summon:"):  # a creature a spell called (v0.8.4.43.4: its portrait's menu)
+		var called := AllyRules.called(s)
+		var texts := AllyRules.summon_lines(s, Catalog.data)
+		for i in called.size():
+			if str(called[i]["id"]) == id:
+				_line(texts[i], false)
+				var acts := _acts("SummonActs_" + id)
+				UiParts.card_button(acts, id)
+				_flow(acts, tr("BTN_SUMMON_DISMISS"), _try.bind(GameState.dismiss_summon.bind(id)), can_act, "Dismiss_" + id)
+				ok = true
+	elif ref.begins_with("prop:"):
+		ok = _prop_menu(s, id, can_act)
 	elif ref.begins_with("cr:"):
 		for cr: Dictionary in CreatureRules.here(s, s.room_id):
 			if str(cr["id"]) == id:
@@ -160,9 +177,28 @@ func _foe_menu(s: GameSession, id: String, can_act: bool) -> bool:
 		_flow(acts, tr("BTN_FOE_INSPECT"), _try.bind(GameState.inspect.bind(id)), can_act and looked.is_empty(), "FoeInspect_" + id,
 			tr("BTN_FOE_INSPECT_TIP") if looked.is_empty() else tr(looked))
 		UiParts.card_button(acts, id)
-		_spell_acts(acts, id, can_act)
+		var groups := {}
+		_spell_acts(_group(groups, "spells", id), id, can_act)  # a list of its own in the menu (v0.8.4.43.4)
+		_fold(acts, groups, id, false)
 		return true
 	return false
+
+
+## A thing of the map (v0.8.4.43.4): what PropRules.acts lets — read a board, open, take, look closer by the master.
+func _prop_menu(s: GameSession, id: String, can_act: bool) -> bool:
+	var p := PropRules.find(s, s.room_id, id)
+	if p.is_empty():
+		return false
+	_line(str(p["name"]), false)
+	var acts := _acts("PropActs_" + id)
+	var ref := "prop:" + id
+	var does := {"read": board_requested.emit.bind(id), "open": container_requested.emit.bind(id),
+		"take": _try.bind(GameState.take_prop.bind(id)), "look": _try.bind(GameState.look_at.bind(id))}
+	for a: Dictionary in PropRules.acts(s, Catalog.data, p):
+		var why := str(a["why"])
+		_flow(acts, tr(UiParts.THING_ACTS[a["act"]]), _near(ref, "touch", does[a["act"]]), (can_act or a["act"] in ["read", "open"]) and why.is_empty(),
+			"Prop_%s_%s" % [a["act"], id], why)
+	return true
 
 
 ## The spells the hero may aim at `target` out of a fight, a button each: cast at once (v0.8.4.30).
@@ -253,8 +289,22 @@ func _mark_acts(box: Container, ref: String) -> bool:
 		copy.disabled = b.disabled
 		copy.tooltip_text = b.tooltip_text
 		copy.pressed.connect(_near(ref, "touch", b.pressed.emit))
+		copy.name = "Mark_" + str(b.name)
 		box.add_child(copy)
 	return not buttons.is_empty()
+
+
+## The left button's act among the menu's buttons built in `box` (v0.8.4.43.4, as in BG3: talk, search, use, pass); null —
+## none or grey, the menu opens instead. A foe, a trap, a thing of no main act have none: their acts are asked.
+static func main_of(box: Container, ref: String) -> BaseButton:
+	var kind := ref.get_slice(":", 0)
+	if not MAIN.has(kind):
+		return null
+	var pattern := str(MAIN[kind]) + ("*" if kind == "station" else ref.substr(kind.length() + 1))
+	for b: Node in box.find_children(pattern, "BaseButton", true, false):
+		if not (b as BaseButton).disabled and not b.is_queued_for_deletion():
+			return b as BaseButton
+	return null
 
 
 ## A thing of the map: its own window, a body or a plain thing — the place's.
@@ -303,22 +353,7 @@ func _rebuild() -> void:
 	var world := GameState.world()
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 
-	_heading(str(c.get("name", "")))
-	var hp := _line(tr("SIDE_HERO_LINE").format({"race": c.get("race_name", ""), "class": c.get("class_name", ""), "level": int(c.get("level", 1)),
-		"hp": c["hp"], "max": c["max_hp"], "ac": c["ac"]}) + ((" · +%d врем." % int(c["temp_hp"])) if int(c.get("temp_hp", 0)) > 0 else ""), false)  # big test #19 (v0.7.22.3)
-	hp.name = "HeroHp"
-	if int(c["hp"]) * 2 <= int(c["max_hp"]):
-		hp.add_theme_color_override("font_color", UiTheme.BAD)
-	_hp_bar(c)
-	var next_xp := LevelUp.xp_for(Catalog.data, int(c.get("level", 1)) + 1)
-	var xp := tr("SIDE_HERO_XP").format({"xp": int(c.get("xp", 0)), "next": next_xp}) if int(c.get("level", 1)) < LevelUp.max_level(c, Catalog.data) else ""
-	_line(" · ".join([Money.format(Ledger.balance(s)), xp].filter(func(x: String) -> bool: return not x.is_empty())), true).name = "HeroMoney"
-	_festival_line(s, world)
-	if NeedRules.on(s):
-		_needs(s, can_act)
-	var chips := EffectChips.new()  # what is on the hero, under the hero (v0.8.1)
-	_content.add_child(chips)
-	chips.refresh()
+	_party(s, world, can_act)
 	var column := _content
 	_content = _bar.section(ActionBar.DEEDS)
 	_craft_row(s, can_act)
@@ -348,53 +383,7 @@ func _rebuild() -> void:
 	if not s.in_conversation():
 		_meeting(s, can_act)  # v0.7.22.12: the foes did not notice the hero; the hero is a captive
 	if not s.in_conversation():
-		var npcs := s.npcs_here(world.world, s.room_id)
-		if not npcs.is_empty():
-			_subheading("SIDE_PEOPLE")
-			for id: String in npcs:
-				_npc_row(s, world, id, can_act)
-		var called := AllyRules.called(s)
-		if not called.is_empty():  # v0.7.22.22: the creatures a spell called
-			_subheading("SIDE_WITH_YOU")
-			var texts := AllyRules.summon_lines(s, Catalog.data)
-			for i in called.size():
-				var srow := HBoxContainer.new()
-				srow.add_theme_constant_override("separation", 6)
-				_content.add_child(srow)
-				var sl := Label.new()
-				sl.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-				sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-				sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				sl.text = texts[i]
-				srow.add_child(sl)
-				var sid := str(called[i]["id"])
-				var db := _small(srow, tr("BTN_SUMMON_DISMISS"), _try.bind(GameState.dismiss_summon.bind(sid)), can_act)
-				db.name = "Dismiss_" + sid
-		for away: String in SceneRules.absent(s, Catalog.data["world"], s.room_id):  # v0.7.14.2: their hours
-			_line(away, true)
-		for body: Dictionary in CrimeRules.bodies_here(s, Catalog.data):  # v0.7.14: the body of a killed NPC
-			if bool(body["searched"]):
-				_line(str(body["name"]), true)
-				continue
-			var bid := str(body["npc_id"])
-			var bb := _button(tr("BTN_SEARCH_BODY").format({"name": body["name"]}), _try.bind(GameState.search_body.bind(bid)), can_act)
-			bb.name = "Body_" + bid
-		var here := CreatureRules.here(s, s.room_id)  # v0.7.22.11: the foes a fight left here
-		var beasts := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) == PropertyRules.TAME)
-		var beaten := here.filter(func(cr: Dictionary) -> bool: return not str(cr["state"]) in [PropertyRules.TAME, PetRules.WILD])
-		var wild := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) == PetRules.WILD)
-		if not beaten.is_empty():
-			_subheading("SIDE_CREATURES")
-		for cr: Dictionary in beaten:
-			_creature_row(s, cr, can_act)
-		if not wild.is_empty():  # v0.7.43: wild beasts to tame
-			_subheading("SIDE_WILD")
-		for cr: Dictionary in wild:
-			_creature_row(s, cr, can_act)
-		if not beasts.is_empty():  # v0.7.27: the hero's own animals
-			_subheading("SIDE_ANIMALS")
-		for cr: Dictionary in beasts:
-			_creature_row(s, cr, can_act)
+		_unseen(s, world, can_act)
 		for qid: String in XpRules.quests_here(s, Catalog.data["world"]):
 			var q: Dictionary = XpRules.quests(Catalog.data["world"])[qid]
 			var qb := _button(tr("BTN_QUEST").format({"action": q["action"]}), _try.bind(GameState.complete_quest.bind(qid)), can_act)
@@ -509,11 +498,101 @@ func _rebuild() -> void:
 		(_exit_list.get_parent() as Control).custom_minimum_size = Vector2(330, mini(_exit_list.get_child_count() * 38, 420))
 
 
-## The hero's life as a bar under the line of numbers.
-func _hp_bar(c: Dictionary) -> void:
-	var bar := UiParts.hp_line(int(c["hp"]), int(c["max_hp"]), int(c.get("temp_hp", 0)), 10.0, 2)  # temporary hits in blue (v0.8.4.30)
-	bar.name = "HeroBar"
-	_content.add_child(bar)
+## The hero and those with it as portraits, as in BG3 (v0.8.4.43.4, the author): the ring of HP, the AC on a shield, the
+## statuses and the needs as icons; the coins, the experience and the festival at the cursor of the hero's portrait. The
+## hero's portrait opens the sheet; a companion's acts on the left button as on the map (a follower talks), its menu on
+## the right one.
+func _party(s: GameSession, world: WorldView, can_act: bool) -> void:
+	var data := Catalog.data
+	var box := VBoxContainer.new()
+	box.name = "Party"
+	box.add_theme_constant_override("separation", 8)
+	_content.add_child(box)
+	var hero := _member(box, s, Sheet.HERO, str(s.character.get("name", "")), "", 96)
+	if NeedRules.on(s):
+		_needs(s, hero, can_act)
+	for id: String in Being.followers(s):
+		_member(box, s, Sheet.who(s, data, id), world.npc_name(id), "npc:" + id, 56)
+	for m: Dictionary in AllyRules.called(s):  # v0.7.22.22: the creatures a spell called
+		_member(box, s, m, str(m["name"]), "summon:" + str(m["id"]), 48)
+	for cr: Dictionary in CreatureRules.here(s, s.room_id):  # the hero's beasts and those led along walk with it
+		if CreatureRules.with_hero(cr):
+			_member(box, s, cr, str(cr["name"]), "cr:" + str(cr["id"]), 48)
+
+
+## One of the party: its portrait, its name, a bar of HP and its statuses as icons. The hero's info column; `ref` "" —
+## the hero.
+func _member(box: VBoxContainer, s: GameSession, who: Dictionary, title: String, ref: String, side: int) -> VBoxContainer:
+	var row := HBoxContainer.new()
+	row.name = "Member_" + (ref.replace(":", "_") if not ref.is_empty() else "hero")
+	row.add_theme_constant_override("separation", 10)
+	box.add_child(row)
+	var p := Portrait.of(title, side)
+	p.name = "Portrait_" + (ref.get_slice(":", 1) if not ref.is_empty() else "hero")
+	p.show_of(s, Catalog.data, who, title)
+	row.add_child(p)
+	if ref.is_empty():
+		p.pressed.connect(sheet_requested.emit)
+	else:
+		p.pressed.connect(func() -> void: touch_requested.emit(ref))
+		_on_right(p, context_requested.emit.bind(ref))
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	info.add_theme_constant_override("separation", 4)
+	row.add_child(info)
+	var name_l := UiParts.label(info, title, UiTheme.HEADING if ref.is_empty() else "")
+	name_l.name = "Name_" + p.name.trim_prefix("Portrait_")
+	name_l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_l.clip_text = true
+	var bar := UiParts.hp_line(p.hp, p.top, p.temp, 10.0 if ref.is_empty() else 7.0, 2)  # temporary hits in blue (v0.8.4.30)
+	bar.name = "HeroBar" if ref.is_empty() else "Bar_" + p.name.trim_prefix("Portrait_")
+	info.add_child(bar)
+	var chips := EffectChips.new()  # what is on it (v0.8.1), icons since v0.8.4.43.4
+	chips.icons = 30 if ref.is_empty() else 24
+	chips.who = {} if ref.is_empty() else who
+	if not ref.is_empty():
+		chips.name = "EffectChips_" + p.name.trim_prefix("Portrait_")
+	chips.add_theme_constant_override("h_separation", 4)
+	info.add_child(chips)
+	chips.refresh()
+	return info
+
+
+## Who is in the room but not drawn on the map now (v0.8.4.43.4, the author: «люди сцены — только на карте; список — для
+## тех, кого не видно на карте»): out of sight, without a square. A row each, as before; with no screen — everybody.
+func _unseen(s: GameSession, world: WorldView, can_act: bool) -> void:
+	var listed := func(ref: String) -> bool: return not seen.is_valid() or not bool(seen.call(ref))
+	var followers := Being.followers(s)
+	var npcs := s.npcs_here(world.world, s.room_id).filter(func(id: String) -> bool: return not followers.has(id) and listed.call("npc:" + id))
+	if not npcs.is_empty():
+		_subheading("SIDE_UNSEEN" if seen.is_valid() else "SIDE_PEOPLE")
+	for id: String in npcs:
+		_npc_row(s, world, id, can_act)
+	for away: String in SceneRules.absent(s, Catalog.data["world"], s.room_id):  # v0.7.14.2: their hours
+		_line(away, true)
+	for body: Dictionary in CrimeRules.bodies_here(s, Catalog.data):  # v0.7.14: the body of a killed NPC
+		var bid := str(body["npc_id"])
+		if not listed.call("body:" + bid):
+			continue
+		if bool(body["searched"]):
+			_line(str(body["name"]), true)
+			continue
+		var bb := _button(tr("BTN_SEARCH_BODY").format({"name": body["name"]}), _try.bind(GameState.search_body.bind(bid)), can_act)
+		bb.name = "Body_" + bid
+	var here := CreatureRules.here(s, s.room_id).filter(func(cr: Dictionary) -> bool:  # v0.7.22.11: the foes a fight left here
+		return not CreatureRules.with_hero(cr) and listed.call("cr:" + str(cr["id"])))
+	var beaten := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) != PetRules.WILD)
+	var wild := here.filter(func(cr: Dictionary) -> bool: return str(cr["state"]) == PetRules.WILD)
+	if not beaten.is_empty():
+		_subheading("SIDE_CREATURES")
+	for cr: Dictionary in beaten:
+		_creature_row(s, cr, can_act)
+	if not wild.is_empty():  # v0.7.43: wild beasts to tame
+		_subheading("SIDE_WILD")
+	for cr: Dictionary in wild:
+		_creature_row(s, cr, can_act)
 
 
 ## Out of a fight the hotbar's class and items (v0.8.4.43, as in BG3): the ready spells, the uses of features and the
@@ -675,6 +754,8 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 ## The groups of a person's acts (v0.8.4.31, the author's feedback): a header «Дела ▸» opens its list under the row; a group of
 ## one act shows it in the row itself.
 const ACT_GROUPS: Array[String] = ["talk", "deals", "services", "life", "spells"]
+## The left button's act on the map by the kind of a ref: the name of its button in the menu (`main_of`).
+const MAIN := {"npc": "Talk_", "body": "BodySearch_", "cr": "Creature_search_", "door": "DoorPass_", "station": "Mark_"}
 
 
 ## The services of any person (v0.8.4.35): a button each, a mark on a thing one per thing it fits when there are several.
@@ -702,13 +783,16 @@ func _group(groups: Dictionary, key: String, id: String) -> HFlowContainer:
 	return groups[key]
 
 
-func _fold(acts: HFlowContainer, groups: Dictionary, id: String) -> void:
-	var attack := acts.get_child(acts.get_child_count() - 1)  # the attack stays last and apart
-	var at := acts.get_child_count() - 1
+func _fold(acts: HFlowContainer, groups: Dictionary, id: String, attack_last := true) -> void:
+	var attack := acts.get_child(acts.get_child_count() - 1) if attack_last else null  # the attack stays last and apart
+	var at := acts.get_child_count() - (1 if attack_last else 0)
 	for key: String in ACT_GROUPS:
 		if not groups.has(key):
 			continue
 		var box: HFlowContainer = groups[key]
+		if box.get_child_count() == 0:  # no spell aimed at it, no service: no empty list
+			box.free()
+			continue
 		if box.get_child_count() == 1:
 			var only := box.get_child(0)
 			box.remove_child(only)
@@ -732,7 +816,8 @@ func _fold(acts: HFlowContainer, groups: Dictionary, id: String) -> void:
 		acts.move_child(head, at)
 		at += 1
 		_content.add_child(box)
-	acts.move_child(attack, acts.get_child_count() - 1)
+	if attack != null:
+		acts.move_child(attack, acts.get_child_count() - 1)
 
 
 func _npc_head(row: HBoxContainer, s: GameSession, n: Dictionary, id: String, a: int, att: String, refuses: bool, can_act: bool) -> Control:
@@ -887,42 +972,27 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		b.tooltip_text = str(w["text"])
 
 
-## Food, water, sleep as three small bars under the hero (v0.7.23), «Поесть» and «Попить» beside them.
-func _needs(s: GameSession, can_act: bool) -> void:
+## Food, water, sleep as three icons under the hero (v0.7.23; icons with their fill since v0.8.4.43.4), «Поесть» and
+## «Попить» on the hotbar.
+func _needs(s: GameSession, info: VBoxContainer, can_act: bool) -> void:
 	var data := Catalog.data
 	var row := HBoxContainer.new()
 	row.name = "Needs"
-	row.add_theme_constant_override("separation", 10)
-	_content.add_child(row)
+	row.add_theme_constant_override("separation", 4)
+	info.add_child(row)
 	for need: String in NeedRules.KINDS:
 		var v := NeedRules.value(s, data, need)
 		var st := NeedRules.stage(s, data, need)
-		var col := VBoxContainer.new()
-		col.name = "Need_" + need
-		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		col.add_theme_constant_override("separation", 2)
-		col.mouse_filter = Control.MOUSE_FILTER_STOP
-		col.tooltip_text = "%s %d/100%s" % [NeedRules.cfg(data)[need]["name"], roundi(v), (" — " + str(st["chip"])) if not st.is_empty() else ""]
-		row.add_child(col)
-		var l := Label.new()
-		l.text = str(st.get("chip", NeedRules.cfg(data)[need]["name"]))
-		l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		l.theme_type_variation = UiTheme.MUTED_LABEL
-		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		var title := str(NeedRules.cfg(data)[need]["name"])
+		var cell := IconSlot.make("ui/" + need, "%s %d/100" % [title, roundi(v)], 30)
+		cell.name = "Need_" + need
+		cell.tip_title = title
+		cell.tooltip_text = "%d/100%s" % [roundi(v), (" — " + str(st["chip"])) if not st.is_empty() else ""]
+		cell.meter = v / 100.0
+		cell.meter_color = UiTheme.hp_color(v / 100.0)  # what is left, on the scale of a bar of HP
 		if not st.is_empty():
-			l.add_theme_color_override("font_color", UiTheme.WARN if v >= 20.0 else UiTheme.BAD)
-		col.add_child(l)
-		var bar := ProgressBar.new()
-		bar.max_value = 100.0
-		bar.value = v
-		bar.show_percentage = false
-		bar.custom_minimum_size = Vector2(0, 6)
-		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var fill_col := UiTheme.OK if v >= 50.0 else UiTheme.WARN if v >= 20.0 else UiTheme.BAD
-		bar.add_theme_stylebox_override("fill", UiTheme.box(fill_col, fill_col, 0, 0, 2))
-		bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 2))
-		col.add_child(bar)
+			cell.badge = "!"
+		row.add_child(cell)
 	# Only the acts that do good now: the row takes no height when there is nothing to do.
 	var specs: Array = []
 	if NeedRules.can_eat(s, data).is_empty():
@@ -1253,7 +1323,7 @@ func _being_row(key: String, more_name: String, head: Callable) -> bool:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	_content.add_child(row)
-	_on_right(head.call(row), key)
+	_on_right(head.call(row), _toggle.bind(key))
 	_more(row, more_name, key)
 	return _open == key
 
@@ -1270,12 +1340,12 @@ func _more(row: HBoxContainer, node_name: String, key: String) -> void:
 	row.add_child(m)
 
 
-## The right button on a row opens its acts, as in BG3 (the UI audit П4).
-func _on_right(control: Control, key: String) -> void:
+## The right button on a row opens its acts, on a portrait its menu — as in BG3 (the UI audit П4).
+func _on_right(control: Control, act: Callable) -> void:
 	control.gui_input.connect(func(ev: InputEvent) -> void:
 		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
 			control.accept_event()
-			_toggle(key))
+			act.call())
 
 
 ## Opens a row (one at a time) or closes it; the panel is rebuilt after the click is done.
@@ -1336,14 +1406,6 @@ func _trap(to: String, disarm: bool, id: String) -> void:
 		EventBus.message.emit(tr(err))
 
 
-func _heading(text: String) -> void:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.theme_type_variation = UiTheme.HEADING
-	_content.add_child(l)
-
-
 func _subheading(key: String) -> void:
 	var l := Label.new()
 	l.text = key
@@ -1361,22 +1423,6 @@ func _weather_line(s: GameSession) -> void:
 	l.name = "WeatherLine"
 	l.mouse_filter = Control.MOUSE_FILTER_STOP
 	l.tooltip_text = "\n".join(WeatherRules.effects(s, Catalog.data, k))
-
-
-## The nearest festival under the date (v0.7.44): «★ Бродская ярмарка — через 5 дней»; all near ones in the hint.
-func _festival_line(s: GameSession, world: WorldView) -> void:
-	var near := CalendarRules.upcoming(s, Catalog.data, world.world)
-	if near.is_empty():
-		return
-	var e: Dictionary = near[0]
-	var when := tr("SIDE_FESTIVAL_ON").format({"left": CalendarRules.days_word(int(e["left"]))}) if bool(e["on"]) \
-		else tr("SIDE_FESTIVAL_IN").format({"in": int(e["in"]), "days": CalendarRules.days_noun(int(e["in"]))})
-	var l := _line("★ %s — %s" % [e["name"], when], not bool(e["on"]))
-	l.name = "FestivalLine"
-	if bool(e["on"]):
-		l.add_theme_color_override("font_color", UiTheme.ACCENT)
-	l.mouse_filter = Control.MOUSE_FILTER_STOP
-	l.tooltip_text = "\n".join(near.map(func(x: Dictionary) -> String: return CalendarRules.line(world.world, x, true)))
 
 
 func _line(text: String, muted: bool) -> Label:
