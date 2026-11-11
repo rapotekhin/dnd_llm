@@ -245,7 +245,6 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 		s.combat["field"] = (source["field"] as Dictionary).duplicate()
 	if source.get("arena") is Dictionary:  # v0.7.45: a bout one to one by the arena's rule
 		s.combat["arena"] = (source["arena"] as Dictionary).duplicate(true)
-		s.combat["nonlethal"] = ArenaRules.yield_bout(s)
 	var ring := ArenaRules.ring(s, data)  # v0.8.4.5: its sides and its crowd
 	s.combat["crowd"] = ring.get("crowd", [])
 	FightGrid.put(player(s), FightGrid.free_near(s, data, ring["hero"]) if ring.has("hero") else _hero_square(s, data))
@@ -1781,7 +1780,7 @@ static func can_react(s: GameSession, data: Dictionary, r: Dictionary, t: Dictio
 	var me := Sheet.holder(s, r)
 	if bool(r.get("reacted", false)) or ConditionRules.incapacitated(me) or ConditionRules.has(me, "charmed"):
 		return false
-	if Sheet.is_hero(r) and (int(me.get("hp", 0)) <= 0 or FeatureRules.policy(s) == "never"):
+	if (Sheet.is_hero(r) and int(me.get("hp", 0)) <= 0) or FeatureRules.policy(s, r, "opportunity") == "never":
 		return false
 	return FightGrid.veiled(s, data, r, t).is_empty() and not ConditionRules.invisible(Sheet.holder(s, t), data)
 

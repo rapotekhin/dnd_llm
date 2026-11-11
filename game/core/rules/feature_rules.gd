@@ -26,9 +26,78 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["class_features"]
 
 
-## What happens to a reaction or a prompt of `who`: "ask" (the player is asked), "always", "never".
-static func policy(s: GameSession, who: Dictionary = Sheet.HERO) -> String:
-	return str(s.settings.get("reactions", "always")) if Sheet.is_hero(who) else "always"
+const POLICIES: Array[String] = ["ask", "always", "never"]
+
+
+## What happens to the reaction or the prompt `id` of `who`: "ask" (the player is asked), "always", "never". Its own choice
+## of that reaction (v0.8.4.43.7, as in BG3) first; the hero's not chosen — the settings' common one. A companion or a foe
+## is never asked: «never» holds, anything else is «always».
+static func policy(s: GameSession, who: Dictionary = Sheet.HERO, id: String = "") -> String:
+	var own := "" if id.is_empty() else str(Sheet.record(s, who).get("reacts", {}).get(reaction_key(id), ""))
+	if Sheet.is_hero(who):
+		return own if POLICIES.has(own) else str(s.settings.get("reactions", "always"))
+	return "never" if own == "never" else "always"
+
+
+## The key a reaction is chosen by: a spell's own id (Shield answers as «shield» in the hero's window and a companion's act).
+static func reaction_key(id: String) -> String:
+	return id.trim_prefix("spell_")
+
+
+## "" when `who` may choose `p` for a reaction: only the hero is asked.
+static func choose_why(who: Dictionary, p: String) -> String:
+	return "" if POLICIES.has(p) and (p != "ask" or Sheet.is_hero(who)) else "REACTIONS_BAD_CHOICE"
+
+
+## Keeps the choice `p` of the reaction `id` on the record of `who`. "" or why not.
+static func choose(s: GameSession, who: Dictionary, id: String, p: String) -> String:
+	var stop := choose_why(who, p)
+	if not stop.is_empty():
+		return stop
+	var rec := Sheet.record(s, who, true)
+	if not rec.has("reacts"):
+		rec["reacts"] = {}
+	rec["reacts"][reaction_key(id)] = p
+	return ""
+
+
+## The reactions `who` has, as the book lists them: the rows of `rules.reactions` it has, then the spells with a reaction
+## it can cast. [{id, name, tip, policy}].
+static func reaction_list(s: GameSession, data: Dictionary, who: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var c := Sheet.holder(s, who)
+	var table: Dictionary = data["rules"].get("reactions", {})
+	for id: String in table:
+		if id.begins_with("_"):
+			continue
+		var row: Dictionary = table[id]
+		if not _has_reaction(s, data, who, c, row):
+			continue
+		out.append({"id": id, "name": str(row["name"]), "tip": str(row.get("tip", ""))})
+	var spells: Array = SpellRules.ready(c).duplicate()
+	if not Sheet.is_hero(who):
+		for x: Dictionary in Sheet.template(data, who).get("spellcasting", {}).get("spells", []):
+			spells.append(str(x["id"]))
+	for sid: Variant in spells:
+		var sp: Dictionary = data["spells"].get(str(sid), {})
+		if not sp.is_empty() and not str(SpellEffects.spec(data, str(sid)).get("reaction", "")).is_empty() \
+				and not out.any(func(r: Dictionary) -> bool: return r["id"] == str(sid)):
+			out.append({"id": str(sid), "name": str(sp["name"]), "tip": str(sp.get("casting_time", ""))})
+	for r: Dictionary in out:
+		r["policy"] = policy(s, who, str(r["id"]))
+	return out
+
+
+static func _has_reaction(s: GameSession, data: Dictionary, who: Dictionary, c: Dictionary, row: Dictionary) -> bool:
+	if bool(row.get("all", false)):
+		return true
+	if (row.get("features", []) as Array).any(func(f: Variant) -> bool: return has(c, str(f))):
+		return true
+	if row.has("style") and CharacterRules.style(c, str(row["style"])):
+		return true
+	if row.has("prop") and Sheet.prop(s, data, who, str(row["prop"])):
+		return true
+	return row.has("template") and (Sheet.template(data, who).get("reactions", []) as Array).any(func(r: Dictionary) -> bool: return str(r.get("id", "")) == str(row["template"]))
 
 
 static func has(c: Dictionary, id: String) -> bool:
@@ -312,7 +381,7 @@ static func after_hit(s: GameSession, data: Dictionary, f: Dictionary, b: Dictio
 	if not oh.is_empty():
 		_open_hand(s, data, f, t, oh, lines)
 	if bool(b.get("melee", false)) and has(c, "divine_smite") and not smite_slots(c).is_empty():
-		var pol := policy(s, f)
+		var pol := policy(s, f, "divine_smite")
 		if pol == "ask":
 			var options: Array[Dictionary] = []
 			for lv: int in smite_slots(c):

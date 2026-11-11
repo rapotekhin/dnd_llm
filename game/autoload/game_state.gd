@@ -730,11 +730,25 @@ func _combat_do(why: String, act: Callable) -> String:
 	return ""
 
 
-## «Оглушать, а не убивать» (v0.7.22.11, big test #44): a melee blow that brings a foe to 0 HP knocks it out.
-func combat_nonlethal(on: bool) -> void:
-	if session != null and CombatRules.active(session):
-		session.combat["nonlethal"] = on
-		EventBus.state_changed.emit()
+## A passive of `who` on or off (v0.8.4.43.7, ToggleRules): a cell of the hotbar's «Пассивные» — «Не убивать» (v0.7.22.11),
+## Reckless Attack, a stunning strike. "" or a reason.
+func set_toggle(id: String, on: bool, who: String = Being.HERO) -> String:
+	var w := Sheet.who(session, Catalog.data, who)
+	return _act("toggle", {"toggle": [func() -> String: return ToggleRules.why(session, Catalog.data, w, id),
+		func() -> Array: return _quiet(ToggleRules.put(session, Catalog.data, w, id, on))]})
+
+
+## The choice `p` («ask», «always», «never») of the reaction `id` of `who` (v0.8.4.43.7, FeatureRules.choose): the
+## book's «Реакции». "" or a reason.
+func choose_reaction(id: String, p: String, who: String = Being.HERO) -> String:
+	var w := Sheet.who(session, Catalog.data, who)
+	return _act("react", {"react": [func() -> String: return FeatureRules.choose_why(w, p),
+		func() -> Array: return _quiet(FeatureRules.choose(session, w, id, p))]})
+
+
+## A rule that only answers "" or a reason, done as an act of `_act` that says nothing.
+static func _quiet(_why: String) -> Array:
+	return []
 
 
 ## A spell in a fight: engine spells resolve at once; others spend the slot and go to the master (it costs the action).

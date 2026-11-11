@@ -46,7 +46,7 @@ func test_a_nonlethal_blow_knocks_out() -> void:
 	var s := _hero()
 	var f := _fight(s, [{"monster": "goblin", "col": 0}])[0]
 	TestUtils.beside(s, f)
-	s.combat["nonlethal"] = true
+	s.combat["spare_blow"] = true  # the striker's «Не убивать» (v0.8.4.43.7)
 	s.combat["melee_strike"] = true
 	var lines: Array[String] = []
 	Harm.take(s, data, f, 999, lines)

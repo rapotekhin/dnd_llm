@@ -53,7 +53,7 @@ func test_a_bout_to_surrender_knocks_out_and_nobody_dies() -> void:
 	var s := _session()
 	_bout(s)
 	assert_bool(ArenaRules.yield_bout(s)).is_true()
-	assert_bool(bool(s.combat["nonlethal"])).is_true()
+	assert_bool(ToggleRules.on(s, data, Sheet.HERO, "nonlethal")).is_true()  # fixed on in a bout to surrender (v0.8.4.43.7)
 	assert_array(CombatRules.allies(s)).is_empty()
 	var foe := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	var lines: Array[String] = []
@@ -159,7 +159,7 @@ func test_the_blood_pit_is_to_the_death() -> void:
 	var s := _session("brod-pit")
 	_bout(s, PIT)
 	assert_bool(ArenaRules.yield_bout(s)).is_false()
-	assert_bool(bool(s.combat["nonlethal"])).is_false()
+	assert_bool(ToggleRules.on(s, data, Sheet.HERO, "nonlethal")).is_false()
 	while not CombatRules.is_player_turn(s):
 		CombatRules.next_actor(s, data)
 	assert_str(Acts.one("surrender").can(s, data, CombatRules.player(s))).is_equal("COMBAT_NO_SURRENDER_PIT")

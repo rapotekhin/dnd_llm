@@ -7,7 +7,8 @@ extends PanelContainer
 ## spell slots by circle (a press picks the circle in a fight); under it the tabs of kinds. Only icons: what a cell is
 ## shows at the cursor. Cells go where `HotbarLayout` puts them; one is dragged to another slot, off the bar, or onto it
 ## from the sheet; the layout is the profile's (SaveManager.hotbar). The side panel fills the peace's cells, `FightUi`
-## the fight's: each into `section(key)`, then `tidy()`. In a conversation the bar gives way to the acts with the partner.
+## the fight's: each into `section(key)`, then `tidy()`; the passives (v0.8.4.43.7) the bar lays itself, in both. In a
+## conversation the bar gives way to the acts with the partner.
 
 signal circle_picked(circle: int)
 
@@ -16,13 +17,15 @@ const GROUP := "hotbar"  ## the bar's group: a window that keeps it in sight (th
 const KEYS := {"BAR_PLACE": ["peace", "common"], "BAR_CLASS": ["peace", "class"], "BAR_ITEMS": ["peace", "items"],
 	"BAR_DEEDS": ["peace", "deeds"], "BAR_REST": ["peace", "rest"], "COMBAT_TAB_WEAPONS": ["fight", "common"],
 	"COMBAT_TAB_COMMON": ["fight", "common"], "COMBAT_TAB_SPELLS": ["fight", "class"], "COMBAT_TAB_FEATURES": ["fight", "class"],
-	"COMBAT_TAB_ITEMS": ["fight", "items"], "COMBAT_TAB_WATCH": ["fight", "common"]}
+	"COMBAT_TAB_ITEMS": ["fight", "items"], "COMBAT_TAB_WATCH": ["fight", "common"], "BAR_PASSIVE": ["both", "passive"]}
 const PLACE := "BAR_PLACE"
 const CLASS := "BAR_CLASS"
 const ITEMS := "BAR_ITEMS"
 const DEEDS := "BAR_DEEDS"
 const REST := "BAR_REST"
-const KIND_TITLES := {"common": "BAR_KIND_COMMON", "class": "BAR_KIND_CLASS", "items": "BAR_KIND_ITEMS", "deeds": "BAR_DEEDS"}
+const PASSIVE := "BAR_PASSIVE"
+const KIND_TITLES := {"common": "BAR_KIND_COMMON", "class": "BAR_KIND_CLASS", "items": "BAR_KIND_ITEMS", "deeds": "BAR_DEEDS",
+	"passive": "BAR_KIND_PASSIVE"}
 const CELL := 56
 const GAP := 4
 const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
@@ -49,6 +52,7 @@ var _park: Control  # hidden: the cells not on the grid now wait here, never fre
 var _fight := false
 var _talking := false
 var _filter := ""  # a kind shown alone, "" — the player's own bar
+var _toggles := {}  # id of rules.toggles → its cell, kept while the hero has it
 
 
 func _init() -> void:
@@ -280,7 +284,7 @@ func _relay() -> void:
 func _cells() -> Dictionary:
 	var out := {}
 	for k: String in _stage:
-		if KEYS.get(k, ["", ""])[0] != _mode() or KEYS[k][1] == "rest":
+		if not KEYS.get(k, ["", ""])[0] in [_mode(), "both"] or KEYS[k][1] == "rest":
 			continue
 		for c: Variant in _cells_of(k):
 			var key := str((c as Node).name)
@@ -303,6 +307,7 @@ func _lay() -> void:
 	_portrait.show_of(GameState.session, Catalog.data, Sheet.HERO, str(GameState.session.character.get("name", "")))
 	_lay_hands()
 	_lay_counters()
+	_lay_passives()
 	_lay_grid()
 	_lay_tabs()
 	_lay_rests()
@@ -429,7 +434,7 @@ func _lay_tabs() -> void:
 	for v: Array in _cells().values():
 		kinds[v[0]] = true
 	if _tabs.get_child_count() == 0:  # made once: a filter pressed is never freed under its own signal
-		for k: String in ["", "common", "class", "items", "deeds"]:
+		for k: String in ["", "common", "class", "items", "deeds", "passive"]:
 			var b := Button.new()
 			b.name = "Filter_" + (k if k != "" else "all")
 			b.text = KIND_TITLES.get(k, "BAR_ALL")
@@ -448,6 +453,46 @@ func _lay_tabs() -> void:
 		var k := str(b.get_meta("kind"))
 		b.visible = k == "" or kinds.has(k)
 		b.set_pressed_no_signal(k == _filter)
+
+
+## The hero's passives as switches (v0.8.4.43.7, ToggleRules), the same in a fight and out of it: a cell lit while it is on,
+## a press switches it, the card says what it does; one fixed by the moment (a bout to surrender) is grey and lit.
+func _lay_passives() -> void:
+	var s := GameState.session
+	var box := section(PASSIVE)
+	var cells: Array = box.get_meta("cells", [])
+	var have := {}
+	for t: Dictionary in ToggleRules.of(s, Catalog.data, Sheet.HERO):
+		var id := str(t["id"])
+		have[id] = true
+		if not _toggles.has(id) or not is_instance_valid(_toggles[id]):
+			var made := IconSlot.make("toggles/" + id, str(t["name"]), CELL)
+			made.name = "Toggle_" + id
+			made.toggle_mode = true
+			made.pressed.connect(func() -> void:  # the engine's state turned round, whatever the button shows
+				var why := GameState.set_toggle(id, not ToggleRules.on(GameState.session, Catalog.data, Sheet.HERO, id))
+				if not why.is_empty():
+					EventBus.message.emit(tr(why))
+				_relay())
+			box.add_child(made)
+			cells.append(made)
+			_toggles[id] = made
+		var cell: IconSlot = _toggles[id]
+		cell.set_pressed_no_signal(bool(t["on"]))
+		cell.disabled = not str(t["why"]).is_empty()
+		cell.tip_title = str(t["name"])
+		cell.tip_body = str(t["tip"])
+		cell.tooltip_text = tr("TOGGLE_ON" if bool(t["on"]) else "TOGGLE_OFF") + ("" if str(t["why"]).is_empty() else " · " + tr(str(t["why"])))
+		cell.queue_redraw()
+	for id: String in _toggles.keys():
+		if not have.has(id):
+			var gone: Node = _toggles[id]
+			_toggles.erase(id)
+			cells.erase(gone)
+			if is_instance_valid(gone):
+				_detach(gone)
+				gone.queue_free()
+	box.set_meta("cells", cells)
 
 
 ## The weapons of both hands of the set in hand — in a fight a press strikes with it (the fight's own cell) — and the

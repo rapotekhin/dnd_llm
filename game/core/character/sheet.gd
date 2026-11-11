@@ -79,6 +79,15 @@ static func own(s: GameSession, id: String) -> Dictionary:
 	return h
 
 
+## The record a character keeps its own choices in for life (v0.8.4.43.7): the hero's sheet, else its record of `s.beings`
+## — never a fighter, which the fight's end lets go. `write` — the record is made when it is not there yet.
+static func record(s: GameSession, who: Dictionary, write := false) -> Dictionary:
+	if is_hero(who):
+		return s.character
+	var id := str(who.get("id", ""))
+	return Being.of(s, id) if write else Being.view(s, id)
+
+
 ## Its hit point maximum now: the hero's sheet, a fighter's own (halved when exhaustion 4 came on it), a record's or its
 ## creature's, else its template's — a record's halved at exhaustion 4 (v0.8.4.15).
 static func max_hp(s: GameSession, data: Dictionary, who: Dictionary) -> int:

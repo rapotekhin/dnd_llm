@@ -123,7 +123,7 @@ func _wakes_bound(gs: Node, s: GameSession, data: Dictionary) -> void:
 	var fid: String = CombatRules.enemies(s)[0]
 	var f := CombatRules.fighter(s, fid)
 	FightGrid.put(f, FightGrid.free_near(s, data, FightGrid.cell(CombatRules.player(s)), int(f.get("span", 1))))
-	s.combat["nonlethal"] = true
+	s.combat["spare_blow"] = true  # the striker's «Не убивать» (v0.8.4.43.7)
 	s.combat["melee_strike"] = true
 	var lines: Array[String] = []
 	Harm.take(s, data, f, 999, lines)

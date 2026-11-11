@@ -39,13 +39,15 @@ const HERO_BY_ITSELF: Array[String] = ["attacked", "fall"]
 ## `f` answers what happened with its reaction, when it has one left: the best of what any act offers. The hero has its window
 ## instead (`FeatureRules.reactions`), the same features and the same `apply_reaction`, but at `HERO_BY_ITSELF`. True when it did.
 static func react(s: GameSession, data: Dictionary, f: Dictionary, when: String, ctx: Dictionary, lines: Array[String]) -> bool:
-	if Sheet.is_hero(f) and (not HERO_BY_ITSELF.has(when) or FeatureRules.policy(s) == "never"):
+	if Sheet.is_hero(f) and not HERO_BY_ITSELF.has(when):
 		return false
 	if bool(f.get("reacted", false)) or str(f.get("status")) != "active" or CombatRules.incapacitated(f):
 		return false
 	var best := {}
 	for a: Act in all():
 		for o: Dictionary in a.reacts(s, data, f, when, ctx):
+			if FeatureRules.policy(s, f, key_of(o)) == "never":  # its own choice of this reaction (v0.8.4.43.7)
+				continue
 			if best.is_empty() or float(o["worth"]) > float(best["worth"]):
 				best = o
 	if best.is_empty():
@@ -53,6 +55,12 @@ static func react(s: GameSession, data: Dictionary, f: Dictionary, when: String,
 	f["reacted"] = true
 	lines.append_array(one(str(best["act"])).run(s, data, f, str(best["to"]), best["how"]))
 	return true
+
+
+## The reaction an offer of `reacts` is chosen by (FeatureRules.policy): its spell, the feature it answers with, else the act.
+static func key_of(o: Dictionary) -> String:
+	var how: Dictionary = o.get("how", {})
+	return FeatureRules.reaction_key(str(how.get("spell", how.get("answer", o.get("act", "")))))
 
 
 ## What `f` has a button for on a tab, in the tab's order.

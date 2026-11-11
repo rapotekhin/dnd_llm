@@ -46,6 +46,7 @@ const PARTS := {
 	"stolen_animals": TYPE_ARRAY,
 	"wanted": TYPE_DICTIONARY,  # where a person is wanted for its crimes (v0.8.4.21, CrimeRules.wanted_of)
 	"looked": TYPE_BOOL,  # the hero tried the knowledge check on it out of a fight (v0.8.4.30, v0.8.4.41)
+	"toggles": TYPE_DICTIONARY, "reacts": TYPE_DICTIONARY,  # its passives on or off and its choice of each reaction (v0.8.4.43.7)
 }
 const NESTED := {
 	"creature": {

@@ -1007,16 +1007,6 @@ func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "fists"}),
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "fists"}),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false, true))
-	var nl := IconSlot.make("ui/nonlethal", tr("COMBAT_NONLETHAL"), ActionBar.CELL)  # knock out, not kill (v0.7.22.11, big test #44)
-	nl.name = "NonlethalToggle"
-	nl.toggle_mode = true
-	nl.tooltip_text = tr("COMBAT_NONLETHAL_TIP")
-	nl.button_pressed = bool(s.combat.get("nonlethal", false))
-	if ArenaRules.yield_bout(s):  # v0.7.45: a bout to surrender — only knocking out
-		nl.disabled = true
-		nl.tooltip_text = tr("COMBAT_NONLETHAL_ARENA")
-	nl.toggled.connect(func(on: bool) -> void: GameState.combat_nonlethal(on))
-	w.add_child(nl)
 	var off := str(c.get("equipped", {}).get("off_hand", ""))
 	if not off.is_empty():
 		var ow := CombatRules.weapon_profile(c, data, s.items, off, true)

@@ -10,7 +10,7 @@ extends RefCounted
 
 const ROWS := 2
 const MAX_ROWS := 4
-const KINDS := {"peace": ["common", "class", "items", "deeds"], "fight": ["common", "class", "items"]}
+const KINDS := {"peace": ["common", "class", "items", "deeds", "passive"], "fight": ["common", "class", "items", "passive"]}
 
 
 static func rows(state: Dictionary) -> int:

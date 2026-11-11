@@ -4627,6 +4627,25 @@
 			"teach_healing_potion": {"cost_cp": 2500, "op": "teach_recipe", "recipe": "healing_potion", "name": "Научиться варить зелье лечения", "short": "урок: зелье лечения", "done": "рецепт выучен"}
 		}
 	},
+	"toggles": {
+		"_doc": "Passives as in BG3 (v0.8.4.43.7, ToggleRules): what a character keeps on or off, a cell of the hotbar's «Пассивные». name, tip; who has it: all (anybody), features (any of them); default — on when never set; yield_bout — on and fixed in a bout to surrender (ArenaRules.yield_bout), why its key. What it does on a weapon blow of the one it belongs to, when the blow matches `blow` ({melee, str_based} of Attack.way): act — the feature action run first for nothing when it can (FeatureRules.why), opts — merged into the blow's opts (Attack.land → FeatureRules.after_hit), spare — a melee blow at 0 HP only knocks out (Harm.take).",
+		"nonlethal": {"name": "Не убивать", "tip": "Удар вплотную, доводящий до 0 хитов, только оглушает: враг падает без сознания, его можно связать и допросить", "all": true, "blow": {"melee": true}, "spare": true, "yield_bout": "COMBAT_NONLETHAL_ARENA"},
+		"reckless": {"name": "Безрассудная атака", "tip": "Первая атака Силой вплотную в каждом ходу — безрассудная сама: с преимуществом до конца хода, но и по вам — с преимуществом до вашего следующего хода", "features": ["reckless_attack"], "blow": {"melee": true, "str_based": true}, "act": "reckless"},
+		"stunning": {"name": "Оглушающий удар", "tip": "Каждое попадание вплотную тратит 1 ки на оглушающий удар, пока ки есть: спасбросок Телосложения, иначе цель ошеломлена до конца вашего следующего хода", "features": ["stunning_strike"], "blow": {"melee": true}, "opts": {"stunning": true}}
+	},
+	"reactions": {
+		"_doc": "The reactions a character chooses for itself as in BG3 (v0.8.4.43.7, FeatureRules.policy): «Спрашивать / Всегда / Никогда» of each, kept on its record (`reacts`); the hero's not chosen yet — the settings' common choice; a companion is never asked. A row: name, tip; who has it: all, features (any of them), style (a fighting style), prop (a property of what it wears), template (its SRD template's reaction of this id). A spell with a reaction of rules.spell_effects is a row by itself, under its own id.",
+		"opportunity": {"name": "Атака при отходе", "tip": "Удар по врагу, который уходит из вашей досягаемости без отхода", "all": true},
+		"uncanny_dodge": {"name": "Невероятное уклонение", "tip": "Урон от попавшего удара, который вы видите, вдвое меньше", "features": ["uncanny_dodge"]},
+		"deflect_missiles": {"name": "Отражение снарядов", "tip": "Урон от попавшего снаряда меньше на 1к10 + Ловкость + уровень", "features": ["deflect_missiles"]},
+		"missile_snaring": {"name": "Ловля снарядов", "tip": "Перчатки ловят снаряд: урон меньше на 1к10 + Ловкость", "prop": "missile_snaring"},
+		"cutting_words": {"name": "Язвительные слова", "tip": "Кость вдохновения вычитается из броска атаки по вам или союзнику в 60 футах", "features": ["cutting_words"]},
+		"giant_killer": {"name": "Убийца великанов", "tip": "Удар в ответ большому врагу рядом, который атаковал вас", "features": ["hunters_prey_giant_killer"]},
+		"divine_smite": {"name": "Божественная кара", "tip": "После попадания вплотную — ячейка на кару: урон излучением", "features": ["divine_smite"]},
+		"protect": {"name": "Защита союзника", "tip": "Со щитом — помеха атаке по союзнику рядом с вами", "style": "protection"},
+		"slow_fall": {"name": "Замедление падения", "tip": "Урон от падения меньше на пять за уровень", "features": ["slow_fall"]},
+		"parry": {"name": "Парирование", "tip": "КД выше против одного удара вплотную, который виден", "template": "parry"}
+	},
 	"feature_actions": {
 		"divine_eminence": {
 			"name": "Божественное превосходство",

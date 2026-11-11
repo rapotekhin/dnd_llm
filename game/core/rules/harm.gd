@@ -96,7 +96,7 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 		lines.append(("%s развеивается" if summoned else "%s падает без сознания") % who["name"])
 		MonsterRules.release(s, data, who, lines)
 		return
-	if by_hero and (ArenaRules.yield_bout(s) or bool(s.combat.get("nonlethal", false)) and bool(s.combat.get("melee_strike", false))):
+	if (by_hero and ArenaRules.yield_bout(s)) or (bool(s.combat.get("spare_blow", false)) and bool(s.combat.get("melee_strike", false))):
 		who["status"] = "unconscious"  # v0.7.45: in a bout to surrender any blow only knocks out; 5e: a melee blow at 0 HP may knock out (v0.7.22.11)
 		lines.append("%s оглушён и падает без сознания" % who["name"])
 		return

@@ -338,7 +338,7 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	if not hit:
 		lines.append(line + " — промах")
 		CombatRules.fx(s, str(t["id"]), "dodge")
-		if FeatureRules.giant_killer(s, data, t, f) and (not Sheet.is_hero(t) or FeatureRules.policy(s) != "never"):  # on a miss too (v0.8.4.33)
+		if FeatureRules.giant_killer(s, data, t, f) and FeatureRules.policy(s, t, "giant_killer") != "never":  # on a miss too (v0.8.4.33)
 			t["reacted"] = true
 			lines.append("%s: Убийца великанов — удар в ответ" % Sheet.holder(s, t).get("name", ""))
 			swing(s, data, t, f, blade(s, data, t).merged({"opts": {"no_horde": true}}, true), lines)
@@ -366,15 +366,17 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	if Sheet.is_hero(t):
 		f["last_total"] = total  # for the labels of the reaction spells (v0.7.13.7)
 		var rx := FeatureRules.reactions(s, data, t, f, b.get("act", {}), shot(f, t, b), int(hurt["dmg"]), ctx)  # v0.7.10
+		rx = rx.filter(func(r: Dictionary) -> bool: return FeatureRules.policy(s, t, str(r["id"])) != "never")  # each by its own choice (v0.8.4.43.7)
 		if not rx.is_empty():
-			var pol := FeatureRules.policy(s)
-			if pol == "ask" and CombatRules.current(s) == str(f["id"]):
+			var asked := rx.any(func(r: Dictionary) -> bool: return FeatureRules.policy(s, t, str(r["id"])) == "ask")
+			if asked and CombatRules.current(s) == str(f["id"]):
 				ctx["options"] = rx
 				s.combat["pending"] = ctx
 				s.combat["halt"] = true
 				return {"hit": true, "crit": crit, "damage": int(hurt["dmg"])}
-			if pol != "never":
-				FeatureRules.apply_reaction(s, data, t, f, str(rx[0]["id"]), ctx, lines)
+			var always := rx.filter(func(r: Dictionary) -> bool: return FeatureRules.policy(s, t, str(r["id"])) == "always")
+			if not always.is_empty():
+				FeatureRules.apply_reaction(s, data, t, f, str(always[0]["id"]), ctx, lines)
 	else:
 		Acts.react(s, data, t, "hurt", ctx, lines)
 	land(s, data, f, t, b, ctx, lines)
@@ -387,7 +389,7 @@ static func _words_for(s: GameSession, data: Dictionary, f: Dictionary, t: Dicti
 	for id: String in CombatRules.friends_of(s, t):
 		var o := CombatRules.fighter(s, id)
 		var c := Sheet.holder(s, o)
-		if id == str(t["id"]) or not FeatureRules.has(c, "cutting_words") or bool(o.get("reacted", false)) or not up(s, o) 				or ConditionRules.incapacitated(c) or Stock.left(c, data, "bardic_inspiration") < 1 or ConditionRules.has(c, "blinded") 				or ConditionRules.invisible(Sheet.holder(s, f), data) or FightGrid.dist(o, f) > FightGrid.squares_of(data, 60) 				or (Sheet.is_hero(o) and FeatureRules.policy(s) == "never"):
+		if id == str(t["id"]) or not FeatureRules.has(c, "cutting_words") or bool(o.get("reacted", false)) or not up(s, o) 				or ConditionRules.incapacitated(c) or Stock.left(c, data, "bardic_inspiration") < 1 or ConditionRules.has(c, "blinded") 				or ConditionRules.invisible(Sheet.holder(s, f), data) or FightGrid.dist(o, f) > FightGrid.squares_of(data, 60) 				or FeatureRules.policy(s, o, "cutting_words") == "never":
 			continue
 		var ctx := {"total": total, "ac": ac, "nat20": false, "hit": true}
 		FeatureRules.apply_reaction(s, data, o, f, "cutting_words", ctx, lines)

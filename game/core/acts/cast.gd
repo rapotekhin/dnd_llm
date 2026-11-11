@@ -87,7 +87,7 @@ func _countered(s: GameSession, data: Dictionary, f: Dictionary, to: String, how
 		return false
 	var name := str(data["spells"][spell]["name"])
 	var circle := maxi(int(data["spells"][spell]["level"]), int(how.get("slot", 0)))
-	var pol := FeatureRules.policy(s)
+	var pol := FeatureRules.policy(s, Sheet.HERO, "counterspell")
 	if pol == "ask":
 		lines.append("%s начинает колдовать «%s»…" % [f["name"], name])
 		s.combat["pending"] = {"kind": "counter", "foe": str(f["id"]), "to": to, "how": how, "circle": circle,

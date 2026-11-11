@@ -67,6 +67,8 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	if bool((b.get("act", {}) as Dictionary).get("stowed", false)) and Equip.swap_why(s, data, str(f.get("id", Being.HERO))).is_empty():
 		lines = Acts.one("swap").go(s, data, f)  # its other set to the hands for nothing (v0.8.4.40), then the blow
 		b = Attack.way(s, data, f, how)
+	if not b.has("act"):  # its passives on the blow: Reckless Attack first, a stunning strike, not to kill (v0.8.4.43.7)
+		b = ToggleRules.before_blow(s, data, f, b, lines)
 	CombatRules.points(s, data, f)["attacked"] = true
 	if bool(b["melee"]) and Move.air(s, data, f):
 		f["swooped"] = true  # Fly (v0.7.63): down at arm's length, in reach until its next turn
@@ -78,8 +80,10 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 			Attack.full(s, data, f, t, a, lines)
 		return lines
 	s.combat["melee_strike"] = bool(b["melee"]) and CombatRules.blade_reaches(s, data, f, t, int(b.get("reach", 1)))  # nonlethal needs a melee blow (5e)
+	s.combat["spare_blow"] = bool(b.get("opts", {}).get("spare", false))  # the striker's «Не убивать»
 	Attack.swing(s, data, f, t, b, lines)
 	s.combat.erase("melee_strike")
+	s.combat.erase("spare_blow")
 	return lines
 
 

@@ -706,6 +706,13 @@ RARITY_VERY_RARE,Очень редкий
 REACTIONS_ALWAYS,Использовать сами
 REACTIONS_ASK,Спрашивать каждый раз
 REACTIONS_NEVER,Не использовать
+REACT_ASK,Спрашивать
+REACT_ALWAYS,Всегда
+REACT_NEVER,Никогда
+REACTIONS_BAD_CHOICE,Спутника не спрашивают: только «Всегда» или «Никогда»
+TOGGLE_ON,Включено
+TOGGLE_OFF,Выключено
+TOGGLE_NOT_YOURS,Этого у персонажа нет
 REST_BAD_SUPPLIES,Таких припасов нет в рюкзаке
 REST_BUSY,Сейчас нельзя отдыхать
 REST_DANGER,Здесь ещё опасно — лагерь не разбить
@@ -913,8 +920,6 @@ BTN_CREATURE_HAND_OVER,Отдать страже
 CREATURE_HAND_OVER_TIP,"Стража забирает связанного пленника: награда за голову и уважение в поселении"
 CREATURE_NOT_YOUR_PRISONER,Это не ваш связанный пленник
 CREATURE_NO_LAW,Здесь нет стражи — отдавать некому
-COMBAT_NONLETHAL,"Оглушать, а не убивать"
-COMBAT_NONLETHAL_TIP,"Удар вблизи, который валит врага, оставляет его без сознания — живым: потом его можно связать и увести"
 TRADE_YOU_BUY,Вы покупаете
 TRADE_YOU_SELL,Вы продаёте
 TRADE_NOTHING_YET,—
@@ -2091,6 +2096,7 @@ CREATURE_TYPE_SWARM,рой
 BAR_KIND_COMMON,Общие
 BAR_KIND_CLASS,Класс
 BAR_KIND_ITEMS,Вещи
+BAR_KIND_PASSIVE,Пассивные
 BAR_ROWS_MORE,Больше рядов ячеек
 BAR_ROWS_LESS,Меньше рядов ячеек
 BAR_DIVIDER_TIP,Тяните — сдвинуть границу между группами
@@ -2147,7 +2153,8 @@ SHEET_AC_TITLE,Класс доспеха {ac}
 SHEET_AC_WORN,Надето: {list}
 SHEET_AC_BARE,без доспеха и щита
 SHEET_REACTIONS,Реакции
-SHEET_REACTIONS_HINT,"Как герой отвечает на чужой ход: спрашивать, применять само или никогда — то же, что в настройках."
+SHEET_REACTIONS_HINT,"Как герой отвечает на чужой ход — у каждой реакции свой выбор. Ещё не выбранная идёт по общему выбору из настроек."
+SHEET_REACTIONS_HINT_MATE,"Спутник не спрашивает: реакцию он применяет сам или никогда — как здесь выбрано."
 SET_STOWED,Запасной набор
 SET_ATTACK,атака
 SET_DAMAGE,урон

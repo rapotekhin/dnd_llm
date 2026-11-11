@@ -126,7 +126,10 @@ func _rebuild() -> void:
 		(UiScenes.need(self, page[0]) as Control).visible = section == page[1]
 	match section:
 		"book":
-			_book(s.character)
+			if who == Being.HERO:
+				_book(s.character)
+			else:  # a companion's book: its reactions, chosen as the hero's (v0.8.4.43.7)
+				_reactions(_page("%FeaturesBox"))
 		"dev":
 			_development(s.character)
 		_:
@@ -181,7 +184,7 @@ func _sections() -> void:
 		b.name = "SheetSection_" + sec
 		b.toggle_mode = true
 		b.button_pressed = sec == section
-		b.disabled = who != Being.HERO and sec != "gear"
+		b.disabled = who != Being.HERO and sec == "dev"
 		b.tooltip_text = Hotkeys.tip(tr("SHEET_SECTION_" + sec.to_upper()), {"gear": "inventory", "book": "spells"}.get(sec, ""), SaveManager.keys) \
 			if not b.disabled else tr("SHEET_HERO_ONLY")
 		b.pressed.connect(func() -> void:
@@ -415,27 +418,44 @@ func _book(c: Dictionary) -> void:
 				_cast_row(box, c, str(id), 0 if list == "free" else lv, can_act)
 
 
-## The reactions as in BG3's book (v0.8.4.43.6): asked, used by themselves or never — the same choice as the settings'.
+## The reactions as in BG3's book (v0.8.4.43.7): each its own «Спрашивать / Всегда / Никогда», kept on the character
+## (FeatureRules.reaction_list, GameState.choose_reaction); one not chosen yet goes by the settings' common choice. A
+## companion is never asked: «Всегда» or «Никогда».
 func _reactions(box: VBoxContainer) -> void:
+	var s := GameState.session
+	var me := Sheet.who(s, Catalog.data, who)
 	box.add_child(HSeparator.new())
 	_text(box, tr("SHEET_REACTIONS"), UiTheme.CAPTION_LABEL)
-	_text(box, tr("SHEET_REACTIONS_HINT"), UiTheme.MUTED_LABEL)
-	var row := HBoxContainer.new()
-	row.name = "ReactionPolicy"
-	row.add_theme_constant_override("separation", 8)
-	box.add_child(row)
-	for p: String in ["ask", "always", "never"]:
-		var b := Button.new()
-		b.name = "Reactions_" + p
-		b.text = "REACTIONS_" + p.to_upper()
-		b.toggle_mode = true
-		b.button_pressed = SaveManager.reactions == p
-		b.pressed.connect(func() -> void:
-			SaveManager.reactions = p
-			SaveManager.save_settings()
-			GameState.session.settings["reactions"] = p
-			_rebuild())
-		row.add_child(b)
+	_text(box, tr("SHEET_REACTIONS_HINT" if who == Being.HERO else "SHEET_REACTIONS_HINT_MATE"), UiTheme.MUTED_LABEL)
+	var grid := GridContainer.new()
+	grid.name = "ReactionRows"
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 6)
+	box.add_child(grid)
+	for r: Dictionary in FeatureRules.reaction_list(s, Catalog.data, me):
+		var id := str(r["id"])
+		var name_b := _entry(grid, str(r["name"]), str(r["tip"]))
+		name_b.name = "Reaction_" + id
+		name_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var row := HBoxContainer.new()
+		row.name = "ReactionChoice_" + id
+		row.add_theme_constant_override("separation", 4)
+		grid.add_child(row)
+		for p: String in FeatureRules.POLICIES:
+			if p == "ask" and who != Being.HERO:
+				continue
+			var b := Button.new()
+			b.name = "React_%s_%s" % [id, p]
+			b.text = "REACT_" + p.to_upper()
+			b.toggle_mode = true
+			b.button_pressed = str(r["policy"]) == p
+			b.pressed.connect(func() -> void:
+				var why := GameState.choose_reaction(id, p, who)
+				if not why.is_empty():
+					EventBus.message.emit(tr(why))
+				_rebuild())
+			row.add_child(b)
 
 
 ## Pact of the Blade (v0.8.4.33, as in BG3): what the pact weapon is, the forms to call and the weapons to bind, nested.
