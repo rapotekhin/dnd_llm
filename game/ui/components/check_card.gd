@@ -12,7 +12,9 @@ func _init(check_entry: Dictionary) -> void:
 
 func _ready() -> void:
 	theme_type_variation = UiTheme.CARD
-	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	# What a check found wraps inside the chat's own width: a card wider than the chat's column (a fixed 520 px since v0.5.2,
+	# the chat on the right since v0.8.1) sent the chat's scroll into a layout loop and Godot down (signal 11, v0.8.4.43.2).
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL if not (entry.get("revealed", []) as Array).is_empty() else Control.SIZE_SHRINK_BEGIN
 	tooltip_text = breakdown(entry)  # every part of the bonus on hover (v0.7.39.5)
 	var col := VBoxContainer.new()
 	add_child(col)
@@ -37,7 +39,7 @@ func _ready() -> void:
 		var f := Label.new()
 		f.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		f.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		f.custom_minimum_size = Vector2(520, 0)
+		f.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		f.text = tr("CHECK_FOUND").format({"what": found})
 		f.add_theme_color_override("font_color", UiTheme.ACCENT_BRIGHT)
 		col.add_child(f)
