@@ -17,5 +17,6 @@ Read that file when this rule triggers, then follow it.
 **Quick reference:**
 
 - gdUnit4 green first, then `python tools/godot_playtest.py` (smoke, stub turn), `--scenario offline`, `--scenario live --real` after prompt changes
+- the game's window runs on a hidden Windows desktop (`tool_base.run_unseen`): never over the author's screen, never takes the focus; `BTR_PLAYTEST_SHOW=1` to watch it
 - Read `build/playtest/<scenario>/report.txt` and look at every `NN_*.png`
 - Crashes: fix + regression test in `game/test/`; other findings: `docs/production/backlog.md`. Never print `.env` keys

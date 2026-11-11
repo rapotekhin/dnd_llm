@@ -6,7 +6,8 @@
     python tools/godot_playtest.py --scenario embedded --real   # the build's server.exe started by the game (run build_game.py first)
 
 Screenshots and report.txt land in build/playtest/<scenario>/. The game runs with --profile=agent, so the
-author's saves and settings stay untouched. The token is generated here and never printed.
+author's saves and settings stay untouched. The token is generated here and never printed. The game's window runs on a
+hidden desktop (tool_base.run_unseen): never over the author's screen; BTR_PLAYTEST_SHOW=1 to watch it.
 Exit code: 0 = all steps OK, 1 = a step failed, 2 = setup problem.
 """
 
@@ -21,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from connectivity_e2e import OUT, PORT, ROOT, start_server, stop_server, wait_http  # noqa: E402
-from tool_base import free_port, godot as godot_path, port_busy  # noqa: E402
+from tool_base import free_port, godot as godot_path, port_busy, run_unseen  # noqa: E402
 
 
 def run_embedded(godot: str, real: bool, out_dir: Path) -> subprocess.CompletedProcess:
@@ -47,7 +48,7 @@ def run_embedded(godot: str, real: bool, out_dir: Path) -> subprocess.CompletedP
             env["LLM_SERVER_TURN_HANDLER"] = "stub"
         args = [godot, "--path", str(ROOT / "game"), "--script", "res://tools/playtest/embedded.gd", "--", "--profile=agent",
                 f"--out={out_dir.as_posix()}", "--seed=42"]
-        proc = subprocess.run(args, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800)
+        proc = run_unseen(args, env, 1800)
         time.sleep(1.0)  # the server's watch of its parent
         left = subprocess.run(["tasklist", "/FI", "IMAGENAME eq server.exe", "/NH"], capture_output=True, text=True).stdout
         print(f"server.exe after the game: {'ALIVE' if 'server.exe' in left else 'gone'}")
@@ -98,7 +99,7 @@ def main() -> int:
             args = [godot, "--path", str(ROOT / "game"), "--script", f"res://tools/playtest/{opts.scenario}.gd", "--",
                     "--profile=agent", f"--out={out_dir.as_posix()}", f"--backend-url=ws://127.0.0.1:{port}/ws", "--seed=42"]
             env = {**os.environ, "BTR_BACKEND_TOKEN": token, "BTR_PLAYTEST_REAL": "1" if opts.real else ""}
-            proc = subprocess.run(args, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800)
+            proc = run_unseen(args, env, 1800)
         (out_dir / "godot.log").write_text(proc.stdout + proc.stderr, encoding="utf-8")
     finally:
         if server:

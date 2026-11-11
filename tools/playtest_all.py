@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from connectivity_e2e import OUT, PORT, ROOT, start_server, stop_server, wait_http  # noqa: E402
-from tool_base import free_port, godot as godot_path  # noqa: E402
+from tool_base import free_port, godot as godot_path, run_unseen  # noqa: E402
 
 SCENARIOS = ROOT / "game" / "tools" / "playtest"
 NEEDS_MORE = {"playtest_base", "live", "attach", "pack_only", "unseen", "providers", "image_prompts"}  # the real master or Forge
@@ -39,7 +39,7 @@ def run_one(godot: str, name: str, port: int, token: str, slow: bool) -> dict:
     env = {**os.environ, "BTR_BACKEND_TOKEN": token, "BTR_PLAYTEST_REAL": ""}
     start = time.monotonic()
     try:
-        proc = subprocess.run(args, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
+        proc = run_unseen(args, env, 900)
         log = proc.stdout + proc.stderr
     except subprocess.TimeoutExpired as exc:
         log = f"{exc.stdout or ''}\n{exc.stderr or ''}\nTIMEOUT"
