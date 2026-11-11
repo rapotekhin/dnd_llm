@@ -372,8 +372,8 @@
    "id": "caltrops",
    "kind": "items",
    "name": "Рассыпные шипы",
-   "tags": "caltrop, jack, spikes, grey iron, star shape",
-   "sentence": "A single small grey iron caltrop shaped like a jack, four short sharp spikes pointing in different directions so that one always points up.",
+   "tags": "spiked stars, shuriken, scattered, grey iron, spikes",
+   "sentence": "A single small heap of three grey iron stars with four short sharp points each, lying scattered on a flat ground line.",
    "key": ""
   },
   {
@@ -6996,8 +6996,8 @@
    "id": "enfeebled",
    "kind": "conditions",
    "name": "Ослаблен",
-   "tags": "bent sword, drooping, weak, grey steel",
-   "sentence": "A single grey steel sword bent and drooping like a wilted flower, its tip pointing down.",
+   "tags": "broken sword, snapped blade, two pieces, grey steel, purple glow",
+   "sentence": "A single grey steel sword snapped in two, its upper half falling away from the hilt, with a faint purple glow at the break.",
    "key": ""
   },
   {
