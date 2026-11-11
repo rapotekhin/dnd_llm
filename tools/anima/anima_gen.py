@@ -77,7 +77,7 @@ PAINTED_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, arti
                     "chromatic aberration, text, letters, watermark, signature, border, frame, multiple objects, "
                     "duplicate, human, person, face, hands, photo, 3d render, flat color, minimalism, vector art, "
                     "vignette, gradient background, small object")
-STYLES = {"flat": (HEAD, TAIL, NEGATIVE), "painted": (PAINTED_HEAD, PAINTED_TAIL, PAINTED_NEGATIVE)}
+STYLES = ("flat", "painted")  # flat: every icon as before; painted: each kind by its family (FAMILY)
 # The painted style follows the families of BG3's icons (docs/design/ux/bg3-icons.md, the author 2026-11-11): a thing is
 # a painted object cut out of its background; a spell, a feature or an act is a bright glowing emblem on a tile of
 # cracked stone, which the model draws as a rounded tile on black, so the same cut leaves the tile with clear corners;
@@ -96,7 +96,23 @@ GLYPH_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist
                   "chromatic aberration, text, letters, watermark, signature, multiple objects, duplicate, human, "
                   "person, face, photo, 3d render, realistic, solid fill, flat color, plain background, "
                   "white background, scenery, landscape")
-FAMILY = {"spells": "glyph", "features": "glyph", "acts": "glyph", "conditions": "medal"}  # in the painted style
+# The interface's buttons and the inventory's groups as BG3's skills: one embossed emblem of silver, no colour of its own,
+# cut out like a thing (the trial of 2026-11-11).
+RELIEF_HEAD = "masterpiece, best quality, score_7, safe, no humans, simple background, {tag}metallic, silver, emboss, "
+RELIEF_TAIL = ("It is an interface icon for a fantasy role-playing game: the subject as one embossed emblem of polished "
+               "silver metal, a raised relief with soft shading and bright highlights, light from the upper left, "
+               "monochrome with no other colors. The single emblem is large and centered and fills almost the whole "
+               "square, on a plain flat {word} background.")
+RELIEF_NEGATIVE = PAINTED_NEGATIVE + ", colorful, gold, gem, glow"
+FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the tail's {word} are the job's key
+    "flat": (HEAD, TAIL, NEGATIVE),
+    "object": (PAINTED_HEAD, PAINTED_TAIL, PAINTED_NEGATIVE),
+    "glyph": (GLYPH_HEAD, GLYPH_TAIL, GLYPH_NEGATIVE),
+    "medal": (GLYPH_HEAD, GLYPH_TAIL, GLYPH_NEGATIVE),
+    "relief": (RELIEF_HEAD, RELIEF_TAIL, RELIEF_NEGATIVE),
+}
+FAMILY = {"spells": "glyph", "features": "glyph", "acts": "glyph", "traits": "glyph", "conditions": "medal",
+          "ui": "relief", "groups": "relief", "marks": "flat"}  # a kind (or its head before «/») in the painted style
 ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
@@ -115,7 +131,7 @@ P_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist nam
 FACE = (0.14, 0.02, 0.86, 0.74)  # a fixed square over the head and a little of the shoulders (the author, 2026-11-11)
 PORTRAIT = 256
 TRIM = 0.03  # of a glyph's tile kept whole, each side
-DARK = 40  # a border darker than this (each channel's median) is the black around a glyph's tile: cut out
+FLAT = 0.6  # a glyph's frame whose border is this flat (a share near its median) floats on a ground: cut out
 
 
 # --- Forge ----------------------------------------------------------------------------------------------------------
@@ -150,19 +166,18 @@ def seeds_of(job: dict, seeds: list[int]) -> list[int]:
 
 
 def family(job: dict, style: str = "flat") -> str:
-    """How an icon is drawn and cut: flat, object (cut out), glyph (a whole tile), medal (a tile in a circle)."""
+    """How an icon is drawn and cut: flat, object (cut out), glyph (a tile cut out of black), medal (the tile in a
+    circle), relief (silver, cut out), portrait."""
     if portrait(job):
         return "portrait"
     if style == "flat":
         return "flat"
-    return FAMILY.get(job["kind"], "object")
+    return FAMILY.get(job["kind"], FAMILY.get(job["kind"].split("/")[0], "object"))
 
 
 def prompt_of(job: dict, key: str, style: str = "flat") -> str:
-    if family(job, style) in ("glyph", "medal"):
-        return GLYPH_HEAD + job["tags"] + ".\n" + job["sentence"] + " " + GLYPH_TAIL
     tag, word = KEYS[key]
-    head, tail, _ = STYLES[style]
+    head, tail, _ = FAMILIES[family(job, style)]
     return head.format(tag=tag) + job["tags"] + ".\n" + job["sentence"] + " " + tail.format(word=word)
 
 
@@ -175,10 +190,8 @@ def full_prompt(job: dict, n: int, a: argparse.Namespace) -> str:
 
 
 def negative_of(job: dict, style: str = "flat") -> str:
-    if family(job, style) in ("glyph", "medal"):
-        return GLYPH_NEGATIVE
     if not portrait(job):
-        return STYLES[style][2]
+        return FAMILIES[family(job, style)][2]
     drop = set(job.get("neg_drop", []))
     tags = [t.strip() for t in P_NEGATIVE.split(",") if t.strip() not in drop]
     return ", ".join(tags + [t.strip() for t in job.get("neg_add", "").split(",") if t.strip()])
@@ -261,25 +274,34 @@ def face(raw: Image.Image) -> Image.Image:
 
 
 def tile(raw: Image.Image) -> Image.Image:
-    """A glyph's tile: mostly it floats on black and is cut out like a thing; when the stone fills the frame (a few
-    frames do) it is kept whole, a thin smeared edge trimmed, so the cut does not eat the stone."""
+    """A glyph's tile: mostly it floats on a flat ground (black, at times white) and is cut out like a thing; when the
+    stone fills the frame (a few frames do) the border is textured, and the tile is kept whole, a thin smeared edge
+    trimmed, so the cut does not eat the stone."""
     w, h = raw.size
     rgb = raw.convert("RGB")
     px = rgb.load()
     border = [px[x, y] for x in range(0, w, 4) for y in (0, h - 1)] + [px[x, y] for y in range(0, h, 4) for x in (0, w - 1)]
-    if max(median(c[i] for c in border) for i in range(3)) < DARK:
+    bg = [median(c[i] for c in border) for i in range(3)]
+    flat = sum(1 for c in border if sum((c[i] - bg[i]) ** 2 for i in range(3)) ** 0.5 <= NEAR) / len(border)
+    if flat >= FLAT:
         return cut(raw)
     m = int(w * TRIM)
     return rgb.convert("RGBA").crop((m, m, w - m, h - m)).resize((ICON, ICON), Image.LANCZOS)
 
 
 def medal(raw: Image.Image) -> Image.Image:
-    """A condition's medal: the glyph's tile in a circle with a soft edge, transparent outside."""
+    """A condition's medal: the glyph's tile in a circle inscribed in the tile itself (it floats smaller than the
+    frame), with a soft edge, transparent outside."""
     im = tile(raw)
-    big = ICON * 4
-    mask = Image.new("L", (big, big))
-    ImageDraw.Draw(mask).ellipse((4, 4, big - 5, big - 5), fill=255)
-    im.putalpha(ImageChops.multiply(im.getchannel("A"), mask.resize((ICON, ICON), Image.LANCZOS)))
+    alpha = im.getchannel("A")
+    x0, y0, x1, y1 = alpha.getbbox() or (0, 0, ICON, ICON)
+    side = min(x1 - x0, y1 - y0)
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    k = 4  # drawn 4× larger and shrunk: a smooth edge
+    mask = Image.new("L", (ICON * k, ICON * k))
+    r = side / 2 * k - 2
+    ImageDraw.Draw(mask).ellipse((cx * k - r, cy * k - r, cx * k + r, cy * k + r), fill=255)
+    im.putalpha(ImageChops.multiply(alpha, mask.resize((ICON, ICON), Image.LANCZOS)))
     return im
 
 

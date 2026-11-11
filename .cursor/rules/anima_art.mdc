@@ -18,6 +18,6 @@ Read that file when this rule triggers, then follow it.
 **Quick reference:**
 
 - `make_jobs.py` → `jobs/*.json`; `anima_gen.py` on the server (`--style painted` → `out_painted/`, `--recut`); `install.py` by `picks*.json` (`variant`, `redo`, `reseed`, `overlay`)
-- `--style painted` draws by BG3-like families (`FAMILY`, docs/design/ux/bg3-icons.md): items an object cut out, spells / features / acts a bright glowing sign on a rounded stone tile cut out of black, conditions the tile in a circle; ui, groups, marks stay flat
+- `--style painted` draws by BG3-like families (`FAMILY`, docs/design/ux/bg3-icons.md): items an object cut out, spells / features / acts / traits a bright glowing sign on a rounded stone tile cut out of black, conditions the tile in a circle, ui and groups a silver relief (not settled), marks flat
 - A systematic miss (a tag like «wolf», «no humans», «small») is fixed in `subjects.json` / `portraits.json`, a random one by `reseed`; review at the game's size
 - ControlNet LLLite breaks Forge on its second call: unload the checkpoint after each frame, never run it beside another job; never use another game's art as a reference
