@@ -3,13 +3,14 @@ extends GdUnitTestSuite
 ## variants (a child in one), a monster by its template in five. One place chooses (PortraitRules.of), one reads a race's
 ## word (CharacterRules.race_id); a person keeps one face; no file — "" and the letter is drawn.
 
-const ROOT := "res://assets/portraits/"
+const ROOT := "res://test/no_portraits/"  # a folder with no files: the suite lays its own, the drawn ones do not count
 
 var data: Dictionary
 
 
 func before() -> void:
-	data = TestUtils.data()
+	data = TestUtils.data()  # a copy of its own
+	data["icons"]["portraits"]["root"] = ROOT
 
 
 func after_test() -> void:
