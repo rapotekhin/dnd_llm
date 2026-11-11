@@ -25,8 +25,8 @@ func _armed(s: GameSession) -> void:
 	c["inventory"]["arrows"] = 20
 	c["equipped"]["main_hand"] = "longsword"
 	c["equipped"]["off_hand"] = ""
-	c["equipped"]["shield"] = "shield"
-	c["stowed"] = {"main_hand": "longbow", "off_hand": "", "shield": ""}
+	c["equipped"]["off_hand"] = "shield"
+	c["stowed"] = {"main_hand": "longbow", "off_hand": ""}
 	CharacterRules.refresh(c, data, s.items)
 
 
@@ -77,7 +77,7 @@ func test_either_set_takes_any_weapon() -> void:
 	c["inventory"]["dagger"] = 2
 	c["inventory"]["shield"] = 2
 	assert_str(CharacterRules.can_equip(c, data, s.items, "dagger", "off_hand", true)).is_equal("EQUIP_HANDS_BUSY")  # the bow holds both
-	c["stowed"] = {"main_hand": "", "off_hand": "", "shield": ""}
+	c["stowed"] = {"main_hand": "", "off_hand": ""}
 	for slot: String in ["main_hand", "off_hand"]:
 		assert_str(CharacterRules.can_equip(c, data, s.items, "dagger", slot, true)).is_empty()
 	CharacterRules.put_stowed(c, data, s.items, "dagger", "main_hand")
@@ -85,15 +85,15 @@ func test_either_set_takes_any_weapon() -> void:
 	assert_str(str(CharacterRules.stowed(c)["main_hand"])).is_equal("dagger")
 	assert_str(str(CharacterRules.stowed(c)["off_hand"])).is_equal("dagger")
 	assert_str(str(c["equipped"]["main_hand"])).is_equal("longsword")
-	c["stowed"] = {"main_hand": "longsword", "off_hand": "", "shield": ""}
-	c["equipped"]["shield"] = ""
-	assert_str(CharacterRules.can_equip(c, data, s.items, "shield", "shield", true)).is_empty()
-	CharacterRules.put_stowed(c, data, s.items, "shield", "shield")
+	c["stowed"] = {"main_hand": "longsword", "off_hand": ""}
+	c["equipped"]["off_hand"] = ""
+	assert_str(CharacterRules.can_equip(c, data, s.items, "shield", "off_hand", true)).is_empty()
+	CharacterRules.put_stowed(c, data, s.items, "shield", "off_hand")
 	assert_str(CharacterRules.can_equip(c, data, s.items, "longbow", "main_hand")).is_empty()  # a bow straight to the hands
 	c["equipped"]["main_hand"] = "longbow"
 	CharacterRules.swap_hands(c)
 	assert_str(str(c["equipped"]["main_hand"])).is_equal("longsword")
-	assert_str(str(c["equipped"]["shield"])).is_equal("shield")
+	assert_str(str(c["equipped"]["off_hand"])).is_equal("shield")
 	assert_str(str(CharacterRules.stowed(c)["main_hand"])).is_equal("longbow")
 
 
@@ -104,8 +104,8 @@ func test_a_swap_changes_the_hands_and_the_armour_class() -> void:
 	assert_str(Acts.one("swap").can(s, data, CombatRules.player(s))).is_empty()
 	Acts.one("swap").go(s, data, CombatRules.player(s))
 	assert_str(str(s.character["equipped"]["main_hand"])).is_equal("longbow")
-	assert_str(str(s.character["equipped"]["shield"])).is_empty()
-	assert_str(str(CharacterRules.stowed(s.character)["shield"])).is_equal("shield")
+	assert_str(str(s.character["equipped"]["off_hand"])).is_empty()
+	assert_str(str(CharacterRules.stowed(s.character)["off_hand"])).is_equal("shield")
 	assert_int(int(s.character["ac"])).is_equal(ac - 2)  # the shield went with the set
 	Acts.one("swap").go(s, data, CombatRules.player(s))
 	assert_str(str(s.character["equipped"]["main_hand"])).is_equal("longsword")
@@ -239,7 +239,7 @@ func test_one_sword_is_never_in_both_sets() -> void:
 	_armed(s)
 	var c := s.character
 	c["inventory"]["longsword"] = 1
-	c["stowed"] = {"main_hand": "", "off_hand": "", "shield": ""}
+	c["stowed"] = {"main_hand": "", "off_hand": ""}
 	assert_str(CharacterRules.can_equip(c, data, s.items, "longsword", "main_hand", true)).is_empty()
 	CharacterRules.put_stowed(c, data, s.items, "longsword", "main_hand")
 	assert_str(str(CharacterRules.stowed(c)["main_hand"])).is_equal("longsword")
@@ -256,7 +256,7 @@ func test_two_swords_lie_one_in_each_set() -> void:
 	_armed(s)
 	var c := s.character
 	c["inventory"]["longsword"] = 2
-	c["stowed"] = {"main_hand": "", "off_hand": "", "shield": ""}
+	c["stowed"] = {"main_hand": "", "off_hand": ""}
 	CharacterRules.put_stowed(c, data, s.items, "longsword", "main_hand")
 	assert_str(str(CharacterRules.stowed(c)["main_hand"])).is_equal("longsword")
 	assert_str(str(c["equipped"]["main_hand"])).is_equal("longsword")
@@ -269,8 +269,8 @@ func test_the_master_takes_the_one_sword_of_the_set_put_away_without_a_copy() ->
 	var c := s.character
 	c["inventory"]["longsword"] = 1
 	c["equipped"]["main_hand"] = "longbow"
-	c["equipped"]["shield"] = ""
-	c["stowed"] = {"main_hand": "longsword", "off_hand": "", "shield": ""}
+	c["equipped"]["off_hand"] = ""
+	c["stowed"] = {"main_hand": "longsword", "off_hand": ""}
 	var engine := EffectEngine.new()
 	var r := engine.validate(s, data, "t-1", {"kind": "equip", "item_id": "longsword", "slot": "main_hand"})
 	assert_str(str(r.get("reason", ""))).is_empty()

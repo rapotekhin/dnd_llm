@@ -42,3 +42,8 @@ func worth(s: GameSession, data: Dictionary, f: Dictionary) -> float:
 		if str(s.combat["dropped"][i].get("by", "")) == str(f.get("id", "")):
 			return _weight(data)
 	return 0.0
+
+
+## By the moment, not the character's own: not in the book (v0.8.4.43.13).
+func book() -> bool:
+	return false

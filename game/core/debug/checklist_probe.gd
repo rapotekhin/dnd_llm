@@ -392,9 +392,9 @@ static func _weapon(s: GameSession, data: Dictionary, id: String, d: Dictionary,
 		check(steps, bool(p.get("heavy", false)), "тяжёлое: помеха маленьким", "не читается")
 	if props.has("two_handed"):
 		Gear.give(s, data, Being.HERO, "shield", 1)
-		c["equipped"]["shield"] = "shield"
-		check(steps, CharacterRules.hands_freed(c, data, s.items, id, "main_hand").has("shield"), "двуручное: щит снимается", "щит остаётся")
-		c["equipped"]["shield"] = ""
+		c["equipped"]["off_hand"] = "shield"
+		check(steps, CharacterRules.hands_freed(c, data, s.items, id, "main_hand").has("off_hand"), "двуручное: щит снимается", "щит остаётся")
+		c["equipped"]["off_hand"] = ""
 		CharacterRules.refresh(c, data, s.items)
 	if props.has("loading"):
 		gap(steps, "перезарядка (один выстрел за действие) — не читается")
@@ -432,13 +432,13 @@ static func _blow(s: GameSession, data: Dictionary, id: String, p: Dictionary, s
 static func _armor(s: GameSession, data: Dictionary, id: String, d: Dictionary, steps: Array[String]) -> void:
 	var c := s.character
 	var a: Dictionary = d["armor"]
-	var slot := "shield" if str(a.get("category", "")) == "shield" else "armor"
+	var slot := CharacterRules.slot_for(d, data)  # a shield is held in the off hand
 	if str(c["equipped"].get(slot, "")) != id:
 		return
 	var plus := ItemRules.plus(d, ["magic_plus"]) + ItemRules.plus(d, ["ac_plus"])
 	var dex := CharacterRules.mod(CharacterRules.ability(c, "dex"))
 	var want := 0
-	if slot == "shield":
+	if CharacterRules.is_shield(d):
 		c["equipped"][slot] = ""
 		CharacterRules.refresh(c, data, s.items)
 		var bare := CharacterRules.armor_class(c, data, s.items)

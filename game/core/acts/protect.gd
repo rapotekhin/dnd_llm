@@ -27,7 +27,7 @@ func reacts(s: GameSession, data: Dictionary, f: Dictionary, when: String, ctx: 
 	var me := Sheet.holder(s, f)
 	var foe := CombatRules.fighter(s, str(ctx["foe"]))
 	var t := CombatRules.fighter(s, str(ctx["target"]))
-	if not CharacterRules.style(me, "protection") or CharacterRules.item_def(me, data, s.items, "shield").is_empty() \
+	if not CharacterRules.style(me, "protection") or CharacterRules.shield_def(me, data, s.items).is_empty() \
 			or not CombatRules.friends_of(s, f).has(str(t["id"])) or FightGrid.feet(data, f, t) > 5 or not FightGrid.sees(s, data, f, foe):
 		return out
 	out.append({"act": id, "to": str(ctx["target"]), "how": {}, "worth": 1.5})

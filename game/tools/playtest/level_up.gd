@@ -50,7 +50,12 @@ func run() -> void:
 	scroll.scroll_vertical = 100000
 	await frames(3)
 	await shot("sheet_spells")
-	step("cast buttons on the sheet", find(sheet, "Cast_" + str(gs.session.character["spells"]["prepared"][0])) != null)
+	var first := str(gs.session.character["spells"]["prepared"][0])
+	var icon: Button = find(sheet, "Spell_" + first)  # v0.8.4.43.13: the book's icons, a click lists the circles to cast with
+	if step("the prepared spell's icon in the book", icon != null and not str(icon.get("drag_key")).is_empty()):
+		await press(icon)
+		await frames(2)
+		step("a click lists «Колдовать» with its circles", find(sheet, "CastList_" + first) != null)
 
 
 func _click(view: Control, node_name: String) -> void:

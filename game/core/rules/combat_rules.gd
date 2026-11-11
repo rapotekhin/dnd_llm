@@ -664,7 +664,8 @@ static func pay_attack(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 ## The weapon of the hero's hand: main, off, fists.
 static func hand_profile(s: GameSession, data: Dictionary, hand: String) -> Dictionary:
 	var c := s.character
-	var wid := "" if hand == "fists" else str(c.get("equipped", {}).get("off_hand" if hand == "off" else "main_hand", ""))
+	var eq: Dictionary = c.get("equipped", {})
+	var wid := "" if hand == "fists" else CharacterRules.off_weapon(eq, data, s.items) if hand == "off" else str(eq.get("main_hand", ""))
 	return weapon_profile(c, data, s.items, wid, hand == "off")
 
 
@@ -702,10 +703,10 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	if ranged and _has_style(c, "archery"):
 		to_hit += 2
 		RollParts.add(hit_parts, "боевой стиль: стрельба", 2)
-	var duel := not ranged and not props.has("two_handed") and str(eq.get("off_hand", "")).is_empty() and _has_style(c, "dueling")
+	var duel := not ranged and not props.has("two_handed") and CharacterRules.off_weapon(eq, data, session_items).is_empty() and _has_style(c, "dueling")
 	if duel:  # one hand on it: a versatile weapon keeps its one-handed die (v0.8.4.33)
 		bonus += 2
-	elif w.has("versatile") and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty() and not offhand:
+	elif w.has("versatile") and str(eq.get("off_hand", "")).is_empty() and not offhand:  # a weapon or a shield there holds the hand
 		dice = str(w["versatile"])
 	var magic := ItemRules.plus(def, ["magic_plus"])  # a +N weapon (v0.6.3)
 	to_hit += magic + CraftRules.quality_mod(def)

@@ -915,11 +915,16 @@ func _plan_equip(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		if not why_all.is_empty():
 			return {"reason": _equip_reason(s, data, who, "", why_all, eq)}
 		return {"plan": {"who": who, "slots": CharacterRules.SLOTS.duplicate(), "item_id": "", "stowed": true}, "summary": ("%sснято: %s" if who != Being.HERO else "%sСнято: %s") % [name, ", ".join(worn)]}
+	if slot == "shield":  # the protocol's «shield» is the shield of the off hand (v0.8.4.43.13: no slot of its own)
+		if id.is_empty() and CharacterRules.shield_in(eq, data, s.items).is_empty():
+			return {"reason": "щита в руках нет"}
+		slot = "off_hand"
 	if not CharacterRules.SLOTS.has(slot):
 		return {"reason": "нет такого слота: %s (%s, all)" % [slot, ", ".join(CharacterRules.SLOTS)]}
 	if not id.is_empty() and CharacterRules.HANDS.has(slot) and CharacterRules.stowed(c).values().has(id) and not eq.values().has(id):
 		return _plan_other_set(s, data, who, id, slot)  # a weapon of the set put away: that set comes to hand
-	if CombatRules.active(s) and not id.is_empty() and not (slot in ["armor", "shield"] or CharacterRules.WEAR_SLOTS.has(slot)):  # drawing a weapon: free once a turn, then the action (5e)
+	if CombatRules.active(s) and not id.is_empty() and not (slot == "armor" or CharacterRules.WEAR_SLOTS.has(slot)
+			or CharacterRules.is_shield(ItemRules.def_of(data["items"], s.items, id))):  # drawing a weapon: free once a turn, then the action (5e)
 		var econ := CombatRules.economy(s)
 		if bool(econ.get("object", false)) and int(econ.get("action", 0)) <= 0:
 			return {"reason": "в этот ход оружие уже доставали, а действие потрачено — сменить можно в следующий ход"}

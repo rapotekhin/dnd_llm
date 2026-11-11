@@ -9,12 +9,13 @@ extends RefCounted
 const THING_ACTS := {"read": "BTN_BOARD_READ", "open": "BTN_OPEN_SHORT", "take": "BTN_TAKE", "look": "BTN_LOOK_AT"}
 
 
-static func label(parent: Control, text: String, variation: String = "") -> Label:
+## A line of a window: it wraps and fills the width; `fit` — as wide as its words, in one line (a caption beside icons).
+static func label(parent: Control, text: String, variation: String = "", fit := false) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF if fit else TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if fit else Control.SIZE_EXPAND_FILL
 	if not variation.is_empty():
 		l.theme_type_variation = variation
 	if parent != null:

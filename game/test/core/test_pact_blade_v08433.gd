@@ -38,7 +38,7 @@ func test_a_called_form_is_in_the_hand_owned_magical_and_by_charisma() -> void:
 	var id := FeatureRules.pact_item(c)
 	assert_str(id).is_equal("pact_greatsword")
 	assert_str(str(c["equipped"]["main_hand"])).is_equal(id)
-	assert_str(str(c["equipped"].get("shield", ""))).is_empty()  # two hands on it
+	assert_str(str(c["equipped"].get("off_hand", ""))).is_empty()  # two hands on it
 	var p := _profile(id)
 	assert_bool(bool(p["magical"])).is_true()
 	var owned := CombatRules.weapon_proficient(c, data["items"]["catalog"]["greatsword"]["weapon"], "greatsword")

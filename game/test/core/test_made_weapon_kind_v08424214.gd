@@ -47,7 +47,7 @@ func test_a_fine_storm_longsword_strikes_in_melee_and_swings() -> void:
 	var s: GameSession = m["s"]
 	var id := str(m["id"])
 	s.character["equipped"]["main_hand"] = id
-	s.character["equipped"]["shield"] = ""
+	s.character["equipped"]["off_hand"] = ""
 	CharacterRules.refresh(s.character, data, s.items)
 	TestUtils.fight(s, data, [{"monster": "goblin", "col": 0}])
 	var w := CombatRules.weapon_profile(s.character, data, s.items, id)

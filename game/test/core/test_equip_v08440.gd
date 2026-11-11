@@ -40,7 +40,7 @@ func _turn(s: GameSession, e: Dictionary) -> Dictionary:
 func test_a_template_holds_its_weapons_from_the_start() -> void:
 	var kit := Gear.start(data, "goblin")
 	assert_str(str(kit["equipped"]["main_hand"])).is_equal("scimitar")
-	assert_str(str(kit["equipped"]["shield"])).is_equal("shield")
+	assert_str(str(kit["equipped"]["off_hand"])).is_equal("shield")
 	assert_str(str(kit["stowed"]["main_hand"])).is_equal("shortbow")
 	assert_str(str(Gear.start(data, "bandit_captain")["equipped"]["off_hand"])).is_equal("dagger")
 	assert_str(str(Gear.start(data, "veteran")["equipped"]["off_hand"])).is_equal("shortsword")

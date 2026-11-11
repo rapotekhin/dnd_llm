@@ -2,9 +2,10 @@ class_name CharacterSheet
 extends ModalFrame
 ## The character window as in BG3 (v0.8.4.43.6; the sheet since v0.5.0): not the whole screen — the world shows at its
 ## sides and the hotbar under it. On top the party's portraits (a click shows that one, a thing dropped on one is handed
-## over), the name, the sections — «Снаряжение» (C, I), «Книга» (K), «Развитие» — the level with its experience and the
-## coins. Left the sheet in three tabs (SheetColumn); in «Снаряжение» the doll (DollView) and the grid of things
-## (ItemGrid) with the weight bar and the coins under it. A thing: a drag onto the doll or the belt puts it on, back onto
+## over) and the name on the left, the sections — «Снаряжение» (C, I), «Книга» (K), «Развитие» — in the middle with the
+## level and its experience under them, the coins on the right (v0.8.4.43.13, as in BG3); the window in the middle of the
+## screen. Left the sheet in three tabs (SheetColumn); in «Снаряжение» the doll (DollView) and the grid of things
+## (ItemGrid) with the weight bar under it. A thing: a drag onto the doll or the belt puts it on, back onto
 ## the grid takes it off, onto a companion's portrait hands it over, past the window's edge drops it, Shift asks how many;
 ## a double click puts it on or uses it, the right button lists its acts (ItemActs). Every act is the engine's through
 ## GameState.item_act; anybody of the party is read by Sheet.who (ADR-0016) and shown without closing the window.
@@ -15,6 +16,8 @@ signal bag_requested(bag_id: String)
 const SCENE := "res://ui/components/character_sheet.tscn"
 const SECTIONS: Array[String] = ["gear", "book", "dev"]
 const PORTRAIT := 52
+const BOOK_TABS: Array[String] = ["class", "common", "react"]
+const SPELL_CELL := 48
 
 var who := Being.HERO  ## whose things and sheet are shown
 var section := "gear"
@@ -25,6 +28,7 @@ var _doll: DollView
 var _grid: ItemGrid
 var _menu: ActsMenu
 var _mate_view := {}  # a companion's grid: its filter and sort, kept while the window lives
+var book_tab := "class"  ## the book's tab (v0.8.4.43.13): the class, the common acts of a fight, the reactions
 
 
 func required() -> Dictionary:
@@ -32,9 +36,9 @@ func required() -> Dictionary:
 	nodes.merge({
 		"%SheetSplit": "HBoxContainer", "%ColumnBox": "PanelContainer", "%GearPage": "HBoxContainer", "%DollBox": "VBoxContainer",
 		"%InvBox": "VBoxContainer", "%WeightRow": "HBoxContainer", "%CarriedWeight": "Label", "%WeightBar": "ProgressBar",
-		"%GearCoins": "Label", "%AttunedCount": "Label", "%BookPage": "ScrollContainer", "%FeaturesBox": "VBoxContainer",
+		"%AttunedCount": "Label", "%BookPage": "ScrollContainer", "%FeaturesBox": "VBoxContainer",
 		"%DevPage": "ScrollContainer", "%DevBox": "VBoxContainer", "%ItemActsBox": "VBoxContainer", "%PartyStrip": "HBoxContainer",
-		"%Sections": "HBoxContainer", "%LevelBox": "VBoxContainer", "%LevelLabel": "Label", "%XpBar": "ProgressBar", "%HeadCoins": "Label",
+		"%HeadLeft": "HBoxContainer", "%HeadMid": "VBoxContainer", "%HeadRight": "HBoxContainer", "%Sections": "HBoxContainer", "%LevelBox": "VBoxContainer", "%LevelLabel": "Label", "%XpBar": "ProgressBar", "%HeadCoins": "Label",
 	})
 	return nodes
 
@@ -45,9 +49,8 @@ func _ready() -> void:
 	close_x.name = "CloseSheetButton"
 	var split: HBoxContainer = UiScenes.need(self, "%SheetSplit")
 	fill_body(split)
-	var head := title.get_parent()  # the party, the name, the sections, the level, the coins, «✕»
-	head.move_child(UiScenes.need(self, "%PartyStrip"), 0)
-	head.move_child(close_x, head.get_child_count() - 1)
+	title.reparent(UiScenes.need(self, "%HeadLeft"))  # the party and the name | the sections and the level | the coins and «✕»
+	close_x.reparent(UiScenes.need(self, "%HeadRight"))
 	for n: Node in get_tree().get_nodes_in_group("editor_sample"):
 		if is_ancestor_of(n):
 			n.queue_free()
@@ -126,10 +129,7 @@ func _rebuild() -> void:
 		(UiScenes.need(self, page[0]) as Control).visible = section == page[1]
 	match section:
 		"book":
-			if who == Being.HERO:
-				_book(s.character)
-			else:  # a companion's book: its reactions, chosen as the hero's (v0.8.4.43.7)
-				_reactions(_page("%FeaturesBox"))
+			_book(s.character)
 		"dev":
 			_development(s.character)
 		_:
@@ -234,7 +234,6 @@ func _gear() -> void:
 	_grid.where = {"kind": "things", "who": who}
 	_grid.view = SaveManager.inventory_view if hero else _mate_view
 	_grid.show_items(Gear.loose(c, data, s.items))
-	(UiScenes.need(self, "%GearCoins") as Label).text = tr("SIDE_COINS").format({"coins": Money.format(Gear.coins(s, data, who))})
 	(UiScenes.need(self, "%WeightRow") as Control).visible = hero
 	var att: Label = UiScenes.need(self, "%AttunedCount")
 	att.visible = hero
@@ -323,7 +322,7 @@ func stage_rows(head: String, rows: Array) -> Container:
 	return ItemMenu.stage(UiScenes.need(self, "%ItemActsBox"), head, rows, _do) as Container
 
 
-# --- «Книга»: abilities with uses, the pact, spells (the old «Умения и заклинания» tab) -----------------------------
+# --- «Книга» as in BG3 (v0.8.4.43.13): the class, the common acts, the reactions — icons dragged onto the hotbar ------
 
 
 ## The box of a page, emptied for its rows.
@@ -335,112 +334,362 @@ func _page(path: String) -> VBoxContainer:
 	return box
 
 
-func _text(parent: Control, text: String, variation: String = "") -> Label:
-	return UiParts.label(parent, text, variation)
+func _text(parent: Control, text: String, variation: String = "", fit := false) -> Label:
+	return UiParts.label(parent, text, variation, fit)
 
 
+## The book of `who`: the hero's three tabs — its class (cantrips, class actions, the prepared spells and all of them by
+## circle with the slots), the common acts of a fight, the reactions; a companion's reactions alone (it acts by itself).
+## Every icon is dragged onto the hotbar by its key (`ActionBar.cell_key`): one taken off the bar by chance comes back.
 func _book(c: Dictionary) -> void:
 	var box := _page("%FeaturesBox")
+	var hero := who == Being.HERO
+	if not hero:
+		book_tab = "react"
+	var bar := HBoxContainer.new()
+	bar.name = "BookTabs"
+	bar.alignment = BoxContainer.ALIGNMENT_CENTER
+	bar.add_theme_constant_override("separation", 6)
+	box.add_child(bar)
+	for t: String in BOOK_TABS:
+		if not hero and t != "react":
+			continue
+		var b := Button.new()
+		b.name = "BookTab_" + t
+		b.toggle_mode = true
+		b.button_pressed = t == book_tab
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.text = _book_tab_title(c, t)
+		b.custom_minimum_size = Vector2(200, 40)
+		b.pressed.connect(func() -> void:
+			book_tab = t
+			_rebuild())
+		bar.add_child(b)
+	match book_tab:
+		"common":
+			_book_common(box)
+		"react":
+			_reactions(box)
+		_:
+			_book_class(box, c)
+
+
+## «Друид (4/5)» — the class and its spells prepared, «Общие», «Реакции».
+func _book_tab_title(c: Dictionary, t: String) -> String:
+	match t:
+		"common":
+			return tr("BAR_KIND_COMMON")
+		"react":
+			return tr("SHEET_REACTIONS")
+	var name := str(c.get("class_name", ""))
+	if SpellRules.prepares(c, Catalog.data):
+		name += " (%d/%d)" % [(c.get("spells", {}).get("prepared", []) as Array).size(), int(SpellRules.prepare_pool(c, Catalog.data)["count"])]
+	return name
+
+
+## The class's page: its numbers on top, the cantrips beside the class actions, the strip of prepared spells, every spell by
+## circle with the slots of the circle on the right.
+func _book_class(box: VBoxContainer, c: Dictionary) -> void:
 	var d := Catalog.data
 	var can_act := Backend.is_ready() and not GameState.is_busy()
-	_text(box, tr("SHEET_HIT_DICE").format({"left": ExplorationRules.hit_dice_left(c), "max": int(c.get("level", 1))}), UiTheme.MUTED_LABEL)
-	var res := Stock.lines(c, d)
-	if not res.is_empty():
-		_text(box, tr("SHEET_RESOURCES"), UiTheme.MUTED_LABEL)
-		for r: Dictionary in res:
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 12)
-			box.add_child(row)
-			var rl := _text(row, tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"],
-				"rest": tr("REST_KIND_" + str(r["recharge"]).to_upper())}))
-			rl.mouse_filter = Control.MOUSE_FILTER_STOP
-			_hotbar_drag(rl, "feature", str(r["id"]), "features/" + str((d["rules"]["resources"].get(str(r["id"]), {}).get("features", [r["id"]]) as Array)[0]))
-			if Stock.table(d, c)[str(r["id"])].has("spell"):  # spent by casting its spell (v0.8.4.26.1)
-				continue
-			if str(r["id"]) == "sorcery_points":  # Font of Magic: slots and points (v0.7.10)
-				for o: Dictionary in FeatureRules.font_options(c, d):
-					_action(row, "Font_" + str(o["id"]), str(o["label"]), can_act, GameState.font_convert.bind(str(o["id"])))
-				continue
-			_action(row, "Use_" + str(r["id"]), "BTN_USE", can_act and int(r["left"]) > 0, GameState.use_feature.bind(str(r["id"])))
-	_pact_rows(box, c, can_act)
-	_familiar_rows(box, c, can_act)
-	_reactions(box)
-	if str(c.get("spell_ability", "")).is_empty():
-		return
-	box.add_child(HSeparator.new())
-	_text(box, tr("SHEET_SPELLCASTING").format({"ability": tr("ABILITY_" + str(c["spell_ability"]).to_upper()),
-		"dc": c.get("spell_dc", 0), "attack": "%+d" % int(c.get("spell_attack", 0))}))
-	var slots: Array[String] = []
-	for i in 5:
-		var m := int(c["slots_max"][i])
-		if m > 0:
-			slots.append(tr("SHEET_SLOT").format({"level": i + 1, "left": SpellRules.slots_left(c, i + 1), "max": m}))
-	if not slots.is_empty():
-		_text(box, " · ".join(slots), UiTheme.MUTED_LABEL)
+	var head := HBoxContainer.new()
+	head.name = "BookHead"
+	head.add_theme_constant_override("separation", 18)
+	box.add_child(head)
+	var sub: Dictionary = d["classes"]["subclasses"].get(str(c.get("subclass", "")), {})
+	_text(head, tr("SHEET_CLASS_LEVEL").format({"class": c.get("class_name", ""), "level": int(c.get("level", 1))})
+		+ (" · " + str(sub["name"]) if not sub.is_empty() else ""), UiTheme.ACCENT_LABEL, true)
+	if not str(c.get("spell_ability", "")).is_empty():
+		_text(head, tr("SHEET_SPELLCASTING").format({"ability": tr("ABILITY_" + str(c["spell_ability"]).to_upper()),
+			"dc": c.get("spell_dc", 0), "attack": "%+d" % int(c.get("spell_attack", 0))}), UiTheme.MUTED_LABEL, true)
+	_text(head, tr("SHEET_HIT_DICE").format({"left": ExplorationRules.hit_dice_left(c), "max": int(c.get("level", 1))}), UiTheme.MUTED_LABEL, true)
 	if not str(c.get("concentration", "")).is_empty():
 		_text(box, tr("SHEET_CONCENTRATION").format({"spell": d["spells"].get(str(c["concentration"]), {}).get("name", "")}))
+	var ready_ids := SpellRules.ready(c)
+	var sp: Dictionary = c.get("spells", {})
+	var top := HBoxContainer.new()
+	top.name = "BookTop"
+	top.add_theme_constant_override("separation", 40)
+	box.add_child(top)
+	var cantrips := _book_group(top, "SHEET_SPELLS_CANTRIPS", "BookCantrips")
+	var seen: Array[String] = []
+	for list: String in ["cantrips", "tome", "free"]:  # what is cast at will: cantrips, the tome's, an invocation's spell
+		for id: Variant in _by_circle(sp.get(list, [])):
+			if not seen.has(str(id)):
+				seen.append(str(id))
+				_spell_cell(cantrips, c, str(id), ready_ids.has(str(id)))
+	cantrips.get_parent().visible = cantrips.get_child_count() > 0
+	var acts := _book_group(top, "BOOK_CLASS_ACTS", "BookClassActs")
+	_class_acts(acts, c, can_act)
+	acts.get_parent().visible = acts.get_child_count() > 0
+	_pact_rows(box, c, can_act)
+	_familiar_rows(box, c, can_act)
+	if str(c.get("spell_ability", "")).is_empty():
+		return
+	var spells_head := HBoxContainer.new()
+	spells_head.name = "BookSpellsHead"
+	spells_head.add_theme_constant_override("separation", 14)
+	box.add_child(spells_head)
+	_text(spells_head, tr("BOOK_SPELLS"), UiTheme.CAPTION_LABEL, true).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var always: Array = sp.get("always", [])
+	var pool: Array = []
 	if SpellRules.prepares(c, d):
+		var p := SpellRules.prepare_pool(c, d)
+		var prepared: Array = sp.get("prepared", [])
+		_text(spells_head, tr("BOOK_PREPARED").format({"n": prepared.size(), "max": int(p["count"])}), UiTheme.MUTED_LABEL, true).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var why := SpellRules.can_prepare(c, d)
 		var prep := Button.new()
 		prep.name = "PrepareButton"
 		prep.text = "BTN_PREPARE"
 		prep.disabled = not why.is_empty() or GameState.is_busy()
 		prep.tooltip_text = tr(why) if not why.is_empty() else ""
-		prep.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		prep.pressed.connect(prepare_requested.emit)
-		box.add_child(prep)
-	var ready_ids := SpellRules.ready(c)
-	var sp: Dictionary = c.get("spells", {})
-	for list: String in ["cantrips", "tome", "free", "prepared", "always", "known"]:
-		var ids: Array = sp.get(list, [])
-		if list == "known" and ids == sp.get("prepared", []):
+		spells_head.add_child(prep)
+		var strip := PanelContainer.new()  # BG3: the prepared ones in a strip, the empty places to fill after them
+		strip.name = "PreparedStrip"
+		strip.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_RAISED, UiTheme.BORDER, 1, 8, 6))
+		box.add_child(strip)
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 4)
+		flow.add_theme_constant_override("v_separation", 4)
+		strip.add_child(flow)
+		for id: Variant in _by_circle(prepared):
+			_spell_cell(flow, c, str(id), true)
+		for i in maxi(0, int(p["count"]) - prepared.size()):
+			var empty := IconSlot.make("slots/spell", tr("BOOK_PREPARE_EMPTY"), SPELL_CELL)
+			empty.name = "PreparedEmpty_%d" % i
+			empty.disabled = true
+			flow.add_child(empty)
+		for id: Variant in _by_circle(always):
+			_spell_cell(flow, c, str(id), true)
+		pool = (p["pool"] as Array) + always
+	else:
+		for list: String in ["known", "prepared", "always"]:
+			for id: Variant in sp.get(list, []):
+				if not pool.has(id):
+					pool.append(id)
+	for lv in range(1, 6):
+		var ids := _by_circle(pool.filter(func(id: Variant) -> bool: return SpellRules.level_of(d, str(id)) == lv))
+		var most := int(c.get("slots_max", [0, 0, 0, 0, 0])[lv - 1])
+		if ids.is_empty() and most <= 0:
 			continue
-		if ids.is_empty():
-			continue
-		_text(box, tr("SHEET_SPELLS_" + list.to_upper()), UiTheme.MUTED_LABEL)
-		var sorted := ids.duplicate()  # v0.7.22.21 (#20): by circle, then by name
-		sorted.sort_custom(func(a: Variant, b: Variant) -> bool:
-			var la := SpellRules.level_of(d, str(a))
-			var lb := SpellRules.level_of(d, str(b))
-			return la < lb or (la == lb and str(d["spells"].get(str(a), {}).get("name", a)) < str(d["spells"].get(str(b), {}).get("name", b))))
-		var circle := -1
-		for id: Variant in sorted:
-			var s: Dictionary = d["spells"].get(str(id), {})
-			var lv := int(s.get("level", 0))
-			if lv != circle and list != "cantrips":
-				circle = lv
-				_text(box, tr("DETAILS_CANTRIP") if lv == 0 else tr("DETAILS_CIRCLE").format({"n": lv})).add_theme_color_override("font_color", UiTheme.MUTED)
-			var b := _entry(box, "%s — %s, %s" % [s.get("name", id), s.get("casting_time", ""), s.get("range", "")], DetailsPanel.spell_text(d, str(id)), str(s.get("name", id)))
-			UiTheme.school_frame(b, str(s.get("school_id", "")))
-			b.name = "Spell_" + str(id)
-			_hotbar_drag(b, "spell", str(id), "spells/" + str(id))
-			if list != "known" and ready_ids.has(str(id)):
-				_cast_row(box, c, str(id), 0 if list == "free" else lv, can_act)
+		var row := HBoxContainer.new()
+		row.name = "Circle_%d" % lv
+		row.add_theme_constant_override("separation", 10)
+		box.add_child(row)
+		var roman := _text(row, str(ActionBar.ROMAN[lv]), UiTheme.ACCENT_LABEL, true)
+		roman.custom_minimum_size = Vector2(34, 0)
+		roman.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		roman.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var flow := HFlowContainer.new()
+		flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		flow.add_theme_constant_override("h_separation", 4)
+		flow.add_theme_constant_override("v_separation", 4)
+		row.add_child(flow)
+		for id: Variant in ids:
+			_spell_cell(flow, c, str(id), ready_ids.has(str(id)))
+		if most > 0:  # the slots of the circle as pips, as in BG3
+			var left := SpellRules.slots_left(c, lv)
+			var pips := _text(row, "●".repeat(left) + "○".repeat(maxi(0, most - left)), UiTheme.ACCENT_LABEL, true)
+			pips.name = "Slots_%d" % lv
+			pips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			pips.mouse_filter = Control.MOUSE_FILTER_STOP
+			pips.tooltip_text = tr("SHEET_SLOT").format({"level": lv, "left": left, "max": most})
 
 
-## The reactions as in BG3's book (v0.8.4.43.7): each its own «Спрашивать / Всегда / Никогда», kept on the character
-## (FeatureRules.reaction_list, GameState.choose_reaction); one not chosen yet goes by the settings' common choice. A
-## companion is never asked: «Всегда» or «Никогда».
+## A titled group of icons in a row; its flow.
+func _book_group(parent: Control, key: String, node_name: String) -> HFlowContainer:
+	var col := VBoxContainer.new()
+	col.name = node_name
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 6)
+	parent.add_child(col)
+	_text(col, tr(key), UiTheme.CAPTION_LABEL, true)
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 4)
+	flow.add_theme_constant_override("v_separation", 4)
+	col.add_child(flow)
+	return flow
+
+
+## Spell ids by circle, then by name.
+func _by_circle(ids: Array) -> Array:
+	var d := Catalog.data
+	var out := ids.duplicate()
+	out.sort_custom(func(a: Variant, b: Variant) -> bool:
+		var la := SpellRules.level_of(d, str(a))
+		var lb := SpellRules.level_of(d, str(b))
+		return la < lb or (la == lb and str(d["spells"].get(str(a), {}).get("name", a)) < str(d["spells"].get(str(b), {}).get("name", b))))
+	return out
+
+
+## A spell's icon: its card at the cursor (the right button pins it), dragged onto the hotbar; a click lists the circles
+## to cast it with. One not prepared is dim and only told.
+func _spell_cell(parent: Control, c: Dictionary, id: String, ready: bool) -> IconSlot:
+	var d := Catalog.data
+	var sp: Dictionary = d["spells"].get(id, {})
+	var cell := IconSlot.make(IconRules.ref("spells", id), "", SPELL_CELL)
+	cell.name = "Spell_" + id
+	cell.text = "%s · %s" % [sp.get("casting_time", ""), sp.get("range", "")]
+	if not ready:
+		cell.text += "\n" + tr("BOOK_NOT_PREPARED")
+		cell.disabled = true  # drawn faded by the cell itself; its card still comes on the hover
+	cell.tooltip_text = cell.text
+	parent.add_child(cell)
+	_details.hook(cell, str(sp.get("name", id)), DetailsPanel.spell_text(d, id))
+	if ready:
+		cell.drag_key = "spell:" + id
+		cell.pressed.connect(_cast_menu.bind(cell, c, id))
+	return cell
+
+
+## The circles to cast a spell with (the lowest fitting one first) and what each gives: [[circle, label]].
+func _cast_options(c: Dictionary, id: String) -> Array:
+	var d := Catalog.data
+	var level := SpellRules.level_of(d, id)
+	if SpellRules.free_now(c, d, id):
+		return [[0, tr("SLOT_AT_WILL")]]  # an invocation's spell (v0.7.22.4)
+	if level == 0:
+		return [[0, tr("SLOT_CANTRIP")]]
+	var out: Array = []
+	for lv in range(level, 6):
+		var left := SpellRules.slots_left(c, lv)
+		if left > 0:
+			var grown := SpellRules.at_slot(d, id, lv)  # v0.7.22.19 (#19): what the slot gives
+			out.append([lv, tr("SLOT_CIRCLE").format({"n": lv, "left": left}) + (" — " + grown.get_slice(": ", 1) if not grown.is_empty() else "")])
+	return out
+
+
+## A click on a spell: «Колдовать» with each circle it may be cast with, grey with why.
+func _cast_menu(cell: Control, c: Dictionary, id: String) -> void:
+	var pop := ActsMenu.new()
+	pop.name = "CastList_" + id
+	var top := pop.list_of([])
+	var can_act := Backend.is_ready() and not GameState.is_busy()
+	var opts := _cast_options(c, id)
+	if opts.is_empty():
+		pop.add_act(top, tr("BOOK_NO_SLOTS"), "", true, Callable())
+	for o: Array in opts:
+		var circle := int(o[0])
+		pop.add_act(top, "%s: %s" % [tr("BTN_CAST"), o[1]], "" if can_act else tr("ABILITY_BUSY"), not can_act, func() -> void: cast_spell(id, circle))
+	cell.add_child(pop)
+	pop.popup_hide.connect(pop.queue_free)
+	pop.popup(Rect2i(Vector2i(cell.get_screen_position() + Vector2(0, cell.size.y)), Vector2i.ZERO))
+
+
+## Casts a spell of the book with `circle` (0 — a cantrip or at will): a held concentration asks a second pick, Sending
+## opens the letter (v0.8.4.26.3); done — the window closes, else a toast. "" or the reason.
+func cast_spell(id: String, circle: int) -> String:
+	var held := GameState.concentration_conflict(id)  # v0.7.13.1: the second pick breaks the old concentration
+	var err := ""
+	if not held.is_empty() and _conc_armed != id:
+		_conc_armed = id
+		err = tr("CONC_SWITCH_AGAIN").format({"old": held})
+	elif not LetterRules.way_by(Catalog.data, "spell", id).is_empty():
+		_conc_armed = ""
+		EventBus.letter_requested.emit("")
+	else:
+		_conc_armed = ""
+		err = GameState.cast(id, circle)
+	if err.is_empty():
+		visible = false
+	else:
+		EventBus.message.emit(tr(err))
+	return err
+
+
+## The class actions: each feature with uses (Stock) as an icon with what is left — a click uses it, sorcery points list
+## their conversions; one spent by casting its spell only shows its uses.
+func _class_acts(flow: HFlowContainer, c: Dictionary, can_act: bool) -> void:
+	var d := Catalog.data
+	for r: Dictionary in Stock.lines(c, d):
+		var rid := str(r["id"])
+		var feat := str((d["rules"]["resources"].get(rid, {}).get("features", [rid]) as Array)[0])
+		var cell := IconSlot.make(IconRules.ref("features", feat), "", SPELL_CELL)
+		cell.name = "Use_" + rid
+		cell.badge = "%d/%d" % [int(r["left"]), int(r["max"])]
+		cell.text = tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"], "rest": tr("REST_KIND_" + str(r["recharge"]).to_upper())})
+		cell.tooltip_text = cell.text
+		cell.drag_key = "feature:" + rid
+		flow.add_child(cell)
+		_details.hook(cell, str(r["name"]), str(d["classes"]["features"].get(feat, {}).get("desc", "")))
+		if Stock.table(d, c)[rid].has("spell"):  # spent by casting its spell (v0.8.4.26.1)
+			continue
+		var opts: Array = []  # [[label, why, do]]
+		if rid == "sorcery_points":  # Font of Magic: slots and points (v0.7.10)
+			for o: Dictionary in FeatureRules.font_options(c, d):
+				opts.append([str(o["label"]), "", GameState.font_convert.bind(str(o["id"]))])
+		else:
+			opts.append([tr("BTN_USE"), "" if int(r["left"]) > 0 else tr("BOOK_NO_USES"), GameState.use_feature.bind(rid)])
+		cell.pressed.connect(_use_menu.bind(cell, rid, opts, can_act))
+
+
+## A click on a class action: its uses as a list, grey with why.
+func _use_menu(cell: Control, rid: String, opts: Array, can_act: bool) -> void:
+	var pop := ActsMenu.new()
+	pop.name = "UseList_" + rid
+	var top := pop.list_of([])
+	for o: Array in opts:
+		var stop := str(o[1]) if not str(o[1]).is_empty() else ("" if can_act else tr("ABILITY_BUSY"))
+		var act: Callable = o[2]
+		pop.add_act(top, str(o[0]), stop, not stop.is_empty(), func() -> void:
+			var err: String = act.call()
+			if err.is_empty():
+				visible = false
+			else:
+				EventBus.message.emit(tr(err)))
+	cell.add_child(pop)
+	pop.popup_hide.connect(pop.queue_free)
+	pop.popup(Rect2i(Vector2i(cell.get_screen_position() + Vector2(0, cell.size.y)), Vector2i.ZERO))
+
+
+## «Общие» (as in BG3's book): the acts of a fight anybody has, by `Act.book`, under their buttons' keys — dragged onto the
+## hotbar, one taken off it by chance comes back from here.
+func _book_common(box: VBoxContainer) -> void:
+	_text(box, tr("BOOK_COMMON_HINT"), UiTheme.MUTED_LABEL)
+	var flow := HFlowContainer.new()
+	flow.name = "BookCommon"
+	flow.add_theme_constant_override("h_separation", 6)
+	flow.add_theme_constant_override("v_separation", 6)
+	box.add_child(flow)
+	var acts := Acts.all().filter(func(a: Act) -> bool: return a.tab() == "common" and a.book())
+	acts.sort_custom(func(x: Act, y: Act) -> bool: return x.order() < y.order())
+	for a: Act in acts:
+		var cell := IconSlot.make(IconRules.ref("acts", a.id), "", SPELL_CELL + 8)
+		cell.name = "BookAct_" + a.id
+		cell.text = a.title()
+		cell.tooltip_text = a.title()
+		cell.drag_key = "Do_" + a.id
+		flow.add_child(cell)
+		_details.hook(cell, a.title(), a.tip())
+
+
+## The reactions as in BG3's book (v0.8.4.43.7): each its icon and its own «Спрашивать / Всегда / Никогда», kept on the
+## character (FeatureRules.reaction_list, GameState.choose_reaction); one not chosen yet goes by the settings' common
+## choice. A companion is never asked: «Всегда» or «Никогда».
 func _reactions(box: VBoxContainer) -> void:
 	var s := GameState.session
 	var me := Sheet.who(s, Catalog.data, who)
-	box.add_child(HSeparator.new())
-	_text(box, tr("SHEET_REACTIONS"), UiTheme.CAPTION_LABEL)
 	_text(box, tr("SHEET_REACTIONS_HINT" if who == Being.HERO else "SHEET_REACTIONS_HINT_MATE"), UiTheme.MUTED_LABEL)
 	var grid := GridContainer.new()
 	grid.name = "ReactionRows"
-	grid.columns = 2
+	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 6)
 	box.add_child(grid)
 	for r: Dictionary in FeatureRules.reaction_list(s, Catalog.data, me):
 		var id := str(r["id"])
-		var name_b := _entry(grid, str(r["name"]), str(r["tip"]))
-		name_b.name = "Reaction_" + id
-		name_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var icon := IconSlot.make(str(r["icon"]), str(r["name"]), 44)
+		icon.name = "Reaction_" + id
+		grid.add_child(icon)
+		_details.hook(icon, str(r["name"]), str(r["tip"]))
+		var name_l := _text(grid, str(r["name"]))
+		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var row := HBoxContainer.new()
 		row.name = "ReactionChoice_" + id
 		row.add_theme_constant_override("separation", 4)
+		row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		grid.add_child(row)
 		for p: String in FeatureRules.POLICIES:
 			if p == "ask" and who != Being.HERO:
@@ -493,85 +742,6 @@ func _familiar_rows(box: VBoxContainer, c: Dictionary, can_act: bool) -> void:
 	box.add_child(flow)
 	for o: Dictionary in opts:
 		UiParts.act_button(flow, "Familiar_" + str(o["id"]), str(o["label"]), "" if can_act else "ABILITY_BUSY", GameState.choose_familiar.bind(str(o["id"])))
-
-
-## «Колдовать» with the slot circle to spend (the lowest fitting one first).
-func _cast_row(parent: Control, c: Dictionary, id: String, level: int, can_act: bool) -> void:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	parent.add_child(row)
-	var pick := OptionButton.new()
-	pick.name = "Slot_" + id
-	pick.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	if SpellRules.free_now(c, Catalog.data, id):
-		pick.add_item(tr("SLOT_AT_WILL"), 0)  # an invocation's spell (v0.7.22.4)
-	elif level == 0:
-		pick.add_item(tr("SLOT_CANTRIP"), 0)
-	else:
-		for lv in range(level, 6):
-			var left := SpellRules.slots_left(c, lv)
-			if left > 0:
-				pick.add_item(tr("SLOT_CIRCLE").format({"n": lv, "left": left}), lv)
-	row.add_child(pick)
-	var grown := Label.new()  # v0.7.22.19 (#19): what the chosen slot gives
-	grown.name = "Grown_" + id
-	grown.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	grown.add_theme_color_override("font_color", UiTheme.MUTED)
-	var show_grown := func() -> void:
-		grown.text = SpellRules.at_slot(Catalog.data, id, pick.get_selected_id()) if pick.item_count > 0 and level > 0 else ""
-	show_grown.call()
-	pick.item_selected.connect(func(_i: int) -> void: show_grown.call())
-	_action(row, "Cast_" + id, "BTN_CAST", can_act and pick.item_count > 0,
-		func() -> String:
-			var held := GameState.concentration_conflict(id)  # v0.7.13.1: the second press breaks the old concentration
-			if not held.is_empty() and _conc_armed != id:
-				_conc_armed = id
-				return tr("CONC_SWITCH_AGAIN").format({"old": held})
-			_conc_armed = ""
-			if not LetterRules.way_by(Catalog.data, "spell", id).is_empty():  # Sending: the letter's window, the slot goes with the letter (v0.8.4.26.3)
-				EventBus.letter_requested.emit("")
-				return ""
-			return GameState.cast(id, pick.get_selected_id() if pick.item_count > 0 else 0))
-	row.add_child(grown)
-
-
-## A button that calls `action` (returns "" or a reason): on success the window closes, otherwise a toast.
-func _action(parent: Control, node_name: String, text: String, enabled: bool, action: Callable) -> void:
-	var b := Button.new()
-	b.name = node_name
-	b.text = text
-	b.disabled = not enabled
-	b.pressed.connect(func() -> void:
-		var err: String = action.call()
-		if err.is_empty():
-			visible = false
-		else:
-			EventBus.message.emit(tr(err)))
-	parent.add_child(b)
-
-
-## A spell or a feature's uses dragged from the sheet onto a slot of the hotbar (v0.8.4.43.1, as in BG3): the bar takes
-## «<kind>:<id>» as its own cell (`ActionBar.cell_key`).
-func _hotbar_drag(node: Control, kind: String, id: String, icon: String) -> void:
-	node.set_drag_forwarding(func(_at: Vector2) -> Variant:
-		var ghost := IconSlot.make(icon, "")
-		ghost.size = Vector2(IconSlot.SIZE, IconSlot.SIZE)
-		ghost.modulate = Color(1, 1, 1, 0.8)
-		node.set_drag_preview(ghost)
-		return {"hotbar": "%s:%s" % [kind, id]}, Callable(), Callable())
-
-
-## A spell as one line: its text is in the card at the cursor (the right button pins it).
-func _entry(parent: Control, title_text: String, body_text: String, short_title: String = "") -> Button:
-	var b := Button.new()
-	b.text = title_text
-	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	b.add_theme_color_override("font_color", UiTheme.ACCENT)
-	parent.add_child(b)
-	_details.hook(b, short_title if not short_title.is_empty() else title_text, body_text)
-	return b
 
 
 # --- «Развитие»: the life goal, faith, the peaceful directions ------------------------------------------------------

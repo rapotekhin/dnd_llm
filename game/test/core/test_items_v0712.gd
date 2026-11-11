@@ -107,7 +107,7 @@ func test_reach_meets_a_foe_coming_in() -> void:
 	var s := _hero("fighter_aira")
 	s.character["inventory"]["glaive"] = 1
 	s.character["equipped"]["main_hand"] = "glaive"
-	s.character["equipped"]["shield"] = ""
+	s.character["equipped"]["off_hand"] = ""
 	var f := _fight(s, "wolf", 1)
 	var lines: Array[String] = []
 	TestUtils.enemy_turn(s, data, f, lines)

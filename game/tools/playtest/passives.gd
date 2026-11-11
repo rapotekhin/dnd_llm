@@ -58,6 +58,8 @@ func run() -> void:
 	if not step("K opens the book", sheet != null and sheet.visible and str(sheet.get("section")) == "book"):
 		return
 	await frames(3)
+	await press(find(sheet, "BookTab_react"))  # v0.8.4.43.13: the reactions are a tab of the book
+	await frames(3)
 	var never: BaseButton = find(sheet, "React_opportunity_never")
 	step("«Атака при отходе» with its own three choices", never != null and find(sheet, "React_opportunity_ask") != null and find(sheet, "React_opportunity_always") != null
 		and (find(sheet, "React_opportunity_ask") as BaseButton).button_pressed)

@@ -3173,9 +3173,11 @@ func _gear_changed(before: Dictionary, who: String = Being.HERO) -> void:
 	var minutes := CharacterRules.gear_minutes(Catalog.data, session.items, before, c["equipped"])
 	if minutes > 0 and session.mode != GameSession.MODE_COMBAT:
 		var lines: Array[String] = []
-		for slot: String in ["armor", "shield"]:
-			var was := str(before.get(slot, ""))
-			var now := str(c["equipped"].get(slot, ""))
+		var eq: Dictionary = c["equipped"]
+		for pair: Array in [[str(before.get("armor", "")), str(eq.get("armor", ""))],
+				[CharacterRules.shield_in(before, Catalog.data, session.items), CharacterRules.shield_in(eq, Catalog.data, session.items)]]:
+			var was := str(pair[0])
+			var now := str(pair[1])
 			if was != now:
 				if not was.is_empty():
 					lines.append(("Снято: " if who == Being.HERO else "%s снимает: " % WorldView.new(Catalog.data["world"]).npc_name(who)) + ItemRules.display_name(Catalog.data["items"], session.items, was))

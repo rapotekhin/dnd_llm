@@ -91,13 +91,6 @@ static func _hand_slots(c: Dictionary) -> Dictionary:
 	return out
 
 
-## The slot armour or a shield is worn in; "" for anything else.
-static func _slot(def: Dictionary) -> String:
-	if not def.has("armor"):
-		return ""
-	return "shield" if str(def["armor"].get("category", "")) == "shield" else "armor"
-
-
 ## The things it took from its template are worn: picked from its pockets at a harder DC.
 static func worn(data: Dictionary, tid: String, item: String) -> bool:
 	return (data["monsters"].get(tid, {}).get("equipment", []) as Array).has(item)
@@ -363,8 +356,8 @@ static func ac(s: GameSession, data: Dictionary, tid: String, c: Dictionary) -> 
 	var dex := CharacterRules.mod(int(ab.get("dex", 10)))
 	var bare := 0  # a class's Unarmored Defense of a person who wears none (v0.8.4.29.4)
 	if _on(now, "armor").is_empty():
-		bare = CharacterRules.unarmored_ac(c, dex, CharacterRules.mod(int(ab.get("con", 10))), CharacterRules.mod(int(ab.get("wis", 10))), not _on(now, "shield").is_empty())
-	if _on(was, "armor") == _on(now, "armor") and _on(was, "shield") == _on(now, "shield"):
+		bare = CharacterRules.unarmored_ac(c, dex, CharacterRules.mod(int(ab.get("con", 10))), CharacterRules.mod(int(ab.get("wis", 10))), _shield(s, data, now) > 0)
+	if _on(was, "armor") == _on(now, "armor") and CharacterRules.shield_in(was, data, s.items) == CharacterRules.shield_in(now, data, s.items):
 		return maxi(int(m["ac"]), bare + _shield(s, data, now)) + extra
 	var base := int(m["ac"]) - _shield(s, data, was)
 	if not _on(was, "armor").is_empty():
@@ -379,10 +372,10 @@ static func _on(worn_now: Dictionary, slot: String) -> String:
 	return str(worn_now.get(slot, ""))
 
 
+## What the shield of its off hand adds (v0.8.4.43.13: a shield is held in the off hand), 0 — none.
 static func _shield(s: GameSession, data: Dictionary, worn_now: Dictionary) -> int:
-	if _on(worn_now, "shield").is_empty():
-		return 0
-	return int(ItemRules.def_of(data["items"], s.items, _on(worn_now, "shield")).get("armor", {}).get("base", 2))
+	var id := CharacterRules.shield_in(worn_now, data, s.items)
+	return 0 if id.is_empty() else int(ItemRules.def_of(data["items"], s.items, id).get("armor", {}).get("base", 2))
 
 
 ## The fight is over for it: what it has goes back to its record.

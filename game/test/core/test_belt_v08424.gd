@@ -105,8 +105,8 @@ func _melee(s: GameSession) -> void:
 		c["inventory"][id] = 1
 	c["equipped"]["main_hand"] = "longsword"
 	c["equipped"]["off_hand"] = ""
-	c["equipped"]["shield"] = ""
-	c["stowed"] = {"main_hand": "", "off_hand": "", "shield": ""}
+	c["equipped"]["off_hand"] = ""
+	c["stowed"] = {"main_hand": "", "off_hand": ""}
 	CharacterRules.refresh(c, data, s.items)
 
 

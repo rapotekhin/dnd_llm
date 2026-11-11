@@ -14,6 +14,8 @@ const MARGIN := 24
 @export var width := 640.0  ## the panel in pixels; 0 — the whole screen but a margin (the sheet, the map)
 @export var above_bar := false  ## the window ends over the hotbar: its icons are dragged onto the bar (the sheet, as in BG3)
 @export var tall := false  ## the panel takes the whole height, its width stays `width`: the world is seen at its sides (the sheet)
+## With `tall`: the panel's own height, centred on the screen both ways (v0.8.4.43.13, the sheet as in BG3); 0 — the whole height.
+@export var height := 0.0
 
 var title: Label
 var close_x: Button
@@ -144,10 +146,12 @@ func _fit() -> void:
 		_panel.size = Vector2(w, cap)
 		_panel.position = Vector2(MARGIN, MARGIN)
 		return
-	if tall:  # the whole height under the title, centred by the width it really takes
-		w = maxf(w, _panel.get_combined_minimum_size().x)
-		_panel.size = Vector2(w, cap)
-		_panel.position = Vector2(floorf((size.x - w) / 2.0), MARGIN)
+	if tall:  # the whole height (or its own) under the title, centred by the size it really takes
+		var least := _panel.get_combined_minimum_size()
+		w = maxf(w, least.x)
+		var h := cap if height <= 0.0 else minf(maxf(height, least.y), cap)
+		_panel.size = Vector2(w, h)
+		_panel.position = Vector2(maxf(0.0, floorf((size.x - w) / 2.0)), maxf(0.0, floorf((size.y - h) / 2.0)))
 		return
 	if _scroll != null:
 		var chrome := _panel.get_combined_minimum_size().y - _scroll.custom_minimum_size.y

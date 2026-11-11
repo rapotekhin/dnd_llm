@@ -71,3 +71,8 @@ func _blows(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 	for o: Dictionary in Acts.one("attack").offers(s, data, f, targets):
 		best = maxf(best, float(o["power"]))
 	return best
+
+
+## By the moment, not the character's own: not in the book (v0.8.4.43.13).
+func book() -> bool:
+	return false

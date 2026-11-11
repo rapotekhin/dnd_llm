@@ -159,27 +159,25 @@ func _abilities(s: GameSession, data: Dictionary, w: Dictionary, card: Dictionar
 			+ ("\n" + tr("SHEET_MAIN_ABILITY") if ab == main else "") + ("\n" + tr("SHEET_SAVE_PROF") if saved else ""))
 
 
-## Notable features as icons (BG3): the hero's class features and race traits by id, the text at the cursor; a feature with
-## uses is dragged onto the hotbar. Another's by its card.
+## Notable features as in BG3 (v0.8.4.43.13: a list, not a strip of icons — the author: the empty bottom of the sheet): a row
+## each — its icon, its name, the uses left; the hero's class features and race traits by id, the background's, the text at
+## the cursor; a feature with uses is dragged onto the hotbar by its icon. Another's by its card.
 func _features(s: GameSession, data: Dictionary, w: Dictionary, card: Dictionary) -> void:
-	var flow := HFlowContainer.new()
-	flow.name = "FeatureIcons"
-	flow.add_theme_constant_override("h_separation", 4)
-	flow.add_theme_constant_override("v_separation", 4)
-	_page.add_child(flow)
+	var list := VBoxContainer.new()
+	list.name = "FeatureList"
+	list.add_theme_constant_override("separation", 4)
+	_page.add_child(list)
 	if not Sheet.is_hero(w):
 		var i := 0
 		for f: Dictionary in card.get("features", []):
-			var cell := IconSlot.make("features/_", str(f["name"]), 44)
-			cell.name = "Feature_%d" % i
-			cell.tip_title = str(f["name"])
-			cell.tip_body = str(f["text"])
-			flow.add_child(cell)
+			_feature_row(list, "features/_", "Feature_%d" % i, str(f["name"]), str(f["text"]), {}, "")
 			i += 1
 		return
 	var c := s.character
-	var res_of := {}  # a feature → the stock it spends, for a drag onto the hotbar
+	var res_of := {}  # a feature → the stock it spends: a drag onto the hotbar and its uses on the row
+	var uses := {}
 	for r: Dictionary in Stock.lines(c, data):
+		uses[str(r["id"])] = r
 		for f: Variant in data["rules"]["resources"].get(str(r["id"]), {}).get("features", [r["id"]]):
 			res_of[str(f)] = str(r["id"])
 	for pair: Array in [["features", data["classes"]["features"], "features"], ["traits", data["races"]["traits"], "traits"]]:
@@ -187,24 +185,42 @@ func _features(s: GameSession, data: Dictionary, w: Dictionary, card: Dictionary
 			var f: Dictionary = (pair[1] as Dictionary).get(str(id), {})
 			if f.is_empty() or f.has("options"):
 				continue
-			var cell := IconSlot.make(IconRules.ref(str(pair[2]), str(id)), str(f["name"]), 44)
-			cell.name = "Feature_" + str(id)
-			cell.tip_title = str(f["name"])
-			cell.tip_body = str(f.get("desc", ""))
-			if res_of.has(str(id)):
-				cell.drag_key = "feature:" + str(res_of[str(id)])
-				cell.text = Stock.lines(c, data).filter(func(r: Dictionary) -> bool: return str(r["id"]) == str(res_of[str(id)])).map(func(r: Dictionary) -> String:
-					return tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"], "rest": tr("REST_KIND_" + str(r["recharge"]).to_upper())}))[0]
-				cell.tooltip_text = cell.text
-			flow.add_child(cell)
+			var res := str(res_of.get(str(id), ""))
+			_feature_row(list, IconRules.ref(str(pair[2]), str(id)), "Feature_" + str(id), str(f["name"]), str(f.get("desc", "")),
+				uses.get(res, {}), "feature:" + res if not res.is_empty() else "")
 	var bg: Dictionary = data["backgrounds"].get(str(c.get("background", "")), {})
 	if not bg.is_empty():
 		var rule := str(BackgroundRules.spec(c, data).get("master", ""))
-		var cell := IconSlot.make("features/_background", str(bg["feature"]["name"]), 44)
-		cell.name = "Feature_background"
-		cell.tip_title = str(bg["feature"]["name"])
-		cell.tip_body = str(bg["feature"]["desc"]) + (("\n\n" + tr("SHEET_BG_IN_GAME").format({"rule": rule})) if not rule.is_empty() else "")
-		flow.add_child(cell)
+		_feature_row(list, "features/_background", "Feature_background", str(bg["feature"]["name"]),
+			str(bg["feature"]["desc"]) + (("\n\n" + tr("SHEET_BG_IN_GAME").format({"rule": rule})) if not rule.is_empty() else ""), {}, "")
+
+
+## One row of the notable features: the icon (the drag onto the hotbar when `drag` is set), the name, the uses left of
+## its stock (`uses` — a line of Stock.lines, {} — none).
+func _feature_row(list: VBoxContainer, icon: String, cell_name: String, title: String, body: String, uses: Dictionary, drag: String) -> void:
+	var row := HBoxContainer.new()
+	row.name = "Row" + cell_name
+	row.add_theme_constant_override("separation", 8)
+	list.add_child(row)
+	var cell := IconSlot.make(icon, title, 34)
+	cell.name = cell_name
+	cell.tip_title = title
+	cell.tip_body = body
+	if not drag.is_empty():
+		cell.drag_key = drag
+	if not uses.is_empty():
+		cell.text = tr("SHEET_RESOURCE").format({"name": uses["name"], "left": uses["left"], "max": uses["max"], "rest": tr("REST_KIND_" + str(uses["recharge"]).to_upper())})
+		cell.tooltip_text = cell.text
+	row.add_child(cell)
+	var name_l := _line(row, title)
+	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	name_l.mouse_filter = Control.MOUSE_FILTER_PASS
+	if not uses.is_empty():
+		var left := _line(row, "%d/%d" % [int(uses["left"]), int(uses["max"])], UiTheme.MUTED_LABEL)
+		left.name = "Uses"
+		left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_hook(row, title, body)
 
 
 # --- the skills ---------------------------------------------------------------------------------------------------

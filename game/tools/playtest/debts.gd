@@ -43,10 +43,10 @@ func run() -> void:
 	if step("«Двумя руками» on the longsword with a shield", both != null and not both.disabled):
 		await press(both)
 		await frames(3)
-		step("the shield went to the pack", str(s.character["equipped"]["shield"]).is_empty() and CombatRules.weapon_profile(s.character, node("Catalog").data, s.items, "longsword")["dice"] == "1d10")
+		step("the shield went to the pack", str(s.character["equipped"]["off_hand"]).is_empty() and CombatRules.weapon_profile(s.character, node("Catalog").data, s.items, "longsword")["dice"] == "1d10")
 		await shot("sheet_both_hands")
 	sheet.call("stage", "shield")
-	await press(find(sheet, "Equip_shield_shield"))
+	await press(find(sheet, "Equip_off_hand_shield"))
 	await frames(3)
 	s.character["inventory"]["greatsword"] = 1
 	node("EventBus").state_changed.emit()
@@ -57,12 +57,12 @@ func run() -> void:
 	if great != null:
 		await press(great)
 		await frames(3)
-		step("the greatsword took the shield off", str(s.character["equipped"]["main_hand"]) == "greatsword" and str(s.character["equipped"]["shield"]).is_empty())
+		step("the greatsword took the shield off", str(s.character["equipped"]["main_hand"]) == "greatsword" and str(s.character["equipped"]["off_hand"]).is_empty())
 		var off: Control = find(sheet, "Slot_off_hand")
 		step("the off hand is held", off != null and str(off.get("text")).contains("занята"), str(off.get("text")) if off != null else "")
 		await shot("sheet_greatsword")
 		s.character["equipped"]["main_hand"] = "longsword"  # the rest of the scenario fights with the longsword
-		s.character["equipped"]["shield"] = "shield"
+		s.character["equipped"]["off_hand"] = "shield"
 		CharacterRules.refresh(s.character, node("Catalog").data, s.items)
 	await press(find(sheet, "CloseSheetButton"))
 

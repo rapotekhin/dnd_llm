@@ -55,7 +55,7 @@ func test_a_foe_s_magic_shield_counts_in_its_ac() -> void:
 	var f := _foe(s, "bandit")
 	var was := CombatRules.ac_of(f)
 	f["inventory"]["shield_plus_1"] = 1
-	f["equipped"]["shield"] = "shield_plus_1"
+	f["equipped"]["off_hand"] = "shield_plus_1"
 	Gear.follow(s, data, f)
 	assert_int(CombatRules.ac_of(f)).is_equal(was + 3)  # a shield's 2 and its +1
 

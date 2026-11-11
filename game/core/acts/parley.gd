@@ -30,3 +30,8 @@ func why(s: GameSession, data: Dictionary, _f: Dictionary, _to: String, how: Dic
 
 func check(how: Dictionary) -> Dictionary:
 	return {"skill": str(how["skill"]), "dc_tier": "medium"}
+
+
+## By the moment, not the character's own: not in the book (v0.8.4.43.13).
+func book() -> bool:
+	return false

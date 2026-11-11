@@ -34,3 +34,8 @@ func worth(_s: GameSession, data: Dictionary, _f: Dictionary) -> float:
 func run(s: GameSession, _data: Dictionary, f: Dictionary, _to: String, _how: Dictionary) -> Array[String]:
 	f["frenzy"] = true
 	return ["%s впадает в неистовство: удар бонусным действием каждый ход, когда ярость кончится — истощение" % _name(s, f)]
+
+
+## By the moment, not the character's own: not in the book (v0.8.4.43.13).
+func book() -> bool:
+	return false

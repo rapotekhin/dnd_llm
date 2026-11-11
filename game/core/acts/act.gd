@@ -65,6 +65,12 @@ func amount(_s: GameSession, _data: Dictionary, _f: Dictionary, _how: Dictionary
 	return 1
 
 
+## The act is the character's own, not the moment's: it lies in the book of the character window («Общие», v0.8.4.43.13, as
+## in BG3) under its button's key (`Do_<id>`), to be dragged back onto the hotbar. «Встать», a door, a parley — by the moment.
+func book() -> bool:
+	return true
+
+
 ## A button at all: «Встать» is there only for one who lies.
 func shown(_s: GameSession, _data: Dictionary, _f: Dictionary) -> bool:
 	return true

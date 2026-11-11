@@ -38,7 +38,7 @@ func test_a_person_has_its_things_in_the_form_of_the_heros() -> void:
 	for k: String in ["inventory", "gold_cp", "equipped"]:
 		assert_bool(c.has(k)).override_failure_message(k).is_true()
 	assert_str(str(c["equipped"]["armor"])).is_equal("chain_shirt")  # the guard template's
-	assert_str(str(c["equipped"]["shield"])).is_equal("shield")
+	assert_str(str(c["equipped"]["off_hand"])).is_equal("shield")
 	assert_int(int(c["inventory"]["spear"])).is_equal(1)
 	Gear.give(s, data, "npc_veteran", "healing_potion")
 	assert_str(ItemRules.can_use(c, data, s.items, "healing_potion")).is_empty()  # the hero's rules read it as they are

@@ -58,3 +58,8 @@ static func familiar(s: GameSession, f: Dictionary) -> Dictionary:
 		if by == str(f.get("id", "")) or (by.is_empty() and Sheet.is_hero(f)):
 			return a
 	return {}
+
+
+## By the moment, not the character's own: not in the book (v0.8.4.43.13).
+func book() -> bool:
+	return false

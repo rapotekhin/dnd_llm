@@ -67,17 +67,17 @@ func test_expertise_and_jack_of_all_trades() -> void:
 
 func test_unarmored_ac_formulas() -> void:
 	var c := TestUtils.character()
-	c["equipped"] = {"armor": "", "shield": "", "main_hand": "", "off_hand": ""}
+	c["equipped"] = {"armor": "", "main_hand": "", "off_hand": ""}
 	c["abilities"] = {"str": 10, "dex": 16, "con": 14, "int": 10, "wis": 15, "cha": 10}
 	assert_int(CharacterRules.armor_class(c, data)).is_equal(13)
 	c["features"] = ["barbarian_unarmored_defense"]
 	assert_int(CharacterRules.armor_class(c, data)).is_equal(10 + 3 + 2)
 	c["features"] = ["monk_unarmored_defense"]
 	assert_int(CharacterRules.armor_class(c, data)).is_equal(10 + 3 + 2)
-	c["equipped"]["shield"] = "shield"
+	c["equipped"]["off_hand"] = "shield"
 	assert_int(CharacterRules.armor_class(c, data)).is_equal(13 + 2)  # a monk with a shield loses the WIS bonus
 	c["features"] = ["draconic_resilience"]
-	c["equipped"]["shield"] = ""
+	c["equipped"]["off_hand"] = ""
 	assert_int(CharacterRules.armor_class(c, data)).is_equal(16)
 
 
@@ -87,7 +87,7 @@ func test_armor_caps_dex() -> void:
 	c["inventory"]["leather_armor"] = 1
 	c["inventory"]["chain_shirt"] = 1
 	c["features"] = []
-	c["equipped"] = {"armor": "leather_armor", "shield": "", "main_hand": "", "off_hand": ""}
+	c["equipped"] = {"armor": "leather_armor", "main_hand": "", "off_hand": ""}
 	assert_int(CharacterRules.armor_class(c, data)).is_equal(11 + 4)
 	c["equipped"]["armor"] = "chain_shirt"
 	assert_int(CharacterRules.armor_class(c, data)).is_equal(13 + 2)  # medium: DEX max 2
@@ -100,9 +100,12 @@ func test_equip_rules() -> void:
 	var items := {}
 	assert_str(CharacterRules.can_equip(c, data, items, "longsword", "armor")).is_equal("EQUIP_WRONG_SLOT")
 	assert_str(CharacterRules.can_equip(c, data, items, "rapier", "main_hand")).is_equal("EQUIP_NOT_OWNED")
-	assert_str(CharacterRules.can_equip(c, data, items, "handaxe", "off_hand")).is_equal("EQUIP_HANDS_BUSY")  # the shield
-	c["equipped"]["shield"] = ""
-	assert_str(CharacterRules.can_equip(c, data, items, "handaxe", "off_hand")).is_empty()
+	assert_str(CharacterRules.can_equip(c, data, items, "handaxe", "off_hand")).is_empty()  # the shield goes to the pack
+	assert_str(CharacterRules.can_equip(c, data, items, "shield", "main_hand")).is_equal("EQUIP_WRONG_SLOT")  # a shield is held in the off hand
+	c["equipped"]["main_hand"] = "greatsword"
+	c["inventory"]["greatsword"] = 1
+	assert_str(CharacterRules.can_equip(c, data, items, "handaxe", "off_hand")).is_equal("EQUIP_HANDS_BUSY")  # both on the greatsword
+	c["equipped"]["main_hand"] = "longsword"
 	assert_str(CharacterRules.can_equip(c, data, items, "longsword", "off_hand")).is_equal("EQUIP_NOT_LIGHT")
 	var wizard := c.duplicate(true)
 	wizard["armor_profs"] = []
@@ -113,7 +116,7 @@ func test_given_away_item_is_unequipped() -> void:
 	var c := TestUtils.character()
 	c["inventory"].erase("shield")
 	CharacterRules.refresh(c, data)
-	assert_str(c["equipped"]["shield"]).is_empty()
+	assert_str(c["equipped"]["off_hand"]).is_empty()
 	assert_int(c["ac"]).is_equal(17)
 
 

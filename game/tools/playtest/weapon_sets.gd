@@ -30,7 +30,7 @@ func run() -> void:
 	await press(find(screen(), "WeaponSetStowed"))
 	await frames(3)
 	step("the button brings the bow to hand", str(c["equipped"]["main_hand"]) == "longbow", str(c["equipped"]["main_hand"]))
-	step("the shield went with the set", int(c["ac"]) < ac or str(CharacterRules.stowed(c).get("shield", "")).is_empty(), "AC %d" % int(c["ac"]))
+	step("the shield went with the set", int(c["ac"]) < ac or str(CharacterRules.stowed(c).get("off_hand", "")).is_empty(), "AC %d" % int(c["ac"]))
 	await key(KEY_ESCAPE)  # the input holds the keys until Esc
 	await key(KEY_F)
 	await frames(3)

@@ -62,7 +62,7 @@ static func choose(s: GameSession, who: Dictionary, id: String, p: String) -> St
 
 
 ## The reactions `who` has, as the book lists them: the rows of `rules.reactions` it has, then the spells with a reaction
-## it can cast. [{id, name, tip, policy}].
+## it can cast. [{id, name, tip, icon, policy}].
 static func reaction_list(s: GameSession, data: Dictionary, who: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var c := Sheet.holder(s, who)
@@ -73,7 +73,8 @@ static func reaction_list(s: GameSession, data: Dictionary, who: Dictionary) -> 
 		var row: Dictionary = table[id]
 		if not _has_reaction(s, data, who, c, row):
 			continue
-		out.append({"id": id, "name": str(row["name"]), "tip": str(row.get("tip", ""))})
+		var feats: Array = row.get("features", [])  # its icon: the feature it answers with, else the act's own
+		out.append({"id": id, "name": str(row["name"]), "tip": str(row.get("tip", "")), "icon": "features/" + str(feats[0]) if not feats.is_empty() else "acts/" + id})
 	var spells: Array = SpellRules.ready(c).duplicate()
 	if not Sheet.is_hero(who):
 		for x: Dictionary in Sheet.template(data, who).get("spellcasting", {}).get("spells", []):
@@ -82,7 +83,7 @@ static func reaction_list(s: GameSession, data: Dictionary, who: Dictionary) -> 
 		var sp: Dictionary = data["spells"].get(str(sid), {})
 		if not sp.is_empty() and not str(SpellEffects.spec(data, str(sid)).get("reaction", "")).is_empty() \
 				and not out.any(func(r: Dictionary) -> bool: return r["id"] == str(sid)):
-			out.append({"id": str(sid), "name": str(sp["name"]), "tip": str(sp.get("casting_time", ""))})
+			out.append({"id": str(sid), "name": str(sp["name"]), "tip": str(sp.get("casting_time", "")), "icon": "spells/" + str(sid)})
 	for r: Dictionary in out:
 		r["policy"] = policy(s, who, str(r["id"]))
 	return out

@@ -46,11 +46,12 @@ static func main(rows: Array[Dictionary]) -> Dictionary:
 static func _equip_rows(s: GameSession, data: Dictionary, who: String, c: Dictionary, item: String, def: Dictionary, out: Array[Dictionary]) -> void:
 	for slot: String in CharacterRules.slots_of(def, data):
 		var two := slot == "main_hand" and (def.get("properties", []) as Array).has("two_handed")
+		var shield := CharacterRules.is_shield(def)
 		if str(c.get("equipped", {}).get(slot, "")) != item:
-			out.append(_row("equip", item, "Equip_%s_%s" % [slot, item], "BTN_EQUIP_BOTH_HANDS" if two else "BTN_EQUIP_" + slot.to_upper(),
+			out.append(_row("equip", item, "Equip_%s_%s" % [slot, item], "BTN_EQUIP_BOTH_HANDS" if two else "BTN_EQUIP_SHIELD" if shield else "BTN_EQUIP_" + slot.to_upper(),
 				Equip.why(s, data, who, item, slot), {"slot": slot}))
 		if CharacterRules.HANDS.has(slot) and str(CharacterRules.stowed(c).get(slot, "")) != item:
-			out.append(_row("equip", item, "EquipStowed_%s_%s" % [slot, item], "BTN_EQUIP_STOWED_OFF" if slot == "off_hand" else "BTN_EQUIP_STOWED",
+			out.append(_row("equip", item, "EquipStowed_%s_%s" % [slot, item], "BTN_EQUIP_STOWED_OFF" if slot == "off_hand" and not shield else "BTN_EQUIP_STOWED",
 				Equip.why(s, data, who, item, slot, true), {"slot": slot, "spare": true}))
 
 

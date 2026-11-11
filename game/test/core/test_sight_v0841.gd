@@ -52,7 +52,7 @@ func _bow(s: GameSession) -> void:
 	c["inventory"]["arrows"] = 20
 	c["equipped"]["main_hand"] = "longbow"
 	c["equipped"]["off_hand"] = ""
-	c["equipped"]["shield"] = ""
+	c["equipped"]["off_hand"] = ""
 	c["stowed"] = {}
 
 

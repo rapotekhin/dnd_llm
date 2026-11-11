@@ -502,8 +502,9 @@ static func droppable(s: GameSession, data: Dictionary, item_id: String) -> int:
 	if ItemRules.held_by_curse(c, data, s.items, item_id) or FeatureRules.pact_made(data, s.items, item_id):
 		return 0  # a called pact weapon is let go, not dropped (v0.8.4.33)
 	var worn := 0
-	for slot: String in ["armor", "shield"]:
-		if str(c.get("equipped", {}).get(slot, "")) == item_id:
+	var eq: Dictionary = c.get("equipped", {})
+	for id: String in [str(eq.get("armor", "")), CharacterRules.shield_in(eq, data, s.items)]:
+		if id == item_id:
 			worn += 1
 	return maxi(0, int(c.get("inventory", {}).get(item_id, 0)) - worn - full_bags(c, item_id))
 

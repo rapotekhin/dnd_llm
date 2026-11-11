@@ -27,9 +27,10 @@ static func pockets(s: GameSession, data: Dictionary, npc_id: String) -> Array:
 	if cp > 0:
 		out.append({"id": COINS, "name": "Кошель", "item_id": "", "cp": cp, "qty": 1, "worn": false})
 	var on: Array = []  # on its back: armour, a shield, rings — a weapon in its hands is in reach, at a harder DC (`worn`)
-	for slot: String in c.get("equipped", {}):
-		if not slot in ["main_hand", "off_hand"]:
-			on.append(c["equipped"][slot])
+	var eq: Dictionary = c.get("equipped", {})
+	for slot: String in eq:
+		if not slot in CharacterRules.HANDS or slot == "off_hand" and not CharacterRules.shield_in(eq, data, s.items).is_empty():
+			on.append(eq[slot])
 	var items: Array = (c["inventory"] as Dictionary).keys()
 	items.sort()  # one order before and after a save
 	for item: String in items:

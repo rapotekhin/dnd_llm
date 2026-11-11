@@ -86,7 +86,7 @@ func test_protection_imposes_disadvantage_for_a_friend() -> void:
 	var s := _hero("fighter", 1, ["fighter_fighting_style_protection"])
 	var c := s.character
 	Gear.give(s, data, Being.HERO, "shield", 1)
-	c["equipped"]["shield"] = "shield"
+	c["equipped"]["off_hand"] = "shield"
 	CharacterRules.refresh(c, data, s.items)
 	var ally := ChecklistProbe.fight(s, data, "commoner", false, "ally")
 	var p := CombatRules.player(s)

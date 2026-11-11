@@ -21,7 +21,7 @@ func run() -> void:
 	sheet.call("open_tab", 1)  # v0.8.4.43.6: «Книга» of the character window
 	await frames(3)
 	var spells: Array = sheet.find_children("Spell_*", "Button", true, false)
-	if not step("spells as rows of the sheet", spells.size() >= 2, str(spells.size())):
+	if not step("spells as icons of the book", spells.size() >= 2, str(spells.size())):
 		return
 	var panel: DetailsPanel = sheet.find_children("ItemDetails", "PanelContainer", true, false)[0]
 	var a: Button = spells[0]
@@ -32,10 +32,8 @@ func run() -> void:
 	if scroll != null:
 		(scroll as ScrollContainer).ensure_control_visible(a)
 		await frames(2)
-	a.mouse_entered.emit()
-	await frames(2)
-	var title_a := panel.title()
-	step("hover shows the spell in the panel", not title_a.is_empty() and panel.body().contains("·"), title_a)
+	var title_a: String = a.get("tip_title")  # v0.8.4.43.13: an icon's own card at the cursor
+	step("hover shows the spell's card", not title_a.is_empty() and str(a.get("tip_body")).contains("·"), title_a)
 	await shot("sheet_spells")
 	_right_click(a)
 	await frames(2)
@@ -49,9 +47,8 @@ func run() -> void:
 		and Rect2(Vector2.ZERO, panel.get_viewport_rect().size).encloses(pr) and pr.size.y < 560.0, "%s by %s" % [pr, ra])
 	await shot("sheet_pinned")
 	await press(find(panel, "DetailsUnpin"))
-	b.mouse_entered.emit()
 	await frames(2)
-	step("unpinned by the lock: hover works again", panel.pinned().is_empty() and panel.title() != title_a, panel.title())
+	step("unpinned by the lock", panel.pinned().is_empty(), panel.pinned())
 	sheet.call("open_tab", 2)
 	await frames(3)
 	await shot("sheet_gear")

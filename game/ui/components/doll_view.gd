@@ -123,7 +123,8 @@ func _list(cell: ItemCell, slot: String, spare: bool) -> void:
 	pop.popup(Rect2i(Vector2i(cell.get_screen_position() + Vector2(0, cell.size.y)), Vector2i.ZERO))
 
 
-## The two weapon sets as in BG3: the hands of each, the AC on a shield between, the attack bonus and the damage under each.
+## The two weapon sets as in BG3: the two hands of each (a shield in the off hand, v0.8.4.43.13), the AC on a shield
+## between, the attack bonus and the damage under each.
 func _sets(c: Dictionary) -> Control:
 	var s := GameState.session
 	var data := Catalog.data
@@ -137,6 +138,7 @@ func _sets(c: Dictionary) -> Control:
 		col.add_theme_constant_override("separation", 4)
 		var head := UiParts.label(col, tr("SET_STOWED" if spare else "SET_IN_HAND"), UiTheme.MUTED_LABEL)
 		head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head.autowrap_mode = TextServer.AUTOWRAP_OFF  # two hands are narrower than the words over them
 		head.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL - 2)
 		var frame := PanelContainer.new()  # the set in the hands is lit
 		frame.add_theme_stylebox_override("panel", UiTheme.box(Color(0, 0, 0, 0), UiTheme.ACCENT if not spare else UiTheme.BORDER.darkened(0.2), 2, 4, 5))
@@ -216,8 +218,8 @@ func _shield(c: Dictionary) -> Control:
 		var cs := font.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)
 		shield.draw_string(font, Vector2((w - cs.x) / 2, h * 0.75), cap, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiTheme.MUTED))
 	var worn: Array[String] = []
-	for slot: String in ["armor", "shield"]:
-		var id := str(c.get("equipped", {}).get(slot, ""))
+	var eq: Dictionary = c.get("equipped", {})
+	for id: String in [str(eq.get("armor", "")), CharacterRules.shield_in(eq, data, s.items)]:
 		if not id.is_empty():
 			worn.append(ItemRules.display_name(data["items"], s.items, id))
 	if details != null:

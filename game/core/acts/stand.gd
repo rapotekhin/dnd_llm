@@ -39,3 +39,8 @@ func run(s: GameSession, _data: Dictionary, f: Dictionary, _to: String, _how: Di
 
 func worth(s: GameSession, data: Dictionary, f: Dictionary) -> float:
 	return _weight(data) if shown(s, data, f) else 0.0
+
+
+## By the moment, not the character's own: not in the book (v0.8.4.43.13).
+func book() -> bool:
+	return false

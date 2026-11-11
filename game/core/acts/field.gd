@@ -31,3 +31,8 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String, how: Dict
 	var lines: Array[String] = []
 	FightField.act(s, data, f, str(how["how"]), lines)
 	return lines
+
+
+## By the moment, not the character's own: not in the book (v0.8.4.43.13).
+func book() -> bool:
+	return false

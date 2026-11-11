@@ -62,7 +62,7 @@ func test_not_trained_with_it_and_how_it_compares() -> void:
 	s.character["equipped"]["armor"] = ""
 	CharacterRules.refresh(s.character, data)
 	var cmp := ItemInfo.compare(s.character, data, s.items, "chain_mail")
-	assert_str(cmp).contains("→ %d" % (16 + (2 if not str(s.character["equipped"].get("shield", "")).is_empty() else 0) + _defense(s)))
+	assert_str(cmp).contains("→ %d" % (16 + (2 if not CharacterRules.shield_in(s.character["equipped"], data, s.items).is_empty() else 0) + _defense(s)))
 	assert_str(ItemInfo.compare(s.character, data, s.items, "greatsword")).contains("Атака").contains("2к6")
 	assert_str(ItemInfo.compare(s.character, data, s.items, str(s.character["equipped"]["main_hand"]))).is_empty()  # the one in hand
 

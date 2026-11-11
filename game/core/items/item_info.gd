@@ -222,11 +222,9 @@ static func compare(c: Dictionary, data: Dictionary, session_items: Dictionary, 
 	var eq: Dictionary = c.get("equipped", {})
 	if slot.is_empty() or str(eq.get(slot, "")) == id:
 		return ""
-	if slot == "armor" or slot == "shield":
+	if slot == "armor" or CharacterRules.is_shield(def):  # a shield into the off hand: what it held goes to the pack
 		var probe := c.duplicate(true)
 		probe["equipped"][slot] = id
-		if slot == "shield" and not str(eq.get("off_hand", "")).is_empty():
-			probe["equipped"]["off_hand"] = ""
 		var now := CharacterRules.armor_class(c, data, session_items)
 		var then := CharacterRules.armor_class(probe, data, session_items)
 		return TranslationServer.translate("ITEM_CMP_AC").format({"now": now, "then": then})

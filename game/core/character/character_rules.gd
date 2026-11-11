@@ -6,7 +6,7 @@ extends RefCounted
 ## The character is a Dictionary in the session (it goes into saves as is):
 ##   choices — name, gender, race, subrace, class, subclass, background, level, abilities {str..cha, final},
 ##     skill_profs, expertise, save_profs, languages, tools, armor_profs, weapon_profs, traits, features,
-##     spells {cantrips, known, prepared}, equipped {armor, shield, main_hand, off_hand}, inventory, gold_cp;
+##     spells {cantrips, known, prepared}, equipped {armor, main_hand, off_hand — a weapon or a shield}, inventory, gold_cp;
 ##   state — hp, conditions, spent — the stock (Stock);
 ##   derived cache (refresh) — race_name, class_name, prof_bonus, max_hp, ac, skills {id: bonus}, saves {id: bonus},
 ##     speed, passive_perception, slots_max [5], spell_ability, spell_dc, spell_attack.
@@ -15,9 +15,10 @@ extends RefCounted
 ## `data` = Catalog.data: "rules", "items", "races", "classes", "spells", "backgrounds", "misc".
 
 const ABILITIES: Array[String] = ["str", "dex", "con", "int", "wis", "cha"]
-const SLOTS: Array[String] = ["armor", "shield", "main_hand", "off_hand", "head", "eyes", "neck", "cloak", "hands", "feet", "ring1", "ring2"]
+const SLOTS: Array[String] = ["armor", "main_hand", "off_hand", "head", "eyes", "neck", "cloak", "hands", "feet", "ring1", "ring2"]
 ## Slots of worn things (v0.7.22.9): put on and off out of a fight, like armour.
-const HANDS: Array[String] = ["main_hand", "off_hand", "shield"]  ## the hands of a weapon set (v0.8.4.1)
+## The hands of a weapon set (v0.8.4.1); a shield is held in the off hand, as in every RPG (v0.8.4.43.13).
+const HANDS: Array[String] = ["main_hand", "off_hand"]
 const WEAR_SLOTS: Array[String] = ["head", "eyes", "neck", "cloak", "hands", "feet", "ring1", "ring2"]
 
 
@@ -100,6 +101,28 @@ static func item_def(c: Dictionary, data: Dictionary, session_items: Dictionary,
 	return {} if id.is_empty() else ItemRules.copy_def(data["items"], session_items, c, id, hold_index(c, id, slot))
 
 
+## Whether a thing is a shield: it goes to the off hand (v0.8.4.43.13, the author: as in every RPG, no slot of its own).
+static func is_shield(def: Dictionary) -> bool:
+	return str(def.get("armor", {}).get("category", "")) == "shield"
+
+
+## The shield the off hand of a set holds — `row` is `equipped` or the set put away; "" — none. Anybody's.
+static func shield_in(row: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> String:
+	var id := str(row.get("off_hand", ""))
+	return id if not id.is_empty() and is_shield(ItemRules.def_of(data["items"], session_items, id)) else ""
+
+
+## The weapon of the off hand of a set: "" — an empty hand or a shield.
+static func off_weapon(row: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> String:
+	var id := str(row.get("off_hand", ""))
+	return "" if id.is_empty() or not shield_in(row, data, session_items).is_empty() else id
+
+
+## The worn shield (its copy's definition), {} — none in the hands.
+static func shield_def(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> Dictionary:
+	return {} if shield_in(c.get("equipped", {}), data, session_items).is_empty() else item_def(c, data, session_items, "off_hand")
+
+
 ## The AC of worn armour: its base and DEX within its cap. Anybody's (Gear.ac).
 static func armored(armor: Dictionary, dex: int) -> int:
 	var ac := int(armor.get("base", 10))
@@ -115,7 +138,7 @@ static func armor_class(c: Dictionary, data: Dictionary, session_items: Dictiona
 		return int(data["monsters"].get(str(Guise.body(c)["monster"]), {}).get("ac", 10))
 	var dex := mod(ability(c, "dex"))
 	var armor: Dictionary = item_def(c, data, session_items, "armor").get("armor", {})
-	var shield: Dictionary = item_def(c, data, session_items, "shield").get("armor", {})
+	var shield: Dictionary = shield_def(c, data, session_items).get("armor", {})
 	var ac := 10 + dex
 	if not armor.is_empty():
 		ac = armored(armor, dex) + (1 if style(c, "defense") else 0)
@@ -142,8 +165,7 @@ static func unarmored_ac(c: Dictionary, dex: int, con: int, wis: int, shielded: 
 ## carried wondrous items (Cloak of Protection).
 static func gear_ac(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> int:
 	var ac := 0
-	for slot: String in ["armor", "shield"]:
-		var d := item_def(c, data, session_items, slot)
+	for d: Dictionary in [item_def(c, data, session_items, "armor"), shield_def(c, data, session_items)]:
 		ac += ItemRules.plus(d, ["ac_plus", "magic_plus"]) + mini(0, CraftRules.quality_mod(d))
 	for d: Dictionary in carried(c, data, session_items):
 		ac += ItemRules.plus(d, ["ac_plus"])
@@ -309,7 +331,7 @@ static func speed(c: Dictionary, data: Dictionary) -> int:
 static func walk(me: Dictionary, gear: Dictionary, data: Dictionary, items: Dictionary, feet: int, strength: int, props: Array) -> int:
 	var armor := item_def(gear, data, items, "armor")
 	var bonus := 0
-	if armor.is_empty() and item_def(gear, data, items, "shield").is_empty():
+	if armor.is_empty() and shield_def(gear, data, items).is_empty():
 		bonus = int(level_row(me, data).get("class_specific", {}).get("unarmored_movement", 0))
 	feet += bonus
 	if props.has("speed_30"):  # Boots of Striding and Springing (v0.7.12)
@@ -437,6 +459,11 @@ static func refresh(c: Dictionary, data: Dictionary, session_items: Dictionary =
 static func sanitize_equipped(c: Dictionary) -> void:
 	var eq: Dictionary = c.get("equipped", {})
 	var inv: Dictionary = c.get("inventory", {})
+	for row: Dictionary in [eq, stowed(c)]:  # a shield of its own slot, before v0.8.4.43.13: into the off hand
+		if row.has("shield"):
+			if str(row.get("off_hand", "")).is_empty():
+				row["off_hand"] = str(row["shield"])
+			row.erase("shield")
 	for slot: String in SLOTS:
 		var id := str(eq.get(slot, ""))
 		if not id.is_empty() and int(inv.get(id, 0)) <= 0:
@@ -453,7 +480,7 @@ static func sanitize_equipped(c: Dictionary) -> void:
 # --- the two weapon sets (v0.8.4.1, as in BG3) ---------------------------------------------------------------------
 
 
-## The set put away: {main_hand, off_hand, shield}. What is in the hands is `equipped`, so the rules read one place.
+## The set put away: {main_hand, off_hand}. What is in the hands is `equipped`, so the rules read one place.
 static func stowed(c: Dictionary) -> Dictionary:
 	return c.get("stowed", {})
 
@@ -503,7 +530,6 @@ static func put_stowed(c: Dictionary, data: Dictionary, session_items: Dictionar
 	row[slot] = id
 	if _two_handed(data, session_items, id) and slot == "main_hand":
 		row["off_hand"] = ""
-		row["shield"] = ""
 	if slot == "main_hand" and str(row.get("off_hand", "")) == id and int(c["inventory"].get(id, 0)) < 2:
 		row["off_hand"] = ""
 
@@ -542,11 +568,11 @@ static func held_copies(c: Dictionary, id: String) -> int:
 	return n
 
 
-## The slot an item goes to, or "" if it cannot be equipped. A weapon goes to the main hand; a wondrous thing to the
-## slot of its look (rules.wear_slots, v0.7.22.9; a ring — ring1, ring2 fits too).
+## The slot an item goes to, or "" if it cannot be equipped. A weapon goes to the main hand, a shield to the off hand; a
+## wondrous thing to the slot of its look (rules.wear_slots, v0.7.22.9; a ring — ring1, ring2 fits too).
 static func slot_for(def: Dictionary, data: Dictionary = {}) -> String:
 	if def.has("armor"):
-		return "shield" if str(def["armor"]["category"]) == "shield" else "armor"
+		return "off_hand" if is_shield(def) else "armor"
 	if def.has("weapon") or str(def.get("item_type", "")) == "weapon":
 		return "main_hand"
 	return wear_slot(def, data)
@@ -599,15 +625,12 @@ static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary
 		"armor":
 			if not profs.has(str(def["armor"]["category"])):
 				return "EQUIP_NO_PROFICIENCY"
-		"shield":
-			if not profs.has("shield"):
+		"off_hand":  # a shield or a light weapon; what the hand held goes to the pack
+			if is_shield(def) and not profs.has("shield"):
 				return "EQUIP_NO_PROFICIENCY"
-			if not str(eq.get("off_hand", "")).is_empty() or _two_handed(data, session_items, str(eq.get("main_hand", ""))):
-				return "EQUIP_HANDS_BUSY"
-		"off_hand":
-			if not (def.get("properties", []) as Array).has("light"):
+			if not is_shield(def) and not (def.get("properties", []) as Array).has("light"):
 				return "EQUIP_NOT_LIGHT"
-			if not str(eq.get("shield", "")).is_empty() or _two_handed(data, session_items, str(eq.get("main_hand", ""))):
+			if _two_handed(data, session_items, str(eq.get("main_hand", ""))):
 				return "EQUIP_HANDS_BUSY"
 			if str(eq.get("main_hand", "")) == id and int(c["inventory"][id]) < 2:
 				return "EQUIP_NOT_OWNED"
@@ -618,7 +641,7 @@ static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary
 	return ""
 
 
-## The slots a weapon taken in both hands empties: the shield and the off hand. A two-handed weapon always,
+## The slots a weapon taken in both hands empties: the off hand, a weapon or a shield. A two-handed weapon always,
 ## a versatile one when `both` (5e: its bigger die).
 static func hands_freed(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, slot: String, both: bool = false) -> Array[String]:
 	var out: Array[String] = []
@@ -627,9 +650,8 @@ static func hands_freed(c: Dictionary, data: Dictionary, session_items: Dictiona
 	var w := ItemRules.def_of(data["items"], session_items, id)
 	if not ((w.get("properties", []) as Array).has("two_handed") or (both and (w.get("weapon", {}) as Dictionary).has("versatile"))):
 		return out
-	for sl: String in ["shield", "off_hand"]:
-		if not str(c.get("equipped", {}).get(sl, "")).is_empty():
-			out.append(sl)
+	if not str(c.get("equipped", {}).get("off_hand", "")).is_empty():
+		out.append("off_hand")
 	return out
 
 
@@ -642,7 +664,7 @@ static func two_hand_grip(c: Dictionary, data: Dictionary, session_items: Dictio
 		return false
 	var w := ItemRules.def_of(data["items"], session_items, id)
 	return _two_handed(data, session_items, id) or ((w.get("weapon", {}) as Dictionary).has("versatile")
-		and str(eq.get("shield", "")).is_empty() and str(eq.get("off_hand", "")).is_empty() and not style(c, "dueling"))
+		and str(eq.get("off_hand", "")).is_empty() and not style(c, "dueling"))
 
 
 ## Pounds the hero carries: everything in the pack, worn things too (v0.7.7).
@@ -667,9 +689,10 @@ static func overloaded(c: Dictionary, data: Dictionary, session_items: Dictionar
 static func gear_minutes(data: Dictionary, session_items: Dictionary, before: Dictionary, after: Dictionary) -> int:
 	var t: Dictionary = data["rules"].get("equip_minutes", {})
 	var total := 0
-	for slot: String in ["armor", "shield"]:
-		var was := str(before.get(slot, ""))
-		var now := str(after.get(slot, ""))
+	for pair: Array in [[str(before.get("armor", "")), str(after.get("armor", ""))],
+			[shield_in(before, data, session_items), shield_in(after, data, session_items)]]:
+		var was := str(pair[0])
+		var now := str(pair[1])
 		if was == now:
 			continue
 		if not was.is_empty():
@@ -691,7 +714,7 @@ static func _two_handed(data: Dictionary, session_items: Dictionary, id: String)
 ## a shield when the hand is free. `full` — every weapon in a hand (a template's gear, v0.8.4.40: it strikes only with what
 ## it holds): one that finds its set taken goes to the other, a second light blade to the off hand when there is no shield.
 static func auto_equip(c: Dictionary, data: Dictionary, full := false) -> void:
-	var eq := {"armor": "", "shield": "", "main_hand": "", "off_hand": ""}
+	var eq := {"armor": "", "main_hand": "", "off_hand": ""}
 	c["equipped"] = eq
 	var best_ac := -1
 	var weapons: Array[String] = []
@@ -715,19 +738,19 @@ static func auto_equip(c: Dictionary, data: Dictionary, full := false) -> void:
 	if str(eq["main_hand"]).is_empty():
 		swap_hands(c)
 	for id: String in c.get("inventory", {}):
-		if slot_for(ItemRules.def_of(data["items"], {}, id)) != "shield":
+		if not is_shield(ItemRules.def_of(data["items"], {}, id)):
 			continue
-		if can_equip(c, data, {}, id, "shield").is_empty():
-			eq["shield"] = id
+		if can_equip(c, data, {}, id, "off_hand").is_empty():
+			eq["off_hand"] = id
 			break
-		if can_equip(c, data, {}, id, "shield", true).is_empty():  # a bow in both hands: the shield with the blade
-			stowed(c)["shield"] = id
+		if can_equip(c, data, {}, id, "off_hand", true).is_empty():  # a bow in both hands: the shield with the blade
+			stowed(c)["off_hand"] = id
 			break
 	if not full:
 		return
 	var main := str(eq.get("main_hand", ""))
 	for id: String in left + ([main] as Array[String]):  # a second blade in the free hand (a captain's dagger)
-		if not main.is_empty() and can_equip(c, data, {}, id, "off_hand").is_empty():
+		if not main.is_empty() and str(eq["off_hand"]).is_empty() and can_equip(c, data, {}, id, "off_hand").is_empty():
 			eq["off_hand"] = id
 			left.erase(id)
 			break

@@ -145,7 +145,7 @@ func test_a_made_up_flag_is_refused_and_a_note_is_kept() -> void:
 func test_gear_by_words_strips_and_dresses() -> void:
 	var eq: Dictionary = s.character["equipped"]
 	var armor := str(eq.get("armor", ""))
-	var shield := str(eq.get("shield", ""))
+	var shield := CharacterRules.shield_in(eq, data, s.items)
 	var ac := int(s.character["ac"])
 	var lines := fx.apply(s, "t-1", [_ok({"kind": "equip", "slot": "all"})])
 	assert_str(lines[0]).starts_with("Снято:")

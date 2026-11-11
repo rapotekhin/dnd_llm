@@ -100,12 +100,12 @@ func test_a_miss_looks_as_the_gear_allows() -> void:
 	var s := TestUtils.new_session()
 	var g := _fight(s)
 	var c := s.character
-	c["equipped"]["shield"] = ""
+	c["equipped"]["off_hand"] = ""
 	c["equipped"]["main_hand"] = ""
 	var hero := CombatRules.player(s)
 	assert_array(AnimRules.defences(s, data, hero, "swing")).is_equal(["dodge"])
 	assert_array(AnimRules.defences(s, data, hero, "shot")).is_equal(["dodge", "overshoot", "undershoot"])
-	c["equipped"]["shield"] = "shield"
+	c["equipped"]["off_hand"] = "shield"
 	c["equipped"]["main_hand"] = "longsword"
 	assert_array(AnimRules.defences(s, data, hero, "swing")).is_equal(["dodge", "block_shield", "parry"])
 	assert_array(AnimRules.defences(s, data, hero, "shot")).is_equal(["dodge", "block_shield", "overshoot", "undershoot"])
@@ -200,7 +200,7 @@ func test_the_token_shows_what_is_in_the_hands_of_anybody() -> void:
 	var s := TestUtils.new_session()
 	var g := _fight(s, "bandit")
 	s.character["equipped"]["main_hand"] = "longsword"
-	s.character["equipped"]["shield"] = "shield"
+	s.character["equipped"]["off_hand"] = "shield"
 	var mine := AnimRules.gear(s, data, CombatRules.player(s))
 	assert_bool(bool(mine["shield"])).is_true()
 	assert_str(str(mine["sprite"])).is_equal("sword")

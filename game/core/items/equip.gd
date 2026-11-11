@@ -54,10 +54,12 @@ static func why(s: GameSession, data: Dictionary, id: String, item: String, slot
 		return hands
 	var c := _probe(s, data, id)
 	var fight := CombatRules.active(s)
+	var shield := CharacterRules.is_shield(ItemRules.def_of(data["items"], s.items, item))
 	if CharacterRules.HANDS.has(slot) and spare:
-		return "EQUIP_IN_COMBAT" if slot == "shield" and fight else CharacterRules.can_equip(c, data, s.items, item, slot, true)
+		return "EQUIP_IN_COMBAT" if shield and fight else CharacterRules.can_equip(c, data, s.items, item, slot, true)
 	var freed := CharacterRules.hands_freed(c, data, s.items, item, slot, both)
-	if fight and (slot in ["armor", "shield"] or CharacterRules.WEAR_SLOTS.has(slot) or freed.has("shield")):
+	var shield_off := not CharacterRules.shield_in(c.get("equipped", {}), data, s.items).is_empty() and (slot == "off_hand" or freed.has("off_hand"))
+	if fight and (slot == "armor" or CharacterRules.WEAR_SLOTS.has(slot) or shield or shield_off):  # a shield on or off takes an action
 		return "EQUIP_IN_COMBAT"
 	var reason := CharacterRules.can_equip(c, data, s.items, item, slot)
 	if not reason.is_empty():
@@ -79,7 +81,7 @@ static func put(s: GameSession, data: Dictionary, id: String, item: String, slot
 	if CharacterRules.HANDS.has(slot):  # the last copy in the set put away comes to the hands (v0.8.4.24)
 		CharacterRules.free_copy(c, item, CharacterRules.stowed(c), slot, eq)
 	eq[slot] = item
-	for sl: String in freed:  # both hands on the weapon: the shield and the off hand go to the pack
+	for sl: String in freed:  # both hands on the weapon: what the off hand held goes to the pack
 		eq[sl] = ""
 	if slot == "main_hand" and str(eq.get("off_hand", "")) == item and int(c["inventory"][item]) < 2:
 		eq["off_hand"] = ""
@@ -95,7 +97,7 @@ static func off_why(s: GameSession, data: Dictionary, id: String, slot: String, 
 	var row: Dictionary = CharacterRules.stowed(c) if spare else c.get("equipped", {})
 	if str(row.get(slot, "")).is_empty():
 		return "EQUIP_EMPTY"
-	if CombatRules.active(s) and (slot in ["armor", "shield"] or CharacterRules.WEAR_SLOTS.has(slot)):
+	if CombatRules.active(s) and (slot == "armor" or CharacterRules.WEAR_SLOTS.has(slot) or not CharacterRules.shield_in(row, data, s.items).is_empty() and slot == "off_hand"):
 		return "EQUIP_IN_COMBAT"
 	return "ITEM_CURSED" if not spare and ItemRules.held_by_curse(c, data, s.items, str(row[slot])) else ""
 
@@ -151,8 +153,8 @@ static func fill(s: GameSession, data: Dictionary, id: String, item: String) -> 
 	var c := Gear.of(s, data, id)
 	var def := ItemRules.def_of(data["items"], s.items, item)
 	for slot: String in CharacterRules.slots_of(def, data):
-		if slot == "off_hand":
-			continue  # a second weapon is a choice, not a free hand
+		if slot == "off_hand" and not CharacterRules.is_shield(def):
+			continue  # a second weapon is a choice, not a free hand; a shield goes to it
 		var row: Dictionary = c.get("equipped", {})
 		var spare := slot == "main_hand" and not str(row.get(slot, "")).is_empty() and CharacterRules.set_kind(def) == "ranged"
 		if spare:

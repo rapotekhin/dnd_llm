@@ -1054,7 +1054,7 @@ func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "fists"}),
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "fists"}),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false, true))
-	var off := str(c.get("equipped", {}).get("off_hand", ""))
+	var off := CharacterRules.off_weapon(c.get("equipped", {}), data, s.items)  # a shield there strikes not
 	if not off.is_empty():
 		var ow := CombatRules.weapon_profile(c, data, s.items, off, true)
 		_action(w, "Attack_off", tr("COMBAT_ATTACK_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), me,

@@ -61,7 +61,7 @@ func _map_anims(s: GameSession, foe: String) -> void:
 	var data: Dictionary = node("Catalog").data
 	var gs := node("GameState")
 	s.character["equipped"]["main_hand"] = "longsword"
-	s.character["equipped"]["shield"] = "shield"
+	s.character["equipped"]["off_hand"] = "shield"
 	node("EventBus").state_changed.emit()
 	await frames(5)
 	var field = find(screen(), "Field")

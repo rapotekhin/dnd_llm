@@ -30,7 +30,7 @@ func test_dueling_keeps_a_versatile_weapon_in_one_hand() -> void:
 	var c := s.character
 	ItemRules.add(c, "longsword", 1)
 	c["equipped"]["main_hand"] = "longsword"
-	c["equipped"]["shield"] = ""
+	c["equipped"]["off_hand"] = ""
 	c["equipped"]["off_hand"] = ""
 	c["features"] = (c["features"] as Array).filter(func(f: Variant) -> bool: return not str(f).contains("fighting_style"))
 	CharacterRules.refresh(c, data, s.items)

@@ -128,11 +128,11 @@ static func gear(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
 		if Guise.has_body(c):
 			return out
 		var eq: Dictionary = c.get("equipped", {})
-		out["shield"] = not str(eq.get("shield", "")).is_empty()
+		out["shield"] = not CharacterRules.shield_in(eq, data, s.items).is_empty()
 		out["item"] = str(eq.get("main_hand", ""))
 	else:
 		var eq: Dictionary = f.get("equipped", Gear.start(data, Sheet.template_id(data, f))["equipped"])
-		out["shield"] = not str(eq.get("shield", "")).is_empty()
+		out["shield"] = not CharacterRules.shield_in(eq, data, s.items).is_empty()
 		var inv: Dictionary = f.get("inventory", {})
 		for kind: String in ["melee", "ranged"]:
 			var item := str(CombatRules._best_action(data, f, kind).get("item", "")) if not Sheet.template(data, f).is_empty() else ""
