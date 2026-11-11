@@ -131,6 +131,18 @@ def entries() -> list[dict]:
         tip = re.search(r'func tip\(\)[^:]*:\s*return "([^"]+)"', text)
         out.append({"kind": "acts", "id": gd.stem, "name": title.group(1) if title else gd.stem,
                     "en": gd.stem.replace("_", " "), "hint": "a combat action; " + (tip.group(1) if tip else "")})
+    icons = load("game/data/icons.json")
+    for uid, what in icons["ui"].items():  # the interface's own buttons: the value is what to draw
+        if not uid.startswith("_"):
+            out.append({"kind": "ui", "id": uid, "name": what, "en": uid.replace("_", " "),
+                        "hint": f"a button of the game's interface; draw: {what}"})
+    marks = {"elements": "a damage type", "materials": "a material of a weapon or armor", "shapes": "a spell's area"}
+    for what, hint in marks.items():  # small marks over an icon's corner: marks/<what>/<id>.png
+        for mid in icons[what]:
+            if not mid.startswith("_"):
+                out.append({"kind": f"marks/{what}", "id": mid, "name": mid, "en": mid,
+                            "hint": f"a tiny mark of {hint} drawn over the corner of another icon: one bold simple "
+                                    f"emblem readable at 16 px, colored {icons[what][mid]}"})
     return out
 
 

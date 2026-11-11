@@ -3650,6 +3650,106 @@
   "sentence": "A single short brown wooden wand with a slightly curved tip, lying diagonally and giving a faint green glow.",
   "tags": "wand, wooden wand, brown, glowing, diagonal"
  },
+ "marks/elements/acid": {
+  "dark": false,
+  "sentence": "A single bright green acid drop with a rounded top and pointed bottom.",
+  "tags": "acid, drop, green, liquid, front view"
+ },
+ "marks/elements/cold": {
+  "dark": false,
+  "sentence": "A single pale blue snowflake with six simple arms, seen from the front.",
+  "tags": "snowflake, cold, light blue, six arms, front view"
+ },
+ "marks/elements/fire": {
+  "dark": false,
+  "sentence": "A single bold orange flame with a bright yellow core, pointing upward.",
+  "tags": "fire, flame, orange, glowing"
+ },
+ "marks/elements/force": {
+  "dark": false,
+  "sentence": "A single glowing violet six-pointed star inside a thin circle, with a bright white center.",
+  "tags": "star, geometric symbol, violet, glowing, circle"
+ },
+ "marks/elements/lightning": {
+  "dark": false,
+  "sentence": "A single bold yellow lightning bolt zigzagging downward.",
+  "tags": "lightning, lightning bolt, yellow, zigzag, diagonal"
+ },
+ "marks/elements/necrotic": {
+  "dark": false,
+  "sentence": "A single pale violet skull seen from the front, with deep purple eye sockets and a soft violet glow.",
+  "tags": "skull, pale violet, glowing, eye sockets, front view"
+ },
+ "marks/elements/poison": {
+  "dark": false,
+  "sentence": "A single bright green poison droplet, rounded at the bottom and pointed at the top, with one small darker green bubble.",
+  "tags": "poison, drop, green, liquid, bubble"
+ },
+ "marks/elements/psychic": {
+  "dark": false,
+  "sentence": "A single bright pink spiral curling inward to a small white center, with a soft glow.",
+  "tags": "spiral, pink, glowing, swirl"
+ },
+ "marks/elements/radiant": {
+  "dark": false,
+  "sentence": "A single pale gold sunburst with eight short pointed rays around a round center, glowing softly.",
+  "tags": "sunburst, sun, yellow, glowing, rays"
+ },
+ "marks/elements/thunder": {
+  "dark": false,
+  "sentence": "A single pale violet shockwave ring with three short spikes, seen from the front.",
+  "tags": "shockwave, burst, purple, ring, front view"
+ },
+ "marks/materials/adamantine": {
+  "dark": false,
+  "sentence": "A single slate green-grey metal ingot, a chunky rounded block with a bright pale edge.",
+  "tags": "ingot, metal, slate green, shiny, block"
+ },
+ "marks/materials/crude": {
+  "dark": false,
+  "sentence": "A single rough brown stone chunk with a jagged top and a flat bottom, seen from the front.",
+  "tags": "rock, brown, rough, stone"
+ },
+ "marks/materials/masterwork": {
+  "dark": false,
+  "sentence": "A single bright gold five-pointed star with a small white shine at its top point.",
+  "tags": "star, gold, shiny, five-pointed star"
+ },
+ "marks/materials/mithral": {
+  "dark": false,
+  "sentence": "A single pale blue-silver metal ingot, a rounded block with a bright white shine along one edge.",
+  "tags": "ingot, metal, light blue, shiny, silver"
+ },
+ "marks/materials/silvered": {
+  "dark": false,
+  "sentence": "A single pale silver metal ingot, a rounded trapezoid block with a bright white shine on its top edge.",
+  "tags": "ingot, silver, metal, shiny, grey"
+ },
+ "marks/shapes/cone": {
+  "dark": false,
+  "sentence": "A single pale grey cone standing upright, with a round base and a pointed top.",
+  "tags": "cone, grey, geometric shape, triangle"
+ },
+ "marks/shapes/cube": {
+  "dark": false,
+  "sentence": "A single pale grey cube seen at a slight angle, showing its front, top, and side faces.",
+  "tags": "cube, grey, geometric shape, block"
+ },
+ "marks/shapes/cylinder": {
+  "dark": false,
+  "sentence": "A single pale grey cylinder standing upright, with an oval top and a straight side.",
+  "tags": "cylinder, grey, geometric shape, round top"
+ },
+ "marks/shapes/line": {
+  "dark": false,
+  "sentence": "A single thick pale grey straight line lying horizontally, with rounded ends.",
+  "tags": "line, grey, straight line, horizontal"
+ },
+ "marks/shapes/sphere": {
+  "dark": false,
+  "sentence": "A single pale grey sphere with a round outline and a small white highlight on its upper left.",
+  "tags": "sphere, ball, grey, circle, highlight"
+ },
  "spells/acid_arrow": {
   "green": true,
   "sentence": "A single glowing green arrow of acid with a bright yellow-green tip and dripping droplets, flying diagonally to the right.",
@@ -4631,5 +4731,280 @@
   "dark": false,
   "sentence": "A single pale blue crescent moon glowing softly, seen from the front, with a smooth curved outline.",
   "tags": "crescent moon, moon, blue, glowing, front view"
+ },
+ "ui/all": {
+  "dark": false,
+  "sentence": "A single grey square divided into four equal smaller squares by a cross-shaped gap.",
+  "tags": "four squares, grid, square, grey, front view"
+ },
+ "ui/attack": {
+  "dark": false,
+  "sentence": "A single set of three red claw marks slashing diagonally, with sharp tapered ends.",
+  "tags": "claw marks, slashes, red, diagonal"
+ },
+ "ui/bed": {
+  "dark": false,
+  "sentence": "A single simple wooden bed seen from the side, with a white pillow and a red blanket.",
+  "tags": "bed, wooden frame, blanket, pillow, side view"
+ },
+ "ui/board": {
+  "dark": false,
+  "sentence": "A single brown wooden notice board with one pale paper pinned to its center by a red pin, seen from the front.",
+  "tags": "notice board, wooden board, paper, pin, brown"
+ },
+ "ui/camp": {
+  "dark": false,
+  "sentence": "A single simple brown canvas tent with a triangular opening and two poles, seen from the front.",
+  "tags": "tent, canvas, brown, front view"
+ },
+ "ui/class": {
+  "dark": false,
+  "sentence": "A single blue shield with a gold star in its center, seen from the front.",
+  "tags": "shield, star, blue, gold, front view"
+ },
+ "ui/collect": {
+  "dark": false,
+  "sentence": "A single bundle of three brown arrows tied with a leather strap, fanned out diagonally.",
+  "tags": "arrows, bundle, brown, leather strap, diagonal"
+ },
+ "ui/common": {
+  "dark": false,
+  "sentence": "A single round grey stone disc with a white four-pointed compass star on it.",
+  "tags": "compass rose, four-pointed star, white, grey disc"
+ },
+ "ui/craft": {
+  "dark": false,
+  "sentence": "A single grey metal anvil with a brown-handled hammer resting across its top, seen from the side.",
+  "tags": "anvil, hammer, blacksmith, grey metal, brown handle, side view"
+ },
+ "ui/deeds": {
+  "dark": false,
+  "sentence": "A single brown leather satchel with a hammer handle and a white quill sticking out of it, a gold coin in front.",
+  "tags": "satchel, hammer, quill, gold coin, brown leather"
+ },
+ "ui/drink": {
+  "dark": false,
+  "sentence": "A single brown wooden mug with a curved handle, seen from the front, filled with pale foam.",
+  "tags": "mug, wooden mug, handle, brown, front view"
+ },
+ "ui/eat": {
+  "dark": false,
+  "sentence": "A single round brown bowl filled with pale soup, with a silver spoon resting inside.",
+  "tags": "bowl, spoon, soup, brown, white, front view"
+ },
+ "ui/end_turn": {
+  "dark": false,
+  "sentence": "A single brown hourglass with a yellow curved arrow circling it clockwise, seen from the front.",
+  "tags": "hourglass, arrow, sand, brown, yellow"
+ },
+ "ui/exit": {
+  "dark": false,
+  "sentence": "A single open brown door seen from the front, with a bright green arrow pointing out through the doorway.",
+  "tags": "door, open door, arrow, brown, green, front view"
+ },
+ "ui/exits": {
+  "dark": false,
+  "sentence": "A single grey stone doorway with a rounded arch, seen from the front, opening into darkness.",
+  "tags": "doorway, arch, stone, grey, front view"
+ },
+ "ui/faith": {
+  "dark": false,
+  "sentence": "A single grey stone altar with a small orange flame burning on its top, seen from the front.",
+  "tags": "altar, flame, fire, stone, grey, orange, front view"
+ },
+ "ui/family": {
+  "dark": false,
+  "sentence": "A single small brown house with a red heart on its front, seen from the front.",
+  "tags": "house, heart, red, brown, front view"
+ },
+ "ui/features": {
+  "dark": false,
+  "sentence": "A single golden laurel wreath around a small white five-pointed star.",
+  "tags": "laurel wreath, star, gold, white, emblem"
+ },
+ "ui/fill": {
+  "dark": false,
+  "sentence": "A single brown leather waterskin with a blue water drop falling into its open mouth.",
+  "tags": "waterskin, water drop, blue, brown leather, front view"
+ },
+ "ui/food": {
+  "dark": false,
+  "sentence": "A single oval brown loaf of bread with three pale slashes across its top, seen from the front.",
+  "tags": "bread, loaf, brown, baked, front view"
+ },
+ "ui/gather": {
+  "dark": false,
+  "sentence": "A single grey pickaxe with a brown handle, a small green herb tied to its head, lying diagonally.",
+  "tags": "pickaxe, herb, green leaves, brown handle, diagonal"
+ },
+ "ui/heist": {
+  "dark": false,
+  "sentence": "A single slate grey domino mask seen from the front with a pale edge, a thin silver lockpick lying across it.",
+  "tags": "domino mask, lockpick, slate grey, silver, front view"
+ },
+ "ui/inventory": {
+  "dark": false,
+  "sentence": "A single brown leather backpack with a front flap and two shoulder straps, seen from the front.",
+  "tags": "backpack, leather, brown, straps, front view"
+ },
+ "ui/items": {
+  "dark": false,
+  "sentence": "A single round glass flask with a narrow neck, filled with bright red liquid and closed with a brown cork.",
+  "tags": "potion, flask, round bottle, red liquid, cork, glass"
+ },
+ "ui/journal": {
+  "dark": false,
+  "sentence": "A single closed brown leather journal with a pale feather emblem on its cover, seen from the front.",
+  "tags": "journal, book, leather cover, feather emblem, brown, front view"
+ },
+ "ui/look": {
+  "dark": false,
+  "sentence": "A single wide open eye with a bright blue iris and a black pupil, seen from the front.",
+  "tags": "eye, open eye, blue iris, white sclera, front view"
+ },
+ "ui/map": {
+  "dark": false,
+  "sentence": "A single folded beige parchment map with a few red route lines and a dark brown edge, seen from above.",
+  "tags": "map, parchment, folded, brown, red line, top view"
+ },
+ "ui/menu": {
+  "dark": false,
+  "sentence": "A single grey metal gear wheel with eight square teeth and a round hole in the center, seen from the front.",
+  "tags": "gear, cogwheel, grey metal, front view"
+ },
+ "ui/nonlethal": {
+  "dark": false,
+  "sentence": "A single grey club with a white feather tied to its handle, lying diagonally.",
+  "tags": "club, feather, white, grey, diagonal"
+ },
+ "ui/office": {
+  "dark": false,
+  "sentence": "A single rolled parchment scroll seen from the front, closed with a round red wax seal.",
+  "tags": "scroll, wax seal, parchment, red, rolled, front view"
+ },
+ "ui/org": {
+  "dark": false,
+  "sentence": "A single grey rat head seen from the front, with round ears and a simple pointed snout.",
+  "tags": "rat, rat head, emblem, grey, front view"
+ },
+ "ui/org_entry": {
+  "dark": false,
+  "sentence": "A single brown wooden door seen from the front, with a simple grey rat emblem on its center.",
+  "tags": "door, rat, emblem, brown, grey, front view"
+ },
+ "ui/passive": {
+  "dark": false,
+  "sentence": "A single closed eye drawn as one thick pale blue downward arc with five short lashes below it, floating alone with no face around it.",
+  "tags": "closed eye, eyelashes, curved line, pale blue, sleeping"
+ },
+ "ui/perform": {
+  "dark": false,
+  "sentence": "A single brown wooden lute with a round body and a long neck, seen from the front.",
+  "tags": "lute, string instrument, wooden, brown, front view"
+ },
+ "ui/place": {
+  "dark": false,
+  "sentence": "A single small wooden table seen from the front with a lit candle and a mug standing on it.",
+  "tags": "table, candle, mug, wooden, front view"
+ },
+ "ui/property": {
+  "dark": false,
+  "sentence": "A single rolled parchment deed tied with a red ribbon and a small gold key, seen from the front.",
+  "tags": "scroll, key, deed, parchment, red ribbon, gold, front view"
+ },
+ "ui/rest_long": {
+  "dark": false,
+  "sentence": "A single rolled brown bedroll with a small pale crescent moon and two stars above it.",
+  "tags": "bedroll, crescent moon, stars, brown, night"
+ },
+ "ui/rest_short": {
+  "dark": false,
+  "sentence": "A single small campfire with orange flames rising from two crossed brown logs.",
+  "tags": "campfire, fire, logs, orange, flame"
+ },
+ "ui/search": {
+  "dark": false,
+  "sentence": "A single magnifying glass with a round pale blue lens and a short brown handle, tilted diagonally.",
+  "tags": "magnifying glass, lens, handle, brown, glass"
+ },
+ "ui/sheet": {
+  "dark": false,
+  "sentence": "A single beige parchment scroll with a red wax seal and a small blue shield emblem on its front.",
+  "tags": "scroll, parchment, wax seal, shield emblem, brown, front view"
+ },
+ "ui/shop": {
+  "dark": false,
+  "sentence": "A single small wooden market stall with a red-and-white striped awning, seen from the front.",
+  "tags": "market stall, awning, wooden, red, white, front view"
+ },
+ "ui/sleep": {
+  "dark": false,
+  "sentence": "A single pale yellow crescent moon with a soft glow, opening to the right.",
+  "tags": "crescent moon, moon, yellow, glowing"
+ },
+ "ui/sneak": {
+  "dark": false,
+  "sentence": "A single empty slate grey hooded cloak with a pale edge, its hood opening shadowed, with no one inside.",
+  "tags": "hood, cloak, slate grey, empty, shadow"
+ },
+ "ui/sneak_wait": {
+  "dark": false,
+  "sentence": "A single empty slate grey hooded cloak with a pale edge and a small yellow hourglass in front of it, no one inside.",
+  "tags": "hood, cloak, slate grey, hourglass, empty"
+ },
+ "ui/spellbook": {
+  "dark": false,
+  "sentence": "A single open book with a blue cover and pale pages, a soft violet glow rising above the pages.",
+  "tags": "spellbook, book, open book, blue cover, glowing, pages"
+ },
+ "ui/spells": {
+  "dark": false,
+  "sentence": "A single brown wooden wand pointing diagonally up, with a few yellow sparkles around its tip.",
+  "tags": "wand, sparkle, star, brown, yellow, diagonal"
+ },
+ "ui/study": {
+  "dark": false,
+  "sentence": "A single thick brown book seen from the front, with a simple white owl emblem on its cover.",
+  "tags": "book, owl, cover, brown, white, front view"
+ },
+ "ui/talk": {
+  "dark": false,
+  "sentence": "A single white rounded speech bubble with a short tail at the bottom left and three small grey dots inside.",
+  "tags": "speech bubble, white, three dots, rounded, tail"
+ },
+ "ui/trade": {
+  "dark": false,
+  "sentence": "A single gold balance scale with two round pans hanging from a central beam, seen from the front.",
+  "tags": "scales, balance, gold, metal, front view"
+ },
+ "ui/wait": {
+  "dark": false,
+  "sentence": "A single hourglass with a brown wooden frame, pale glass bulbs and a small pile of yellow sand at the bottom.",
+  "tags": "hourglass, sand, glass, wooden frame, brown"
+ },
+ "ui/water": {
+  "dark": false,
+  "sentence": "A single brown leather waterskin with a small cork stopper and a strap, seen from the front.",
+  "tags": "waterskin, leather, brown, cork, front view"
+ },
+ "ui/weapon_set": {
+  "dark": false,
+  "sentence": "A single pair of steel swords crossed in an X with a small yellow arrow curving around them.",
+  "tags": "crossed swords, sword, steel, arrow, x shape"
+ },
+ "ui/weapons": {
+  "dark": false,
+  "sentence": "A single steel sword crossed with a brown wooden bow, forming one emblem, seen from the front.",
+  "tags": "sword, bow, crossed, steel, brown, diagonal"
+ },
+ "ui/wilds": {
+  "dark": false,
+  "sentence": "A single brown wooden bow with a thin fishing line and a small silver hook wrapped around its curve.",
+  "tags": "bow, fishing line, fishing hook, brown, diagonal"
+ },
+ "ui/work": {
+  "dark": false,
+  "sentence": "A single pair of brown leather work gloves, empty and lying flat, seen from the front.",
+  "tags": "gloves, leather gloves, brown, front view"
  }
 }

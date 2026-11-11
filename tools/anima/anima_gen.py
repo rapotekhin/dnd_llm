@@ -192,7 +192,7 @@ def sheets(out: Path, jobs: list[dict], seeds: list[int]) -> None:
                     x = label + c * cell
                     sheet.paste(slot.convert("RGB"), (x, y))
                     pen.text((x + 3, y + 2), str(n), fill=(255, 255, 255), font=font)
-            name = out / kind / f"sheet_{kind}_{page // ROWS_PER_SHEET + 1}.png"
+            name = out / kind / f"sheet_{kind.replace('/', '_')}_{page // ROWS_PER_SHEET + 1}.png"
             name.parent.mkdir(parents=True, exist_ok=True)
             sheet.save(name)
             print("sheet", name, flush=True)
