@@ -118,6 +118,24 @@ func run() -> void:
 	await frames(5)
 	step("fast travel puts the hero on a free square", WalkRules.room_of(field.map, field.hero_cell()) == s.room_id and WalkRules.passable(field.map, lib, field.hero_cell()))
 	await shot("travelled")
+	await _folded(s, gs)
+
+
+## v0.8.4.43.5.1: the engine's lines are quiet, one look; the same one said three times is one line «×3».
+func _folded(s: GameSession, gs: Node) -> void:
+	var chat: Node = screen().get("chat")
+	var size := s.chat.size()
+	for i in 3:
+		gs._effect_lines(["Взято: оловянная кружка"] as Array[String])  # the engine's road of a deed into the chat
+	await frames(3)
+	step("the same engine line folds", s.chat.size() == size + 1 and GameSession.times(s.chat[-1]) == 3, "%d → %d" % [size, s.chat.size()])
+	var lines: Array = chat.find_children("*", "RichTextLabel", true, false)
+	var last: RichTextLabel = lines.back() if not lines.is_empty() else null
+	step("one line «×3» in the chat", last != null and last.get_parsed_text().ends_with("×3"), last.get_parsed_text() if last else "")
+	var quiet := lines.filter(func(l: RichTextLabel) -> bool: return GameSession.is_engine(l.get_meta("entry", {})))
+	step("the engine's lines share one quiet look", not quiet.is_empty() and quiet.all(func(l: RichTextLabel) -> bool: return l.theme_type_variation == quiet[0].theme_type_variation),
+		str(quiet.size()))
+	await shot("chat_folded")
 
 
 ## v0.8.4.43.4: the right button on a person opens its one menu where the hero stands — a list with lists inside; a trade

@@ -3097,8 +3097,7 @@ func _add(entry: Dictionary) -> void:
 		session.faith_lines.clear()
 	if str(entry.get("kind", "")) == GameSession.KIND_EFFECT:  # every deed told closes the quest steps it made true: a quest's
 		(entry["lines"] as Array).append_array(QuestRules.advance(session, Catalog.data))  # thing taken any way (v0.8.4.42.10)
-	session.append(entry)
-	EventBus.chat_appended.emit(entry)
+	EventBus.chat_appended.emit(session.append(entry))  # a repeat of the engine's line comes back as the line it folded into
 	if not session.faith_lines.is_empty():
 		var faith := session.faith_lines.duplicate()
 		session.faith_lines.clear()

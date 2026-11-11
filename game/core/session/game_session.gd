@@ -16,6 +16,9 @@ const KIND_SYSTEM := "system"
 ## A fight's round kept in the chat after it (v0.8.4.21.1): `round`, `lines` of the engine, `tips` {line: breakdown}.
 ## Not the master's history: it has the round's lines in its own turn.
 const KIND_ROLLS := "rolls"
+## The kinds the engine writes (v0.8.4.43.5.1): told quietly apart from the story — the master's, an NPC's and the
+## player's words. `true` — a line that folds: the same line again right after it is counted «×N» (`times`), not repeated.
+const ENGINE_KINDS := {KIND_EFFECT: true, KIND_SYSTEM: true, KIND_ROLLS: false, KIND_CHECK: false}
 
 const MODE_EXPLORATION := "exploration"
 const MODE_SOCIAL := "social"
@@ -299,13 +302,50 @@ func next_effect_id() -> String:
 	return "e-%d" % effect_counter
 
 
+## The entry as the chat keeps it: the engine's line said again right after itself folds into it (v0.8.4.43.5.1), and
+## the one kept is returned — its `times` grown, the rolls of both on it. The chronicle still gets each deed at its minute.
 func append(entry: Dictionary) -> Dictionary:
-	chat.append(entry)
+	var kept := entry
+	if not chat.is_empty() and folds(chat[-1], entry):
+		kept = chat[-1]
+		kept["times"] = times(kept) + 1
+		if entry.get("rolls") is Array:
+			kept["rolls"] = (kept.get("rolls", []) as Array) + (entry["rolls"] as Array)
+	else:
+		chat.append(entry)
 	if str(entry.get("kind", "")) == KIND_EFFECT and not (entry.get("lines", []) as Array).is_empty():  # v0.7.14.4
 		chronicle.append(Fact.of(self, " · ".join(entry["lines"]), room_id))
 		if chronicle.size() > CHRONICLE_MAX:
 			chronicle = chronicle.slice(chronicle.size() - CHRONICLE_MAX)
-	return entry
+	return kept
+
+
+## The engine's own line (`ENGINE_KINDS`): told quietly, not the story.
+static func is_engine(e: Dictionary) -> bool:
+	return ENGINE_KINDS.has(str(e.get("kind", "")))
+
+
+## `e` says again what `last` said, and its kind folds: one line «×N» instead of two.
+static func folds(last: Dictionary, e: Dictionary) -> bool:
+	return bool(ENGINE_KINDS.get(str(e.get("kind", "")), false)) and _said(last) == _said(e)
+
+
+## How many times the line was said (1 — once).
+static func times(e: Dictionary) -> int:
+	return int(e.get("times", 1))
+
+
+## The line's text with its count: «Вы ждёте ×3».
+static func counted(text: String, e: Dictionary) -> String:
+	return text + (" ×%d" % times(e) if times(e) > 1 else "")
+
+
+## What a line says, without its count and rolls: a loaded line (untyped arrays) equals the one that was told.
+static func _said(e: Dictionary) -> String:
+	var said := e.duplicate()
+	said.erase("times")
+	said.erase("rolls")
+	return JSON.stringify(said, "", true)
 
 
 ## The chronicle for the master: the last `n` facts away from mere walking, «день 2, 09:12, Таверна — …».
@@ -430,7 +470,7 @@ func history(max_chars: int) -> Array[Dictionary]:
 			KIND_EFFECT:
 				# Applied effects stay in the history so the master does not charge or give the same thing twice.
 				role = "dm"
-				text = "[Движок уже применил: %s]" % " · ".join(e.get("lines", []))
+				text = "[Движок уже применил: %s]" % counted(" · ".join(e.get("lines", [])), e)
 		if role.is_empty():
 			continue
 		used += text.length()

@@ -34,9 +34,8 @@ const SIZE_HEADING := 36
 ## Type variations.
 const DM_TEXT := "DmText"  # Label: the master's narration
 const PLAYER_TEXT := "PlayerText"  # Label: the player's lines
-const SYSTEM_TEXT := "SystemText"  # Label: engine notices
 const NPC_TEXT := "NpcText"  # Label: an NPC's line in conversation
-const EFFECT_TEXT := "EffectText"  # Label: applied effects of a turn
+const ENGINE_TEXT := "EngineText"  # Label: the engine's own line in the chat — quiet: small, muted, under a rule (v0.8.4.43.5.1)
 const MUTED_LABEL := "MutedLabel"
 const TITLE := "TitleLabel"
 const HEADING := "HeadingLabel"

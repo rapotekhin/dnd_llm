@@ -2,8 +2,16 @@ class_name ChatView
 extends ScrollContainer
 ## The session chat: master narration (serif), player lines (italic accent), check cards, engine notices.
 ## Rebuilt from GameState.session on creation, then appended entry by entry; follows the bottom.
+## The story leads; the engine's lines (`GameSession.ENGINE_KINDS`) are quiet, and a repeat of one is its own line
+## counted «×N», rebuilt where it stands (v0.8.4.43.5.1).
 
 signal image_requested(path: String)  ## the link of an event's image (v0.7.35)
+
+## One look per kind of a text line (v0.8.4.43.5.1): the story in Literata, the engine's lines all alike and quiet.
+const STYLE := {
+	GameSession.KIND_DM: UiTheme.DM_TEXT, GameSession.KIND_PLAYER: UiTheme.PLAYER_TEXT, GameSession.KIND_NPC: UiTheme.NPC_TEXT,
+	GameSession.KIND_EFFECT: UiTheme.ENGINE_TEXT, GameSession.KIND_SYSTEM: UiTheme.ENGINE_TEXT,
+}
 
 var _list: VBoxContainer
 
@@ -23,7 +31,15 @@ func _ready() -> void:
 
 
 func _on_appended(entry: Dictionary) -> void:
-	_add(entry)
+	var line := _line_of(entry)
+	if line == null:
+		_add(entry)
+	else:  # the engine said its line again: the same line, its count grown
+		var fresh := _line(entry)
+		_list.add_child(fresh)
+		_list.move_child(fresh, line.get_index())
+		_list.remove_child(line)
+		line.queue_free()
 	_scroll_to_end.call_deferred()
 
 
@@ -33,24 +49,30 @@ func _scroll_to_end() -> void:
 
 
 func _add(e: Dictionary) -> void:
-	match str(e.get("kind", "")):
+	_list.add_child(_line(e))
+	if str(e.get("kind", "")) in [GameSession.KIND_DM, GameSession.KIND_NPC] and not ImageFrame.image_of(e).is_empty():
+		_link_after(_list.get_child(_list.get_child_count() - 1), e)
+
+
+## The node of an entry by its kind; the entry rides on it, so a new image or a repeat finds its place.
+func _line(e: Dictionary) -> Control:
+	var kind := str(e.get("kind", ""))
+	var line: Control
+	match kind:
 		GameSession.KIND_DM:
-			_list.add_child(_text(str(e.get("text", "")), UiTheme.DM_TEXT))
-			_link(e)
+			line = _text(str(e.get("text", "")), STYLE[kind])
 		GameSession.KIND_PLAYER:
-			_list.add_child(_text("— " + str(e.get("text", "")), UiTheme.PLAYER_TEXT))
+			line = _text("— " + str(e.get("text", "")), STYLE[kind])
 		GameSession.KIND_NPC:
 			# The master writes the line with its own remarks and quotes; only the speaker is added.
-			_list.add_child(_text("%s — %s" % [e.get("name", ""), without_name(str(e.get("text", "")), str(e.get("name", "")))], UiTheme.NPC_TEXT))
-			_link(e)
+			line = _text("%s — %s" % [e.get("name", ""), without_name(str(e.get("text", "")), str(e.get("name", "")))], STYLE[kind])
 		GameSession.KIND_EFFECT:
-			var l := _text(" · ".join(e.get("lines", [])), UiTheme.EFFECT_TEXT)
-			l.tooltip_text = RollParts.entry_text(e)  # the rolls of the line on hover (v0.7.39.5)
-			_list.add_child(l)
+			line = _text(GameSession.counted(" · ".join(e.get("lines", [])), e), STYLE[kind])
+			line.tooltip_text = RollParts.entry_text(e)  # the rolls of the line on hover (v0.7.39.5), of every repeat
 		GameSession.KIND_CHECK:
-			_list.add_child(CheckCard.new(e))
+			line = CheckCard.new(e)
 		GameSession.KIND_SYSTEM:
-			_list.add_child(_text(tr(str(e.get("key", ""))).format(e.get("args", {})), UiTheme.SYSTEM_TEXT))
+			line = _text(GameSession.counted(tr(str(e.get("key", ""))).format(e.get("args", {})), e), STYLE[kind])
 		GameSession.KIND_ROLLS:  # a fight's round, folded as in the fight (v0.8.4.21.1)
 			var block := UiParts.rolls_block(true)
 			block.set_meta("rolls", true)
@@ -58,26 +80,29 @@ func _add(e: Dictionary) -> void:
 			for l: Variant in e.get("lines", []):
 				UiParts.roll_line(block.get_node("Lines"), str(l), str(tips.get(str(l), "")))
 			UiParts.fold_rolls(block, true)
-			_list.add_child(block)
-
-
-## «Картинка» under an event that has one; the entry rides on the line, so a new image finds its place.
-func _link(e: Dictionary) -> void:
-	var line := _list.get_child(_list.get_child_count() - 1)
+			line = block
+		_:
+			line = _text(str(e.get("text", "")), UiTheme.ENGINE_TEXT)
 	line.set_meta("entry", e)
-	if not ImageFrame.image_of(e).is_empty():
-		_link_after(line, e)
+	return line
+
+
+func _line_of(entry: Dictionary) -> Node:
+	for line in _list.get_children():
+		if line.has_meta("entry") and is_same(line.get_meta("entry"), entry):
+			return line
+	return null
 
 
 func _on_image(entry: Dictionary) -> void:
-	for line in _list.get_children():
-		if line.has_meta("entry") and is_same(line.get_meta("entry"), entry):
-			var i := line.get_index() + 1
-			if i >= _list.get_child_count() or not _list.get_child(i).has_meta("image_link"):
-				_link_after(line, entry)
-			return
+	var line := _line_of(entry)
+	if line != null:
+		var i := line.get_index() + 1
+		if i >= _list.get_child_count() or not _list.get_child(i).has_meta("image_link"):
+			_link_after(line, entry)
 
 
+## «Картинка» under an event that has one.
 func _link_after(line: Node, e: Dictionary) -> void:
 	var b := Button.new()
 	b.name = "ImageLink"
