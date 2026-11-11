@@ -379,18 +379,12 @@ GEAR_NOT_IN_COMBAT,В бою вещи не передают
 GEAR_NOT_FOLLOWER,Вещи передают только тому, кто идёт с героем
 GEAR_TAKE_OFF_FIRST,Сначала снять: эта вещь надета
 GEAR_TITLE,Снаряжение: {name}
-GEAR_WORN,Надето
-GEAR_STOWED,Запасной набор
-GEAR_THINGS,Вещи спутника
 GEAR_HERO_THINGS,Вещи героя
 GEAR_NONE,Ничего
 GEAR_SLOT_LINE,{slot}: {item}
 BTN_GEAR,Снаряжение
 BTN_GEAR_TIP,"Что надето на спутнике и в его вещах: надеть, снять, сменить набор, передать вещь"
-BTN_GEAR_GIVE,Отдать
 BTN_GEAR_TAKE,Забрать
-BTN_GEAR_OFF,Снять
-BTN_GEAR_SWAP,Сменить набор
 GAME_SUBTITLE,D&D 5e с мастером-ИИ
 GAME_TITLE,Between the Rolls
 HEALTH_BLOODIED,тяжело ранен
@@ -540,7 +534,6 @@ CONTAINER_OWNER,"хозяин: {name}"
 CONTAINER_LOCKED,"Заперто."
 CONTAINER_INSIDE,Внутри
 CONTAINER_EMPTY,пусто
-CONTAINER_YOURS,Ваши вещи — положить
 BTN_DROP_BAG,Оставить здесь
 BTN_OPEN_BAG,Открыть
 BTN_DROP,Выбросить
@@ -549,7 +542,6 @@ SPELL_AT_WILL_SHORT, [по желанию]
 BTN_DROP_ALL,Выбросить все
 BTN_DROP_TIP,Вещь останется лежать здесь — её можно будет поднять
 SHEET_BAG,"{name}: внутри {w} из {cap} фнт"
-SHEET_TAB_DEV,Развитие
 DEV_HINT,"Мирные дела растят героя так же, как бой: у каждого направления свой опыт и уровни, на каждом уровне — новый навык из списка. Навыки работают только в своих делах."
 DEV_DIRECTION,"{name} — уровень {level} (опыт {xp} / {next})"
 DEV_PICK,Новый уровень — выберите навык:
@@ -747,10 +739,8 @@ SHEET_EQUIPPED,Надето и в руках
 SHEET_HIT_DICE,Кости хитов: {left} из {max}
 SHEET_LANGUAGES,Языки: {list}
 SHEET_LANGUAGES_TIP,"Кто не понимает твоего языка, того не уговорить и не обмануть словами; запугать можно, но с помехой. Тайные языки (воровской жаргон, друидический) открывают знаки, которые видишь только ты."
-SHEET_LINE,"{race}, {class}, {level} уровень · {background}"
 SHEET_PASSIVE,пассивная Внимательность {n}
 SHEET_PROF_SPEED,Бонус мастерства +{prof} · скорость {speed} футов
-SHEET_RESIST,Сопротивление урону: {list}
 SHEET_ITEM_BOONS,От вещей:
 SHEET_RESOURCE,{name}: {left} из {max} (восстановление: {rest})
 SHEET_RESOURCES,Умения с ограниченными использованиями
@@ -761,9 +751,6 @@ SHEET_SPELLS_ALWAYS,Всегда подготовлены (подкласс)
 SHEET_SPELLS_CANTRIPS,Заговоры
 SHEET_SPELLS_KNOWN,В книге заклинаний
 SHEET_SPELLS_PREPARED,Подготовлены
-SHEET_TAB_FEATURES,Умения и заклинания
-SHEET_TAB_GEAR,Снаряжение
-SHEET_TAB_STATS,Характеристики
 SHEET_TOOLS,Инструменты: {list}
 SHEET_TOOLS_TIP,"Действуешь инструментом, которым владеешь, и он с собой — бонус мастерства к проверке, а если владеешь и навыком — преимущество. Замок без воровских инструментов не вскрыть."
 SHEET_WEIGHT,Вес: {n} из {max} фнт.
@@ -2023,7 +2010,7 @@ BELT_EMPTY_TIP,Пустая ячейка: кладите сюда кнопкой
 BELT_USE_TIP,В бою и вне его используются только вещи с пояса; свеча или факел здесь светят
 BTN_EQUIP_STOWED,В запасной набор
 BTN_EQUIP_STOWED_OFF,В запасной набор: вторая рука
-STOWED_EMPTY_TIP,Пусто. Оружие этого набора кладётся сюда кнопкой «В запасной набор» в снаряжении
+STOWED_EMPTY_TIP,Пусто. Оружие этого набора кладётся сюда перетаскиванием или «В запасной набор» в меню вещи
 BTN_FOE_ATTACK,Атаковать
 BTN_FOE_ATTACK_WORD_TIP,Они ждут слов — удар начнёт бой
 BTN_FOE_INSPECT,Присмотреться
@@ -2116,3 +2103,60 @@ SIDE_UNSEEN,"Здесь, но не видно на карте"
 BTN_TALK,Поговорить
 CC_PORTRAIT,"Портрет — по расе, полу и возрасту; без выбора подберёт игра:"
 CC_PORTRAIT_TIP,"Лицо героя на карте, в отряде и в бою. Пока портреты не нарисованы, вместо лица — номер."
+SHEET_SECTION_GEAR,Снаряжение
+SHEET_SECTION_BOOK,Книга: умения и заклинания
+SHEET_SECTION_DEV,Развитие
+SHEET_TAB_SUMMARY,Сводка
+SHEET_TAB_SKILLS,Навыки
+SHEET_TAB_DETAIL,Подробно
+SHEET_HERO_ONLY,Только у героя
+SHEET_LEVEL,Уровень {n}
+SHEET_LEVEL_XP,Уровень {n} · опыт {xp} из {next}
+SHEET_CLASS_LEVEL,"{class}, уровень {level}"
+SHEET_ABILITY_TIP,"Модификатор {mod}, спасбросок {save}"
+SHEET_MAIN_ABILITY,★ Основная характеристика класса
+SHEET_SAVE_PROF,● Владение спасброском
+SHEET_DEFENSES,Защиты
+SHEET_NONE,нет
+SHEET_FEATURES,Умения и черты
+SHEET_PROF_LEGEND,★ владение ({n}) · ★★ компетентность (вдвое)
+SHEET_HP,Хиты
+SHEET_AC,КД
+SHEET_CLASS,Класс
+SHEET_RACE,Раса
+SHEET_BACKGROUND,Предыстория
+SHEET_DEITY,Божество
+SHEET_ROLE,Занятие
+SHEET_ATTRIBUTES,Свойства
+SHEET_INITIATIVE,Инициатива
+SHEET_SPEED,Скорость
+SHEET_DARKVISION,Тёмное зрение
+SHEET_FEET,{n} фт
+SHEET_SIZE,Размер
+SHEET_PASSIVE_SHORT,Пассивная Внимательность
+SHEET_CARRY,Грузоподъёмность
+SHEET_POUNDS,{n} фнт
+SHEET_HIT_DICE_SHORT,Кости хитов
+SHEET_PROF_BONUS,Бонус мастерства {n}
+SHEET_PROF_ARMOR,Доспехи
+SHEET_PROF_WEAPONS,Оружие
+SHEET_SAVES,Спасброски
+SHEET_SAVE_OF,Спасбросок: {ability}
+SHEET_AC_SHORT,КД
+SHEET_AC_TITLE,Класс доспеха {ac}
+SHEET_AC_WORN,Надето: {list}
+SHEET_AC_BARE,без доспеха и щита
+SHEET_REACTIONS,Реакции
+SHEET_REACTIONS_HINT,"Как герой отвечает на чужой ход: спрашивать, применять само или никогда — то же, что в настройках."
+SET_STOWED,Запасной набор
+SET_ATTACK,атака
+SET_DAMAGE,урон
+BTN_BELT_TAKE,Снять с пояса
+BTN_OPEN_BAG_NAMED,Открыть: {name}
+BTN_DROP_BAG_NAMED,"Выбросить {name} со всем, что в ней"
+BTN_GIVE,Отдать
+BTN_GIVE_TO,{name}
+BTN_OK,Готово
+GEAR_THINGS_OF,Вещи: {name}
+BTN_PUT_IN_STACK,Положить всё
+CONTAINER_HERO_THINGS,Ваши вещи

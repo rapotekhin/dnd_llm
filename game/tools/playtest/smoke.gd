@@ -92,16 +92,18 @@ func _sheet(gs: Node, game: Control) -> void:
 	await press(find(game, "SheetButton"))
 	var sheet: Control = find(game, "CharacterSheet")
 	step("sheet opens", sheet.visible)
-	var tabs: TabContainer = sheet.find_children("*", "TabContainer", true, false)[0]
-	for i in tabs.get_tab_count():
-		tabs.current_tab = i
+	for i: int in [0, 1, 3]:  # v0.8.4.43.6: «Снаряжение», «Книга», «Развитие» of one window
+		sheet.call("open_tab", i)
 		await shot("sheet_tab_%d" % i)
+	sheet.call("open_tab", 0)
 	var c: Dictionary = gs.session.character
 	var weapon := str(c["equipped"]["main_hand"])
 	if not weapon.is_empty():
 		var ac_before := int(c["ac"])
+		sheet.call("stage", weapon, "main_hand")
 		await press(find(sheet, "Unequip_main_hand"))
 		step("unequip the weapon", str(gs.session.character["equipped"]["main_hand"]).is_empty() and int(gs.session.character["ac"]) == ac_before)
+		sheet.call("stage", weapon)
 		var again: Button = find(sheet, "Equip_main_hand_" + weapon)
 		if step("equip button for the weapon", again != null and not again.disabled):
 			await press(again)

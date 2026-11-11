@@ -46,11 +46,12 @@ static func sheet(c: Dictionary, data: Dictionary, kind: String, id: String, ses
 	var pb := CharacterRules.prof_bonus(c, data)
 	match kind:
 		"skill":
-			if (c.get("expertise", []) as Array).has(id):
+			var how := CharacterRules.skill_mastery(c, id)
+			if how == "expertise":
 				add(out, "компетентность (двойное владение)", pb * 2)
-			elif (c.get("skill_profs", []) as Array).has(id) or CharacterRules.has_feature(c, "skill_prof_" + id):
+			elif how == "skill":
 				add(out, "владение навыком", pb)
-			elif id in ["deception", "persuasion"] and CharacterRules.has_feature(c, "eldritch_invocation_beguiling_influence"):
+			elif how == "beguiling":
 				add(out, "владение (Чарующее влияние)", pb)
 			elif CharacterRules.has_feature(c, "jack_of_all_trades"):
 				add(out, "мастер на все руки (½ владения)", pb / 2)

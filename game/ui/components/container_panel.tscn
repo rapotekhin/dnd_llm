@@ -5,7 +5,11 @@
 
 [node name="ContainerPanel" instance=ExtResource("1")]
 script = ExtResource("2")
-width = 820.0
+width = 1080.0
+above_bar = true
+
+[node name="ModalDim" parent="." index="0"]
+color = Color(0, 0, 0, 0.35)
 
 [node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
 auto_translate_mode = 2
@@ -17,53 +21,61 @@ visible = false
 [node name="SampleButton" parent="ModalPanel/Col/ModalFooter" index="0"]
 visible = false
 
-[node name="Sample1" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody" index="1" groups=["editor_sample"]]
+[node name="ModalScroll" parent="ModalPanel/Col" index="1"]
+visible = false
+
+[node name="ChestSplit" type="VBoxContainer" parent="ModalPanel/Col" index="2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="ChestTop" type="VBoxContainer" parent="ModalPanel/Col/ChestSplit"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Sample1" type="Label" parent="ModalPanel/Col/ChestSplit/ChestTop" groups=["editor_sample"]]
 layout_mode = 2
 auto_translate_mode = 2
-text = "Внутри 12 из 300 фнт"
-autowrap_mode = 3
+text = "Груз: 12 из 300 фнт · Хозяин: Бруно"
 theme_type_variation = &"MutedLabel"
 
-[node name="Sample2" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody" index="2" groups=["editor_sample"]]
+[node name="ChestGrids" type="HBoxContainer" parent="ModalPanel/Col/ChestSplit"]
+unique_name_in_owner = true
 layout_mode = 2
-auto_translate_mode = 2
-text = "Внутри"
-autowrap_mode = 3
-theme_type_variation = &"AccentLabel"
+size_flags_vertical = 3
+theme_override_constants/separation = 20
 
-[node name="Sample3" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="3" groups=["editor_sample"]]
+[node name="BoxCol" type="VBoxContainer" parent="ModalPanel/Col/ChestSplit/ChestGrids"]
+unique_name_in_owner = true
 layout_mode = 2
-
-[node name="Text" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample3"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "Верёвка ×2"
-autowrap_mode = 3
 size_flags_horizontal = 3
+theme_override_constants/separation = 6
 
-[node name="Act" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample3"]
+[node name="BoxHead" type="HBoxContainer" parent="ModalPanel/Col/ChestSplit/ChestGrids/BoxCol"]
+unique_name_in_owner = true
 layout_mode = 2
-auto_translate_mode = 2
-text = "Взять"
+theme_override_constants/separation = 12
 
-[node name="Sample4" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody" index="4" groups=["editor_sample"]]
+[node name="BoxCaption" type="Label" parent="ModalPanel/Col/ChestSplit/ChestGrids/BoxCol/BoxHead"]
 layout_mode = 2
-auto_translate_mode = 2
-text = "Ваши вещи — положить"
-autowrap_mode = 3
-theme_type_variation = &"AccentLabel"
-
-[node name="Sample5" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="5" groups=["editor_sample"]]
-layout_mode = 2
-
-[node name="Text" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample5"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "Факел"
-autowrap_mode = 3
 size_flags_horizontal = 3
+text = "CONTAINER_INSIDE"
+theme_type_variation = &"CaptionLabel"
 
-[node name="Act" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample5"]
+[node name="MineCol" type="VBoxContainer" parent="ModalPanel/Col/ChestSplit/ChestGrids"]
+unique_name_in_owner = true
 layout_mode = 2
-auto_translate_mode = 2
-text = "Положить"
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="MineCaption" type="Label" parent="ModalPanel/Col/ChestSplit/ChestGrids/MineCol"]
+layout_mode = 2
+text = "CONTAINER_HERO_THINGS"
+theme_type_variation = &"CaptionLabel"
+
+[node name="ChestActsBox" type="VBoxContainer" parent="ModalPanel/Col" index="3"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2

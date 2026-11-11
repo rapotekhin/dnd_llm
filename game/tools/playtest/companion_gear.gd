@@ -33,24 +33,24 @@ func run() -> void:
 	step("its own kit in its hands", str(c["equipped"].get("main_hand", "")) == "shortsword" and str(CharacterRules.stowed(c).get("main_hand", "")) == "longbow",
 		str(c["equipped"]) + " | " + str(CharacterRules.stowed(c)))
 	await shot("gear_window")
-	var give: Button = find(screen(), "GearGive_longsword")
+	step("its doll and two grids: its things and the hero's", find(view, "Slot_main_hand") != null and find(view, "MateGrid") != null
+		and find(view, "GearHero_longsword") != null)
 	var had := int(s.character["inventory"].get("longsword", 0))
-	if step("«Отдать» the longsword", give != null and not give.disabled):
-		await press(give)
-		await frames(3)
+	if step("the longsword dragged onto its grid is handed over", await drag(find(view, "GearHero_longsword"), find(view, "MateGrid"))):
 		step("the sword is its own now", int(Gear.of(s, data, "npc_mercenary")["inventory"].get("longsword", 0)) == 1 and int(s.character["inventory"].get("longsword", 0)) == had - 1)
-	var on: Button = find(screen(), "GearOn_main_hand_longsword")
+	view.call("stage", "longsword")  # v0.8.4.43.6: a thing's menu, staged by name
+	var on: Button = find(view, "Equip_main_hand_longsword")
 	if step("«В основную руку»", on != null and not on.disabled):
 		await press(on)
 		await frames(3)
 		step("in its hand", str(Gear.of(s, data, "npc_mercenary")["equipped"].get("main_hand", "")) == "longsword")
 	await shot("sword_in_hand")
-	var swap: Button = find(screen(), "GearSwap")
-	if step("«Сменить набор»", swap != null and not swap.disabled):
+	var swap: Button = find(view, "SwapWeapons")
+	if step("«Сменить набор» on its doll", swap != null and not swap.disabled):
 		await press(swap)
 		await frames(3)
 		step("the bow in its hands", str(Gear.of(s, data, "npc_mercenary")["equipped"].get("main_hand", "")) == "longbow")
-		await press(find(screen(), "GearSwap"))
+		await press(find(view, "SwapWeapons"))
 		await frames(3)
 		step("the sword back", str(Gear.of(s, data, "npc_mercenary")["equipped"].get("main_hand", "")) == "longsword")
 	await press(find(screen(), "CloseGearButton"))

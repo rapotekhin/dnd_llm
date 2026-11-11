@@ -18,7 +18,20 @@
 		"ui"
 	],
 	"shared": {
-		"_doc": "\"<kind>/<id>\": \"<kind>/<id>\" — the second's file stands for the first."
+		"_doc": "\"<kind>/<id>\": \"<kind>/<id>\" — the second's file stands for the first. «slots/<slot>» — the faded picture of an empty slot of the doll (v0.8.4.43.6).",
+		"slots/head": "items/helm_of_telepathy",
+		"slots/eyes": "items/goggles_of_night",
+		"slots/neck": "items/amulet",
+		"slots/cloak": "items/cloak_of_protection",
+		"slots/armor": "items/chain_mail",
+		"slots/hands": "items/gauntlets_of_ogre_power",
+		"slots/feet": "items/boots",
+		"slots/ring1": "items/silver_ring",
+		"slots/ring2": "items/silver_ring",
+		"slots/main_hand": "items/longsword",
+		"slots/off_hand": "items/dagger",
+		"slots/shield": "items/shield",
+		"slots/belt": "items/belt"
 	},
 	"source": {
 		"_doc": "\"<kind>/<id>\": where its file came from — forge (tools/anima), hand, or a licence line (CC BY …)."
@@ -164,6 +177,14 @@
 		"FaithButton": "faith",
 		"ShopButton": "shop",
 		"PropertyButton": "property",
-		"NonlethalToggle": "nonlethal"
+		"NonlethalToggle": "nonlethal",
+		"SheetSection_gear": "inventory",
+		"SheetSection_book": "spellbook",
+		"SheetSection_dev": "study",
+		"SheetTab_summary": "class",
+		"SheetTab_skills": "features",
+		"SheetTab_detail": "sheet",
+		"InvGroup_all": "all",
+		"SwapSets": "weapon_set"
 	}
 }

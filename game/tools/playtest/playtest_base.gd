@@ -280,3 +280,16 @@ func key(keycode: Key) -> void:
 ## income (rules.off.parts) — out of the game for the player, their road kept and played here.
 func trade_on(data: Dictionary) -> void:
 	TestUtils.trade_on(data)
+
+
+## A thing dragged from `cell` (an ItemCell) and let go on `onto` (v0.8.4.43.6): the drag's data as the cell gives it,
+## the drop as the target takes it; false if the target does not take it. `split` — Shift held: how many is asked.
+func drag(cell: Control, onto: Control, split := false) -> bool:
+	if cell == null or onto == null:
+		return false
+	var d := {"item": cell.get("item"), "qty": cell.get("qty"), "from": cell.get("from"), "split": split and int(cell.get("qty")) > 1}
+	if not onto._can_drop_data(Vector2.ZERO, d):
+		return false
+	onto._drop_data(Vector2.ZERO, d)
+	await frames(3)
+	return true

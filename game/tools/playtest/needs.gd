@@ -95,15 +95,15 @@ func run() -> void:
 		# v0.8.4.28: a mug of ale on the sheet is drunk and leaves its cup; a bottle of wine poured into the empty cup
 		s.character["inventory"]["ale"] = 1
 		s.character["inventory"]["bottle_wine"] = 1
-		sheet.call("open")
-		(sheet.find_children("*", "TabContainer", true, false)[0] as TabContainer).current_tab = 2
+		sheet.call("open_tab", 2)
 		await frames(4)
-		for sc: ScrollContainer in sheet.find_children("*", "ScrollContainer", true, false):
-			if sc.is_visible_in_tree():
-				sc.scroll_vertical = 100000
-		await frames(3)
+		sheet.call("stage", "ale")  # v0.8.4.43.6: a thing's menu, staged by name
 		var sip: Button = find(sheet, "Drink_ale")
-		step("the ale has «Выпить»; the wine no «Перелить» with no empty vessel", sip != null and find(sheet, "Pour_bottle_wine") == null)
+		sheet.call("stage", "bottle_wine")
+		var no_pour := find(sheet, "Group_BTN_LIQUID_POUR") == null and find(sheet, "Pour_bottle_wine") == null
+		sheet.call("stage", "ale")
+		sip = find(sheet, "Drink_ale")
+		step("the ale has «Выпить»; the wine no «Перелить» with no empty vessel", sip != null and no_pour)
 		await shot("liquids")
 		if sip != null:
 			await press(sip)
@@ -111,14 +111,15 @@ func run() -> void:
 		step("the ale drunk, its cup left", not s.character["inventory"].has("ale") and int(s.character["inventory"].get("cup_clay", 0)) == 1)
 		sheet.call("open")
 		await frames(4)
-		var pour2: MenuButton = find(sheet, "Pour_bottle_wine")
-		var cup := -1
-		if pour2 != null:
-			for i in pour2.get_popup().item_count:
-				if pour2.get_popup().get_item_text(i).begins_with("Глиняная кружка"):
-					cup = i
-		if step("the cup among the targets", cup >= 0):
-			pour2.get_popup().id_pressed.emit(pour2.get_popup().get_item_id(cup))
+		sheet.call("stage", "bottle_wine")
+		var cup: Button = null
+		var into: Node = find(sheet, "Group_BTN_LIQUID_POUR")  # «Перелить ▸» and its vessels
+		if into != null:
+			for b: Node in into.get_children():
+				if (b as Button).text.begins_with("Глиняная кружка"):
+					cup = b
+		if step("the cup among the targets", cup != null):
+			await press(cup)
 			await frames(3)
 		step("wine in the cup, the rest in the bottle", LiquidRules.summary(s.character, data, "cup_clay") == "вино 1/1" \
 			and LiquidRules.summary(s.character, data, "bottle_glass") == "вино 0.5/1.5",

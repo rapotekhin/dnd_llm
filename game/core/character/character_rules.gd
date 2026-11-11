@@ -55,6 +55,18 @@ static func has_trait(c: Dictionary, id: String) -> bool:
 	return (c.get("traits", []) as Array).has(id)
 
 
+## How the character knows a skill (v0.8.4.43.6: one place for the roll's parts and the sheet's ★): "expertise", "skill"
+## (its proficiency, or a feature that gives it), "beguiling" (Beguiling Influence: Deception and Persuasion), "" — none.
+static func skill_mastery(c: Dictionary, id: String) -> String:
+	if (c.get("expertise", []) as Array).has(id):
+		return "expertise"
+	if (c.get("skill_profs", []) as Array).has(id) or has_feature(c, "skill_prof_" + id):
+		return "skill"
+	if id in ["deception", "persuasion"] and has_feature(c, "eldritch_invocation_beguiling_influence"):
+		return "beguiling"
+	return ""
+
+
 ## A bare ability check (5e: «Сила» to force a door): the modifier, half proficiency with Jack of All Trades, the
 ## Stone of Good Luck — the sum of its parts (RollParts).
 static func ability_check_bonus(c: Dictionary, data: Dictionary, ab: String) -> int:

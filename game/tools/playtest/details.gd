@@ -18,8 +18,7 @@ func run() -> void:
 	var game := screen()
 	await press(find(game, "SheetButton"))
 	var sheet: Control = find(game, "CharacterSheet")
-	var tabs: TabContainer = sheet.find_children("*", "TabContainer", true, false)[0]
-	tabs.current_tab = 1
+	sheet.call("open_tab", 1)  # v0.8.4.43.6: «Книга» of the character window
 	await frames(3)
 	var spells: Array = sheet.find_children("Spell_*", "Button", true, false)
 	if not step("spells as rows of the sheet", spells.size() >= 2, str(spells.size())):
@@ -53,7 +52,7 @@ func run() -> void:
 	b.mouse_entered.emit()
 	await frames(2)
 	step("unpinned by the lock: hover works again", panel.pinned().is_empty() and panel.title() != title_a, panel.title())
-	tabs.current_tab = 2
+	sheet.call("open_tab", 2)
 	await frames(3)
 	await shot("sheet_gear")
 	await key(KEY_ESCAPE)

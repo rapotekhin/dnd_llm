@@ -19,56 +19,47 @@ func run() -> void:
 	var s: GameSession = gs.session
 	var game := screen()
 
-	# The sheet: item numbers, weight; the mail off takes minutes.
-	await press(find(game, "SheetButton"))
-	var sheet: Control = find(game, "CharacterSheet")
-	var tabs: TabContainer = sheet.find_children("*", "TabContainer", true, false)[0]
-	tabs.current_tab = 2
+	# The window: a thing's card at the cursor, the weight; the mail off takes minutes (v0.8.4.43.6: the doll and its menu).
+	var sheet: Control = game.get("_sheet")
+	sheet.call("open_tab", 2)
 	await frames(3)
-	var details: Control = find(sheet, "ItemDetails")
-	var box_size: Vector2 = details.size if details != null else Vector2.ZERO
-	await press(find(sheet, "Item_" + str(s.character["equipped"]["armor"])))
-	await frames(2)
-	step("a click on the mail shows its AC in the details", details != null and _text_of(details).contains("КД 16"), _text_of(details).left(160) if details != null else "")
-	for id: String in s.character["inventory"]:
-		var b: Button = find(sheet, "Item_" + id)
-		if b != null:
-			await press(b)
-	await frames(2)
-	step("the card at the cursor stays on the screen", details != null and Rect2(Vector2.ZERO, details.get_viewport_rect().size).encloses(details.get_global_rect()),  # v0.8.4.43.3: sized by its text
-		"%s → %s" % [box_size, details.get_global_rect() if details != null else Rect2()])
+	var armor := str(s.character["equipped"]["armor"])
+	var mail: Control = find(sheet, "Slot_armor")
+	step("the mail's card at the cursor shows its AC", mail != null and str(mail.get("tip_body")).contains("КД 16"), str(mail.get("tip_body")).left(160) if mail != null else "")
 	var weight: Label = find(sheet, "CarriedWeight")
 	step("carried weight", weight != null and weight.text.contains("фнт"), weight.text if weight != null else "")
 	await shot("sheet_gear")
 	var minute := s.minute
+	sheet.call("stage", armor, "armor")
 	await press(find(sheet, "Unequip_armor"))
 	await frames(2)
 	step("taking the mail off takes 5 minutes", s.minute - minute == 5, "%d → %d" % [minute, s.minute])
 	step("info: the chat line", true, _last_effect(s))
 	await shot("sheet_unequipped")
 
-	# Both hands (a fix after v0.7.22.32): the longsword gripped in two, a greatsword frees the shield hand; the sheet scrolls.
-	var list: ScrollContainer = find(sheet, "GearList")
-	step("the gear tab scrolls", list != null and list.size.y < sheet.get_viewport_rect().size.y and list.get_v_scroll_bar().visible,
-		str(list.size) if list != null else "")
+	# Both hands (a fix after v0.7.22.32): the longsword gripped in two, a greatsword frees the shield hand.
+	sheet.call("stage", "longsword", "main_hand")
 	var both: Button = find(sheet, "BothHands")
 	if step("«Двумя руками» on the longsword with a shield", both != null and not both.disabled):
 		await press(both)
 		await frames(3)
 		step("the shield went to the pack", str(s.character["equipped"]["shield"]).is_empty() and CombatRules.weapon_profile(s.character, node("Catalog").data, s.items, "longsword")["dice"] == "1d10")
 		await shot("sheet_both_hands")
+	sheet.call("stage", "shield")
 	await press(find(sheet, "Equip_shield_shield"))
 	await frames(3)
 	s.character["inventory"]["greatsword"] = 1
 	node("EventBus").state_changed.emit()
 	await frames(3)
+	sheet.call("stage", "greatsword")
 	var great: Button = find(sheet, "Equip_main_hand_greatsword")
 	step("a greatsword goes «В обе руки»", great != null and not great.disabled and great.text == "В обе руки", great.text if great != null else "")
 	if great != null:
 		await press(great)
 		await frames(3)
 		step("the greatsword took the shield off", str(s.character["equipped"]["main_hand"]) == "greatsword" and str(s.character["equipped"]["shield"]).is_empty())
-		step("the off hand is held", _text_of(find(sheet, "SlotCard_off_hand")).contains("занята"), _text_of(find(sheet, "SlotCard_off_hand")))
+		var off: Control = find(sheet, "Slot_off_hand")
+		step("the off hand is held", off != null and str(off.get("text")).contains("занята"), str(off.get("text")) if off != null else "")
 		await shot("sheet_greatsword")
 		s.character["equipped"]["main_hand"] = "longsword"  # the rest of the scenario fights with the longsword
 		s.character["equipped"]["shield"] = "shield"
@@ -88,14 +79,15 @@ func run() -> void:
 		await press(trade)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		var panel: Control = find(game, "TradePanel")
-		var info: Control = find(panel, "TradeItemInfo")
 		var panel_size := panel.size
-		await press(find(panel, "TradeItem_longsword"))
+		var sword: Control = find(panel, "Buy_longsword")  # v0.8.4.43.6: a cell of the trader's grid, its card at the cursor
+		step("the sword's card shows its numbers and price", sword != null and str(sword.get("tip_body")).contains("1к8") and str(sword.get("text")).contains("зм"),
+			str(sword.get("tip_body")).left(160) if sword != null else "")
+		var shirt: Control = find(panel, "Buy_chain_shirt")
+		step("the chain shirt compares with what is worn", shirt != null and str(shirt.get("tip_body")).contains("→"), str(shirt.get("tip_body")).left(200) if shirt != null else "")
+		await press(sword)
 		await frames(2)
-		step("a click on the sword shows its numbers", _text_of(info).contains("1к8"), _text_of(info).left(160))
-		await press(find(panel, "TradeItem_chain_shirt"))
-		await frames(2)
-		step("the chain shirt compares with what is worn", _text_of(info).contains("→"), _text_of(info).left(200))
+		step("a click puts the sword into the deal", find(panel, "Unbuy_longsword") != null)
 		step("the trade panel keeps its size", panel.size.is_equal_approx(panel_size), "%s → %s" % [panel_size, panel.size])
 		await shot("trade_stats")
 		await press(find(game, "LeaveButton"))

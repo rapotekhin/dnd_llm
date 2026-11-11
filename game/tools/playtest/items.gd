@@ -37,21 +37,16 @@ func run() -> void:
 	await press(find(game, "SheetButton"))
 	var sheet: Control = find(game, "CharacterSheet")
 	await frames(3)
-	_gear_tab(sheet)
+	sheet.call("open_tab", 2)  # v0.8.4.43.6: «Снаряжение», a thing's acts staged by name as its menu shows them
 	await frames(2)
+	sheet.call("stage", "gauntlets_of_ogre_power")
 	var wear: Button = find(sheet, "Equip_hands_gauntlets_of_ogre_power")  # v0.7.22.9: worn on the hands
 	if step("the gauntlets go on the hands", wear != null and not wear.disabled, wear.tooltip_text if wear != null else ""):
 		await press(wear)
 		await frames(3)
-		_gear_tab(find(screen(), "CharacterSheet"))
-		await frames(2)
-	sheet = find(screen(), "CharacterSheet")
-	if not sheet.visible:
-		await press(find(game, "SheetButton"))
-		await frames(3)
-		_gear_tab(sheet)
-		await frames(2)
+	step("the gauntlets on the doll", str(find(sheet, "Slot_hands").get("item")) == "gauntlets_of_ogre_power")
 	await shot("sheet_worn")
+	sheet.call("stage", "gauntlets_of_ogre_power", "hands")
 	var att: Button = find(sheet, "Attune_gauntlets_of_ogre_power")
 	step("the attune button", att != null and not att.disabled, att.tooltip_text if att != null else "")
 	await shot("sheet_attune")
@@ -123,14 +118,6 @@ func run() -> void:
 		step("the wand hit and spent a charge", int(ogre["hp"]) < hp and ItemRules.charges_left(c, ItemRules.def_of(data["items"], s.items, "wand_of_magic_missiles"), "wand_of_magic_missiles") == 6, _tail(3))
 		await shot("wand")
 	step("info: burning", true, ", ".join(_seen.filter(func(l: String) -> bool: return l.contains("горит") or l.contains("пламя"))))
-
-
-func _gear_tab(sheet: Control) -> void:
-	for t: Node in sheet.find_children("*", "TabContainer", true, false):
-		var tabs := t as TabContainer
-		for i in tabs.get_tab_count():
-			if tabs.get_tab_title(i) == tr("SHEET_TAB_GEAR"):
-				tabs.current_tab = i
 
 
 func _items_tab(cs: Control) -> void:

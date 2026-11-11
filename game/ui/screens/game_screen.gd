@@ -351,7 +351,7 @@ func _hotkey(event: InputEvent, nothing_open: bool) -> bool:
 		if not err.is_empty():
 			EventBus.message.emit(tr(err))
 		return true
-	for tab: Array in [["character_sheet", 0], ["spells", 1], ["inventory", 2]]:
+	for tab: Array in [["character_sheet", 0], ["spells", 1], ["inventory", 0]]:
 		if event.is_action_pressed(tab[0]):
 			if _sheet.visible and _sheet.current_tab() == int(tab[1]):
 				_sheet.visible = false

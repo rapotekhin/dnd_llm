@@ -66,7 +66,8 @@ func run() -> void:
 	await press(find(game, "SheetButton"))
 	var sheet: Control = find(game, "CharacterSheet")
 	await frames(3)
-	step("the sheet shows the dwarf's poison resistance", _text_of(sheet).contains("Сопротивление урону: яд"), "")
+	var resist: Label = find(sheet, "Defense_resist")  # v0.8.4.43.6: «Защиты» of the sheet's summary
+	step("the sheet shows the dwarf's poison resistance", resist != null and resist.text.contains("Сопротивление") and resist.text.contains("яд"), resist.text if resist != null else "")
 	await shot("sheet_resist")
 	await press(find(sheet, "CloseSheetButton"))
 

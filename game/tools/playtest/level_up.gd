@@ -43,10 +43,10 @@ func run() -> void:
 			"HP %d, known %d, prepared %d, subclass %s" % [c["max_hp"], c["spells"]["known"].size(), c["spells"]["prepared"].size(), c["subclass"]])
 	await press(find(game, "SheetButton"))
 	var sheet: Control = find(game, "CharacterSheet")
-	var tabs: TabContainer = sheet.find_children("*", "TabContainer", true, false)[0]
-	tabs.current_tab = 1
+	sheet.call("open_tab", 1)  # v0.8.4.43.6: «Книга» of the character window
+	await frames(3)
 	await shot("sheet_after")
-	var scroll: ScrollContainer = tabs.get_child(1)
+	var scroll: ScrollContainer = find(sheet, "BookPage")
 	scroll.scroll_vertical = 100000
 	await frames(3)
 	await shot("sheet_spells")

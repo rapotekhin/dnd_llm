@@ -42,6 +42,8 @@ func run() -> void:
 	await press(find(game, "SheetButton"))
 	var sheet: Control = find(game, "CharacterSheet")
 	await frames(3)
+	await press(find(sheet, "SheetTab_detail"))  # v0.8.4.43.6: «Подробно» of the sheet's column
+	await frames(3)
 	var text := _text_of(sheet)
 	step("the sheet shows the languages", text.contains("Языки:") and text.contains("Общий"), "")
 	step("the sheet shows the tools", text.contains("Инструменты:"), "")

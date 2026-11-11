@@ -1,22 +1,74 @@
 class_name GearPanel
 extends ModalFrame
-## The «Снаряжение» window of one who walks with the hero (v0.8.4.40, as a companion in BG3): what it wears and holds in
-## both sets, its things with the slots they go to, the hero's things to hand over. Every act is Equip's through
-## GameState (`equip`, `unequip`, `gear_act`): the same rules as the hero's sheet.
+## The «Снаряжение» window of one who walks with the hero (v0.8.4.40; two grids as in BG3 since v0.8.4.43.6): its doll
+## (DollView) and its things on the left, the hero's things on the right. A thing dragged from one grid onto the other is
+## handed over (Shift asks how many), onto its doll is put on; a double click puts a thing on, the right button lists the
+## acts (ItemActs, ItemMenu). Every act is Equip's through GameState: the same rules as the hero's own window.
 
 const SCENE := "res://ui/components/gear_panel.tscn"
 
 var who := ""
-var _box: VBoxContainer
+var _doll: DollView
+var _mate: ItemGrid
+var _hero: ItemGrid
+var _menu: ActsMenu
+var _mate_view := {}
+var _hero_view := {}
+
+
+func required() -> Dictionary:
+	var nodes := super()
+	nodes.merge({"%GearSplit": "HBoxContainer", "%MateDoll": "VBoxContainer", "%MateBox": "VBoxContainer", "%MateHead": "Label",
+		"%MateCoins": "Label", "%HeroBox": "VBoxContainer", "%HeroHead": "Label", "%HeroCoins": "Label", "%GearActsBox": "VBoxContainer"})
+	return nodes
 
 
 func _ready() -> void:
 	super()
 	close_requested.connect(func() -> void: visible = false)
 	close_x.name = "CloseGearButton"
-	_box = body
+	fill_body(UiScenes.need(self, "%GearSplit"))
+	for n: Node in get_tree().get_nodes_in_group("editor_sample"):
+		if is_ancestor_of(n):
+			n.queue_free()
+	var details := DetailsPanel.new(Vector2(0, 160), true)
+	details.name = "GearDetails"
+	add_child(details)
+	_doll = DollView.new()
+	_doll.details = details
+	_doll.act.connect(_do)
+	_doll.menu.connect(_open_menu)
+	(UiScenes.need(self, "%MateDoll") as Control).add_child(_doll)
+	_mate = _grid("Mate", "GearItem_", "%MateBox", _mate_view)
+	_hero = _grid("Hero", "GearHero_", "%HeroBox", _hero_view)
 	EventBus.state_changed.connect(_rebuild)
 	visibility_changed.connect(_rebuild)
+
+
+## A grid under its caption and coins: a drop from the other grid hands the thing over.
+func _grid(tag: String, prefix: String, host: String, view: Dictionary) -> ItemGrid:
+	var g := ItemGrid.new(tag, prefix, 5)
+	var box: VBoxContainer = UiScenes.need(self, host)
+	box.add_child(g)
+	box.move_child(g, 1)
+	g.view = view
+	g.view_changed.connect(_rebuild)
+	g.accepts = func(drag: Dictionary) -> bool:
+		var from: Dictionary = drag.get("from", {})
+		return str(from.get("kind", "")) == "things" and str(from.get("who", "")) != str(g.where.get("who", ""))
+	g.dropped = func(drag: Dictionary) -> void:
+		var to_mate := g == _mate
+		ItemGrid.with_qty(self, drag, func(n: int) -> void: _do({"act": "give" if to_mate else "take", "item": str(drag["item"]), "to": who, "qty": n}, Being.HERO if to_mate else who))
+	g.setup = func(cell: ItemCell) -> void:
+		var whose := str(g.where.get("who", ""))
+		var id := cell.item
+		var rows := func() -> Array: return _rows(whose, id)
+		cell.on_double = func() -> void:
+			var main := ItemActs.main(rows.call())
+			if not main.is_empty():
+				_do(main, whose)
+		cell.on_menu = func(at: ItemCell) -> void: _open_menu(at, rows.call(), whose)
+	return g
 
 
 func open(id: String) -> void:
@@ -25,92 +77,54 @@ func open(id: String) -> void:
 	_rebuild()
 
 
-func _row() -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	_box.add_child(row)
-	return row
-
-
-## The name on the left and a flow of its buttons on the right: they wrap under one another, the name keeps its width.
-func _line(row: HBoxContainer, text: String) -> HFlowContainer:
-	var l := UiParts.label(row, text)
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.size_flags_stretch_ratio = 2.0
-	l.custom_minimum_size = Vector2(180, 0)
-	var acts := HFlowContainer.new()
-	acts.alignment = FlowContainer.ALIGNMENT_END
-	acts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	acts.size_flags_stretch_ratio = 3.0
-	acts.add_theme_constant_override("h_separation", 8)
-	acts.add_theme_constant_override("v_separation", 6)
-	row.add_child(acts)
-	return acts
-
-
-func _button(row: Control, node_name: String, text: String, why: String, act: Callable) -> void:
-	var b := UiParts.act_button(row, node_name, text, why, act)
-	b.size_flags_horizontal = Control.SIZE_SHRINK_END
-
-
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
 	if not Being.follows(s, who):
 		visible = false
 		return
-	var items: Dictionary = data["items"]
+	var name_of := WorldView.name_of(data, who)
+	title.text = tr("GEAR_TITLE").format({"name": name_of})
+	_doll.show_of(who)
 	var c := Gear.of(s, data, who)
-	title.text = tr("GEAR_TITLE").format({"name": WorldView.name_of(data, who)})
-	for spare: bool in [false, true]:
-		var row_of: Dictionary = CharacterRules.stowed(c) if spare else c.get("equipped", {})
-		UiParts.heading(_box, tr("GEAR_STOWED" if spare else "GEAR_WORN"))
-		var any := false
-		for slot: String in CharacterRules.HANDS if spare else CharacterRules.SLOTS:
-			var id := str(row_of.get(slot, ""))
-			if id.is_empty():
-				continue
-			any = true
-			var row := _line(_row(), tr("GEAR_SLOT_LINE").format({"slot": tr("SLOT_" + slot.to_upper()), "item": ItemRules.display_name(items, s.items, id)}))
-			var sl := slot
-			var sp := spare
-			_button(row, "GearOff_%s%s" % ["stowed_" if spare else "", slot], tr("BTN_GEAR_OFF"), Equip.off_why(s, data, who, slot, spare),
-				func() -> String:
-					GameState.unequip(sl, who, sp)
-					return "")
-		if not any:
-			UiParts.label(_box, tr("GEAR_NONE"), UiTheme.MUTED_LABEL)
-	var swap := _row()
-	swap.alignment = BoxContainer.ALIGNMENT_END
-	_button(swap, "GearSwap", tr("BTN_GEAR_SWAP"), Equip.swap_why(s, data, who), GameState.gear_act.bind("swap", who, ""))
-	UiParts.heading(_box, tr("GEAR_THINGS"))
-	var mine: Dictionary = c.get("inventory", {})
-	for id: String in mine:
-		var def := ItemRules.def_of(items, s.items, id)
-		var row := _line(_row(), "%s%s" % [ItemRules.display_name(items, s.items, id), " ×%d" % int(mine[id]) if int(mine[id]) > 1 else ""])
-		for slot: String in CharacterRules.slots_of(def, data):
-			for spare: bool in ([false, true] if CharacterRules.HANDS.has(slot) else [false]):
-				if str((CharacterRules.stowed(c) if spare else c.get("equipped", {})).get(slot, "")) == id:
-					continue
-				var sl := slot
-				var sp := spare
-				var text := tr("BTN_EQUIP_STOWED" if spare and slot != "off_hand" else "BTN_EQUIP_STOWED_OFF" if spare else "BTN_EQUIP_" + slot.to_upper())
-				_button(row, "GearOn_%s%s_%s" % ["stowed_" if spare else "", slot, id], text, Equip.why(s, data, who, id, slot, spare),
-					func() -> String: return GameState.equip(id, sl, false, sp, who))
-		_button(row, "GearTake_" + id, tr("BTN_GEAR_TAKE"), Equip.hand_why(s, data, who, Being.HERO, id), GameState.gear_act.bind("take", who, id))
-	if mine.is_empty():
-		UiParts.label(_box, tr("GEAR_NONE"), UiTheme.MUTED_LABEL)
-	UiParts.heading(_box, tr("GEAR_HERO_THINGS"))
-	var hero: Dictionary = s.character.get("inventory", {})
-	var shown := 0
-	for id: String in hero:
-		if CharacterRules.slots_of(ItemRules.def_of(items, s.items, id), data).is_empty():
-			continue  # what may be worn or held: the rest goes by the bond's gift
-		shown += 1
-		var row := _line(_row(), ItemRules.display_name(items, s.items, id))
-		_button(row, "GearGive_" + id, tr("BTN_GEAR_GIVE"), Equip.hand_why(s, data, Being.HERO, who, id), GameState.gear_act.bind("give", who, id))
-	if shown == 0:
-		UiParts.label(_box, tr("GEAR_NONE"), UiTheme.MUTED_LABEL)
+	_mate.where = {"kind": "things", "who": who}
+	_mate.show_items(Gear.loose(c, data, s.items))
+	_hero.where = {"kind": "things", "who": Being.HERO}
+	_hero.show_items(Gear.loose(s.character, data, s.items))
+	(UiScenes.need(self, "%MateHead") as Label).text = tr("GEAR_THINGS_OF").format({"name": name_of})
+	(UiScenes.need(self, "%MateCoins") as Label).text = tr("SIDE_COINS").format({"coins": Money.format(Gear.coins(s, data, who))})
+	(UiScenes.need(self, "%HeroHead") as Label).text = tr("GEAR_HERO_THINGS")
+	(UiScenes.need(self, "%HeroCoins") as Label).text = tr("SIDE_COINS").format({"coins": Money.format(Gear.coins(s, data, Being.HERO))})
+
+
+## A thing's acts in this window: the companion's own (put on, give back), the hero's — only to hand to this one.
+func _rows(whose: String, item: String) -> Array:
+	var rows := ItemActs.of(GameState.session, Catalog.data, whose, item)
+	if whose != Being.HERO:
+		return rows
+	return rows.filter(func(r: Dictionary) -> bool: return str(r["act"]) == "give" and str(r.get("to", "")) == who)
+
+
+func _do(row: Dictionary, whose: String = "") -> String:
+	var err := GameState.item_act(row, who if whose.is_empty() else whose)
+	if not err.is_empty():
+		EventBus.message.emit(tr(err))
+	return err
+
+
+func _open_menu(cell: Control, rows: Array, whose: String = "") -> void:
+	var on := who if whose.is_empty() else whose
+	var box := ItemMenu.stage(UiScenes.need(self, "%GearActsBox"), str(cell.get("tip_title")) if cell != null else "", rows,
+		func(r: Dictionary) -> void: _do(r, on))
+	_menu = ItemMenu.show(self, box as Container, _menu)
+
+
+## The acts of a thing staged by name (Equip_main_hand_longsword, GearTake_dagger, Give_<who>_longsword): a playtest
+## presses them as the list would. `whose` — the hero's things or the companion's.
+func stage(item: String, whose: String = "") -> Control:
+	var on := who if whose.is_empty() else whose
+	var s := GameState.session
+	return ItemMenu.stage(UiScenes.need(self, "%GearActsBox"), ItemRules.display_name(Catalog.data["items"], s.items, item), _rows(on, item),
+		func(r: Dictionary) -> void: _do(r, on))

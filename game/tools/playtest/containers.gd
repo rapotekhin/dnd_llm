@@ -43,17 +43,21 @@ func run() -> void:
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(3)
 	step("the key opened it", not bool(PropRules.find(s, s.room_id, "pchest")["locked"]))
+	step("two grids: the chest's things and the hero's", find(view, "In_dagger") != null and find(view, "Mine_lock") != null)
+	view.call("stage", "dagger")  # v0.8.4.43.6: a thing's menu, staged by name
 	var take: Button = find(view, "TakeOut_dagger")
 	if step("a dagger to take", take != null):
 		var before := int(s.character["inventory"].get("dagger", 0))
 		await press(take)
 		await frames(3)
 		step("taken", int(s.character["inventory"].get("dagger", 0)) == before + 1, "%d → %d" % [before, int(s.character["inventory"].get("dagger", 0))])
-	var put: Button = find(view, "PutIn_lock")
-	if step("the key can be put in", put != null):
-		await press(put)
+	step("the key dragged onto the chest's grid is put in", await drag(find(view, "Mine_lock"), find(view, "BoxGrid"))
+		and int((PropRules.find(s, s.room_id, "pchest")["contents"] as Dictionary).get("lock", 0)) == 1)
+	var candle: Control = find(view, "In_candle")
+	if step("a candle in the chest", candle != null):
+		candle.call("double")
 		await frames(3)
-		step("put in", int((PropRules.find(s, s.room_id, "pchest")["contents"] as Dictionary).get("lock", 0)) == 1)
+		step("a double click takes it", int(s.character["inventory"].get("candle", 0)) >= 1 and not (PropRules.find(s, s.room_id, "pchest")["contents"] as Dictionary).has("candle"))
 	await shot("open")
 	await press(find(view, "CloseContainerButton"))
 	await frames(3)
@@ -61,17 +65,18 @@ func run() -> void:
 	# v0.7.18.2: the backpack from the sheet.
 	await press(find(game, "SheetButton"))
 	var sheet: Control = find(game, "CharacterSheet")
-	var tabs: TabContainer = sheet.find_children("*", "TabContainer", true, false)[0]
-	tabs.current_tab = 2
+	sheet.call("open_tab", 2)
 	await frames(3)
 	var bags: Array = ContainerRules.bags_of(s.character, "backpack")
 	if not step("the hero has a backpack bag", not bags.is_empty(), str(s.character.get("bags", {}))):
 		return
 	var bag := str(bags[0])
+	sheet.call("stage", "backpack")
 	var ob: Button = find(sheet, "OpenBag_" + bag)
 	if step("the sheet offers to open it", ob != null):
 		await press(ob)
 		await frames(3)
+		view.call("stage", "torch", false)
 		var put_torch: Button = find(view, "PutIn_torch")
 		if step("a torch to put in", put_torch != null):
 			await press(put_torch)
@@ -88,9 +93,10 @@ func run() -> void:
 	# v0.7.22.2 (big test #10): «Выбросить» right in the sheet — the sheet stays open, the thing lies in the room.
 	if not sheet.visible:
 		await press(find(game, "SheetButton"))
-	tabs.current_tab = 2
+	sheet.call("open_tab", 2)
 	await frames(3)
 	var weapon := str(s.character["equipped"].get("main_hand", ""))
+	sheet.call("stage", weapon, "main_hand")
 	var drop_w: Button = find(sheet, "Drop_" + weapon)
 	if step("the sheet offers to drop the weapon in hand", drop_w != null and not drop_w.disabled, weapon):
 		await press(drop_w)

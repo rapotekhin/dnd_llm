@@ -38,20 +38,24 @@ func run() -> void:
 	await key(KEY_I)
 	await frames(4)
 	await shot("sheet")
-	step("the other set on the doll", find(screen(), "StowedCard_main_hand") != null and find(screen(), "SwapWeapons") != null)
+	var sheet: Control = find(screen(), "CharacterSheet")
+	step("the other set on the doll", find(screen(), "Stowed_main_hand") != null and find(screen(), "SwapWeapons") != null)
 	# v0.8.4.24: a javelin to the set put away by its own button, the sheet drawn again at once; the belt under the doll
 	c["inventory"]["javelin"] = 1
 	c["inventory"]["candle"] = 5
 	c["belt"] = ["", "", "", "", ""]
 	node("EventBus").state_changed.emit()
 	await frames(4)
+	sheet.call("stage", "javelin")  # v0.8.4.43.6: a thing's acts as its menu shows them
 	var spare: Button = find(screen(), "EquipStowed_main_hand_javelin")
 	if step("a javelin may go to the set put away", spare != null and not spare.disabled):
 		await press(spare)
 		await frames(3)
-		step("the javelin lies in the set and shows at once", str(CharacterRules.stowed(c)["main_hand"]) == "javelin" and find(screen(), "Stowed_main_hand") != null and (find(screen(), "Stowed_main_hand") as Button).text.contains(str(data["items"]["catalog"]["javelin"]["name"])))
+		step("the javelin lies in the set and shows at once", str(CharacterRules.stowed(c)["main_hand"]) == "javelin" and str(find(screen(), "Stowed_main_hand").get("item")) == "javelin")
+	sheet.call("stage", "longbow")
 	var bow_back: Button = find(screen(), "EquipStowed_main_hand_longbow")
 	step("the bow's button says where it goes", bow_back != null and bow_back.text == tr("BTN_EQUIP_STOWED"))
+	sheet.call("stage", "candle")
 	var belt: Button = find(screen(), "BeltPut_candle")
 	if step("candles go to the belt", belt != null and not belt.disabled):
 		await press(belt)
@@ -68,12 +72,13 @@ func run() -> void:
 		var widths: Array[float] = []
 		for cell: Control in row.get_children():
 			widths.append(cell.size.x)
-		# five cells alike across the whole row, not narrow boxes with a dash over their edges
-		step("the belt's cells share the row alike", widths.size() == 5 and widths.max() - widths.min() <= 2.0 and widths.max() * 5 >= row.size.x * 0.9, str(widths) + " of " + str(row.size.x))
+		# five square cells alike under the doll (v0.8.4.43.6: icons of the size of the doll's slots), none squeezed
+		step("the belt's cells alike", widths.size() == 5 and widths.max() - widths.min() <= 2.0 and widths.min() >= 48.0, str(widths) + " of " + str(row.size.x))
 	await shot("sheet_belt")
 	var said := []
 	var hear := func(m: String) -> void: said.append(m)
 	node("EventBus").message.connect(hear)
+	sheet.call("stage", "longbow")
 	var again: Button = find(screen(), "EquipStowed_main_hand_longbow")
 	if again != null:
 		await press(again)
@@ -82,18 +87,20 @@ func run() -> void:
 	step("the bow back in the set", str(CharacterRules.stowed(c)["main_hand"]) == "longbow", "%s %s" % [str(CharacterRules.stowed(c)), str(said)])
 	# v0.8.4.42.1: a shot only from the belt — a bow in a set warns until the arrows are on it
 	step("the bow in a set without arrows on the belt warns", find(screen(), "BeltNoAmmo") != null)
+	sheet.call("stage", "arrows")
 	var arrows: Button = find(screen(), "BeltPut_arrows")
 	if step("arrows go to the belt", arrows != null and not arrows.disabled):
 		await press(arrows)
 		await frames(3)
 		step("the warning gone with the arrows on the belt", ItemRules.on_belt(c, data, s.items, "arrows") and find(screen(), "BeltNoAmmo") == null)
-		var shots: Label = find(screen(), "StowedShots_main_hand")  # v0.8.4.42.6: the shots at hand by the bow
-		step("the bow says its shots at hand", shots != null and shots.text.contains("20"), shots.text if shots != null else "")
+		var shots: Control = find(screen(), "Stowed_main_hand")  # v0.8.4.42.6: the shots at hand on the bow's cell
+		step("the bow says its shots at hand", shots != null and str(shots.get("badge")) == "20", str(shots.get("badge")) if shots != null else "")
 		var set_b: Button = find(screen(), "WeaponSetStowed")
 		step("and so does its weapon set", set_b == null or set_b.text.ends_with("· 20"), set_b.text if set_b != null else "")
 	await shot("sheet_belt_arrows")
 	# v0.8.4.25.1: the one sword is never in both sets — to the set put away it leaves the hands, and back
 	c["inventory"][sword] = 1
+	sheet.call("stage", sword, "main_hand")
 	var one := find(screen(), "EquipStowed_main_hand_" + sword)
 	if step("the sword may go to the set put away", one != null and not (one as Button).disabled):
 		await press(one)

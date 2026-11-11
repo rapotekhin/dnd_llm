@@ -83,7 +83,7 @@ func run() -> void:
 
 	s.character["inventory"]["dagger"] = 1
 	await _key_sheet(game)
-	var pick: Button = find(game, "SlotPick_off_hand")
+	var pick: Button = find(game, "Slot_off_hand")  # v0.8.4.43.6: a slot of the doll opens what fits it
 	if step("a slot opens its list", pick != null):
 		await press(pick)
 		await frames(3)

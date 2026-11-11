@@ -120,58 +120,11 @@ layout_mode = 2
 text = "TRADE_STOCK"
 theme_type_variation = &"CaptionLabel"
 
-[node name="StockScroll" type="ScrollContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol"]
-layout_mode = 2
-size_flags_vertical = 3
-horizontal_scroll_mode = 0
-
-[node name="TradeStock" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll"]
+[node name="TradeStock" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 6
-
-[node name="Sample1" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock" groups=["editor_sample"]]
-layout_mode = 2
-
-[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample1"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "Верёвка, 1 зм"
-size_flags_horizontal = 3
-
-[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample1"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "+"
-
-[node name="Sample2" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock" groups=["editor_sample"]]
-layout_mode = 2
-
-[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample2"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "Факел, 1 см"
-size_flags_horizontal = 3
-
-[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample2"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "+"
-
-[node name="Sample3" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock" groups=["editor_sample"]]
-layout_mode = 2
-
-[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample3"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "Паёк, 5 см"
-size_flags_horizontal = 3
-
-[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/StockPanel/StockCol/StockScroll/TradeStock/Sample3"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "+"
 
 [node name="DealPanel" type="PanelContainer" parent="TradeMargin/Split/Col/Cols"]
 layout_mode = 2
@@ -282,44 +235,11 @@ layout_mode = 2
 text = "TRADE_YOURS"
 theme_type_variation = &"CaptionLabel"
 
-[node name="YoursScroll" type="ScrollContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol"]
-layout_mode = 2
-size_flags_vertical = 3
-horizontal_scroll_mode = 0
-
-[node name="TradeYours" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll"]
+[node name="TradeYours" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 6
-
-[node name="Sample1" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours" groups=["editor_sample"]]
-layout_mode = 2
-
-[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours/Sample1"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "Кинжал, 1 зм"
-size_flags_horizontal = 3
-
-[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours/Sample1"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "+"
-
-[node name="Sample2" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours" groups=["editor_sample"]]
-layout_mode = 2
-
-[node name="Text" type="Label" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours/Sample2"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "Шкура волка, 5 см"
-size_flags_horizontal = 3
-
-[node name="Act" type="Button" parent="TradeMargin/Split/Col/Cols/YoursPanel/YoursCol/YoursScroll/TradeYours/Sample2"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "+"
 
 [node name="SampleDetails" type="PanelContainer" parent="TradeMargin/Split" groups=["editor_sample"]]
 layout_mode = 2

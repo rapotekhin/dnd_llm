@@ -119,19 +119,22 @@ static func check(s: GameSession, data: Dictionary, who: Dictionary, spec: Dicti
 
 
 ## The chance in percent and the bonus of a check by the same `spec`, nothing rolled or spent: {chance, bonus, adv, dis,
-## failed}. A save counts its statuses and advantages as Sheet.save does.
+## failed, parts} — the labelled bonus is the card's breakdown (v0.8.4.43.6: the character window's numbers). A save
+## counts its statuses and advantages as Sheet.save does.
 static func odds(s: GameSession, data: Dictionary, who: Dictionary, spec: Dictionary) -> Dictionary:
 	var dc := int(spec.get("dc", 0))
 	if not str(spec.get("save", "")).is_empty():
 		var sv := Sheet.save_odds(s, data, who, str(spec["save"]), str(spec.get("tag", "")), spec)
 		var p := 0 if bool(sv["failed"]) else chance(int(sv["bonus"]), dc, bool(sv["adv"]), bool(sv["dis"]))
-		return {"chance": p, "bonus": sv["bonus"], "adv": sv["adv"], "dis": sv["dis"], "failed": sv["failed"]}
+		return {"chance": p, "bonus": sv["bonus"], "adv": sv["adv"], "dis": sv["dis"], "failed": sv["failed"], "parts": sv["parts"]}
 	var at := CheckEngine.situation(s, data, who, spec, true)
 	var adv := bool(spec.get("adv", false)) or not (at["adv"] as Array).is_empty()
 	var dis := bool(spec.get("dis", false)) or not (at["dis"] as Array).is_empty()
 	var failed := not (at["fail"] as Array).is_empty()
-	var bonus := (int(spec["bonus"]) if spec.has("bonus") else RollParts.sum(_parts(s, data, who, spec))) + RollParts.sum(at["parts"])
-	return {"chance": 0 if failed else chance(bonus, dc, adv, dis), "bonus": bonus, "adv": adv, "dis": dis, "failed": failed}
+	var parts := _parts(s, data, who, spec)
+	var bonus := (int(spec["bonus"]) if spec.has("bonus") else RollParts.sum(parts)) + RollParts.sum(at["parts"])
+	parts.append_array(at["parts"])
+	return {"chance": 0 if failed else chance(bonus, dc, adv, dis), "bonus": bonus, "adv": adv, "dis": dis, "failed": failed, "parts": parts}
 
 
 ## The chance in percent of a check of `who` by `spec` (Roll.check's own): what a window shows.

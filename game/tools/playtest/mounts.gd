@@ -82,11 +82,12 @@ func run() -> void:
 		await frames(3)
 		var view: Control = find(screen(), "ContainerView")
 		step("the pack's window", view != null and view.visible)
-		for i in 3:
-			var put: Button = find(view, "PutIn_iron_ore")
-			if put != null:
-				await press(put)
-				await frames(2)
+		await drag(find(view, "Mine_iron_ore"), find(view, "BoxGrid"), true)  # v0.8.4.43.6: Shift + a drag onto the pack's grid
+		var spin: SpinBox = find(view, "QtySpin")
+		if step("how many of six", spin != null and int(spin.max_value) == 6):
+			spin.value = 3
+			await press(find(view, "QtyOk"))
+			await frames(3)
 		step("ore in the pack", int(mule.get("pack", {}).get("iron_ore", 0)) == 3, str(mule.get("pack", {})))
 		await shot("pack")
 		view.visible = false

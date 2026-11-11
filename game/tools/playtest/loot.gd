@@ -57,11 +57,11 @@ func run() -> void:
 	await press(act)
 	var take: Array = [null]
 	await wait_until(func() -> bool:
-		take[0] = find(screen(), "TakeOut_scimitar")
+		take[0] = find(screen(), "In_scimitar")  # v0.8.4.43.6: a cell of the body's grid
 		return take[0] != null and take[0].is_visible_in_tree(), 5.0)
 	if step("its things in a chest's window", take[0] != null):
 		await shot("body_things")
-		await press(take[0])
+		take[0].call("double")  # a double click takes the stack
 		await frames(3)
 		step("the blade taken", int(s.character["inventory"].get("scimitar", 0)) >= 1, str(s.character["inventory"]))
 

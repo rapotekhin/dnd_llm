@@ -169,6 +169,16 @@ static func skill(s: GameSession, data: Dictionary, who: Dictionary, id: String)
 	return int(of(s, data, who)["skills"].get(id, 0))
 
 
+## How it knows a skill (v0.8.4.43.6, ★ and ★★ of the character window as in BG3): 2 — expertise, 1 — proficiency, 0 — none.
+## The hero's by its sheet (CharacterRules.skill_mastery), anybody else's by its number over its ability.
+static func skill_rank(s: GameSession, data: Dictionary, who: Dictionary, id: String) -> int:
+	if is_hero(who):
+		return {"expertise": 2, "skill": 1, "beguiling": 1}.get(CharacterRules.skill_mastery(s.character, id), 0)
+	var over := skill(s, data, who, id) - ability_mod(s, data, who, str(data["rules"]["skills"][id]))
+	var pb := prof(s, data, who)
+	return 2 if over >= 2 * pb else 1 if over >= pb else 0
+
+
 static func ability_mod(s: GameSession, data: Dictionary, who: Dictionary, id: String) -> int:
 	if is_hero(who):
 		return CharacterRules.mod(CharacterRules.ability(s.character, id))
@@ -277,13 +287,13 @@ static func _told(s: GameSession, who: Dictionary, line: String, what: String, r
 		RollParts.note(s, what, rolls, nat, parts, bonus, dc)
 
 
-## A save's bonus and what it rolls with, nothing rolled or spent (Roll.odds): {bonus, adv, dis, failed}.
+## A save's bonus and what it rolls with, nothing rolled or spent (Roll.odds): {bonus, adv, dis, failed, parts}.
 static func save_odds(s: GameSession, data: Dictionary, who: Dictionary, ab: String, tag: String = "", opts: Dictionary = {}) -> Dictionary:
 	var at := _save_situation(s, data, who, ab, tag, bool(opts.get("dis", false)), opts)
 	var parts := _save_parts(s, data, who, ab)
 	parts.append_array(SpellEffects.die(s, holder(s, who), "save", true)["parts"])
 	return {"bonus": RollParts.sum(parts), "adv": not (at["adv"] as Array).is_empty(), "dis": not (at["dis"] as Array).is_empty(),
-		"failed": not (at["fail"] as Array).is_empty()}
+		"failed": not (at["fail"] as Array).is_empty(), "parts": parts}
 
 
 ## What a save of `who` rolls with: {adv, dis, fail: [why]} of its statuses, traits and the caller's reasons.

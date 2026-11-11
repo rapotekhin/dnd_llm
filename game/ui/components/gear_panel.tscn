@@ -5,7 +5,12 @@
 
 [node name="GearPanel" instance=ExtResource("1")]
 script = ExtResource("2")
-width = 760.0
+width = 1320.0
+above_bar = true
+tall = true
+
+[node name="ModalDim" parent="." index="0"]
+color = Color(0, 0, 0, 0.35)
 
 [node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
 text = "BTN_GEAR"
@@ -16,22 +21,66 @@ visible = false
 [node name="SampleButton" parent="ModalPanel/Col/ModalFooter" index="0"]
 visible = false
 
-[node name="Sample1" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody" index="1" groups=["editor_sample"]]
+[node name="ModalScroll" parent="ModalPanel/Col" index="1"]
+visible = false
+
+[node name="GearSplit" type="HBoxContainer" parent="ModalPanel/Col" index="2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="MateDoll" type="VBoxContainer" parent="ModalPanel/Col/GearSplit"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+
+[node name="SampleDoll" type="Label" parent="ModalPanel/Col/GearSplit/MateDoll" groups=["editor_sample"]]
 layout_mode = 2
 auto_translate_mode = 2
-text = "Надето"
-theme_type_variation = &"AccentLabel"
+text = "Кукла спутника: слоты, два набора, пояс"
 
-[node name="Sample2" type="HBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody" index="2" groups=["editor_sample"]]
+[node name="MateBox" type="VBoxContainer" parent="ModalPanel/Col/GearSplit"]
+unique_name_in_owner = true
 layout_mode = 2
-
-[node name="Text" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample2"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "Основная рука: длинный меч"
 size_flags_horizontal = 3
+theme_override_constants/separation = 6
 
-[node name="Act" type="Button" parent="ModalPanel/Col/ModalScroll/ModalBody/Sample2"]
+[node name="MateHead" type="Label" parent="ModalPanel/Col/GearSplit/MateBox"]
+unique_name_in_owner = true
 layout_mode = 2
 auto_translate_mode = 2
-text = "Снять"
+text = "Вещи Кейры"
+theme_type_variation = &"CaptionLabel"
+
+[node name="MateCoins" type="Label" parent="ModalPanel/Col/GearSplit/MateBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Монеты: 8 см"
+theme_type_variation = &"MutedLabel"
+
+[node name="HeroBox" type="VBoxContainer" parent="ModalPanel/Col/GearSplit"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="HeroHead" type="Label" parent="ModalPanel/Col/GearSplit/HeroBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Ваши вещи"
+theme_type_variation = &"CaptionLabel"
+
+[node name="HeroCoins" type="Label" parent="ModalPanel/Col/GearSplit/HeroBox"]
+unique_name_in_owner = true
+layout_mode = 2
+auto_translate_mode = 2
+text = "Монеты: 10 зм"
+theme_type_variation = &"MutedLabel"
+
+[node name="GearActsBox" type="VBoxContainer" parent="ModalPanel/Col" index="3"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2

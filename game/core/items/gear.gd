@@ -137,6 +137,70 @@ static func take(s: GameSession, data: Dictionary, id: String, item: String, qty
 	return ItemRules.remove(of(s, data, id), item, qty)
 
 
+## What it carries loose (v0.8.4.43.6, the grid of the character window as in BG3): its things less what it wears or holds
+## in either set and the stacks on its belt, which the doll and the belt show. {item: qty}.
+static func loose(c: Dictionary, data: Dictionary, session_items: Dictionary) -> Dictionary:
+	var out := {}
+	var belt := ItemRules.belt(c, data, session_items)
+	for item: String in c.get("inventory", {}):
+		var n := int(c["inventory"][item]) - CharacterRules.held_copies(c, item)
+		if n > 0 and not belt.has(item):
+			out[item] = n
+	return out
+
+
+## What a weapon set strikes with (v0.8.4.43.6, under the doll as in BG3): the blow of its main hand — fists when it is
+## empty — {name, to_hit, parts, damage, low, high}; `spare` — the set put away, counted as if it were in the hands.
+## Anybody's on one road: the hero's by its sheet (CombatRules.weapon_profile), another's by what it holds (`actions`).
+static func set_blow(s: GameSession, data: Dictionary, id: String, spare: bool) -> Dictionary:
+	var c := of(s, data, id)
+	var hands: Dictionary = CharacterRules.stowed(c) if spare else c.get("equipped", {})
+	var main := str(hands.get("main_hand", ""))
+	if id != Being.HERO:
+		var tid := Sheet.template_id(data, Sheet.who(s, data, id))
+		if not data["monsters"].has(tid):
+			return {}
+		var pick := {}
+		for a: Dictionary in actions(s, data, tid, c):
+			if bool(a.get("stowed", false)) != spare or not a.has("damage"):
+				continue
+			if pick.is_empty() or (not main.is_empty() and str(a.get("item", "")) == main):
+				pick = a
+		if pick.is_empty():
+			return {}
+		var low := 0
+		var high := 0
+		var dmg: Array[String] = []
+		for d: Dictionary in pick.get("damage", []):
+			var r := CombatRules.dice_range(str(d["dice"]))
+			low += r[0]
+			high += r[1]
+			dmg.append("%s %s" % [str(d["dice"]).replace("d", "к"), data["misc"]["damage_types"].get(str(d["type"]), d["type"])])
+		return {"name": str(pick.get("name", "")), "to_hit": int(pick.get("to_hit", 0)), "parts": [RollParts.part(str(pick.get("name", "")), int(pick.get("to_hit", 0)))],
+			"damage": " + ".join(dmg), "low": maxi(1, low), "high": maxi(1, high)}
+	var probe := c.duplicate()
+	if spare:
+		var eq: Dictionary = (c.get("equipped", {}) as Dictionary).duplicate()
+		for slot: String in CharacterRules.HANDS:
+			eq.erase(slot)
+			if not str(hands.get(slot, "")).is_empty():
+				eq[slot] = hands[slot]
+		probe["equipped"] = eq
+	var w := CombatRules.weapon_profile(probe, data, s.items, main)
+	var r := CombatRules.dice_range(str(w["dice"]), 0)
+	var low := r[0] + int(w["bonus"])
+	var high := r[1] + int(w["bonus"])
+	for el: Dictionary in ItemRules.elements(data, ItemRules.def_of(data["items"], s.items, main)):  # an elemental blade's fire
+		var er := CombatRules.dice_range(str(el["dice"]))
+		low += er[0]
+		high += er[1]
+	var parts: Array[Dictionary] = []
+	parts.assign(w.get("hit_parts", []))
+	RollParts.add(parts, RollParts.OTHER, int(w["to_hit"]) - RollParts.sum(parts))  # a spell on the weapon names itself in the fight's log
+	return {"name": str(w["name"]), "to_hit": int(w["to_hit"]), "parts": parts,
+		"damage": ItemInfo.damage(data, s.items, w), "low": maxi(1, low), "high": maxi(1, high)}
+
+
 ## Empties its pockets: {cp, items}; `keep_worn` — what it wears and its template's weapons stay on it.
 static func strip(s: GameSession, data: Dictionary, id: String, keep_worn: bool) -> Dictionary:
 	var c := of(s, data, id)

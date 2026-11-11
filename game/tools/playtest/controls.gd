@@ -42,7 +42,7 @@ func run() -> void:
 	await _key(KEY_K)
 	step("K — the spells", sheet.visible and int(sheet.call("current_tab")) == 1)
 	await _key(KEY_I)
-	step("I — the inventory", sheet.visible and int(sheet.call("current_tab")) == 2)
+	step("I — the things, the same section as C", sheet.visible and int(sheet.call("current_tab")) == 0 and str(sheet.get("section")) == "gear")
 	await shot("inventory_by_key")
 	await _key(KEY_I)
 	step("I again closes it", not sheet.visible)

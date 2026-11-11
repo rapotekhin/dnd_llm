@@ -56,6 +56,8 @@ func run() -> void:
 		await frames(3)
 		var view: Control = find(screen(), "ContainerView")
 		await shot("chest")
+		if view != null:
+			view.call("stage", "longsword")  # v0.8.4.43.6: a thing's menu of the chest's grid
 		var take: Button = find(view, "TakeOut_longsword") if view != null else null
 		if step("the longsword in the chest", take != null):
 			await press(take)

@@ -1,10 +1,11 @@
 class_name TradePanel
 extends Control
 ## The trade screen (roadmap v0.5.3; a screen of its own since v0.7.22.10, the author: «как в BG3», the talk is not
-## needed there): the trader's goods on the left, the hero's things on the right, the deal in the middle — what is
-## bought and sold, the total, «Торговаться», «Заключить сделку», the trader's services; what the picked thing is —
-## a thin strip at the bottom. The engine (TradeRules via GameState.deal / haggle) checks and makes the deal; the
-## master narrates it in the chat behind.
+## needed there): the trader's goods on the left, the hero's things on the right — two grids of icons (ItemGrid, v0.8.4.43.6)
+## with the price in a thing's card at the cursor — the deal in the middle: what is bought and sold, the total,
+## «Торговаться», «Заключить сделку», the trader's services. A click puts one into the deal (Shift ten, Ctrl all), a
+## thing dragged onto the other side's grid too (Shift asks how many). The engine (TradeRules via GameState.deal /
+## haggle) checks and makes the deal; the master narrates it in the chat behind.
 
 const SCENE := "res://ui/components/trade_panel.tscn"
 
@@ -28,7 +29,12 @@ var deal_button: Button
 var _clear: Button
 var _to_talk: Button
 var _leave: Button
-var _info: DetailsPanel  # what the picked item is (a click on its name), a thin strip at the bottom
+var _info: DetailsPanel  # the chat's column, its card at the cursor
+var _stock_grid: ItemGrid
+var _yours_grid: ItemGrid
+var _views := {"buy": {}, "sell": {}}  # each side's filter and sort while the screen lives
+var _lines := {"buy": {}, "sell": {}}  # a thing's line of TradeRules.info shown now: its price, wanted
+var _can_act := false
 
 
 func required() -> Dictionary:
@@ -75,6 +81,8 @@ func _ready() -> void:
 	chat.name = "TradeChat"
 	UiScenes.need(self, "%Split").add_child(_info.column(chat, 420))
 
+	_stock_grid = _trade_grid("Stock", "Buy_", _stock, "buy")
+	_yours_grid = _trade_grid("Yours", "Sell_", _yours, "sell")
 	EventBus.state_changed.connect(_rebuild)
 	EventBus.turn_started.connect(func(_id: String) -> void: _rebuild())
 	EventBus.turn_finished.connect(func(_id: String, _ok: bool) -> void: _rebuild())
@@ -136,8 +144,9 @@ func _rebuild() -> void:
 		states.append(tr("TRADE_SHUNS").format({"tags": info["shuns"]}))
 	_haggle_state.text = " · ".join(states)
 
-	_fill(_stock, info["stock"], "buy", "Buy_", "TRADE_SOLD_OUT", can_act)
-	_fill(_yours, info["buys"], "sell", "Sell_", "TRADE_NOTHING_TO_SELL", can_act)
+	_can_act = can_act
+	_fill(_stock_grid, info["stock"], "buy", "TRADE_SOLD_OUT")
+	_fill(_yours_grid, info["buys"], "sell", "TRADE_NOTHING_TO_SELL")
 
 	var items: Dictionary = data["items"]
 	var empty := true
@@ -214,42 +223,51 @@ func _rebuild() -> void:
 	haggle_button.tooltip_text = tr(why) if not why.is_empty() else ""
 
 
-func _fill(box: VBoxContainer, lines: Array, side: String, prefix: String, empty_key: String, can_act: bool) -> void:
-	_clear_children(box)
-	if lines.is_empty():
-		_label(box, true).text = tr(empty_key)
-		return
+## A side's grid: a click puts one into the deal, a thing of the other side dropped on it too.
+func _trade_grid(tag: String, prefix: String, host: Control, side: String) -> ItemGrid:
+	var g := ItemGrid.new(tag, prefix, 5)
+	g.min_rows = 6
+	g.view = _views[side]
+	g.where = {"kind": "trade", "side": side}
+	host.add_child(g)
+	g.view_changed.connect(_rebuild)
+	g.accepts = func(drag: Dictionary) -> bool:
+		var from: Dictionary = drag.get("from", {})
+		return str(from.get("kind", "")) == "trade" and str(from.get("side", "")) != side and _can_act
+	g.dropped = func(drag: Dictionary) -> void:
+		var from := str((drag["from"] as Dictionary)["side"])
+		ItemGrid.with_qty(self, drag, func(n: int) -> void: _change(from, str(drag["item"]), mini(n, int(drag.get("qty", 1)))))
+	g.setup = func(cell: ItemCell) -> void:
+		var line: Dictionary = _lines[side].get(cell.item, {})
+		cell.text = Money.format(int(line.get("price_cp", 0)))
+		if bool(line.get("wanted", false)):  # bought gladly (v0.7.17.1)
+			cell.text += " · " + tr("TRADE_WANTED_TIP")
+		cell.disabled = not _can_act
+		var id := cell.item
+		var left := cell.qty
+		cell.pressed.connect(func() -> void: _change(side, id, mini(left, _step())))
+	return g
+
+
+## The things of a side not yet in the deal; «nothing» over an empty grid.
+func _fill(grid: ItemGrid, lines: Array, side: String, empty_key: String) -> void:
+	var inv := {}
+	_lines[side] = {}
 	for line: Dictionary in lines:
 		var id := str(line["item_id"])
 		var left := int(line["qty"]) - int(cart[side].get(id, 0))
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		box.add_child(row)
-		var title := Button.new()
-		title.name = "TradeItem_" + id
-		title.text = "%s ×%d" % [line["name"], left]
-		title.flat = true
-		title.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var s := GameState.session
-		_info.hook(title, str(line["name"]), DetailsPanel.item_text(s.character, Catalog.data, s.items, id))
-		row.add_child(title)
-		var price := _label(row, true)
-		price.text = Money.format(int(line["price_cp"]))
-		if bool(line.get("wanted", false)):  # bought gladly (v0.7.17.1)
-			price.add_theme_color_override("font_color", UiTheme.OK)
-			price.mouse_filter = Control.MOUSE_FILTER_STOP
-			price.tooltip_text = tr("TRADE_WANTED_TIP")
-		var plus := Button.new()
-		plus.name = prefix + id
-		plus.text = "+"
-		plus.custom_minimum_size = Vector2(52, 44)
-		plus.disabled = not can_act or left <= 0
-		plus.tooltip_text = "TRADE_QTY_TIP"
-		plus.pressed.connect(func() -> void: _change(side, id, mini(left, _step())))
-		row.add_child(plus)
+		_lines[side][id] = line
+		if left > 0:
+			inv[id] = left
+	grid.show_items(inv)
+	var none := grid.get_parent().get_node_or_null("TradeNone_" + side)
+	if lines.is_empty() and none == null:
+		none = _label(grid.get_parent(), true)
+		none.name = "TradeNone_" + side
+		none.text = tr(empty_key)
+		grid.get_parent().move_child(none, grid.get_index())
+	elif not lines.is_empty() and none != null:
+		none.queue_free()
 
 
 ## Shift — ten at once, Ctrl — all of them (v0.7.22.31, Т1).

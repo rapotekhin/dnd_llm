@@ -2988,6 +2988,45 @@ func unequip_stowed(slot: String, who: String = Being.HERO) -> void:
 	unequip(slot, who, true)
 
 
+## An act of a thing in the character window (v0.8.4.43.6, as in BG3): a row of ItemActs.of — the right button's menu, a
+## double click, a drag — done by the road its `act` names, for `who`'s things. "" or the key of the refusal.
+func item_act(row: Dictionary, who: String = Being.HERO) -> String:
+	var item := str(row.get("item", ""))
+	var roads := {
+		"equip": func() -> String: return equip(item, str(row["slot"]), bool(row.get("both", false)), bool(row.get("spare", false)), who),
+		"unequip": func() -> String:
+			unequip(str(row["slot"]), who, bool(row.get("spare", false)))
+			return "",
+		"use": use_item.bind(item),
+		"belt": belt_put.bind(item, int(row.get("at", -1))),
+		"belt_take": belt_take.bind(int(row.get("at", -1))),
+		"drink": liquid_act.bind("drink", str(row.get("key", ""))),
+		"pour": liquid_act.bind("pour", str(row.get("key", "")), str(row.get("to", ""))),
+		"pour_out": liquid_act.bind("pour_out", str(row.get("key", ""))),
+		"to_bag": container_move.bind(str(row.get("bag", "")), item, int(row.get("n", 1)), false),
+		"attune": attune.bind(item),
+		"unattune": unattune.bind(item),
+		"store": store_spell.bind(item, str(row.get("spell", "")), int(row.get("circle", 0))),
+		"drop": drop_item.bind(item, int(row.get("qty", 1))),
+		"drop_bag": drop_item.bind(str(row.get("bag", ""))),
+		"give": func() -> String: return _handed("give", str(row.get("to", "")), item, int(row.get("qty", 1))),
+		"take": func() -> String: return _handed("take", who, item, int(row.get("qty", 1))),
+	}
+	if not roads.has(str(row.get("act", ""))):
+		return "PROPERTY_NOT_NOW"
+	return (roads[str(row["act"])] as Callable).call()
+
+
+## `qty` copies handed over one by one (Equip.hand passes one): stops at the first refusal, "" when at least one went.
+func _handed(what: String, who: String, item: String, qty: int) -> String:
+	var err := ""
+	for i in maxi(1, qty):
+		err = gear_act(what, who, item)
+		if not err.is_empty():
+			return err if i == 0 else ""
+	return ""
+
+
 ## A thing onto the belt under the doll (v0.8.4.24): "" or the reason. Not in a fight, as in Pathfinder.
 func belt_put(item_id: String, at: int = -1) -> String:
 	if not _idle():
