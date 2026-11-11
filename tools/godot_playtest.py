@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from connectivity_e2e import OUT, PORT, ROOT, start_server, stop_server, wait_http  # noqa: E402
+from connectivity_e2e import OUT, PORT, ROOT, server_port, start_server, stop_server  # noqa: E402
 from tool_base import free_port, godot as godot_path, port_busy, run_unseen  # noqa: E402
 
 
@@ -74,12 +74,12 @@ def main() -> int:
     if not Path(godot).exists():
         print(f"Godot not found: {godot} (set GODOT)")
         return 2
-    port = free_port(PORT)  # the player's own llm_server may hold 8765: the playtest takes the next free port
-    if port_busy(port):
-        print(f"ports {PORT}–{port} are busy: stop a running llm_server first")
-        return 2
-    if port != PORT:
-        print(f"port {PORT} is busy (a running llm_server?) — the playtest uses {port}")
+    port = 0  # the server's own, told once it is up (start_server)
+    if not with_server:  # a port nobody listens on: «offline» must find no master there
+        port = free_port(PORT)
+        if port_busy(port):
+            print(f"ports {PORT}–{port} are busy")
+            return 2
     out_dir = ROOT / "build" / "playtest" / opts.scenario
     out_dir.mkdir(parents=True, exist_ok=True)
     for stale in [out_dir / "report.txt", *out_dir.glob("*.png")]:  # a scenario that fails to compile must not show the old report
@@ -88,11 +88,14 @@ def main() -> int:
     subprocess.run([godot, "--headless", "--path", str(ROOT / "game"), "--import"], capture_output=True, timeout=300)
 
     token = secrets.token_urlsafe(32)
-    server = start_server(token, "agent" if opts.real else "stub", port) if with_server else None
+    server = start_server(token, "agent" if opts.real else "stub", 0) if with_server else None
     try:
-        if server and not wait_http(f"http://127.0.0.1:{port}/healthz", 60):
-            print("llm_server did not start, see build/connectivity/llm_server.log")
-            return 2
+        if server:
+            port = server_port(server, 60) or 0
+            if not port:
+                print("llm_server did not start, see build/connectivity/llm_server.log")
+                return 2
+            print(f"llm_server on port {port}")
         if opts.scenario == "embedded":
             proc = run_embedded(godot, opts.real, out_dir)
         else:

@@ -44,7 +44,7 @@ uv sync --project llm_server && cd llm_server && uv run pytest && cd ..   # back
 uv run --project llm_server python -m llm_server.contract            # regenerate contract/schema/ after changing protocol models
 uv run --project llm_server python -m llm_server.golden              # golden LLM scenarios on the real model + judge → build/evals/ (cents; --model, --only, --repeat, --route, --provider relace to compare runs on one provider of the master, the judge unpinned)
 python tools/connectivity_e2e.py                                      # Godot <-> Caddy wss:// <-> llm_server end to end (Docker; --no-proxy without it)
-python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/ (takes the next free port when 8765 is busy)
+python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/ (its server on a port the system gives, beside any other session's)
 python tools/playtest_all.py                                          # every stub scenario in a pack: one import, one server, 6 games side by side, game time off the frames (--jobs, --only a,b, --slow); use it for wide checks
 python tools/build_game.py                                            # the runnable Windows build of the version: build/release/<version>/BetweenTheRolls.exe with server.exe beside it (ADR-0014), no keys inside, started once to check it
 python tools/godot_playtest.py --scenario offline                     # live Godot playtest without the server

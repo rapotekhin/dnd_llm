@@ -50,10 +50,28 @@ def stop_server(proc: subprocess.Popen) -> None:
     else:
         proc.terminate()
     proc.wait(timeout=10)
+    _port_file().unlink(missing_ok=True)
+
+
+def _port_file() -> Path:
+    return OUT / f"llm_server_{os.getpid()}.port"  # this run's own: two playtests of one worktree may run at once
+
+
+def server_port(proc: subprocess.Popen, timeout: float) -> int | None:
+    """The port of a server started on port 0, once its app is up; None when it ended or stayed silent."""
+    path, deadline = _port_file(), time.monotonic() + timeout
+    while time.monotonic() < deadline and proc.poll() is None:
+        if path.exists():
+            return int(path.read_text(encoding="ascii"))
+        time.sleep(0.3)
+    return None
 
 
 def start_server(token: str, handler: str = "stub", port: int = PORT) -> subprocess.Popen:
-    """llm_server on `port`; handler "stub" (no LLM, no money) or "agent" (real OpenRouter, key from the root .env)."""
+    """llm_server on `port`; handler "stub" (no LLM, no money) or "agent" (real OpenRouter, key from the root .env).
+    Port 0: the server's own socket on a port the system gives, told by `server_port` — as the build's server.exe
+    (ADR-0014). A free port looked up first and passed on is a race: a playtest of another session started minutes
+    before (`godot --import`, `uv run`) takes it too, its server answers /healthz and refuses this token."""
     uv = shutil.which("uv")
     if not uv:
         sys.exit("uv not found: activate venv or install uv")
@@ -64,6 +82,10 @@ def start_server(token: str, handler: str = "stub", port: int = PORT) -> subproc
     env.pop("VIRTUAL_ENV", None)  # llm_server has its own uv environment
     # Docker reaches the host through host.docker.internal, which is not the loopback interface.
     env["LLM_SERVER_HOST"] = os.environ.get("LLM_SERVER_HOST", "127.0.0.1")
+    env.pop("LLM_SERVER_PORT_FILE", None)
+    if port == 0:
+        _port_file().unlink(missing_ok=True)
+        env["LLM_SERVER_PORT_FILE"] = str(_port_file())
     log = open(OUT / "llm_server.log", "w", encoding="utf-8")
     return subprocess.Popen([uv, "run", "--project", str(ROOT / "llm_server"), "llm_server"],
                             cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)

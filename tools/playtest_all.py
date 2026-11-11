@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from connectivity_e2e import OUT, PORT, ROOT, start_server, stop_server, wait_http  # noqa: E402
+from connectivity_e2e import OUT, PORT, ROOT, server_port, start_server, stop_server  # noqa: E402
 from tool_base import free_port, godot as godot_path, run_unseen  # noqa: E402
 
 SCENARIOS = ROOT / "game" / "tools" / "playtest"
@@ -33,7 +33,7 @@ def run_one(godot: str, name: str, port: int, token: str, slow: bool) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     for stale in [out_dir / "report.txt", *out_dir.glob("*.png")]:
         stale.unlink(missing_ok=True)
-    backend = PORT + 999 if name in NO_SERVER else port  # nobody listens there
+    backend = free_port(PORT + 999) if name in NO_SERVER else port  # nobody listens there
     args = [godot, "--path", str(ROOT / "game"), *([] if slow else FAST), "--script", f"res://tools/playtest/{name}.gd", "--",
             f"--profile=agent-{name}", f"--out={out_dir.as_posix()}", f"--backend-url=ws://127.0.0.1:{backend}/ws", "--seed=42"]
     env = {**os.environ, "BTR_BACKEND_TOKEN": token, "BTR_PLAYTEST_REAL": ""}
@@ -65,17 +65,17 @@ def main() -> int:
     started = time.monotonic()
     subprocess.run([godot, "--headless", "--path", str(ROOT / "game"), "--import"], capture_output=True, timeout=300)
     print(f"import {time.monotonic() - started:.0f} s")
-    port = free_port(PORT)
     OUT.mkdir(parents=True, exist_ok=True)
     token = secrets.token_urlsafe(32)
     os.environ["LLM_SERVER_MAX_TURNS"] = str(opts.jobs)  # the server's default is one turn at a time: the games would get SERVER_BUSY
-    server = start_server(token, "stub", port)
+    server = start_server(token, "stub", 0)  # the server's own port (start_server)
     results = []
     try:
-        if not wait_http(f"http://127.0.0.1:{port}/healthz", 60):
+        port = server_port(server, 60)
+        if not port:
             print("llm_server did not start, see build/connectivity/llm_server.log")
             return 2
-        print(f"server {time.monotonic() - started:.0f} s")
+        print(f"server on port {port}, {time.monotonic() - started:.0f} s")
         with concurrent.futures.ThreadPoolExecutor(opts.jobs) as pool:
             for f in concurrent.futures.as_completed([pool.submit(run_one, godot, n, port, token, opts.slow) for n in names]):
                 r = f.result()

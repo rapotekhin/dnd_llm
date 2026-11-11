@@ -31,13 +31,16 @@ def backend_trace_dirs() -> list[Path]:
 
 
 def port_busy(port: int) -> bool:
-    # A bind, not a connect: Windows may reserve a port range (WinError 10013) that nobody listens on.
+    """A bind and a connect, either says busy. The bind sees a range Windows reserves (WinError 10013) that nobody
+    listens on; the connect sees a server on 0.0.0.0, beside which Windows lets a bind on 127.0.0.1 pass."""
     with socket.socket() as sock:
         try:
             sock.bind(("127.0.0.1", port))
         except OSError:
             return True
-        return False
+    with socket.socket() as sock:
+        sock.settimeout(0.2)  # a listener answers at once; a refused connect takes Windows two seconds
+        return sock.connect_ex(("127.0.0.1", port)) == 0
 
 
 def free_port(start: int, span: int = 300) -> int:
