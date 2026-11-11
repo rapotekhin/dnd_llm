@@ -28,17 +28,17 @@
    "id": "adamantine_chain_mail",
    "kind": "items",
    "name": "Кольчуга (адамантин)",
-   "tags": "chainmail, armor, dark grey metal, short sleeves, front view",
-   "sentence": "A single dark grey chainmail shirt with short sleeves and a round neck, seen from the front, lying flat with no body inside.",
-   "key": "grey"
+   "tags": "chainmail, hauberk, interlocking rings, slate blue-grey, front view",
+   "sentence": "A single slate blue-grey chainmail hauberk with long sleeves, its whole surface a clear pattern of small interlocking metal rings, seen from the front with no body inside.",
+   "key": ""
   },
   {
    "id": "adamantine_chain_shirt",
    "kind": "items",
    "name": "Кольчужная рубаха (адамантин)",
-   "tags": "chain shirt, chainmail, armor, dark grey metal, short sleeves, front view",
-   "sentence": "A single dark grey chain shirt with short sleeves and a round neck, seen from the front, lying flat with no body inside.",
-   "key": "grey"
+   "tags": "chainmail, hauberk, interlocking rings, slate blue-grey, front view",
+   "sentence": "A single slate blue-grey chainmail shirt without sleeves, its whole surface a clear pattern of small interlocking metal rings, seen from the front with no body inside.",
+   "key": ""
   },
   {
    "id": "adamantine_half_plate_armor",
@@ -228,8 +228,8 @@
    "id": "block_and_tackle",
    "kind": "items",
    "name": "Блок с талью",
-   "tags": "pulley, block and tackle, rope, wooden block, metal hook",
-   "sentence": "A single wooden pulley block with a grey metal hook and a loop of brown rope running through it.",
+   "tags": "pulley, wheel, rope, hook, wooden frame",
+   "sentence": "A single pulley: a round grey metal wheel in a wooden frame with a hook on top, a brown rope running over the wheel and hanging down on both sides.",
    "key": ""
   },
   {
@@ -372,8 +372,8 @@
    "id": "caltrops",
    "kind": "items",
    "name": "Рассыпные шипы",
-   "tags": "caltrop, spike, grey metal, four pointed, front view",
-   "sentence": "A single grey metal caltrop with four sharp spikes pointing outward, seen from the front.",
+   "tags": "caltrop, jack, spikes, grey iron, star shape",
+   "sentence": "A single small grey iron caltrop shaped like a jack, four short sharp spikes pointing in different directions so that one always points up.",
    "key": ""
   },
   {
@@ -436,16 +436,16 @@
    "id": "chain_mail",
    "kind": "items",
    "name": "Кольчуга",
-   "tags": "chainmail, armor, sleeved shirt, grey metal, front view",
-   "sentence": "A single grey chainmail shirt with short sleeves and a round neck, seen from the front, lying flat with no body inside.",
+   "tags": "chainmail, hauberk, interlocking rings, grey steel, front view",
+   "sentence": "A single grey steel chainmail hauberk with long sleeves, its whole surface a clear pattern of small interlocking metal rings, seen from the front with no body inside.",
    "key": ""
   },
   {
    "id": "chain_mail_plus_1",
    "kind": "items",
    "name": "Кольчуга +1",
-   "tags": "chainmail, armor, sleeved shirt, grey metal, blue glow, front view",
-   "sentence": "A single grey chainmail shirt with short sleeves and a soft blue glow, seen from the front, lying flat with no body inside.",
+   "tags": "chainmail, hauberk, interlocking rings, grey steel, front view",
+   "sentence": "A single grey steel chainmail hauberk with long sleeves, its whole surface a clear pattern of small interlocking metal rings, seen from the front with no body inside, with a soft blue glow.",
    "key": ""
   },
   {
@@ -492,8 +492,8 @@
    "id": "climbers_kit",
    "kind": "items",
    "name": "Набор альпиниста",
-   "tags": "piton, climbing, rope, grey metal, brown, diagonal",
-   "sentence": "A single grey metal climbing piton with a short brown rope looped through its eye, angled diagonally.",
+   "tags": "climbing gear, coiled rope, hook, pitons, brown rope",
+   "sentence": "A single coil of brown rope with a grey metal grappling hook and two small iron spikes hanging from it.",
    "key": ""
   },
   {
@@ -588,8 +588,8 @@
    "id": "crossbow_bolt",
    "kind": "items",
    "name": "Арбалетный болт",
-   "tags": "crossbow bolt, arrow, wooden shaft, grey metal, diagonal",
-   "sentence": "A single short crossbow bolt with a wooden shaft, grey metal tip, and two dark fletchings, pointing diagonally up.",
+   "tags": "short arrow, bolt, steel tip, wooden shaft, diagonal",
+   "sentence": "A single short thick arrow lying diagonally, with a pointed grey steel head, a brown wooden shaft and two small grey fins at the tail.",
    "key": ""
   },
   {
@@ -1100,8 +1100,8 @@
    "id": "hunting_trap",
    "kind": "items",
    "name": "Охотничий капкан",
-   "tags": "bear trap, trap, steel, teeth, open, from above",
-   "sentence": "A single open steel bear trap with jagged teeth and a short chain, seen from above.",
+   "tags": "bear trap, steel jaws, zigzag teeth, flat base, grey metal",
+   "sentence": "A single grey steel leg-hold trap seen from the front, two curved jaws wide open with zigzag teeth, on a flat round base.",
    "key": ""
   },
   {
@@ -1380,8 +1380,8 @@
    "id": "mess_kit",
    "kind": "items",
    "name": "Набор походной посуды",
-   "tags": "mess kit, metal tin, cup, grey metal, front view",
-   "sentence": "A single grey metal mess tin with a lid and folding handle, a small cup nested inside, seen from the front.",
+   "tags": "mess tin, pan, long handle, cup, grey metal",
+   "sentence": "A single shallow round grey tin pan with a long folding handle and a small tin cup stacked inside it, seen from slightly above.",
    "key": ""
   },
   {
@@ -1404,16 +1404,16 @@
    "id": "mithral_chain_mail",
    "kind": "items",
    "name": "Кольчуга (мифрил)",
-   "tags": "chainmail, armor, sleeved shirt, silver, blue, front view",
-   "sentence": "A single fine silver-blue chainmail shirt with short sleeves and a round neck, seen from the front, empty.",
+   "tags": "chainmail, hauberk, interlocking rings, bright silver-white, front view",
+   "sentence": "A single bright silver-white chainmail hauberk with long sleeves, its whole surface a clear pattern of small interlocking metal rings, seen from the front with no body inside, with a light blue sheen.",
    "key": ""
   },
   {
    "id": "mithral_chain_shirt",
    "kind": "items",
    "name": "Кольчужная рубаха (мифрил)",
-   "tags": "chain shirt, chainmail, armor, silver, blue, front view",
-   "sentence": "A single fine silver-blue chain shirt with short sleeves and a plain neck, seen from the front, empty.",
+   "tags": "chainmail, hauberk, interlocking rings, bright silver-white, front view",
+   "sentence": "A single bright silver-white chainmail shirt without sleeves, its whole surface a clear pattern of small interlocking metal rings, seen from the front with no body inside, with a light blue sheen.",
    "key": ""
   },
   {
@@ -1516,8 +1516,8 @@
    "id": "pan_flute",
    "kind": "items",
    "name": "Флейта Пана",
-   "tags": "pan flute, flute, pipes, wooden, brown, diagonal",
-   "sentence": "A single brown wooden pan flute made of several short pipes of different lengths, bound together and angled diagonally.",
+   "tags": "pan flute, panpipes, reed pipes, row of pipes, red cord",
+   "sentence": "A single pan flute: seven light-brown reed pipes standing side by side in a row, from long on the left to short on the right, tied with a red cord.",
    "key": ""
   },
   {
@@ -1604,8 +1604,8 @@
    "id": "piton",
    "kind": "items",
    "name": "Крюк",
-   "tags": "piton, spike, metal, ring, grey, diagonal",
-   "sentence": "A single grey metal piton with a sharp spike and a small ring at the top, angled diagonally.",
+   "tags": "piton, spike, wedge, ring, grey iron",
+   "sentence": "A single short grey iron climbing spike like a thick flat nail, pointing down diagonally, with a round ring at its head.",
    "key": ""
   },
   {
@@ -1756,16 +1756,16 @@
    "id": "quarterstaff",
    "kind": "items",
    "name": "Боевой посох",
-   "tags": "quarterstaff, staff, wooden, brown, diagonal",
-   "sentence": "A single long straight wooden quarterstaff, light brown, lying diagonally.",
+   "tags": "staff, wooden pole, bo staff, iron caps, diagonal",
+   "sentence": "A single plain wooden quarterstaff lying diagonally, a long straight round pole of light brown wood with no blade or tip, both ends capped with grey iron bands.",
    "key": ""
   },
   {
    "id": "quarterstaff_plus_1",
    "kind": "items",
    "name": "Боевой посох +1",
-   "tags": "quarterstaff, staff, wooden, glowing, blue, diagonal",
-   "sentence": "A single long straight wooden quarterstaff with a soft blue glow along its length, lying diagonally.",
+   "tags": "staff, wooden pole, bo staff, iron caps, blue glow, diagonal",
+   "sentence": "A single plain wooden quarterstaff lying diagonally, a long straight round pole with no blade or tip, both ends capped with iron bands, with a soft blue glow.",
    "key": ""
   },
   {
@@ -1964,8 +1964,8 @@
    "id": "shawm",
    "kind": "items",
    "name": "Шалмей",
-   "tags": "shawm, musical instrument, woodwind, wooden, bell, from side",
-   "sentence": "A single wooden shawm with a flared bell, a slender body, and a small metal key, seen from the side.",
+   "tags": "woodwind, oboe, wooden pipe, flared bell, finger holes",
+   "sentence": "A single wooden shawm standing upright, a long straight brown pipe with a row of finger holes widening into a flared bell at the bottom, a thin reed on top.",
    "key": ""
   },
   {
@@ -2060,8 +2060,8 @@
    "id": "sling",
    "kind": "items",
    "name": "Праща",
-   "tags": "sling, weapon, leather pouch, cord, from side",
-   "sentence": "A single leather sling with two long brown cords joined to a small central pouch, seen from the side.",
+   "tags": "sling, leather pouch, cords, stone, v shape",
+   "sentence": "A single leather sling hanging in a V shape, a small brown leather pouch at the bottom holding a grey stone and two long cords rising from it to a loop.",
    "key": ""
   },
   {
@@ -2092,8 +2092,8 @@
    "id": "smiths_tools",
    "kind": "items",
    "name": "Инструменты кузнеца",
-   "tags": "tongs, blacksmith tongs, iron, glowing metal",
-   "sentence": "A single pair of long dark iron blacksmith tongs gripping a small glowing orange bar of hot metal.",
+   "tags": "tongs, hammer, crossed, smithing, light grey steel",
+   "sentence": "A single pair of light grey steel blacksmith tongs crossed over a short hammer, both with brown wooden handles.",
    "key": ""
   },
   {
@@ -2620,8 +2620,8 @@
    "id": "weavers_tools",
    "kind": "items",
    "name": "Инструменты ткача",
-   "tags": "weaving shuttle, wood, brown, thread, diagonal",
-   "sentence": "A single brown wooden weaving shuttle with white thread wound around its middle, lying diagonally.",
+   "tags": "shuttle, weaving, boat shape, thread spool, light wood",
+   "sentence": "A single light wooden weaving shuttle shaped like a narrow boat with pointed ends, a spool of red thread in its middle hollow, lying diagonally.",
    "key": ""
   },
   {
@@ -3540,8 +3540,8 @@
    "id": "augury",
    "kind": "spells",
    "name": "Гадание",
-   "tags": "stick, wooden stick, gold, eye symbol, diagonal",
-   "sentence": "A single flat golden divination stick with a small dark eye symbol carved at one end, lying diagonally.",
+   "tags": "bones, divination, rune sticks, golden disc, eye",
+   "sentence": "A single round golden divination disc with three small white bone sticks lying across it and a small glowing eye above them.",
    "key": ""
   },
   {
@@ -3708,16 +3708,16 @@
    "id": "counterspell",
    "kind": "spells",
    "name": "Контрзаклинание",
-   "tags": "magic circle, hexagon, blue, glowing, crack",
-   "sentence": "A single blue glowing hexagonal barrier with a white crack across its center.",
+   "tags": "magic circle, broken, slash, blue, shards, glowing",
+   "sentence": "A single glowing blue magic circle cut through by a bright white diagonal slash, its two halves drifting apart in small shards.",
    "key": ""
   },
   {
    "id": "create_food_and_water",
    "kind": "spells",
    "name": "Создание пищи и воды",
-   "tags": "wheat, sheaf, teal, glowing, front view",
-   "sentence": "A single teal glowing sheaf of wheat tied in the middle, seen from the front.",
+   "tags": "bread, loaf, water drop, sparkles, food",
+   "sentence": "A single round loaf of brown bread with a blue water drop beside it and a few white sparkles above.",
    "key": ""
   },
   {
@@ -3796,8 +3796,8 @@
    "id": "detect_thoughts",
    "kind": "spells",
    "name": "Обнаружение мыслей",
-   "tags": "thought bubble, gold, glowing, empty",
-   "sentence": "A single empty golden thought bubble with a soft white outline, seen from the front.",
+   "tags": "brain, glowing, gold, mind, sparkles",
+   "sentence": "A single golden glowing brain seen from the side with a few small sparkles around it.",
    "key": ""
   },
   {
@@ -3820,8 +3820,8 @@
    "id": "divine_favor",
    "kind": "spells",
    "name": "Божественное благоволение",
-   "tags": "halo, gold, glowing, white, front view",
-   "sentence": "A single golden glowing halo with a bright white inner edge, seen from the front.",
+   "tags": "mace, golden, radiant, holy glow, light rays",
+   "sentence": "A single golden mace pointing up, its round head glowing bright white with short rays of holy light around it.",
    "key": ""
   },
   {
@@ -3884,8 +3884,8 @@
    "id": "faerie_fire",
    "kind": "spells",
    "name": "Огонь фей",
-   "tags": "glowing outline, bird, orange, sparkle",
-   "sentence": "A single glowing orange outline of a small bird, its edges bright and a few orange sparkles around it.",
+   "tags": "sparkles, fairy dust, glowing motes, violet, pink",
+   "sentence": "A single cluster of bright violet and pink glowing motes swirling in a loose ring, like sparkling fairy dust.",
    "key": ""
   },
   {
@@ -4276,8 +4276,8 @@
    "id": "mending",
    "kind": "spells",
    "name": "Починка",
-   "tags": "needle, thread, green, brown, diagonal",
-   "sentence": "A single green needle with brown thread looping through its eye, pointing diagonally.",
+   "tags": "cup, crack, golden stitches, repair, glow",
+   "sentence": "A single grey metal cup split by a crack, a line of glowing golden stitches closing the crack.",
    "key": ""
   },
   {
@@ -4316,8 +4316,8 @@
    "id": "moonbeam",
    "kind": "spells",
    "name": "Лунный луч",
-   "tags": "crescent moon, beam, gold, glowing, white",
-   "sentence": "A single pale gold crescent moon with a straight white beam of light shining down from it.",
+   "tags": "moonlight, light beam, crescent moon, silver, cone of light",
+   "sentence": "A single wide pale silver cone of moonlight falling straight down from a small crescent moon at the top, lighting a round silver circle at the bottom.",
    "key": ""
   },
   {
@@ -4428,8 +4428,8 @@
    "id": "remove_curse",
    "kind": "spells",
    "name": "Снятие проклятия",
-   "tags": "chain, broken chain, blue, glowing, grey metal",
-   "sentence": "A single broken grey metal chain link with a glowing blue crack through it.",
+   "tags": "magic circle, cracked, shattering, white light, violet",
+   "sentence": "A single violet curse sigil cracking and shattering into pieces under a bright beam of white light from above.",
    "key": ""
   },
   {
@@ -4524,8 +4524,8 @@
    "id": "silence",
    "kind": "spells",
    "name": "Тишина",
-   "tags": "sphere, barrier, violet, glowing, bell, white ring",
-   "sentence": "A single violet glowing sphere with a white ring and a small grey bell at its center, its sound lines cut off.",
+   "tags": "bell, crossed out, red slash, no sound, grey",
+   "sentence": "A single grey bell with a thick red diagonal slash across it, as a sign of silence.",
    "key": ""
   },
   {
@@ -4580,9 +4580,9 @@
    "id": "speak_with_dead",
    "kind": "spells",
    "name": "Разговор с мертвецами",
-   "tags": "skull, open mouth, dark purple, speech bubble, front view",
-   "sentence": "A single dark purple skull seen from the front with an open jaw and a small white speech bubble shape in its mouth.",
-   "key": "grey"
+   "tags": "skull, bone white, speech bubble, light blue",
+   "sentence": "A single pale bone-white skull seen from the front with a small light blue speech bubble beside its jaw.",
+   "key": ""
   },
   {
    "id": "speak_with_plants",
@@ -4684,16 +4684,16 @@
    "id": "vampiric_touch",
    "kind": "spells",
    "name": "Вампирическое прикосновение",
-   "tags": "heart, drop, dark purple, black, glowing",
-   "sentence": "A single dark purple heart with a black drop dripping from its lower point and a thin violet glow.",
-   "key": "grey"
+   "tags": "fangs, vampire, blood drops, red, violet glow",
+   "sentence": "A single pair of white fangs dripping two red drops of blood, with a thin violet glow around them.",
+   "key": ""
   },
   {
    "id": "vicious_mockery",
    "kind": "spells",
    "name": "Злая насмешка",
-   "tags": "speech bubble, pink, jagged, glowing, front view",
-   "sentence": "A single pink glowing speech bubble with a sharp white zigzag inside and a soft white outline.",
+   "tags": "jester mask, grin, tongue out, pink, violet",
+   "sentence": "A single pink and violet jester mask with a wide mocking grin and its tongue sticking out.",
    "key": ""
   },
   {
@@ -5324,8 +5324,8 @@
    "id": "eldritch_invocation_mask_of_many_faces",
    "kind": "features",
    "name": "Мистическое воззвание: Маска многих лиц",
-   "tags": "mask, white, blank, violet glow, front view",
-   "sentence": "A single blank white mask with a smooth oval shape and a soft violet glow around its edge, seen from the front.",
+   "tags": "mask, split mask, two halves, white, violet",
+   "sentence": "A single theatrical mask split down the middle, the left half pale white and the right half violet, with empty eye holes.",
    "key": ""
   },
   {
@@ -5388,8 +5388,8 @@
    "id": "eldritch_invocation_voice_of_the_chain_master",
    "kind": "features",
    "name": "Жуткое воззвание: Голос повелителя цепей",
-   "tags": "chain, silver, gem, violet, glowing, circular",
-   "sentence": "A single silver chain coiled in a circle with a small glowing violet gem at its center.",
+   "tags": "chain link, speech bubble, silver, violet glow",
+   "sentence": "A single big silver chain link with a small violet glowing speech bubble hanging from it.",
    "key": ""
   },
   {
@@ -5420,8 +5420,8 @@
    "id": "fast_hands",
    "kind": "features",
    "name": "Быстрые руки",
-   "tags": "lockpick, grey metal, speed lines, diagonal",
-   "sentence": "A single thin grey lockpick pointing diagonally up to the right, with three short speed lines behind it.",
+   "tags": "pouch, gold coin, speed lines, quick, brown leather",
+   "sentence": "A single small brown leather pouch with a gold coin flying out of it and three short speed lines behind.",
    "key": ""
   },
   {
@@ -5660,8 +5660,8 @@
    "id": "martial_arts",
    "kind": "features",
    "name": "Боевые искусства",
-   "tags": "staff, wooden, blue cloth, glowing, diagonal",
-   "sentence": "A single long wooden staff lying diagonally, its ends wrapped in blue cloth, with a soft blue glow.",
+   "tags": "belt, martial arts belt, knot, white cloth",
+   "sentence": "A single white cloth martial arts belt tied in a knot at its middle, its two ends hanging down.",
    "key": ""
   },
   {
@@ -6388,8 +6388,8 @@
    "id": "skill_prof_acrobatics",
    "kind": "features",
    "name": "Навык: Акробатика",
-   "tags": "ribbon, spiral, blue, motion",
-   "sentence": "A single blue ribbon curling in a tight spiral, suggesting a graceful flip.",
+   "tags": "loop arrow, circular arrow, somersault, motion lines, gold",
+   "sentence": "A single golden arrow curving in a full loop like a somersault, with a few short motion lines.",
    "key": ""
   },
   {
@@ -6412,8 +6412,8 @@
    "id": "skill_prof_athletics",
    "kind": "features",
    "name": "Навык: Атлетика",
-   "tags": "rope, knot, brown, coiled",
-   "sentence": "A single thick brown rope tied in a tight knot, coiled in a circle.",
+   "tags": "kettlebell, weight, iron, grey, handle",
+   "sentence": "A single heavy round grey iron kettlebell with a thick handle on top.",
    "key": ""
   },
   {
@@ -6500,8 +6500,8 @@
    "id": "skill_prof_religion",
    "kind": "features",
    "name": "Навык: Религия",
-   "tags": "holy symbol, sun disk, gold, glowing, front view",
-   "sentence": "A single golden sun disk with short rays and a small loop on top, seen from the front, glowing softly.",
+   "tags": "temple, columns, roof, shrine, light grey",
+   "sentence": "A single small light grey stone temple seen from the front, three columns under a triangular roof.",
    "key": ""
   },
   {
@@ -6644,9 +6644,9 @@
    "id": "draconic_ancestry_black",
    "kind": "traits",
    "name": "Драконье наследие (чёрный)",
-   "tags": "dragon head, black, horns, scales, front view",
-   "sentence": "A single black dragon head seen from the front, with two curved horns and dark grey scales.",
-   "key": "grey"
+   "tags": "dragon head, horns, slate grey, green eyes, acid",
+   "sentence": "A single slate grey dragon head seen from the front with two curved horns, bright acid-green eyes and green drops at its jaw.",
+   "key": ""
   },
   {
    "id": "relentless_endurance",
@@ -6796,9 +6796,9 @@
    "id": "tool_proficiency",
    "kind": "traits",
    "name": "Владение инструментами",
-   "tags": "anvil, iron, dark grey, from side",
-   "sentence": "A single dark grey iron anvil with a broad flat top and a pointed horn, seen from the side.",
-   "key": "grey"
+   "tags": "anvil, hammer, light grey, smithing",
+   "sentence": "A single light grey iron anvil with a brown wooden-handled hammer resting on top, seen from the side.",
+   "key": ""
   },
   {
    "id": "lucky",
@@ -6844,9 +6844,9 @@
    "id": "oiled",
    "kind": "conditions",
    "name": "облито маслом",
-   "tags": "drop, oil, black, glossy, front view",
-   "sentence": "A single glossy black oil drop with a bright white highlight, seen from the front.",
-   "key": "grey"
+   "tags": "drop, oil, amber, glossy, puddle",
+   "sentence": "A single glossy amber-brown oil drop with a bright white highlight above a small shiny puddle.",
+   "key": ""
   },
   {
    "id": "wet",
@@ -6900,9 +6900,9 @@
    "id": "frightened",
    "kind": "conditions",
    "name": "frightened",
-   "tags": "bat, purple, wings, fangs, front view",
-   "sentence": "A single dark purple bat with spread wings and small white fangs, seen from the front.",
-   "key": "grey"
+   "tags": "bat, spread wings, fangs, light violet, trembling lines",
+   "sentence": "A single light violet bat with spread wings and small white fangs, with three short trembling lines on each side.",
+   "key": ""
   },
   {
    "id": "blinded",
@@ -6996,8 +6996,8 @@
    "id": "enfeebled",
    "kind": "conditions",
    "name": "Ослаблен",
-   "tags": "sword, broken sword, grey, cracked, diagonal",
-   "sentence": "A single grey steel sword pointing down diagonally, its blade cracked and chipped near the middle.",
+   "tags": "bent sword, drooping, weak, grey steel",
+   "sentence": "A single grey steel sword bent and drooping like a wilted flower, its tip pointing down.",
    "key": ""
   },
   {
@@ -7420,8 +7420,8 @@
    "id": "volley",
    "kind": "acts",
    "name": "Следующая цель",
-   "tags": "arrows, three arrows, brown, flying, diagonal",
-   "sentence": "A single set of three brown arrows flying diagonally to the right, fanned slightly apart.",
+   "tags": "arrows, three arrows, volley, flying, diagonal",
+   "sentence": "A single fan of three arrows flying up to the right side by side, brown shafts, grey heads and white fletchings.",
    "key": ""
   },
   {

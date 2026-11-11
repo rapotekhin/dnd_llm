@@ -61,6 +61,11 @@ Rules:
    pink. A spell without damage takes its school: abjuration blue, conjuration teal, divination gold, enchantment
    pink, evocation orange, illusion violet, necromancy dark purple, transmutation green-brown. Healing is green or
    warm white with a small plus sign.
+6. The icon sits on a dark slot: never make the whole object black or very dark — a black or dark thing is drawn in
+   slate grey or a lighter tone of its color with one bright detail (eyes, a glow, an edge). Chain armor is covered in
+   a clear pattern of small interlocking rings, or it reads as a cloth shirt.
+7. Never tag a bigger thing the object belongs to: a crossbow bolt is «short arrow», not «crossbow»; a speech bubble
+   or a zigzag in a rounded square reads as an app logo — choose another emblem.
 
 Examples (key → answer):
 items/longsword → {"tags": "longsword, sword, steel blade, crossguard, brown handle, diagonal", "sentence": "A single straight steel longsword lying diagonally, blade up and to the right, with a short crossguard and a brown leather grip.", "dark": false}
