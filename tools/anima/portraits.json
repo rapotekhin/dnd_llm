@@ -56,7 +56,7 @@
           "skin": ["pale skin", "fair skin", "light tan skin", "bronze skin"],
           "hair": ["silver hair", "blonde hair", "platinum blonde hair", "black hair", "copper hair", "dark brown hair"],
           "eyes": ["green eyes", "blue eyes", "violet eyes", "amber eyes", "grey eyes"], "beards": []},
-  "dwarf": {"tags": "dwarf, stocky, broad face", "word": "dwarf", "features": "a broad weathered face, a strong nose and a thick neck",
+  "dwarf": {"tags": "dwarf, stocky, broad face", "word": "dwarf", "features": {"male": "a broad weathered face, a strong nose and a thick neck", "female": "a broad face with soft feminine features, rosy cheeks and a strong nose", "minor": "a round chubby face, a button nose and rosy cheeks"},
             "skin": ["ruddy skin", "fair skin", "tan skin", "brown skin"],
             "hair": ["red hair", "brown hair", "black hair", "auburn hair", "blonde hair"],
             "eyes": ["brown eyes", "grey eyes", "blue eyes", "green eyes", "hazel eyes"],

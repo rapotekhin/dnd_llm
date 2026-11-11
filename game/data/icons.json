@@ -41,10 +41,10 @@
 	},
 	"ui": {
 		"_doc": "Icons of the interface itself: window buttons, needs, acts of a place. The id is the file ui/<id>.png, the value its subject for the artist.",
-		"sheet": "character sheet: a scroll with a portrait",
+		"sheet": "the character: a bust of a hooded adventurer",
 		"inventory": "a leather backpack",
 		"spellbook": "an open spellbook",
-		"map": "a folded map",
+		"map": "a compass",
 		"journal": "a journal with a quill",
 		"menu": "a gear wheel",
 		"deeds": "a bundle of tools: hammer, quill and coin",
@@ -95,7 +95,10 @@
 		"spells": "a sparkling wand",
 		"features": "a star in a shield",
 		"items": "a potion flask",
-		"nonlethal": "a fist with a feather"
+		"nonlethal": "a club wrapped in cloth with stars over it",
+		"skills": "a twenty-sided die",
+		"details": "an upright sheet with lines of text",
+		"empty_hand": "an open palm"
 	},
 	"rarity": {
 		"_doc": "The frame of an item by its rarity; none for a common thing.",
@@ -183,9 +186,9 @@
 		"SheetSection_gear": "inventory",
 		"SheetSection_book": "spellbook",
 		"SheetSection_dev": "study",
-		"SheetTab_summary": "class",
-		"SheetTab_skills": "features",
-		"SheetTab_detail": "sheet",
+		"SheetTab_summary": "sheet",
+		"SheetTab_skills": "skills",
+		"SheetTab_detail": "details",
 		"InvGroup_all": "all",
 		"SwapSets": "weapon_set"
 	}

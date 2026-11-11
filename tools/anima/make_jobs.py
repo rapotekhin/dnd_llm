@@ -33,6 +33,7 @@ SUBJECTS = HERE / "subjects.json"
 JOBS = HERE / "jobs" / "icons.json"
 LOOKS = HERE / "portraits.json"
 PORTRAIT_JOBS = HERE / "jobs" / "portraits.json"
+PICKS = HERE / "picks.json"
 FRAME = "portrait, upper body, looking at viewer"  # the tags of a person's portrait after its sex and age
 MODEL = "deepseek/deepseek-v4.1-flash-1017"  # the master's default (llm_server.config.DEFAULT_MODEL)
 BATCH = 30
@@ -256,8 +257,11 @@ def person_look(t: dict, rid: str, sex: str, age_id: str, i: int) -> dict:
     pron = "He" if sex == "male" else "She"
     sentence = (f"{_a(race['word'] + ' ' + age[sex]['who']).capitalize()}, with {', '.join(says[:-1])} and "
                 f"{says[-1]}, wearing {_a(cloth)}.")
-    if race.get("features"):
-        sentence += f" {pron} has {race['features']}."
+    feats = race.get("features")
+    if isinstance(feats, dict):  # by sex, a minor's own: a dwarf woman's or child's face is no weathered man's
+        feats = feats.get("minor") if age.get("minor") and feats.get("minor") else feats.get(sex)
+    if feats:
+        sentence += f" {pron} has {feats}."
     if race.get("grown") and not age.get("minor"):
         sentence += f" {pron} is a grown-up of a small folk with adult proportions and an adult face."
     return {"tags": ", ".join(x for x in tags if x), "sentence": sentence}
@@ -343,6 +347,18 @@ def key_of(s: dict) -> str:
     return "grey" if dark else ""
 
 
+def reseeded(jobs: list[dict]) -> list[dict]:
+    """A variant drawn badly by chance gets another seed: «<kind>/<id>__<n>»: seed in `reseed` of picks.json; anima_gen
+    draws it again, as its raw frame of that seed is not there yet."""
+    reseed = json.loads(PICKS.read_text(encoding="utf-8")).get("reseed", {}) if PICKS.exists() else {}
+    for j in jobs:
+        seeds = list(j["seeds"])
+        for n in range(1, len(seeds) + 1):
+            seeds[n - 1] = int(reseed.get(f"{j['kind']}/{j['id']}__{n}", seeds[n - 1]))
+        j["seeds"] = seeds
+    return jobs
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--describe", action="store_true", help="ask the model for the subjects not written yet")
@@ -370,8 +386,9 @@ def main() -> None:
             print(f"described {min(i + BATCH, len(todo))}/{len(todo)}", flush=True)
 
     if a.portraits:
-        people = people_jobs()
+        people = reseeded(people_jobs())
         monsters, fallback = monster_jobs(subjects)
+        monsters = reseeded(monsters)
         PORTRAIT_JOBS.parent.mkdir(parents=True, exist_ok=True)
         PORTRAIT_JOBS.write_text(json.dumps({"jobs": people + monsters}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         frames = sum(len(j["seeds"]) for j in people + monsters)

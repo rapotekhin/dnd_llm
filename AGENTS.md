@@ -20,7 +20,7 @@ Decisions to follow in new code: [pillar 6](docs/vision/pillars.md#6-движо�
 
 ## Documentation
 
-Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes; **`playtest`** to test the game live (see «Testing»); **`trace_analyzer`** to analyse the author's own play session from its trace; **`godot_conventions`** when writing GDScript in `game/`.
+Full docs in [`docs/`](docs/). Use the **`docs_lookup`** skill/rule to navigate it before answering conceptual questions. Use **`docs_updater`** after meaningful code changes; **`release_notes_updater`** for player-facing changes; **`playtest`** to test the game live (see «Testing»); **`trace_analyzer`** to analyse the author's own play session from its trace; **`godot_conventions`** when writing GDScript in `game/`; **`anima_art`** when drawing icons, portraits or interface art with Anima (`tools/anima`).
 
 The master's ways into the engine are in two pages: [master-tools.md](docs/tech/master-tools.md) — every tool, `engine.*` call and effect kind with what the engine checks and links to the code; [master-scenarios.md](docs/tech/master-scenarios.md) — what the master can do, scenario by scenario, with its pipeline. The player's side is in [player-scenarios.md](docs/tech/player-scenarios.md): everything a player may want, by channel (UI, master + engine, story only, impossible), how complete the answer is, and the gaps outside the roadmap — look there before planning a new mechanic. Read the first two before touching `agents.py`, `protocol.py` effects, `EffectEngine` or the prompts; update them with any new tool, effect or turn `kind`.
 

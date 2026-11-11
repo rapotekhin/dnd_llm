@@ -1,5 +1,5 @@
 {
- "_doc": "The variant of each icon put into the game (anything absent is variant 1) and the icons drawn badly in both, left blank until their subject is fixed and redrawn. Read by install.py.",
+ "_doc": "The variant of each icon put into the game (anything absent is variant 1) and the icons drawn badly in both, left blank until their subject is fixed and redrawn. Read by install.py. `reseed`: a portrait variant drawn badly by chance → another seed, read by make_jobs.py («<kind>/<id>__<n>»: seed); anima_gen.py draws it again. `overlay`: «<kind>/<id>»: a mark drawn by code over the icon on install (overlays.py).",
  "variant": {
   "acts/attack": 2,
   "acts/avert": 2,
@@ -224,6 +224,7 @@
   "spells/find_traps": 2,
   "spells/floating_disk": 2,
   "spells/gaseous_form": 2,
+  "spells/goodberry": 2,
   "spells/healing_word": 2,
   "spells/hunters_mark": 2,
   "spells/hypnotic_pattern": 2,
@@ -275,6 +276,8 @@
   "ui/camp": 2,
   "ui/collect": 2,
   "ui/craft": 2,
+  "ui/details": 1,
+  "ui/empty_hand": 1,
   "ui/end_turn": 2,
   "ui/exits": 2,
   "ui/faith": 2,
@@ -282,14 +285,15 @@
   "ui/gather": 2,
   "ui/heist": 2,
   "ui/journal": 2,
-  "ui/map": 2,
-  "ui/nonlethal": 2,
+  "ui/map": 1,
+  "ui/nonlethal": 3,
   "ui/org_entry": 2,
   "ui/place": 2,
   "ui/rest_long": 2,
   "ui/rest_short": 2,
   "ui/search": 2,
-  "ui/sheet": 2,
+  "ui/sheet": 1,
+  "ui/skills": 2,
   "ui/sleep": 2,
   "ui/sneak_wait": 2,
   "ui/spellbook": 2,
@@ -299,5 +303,18 @@
   "ui/weapon_set": 2,
   "ui/weapons": 2
  },
- "redo": []
+ "redo": [],
+ "reseed": {
+  "portraits/people/tiefling/male/child__1": 101,
+  "portraits/people/elf/male/young__4": 401,
+  "portraits/people/half_elf/male/young__3": 301,
+  "portraits/people/elf/male/teen__3": 301,
+  "portraits/monsters/giant_scorpion__3": 301,
+  "portraits/monsters/giant_scorpion__5": 501,
+  "portraits/monsters/scorpion__3": 301,
+  "portraits/monsters/scorpion__5": 501
+ },
+ "overlay": {
+  "ui/nonlethal": "peace"
+ }
 }

@@ -9,6 +9,7 @@ extends RefCounted
 ## Everything is a row of data/icons.json: a new kind of mark needs no code.
 
 const BLANK := "_blank/"
+const EMPTY_HAND := "ui/empty_hand"  # a hand that holds nothing: the hotbar's hand, an attack with no weapon (an open palm)
 
 static var _exists := {}  # path → bool: a file is looked for once a run
 

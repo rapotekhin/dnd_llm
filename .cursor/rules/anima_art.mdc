@@ -1,0 +1,23 @@
+---
+description: Use this skill when drawing game art with Anima on our own Forge — icons of items, spells, features, conditions, acts and the interface, portraits of people and monsters, or UI elements (frames, buttons, hotbar cells) — and when reviewing, redrawing, cutting or installing that art. Trigger on "нарисуй иконки", "перерисуй портреты", "иконка вышла не та", "прогон на ночь", "аниму", "Forge", "ControlNet", "элементы интерфейса нарисовать", "portraits", "icons", "anima", and on edits under tools/anima/**, game/assets/icons/**, game/assets/portraits/**. Do NOT use for event images of the master (llm_server images.py) or for UI layout code without drawing.
+globs:
+  - "tools/anima/**"
+  - "game/assets/icons/**"
+  - "game/assets/portraits/**"
+alwaysApply: false
+---
+
+# anima_art
+
+Game art by Anima on our Forge: icons (flat / painted), portraits, UI elements — the pipeline in tools/anima and the lessons of the trials.
+
+The full procedure is in [.claude/skills/anima_art/SKILL.md](mdc:.claude/skills/anima_art/SKILL.md).
+
+Read that file when this rule triggers, then follow it.
+
+**Quick reference:**
+
+- `make_jobs.py` → `jobs/*.json`; `anima_gen.py` on the server (`--style painted` → `out_painted/`, `--recut`); `install.py` by `picks*.json` (`variant`, `redo`, `reseed`, `overlay`)
+- `--style painted` draws by BG3-like families (`FAMILY`, docs/design/ux/bg3-icons.md): items an object cut out, spells / features / acts a bright glowing sign on a rounded stone tile cut out of black, conditions the tile in a circle; ui, groups, marks stay flat
+- A systematic miss (a tag like «wolf», «no humans», «small») is fixed in `subjects.json` / `portraits.json`, a random one by `reseed`; review at the game's size
+- ControlNet LLLite breaks Forge on its second call: unload the checkpoint after each frame, never run it beside another job; never use another game's art as a reference

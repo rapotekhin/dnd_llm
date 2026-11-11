@@ -1,0 +1,124 @@
+---
+name: anima_art
+description: Use this skill when drawing game art with Anima on our own Forge — icons of items, spells, features, conditions, acts and the interface, portraits of people and monsters, or UI elements (frames, buttons, hotbar cells) — and when reviewing, redrawing, cutting or installing that art. Trigger on "нарисуй иконки", "перерисуй портреты", "иконка вышла не та", "прогон на ночь", "аниму", "Forge", "ControlNet", "элементы интерфейса нарисовать", "portraits", "icons", "anima", and on edits under tools/anima/**, game/assets/icons/**, game/assets/portraits/**. Do NOT use for event images of the master (llm_server images.py) or for UI layout code without drawing.
+---
+
+# anima_art
+
+Как мы рисуем арт игры на Anima: иконки, портреты, элементы интерфейса. Всё, что выяснили пробами с автором (2026-11-10 … 11), чтобы не открывать заново.
+
+## Когда срабатывать
+
+- Нарисовать или перерисовать иконки, портреты, элементы интерфейса; ночной прогон на сервере
+- Иконка или портрет вышли не тем (не тот пол, возраст, существо, мелко, обрезано)
+- Отбор вариантов, установка в игру, правка `subjects.json`, `portraits.json`, `picks*.json`
+
+**НЕ срабатывает на:** картинки событий мастера (`llm_server/src/llm_server/images.py`, свой промт на семью модели); вёрстку окон без рисунка (`godot_conventions`).
+
+## Конвейер (`tools/anima/`, подробно — [README](../../../tools/anima/README.md))
+
+| Файл | Где | Что |
+|---|---|---|
+| `make_jobs.py` | репо | задания из данных игры: `jobs/icons.json` (1007), `--portraits` → `jobs/portraits.json` (1308); `--describe` — описания, которых нет, пишет модель (центы); `reseed` из `picks.json` |
+| `subjects.json` | репо, руками | что рисовать: теги Danbooru + одна фраза по `<kind>/<id>`; `key` — фон (`grey` для тёмного предмета) |
+| `portraits.json` | репо, руками | таблицы внешности людей: раса (`tags`, `word`, `features` — строка или `{male, female, minor}`), возрасты, волосы, одежда |
+| `anima_gen.py` | сервер | рисует только недостающее или изменившееся (рядом с вариантом `.txt` — промт; нет сырого кадра этой затравки — тоже рисует); `--style flat\|painted`, `--recut`, `--sheets`, `--ids`, `--only`, `--seeds` |
+| `install.py` | репо | `picks.json` (`variant`, `redo`, `overlay`) → `game/assets/icons/<kind>/<id>.png`; `--jobs …portraits.json` → `game/assets/portraits/…` |
+| `overlays.py` | репо | знак поверх иконки кодом (пацифик на «Не убивать»): модель символы коверкает |
+| `ui/guides.py`, `ui/paint.py`, `ui/mock.py` | репо | элементы интерфейса: свои направляющие → ControlNet → макет с нарезкой на 9 частей |
+
+`out/`, `out_painted/`, `out_ui/` в git не идут; сырые кадры 768 px хранятся — любой вырез переделывается `--recut` без перерисовки.
+
+Forge: `--api`, чекпойнт `anima-aesthetic` (v1.1), модули `qwen_image_vae.safetensors`, `qwen_3_06b_base.safetensors`; дома — проброшенный порт `127.0.0.1:7860`. 768 px, CFG 4.5, ER SDE; 20 шагов ≈ 19 с, 24 ≈ 22 с.
+
+## Промт (карточка Anima)
+
+Качество в начале → теги Danbooru строчными с пробелами → одна-две простые фразы → хвост стиля. D&D-названий модель не знает, текст рисует плохо.
+
+- **Иконки, плоские** (`flat`, `out/`): «flat color, minimalism, icon», 2–3 цвета. A/B 2026-11-10: тёмный фон без тега — предмет крупнее и смелее всего; серый/зелёный фон его уменьшает; «dark outline» — толстые контуры.
+- **Иконки, живописные** (`painted`, `out_painted/`, автор 2026-11-11 — к портретам и интерфейсу) рисуются **семействами, как в BG3** — разбор в [docs/design/ux/bg3-icons.md](../../../docs/design/ux/bg3-icons.md), вид → семейство в `FAMILY` (`anima_gen.py`):
+  - `object` (вещи): «painted as a small illustration in a soft painterly style… light from the upper left… large and centered and fills almost the whole square, on a plain flat {bg} background with no vignette»; негатив + `flat color, minimalism, vector art, vignette, gradient background, small object`. Без «large… almost the whole» выходило мелко, виньетка портила вырез.
+  - `glyph` (заклинания, умения, действия): «emblem of thin glowing lines… on a square tile of dark brown rough cracked stone». Модель рисует **плитку камня со скруглёнными углами на чёрном** и яркий залитый светящийся знак — так и оставили: в 64 px читается лучше всех (выбор автора из пяти вариантов 2026-11-11). Чёрное вырезается, камень во весь кадр остаётся квадратом (`tile`); `medal` (состояния) — плитка, обрезанная кругом. Цвет знака — из описания (урон, потом школа). Плитку с наклоном выровнять при разборе (`--recut`).
+  - Минимализм (`ui`, `groups`, `marks/*`, пока и `traits`) остаётся `flat`.
+- **Портреты**: `score_7, safe`, бюст «head and shoulders… soft painterly shading, on a plain dark muted background»; детям и подросткам — негатив `loli, shota, child` (ребёнку без `child`) + `minor_neg`: ни декольте, ни косметики.
+- **Тёмный предмет** — `key: grey` в описании: на тёмном фоне вырез съедает край.
+
+### Уроки описаний (что ломало)
+
+| Было | Вышло | Правка |
+|---|---|---|
+| `giant wolf spider` в тегах | волки | слово «wolf» убрать: «giant hunting spider, eight legs» |
+| ящерица с `forked tongue` | змеи | «four legs, gecko», без языка |
+| `no humans` у сатира, гарпии, спрайта | козёл, волосатая тварь | `solo, 1boy/1girl`, «a man's face…» |
+| спрайт с `green skin` | гоблин с крыльями | «elfin face, pale skin, messy hair» |
+| кентавр с «horse body» | мелкая фигурка в рост | «seen from the chest up» |
+| «small», «tiny» во фразе | крошечный предмет | убрать, «big… fills the whole square» |
+| d20 | куб | «icosahedron, many triangular faces, the number 20» |
+| дварф «weathered face, thick neck» для всех | женщины — мужики, дети — взрослые | `features: {male, female, minor}` |
+| символ (пацифик) моделью | кривой знак | `overlay` в `picks.json`, рисует `overlays.py` |
+| глиф «on a square tile of stone» | плитка со скруглёнными углами на чёрном, знак залит | автору понравилось больше «правильных» вариантов: не «чинить» то, что читается лучше; сравнивать в 64 px |
+| глиф на «dim stone, subtle texture» | фон тише, но знак мельчает | не брать |
+
+Системная причина (тег, слово, черта расы) → правка описания или таблицы; случайная неудача → `reseed`.
+
+## Отбор и исправление
+
+1. Листы: `--sheets` или свой лист по заданию — варианты **в том размере и форме, как в игре** (портрет — круг 64–96 px, иконка — ячейка 64–128).
+2. Ищи: не тот пол или возраст, не то существо, мелко или в полный рост, обрезано вырезом, артефакты, тёмное на тёмном.
+3. Системное — правь `subjects.json` / `portraits.json`, `make_jobs.py` (`--portraits`), та же команда `anima_gen.py` перерисует только изменившееся.
+4. Случайное — `picks.json` → `reseed: {"portraits/people/elf/male/young__4": 401}` (иконкам — выбрать другой `variant`, третий вариант: `--seeds 11,22,33 --ids …`).
+5. Лучший вариант иконки — `variant`, безнадёжные — `redo` (игра покажет заготовку или букву).
+
+## Портреты
+
+- Люди без классов: 9 рас × 2 пола × (6 возрастов × 5 + ребёнок × 1) = 558; монстры: 150 шаблонов × 5 = 750 (человек-шаблон — мужчина в нечётных, женщина в чётных).
+- В игру идёт **лицо**: постоянная рамка `FACE = (0.14, 0.02, 0.86, 0.74)` из бюста, 256 px WebP (решение автора: поиск лица по светлому пятну пробовали — не нужен). Сменил рамку — `--recut`.
+- Выбор лица в игре — `PortraitRules.of` (вариант по `hash(id)`, герой — свой выбор при создании); файлы `game/assets/portraits/people/<раса>/<пол>/<возраст>__<n>.webp`, `monsters/<шаблон>__<n>.webp`.
+
+## Элементы интерфейса (проба 2026-11-11)
+
+- **Только свой рисунок.** Не брать картинки BG3 или другой игры в ControlNet/img2img: это их арт, производная в нашей игре (принцип автора — раскладка как в BG3, рисунок свой). Смотреть на них можно, копировать формы нельзя.
+- Свои направляющие кодом (`ui/guides.py`): глубина (выпуклая кайма, утопленное поле) + линии (стык каймы и поля, внутренняя линия, угловой орнамент). Внешнюю линию по краю холста не рисовать — модель делает из неё светлую кромку.
+- ControlNet LLLite: `anima-lllite-depth-1` 0.75 (до 0.8 шагов) + `anima-lllite-lineart-1` 0.55 (до 0.6), `module: None`, `Just Resize`. Ещё есть `scribble-1`, `inpainting-v2`, `pose-1`.
+- **Баг Forge:** второй вызов LLLite ломает модель — любой запрос дальше отвечает 500 «'NoneType' object is not callable». Лечится `POST /sdapi/v1/unload-checkpoint`; `ui/paint.py` выгружает после каждого кадра. Не запускать вместе с другим заданием на том же Forge.
+- Нарезка на 9 частей (углы как есть, края и середина тянутся), состояния кнопки — из одной картинки яркостью и тёплым свечением (`ui/mock.py`). Материалы пробы: бронза с кожей, дерево с золотом — выбор за автором; в игру пойдут `StyleBoxTexture` в `game/ui/theme/game_theme.tres`.
+
+## Ночной прогон (сервер)
+
+```bash
+git pull                                      # или scp tools/anima на сервер
+cd tools/anima && pip install pillow
+nohup python3 anima_gen.py jobs/icons.json --style painted --steps 20 --only items,spells > painted.log 2>&1 &   # ~6 ч
+nohup python3 anima_gen.py jobs/portraits.json --steps 24 > portraits.log 2>&1 &                               # ~8 ч на все
+tail -f painted.log                           # [12/1186] items/longsword #1 19s, left ~6.1 h
+```
+
+Время: кадров × 19 с (20 шагов). Остановленный прогон продолжается той же командой. Значки `marks/*` оставлять плоскими. Дома — `out*/` с сервера в `tools/anima/`.
+
+## В игру
+
+```bash
+python tools/anima/install.py                                   # иконки по picks.json
+python tools/anima/install.py --out tools/anima/out_painted --picks tools/anima/picks_painted.json
+python tools/anima/install.py --jobs tools/anima/jobs/portraits.json
+"$GODOT" --headless --path game --import
+```
+
+Иконка выбирается одним местом — `IconRules.of` по `game/data/icons.json` (`ui` — что рисовать, `buttons` — кнопка → иконка, `shared` — одна картинка за другую). Новая иконка интерфейса: строка в `icons.json → ui` + описание `ui/<id>` в `subjects.json`.
+
+Коммит артом отдельно (`icons: …`, `portraits: …`, без версии). Большой push: `git -c http.version=HTTP/1.1 push`. Тест не должен зависеть от того, нарисованы ли файлы: направь корень на пустую папку (`test_portraits_v0844352.gd`).
+
+## Что НЕ делать
+
+- ❌ Перебирать затравки, когда причина в описании (тег «wolf» нарисует волка при любом сиде)
+- ❌ Рисовать вместе задание с ControlNet и другое на одном Forge
+- ❌ Брать чужой арт опорой для ControlNet или img2img
+- ❌ Писать файл иконки в `game/assets` руками поверх `install.py` (затрёт следующая установка) — для знака поверх есть `overlay`
+- ❌ Судить по листу 768 px: смотреть в размере игры
+
+## Связанные
+
+- [tools/anima/README.md](../../../tools/anima/README.md) — команды и параметры
+- [docs/design/ux/bg3-icons.md](../../../docs/design/ux/bg3-icons.md) — стиль иконок BG3 по семействам и какое семейство у каждого нашего вида
+- [docs/production/roadmap.md](../../../docs/production/roadmap.md) — v0.8.4.43: портреты, иконки, интерфейс как в BG3
+- `godot_conventions` — вёрстка темы и окон; `playtest` — проверить лица и иконки в игре (`--scenario portraits`)

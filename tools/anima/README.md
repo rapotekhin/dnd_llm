@@ -46,6 +46,8 @@ tail -f anima.log                               # [12/1856] items/longsword #1 1
 | `--side` (768), `--steps` (20), `--cfg` (4.5), `--sampler` (`ER SDE`) | генерация; карточка Anima: 512–1536 px, CFG 4–5, ER SDE |
 | `--seeds` (`11,22`) | по варианту на сид |
 | `--bg` (`dark`) | фон, где задание не задало свой: `dark`, `grey`, `white`, `green` |
+| `--style` (`flat`) | стиль иконки: `flat` — плоский минимализм в `out/`, `painted` — живописный в `out_painted/` (раздел 6) |
+| `--recut` | перерезать варианты из сырых кадров, ничего не рисуя |
 | `--only items,spells` | только эти виды |
 | `--ids longsword,fireball --redraw` | перерисовать эти |
 | `--sheets` | только собрать листы из нарисованного |
@@ -90,6 +92,39 @@ python tools/anima/install.py --jobs tools/anima/jobs/portraits.json   # → gam
 ```
 
 Файлы в игре — `game/assets/portraits/people/<раса>/<пол>/<возраст>__<n>.webp` и `game/assets/portraits/monsters/<id>__<n>.webp`; в игру идут все варианты (вариант человека выбирает игра). Неудачный — в `redo` файла `picks.json` как `portraits/people/human/male/young__3`: игра покажет на его месте букву, пока его не перерисуют.
+
+## 6. Живописные иконки
+
+Плоский минимализм перестал вписываться рядом с портретами и живописным интерфейсом (автор, 2026-11-11). `--style painted` рисует те же описания из `subjects.json` **семействами, как в BG3** ([разбор стиля](../../docs/design/ux/bg3-icons.md), `FAMILY` в `anima_gen.py`):
+
+| Семейство | Виды | Как | Вырез |
+|---|---|---|---|
+| `object` | `items` и всё, чего нет ниже | живописный предмет: мягкая светотень, свет слева сверху, на тёмном фоне (`PAINTED_*`) | фон вырезается, как у плоских |
+| `glyph` | `spells`, `features`, `acts` | яркий светящийся знак на плитке шершавого камня, плитка на чёрном (`GLYPH_*`, выбор автора 2026-11-11) | чёрное вырезается, углы плитки прозрачные; камень во весь кадр — квадрат целиком |
+| `medal` | `conditions` | тот же знак на плитке | плитка, обрезанная кругом |
+
+Рисуется в `out_painted/`, плоские иконки в `out/` и в игре остаются, пока живописные не выбраны. Значки в углу (`marks/*`), `ui` и `groups` — минимализм, их оставляем плоскими.
+
+```bash
+# на сервере, на ночь: предметы и заклинания — 593 иконки × 2 варианта, ~6 ч при 20 шагах; остановленный прогон продолжается той же командой
+nohup python3 anima_gen.py jobs/icons.json --style painted --steps 20 --only items,spells > painted.log 2>&1 &
+# следующей ночью: умения, действия, состояния — 284 × 2, ~3 ч
+nohup python3 anima_gen.py jobs/icons.json --style painted --steps 20 --only features,acts,conditions > painted.log 2>&1 &
+# проба семейства на нескольких: по одному варианту
+python3 anima_gen.py jobs/icons.json --style painted --ids fireball,bless,longsword --first 1
+# дома: out_painted/ с сервера в tools/anima/out_painted/, выбор вариантов — в picks_painted.json
+python tools/anima/install.py --out tools/anima/out_painted --picks tools/anima/picks_painted.json
+```
+
+## 7. Элементы интерфейса
+
+Рамки окон, кнопки, ячейки панели действий — своим рисунком в стиле портретов (проба 2026-11-11). Геометрию рисует код (`ui/guides.py`: глубина и линии), Anima раскрашивает материал через ControlNet LLLite (`ui/paint.py`: `anima-lllite-depth-1` + `anima-lllite-lineart-1`), `ui/mock.py` режет на 9 частей и собирает макет с кнопкой в четырёх состояниях. Чужой арт (BG3 и др.) опорой не берём. Второй вызов LLLite ломает модель Forge (500 «'NoneType' object is not callable»): `paint.py` выгружает чекпойнт после каждого кадра — не запускать рядом с другим заданием.
+
+```bash
+python tools/anima/ui/guides.py      # → out_ui/guides/
+python tools/anima/ui/paint.py       # → out_ui/raw/<part>_<material>_<seed>.png, ~40 с кадр
+python tools/anima/ui/mock.py        # → out_ui/mock/
+```
 
 ## Время
 

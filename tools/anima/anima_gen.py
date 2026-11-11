@@ -12,6 +12,7 @@ subject (or settings) changed: each variant keeps the prompt it was drawn from b
 
     nohup python3 anima_gen.py jobs/icons.json > anima.log 2>&1 &
     nohup python3 anima_gen.py jobs/portraits.json --steps 24 > portraits.log 2>&1 &   # people and monsters
+    nohup python3 anima_gen.py jobs/icons.json --style painted --only items,spells > painted.log 2>&1 &   # → out_painted/, by families
 
 A portrait job (`style: "portrait"`) is drawn as a bust and kept whole in raw/; its variant is the face cut out of it,
 256 px WebP (variants/<id>__<n>.webp); it has its own seeds, and a person its own look per variant (`looks`).
@@ -42,7 +43,7 @@ from collections import deque
 from pathlib import Path
 from statistics import median
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 HERE = Path(__file__).resolve().parent
 
@@ -64,6 +65,38 @@ KEYS = {  # a job's key → (a tag of the head, the word of the tail)
     "white": ("white background, ", "solid white"),
     "green": ("green background, ", "solid green"),
 }
+# The painted style (the author, 2026-11-11: the flat minimalism no longer fits beside the portraits and the painted
+# interface): the same subjects as a small soft painterly illustration, drawn into out_painted/ so the flat icons stay
+# as they are until the painted ones are picked; the cut and the keys stay the same.
+PAINTED_HEAD = "masterpiece, best quality, score_7, safe, no humans, simple background, {tag}"
+PAINTED_TAIL = ("It is an icon for a fantasy role-playing game, painted as a small illustration in a soft painterly "
+                "style with gentle shading, rich muted colors and light from the upper left. The single object is "
+                "large and centered and fills almost the whole square, on a plain flat {word} background with no "
+                "vignette.")  # the trial of 2026-11-11: «fills most» drew small things, a vignette spoiled the cut
+PAINTED_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, "
+                    "chromatic aberration, text, letters, watermark, signature, border, frame, multiple objects, "
+                    "duplicate, human, person, face, hands, photo, 3d render, flat color, minimalism, vector art, "
+                    "vignette, gradient background, small object")
+STYLES = {"flat": (HEAD, TAIL, NEGATIVE), "painted": (PAINTED_HEAD, PAINTED_TAIL, PAINTED_NEGATIVE)}
+# The painted style follows the families of BG3's icons (docs/design/ux/bg3-icons.md, the author 2026-11-11): a thing is
+# a painted object cut out of its background; a spell, a feature or an act is a bright glowing emblem on a tile of
+# cracked stone, which the model draws as a rounded tile on black, so the same cut leaves the tile with clear corners;
+# a condition is that tile in a circle. The colour of the emblem is the subject's own (make_jobs.py: damage, then
+# school), so the sentences of subjects.json serve both families.
+GLYPH_HEAD = "masterpiece, best quality, score_7, safe, no humans, lineart, glowing, emblem, stone texture, "
+GLYPH_TAIL = ("It is an ability icon for a fantasy role-playing game. The subject is drawn as one simple bold emblem "
+              "of thin glowing lines with a white-hot core and a soft colored glow, like luminous chalk or molten "
+              "metal inlaid in stone, with no solid fill. The emblem is large and centered on a square tile of dark "
+              "brown rough cracked stone that fills the whole frame, a little darker toward its edges.")
+# The A/B of 2026-11-11 on eight spells, picked by the author out of four: this first prompt, whose words the model does
+# not quite follow — the tile floats on black with rounded corners and the emblem is a bright filled shape — and that
+# reads best at 64 px. Rejected: glowing outlines on stone edge to edge (flatter), a sign engraved in a slab (darker),
+# a dim subtle stone (the emblem shrank), a brick wall (busy).
+GLYPH_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, "
+                  "chromatic aberration, text, letters, watermark, signature, multiple objects, duplicate, human, "
+                  "person, face, photo, 3d render, realistic, solid fill, flat color, plain background, "
+                  "white background, scenery, landscape")
+FAMILY = {"spells": "glyph", "features": "glyph", "acts": "glyph", "conditions": "medal"}  # in the painted style
 ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
@@ -81,6 +114,8 @@ P_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist nam
               "loli, shota, child")  # the last three as in the event images' MINOR_NEG (llm_server images.py)
 FACE = (0.14, 0.02, 0.86, 0.74)  # a fixed square over the head and a little of the shoulders (the author, 2026-11-11)
 PORTRAIT = 256
+TRIM = 0.03  # of a glyph's tile kept whole, each side
+DARK = 40  # a border darker than this (each channel's median) is the black around a glyph's tile: cut out
 
 
 # --- Forge ----------------------------------------------------------------------------------------------------------
@@ -114,44 +149,61 @@ def seeds_of(job: dict, seeds: list[int]) -> list[int]:
     return list(job.get("seeds") or seeds)
 
 
-def prompt_of(job: dict, key: str) -> str:
+def family(job: dict, style: str = "flat") -> str:
+    """How an icon is drawn and cut: flat, object (cut out), glyph (a whole tile), medal (a tile in a circle)."""
+    if portrait(job):
+        return "portrait"
+    if style == "flat":
+        return "flat"
+    return FAMILY.get(job["kind"], "object")
+
+
+def prompt_of(job: dict, key: str, style: str = "flat") -> str:
+    if family(job, style) in ("glyph", "medal"):
+        return GLYPH_HEAD + job["tags"] + ".\n" + job["sentence"] + " " + GLYPH_TAIL
     tag, word = KEYS[key]
-    return HEAD.format(tag=tag) + job["tags"] + ".\n" + job["sentence"] + " " + TAIL.format(word=word)
+    head, tail, _ = STYLES[style]
+    return head.format(tag=tag) + job["tags"] + ".\n" + job["sentence"] + " " + tail.format(word=word)
 
 
 def full_prompt(job: dict, n: int, a: argparse.Namespace) -> str:
     look = job["looks"][n - 1] if job.get("looks") else job
     if portrait(job):
         return P_HEAD + look["tags"] + ".\n" + look["sentence"] + " " + P_TAIL
-    return prompt_of(look, job.get("key") if job.get("key") in KEYS else a.bg)
+    return prompt_of({**look, "kind": job["kind"]}, job.get("key") if job.get("key") in KEYS else a.bg,
+                     getattr(a, "style", "flat"))
 
 
-def negative_of(job: dict) -> str:
+def negative_of(job: dict, style: str = "flat") -> str:
+    if family(job, style) in ("glyph", "medal"):
+        return GLYPH_NEGATIVE
     if not portrait(job):
-        return NEGATIVE
+        return STYLES[style][2]
     drop = set(job.get("neg_drop", []))
     tags = [t.strip() for t in P_NEGATIVE.split(",") if t.strip() not in drop]
     return ", ".join(tags + [t.strip() for t in job.get("neg_add", "").split(",") if t.strip()])
 
 
 def stamp_of(job: dict, n: int, a: argparse.Namespace) -> str:
-    """What a variant was drawn from: the prompt, and a portrait's negative too (a child's differs)."""
+    """What a variant was drawn from: the prompt, and the negative of a portrait (a child's differs) or a painted one."""
     text = full_prompt(job, n, a)
-    return text + "\n\nNEGATIVE: " + negative_of(job) if portrait(job) else text
+    style = getattr(a, "style", "flat")
+    return text + "\n\nNEGATIVE: " + negative_of(job, style) if portrait(job) or style != "flat" else text
 
 
 def stale(out: Path, job: dict, n: int, seed: int, stamp_text: str) -> bool:
-    """Not drawn yet, or drawn from another prompt: its subject was edited after a `git pull`. A variant drawn
-    before the stamps existed counts as current."""
-    v = paths(out, job, n, seed)[1]
-    if not v.exists():
+    """Not drawn yet, drawn from another prompt (its subject was edited after a `git pull`) or from another seed (a
+    variant reseeded in picks.json: no raw frame of the new seed). A variant drawn before the stamps existed counts as
+    current."""
+    raw, v = paths(out, job, n, seed)
+    if not v.exists() or not raw.exists():
         return True
     stamp = v.with_suffix(".txt")
     return stamp.exists() and stamp.read_text(encoding="utf-8") != stamp_text
 
 
 def draw(url: str, settings: dict, job: dict, n: int, seed: int, a: argparse.Namespace) -> Image.Image:
-    body = {"prompt": full_prompt(job, n, a), "negative_prompt": negative_of(job), "steps": a.steps, "cfg_scale": a.cfg,
+    body = {"prompt": full_prompt(job, n, a), "negative_prompt": negative_of(job, getattr(a, "style", "flat")), "steps": a.steps, "cfg_scale": a.cfg,
             "sampler_name": a.sampler, "width": a.side, "height": a.side, "seed": seed,
             "override_settings": settings, "override_settings_restore_afterwards": False}
     for attempt in range(5):  # Forge restarted or busy: wait and try again
@@ -208,9 +260,37 @@ def face(raw: Image.Image) -> Image.Image:
     return raw.convert("RGB").crop(box).resize((PORTRAIT, PORTRAIT), Image.LANCZOS)
 
 
-def save_variant(raw: Image.Image, job: dict, path: Path) -> None:
-    if portrait(job):
+def tile(raw: Image.Image) -> Image.Image:
+    """A glyph's tile: mostly it floats on black and is cut out like a thing; when the stone fills the frame (a few
+    frames do) it is kept whole, a thin smeared edge trimmed, so the cut does not eat the stone."""
+    w, h = raw.size
+    rgb = raw.convert("RGB")
+    px = rgb.load()
+    border = [px[x, y] for x in range(0, w, 4) for y in (0, h - 1)] + [px[x, y] for y in range(0, h, 4) for x in (0, w - 1)]
+    if max(median(c[i] for c in border) for i in range(3)) < DARK:
+        return cut(raw)
+    m = int(w * TRIM)
+    return rgb.convert("RGBA").crop((m, m, w - m, h - m)).resize((ICON, ICON), Image.LANCZOS)
+
+
+def medal(raw: Image.Image) -> Image.Image:
+    """A condition's medal: the glyph's tile in a circle with a soft edge, transparent outside."""
+    im = tile(raw)
+    big = ICON * 4
+    mask = Image.new("L", (big, big))
+    ImageDraw.Draw(mask).ellipse((4, 4, big - 5, big - 5), fill=255)
+    im.putalpha(ImageChops.multiply(im.getchannel("A"), mask.resize((ICON, ICON), Image.LANCZOS)))
+    return im
+
+
+def save_variant(raw: Image.Image, job: dict, path: Path, style: str = "flat") -> None:
+    how = family(job, style)
+    if how == "portrait":
         face(raw).save(path, "WEBP", quality=88, method=6)
+    elif how == "glyph":
+        tile(raw).save(path)
+    elif how == "medal":
+        medal(raw).save(path)
     else:
         cut(raw).save(path)
 
@@ -258,14 +338,14 @@ def sheets(out: Path, jobs: list[dict], seeds: list[int]) -> None:
             print("sheet", name, flush=True)
 
 
-def recut(out: Path, jobs: list[dict], seeds: list[int]) -> None:
+def recut(out: Path, jobs: list[dict], seeds: list[int], style: str = "flat") -> None:
     """Every variant cut again from its raw frame (a changed FACE or cut), the stamps kept: nothing is drawn."""
     done = 0
     for j in jobs:
         for n, seed in enumerate(seeds_of(j, seeds), 1):
             raw_path, cut_path = paths(out, j, n, seed)
             if raw_path.exists():
-                save_variant(Image.open(raw_path), j, cut_path)
+                save_variant(Image.open(raw_path), j, cut_path, style)
                 done += 1
     print(f"{done} variants cut again", flush=True)
 
@@ -291,7 +371,8 @@ def pick(out: Path, jobs: list[dict], seeds: list[int], picks: str) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("jobs", type=Path, help="the jobs file: {jobs: [{id, kind, name, tags, sentence, key}]}")
-    p.add_argument("--out", type=Path, default=HERE / "out")
+    p.add_argument("--out", type=Path, default=None, help="out/, or out_<style>/ for an icon style but flat")
+    p.add_argument("--style", default="flat", choices=sorted(STYLES), help="an icon's style; a portrait has its own")
     p.add_argument("--url", default="http://127.0.0.1:7860", help="Forge with --api")
     p.add_argument("--checkpoint", default=CHECKPOINT, help="a part of the checkpoint's title")
     p.add_argument("--side", type=int, default=768)
@@ -308,6 +389,7 @@ def main() -> None:
     p.add_argument("--recut", action="store_true", help="cut the variants again from the raw frames, nothing drawn")
     p.add_argument("--pick", default="", help="id=n,…: variant n becomes the icon")
     a = p.parse_args()
+    a.out = a.out or HERE / ("out" if a.style == "flat" else f"out_{a.style}")
 
     jobs: list[dict] = json.loads(a.jobs.read_text(encoding="utf-8"))["jobs"]
     if a.only:
@@ -320,7 +402,7 @@ def main() -> None:
     if a.sheets:
         return sheets(a.out, jobs, seeds)
     if a.recut:
-        return recut(a.out, jobs, seeds)
+        return recut(a.out, jobs, seeds, a.style)
 
     todo = [(j, n, s) for j in jobs for n, s in enumerate(seeds_of(j, seeds), 1)
             if (not a.first or n <= a.first) and (a.redraw or stale(a.out, j, n, s, stamp_of(j, n, a)))]
@@ -338,7 +420,7 @@ def main() -> None:
         t = time.time()
         raw = draw(a.url, settings, job, n, seed, a)
         raw.save(raw_path)
-        save_variant(raw, job, cut_path)
+        save_variant(raw, job, cut_path, a.style)
         cut_path.with_suffix(".txt").write_text(stamp_of(job, n, a), encoding="utf-8")  # the stamp: redrawn when it changes
         icon = a.out / job["kind"] / f"{job['id']}.png"
         if not portrait(job) and (n == 1 or not icon.exists()):

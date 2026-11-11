@@ -5,8 +5,9 @@
 
 The variant of each icon is read from picks.json (absent — variant 1); an icon listed under `redo` is left out, so the
 game shows its blank until the subject is fixed and drawn again. A portrait keeps all its variants (the game picks one
-per person); a bad one is listed under `redo` as «portraits/<sub>/<id>__<n>» and the game shows the letter for it. A
-file already in the game is replaced only when it differs. Run `"$GODOT" --headless --path game --import` afterwards.
+per person); a bad one is listed under `redo` as «portraits/<sub>/<id>__<n>» and the game shows the letter for it. An
+icon under `overlay` gets a mark drawn by code over it (overlays.py: a symbol the model would spoil). A file already in
+the game is replaced only when it differs. Run `"$GODOT" --headless --path game --import` afterwards.
 
     python tools/anima/install.py                 # every kind of the icon jobs
     python tools/anima/install.py --only spells   # one kind
@@ -20,6 +21,8 @@ import filecmp
 import json
 import shutil
 from pathlib import Path
+
+import overlays
 
 HERE = Path(__file__).resolve().parent
 ASSETS = HERE.parent.parent / "game" / "assets"
@@ -49,7 +52,7 @@ def main() -> None:
     jobs = json.loads(a.jobs.read_text(encoding="utf-8"))
     jobs = jobs["jobs"] if isinstance(jobs, dict) else jobs
     picks = json.loads(a.picks.read_text(encoding="utf-8")) if a.picks.exists() else {}
-    variant, redo = picks.get("variant", {}), set(picks.get("redo", []))
+    variant, redo, overlay = picks.get("variant", {}), set(picks.get("redo", [])), picks.get("overlay", {})
     only = set(filter(None, a.only.split(",")))
     new = same = skipped = missing = 0
     for j in jobs:
@@ -64,13 +67,18 @@ def main() -> None:
                 missing += 1
                 print("not drawn:", src.relative_to(a.out))
                 continue
-            if dst.exists() and filecmp.cmp(src, dst, shallow=False):
+            mark = overlay.get(f"{j['kind']}/{j['id']}") if j.get("style") != "portrait" else None
+            body = overlays.apply(mark, src) if mark else None
+            if dst.exists() and (dst.read_bytes() == body if body else filecmp.cmp(src, dst, shallow=False)):
                 same += 1
                 continue
             new += 1
             if not a.dry:
                 dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(src, dst)
+                if body:
+                    dst.write_bytes(body)
+                else:
+                    shutil.copyfile(src, dst)
     print(f"put {new}, unchanged {same}, left out (redo) {skipped}, not drawn {missing}" + (" (dry)" if a.dry else ""))
 
 

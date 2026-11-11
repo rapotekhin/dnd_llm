@@ -4020,8 +4020,8 @@
    "id": "goodberry",
    "kind": "spells",
    "name": "Волшебные ягоды",
-   "tags": "berry, green, glowing, plus sign",
-   "sentence": "A single round green berry with a soft glow and a tiny white plus sign on its front.",
+   "tags": "berries, cluster, big, green leaves, glowing, close-up",
+   "sentence": "A big cluster of five round glowing green berries on a short sprig with two leaves, filling the whole square.",
    "key": ""
   },
   {
@@ -7435,9 +7435,9 @@
   {
    "id": "sheet",
    "kind": "ui",
-   "name": "character sheet: a scroll with a portrait",
-   "tags": "scroll, parchment, wax seal, shield emblem, brown, front view",
-   "sentence": "A single beige parchment scroll with a red wax seal and a small blue shield emblem on its front.",
+   "name": "the character: a bust of a hooded adventurer",
+   "tags": "silhouette, bust, head and shoulders, hood, blue, gold outline, front view",
+   "sentence": "A single head-and-shoulders bust of a hooded adventurer seen from the front, a simple blue silhouette with a gold outline.",
    "key": ""
   },
   {
@@ -7459,9 +7459,9 @@
   {
    "id": "map",
    "kind": "ui",
-   "name": "a folded map",
-   "tags": "map, parchment, folded, brown, red line, top view",
-   "sentence": "A single folded beige parchment map with a few red route lines and a dark brown edge, seen from above.",
+   "name": "a compass",
+   "tags": "compass, brass, compass rose, red needle, round, top view",
+   "sentence": "A single round brass compass seen from above, a red needle pointing north over a pale compass rose.",
    "key": ""
   },
   {
@@ -7867,9 +7867,33 @@
   {
    "id": "nonlethal",
    "kind": "ui",
-   "name": "a fist with a feather",
-   "tags": "club, feather, white, grey, diagonal",
-   "sentence": "A single grey club with a white feather tied to its handle, lying diagonally.",
+   "name": "a club wrapped in cloth with stars over it",
+   "tags": "club, big, white cloth, bandage, wrapped, yellow stars, close-up",
+   "sentence": "A big wooden club wrapped in white bandage cloth, lying diagonally across the whole square, three yellow stars above it.",
+   "key": ""
+  },
+  {
+   "id": "skills",
+   "kind": "ui",
+   "name": "a twenty-sided die",
+   "tags": "d20, icosahedron, polyhedral die, triangular faces, number, blue, gem",
+   "sentence": "A single blue icosahedron die with many small triangular faces like a cut gem, the number 20 on its front face.",
+   "key": ""
+  },
+  {
+   "id": "details",
+   "kind": "ui",
+   "name": "an upright sheet with lines of text",
+   "tags": "paper, sheet, written, lines of text, list, upright, red ribbon",
+   "sentence": "A single upright sheet of pale paper covered with neat rows of dark handwritten lines, a small red ribbon at its top corner.",
+   "key": ""
+  },
+  {
+   "id": "empty_hand",
+   "kind": "ui",
+   "name": "an open palm",
+   "tags": "open hand, palm, bare hand, fingers, front view",
+   "sentence": "A single bare open hand seen palm forward, fingers slightly spread, skin colored.",
    "key": ""
   },
   {

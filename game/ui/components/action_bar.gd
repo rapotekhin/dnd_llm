@@ -609,7 +609,7 @@ func _lay_hands() -> void:
 			_detach(cell)
 		else:
 			var id := str(held.get(spec[0], ""))
-			var shown := IconSlot.make("items/" + id if not id.is_empty() else "acts/attack",
+			var shown := IconSlot.make("items/" + id if not id.is_empty() else IconRules.EMPTY_HAND,
 				ItemRules.display_name(Catalog.data["items"], s.items, id) if not id.is_empty() else tr("SLOT_EMPTY_HAND"), CELL + 8)
 			shown.name = spec[2]
 			if not id.is_empty():

@@ -1319,7 +1319,7 @@ func _icon_of(node_name: String, text: String) -> Array:
 			var item := str({"main": held.get("main_hand", ""), "frenzy": held.get("main_hand", ""), "off": held.get("off_hand", ""),
 				"stowed": CharacterRules.stowed(c).get("main_hand", "")}.get(rest, ""))
 			if item.is_empty():
-				return ["acts/attack", short.get_slice(": ", 1) if short.contains(": ") else short]
+				return [IconRules.EMPTY_HAND, short.get_slice(": ", 1) if short.contains(": ") else short]
 			return ["items/" + item, ItemRules.display_name(data["items"], s.items, item)]
 		"Cast", "Feat":
 			if data["spells"].has(rest):

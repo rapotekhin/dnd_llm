@@ -32,3 +32,4 @@ __pycache__
 # Backend runtime data: budget counter, generated item library
 /llm_server/var/
 tools/anima/out/
+tools/anima/out_*/

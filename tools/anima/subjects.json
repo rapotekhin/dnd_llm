@@ -3877,8 +3877,8 @@
  },
  "portraits/monsters/centaur": {
   "person": false,
-  "sentence": "A centaur with the lower body of a brown horse and a human torso, long hair, a bow and a pike at the shoulder.",
-  "tags": "no humans, centaur, brown horse body, human torso, long hair, bow, pike"
+  "sentence": "A centaur seen from the chest up: a wild man's face with long hair and a weathered look, a bow and a quiver of arrows at his shoulder.",
+  "tags": "solo, centaur, 1boy, long hair, bare shoulders, leather bracer, bow, quiver, upper body"
  },
  "portraits/monsters/cockatrice": {
   "person": false,
@@ -4087,8 +4087,8 @@
  },
  "portraits/monsters/giant_wolf_spider": {
   "person": false,
-  "sentence": "A large brown wolf spider with a striped hairy body, eight gleaming eyes and prominent fangs.",
-  "tags": "no humans, giant wolf spider, brown carapace, eight eyes, hairy legs, fangs, stripes"
+  "sentence": "A giant brown hunting spider with eight hairy legs, a striped abdomen, a cluster of eight gleaming eyes and prominent fangs.",
+  "tags": "no humans, giant spider, arachnid, eight legs, eight eyes, brown hairy body, fangs, striped abdomen"
  },
  "portraits/monsters/gnoll": {
   "person": false,
@@ -4122,8 +4122,8 @@
  },
  "portraits/monsters/harpy": {
   "person": false,
-  "sentence": "A harpy with a gaunt feathered face, wild dark hair, sharp teeth, brown wings and clawed hands gripping a wooden club.",
-  "tags": "no humans, harpy, feathered wings, bird legs, claws, sharp teeth, long hair, club"
+  "sentence": "A harpy: a gaunt hag-like woman's face with wild dark hair and sharp teeth, wings of brown feathers for arms and ragged feathers covering her body.",
+  "tags": "solo, harpy, 1girl, hag, gaunt face, wild dark hair, sharp teeth, feathered wings, ragged feathers, claws"
  },
  "portraits/monsters/hawk": {
   "person": false,
@@ -4177,8 +4177,8 @@
  },
  "portraits/monsters/lizard": {
   "person": false,
-  "sentence": "A tiny green lizard with smooth scales, a rounded head, bright yellow eyes and a flickering forked tongue.",
-  "tags": "no humans, lizard, green scales, yellow eyes, long tail, claws, forked tongue"
+  "sentence": "A small green lizard standing on four clawed legs, with smooth scales, a rounded head and bright yellow eyes.",
+  "tags": "no humans, lizard, gecko, four legs, green scales, yellow eyes, claws, long tail"
  },
  "portraits/monsters/mage": {
   "person": true,
@@ -4307,8 +4307,8 @@
  },
  "portraits/monsters/satyr": {
   "person": false,
-  "sentence": "A satyr with a lean upper body, pointed ears, small curved goat horns and brown fur at the shoulders, wearing leather armor with a shortsword at the hip.",
-  "tags": "no humans, satyr, goat horns, pointed ears, brown fur, leather armor, shortsword, shortbow"
+  "sentence": "A satyr: a man's face with a short beard and curly brown hair, small curved goat horns on the brow and pointed goat ears, wearing leather armor.",
+  "tags": "solo, satyr, 1boy, human face, short beard, curly hair, goat horns, pointed goat ears, leather armor"
  },
  "portraits/monsters/scorpion": {
   "person": false,
@@ -4337,8 +4337,8 @@
  },
  "portraits/monsters/sprite": {
   "person": false,
-  "sentence": "A tiny sprite with pointed ears, green skin, shimmering dragonfly wings and a mischievous grin, wearing leather armor with a longsword at its hip.",
-  "tags": "no humans, sprite, pointed ears, green skin, dragonfly wings, leather armor, longsword, shortbow"
+  "sentence": "A tiny fey sprite with an elfin face, pointed ears, messy hair and pale skin, shimmering dragonfly wings behind it, wearing armor of leaves.",
+  "tags": "solo, sprite, fairy, tiny fey, elfin face, pointed ears, messy hair, pale skin, dragonfly wings, leaf armor"
  },
  "portraits/monsters/spy": {
   "person": true,
@@ -4847,8 +4847,8 @@
  },
  "spells/goodberry": {
   "green": true,
-  "sentence": "A single round green berry with a soft glow and a tiny white plus sign on its front.",
-  "tags": "berry, green, glowing, plus sign"
+  "sentence": "A big cluster of five round glowing green berries on a short sprig with two leaves, filling the whole square.",
+  "tags": "berries, cluster, big, green leaves, glowing, close-up"
  },
  "spells/grease": {
   "green": false,
@@ -5532,6 +5532,11 @@
   "sentence": "A single brown leather satchel with a hammer handle and a white quill sticking out of it, a gold coin in front.",
   "tags": "satchel, hammer, quill, gold coin, brown leather"
  },
+ "ui/details": {
+  "dark": false,
+  "sentence": "A single upright sheet of pale paper covered with neat rows of dark handwritten lines, a small red ribbon at its top corner.",
+  "tags": "paper, sheet, written, lines of text, list, upright, red ribbon"
+ },
  "ui/drink": {
   "dark": false,
   "sentence": "A single brown wooden mug with a curved handle, seen from the front, filled with pale foam.",
@@ -5541,6 +5546,11 @@
   "dark": false,
   "sentence": "A single round brown bowl filled with pale soup, with a silver spoon resting inside.",
   "tags": "bowl, spoon, soup, brown, white, front view"
+ },
+ "ui/empty_hand": {
+  "dark": false,
+  "sentence": "A single bare open hand seen palm forward, fingers slightly spread, skin colored.",
+  "tags": "open hand, palm, bare hand, fingers, front view"
  },
  "ui/end_turn": {
   "dark": false,
@@ -5614,8 +5624,8 @@
  },
  "ui/map": {
   "dark": false,
-  "sentence": "A single folded beige parchment map with a few red route lines and a dark brown edge, seen from above.",
-  "tags": "map, parchment, folded, brown, red line, top view"
+  "sentence": "A single round brass compass seen from above, a red needle pointing north over a pale compass rose.",
+  "tags": "compass, brass, compass rose, red needle, round, top view"
  },
  "ui/menu": {
   "dark": false,
@@ -5624,8 +5634,8 @@
  },
  "ui/nonlethal": {
   "dark": false,
-  "sentence": "A single grey club with a white feather tied to its handle, lying diagonally.",
-  "tags": "club, feather, white, grey, diagonal"
+  "sentence": "A big wooden club wrapped in white bandage cloth, lying diagonally across the whole square, three yellow stars above it.",
+  "tags": "club, big, white cloth, bandage, wrapped, yellow stars, close-up"
  },
  "ui/office": {
   "dark": false,
@@ -5679,13 +5689,18 @@
  },
  "ui/sheet": {
   "dark": false,
-  "sentence": "A single beige parchment scroll with a red wax seal and a small blue shield emblem on its front.",
-  "tags": "scroll, parchment, wax seal, shield emblem, brown, front view"
+  "sentence": "A single head-and-shoulders bust of a hooded adventurer seen from the front, a simple blue silhouette with a gold outline.",
+  "tags": "silhouette, bust, head and shoulders, hood, blue, gold outline, front view"
  },
  "ui/shop": {
   "dark": false,
   "sentence": "A single small wooden market stall with a red-and-white striped awning, seen from the front.",
   "tags": "market stall, awning, wooden, red, white, front view"
+ },
+ "ui/skills": {
+  "dark": false,
+  "sentence": "A single blue icosahedron die with many small triangular faces like a cut gem, the number 20 on its front face.",
+  "tags": "d20, icosahedron, polyhedral die, triangular faces, number, blue, gem"
  },
  "ui/sleep": {
   "dark": false,

@@ -473,7 +473,7 @@
    "looks": [
     {
      "tags": "1boy, solo, male child, child, portrait, upper body, looking at viewer, dwarf, stocky, broad face, brown hair, long hair, ponytail, blue eyes, brown skin, black hooded cape",
-     "sentence": "A dwarf boy of about ten, with brown hair long and tied in a ponytail, blue eyes and brown skin, wearing a black hooded cape. He has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf boy of about ten, with brown hair long and tied in a ponytail, blue eyes and brown skin, wearing a black hooded cape. He has a round chubby face, a button nose and rosy cheeks."
     }
    ],
    "neg_drop": [
@@ -496,23 +496,23 @@
    "looks": [
     {
      "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, black hair, medium hair, blue eyes, fair skin, grey hooded cloak",
-     "sentence": "A dwarf teenage boy of about sixteen, with black hair falling to the shoulders, blue eyes and fair skin, wearing a grey hooded cloak. He has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage boy of about sixteen, with black hair falling to the shoulders, blue eyes and fair skin, wearing a grey hooded cloak. He has a round chubby face, a button nose and rosy cheeks."
     },
     {
      "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, brown hair, braid, grey eyes, ruddy skin, dark red leather jerkin",
-     "sentence": "A dwarf teenage boy of about sixteen, with brown hair in a braid, grey eyes and ruddy skin, wearing a dark red leather jerkin. He has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage boy of about sixteen, with brown hair in a braid, grey eyes and ruddy skin, wearing a dark red leather jerkin. He has a round chubby face, a button nose and rosy cheeks."
     },
     {
      "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, red hair, long hair, ponytail, brown eyes, tan skin, dark green travel cloak with a scarf",
-     "sentence": "A dwarf teenage boy of about sixteen, with red hair long and tied in a ponytail, brown eyes and tan skin, wearing a dark green travel cloak with a scarf. He has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage boy of about sixteen, with red hair long and tied in a ponytail, brown eyes and tan skin, wearing a dark green travel cloak with a scarf. He has a round chubby face, a button nose and rosy cheeks."
     },
     {
      "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, blonde hair, short hair, curly hair, green eyes, brown skin, dark blue embroidered tunic",
-     "sentence": "A dwarf teenage boy of about sixteen, with blonde hair short and curly, green eyes and brown skin, wearing a dark blue embroidered tunic. He has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage boy of about sixteen, with blonde hair short and curly, green eyes and brown skin, wearing a dark blue embroidered tunic. He has a round chubby face, a button nose and rosy cheeks."
     },
     {
      "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, auburn hair, messy hair, hazel eyes, fair skin, black fur-trimmed coat",
-     "sentence": "A dwarf teenage boy of about sixteen, with auburn hair messy and tousled, hazel eyes and fair skin, wearing a black fur-trimmed coat. He has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage boy of about sixteen, with auburn hair messy and tousled, hazel eyes and fair skin, wearing a black fur-trimmed coat. He has a round chubby face, a button nose and rosy cheeks."
     }
    ],
    "neg_drop": [],
@@ -704,7 +704,7 @@
    "looks": [
     {
      "tags": "1girl, solo, female child, child, portrait, upper body, looking at viewer, dwarf, stocky, broad face, brown hair, ponytail, hazel eyes, ruddy skin, ochre hooded cape",
-     "sentence": "A dwarf girl of about ten, with brown hair tied in a ponytail, hazel eyes and ruddy skin, wearing an ochre hooded cape. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf girl of about ten, with brown hair tied in a ponytail, hazel eyes and ruddy skin, wearing an ochre hooded cape. She has a round chubby face, a button nose and rosy cheeks."
     }
    ],
    "neg_drop": [
@@ -727,23 +727,23 @@
    "looks": [
     {
      "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, black hair, single braid, brown eyes, fair skin, beige leather jerkin",
-     "sentence": "A dwarf teenage girl of about sixteen, with black hair in a single braid, brown eyes and fair skin, wearing a beige leather jerkin. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage girl of about sixteen, with black hair in a single braid, brown eyes and fair skin, wearing a beige leather jerkin. She has a round chubby face, a button nose and rosy cheeks."
     },
     {
      "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, blonde hair, short hair, green eyes, brown skin, dark blue vest over a linen shirt",
-     "sentence": "A dwarf teenage girl of about sixteen, with blonde hair cut short, green eyes and brown skin, wearing a dark blue vest over a linen shirt. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage girl of about sixteen, with blonde hair cut short, green eyes and brown skin, wearing a dark blue vest over a linen shirt. She has a round chubby face, a button nose and rosy cheeks."
     },
     {
      "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, auburn hair, hair bun, hazel eyes, tan skin, ochre hooded cloak",
-     "sentence": "A dwarf teenage girl of about sixteen, with auburn hair gathered in a bun, hazel eyes and tan skin, wearing an ochre hooded cloak. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage girl of about sixteen, with auburn hair gathered in a bun, hazel eyes and tan skin, wearing an ochre hooded cloak. She has a round chubby face, a button nose and rosy cheeks."
     },
     {
      "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, brown hair, braid, hair over shoulder, blue eyes, ruddy skin, dark red fur-trimmed coat",
-     "sentence": "A dwarf teenage girl of about sixteen, with brown hair in a long braid over the shoulder, blue eyes and ruddy skin, wearing a dark red fur-trimmed coat. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage girl of about sixteen, with brown hair in a long braid over the shoulder, blue eyes and ruddy skin, wearing a dark red fur-trimmed coat. She has a round chubby face, a button nose and rosy cheeks."
     },
     {
      "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dwarf, stocky, broad face, red hair, twin braids, grey eyes, fair skin, dark green travel cloak with a scarf",
-     "sentence": "A dwarf teenage girl of about sixteen, with red hair in twin braids, grey eyes and fair skin, wearing a dark green travel cloak with a scarf. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf teenage girl of about sixteen, with red hair in twin braids, grey eyes and fair skin, wearing a dark green travel cloak with a scarf. She has a round chubby face, a button nose and rosy cheeks."
     }
    ],
    "neg_drop": [],
@@ -764,23 +764,23 @@
    "looks": [
     {
      "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, red hair, single braid, hazel eyes, brown skin, brown vest over a linen shirt",
-     "sentence": "A dwarf young woman in her early twenties, with red hair in a single braid, hazel eyes and brown skin, wearing a brown vest over a linen shirt. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf young woman in her early twenties, with red hair in a single braid, hazel eyes and brown skin, wearing a brown vest over a linen shirt. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, black hair, ponytail, green eyes, tan skin, dark green leather armor",
-     "sentence": "A dwarf young woman in her early twenties, with black hair tied in a ponytail, green eyes and tan skin, wearing dark green leather armor. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf young woman in her early twenties, with black hair tied in a ponytail, green eyes and tan skin, wearing dark green leather armor. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, blonde hair, twin braids, blue eyes, fair skin, beige simple dress with a shawl",
-     "sentence": "A dwarf young woman in her early twenties, with blonde hair in twin braids, blue eyes and fair skin, wearing a beige simple dress with a shawl. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf young woman in her early twenties, with blonde hair in twin braids, blue eyes and fair skin, wearing a beige simple dress with a shawl. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, auburn hair, short hair, brown eyes, ruddy skin, black wool tunic",
-     "sentence": "A dwarf young woman in her early twenties, with auburn hair cut short, brown eyes and ruddy skin, wearing a black wool tunic. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf young woman in her early twenties, with auburn hair cut short, brown eyes and ruddy skin, wearing a black wool tunic. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, brown hair, hair bun, grey eyes, brown skin, dark blue travel cloak with a scarf",
-     "sentence": "A dwarf young woman in her early twenties, with brown hair gathered in a bun, grey eyes and brown skin, wearing a dark blue travel cloak with a scarf. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf young woman in her early twenties, with brown hair gathered in a bun, grey eyes and brown skin, wearing a dark blue travel cloak with a scarf. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     }
    ]
   },
@@ -799,23 +799,23 @@
    "looks": [
     {
      "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, blonde hair, ponytail, green eyes, brown skin, ochre simple dress with a shawl",
-     "sentence": "A dwarf grown woman in her thirties, with blonde hair tied in a ponytail, green eyes and brown skin, wearing an ochre simple dress with a shawl. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf grown woman in her thirties, with blonde hair tied in a ponytail, green eyes and brown skin, wearing an ochre simple dress with a shawl. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, red hair, hair bun, hazel eyes, tan skin, brown travel cloak with a scarf",
-     "sentence": "A dwarf grown woman in her thirties, with red hair gathered in a bun, hazel eyes and tan skin, wearing a brown travel cloak with a scarf. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf grown woman in her thirties, with red hair gathered in a bun, hazel eyes and tan skin, wearing a brown travel cloak with a scarf. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, black hair, braid, hair over shoulder, blue eyes, fair skin, dark red leather armor",
-     "sentence": "A dwarf grown woman in her thirties, with black hair in a long braid over the shoulder, blue eyes and fair skin, wearing dark red leather armor. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf grown woman in her thirties, with black hair in a long braid over the shoulder, blue eyes and fair skin, wearing dark red leather armor. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, brown hair, short hair, brown eyes, ruddy skin, black wool tunic",
-     "sentence": "A dwarf grown woman in her thirties, with brown hair cut short, brown eyes and ruddy skin, wearing a black wool tunic. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf grown woman in her thirties, with brown hair cut short, brown eyes and ruddy skin, wearing a black wool tunic. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dwarf, stocky, broad face, auburn hair, wavy hair, grey eyes, brown skin, grey padded gambeson",
-     "sentence": "A dwarf grown woman in her thirties, with auburn hair long and wavy, grey eyes and brown skin, wearing a grey padded gambeson. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf grown woman in her thirties, with auburn hair long and wavy, grey eyes and brown skin, wearing a grey padded gambeson. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     }
    ]
   },
@@ -834,23 +834,23 @@
    "looks": [
     {
      "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dwarf, stocky, broad face, blonde hair, hair bun, hazel eyes, ruddy skin, dark blue wool tunic",
-     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with blonde hair gathered in a bun, hazel eyes and ruddy skin, wearing a dark blue wool tunic. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with blonde hair gathered in a bun, hazel eyes and ruddy skin, wearing a dark blue wool tunic. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dwarf, stocky, broad face, black hair, braid, hair over shoulder, blue eyes, brown skin, dark red high-collared coat",
-     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with black hair in a long braid over the shoulder, blue eyes and brown skin, wearing a dark red high-collared coat. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with black hair in a long braid over the shoulder, blue eyes and brown skin, wearing a dark red high-collared coat. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dwarf, stocky, broad face, brown hair, long hair, green eyes, fair skin, black fur-trimmed coat",
-     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with brown hair long and loose, green eyes and fair skin, wearing a black fur-trimmed coat. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with brown hair long and loose, green eyes and fair skin, wearing a black fur-trimmed coat. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dwarf, stocky, broad face, auburn hair, ponytail, brown eyes, tan skin, grey padded gambeson",
-     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with auburn hair tied in a ponytail, brown eyes and tan skin, wearing a grey padded gambeson. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with auburn hair tied in a ponytail, brown eyes and tan skin, wearing a grey padded gambeson. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dwarf, stocky, broad face, red hair, wavy hair, grey eyes, ruddy skin, beige travel cloak with a scarf",
-     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with red hair long and wavy, grey eyes and ruddy skin, wearing a beige travel cloak with a scarf. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf middle-aged woman in her late forties, the first lines on her face, with red hair long and wavy, grey eyes and ruddy skin, wearing a beige travel cloak with a scarf. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     }
    ]
   },
@@ -869,23 +869,23 @@
    "looks": [
     {
      "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dwarf, stocky, broad face, grey hair, single braid, brown eyes, brown skin, black simple dress with a shawl",
-     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair in a single braid, brown eyes and brown skin, wearing a black simple dress with a shawl. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair in a single braid, brown eyes and brown skin, wearing a black simple dress with a shawl. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dwarf, stocky, broad face, grey hair, long hair, blue eyes, ruddy skin, brown laced bodice over a linen blouse",
-     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair long and loose, blue eyes and ruddy skin, wearing a brown laced bodice over a linen blouse. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair long and loose, blue eyes and ruddy skin, wearing a brown laced bodice over a linen blouse. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dwarf, stocky, broad face, grey hair, hair bun, grey eyes, fair skin, grey embroidered tunic",
-     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair gathered in a bun, grey eyes and fair skin, wearing a grey embroidered tunic. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair gathered in a bun, grey eyes and fair skin, wearing a grey embroidered tunic. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dwarf, stocky, broad face, grey hair, twin braids, hazel eyes, tan skin, dark green wool tunic",
-     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair in twin braids, hazel eyes and tan skin, wearing a dark green wool tunic. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair in twin braids, hazel eyes and tan skin, wearing a dark green wool tunic. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dwarf, stocky, broad face, grey hair, short hair, green eyes, brown skin, ochre hooded cloak",
-     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair cut short, green eyes and brown skin, wearing an ochre hooded cloak. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf elderly woman in her sixties, her face lined, with grey hair cut short, green eyes and brown skin, wearing an ochre hooded cloak. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     }
    ]
   },
@@ -904,23 +904,23 @@
    "looks": [
     {
      "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dwarf, stocky, broad face, white hair, ponytail, hazel eyes, fair skin, ochre wool tunic",
-     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair tied in a ponytail, hazel eyes and fair skin, wearing an ochre wool tunic. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair tied in a ponytail, hazel eyes and fair skin, wearing an ochre wool tunic. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dwarf, stocky, broad face, white hair, braid, hair over shoulder, brown eyes, brown skin, dark blue leather armor",
-     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair in a long braid over the shoulder, brown eyes and brown skin, wearing dark blue leather armor. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair in a long braid over the shoulder, brown eyes and brown skin, wearing dark blue leather armor. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dwarf, stocky, broad face, white hair, wavy hair, green eyes, tan skin, beige padded gambeson",
-     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair long and wavy, green eyes and tan skin, wearing a beige padded gambeson. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair long and wavy, green eyes and tan skin, wearing a beige padded gambeson. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dwarf, stocky, broad face, white hair, hair bun, blue eyes, ruddy skin, grey fur-trimmed coat",
-     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair gathered in a bun, blue eyes and ruddy skin, wearing a grey fur-trimmed coat. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair gathered in a bun, blue eyes and ruddy skin, wearing a grey fur-trimmed coat. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     },
     {
      "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dwarf, stocky, broad face, white hair, short hair, grey eyes, fair skin, dark green simple dress with a shawl",
-     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair cut short, grey eyes and fair skin, wearing a dark green simple dress with a shawl. She has a broad weathered face, a strong nose and a thick neck."
+     "sentence": "A dwarf very old woman in her eighties, her face deeply wrinkled, with white hair cut short, grey eyes and fair skin, wearing a dark green simple dress with a shawl. She has a broad face with soft feminine features, rosy cheeks and a strong nose."
     }
    ]
   },
@@ -951,7 +951,7 @@
    "seeds": [
     11,
     22,
-    33,
+    301,
     44,
     55
    ],
@@ -989,7 +989,7 @@
     11,
     22,
     33,
-    44,
+    401,
     55
    ],
    "looks": [
@@ -1912,7 +1912,7 @@
    "seeds": [
     11,
     22,
-    33,
+    301,
     44,
     55
    ],
@@ -3702,7 +3702,7 @@
    "style": "portrait",
    "name": "Тифлинг, ребёнок",
    "seeds": [
-    11
+    101
    ],
    "looks": [
     {
@@ -4645,8 +4645,8 @@
     44,
     55
    ],
-   "tags": "solo, portrait, looking at viewer, no humans, centaur, brown horse body, human torso, long hair, bow, pike",
-   "sentence": "A centaur with the lower body of a brown horse and a human torso, long hair, a bow and a pike at the shoulder."
+   "tags": "solo, portrait, looking at viewer, solo, centaur, 1boy, long hair, bare shoulders, leather bracer, bow, quiver, upper body",
+   "sentence": "A centaur seen from the chest up: a wild man's face with long hair and a weathered look, a bow and a quiver of arrows at his shoulder."
   },
   {
    "id": "cockatrice",
@@ -5276,9 +5276,9 @@
    "seeds": [
     11,
     22,
-    33,
+    301,
     44,
-    55
+    501
    ],
    "tags": "solo, portrait, looking at viewer, no humans, giant scorpion, black carapace, pincers, stinger, segmented tail, yellow eyes",
    "sentence": "A massive black scorpion with a glossy segmented carapace, two heavy pincers raised and a curved stinger above its flat head."
@@ -5355,8 +5355,8 @@
     44,
     55
    ],
-   "tags": "solo, portrait, looking at viewer, no humans, giant wolf spider, brown carapace, eight eyes, hairy legs, fangs, stripes",
-   "sentence": "A large brown wolf spider with a striped hairy body, eight gleaming eyes and prominent fangs."
+   "tags": "solo, portrait, looking at viewer, no humans, giant spider, arachnid, eight legs, eight eyes, brown hairy body, fangs, striped abdomen",
+   "sentence": "A giant brown hunting spider with eight hairy legs, a striped abdomen, a cluster of eight gleaming eyes and prominent fangs."
   },
   {
    "id": "gnoll",
@@ -5480,8 +5480,8 @@
     44,
     55
    ],
-   "tags": "solo, portrait, looking at viewer, no humans, harpy, feathered wings, bird legs, claws, sharp teeth, long hair, club",
-   "sentence": "A harpy with a gaunt feathered face, wild dark hair, sharp teeth, brown wings and clawed hands gripping a wooden club."
+   "tags": "solo, portrait, looking at viewer, solo, harpy, 1girl, hag, gaunt face, wild dark hair, sharp teeth, feathered wings, ragged feathers, claws",
+   "sentence": "A harpy: a gaunt hag-like woman's face with wild dark hair and sharp teeth, wings of brown feathers for arms and ragged feathers covering her body."
   },
   {
    "id": "hawk",
@@ -5665,8 +5665,8 @@
     44,
     55
    ],
-   "tags": "solo, portrait, looking at viewer, no humans, lizard, green scales, yellow eyes, long tail, claws, forked tongue",
-   "sentence": "A tiny green lizard with smooth scales, a rounded head, bright yellow eyes and a flickering forked tongue."
+   "tags": "solo, portrait, looking at viewer, no humans, lizard, gecko, four legs, green scales, yellow eyes, claws, long tail",
+   "sentence": "A small green lizard standing on four clawed legs, with smooth scales, a rounded head and bright yellow eyes."
   },
   {
    "id": "mage",
@@ -6115,8 +6115,8 @@
     44,
     55
    ],
-   "tags": "solo, portrait, looking at viewer, no humans, satyr, goat horns, pointed ears, brown fur, leather armor, shortsword, shortbow",
-   "sentence": "A satyr with a lean upper body, pointed ears, small curved goat horns and brown fur at the shoulders, wearing leather armor with a shortsword at the hip."
+   "tags": "solo, portrait, looking at viewer, solo, satyr, 1boy, human face, short beard, curly hair, goat horns, pointed goat ears, leather armor",
+   "sentence": "A satyr: a man's face with a short beard and curly brown hair, small curved goat horns on the brow and pointed goat ears, wearing leather armor."
   },
   {
    "id": "scorpion",
@@ -6126,9 +6126,9 @@
    "seeds": [
     11,
     22,
-    33,
+    301,
     44,
-    55
+    501
    ],
    "tags": "solo, portrait, looking at viewer, no humans, scorpion, brown carapace, pincers, stinger, black eyes",
    "sentence": "A small brown scorpion with a glossy segmented carapace, raised pincers and a curved tail ending in a dark stinger, its body centered in the frame."
@@ -6225,8 +6225,8 @@
     44,
     55
    ],
-   "tags": "solo, portrait, looking at viewer, no humans, sprite, pointed ears, green skin, dragonfly wings, leather armor, longsword, shortbow",
-   "sentence": "A tiny sprite with pointed ears, green skin, shimmering dragonfly wings and a mischievous grin, wearing leather armor with a longsword at its hip."
+   "tags": "solo, portrait, looking at viewer, solo, sprite, fairy, tiny fey, elfin face, pointed ears, messy hair, pale skin, dragonfly wings, leaf armor",
+   "sentence": "A tiny fey sprite with an elfin face, pointed ears, messy hair and pale skin, shimmering dragonfly wings behind it, wearing armor of leaves."
   },
   {
    "id": "spy",
