@@ -142,9 +142,13 @@ def test_turn_prompt_kinds():
     assert "Действие игрока: прыгаю" in prompts.turn_prompt("exploration", "action", "прыгаю", s, None)
     assert "Мастер: Таверна шумит." in prompts.turn_prompt("exploration", "action", "x", s, None)
     npc = next(n for n in s.scene.npcs if n.npc_id == INNKEEPER)
-    deal = prompts.turn_prompt("trade", "deal", "Куплено: Кружка эля — 4 мм; итог: игрок платит торговцу 4 мм", s, npc)
-    assert "заключил сделку" in deal and "игрок платит торговцу 4 мм" in deal
-    assert "Движок уже бросил проверку: Торг удался" in prompts.turn_prompt("trade", "haggle", "Торг удался", s, npc)
+    # v0.8.4.43.12: the whole visit told once when the trade window closes — its deals, a haggle and the total
+    visit = "Куплено: Кружка эля — 4 мм; итог: игрок платит торговцу 4 мм\nТорг: Торг удался\nВсего за торговлю: игрок платит торговцу 9 мм"
+    deal = prompts.turn_prompt("social", "deal", visit, s, npc)
+    assert "закончил торговлю" in deal and "игрок платит торговцу 4 мм" in deal and "Торг удался" in deal and "«Всего»" in deal
+    gone = prompts.turn_prompt("exploration", "resume", "Перед уходом герой закончил торговлю, торговец — Бруно; движок уже всё провёл:\n" + visit, s, None)
+    assert "торговец — Бруно" in gone and "как торговец закончил с героем эти сделки" in gone
+    assert "как торговец закончил" not in prompts.turn_prompt("exploration", "resume", "", s, None)
 
 
 def test_quests_in_the_prompt_and_the_quest_turn():

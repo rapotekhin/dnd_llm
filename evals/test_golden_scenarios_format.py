@@ -16,8 +16,9 @@ yaml = pytest.importorskip("yaml")
 SCENARIOS_FILE = Path(__file__).resolve().parent / "golden" / "scenarios.yaml"
 
 MODES = {"exploration", "social", "trade", "combat"}
-KINDS = {"enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift", "quest_act", "letter", "prepare"}
-NO_INPUT_KINDS = {"enter", "resume", "rest", "downed"}  # deal / haggle / quest carry the engine facts in input
+KINDS = {"enter", "resume", "action", "rest", "deal", "quest", "ability", "downed", "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift", "quest_act", "letter", "prepare"}
+NO_INPUT_KINDS = {"enter", "resume", "rest", "downed"}  # deal / quest carry the engine facts in input
+SOME_INPUT_KINDS = {"resume"}  # v0.8.4.43.12: leaving a trader from its window carries the visit not told yet
 DC_TIERS = {"very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"}
 EFFECT_KINDS = {"grant:cure", "approach", "create:way", "guise", "make", "vow", "create:god", "letter_reply", "rumor", "weather", "create:festival", "create:wilds", "create:beast", "move_item:world>hero", "move_item:hero>world", "coins", "damage", "heal", "condition", "cast", "use:feature", "use:item", "start_combat", "advance_time", "furnish", "move_item:room>hero", "prop_state",
                 "quest_update", "flag", "xp", "shift:attitude", "advance_time", "move", "note", "equip", "crime:known", "crime:release", "grant:discount", "grant:favor", "grant:quest", "grant:secret", "shift:reputation", "move_item:container>hero", "move_item:hero>container", "open:container", "move_item:hero>room", "fill", "create:npc", "create:place", "grant:follow", "create:quest", "quest_act", "goal:assess", "goal:hint", "owner", "open:door", "disease", "create:recipe", "create:job", "create:property", "create:bank", "create:service", "create:course", "shift:bond", "create:fence", "create:heist", "create:org", "grant:permit", "create:stock", "create:upgrade", "move_item:world>npc", "move_item:npc>world", "move_item:world>container", "move_item:container>world", "create:contest"}
@@ -60,7 +61,8 @@ def test_scenarios_are_well_formed(data: dict) -> None:
         assert s["title"] and s["category"], sid
         assert s["mode"] in MODES, sid
         assert s["kind"] in KINDS, sid
-        assert (s["input"] is None) == (s["kind"] in NO_INPUT_KINDS), f"{sid}: input for action, deal, haggle only"
+        if s["kind"] not in SOME_INPUT_KINDS:
+            assert (s["input"] is None) == (s["kind"] in NO_INPUT_KINDS), f"{sid}: input for action, deal, quest only"
         assert raw.get("expect") or raw.get("rubric"), f"{sid}: nothing to evaluate"
 
         expect = raw.get("expect", {})

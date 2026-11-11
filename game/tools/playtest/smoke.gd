@@ -131,27 +131,35 @@ func _trade(gs: Node, game: Control) -> void:
 	var total: Label = find(panel, "TradeTotal")
 	step("cart total", total.text.contains("8 мм"), total.text)
 	await shot("trade_cart")
+	var turns: int = gs.session.turn_counter
+	var sent: Array = []  # the master's turns asked from now on: [kind, input] (a stub's turn is over before a check)
+	node("EventBus").turn_started.connect(func(_id: String) -> void: sent.append([str(gs.get("_last_kind")), str(gs.get("_last_input"))]))
 	await press(find(panel, "DealButton"))
-	step("deal turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
 	var m: Dictionary = gs.session.merchants[npc]
-	step("deal made by the engine", gs.session.character["gold_cp"] == gold - 8 and gs.session.character["inventory"].get("ale", 0) == had + 2
+	step("deal made by the engine, no master's turn (v0.8.4.43.12)", not gs.is_busy() and gs.session.turn_counter == turns
+		and gs.session.character["gold_cp"] == gold - 8 and gs.session.character["inventory"].get("ale", 0) == had + 2
 		and int(m["stock"]["ale"]) == 38, "%d → %d cp, stock %d" % [gold, gs.session.character["gold_cp"], m["stock"]["ale"]])
 	await shot("trade_deal")
 	var haggle: Button = find(panel, "HaggleButton")
 	if step("haggle button", haggle != null and not haggle.disabled, haggle.text if haggle else ""):
 		var checks := _count(gs, GameSession.KIND_CHECK)
 		await press(haggle)
-		step("haggle turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
-		step("haggle check card", _count(gs, GameSession.KIND_CHECK) == checks + 1 and haggle.disabled,
-			"haggle %d%%, failed day %d" % [m["haggle_pct"], m["haggle_failed_day"]])
+		step("haggle check card, no master's turn", _count(gs, GameSession.KIND_CHECK) == checks + 1 and haggle.disabled
+			and gs.session.turn_counter == turns, "haggle %d%%, failed day %d" % [m["haggle_pct"], m["haggle_failed_day"]])
 		await shot("trade_haggle")
-	var turns: int = gs.session.turn_counter
+	await press(find(game, "TradeToggle"))
+	var told: String = sent[0][1] if sent.size() == 1 else str(sent)
+	step("the visit told once on closing the deal panel", gs.session.mode == GameSession.MODE_SOCIAL and not panel.visible
+		and sent.size() == 1 and str(sent[0][0]) == "deal" and told.contains("Кружка эля ×2") and told.contains("Торг: "), told)
+	step("the trade turn", await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
+	turns = gs.session.turn_counter
 	var options: Array = gs.session.options.duplicate()
 	await press(find(game, "TradeToggle"))
-	step("to talk without a turn (B33)", gs.session.mode == GameSession.MODE_SOCIAL and not panel.visible
+	step("back to the deal panel without a turn", gs.session.mode == GameSession.MODE_TRADE and panel.visible and gs.session.turn_counter == turns)
+	await press(find(game, "TradeToggle"))
+	step("nothing done — to talk without a turn (B33)", gs.session.mode == GameSession.MODE_SOCIAL and not panel.visible
 		and gs.session.turn_counter == turns and gs.session.options == options)
 	await press(find(game, "TradeToggle"))
-	step("back to the deal panel", gs.session.mode == GameSession.MODE_TRADE and panel.visible and gs.session.turn_counter == turns)
 	await press(find(game, "LeaveButton"))
 	step("left the merchant", gs.session.mode == GameSession.MODE_EXPLORATION and await wait_until(func() -> bool: return not gs.is_busy(), 30.0))
 	step("haggle ends with the visit", int(m["haggle_pct"]) == 0)

@@ -87,14 +87,16 @@ func _trade(gs: Node) -> void:
 	await press(find(panel, "Buy_bread"))
 	await press(find(panel, "Buy_bread"))
 	await press(find(panel, "DealButton"))
-	step("deal narration", await _turn_done(gs) and gs.session.character["gold_cp"] < gold)
+	step("the deal made by the engine at once, the master waits for the close (v0.8.4.43.12)", not gs.is_busy() and gs.session.character["gold_cp"] < gold)
 	await shot("trade_deal")
 	await _say(gs, "Слушай, я ведь у тебя каждый вечер. Сбавь цену на пайки, а?")
 	var m: Dictionary = gs.session.merchants[INNKEEPER]
 	step("info: haggle in words", true, "pct %d, failed day %d, result %s" % [m["haggle_pct"], m["haggle_failed_day"], m["haggle_result"]])
 	await shot("trade_haggle")
 	await press(find(screen(), "LeaveButton"))
-	step("left the merchant", gs.session.mode == GameSession.MODE_EXPLORATION and await _turn_done(gs))
+	step("left the merchant, the visit told with it", gs.session.mode == GameSession.MODE_EXPLORATION and str(gs._last_input).contains("закончил торговлю")
+		and await _turn_done(gs), str(gs._last_input).left(200))
+	await shot("trade_told")
 
 
 func _turn_done(gs: Node) -> bool:

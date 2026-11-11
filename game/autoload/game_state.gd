@@ -119,10 +119,10 @@ func long_rest(supplies: Dictionary = {}, prepared: Array = []) -> String:
 	return ""
 
 
-## Trade panel (roadmap v0.5.3): the engine checks both purses and stocks and makes the deal at once, then the
-## master narrates it (kind=deal, the deal lines as input). Returns the quote; its `error` is "" on success.
+## Trade panel (roadmap v0.5.3): the engine checks both purses and stocks and makes the deal at once; the master tells
+## the visit once, when the window closes (v0.8.4.43.12, the author: «как в бою»). Returns the quote; `error` "" on success.
 func deal(cart: Dictionary) -> Dictionary:
-	if session == null or is_busy() or not Backend.is_ready() or session.mode != GameSession.MODE_TRADE:
+	if session == null or is_busy() or session.mode != GameSession.MODE_TRADE:
 		return {"error": "TRADE_ERR_BUSY", "args": {}}
 	var q := TradeRules.quote(session, Catalog.data, session.npc_id, cart)
 	if not str(q["error"]).is_empty():
@@ -131,28 +131,26 @@ func deal(cart: Dictionary) -> Dictionary:
 	_refresh()
 	_add(GameSession.effect_entry(lines))
 	_log("Сделка: " + ", ".join(lines))
+	TradeRules.keep(session, session.npc_id, TradeRules.deal_note(lines, int(q["net_cp"])), int(q["net_cp"]), true)
 	EventBus.state_changed.emit()
-	_request("deal", TradeRules.deal_note(lines, int(q["net_cp"])))
 	return q
 
 
-## Haggle button: a Persuasion or Deception check (the better one) against the DC of the merchant's attitude;
-## the master plays the merchant's reaction (kind=haggle). "" on success or a localization key.
+## Haggle button: a Persuasion or Deception check (the better one) against the DC of the merchant's attitude; its card
+## goes to the chat, the master tells it with the visit (v0.8.4.43.12). "" on success or a localization key.
 func haggle() -> String:
-	if session == null or is_busy() or not Backend.is_ready() or session.mode != GameSession.MODE_TRADE:
+	if session == null or is_busy() or session.mode != GameSession.MODE_TRADE:
 		return "TRADE_ERR_BUSY"
 	var why := TradeRules.can_haggle(session, Catalog.data, session.npc_id)
 	if not why.is_empty():
 		return why
 	var params := {"skill": TradeRules.best_skill(session, Catalog.data), "dc_tier": "medium", "target_id": session.npc_id}
 	var result := _haggle_check(params)
+	TradeRules.keep(session, session.npc_id, "Торг: " + str(result["note"]))
 	EventBus.state_changed.emit()
-	_request("haggle", str(result["note"]))
 	return ""
 
 
-## Switches a conversation with a trader between talk and the deal panel without a turn: the master's options
-## stay as they are (B33), the next turn's snapshot carries the new mode.
 ## Follow a quest: its step goes over the chat (v0.7.22.32, П11).
 func track_quest(quest_id: String) -> void:
 	if session == null:
@@ -161,6 +159,9 @@ func track_quest(quest_id: String) -> void:
 	EventBus.state_changed.emit()
 
 
+## Switches a conversation with a trader between talk and the deal panel: the master's options stay as they are (B33),
+## the next turn's snapshot carries the new mode. Closing the panel after deals is the master's one turn of them
+## (kind deal, v0.8.4.43.12); with nothing done — no turn.
 func set_trade(on: bool) -> bool:
 	if session == null or is_busy() or not session.in_conversation():
 		return false
@@ -171,6 +172,10 @@ func set_trade(on: bool) -> bool:
 		return false
 	session.mode = mode
 	EventBus.state_changed.emit()
+	if not on and Backend.is_ready():
+		var note := TradeRules.told(session, session.npc_id)
+		if not note.is_empty():
+			_request("deal", note)
 	return true
 
 
@@ -2992,11 +2997,13 @@ func talk_to(npc_id: String, trade: bool = false) -> bool:
 	return true
 
 
+## «Уйти»: back to the scene (kind resume); a visit to a trader not told yet goes with it (v0.8.4.43.12).
 func leave_conversation() -> bool:
 	if session == null or is_busy() or not session.in_conversation() or not Backend.is_ready():
 		return false
+	var farewell := TradeRules.farewell(world().npc_name(session.npc_id), TradeRules.told(session, session.npc_id))
 	_end_conversation()
-	_request("resume", "")
+	_request("resume", farewell)
 	return true
 
 

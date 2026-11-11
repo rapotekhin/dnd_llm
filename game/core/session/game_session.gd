@@ -772,6 +772,9 @@ static func _normalized_merchant(m: Dictionary) -> Dictionary:
 		out[k] = int(out.get(k, 0))
 	if out.has("fence_day"):  # the fence's restock (v0.7.33)
 		out["fence_day"] = int(out["fence_day"])
+	if out.get("visit") is Dictionary:  # the deals not told yet (v0.8.4.43.12)
+		for k: String in ["net_cp", "deals"]:
+			out["visit"][k] = int(out["visit"].get(k, 0))
 	for key: String in ["stock", "sold", "extras"]:  # extras — the day's goods of the shop kind (v0.7.22.26)
 		var qty := {}
 		for id: String in out.get(key, {}):

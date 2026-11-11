@@ -71,7 +71,7 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         return await _stub_letter(session, params, usage)
     if params.kind == "prepare":
         return await _stub_prepare(session, params, usage)
-    if params.kind in ("deal", "haggle", "quest", "ability", "downed", "combat_start", "combat_round", "death", "law"):
+    if params.kind in ("deal", "quest", "ability", "downed", "combat_start", "combat_round", "death", "law"):
         return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
     if params.kind != "action":
         return TurnResult(turn_id=params.turn_id, narration="Вы осматриваетесь.", usage=usage)

@@ -128,56 +128,73 @@ theme_override_constants/separation = 6
 
 [node name="DealPanel" type="PanelContainer" parent="TradeMargin/Split/Col/Cols"]
 layout_mode = 2
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(448, 0)
 theme_type_variation = &"SidePanel"
 
 [node name="DealCol" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="DealScroll" type="ScrollContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol"]
+[node name="Offers" type="HBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol"]
 layout_mode = 2
 size_flags_vertical = 3
-horizontal_scroll_mode = 0
+size_flags_stretch_ratio = 2.0
+theme_override_constants/separation = 12
 
-[node name="DealBox" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll"]
+[node name="BuyOffer" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Offers"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="BuyHead" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+[node name="BuyHead" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Offers/BuyOffer"]
 layout_mode = 2
 text = "TRADE_YOU_BUY"
 theme_type_variation = &"CaptionLabel"
 
-[node name="TradeBuyRows" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+[node name="TradeOfferBuy" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Offers/BuyOffer"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
 
-[node name="SampleBuy" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox/TradeBuyRows" groups=["editor_sample"]]
+[node name="TradeBuySum" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Offers/BuyOffer"]
+unique_name_in_owner = true
 layout_mode = 2
 auto_translate_mode = 2
-text = "Верёвка ×1"
+text = "на 8 мм"
 theme_type_variation = &"MutedLabel"
 
-[node name="SellHead" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+[node name="SellOffer" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Offers"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="SellHead" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Offers/SellOffer"]
 layout_mode = 2
 text = "TRADE_YOU_SELL"
 theme_type_variation = &"CaptionLabel"
 
-[node name="TradeSellRows" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+[node name="TradeOfferSell" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Offers/SellOffer"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
 
-[node name="SampleSell" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox/TradeSellRows" groups=["editor_sample"]]
+[node name="TradeSellSum" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/Offers/SellOffer"]
+unique_name_in_owner = true
 layout_mode = 2
 auto_translate_mode = 2
-text = "Пока ничего"
+text = "на 2 зм"
 theme_type_variation = &"MutedLabel"
 
-[node name="TradeServices" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/DealScroll/DealBox"]
+[node name="ServicesScroll" type="ScrollContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="TradeServices" type="VBoxContainer" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol/ServicesScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
 [node name="TradeTotal" type="Label" parent="TradeMargin/Split/Col/Cols/DealPanel/DealCol"]

@@ -930,9 +930,12 @@ CREATURE_NOT_YOUR_PRISONER,Это не ваш связанный пленник
 CREATURE_NO_LAW,Здесь нет стражи — отдавать некому
 TRADE_YOU_BUY,Вы покупаете
 TRADE_YOU_SELL,Вы продаёте
+TRADE_SIDE_SUM,на {coins}
+TRADE_DROP_HERE,Перетащите сюда
+QTY_HOW_MANY,Сколько?
 TRADE_NOTHING_YET,—
 TRADE_SERVICES,Услуги
-TRADE_CART_EMPTY_SHORT,"Нажмите «+» у товара или своей вещи"
+TRADE_CART_EMPTY_SHORT,"Перетащите вещь в сделку или щёлкните по ней"
 TRADE_INFO_HINT,Наведите на вещь — здесь появится её описание; правая кнопка мыши закрепит его
 BTN_PLACE,Взаимодействие с местом ({n})
 JOURNAL_DEAD,мёртв(а)
@@ -1176,7 +1179,7 @@ LONG_REST_PREP,Заклинания на завтра
 LONG_REST_PREP_SHORT,"Выбраны не все: останется прежний список, сменить его можно будет на листе героя"
 COMBAT_ROLLS,"{fold} Броски раунда ({n})"
 CC_SUMMARY_EMPTY,"Здесь появится ваш герой: выберите готового или начните своего"
-TRADE_QTY_TIP,"Shift — по десять, Ctrl — всё сразу"
+TRADE_QTY_TIP,"Щелчок — по одной, Shift — по десять, Ctrl — все; перетащите стопку — спросит, сколько"
 TRADE_WANTED_TIP,Торговец берёт это охотно — цена выше обычной
 OPT_UI_SCALE,Размер интерфейса
 OPT_COMBAT_SPEED,Скорость боя

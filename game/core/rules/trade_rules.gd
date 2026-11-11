@@ -9,7 +9,8 @@ extends RefCounted
 ## - haggling is a Persuasion or Deception check against a DC by attitude; the margin picks the haggle percent for
 ##   this visit, a failure locks haggling with this merchant until the next day;
 ## - a deal is a cart {"buy": {id: qty}, "sell": {id: qty}} checked against both purses and stocks, then applied
-##   at once.
+##   at once; the visit's deals and haggles wait on the trader's record and the master tells them once, when the
+##   trade window closes (`keep`, `told`, v0.8.4.43.12).
 ##
 ## `data` = Catalog.data (rules, items, world).
 
@@ -401,12 +402,53 @@ static func execute(s: GameSession, data: Dictionary, npc_id: String, cart: Dict
 	return lines
 
 
-## The deal for the master (turn.input of kind deal): what changed hands and who pays whom, in words — a bare
-## «+2 зм» reads both ways.
+## A deal for the master: what changed hands and who pays whom, in words — a bare «+2 зм» reads both ways.
 static func deal_note(lines: Array[String], net_cp: int) -> String:
 	var goods := lines.slice(0, lines.size() - 1)
-	var money := "игрок платит торговцу %s" % Money.format(net_cp) if net_cp > 0 		else "торговец доплачивает игроку %s" % Money.format(-net_cp) if net_cp < 0 else "обмен без доплаты"
-	return "; ".join(goods) + "; итог: " + money
+	return "; ".join(goods) + "; итог: " + _money_words(net_cp)
+
+
+static func _money_words(net_cp: int) -> String:
+	if net_cp > 0:
+		return "игрок платит торговцу %s" % Money.format(net_cp)
+	return "торговец доплачивает игроку %s" % Money.format(-net_cp) if net_cp < 0 else "обмен без доплаты"
+
+
+# --- the visit told once (v0.8.4.43.12, the author: «запустить мастера один раз, когда торговля завершится… Как в бою») ---
+
+
+## A deal or a haggle the engine made in the trade window, kept on the trader's record until the window closes: the
+## master tells the whole visit in one turn then (`told`), as a fight is told after it. `net_cp` — what the hero paid.
+static func keep(s: GameSession, npc_id: String, line: String, net_cp: int = 0, deal: bool = false) -> void:
+	if not s.merchants.has(npc_id):
+		return
+	var m: Dictionary = s.merchants[npc_id]
+	var v: Dictionary = m.get("visit", {"lines": [], "net_cp": 0, "deals": 0})
+	(v["lines"] as Array).append(line)
+	v["net_cp"] = int(v["net_cp"]) + net_cp
+	v["deals"] = int(v["deals"]) + (1 if deal else 0)
+	m["visit"] = v
+
+
+## The visit's deals and haggles in one input for the master's turn (kind deal), «» when nothing was done; told once.
+static func told(s: GameSession, npc_id: String) -> String:
+	var m: Dictionary = s.merchants.get(npc_id, {})
+	var v: Dictionary = m.get("visit", {})
+	m.erase("visit")
+	if (v.get("lines", []) as Array).is_empty():
+		return ""
+	var out: Array[String] = []
+	out.assign(v["lines"])
+	if int(v["deals"]) > 1:
+		out.append("Всего за торговлю: " + _money_words(int(v["net_cp"])))
+	return "\n".join(out)
+
+
+## The visit told on leaving the trader at once (the turn of kind resume): who it was and what the engine made.
+static func farewell(npc_name: String, note: String) -> String:
+	if note.is_empty():
+		return ""
+	return "Перед уходом герой закончил торговлю, торговец — %s; движок уже всё провёл:\n%s" % [npc_name, note]
 
 
 ## The DC by the attitude; every haggle already made with this trader today makes the next one harder (v0.7.17.2).
@@ -472,7 +514,7 @@ static func apply_haggle(s: GameSession, data: Dictionary, npc_id: String, resul
 	return pct
 
 
-## The fact line about a haggle for the master (turn.input of kind haggle, engine.check note).
+## The fact line about a haggle for the master (the visit's telling, engine.check note).
 static func haggle_note(skill_name: String, result: Dictionary, pct: int) -> String:
 	var roll := "%s %d против DC %d" % [skill_name, int(result["total"]), int(result["dc"])]
 	if bool(result.get("blocked", false)):
@@ -485,10 +527,11 @@ static func haggle_note(skill_name: String, result: Dictionary, pct: int) -> Str
 	return "Торг не удался (%s): цены прежние, до завтра торговец о скидках слышать не хочет." % roll
 
 
-## The end of a visit: the haggled percent is gone.
+## The end of a visit: the haggled percent is gone, and what was not told of it (a fight broke the talk off) too.
 static func end_visit(s: GameSession, npc_id: String) -> void:
 	if s.merchants.has(npc_id):
 		s.merchants[npc_id]["haggle_pct"] = 0
+		s.merchants[npc_id].erase("visit")
 
 
 ## The trade block of the turn snapshot: the merchant's purse, stock and what he pays for the player's things.

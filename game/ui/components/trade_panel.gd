@@ -2,10 +2,12 @@ class_name TradePanel
 extends Control
 ## The trade screen (roadmap v0.5.3; a screen of its own since v0.7.22.10, the author: «как в BG3», the talk is not
 ## needed there): the trader's goods on the left, the hero's things on the right — two grids of icons (ItemGrid, v0.8.4.43.6)
-## with the price in a thing's card at the cursor — the deal in the middle: what is bought and sold, the total,
-## «Торговаться», «Заключить сделку», the trader's services. A click puts one into the deal (Shift ten, Ctrl all), a
-## thing dragged onto the other side's grid too (Shift asks how many). The engine (TradeRules via GameState.deal /
-## haggle) checks and makes the deal; the master narrates it in the chat behind.
+## with the price in a thing's card at the cursor — and the deal in the middle as BG3's barter (v0.8.4.43.12): two columns
+## of cells, what the hero takes beside the trader's goods and what it gives beside its own things, each with its sum,
+## then the total, «Торговаться», «Заключить сделку» and the trader's services. A thing goes into the deal by a drag onto
+## its column (or onto the other side's grid), out of it by a drag back; a stack asks how many by a slider
+## (ItemGrid.with_qty). A click moves one (Shift ten, Ctrl all). The engine (TradeRules via GameState.deal / haggle)
+## checks and makes each deal at once; the master tells the visit once, when the panel closes.
 
 const SCENE := "res://ui/components/trade_panel.tscn"
 
@@ -17,10 +19,7 @@ var _partner: Label
 var _purse: Label
 var _coins: Label
 var _haggle_state: Label
-var _stock: VBoxContainer
-var _yours: VBoxContainer
-var _buy_rows: VBoxContainer
-var _sell_rows: VBoxContainer
+var _sums := {}  # side → its sum under the deal's column
 var _total: Label
 var _error: Label
 var haggle_button: Button
@@ -32,8 +31,10 @@ var _leave: Button
 var _info: DetailsPanel  # the chat's column, its card at the cursor
 var _stock_grid: ItemGrid
 var _yours_grid: ItemGrid
+var _offer := {}  # side → the grid of the deal's column
 var _views := {"buy": {}, "sell": {}}  # each side's filter and sort while the screen lives
 var _lines := {"buy": {}, "sell": {}}  # a thing's line of TradeRules.info shown now: its price, wanted
+var _quotes := {"buy": {}, "sell": {}}  # a thing in the deal: {q, line_cp} for its cell
 var _can_act := false
 
 
@@ -41,7 +42,8 @@ func required() -> Dictionary:
 	return {
 		"%Split": "HBoxContainer", "%TradeTitle": "Label", "%TradePartner": "Label", "%TradePurse": "Label",
 		"%TradeCoins": "Label", "%DealState": "Label", "%TradeStock": "VBoxContainer", "%TradeYours": "VBoxContainer",
-		"%TradeBuyRows": "VBoxContainer", "%TradeSellRows": "VBoxContainer", "%TradeServices": "VBoxContainer",
+		"%TradeOfferBuy": "VBoxContainer", "%TradeOfferSell": "VBoxContainer", "%TradeBuySum": "Label",
+		"%TradeSellSum": "Label", "%ServicesScroll": "ScrollContainer", "%TradeServices": "VBoxContainer",
 		"%TradeTotal": "Label", "%TradeError": "Label", "%HaggleButton": "Button", "%ClearCartButton": "Button",
 		"%DealButton": "Button", "%TradeToTalk": "Button", "%TradeLeave": "Button",
 	}
@@ -53,10 +55,7 @@ func _ready() -> void:
 	_purse = UiScenes.need(self, "%TradePurse")
 	_coins = UiScenes.need(self, "%TradeCoins")
 	_haggle_state = UiScenes.need(self, "%DealState")
-	_stock = UiScenes.need(self, "%TradeStock")
-	_yours = UiScenes.need(self, "%TradeYours")
-	_buy_rows = UiScenes.need(self, "%TradeBuyRows")
-	_sell_rows = UiScenes.need(self, "%TradeSellRows")
+	_sums = {"buy": UiScenes.need(self, "%TradeBuySum"), "sell": UiScenes.need(self, "%TradeSellSum")}
 	_services = UiScenes.need(self, "%TradeServices")
 	_total = UiScenes.need(self, "%TradeTotal")
 	_error = UiScenes.need(self, "%TradeError")
@@ -81,30 +80,16 @@ func _ready() -> void:
 	chat.name = "TradeChat"
 	UiScenes.need(self, "%Split").add_child(_info.column(chat, 420))
 
-	_stock_grid = _trade_grid("Stock", "Buy_", _stock, "buy")
-	_yours_grid = _trade_grid("Yours", "Sell_", _yours, "sell")
+	_stock_grid = _trade_grid("Stock", "Buy_", UiScenes.need(self, "%TradeStock"), "buy", false)
+	_yours_grid = _trade_grid("Yours", "Sell_", UiScenes.need(self, "%TradeYours"), "sell", false)
+	_offer = {"buy": _trade_grid("OfferBuy", "Unbuy_", UiScenes.need(self, "%TradeOfferBuy"), "buy", true),
+		"sell": _trade_grid("OfferSell", "Unsell_", UiScenes.need(self, "%TradeOfferSell"), "sell", true)}
 	EventBus.state_changed.connect(_rebuild)
 	EventBus.turn_started.connect(func(_id: String) -> void: _rebuild())
 	EventBus.turn_finished.connect(func(_id: String, _ok: bool) -> void: _rebuild())
 	EventBus.backend_state_changed.connect(func(_s: int, _d: String) -> void: _rebuild())
 	visibility_changed.connect(_rebuild)
 	_rebuild()
-
-
-func _label(parent: Control, muted: bool) -> Label:
-	var l := Label.new()
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	if muted:
-		l.theme_type_variation = UiTheme.MUTED_LABEL
-	parent.add_child(l)
-	return l
-
-
-func _heading(parent: Control, key: String) -> void:
-	var t := Label.new()
-	t.text = key
-	t.theme_type_variation = UiTheme.CAPTION_LABEL
-	parent.add_child(t)
 
 
 func _active() -> bool:
@@ -124,12 +109,12 @@ func _rebuild() -> void:
 	var data := Catalog.data
 	var m := TradeRules.merchant(s, data, _npc)
 	var info := TradeRules.info(s, data, _npc)
-	var can_act := Backend.is_ready() and not GameState.is_busy()
+	var can_talk := Backend.is_ready() and not GameState.is_busy()
 	var npc := GameState.world().npc(_npc)
 	_title.text = str(npc.get("name", _npc))
 	_partner.text = UiParts.partner_line(s, data, _npc)
-	_to_talk.disabled = not can_act
-	_leave.disabled = not can_act
+	_to_talk.disabled = not can_talk
+	_leave.disabled = not can_talk
 	_purse.text = tr("TRADE_PURSE").format({"coins": Money.format(Gear.coins(s, data, _npc))})
 	_coins.text = tr("TRADE_COINS").format({"coins": Money.format(Ledger.balance(s))})
 	var pct := int(m["haggle_pct"])
@@ -144,43 +129,27 @@ func _rebuild() -> void:
 		states.append(tr("TRADE_SHUNS").format({"tags": info["shuns"]}))
 	_haggle_state.text = " · ".join(states)
 
-	_can_act = can_act
+	_can_act = not GameState.is_busy()  # the engine makes a deal, the master waits for the panel to close (v0.8.4.43.12)
 	_fill(_stock_grid, info["stock"], "buy", "TRADE_SOLD_OUT")
 	_fill(_yours_grid, info["buys"], "sell", "TRADE_NOTHING_TO_SELL")
 
-	var items: Dictionary = data["items"]
 	var empty := true
 	for side: String in ["buy", "sell"]:
-		var rows := _buy_rows if side == "buy" else _sell_rows
-		_clear_children(rows)
-		var any := false
+		_quotes[side] = {}
+		var sum := 0
+		var in_deal := {}
 		for id: String in cart[side]:
 			var qty := int(cart[side][id])
 			if qty <= 0:
 				continue
 			empty = false
-			any = true
+			in_deal[id] = qty
 			var q := TradeRules.buy_quote(s, data, _npc, id) if side == "buy" else TradeRules.sell_quote(s, data, _npc, id)
-			var price := int(q["cp"])
-			var line_cp := price * qty if side == "buy" else TradeRules.sell_total(s, data, _npc, id, qty)  # the deal's own sum (v0.8.4.29.3)
-			var row := HBoxContainer.new()
-			rows.add_child(row)
-			var l := _label(row, false)
-			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			l.text = "%s%s — %s" % [ItemRules.display_name(items, s.items, id), " ×%d" % qty if qty > 1 else "", Money.format(line_cp)]
-			l.mouse_filter = Control.MOUSE_FILTER_STOP
-			l.tooltip_text = Price.text(q, price)  # why the price is what it is (v0.7.60)
-			var minus := Button.new()
-			minus.name = ("Unbuy_" if side == "buy" else "Unsell_") + id
-			minus.text = "−"
-			minus.custom_minimum_size = Vector2(48, 40)
-			minus.disabled = not can_act
-			minus.tooltip_text = "TRADE_QTY_TIP"
-			minus.pressed.connect(func() -> void: _change(side, id, -_step()))
-			row.add_child(minus)
-		if not any:
-			_label(rows, true).text = tr("TRADE_NOTHING_YET")
+			var line_cp := int(q["cp"]) * qty if side == "buy" else TradeRules.sell_total(s, data, _npc, id, qty)  # the deal's own sum (v0.8.4.29.3)
+			_quotes[side][id] = {"q": q, "line_cp": line_cp}
+			sum += line_cp
+		(_offer[side] as ItemGrid).show_items(in_deal)
+		(_sums[side] as Label).text = tr("TRADE_SIDE_SUM").format({"coins": Money.format(sum)}) if sum > 0 else tr("TRADE_DROP_HERE")
 
 	var q := TradeRules.quote(s, data, _npc, cart)
 	var net := int(q["net_cp"])
@@ -196,57 +165,73 @@ func _rebuild() -> void:
 	var cart_error := str(q["error"]) if not empty else ""
 	if not cart_error.is_empty():
 		_error.text = tr(cart_error).format(q["args"])
-	deal_button.disabled = not can_act or not cart_error.is_empty() or empty
+	deal_button.disabled = not _can_act or not cart_error.is_empty() or empty
 	_clear.disabled = empty
 	_clear_children(_services)
 	var svs := ServiceRules.of(s, data, _npc)
+	_services.get_parent().visible = not svs.is_empty()
 	if not svs.is_empty():
-		_heading(_services, "TRADE_SERVICES")
+		UiParts.label(_services, tr("TRADE_SERVICES"), UiTheme.CAPTION_LABEL)
 	for sv: Dictionary in svs:
 		var sid := str(sv["id"])
-		var b := Button.new()
-		b.name = "Service_" + sid
-		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		b.text = tr("SERVICE_BUTTON").format({"name": sv["name"], "cost": Money.format(int(sv["cost_cp"]))})
+		var b := UiParts.act_button(_services, "Service_" + sid, tr("SERVICE_BUTTON").format({"name": sv["name"], "cost": Money.format(int(sv["cost_cp"]))}),
+			str(sv["why"]), func() -> String: return GameState.service(_npc, sid))
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		b.disabled = not can_act or not str(sv["why"]).is_empty()
-		b.tooltip_text = tr(str(sv["why"])) if not str(sv["why"]).is_empty() else ""
-		b.pressed.connect(func() -> void:
-			var err := GameState.service(_npc, sid)
-			if not err.is_empty():
-				_error.text = tr(err))
-		_services.add_child(b)
+		b.size_flags_vertical = Control.SIZE_FILL
 	var skill := TradeRules.best_skill(s, data)
 	haggle_button.text = tr("BTN_HAGGLE").format({"skill": tr("SKILL_" + skill.to_upper())})
 	var why := TradeRules.can_haggle(s, data, _npc)
-	haggle_button.disabled = not can_act or not why.is_empty()
+	haggle_button.disabled = not _can_act or not why.is_empty()
 	haggle_button.tooltip_text = tr(why) if not why.is_empty() else ""
 
 
-## A side's grid: a click puts one into the deal, a thing of the other side dropped on it too.
-func _trade_grid(tag: String, prefix: String, host: Control, side: String) -> ItemGrid:
-	var g := ItemGrid.new(tag, prefix, 5)
-	g.min_rows = 6
-	g.view = _views[side]
-	g.where = {"kind": "trade", "side": side}
+## A grid of the screen: a side's things (`deal` false) or its column of the deal. A click moves one across, a thing
+## dropped on it moves by `_drop` — how many of a stack the slider says.
+func _trade_grid(tag: String, prefix: String, host: Control, side: String, deal: bool) -> ItemGrid:
+	var g := ItemGrid.new(tag, prefix, 3 if deal else 5)
+	g.bare = deal
+	g.min_columns = 3 if deal else 4
+	g.min_rows = 5 if deal else 6
+	g.view = {} if deal else _views[side]
+	g.where = {"kind": "trade", "side": side, "deal": deal}
 	host.add_child(g)
 	g.view_changed.connect(_rebuild)
-	g.accepts = func(drag: Dictionary) -> bool:
-		var from: Dictionary = drag.get("from", {})
-		return str(from.get("kind", "")) == "trade" and str(from.get("side", "")) != side and _can_act
+	g.accepts = func(drag: Dictionary) -> bool: return _can_act and _drop(g.where, drag.get("from", {})) != 0
 	g.dropped = func(drag: Dictionary) -> void:
-		var from := str((drag["from"] as Dictionary)["side"])
-		ItemGrid.with_qty(self, drag, func(n: int) -> void: _change(from, str(drag["item"]), mini(n, int(drag.get("qty", 1)))))
+		var from: Dictionary = drag["from"]
+		var dir := _drop(g.where, from)
+		var id := str(drag["item"])
+		ItemGrid.with_qty(self, drag, func(n: int) -> void: _change(str(from["side"]), id, dir * mini(n, int(drag.get("qty", 1)))), true)
 	g.setup = func(cell: ItemCell) -> void:
-		var line: Dictionary = _lines[side].get(cell.item, {})
+		var id := cell.item
+		var left := cell.qty
+		cell.disabled = not _can_act
+		if deal:
+			var dq: Dictionary = _quotes[side].get(id, {})
+			cell.text = Money.format(int(dq.get("line_cp", 0)))
+			cell.tooltip_text = "%s\n%s\n%s" % [cell.text, Price.text(dq["q"], int(dq["q"]["cp"])), tr("TRADE_QTY_TIP")] if not dq.is_empty() else cell.text
+			cell.pressed.connect(func() -> void: _change(side, id, -mini(left, _step())))
+			return
+		var line: Dictionary = _lines[side].get(id, {})
 		cell.text = Money.format(int(line.get("price_cp", 0)))
 		if bool(line.get("wanted", false)):  # bought gladly (v0.7.17.1)
 			cell.text += " · " + tr("TRADE_WANTED_TIP")
-		cell.disabled = not _can_act
-		var id := cell.item
-		var left := cell.qty
+		cell.tooltip_text = "%s\n%s" % [cell.text, tr("TRADE_QTY_TIP")]
 		cell.pressed.connect(func() -> void: _change(side, id, mini(left, _step())))
 	return g
+
+
+## What a drop of a thing from `from` onto the grid `onto` does to the deal of the thing's side: +1 — into it (onto its
+## column, or across onto the other side's grid, as BG3's Trade), −1 — out of it (back onto its own side), 0 — nothing.
+static func _drop(onto: Dictionary, from: Dictionary) -> int:
+	if str(from.get("kind", "")) != "trade":
+		return 0
+	var same := str(onto["side"]) == str(from.get("side", ""))
+	if bool(onto["deal"]):
+		return 1 if same and not bool(from.get("deal", false)) else 0
+	if bool(from.get("deal", false)):
+		return -1 if same else 0
+	return 0 if same else 1
 
 
 ## The things of a side not yet in the deal; «nothing» over an empty grid.
@@ -262,9 +247,8 @@ func _fill(grid: ItemGrid, lines: Array, side: String, empty_key: String) -> voi
 	grid.show_items(inv)
 	var none := grid.get_parent().get_node_or_null("TradeNone_" + side)
 	if lines.is_empty() and none == null:
-		none = _label(grid.get_parent(), true)
+		none = UiParts.label(grid.get_parent(), tr(empty_key), UiTheme.MUTED_LABEL)
 		none.name = "TradeNone_" + side
-		none.text = tr(empty_key)
 		grid.get_parent().move_child(none, grid.get_index())
 	elif not lines.is_empty() and none != null:
 		none.queue_free()
@@ -278,7 +262,9 @@ static func _step() -> int:
 
 
 func _change(side: String, id: String, delta: int) -> void:
-	var qty := maxi(0, int(cart[side].get(id, 0)) + delta)
+	var have := int(cart[side].get(id, 0))
+	var most := int((_lines[side] as Dictionary).get(id, {}).get("qty", have))  # never more than the side has
+	var qty := clampi(have + delta, 0, maxi(most, have))
 	if qty == 0:
 		cart[side].erase(id)
 	else:

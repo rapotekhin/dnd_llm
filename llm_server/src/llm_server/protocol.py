@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.126.0"
+PROTOCOL_VERSION = "0.127.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -160,7 +160,9 @@ class StatusResult(_Out):
 # --- snapshot (ADR-0009 §4) ------------------------------------------------------
 
 Mode = Literal["exploration", "social", "trade", "combat"]
-# deal / haggle (0.4.0): the engine already made the deal or rolled the haggle; `input` holds its fact lines.
+# deal (0.4.0): the engine already made the deals of a visit to a trader; 0.127.0 — the whole visit told once, when the
+# trade window closes (deals, haggles, the total; `haggle` gone); `input` holds the fact lines. A visit not told when the
+# hero leaves the trader goes as `input` of `resume`.
 # quest (0.5.0): the engine completed a pack quest and gave the reward; `input` is what happened and the reward.
 # ability (0.6.0): the player cast a spell, used a feature or an item by a button — the engine applied it.
 # downed (0.6.0): the character dropped to 0 HP outside combat and came to with 1 HP; the master tells the cost.
@@ -174,7 +176,7 @@ Mode = Literal["exploration", "social", "trade", "combat"]
 # answer (`narration` is the letter); `input` holds the engine's frame «[letter:<id>] …» with the verdict.
 # prepare (0.106.0): the master readies ahead what the hero will meet — a room's furnishing, a board's orders, a quest of a
 # person around (`input` is the engine's frame «[prepare <subject> | …] …»); its effects are kept by the engine, not applied.
-TurnKind = Literal["enter", "resume", "action", "rest", "deal", "haggle", "quest", "ability", "downed",
+TurnKind = Literal["enter", "resume", "action", "rest", "deal", "quest", "ability", "downed",
                    "combat_start", "combat_round", "death", "trap", "wait", "theft", "law", "goal", "shift", "quest_act",
                    "contest", "letter", "prepare"]
 Gender = Literal["male", "female", "other"]

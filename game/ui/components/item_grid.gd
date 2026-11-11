@@ -4,7 +4,8 @@ extends VBoxContainer
 ## its order in one row; under it the cells — a thing's icon, the stack's number, its rarity's frame, the rest at the
 ## cursor — padded with empty ones to whole rows. One grid for the character window, a chest or a body, the trade and a
 ## companion's things; the owner says what is in it (`show_items`), what its cells do (`setup`) and what a drop on it
-## does (`accepts`, `dropped`). The groups, the sort and the search are ItemGroups'.
+## does (`accepts`, `dropped`). The groups, the sort and the search are ItemGroups'. A `bare` grid has no row over it:
+## the two columns of a deal in the trade (v0.8.4.43.12). How many of a stack a drop moves — `with_qty`, a slider.
 
 signal view_changed  ## a filter, the sort or its order changed: the owner keeps it when it is the hero's
 
@@ -12,6 +13,12 @@ var tag := "Inv"  ## the names of its controls: «InvGroup_all», «InvSearch»,
 var prefix := "Item_"  ## a cell's name before the thing's id
 var columns := 8
 var min_rows := 5
+var min_columns := 4
+var bare := false:  ## no filters, search or sort over the cells
+	set(v):
+		bare = v
+		if _bar != null:
+			_bar.visible = not v
 var cell_side := IconSlot.SIZE
 var where: Dictionary = {}  ## the `from` its cells carry
 var view: Dictionary = {}  ## group, sort, reverse — the hero's are SaveManager.inventory_view
@@ -19,6 +26,7 @@ var setup := Callable()  ## (cell: ItemCell) — the owner's double click, menu 
 var accepts := Callable()  ## (drag: Dictionary) -> bool
 var dropped := Callable()  ## (drag: Dictionary) -> void
 var _find := ""
+var _bar: HBoxContainer
 var _filters: HFlowContainer
 var _search: LineEdit
 var _sort: OptionButton
@@ -39,6 +47,7 @@ func _init(grid_tag: String = "Inv", cell_prefix: String = "Item_", cols: int = 
 	bar.name = tag + "Bar"
 	bar.add_theme_constant_override("separation", 4)
 	add_child(bar)
+	_bar = bar
 	_filters = HFlowContainer.new()  # the icons wrap onto a second line rather than widen the window
 	_filters.name = tag + "Filters"
 	_filters.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -162,7 +171,7 @@ func _pad() -> void:
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_RESIZED or _cells == null:
 		return
-	var fit := maxi(4, int((size.x - 16.0 + 4.0) / (cell_side + 4.0)))
+	var fit := maxi(min_columns, int((size.x - 16.0 + 4.0) / (cell_side + 4.0)))
 	if fit != columns:
 		columns = fit
 		_cells.columns = fit
@@ -220,36 +229,64 @@ func _drop_data(_at: Vector2, data: Variant) -> void:
 		dropped.call(data)
 
 
-## The stack a drag carries, or Shift's question how many of it (as in BG3): `done` gets the number.
-static func with_qty(near: Control, drag: Dictionary, done: Callable) -> void:
-	if bool(drag.get("split", false)) and int(drag.get("qty", 1)) > 1:
+## The stack a drag carries, or the question how many of it (as in BG3): with Shift, or always with `ask` (a deal in the
+## trade, the author: «полоску, сколько из них переместить»). `done` gets the number.
+static func with_qty(near: Control, drag: Dictionary, done: Callable, ask := false) -> void:
+	if (ask or bool(drag.get("split", false))) and int(drag.get("qty", 1)) > 1:
 		ask_qty(near, int(drag["qty"]), done)
 	else:
 		done.call(maxi(1, int(drag.get("qty", 1))))
 
 
-## How many of a stack (Shift + a drag, as in BG3): a small box with the number, `done` gets it.
+## How many of a stack: a slider with the number beside it and «OK» (Enter in the number too), `done` gets it.
 static func ask_qty(near: Control, most: int, done: Callable) -> void:
 	var pop := PopupPanel.new()
 	pop.name = "QtyBox"
+	pop.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_RAISED, UiTheme.ACCENT, 1, 12, 4))
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	pop.add_child(col)
+	UiParts.label(col, TranslationServer.translate("QTY_HOW_MANY"), UiTheme.CAPTION_LABEL).autowrap_mode = TextServer.AUTOWRAP_OFF  # a wrapping line makes a popup tall
+	var slider := HSlider.new()
+	slider.name = "QtySlider"
+	slider.min_value = 1
+	slider.max_value = most
+	slider.step = 1
+	slider.value = most
+	slider.tick_count = most if most <= 10 else 0  # a mark per thing of a small stack
+	slider.ticks_on_borders = true
+	slider.custom_minimum_size = Vector2(280, 28)
+	col.add_child(slider)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	pop.add_child(row)
+	col.add_child(row)
 	var spin := SpinBox.new()
 	spin.name = "QtySpin"
 	spin.min_value = 1
 	spin.max_value = most
 	spin.value = most
-	spin.custom_minimum_size = Vector2(120, 0)
+	spin.suffix = "/ %d" % most
+	spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spin)
+	slider.value_changed.connect(func(v: float) -> void: spin.set_value_no_signal(v))
+	spin.value_changed.connect(func(v: float) -> void: slider.set_value_no_signal(v))
 	var ok := Button.new()
 	ok.name = "QtyOk"
 	ok.text = "BTN_OK"
-	ok.pressed.connect(func() -> void:
+	ok.custom_minimum_size = Vector2(72, 0)
+	var typed := [false]  # the number typed in by hand: its text, not yet the value (Godot updates the text later)
+	spin.get_line_edit().text_changed.connect(func(_t: String) -> void: typed[0] = true)
+	var finish := func() -> void:
+		if typed[0]:
+			spin.apply()
 		pop.hide()
-		done.call(int(spin.value)))
+		done.call(int(spin.value))
+	ok.pressed.connect(finish)
+	spin.get_line_edit().text_submitted.connect(func(_t: String) -> void: finish.call())
 	row.add_child(ok)
 	pop.popup_hide.connect(pop.queue_free)
 	near.add_child(pop)
-	pop.popup(Rect2i(Vector2i(near.get_global_mouse_position()), Vector2i(220, 60)))
-	spin.get_line_edit().grab_focus.call_deferred()
+	var box := Vector2i(320, 136)
+	var at := Vector2i(near.get_global_mouse_position()).clamp(Vector2i.ZERO, Vector2i(near.get_viewport_rect().size) - box)  # never past the screen's edge
+	pop.popup(Rect2i(at, box))
+	slider.grab_focus.call_deferred()

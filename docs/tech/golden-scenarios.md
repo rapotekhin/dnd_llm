@@ -23,7 +23,7 @@ scenarios:
     category: checks          # checks | hidden | injection | budget | effects | modes | limits | style | rules | items | trade | quests | magic | combat
     extends: tavern           # база; поля сценария глубоко сливаются с ней
     mode / kind / settings    # переопределения
-    input: "…"                # ввод игрока; null для kind = enter | resume | rest; для deal | haggle — строки движка
+    input: "…"                # ввод игрока; null для kind = enter | rest (resume — null или итог визита к торговцу); для deal — строки движка
     snapshot: {…}             # частичное переопределение снимка
     engine: {…}               # что ответит движок на обратные вызовы
     expect: {…}               # жёсткие проверки (автомат)

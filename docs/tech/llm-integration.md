@@ -22,7 +22,7 @@
 
 Один ход — один запуск агента (`agents.build_turn_agent`) с `output_type=TurnOutput`:
 
-1. Godot присылает `turn.request`: `mode` (`exploration` / `social` / `trade`), `kind` (`enter`, `resume`, `action`, `rest`, `deal`, `haggle`, `quest`), ввод игрока, `npc_id`, `model` и снимок (`Snapshot`: мир и настройки мастера, сцена, лист персонажа, последние реплики, сводки, лимиты, торговец, задания).
+1. Godot присылает `turn.request`: `mode` (`exploration` / `social` / `trade`), `kind` (`enter`, `resume`, `action`, `rest`, `deal`, `quest`…), ввод игрока, `npc_id`, `model` и снимок (`Snapshot`: мир и настройки мастера, сцена, лист персонажа, последние реплики, сводки, лимиты, торговец, задания).
 2. Агент зовёт инструменты (ниже), каждый превращается в `engine.*`.
 3. Итог `TurnOutput`: `narration`, `options` (1–3), `effect_ids`, `next_mode` + `npc_id`, `changes`. Валидатор вывода (`ModelRetry`) не пускает пустой текст, `changes` без эффектов, чужие `effect_ids` и `social` / `trade` без NPC сцены.
 4. Godot применяет эффекты из `effect_ids`, остальные резервы сгорают; `next_mode` переключает режим.
@@ -33,7 +33,7 @@
 
 Полный справочник — [master-tools.md](master-tools.md): восемь инструментов (`request_check`, `propose_effect`, `rules`, `lookup`, `find_items`, `find_npcs`, `find_places`, `find_quests`), их вызовы `engine.*`, 36 видов эффектов с проверками движка и ссылками на код, итог хода и лимиты. Что мастер умеет по сценариям (создать место, переместить героя, выдать вещь, начать бой…) и как устроен каждый — [master-scenarios.md](master-scenarios.md).
 
-Опыта среди эффектов нет: опыт дают только бой и задания (`XpRules`). В торговле `coins` / `move_item:world>hero` / `move_item:hero>world` движок отклоняет — сделки идут панелью игрока, мастер их только отыгрывает (`kind=deal`, `haggle`).
+Опыта среди эффектов нет: опыт дают только бой и задания (`XpRules`). В торговле `coins` / `move_item:world>hero` / `move_item:hero>world` движок отклоняет — сделки идут панелью игрока, мастер их только рассказывает — один раз за визит, когда окно торговли закрыто (`kind=deal`, v0.8.4.43.12).
 
 ## Промпты
 
