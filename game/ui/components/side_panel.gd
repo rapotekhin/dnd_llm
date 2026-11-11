@@ -471,13 +471,16 @@ func _rebuild() -> void:
 			var bed := _button(tr("BTN_OWN_BED"), sleep, can_act and inn_ok)
 			bed.name = "OwnBedButton"
 			bed.tooltip_text = tr("OWN_BED_TIP")
+			(bed as IconSlot).tip_body = tr("LONG_REST_TIP")
 		var rest := _button(tr("BTN_LONG_REST_OPEN"), long_rest_requested.emit, can_act)
 		rest.name = "RestButton"
 		rest.disabled = not can_act or (not inn_ok and not camp_why.is_empty())
-		rest.tooltip_text = tr(camp_why) if not inn_ok and not camp_why.is_empty() else ""
+		rest.tooltip_text = tr(camp_why) if not inn_ok and not camp_why.is_empty() else rest.text
+		(rest as IconSlot).tip_body = tr("LONG_REST_TIP")  # v0.8.4.43.15: what a rest gives, on its card
 		var wait := IconSlot.make(IconRules.button(Catalog.data, "WaitButton"), tr("BTN_WAIT"), ActionBar.CELL)
 		wait.name = "WaitButton"
 		wait.disabled = not can_act
+		wait.tip_body = tr("WAIT_TIP")
 		var pop := PopupMenu.new()  # the times to wait till, under the cell
 		pop.name = "WaitTimes"
 		wait.add_child(pop)
@@ -499,7 +502,8 @@ func _rebuild() -> void:
 		short.name = "ShortRestButton"
 		var why := ExplorationRules.can_short_rest(s, Catalog.data)
 		short.disabled = GameState.is_busy() or not why.is_empty()
-		short.tooltip_text = tr(why) if not why.is_empty() else ""
+		short.tooltip_text = tr(why) if not why.is_empty() else short.text
+		(short as IconSlot).tip_body = tr("SHORT_REST_TIP")
 		_content = column
 	else:
 		_content = _bar.talk_acts

@@ -7,6 +7,9 @@ extends Button
 ## with the name, the line of the act (its chance, why not) and its description. It stays a Button: pressed, toggled,
 ## disabled, its `text` and found by its name as before; its text is the card's line, never drawn on the cell.
 ## A cell with a `drag_key` is dragged: onto a slot of the hotbar, or off the bar (`dropped_off`).
+## v0.8.4.43.15 (the author: «описание не содержит названия способности»): the card's title is the name — `tip_title`, else
+## the cell's own text, never the line of its tooltip; the card is `DetailsPanel.tip_card`, one size; the right button
+## pins it (`pin_card`) so it stays when the cursor goes.
 
 signal dropped_off(key: String)
 
@@ -60,33 +63,34 @@ func set_icon(ref: String) -> void:
 
 ## The card at the cursor: the name, the act's line when it says more, the description.
 func _make_custom_tooltip(for_text: String) -> Object:
-	var title := tip_title if tip_title != "" else for_text.get_slice("\n", 0)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = UiTheme.CARD
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
-	panel.add_child(col)
-	var head := Label.new()
-	head.text = title
-	head.theme_type_variation = UiTheme.ACCENT_LABEL
-	col.add_child(head)
-	var line := for_text if tip_title != "" else for_text.substr(title.length()).strip_edges()
-	if line != "" and line != title:
-		var l := Label.new()
-		l.text = line
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size = Vector2(360, 0)
-		col.add_child(l)
-	if tip_body != "":
-		var body := RichTextLabel.new()
-		body.bbcode_enabled = true
-		body.fit_content = true
-		body.scroll_active = false
-		body.custom_minimum_size = Vector2(360, 0)
-		body.text = tip_body
-		body.add_theme_color_override("default_color", UiTheme.MUTED)
-		col.add_child(body)
-	return panel
+	return DetailsPanel.tip_card(card_title(for_text), card_line(for_text), tip_body)
+
+
+## The name on the card: `tip_title`, else the cell's own text (its name), else the first line of its tooltip.
+func card_title(for_text: String) -> String:
+	if tip_title != "":
+		return tip_title
+	return text.get_slice("\n", 0) if text != "" else for_text.get_slice("\n", 0)
+
+
+## The act's line under the name: the tooltip without the name it begins with.
+func card_line(for_text: String) -> String:
+	var title := card_title(for_text)
+	var line := for_text.strip_edges()
+	return line.substr(title.length()).strip_edges() if line.begins_with(title) else line
+
+
+## Pins this cell's card (the right button): it stays on the screen until the right button on it again or its lock.
+func pin_card(left := false) -> void:
+	var line := card_line(tooltip_text)
+	DetailsPanel.pin_card(self, card_title(tooltip_text), "\n\n".join([line, tip_body].filter(func(x: String) -> bool: return x != "")), left)
+
+
+func _gui_input(ev: InputEvent) -> void:
+	var mb := ev as InputEventMouseButton
+	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT and (tooltip_text != "" or tip_body != ""):
+		pin_card()
+		accept_event()
 
 
 func _get_drag_data(_at: Vector2) -> Variant:

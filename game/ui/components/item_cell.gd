@@ -41,8 +41,10 @@ func _gui_input(ev: InputEvent) -> void:
 	if mb.button_index == MOUSE_BUTTON_LEFT and mb.double_click and on_double.is_valid():
 		on_double.call()
 		accept_event()
-	elif mb.button_index == MOUSE_BUTTON_RIGHT and on_menu.is_valid():
-		on_menu.call(self)
+	elif mb.button_index == MOUSE_BUTTON_RIGHT and not item.is_empty():  # its card pinned, its menu at the cursor (v0.8.4.43.15)
+		pin_card(on_menu.is_valid())
+		if on_menu.is_valid():
+			on_menu.call(self)
 		accept_event()
 
 

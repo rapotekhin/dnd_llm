@@ -12,6 +12,11 @@ extends PanelContainer
 ## is a card at the cursor while the thing is hovered (beside a button that has the focus, as Tab's foe) and gone
 ## when the cursor leaves; the right button pins it where it stands, with the lock to let it go, its text then
 ## selectable and scrolled. A floating panel shows nothing for a hint without a body: the place goes to the chat.
+## v0.8.4.43.15 (the author: «прямоугольником фиксированного размера с возможностью скроллить его вниз»; «щелчок правой
+## кнопкой … будет блокировать окно описания»): a card is one width and at most `CARD_MAX_BODY` of text high — a longer
+## text says that the right button pins it, and pinned it scrolls; `tip_card` is the same card for an icon's own tooltip;
+## `pin_card` pins an icon's card in the one card of the screen for icons (`_pins`), the right button on it again or the
+## lock lets it go, as on any card.
 
 var _title: Label
 var _body: RichTextLabel
@@ -23,9 +28,15 @@ var _shown: Control  # whose text is up — the lock pins it
 var floating := false  ## a card at the cursor, not a part of the column
 var _anchor := Vector2.ZERO  # where the card stands: by the cursor, or beside the focused button
 var _beside := false  # stands beside its thing (a focused button, Tab; a pin without the cursor on it), not by the cursor
+var _left := false  # beside its thing on the left (a thing whose menu opens at the cursor)
+var _more: Label  # «the right button pins it» under a text longer than the card
+var _icons := false  # the screen's card for icons: shown pinned only, gone with its screen
+var _screen: WeakRef  # the screen of the pinned icon
+
+static var _pins: DetailsPanel  # the one card an icon is pinned in (`pin_card`)
 
 const CARD_WIDTH := 380.0
-const CARD_MAX_BODY := 360.0  # a longer text scrolls inside a pinned card
+const CARD_MAX_BODY := 280.0  # a longer text is cut at this height and scrolls inside a pinned card
 
 
 func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void:
@@ -61,6 +72,8 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 	_body.custom_minimum_size = Vector2(0, maxf(60.0, min_size.y - 60.0))
 	_body.add_theme_color_override("default_color", UiTheme.MUTED)
 	col.add_child(_body)
+	_more = _more_label()
+	col.add_child(_more)
 	show_text(TranslationServer.translate("DETAILS_HINT"), "")
 	_lock.visible = false  # the hint is nothing to pin
 	if floating:
@@ -82,10 +95,22 @@ func _hold(pinned_now: bool) -> void:
 	for n: Node in [self] + find_children("*", "Control", true, false):
 		(n as Control).mouse_filter = Control.MOUSE_FILTER_STOP if pinned_now and (n == _lock or n == _body or n == self) else Control.MOUSE_FILTER_IGNORE
 	_body.selection_enabled = pinned_now
-	var long := _body.get_content_height() > CARD_MAX_BODY
-	_body.fit_content = not (pinned_now and long)
+	_cap(pinned_now)
+	_cap.call_deferred(pinned_now)  # the text's height is known once it is laid out
+
+
+## One size of a card: a text longer than `CARD_MAX_BODY` is cut there — pinned it scrolls, else it says the right
+## button pins it.
+func _cap(pinned_now: bool) -> void:
+	if not floating or not is_instance_valid(_body):
+		return
+	var long := _body.get_content_height() > CARD_MAX_BODY + 4
+	_body.fit_content = not long
 	_body.scroll_active = pinned_now and long
-	_body.custom_minimum_size.y = CARD_MAX_BODY if pinned_now and long else 0.0
+	_body.custom_minimum_size.y = CARD_MAX_BODY if long else 0.0
+	_more.visible = long and not pinned_now
+	if visible and is_inside_tree():
+		_place()
 
 
 ## Where the card stands: by the cursor (down and right, turned back at the screen's edge), or beside the focused button.
@@ -97,7 +122,7 @@ func _place() -> void:
 	if _beside and _shown != null and is_instance_valid(_shown):
 		var r := _shown.get_global_rect()
 		at = Vector2(r.end.x + 8, r.position.y)
-		if at.x + sz.x > screen.x:
+		if _left and r.position.x - sz.x - 8 >= 0.0 or at.x + sz.x > screen.x:
 			at.x = r.position.x - sz.x - 8
 	elif at.x + sz.x > screen.x:
 		at.x = _anchor.x - sz.x - 12
@@ -106,6 +131,9 @@ func _place() -> void:
 
 func _process(_delta: float) -> void:
 	if not floating or not visible:
+		return
+	if _icons and (_pinned.is_empty() or _screen == null or not is_instance_valid(_screen.get_ref()) or not (_screen.get_ref() as Node).is_inside_tree()):
+		unpin()  # its screen is gone (a load, the menu): the card goes with it
 		return
 	if _pinned.is_empty() and not _still_wanted():
 		visible = false
@@ -231,7 +259,103 @@ func unpin() -> void:
 	if floating:
 		_lock.visible = false
 		_hold(false)
-		visible = visible and _still_wanted()
+		visible = visible and _still_wanted() and not _icons
+
+
+## Pins the card of an icon (the right button on an IconSlot, v0.8.4.43.15) in the one card of the screen for icons; on
+## the same one again lets it go. `left` — beside the icon on its left, where a menu opened at the cursor leaves room.
+static func pin_card(control: Control, title_text: String, body_text: String, left := false) -> void:
+	if control == null or not control.is_inside_tree():
+		return
+	if _pins == null or not is_instance_valid(_pins):
+		var layer := CanvasLayer.new()  # over every window
+		layer.name = "PinnedCards"
+		layer.layer = 90
+		control.get_tree().root.add_child(layer)
+		_pins = DetailsPanel.new(Vector2.ZERO, true)
+		_pins.name = "PinnedCard"
+		_pins._icons = true
+		layer.add_child(_pins)
+	if _pins._pinned == title_text and _pins._pinned_body == body_text:
+		_pins.unpin()
+		return
+	var top: Node = control  # the screen it is on: the child of the scene's root
+	var scene := control.get_tree().current_scene
+	while top.get_parent() != null and top.get_parent() != scene and top.get_parent() != control.get_tree().root:
+		top = top.get_parent()
+	_pins._screen = weakref(top)
+	_pins._left = left
+	_pins.visible = false  # stands anew by this icon
+	_pins.pin(control, title_text, body_text)
+	if left:
+		_pins._beside = true
+		_pins._place()
+
+
+## The pinned card of icons (a playtest looks at it), or null.
+static func pinned_card() -> DetailsPanel:
+	return _pins if _pins != null and is_instance_valid(_pins) and _pins.visible else null
+
+
+## The card an icon shows at the cursor (IconSlot's tooltip, v0.8.4.43.15): the name on top, the act's line, the text —
+## one width, a long text cut at `CARD_MAX_BODY` with «the right button pins it» under it.
+static func tip_card(title_text: String, line: String, body_text: String) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.name = "TipCard"
+	panel.theme_type_variation = UiTheme.CARD
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	panel.add_child(col)
+	var head := Label.new()
+	head.name = "TipTitle"
+	head.text = title_text
+	head.theme_type_variation = UiTheme.ACCENT_LABEL
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	head.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
+	col.add_child(head)
+	if line != "" and line != title_text:
+		var l := Label.new()
+		l.name = "TipLine"
+		l.text = line
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
+		col.add_child(l)
+	if body_text != "":
+		var body := RichTextLabel.new()
+		body.name = "TipText"
+		body.bbcode_enabled = true
+		body.fit_content = true
+		body.scroll_active = false
+		body.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
+		body.text = body_text
+		body.add_theme_color_override("default_color", UiTheme.MUTED)
+		col.add_child(body)
+		var more := _more_label()
+		col.add_child(more)
+		var cut := func() -> void:
+			body.fit_content = false
+			body.custom_minimum_size.y = CARD_MAX_BODY
+			more.visible = true
+		# A tooltip takes its size when it comes up: the text's height by its font, before it is laid out …
+		var font := body.get_theme_font("normal_font")
+		var plain := RegEx.create_from_string("\\[[^\\]]*\\]").sub(body_text, "", true)
+		if font != null and font.get_multiline_string_size(plain, HORIZONTAL_ALIGNMENT_LEFT, CARD_WIDTH - 24,
+				body.get_theme_font_size("normal_font_size")).y > CARD_MAX_BODY:
+			cut.call()
+		body.resized.connect(func() -> void:  # … and once it is, should the font have told less
+			if is_instance_valid(body) and body.fit_content and body.get_content_height() > CARD_MAX_BODY + 4:
+				cut.call())
+	return panel
+
+
+static func _more_label() -> Label:
+	var more := Label.new()
+	more.name = "DetailsMore"
+	more.text = TranslationServer.translate("DETAILS_MORE")
+	more.visible = false
+	more.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+	more.add_theme_color_override("font_color", UiTheme.ACCENT)
+	return more
 
 
 func _light(control: Control) -> void:
