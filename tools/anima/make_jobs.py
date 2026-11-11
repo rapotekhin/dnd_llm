@@ -4,6 +4,12 @@ combat act and group of the inventory. Runs in the repo; the jobs file is what i
     python tools/anima/make_jobs.py                  # → tools/anima/jobs/icons.json from subjects.json
     python tools/anima/make_jobs.py --describe       # first ask the model for the subjects not written yet (cents)
     python tools/anima/make_jobs.py --describe --redo items/longsword,spells/fireball
+    python tools/anima/make_jobs.py --portraits --describe   # → jobs/portraits.json: people and monsters
+
+Portraits (v0.8.4.43.5): a person's look is built from the tables of tools/anima/portraits.json by race, sex and age,
+5 looks each (a child 1), no model; a monster's look is a subject the model writes once from its SRD template
+(«portraits/monsters/<id>» in subjects.json), its 5 variants are 5 seeds, an ordinary person of a monster template
+(a bandit, a guard) a man in some and a woman in the others.
 
 What an icon shows is a subject in English — booru tags and one plain sentence — kept in tools/anima/subjects.json
 by "<kind>/<id>". The model writes the missing ones once (OpenRouter, the key from the root .env); the author edits
@@ -15,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import re
 import sys
 import urllib.request
@@ -24,6 +31,9 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 SUBJECTS = HERE / "subjects.json"
 JOBS = HERE / "jobs" / "icons.json"
+LOOKS = HERE / "portraits.json"
+PORTRAIT_JOBS = HERE / "jobs" / "portraits.json"
+FRAME = "portrait, upper body, looking at viewer"  # the tags of a person's portrait after its sex and age
 MODEL = "deepseek/deepseek-v4.1-flash-1017"  # the master's default (llm_server.config.DEFAULT_MODEL)
 BATCH = 30
 
@@ -90,6 +100,46 @@ Answer JSON only: {"<key>": {"tags": "...", "sentence": "...", "dark": false}, .
 Entries:
 """
 
+ASK_MONSTER = """You write the subject of a character portrait of a creature for a fantasy RPG (D&D 5e). Anima, an
+anime image model, paints it as a head-and-shoulders portrait in a soft painterly style on a dark muted background;
+the game shows it as a round token of 48-64 px and in the creature's card. The image prompt is built as: [quality
+tags] [your tags]. [your sentence] [a fixed portrait text]. You write only the creature; never write quality, style,
+background, «portrait» or framing — they are added.
+
+For each entry give:
+- "tags": 5-9 Danbooru tags, lowercase, words separated by spaces (never underscores), comma-separated: first
+  «no humans» for any creature that is not an ordinary person, then the creature's own tag (wolf, bear, giant spider,
+  dragon, skeleton, zombie, goblin, orc, ghost, slime, rat, eagle, horse...), then its colors and features as Danbooru
+  writes them (grey fur, yellow eyes, fangs, horns, green skin, glowing eyes, tattered cloak), then what it wears
+  (leather armor, hood, helmet, chainmail, robe).
+- "sentence": 1-2 plain English sentences, at most 40 words, starting with "A". How its head and upper body look: the
+  shape, 2-3 main colors, the eyes, what it wears. Never a name the model cannot know (not «owlbear» alone, but «a huge
+  bear with the head of an owl, a hooked yellow beak and brown feathers»), never a story or an action scene.
+- "person": true when it is an ordinary person of a human-like people (a bandit, a guard, a priest, a knight, a mage,
+  a noble, a commoner, a cultist, a scout, a spy, a druid, a berserker, a werewolf or a wererat in human form). Then
+  write it with no sex: no beard, no «he» or «she», no «man» or «woman» — write {person} where it goes («A {person}
+  in a hooded dark leather jerkin, a scarf over the mouth»), and no «no humans» tag: it is drawn as a man in some
+  variants and as a woman in the others. A creature of another people (goblin, orc, gnoll, kobold, hobgoblin,
+  bugbear, lizardfolk, drow, duergar, deep gnome) is not a person: it is drawn as itself, with its own sex if any.
+
+Rules:
+1. One creature, its head and chest filling the frame. A big beast or a dragon: its head and neck. A swarm: a tight
+   cluster of a few of its animals. A creature with no face (an ooze, an elemental, a will-o'-wisp, a shrub): its body
+   as one mass with a clear center.
+2. Frightening is fine, gore is not: no blood, no open wounds, no guts.
+3. Things alike look alike: every skeleton is bare off-white bone, every zombie grey-green rotting skin in rags, every
+   ghost pale and translucent; a dragon wyrmling is a young dragon of its color (a red wyrmling red, a brass one
+   brass); a werewolf hybrid is a wolf-headed humanoid in fur, its wolf form a plain wolf.
+
+Examples (key → answer):
+portraits/monsters/wolf → {"tags": "no humans, wolf, grey fur, yellow eyes, fangs, snarling", "sentence": "A grey wolf with thick fur, pricked ears and amber yellow eyes, lips drawn back from white fangs.", "person": false}
+portraits/monsters/goblin → {"tags": "no humans, goblin, green skin, pointy ears, yellow eyes, sharp teeth, leather armor", "sentence": "A small green-skinned goblin with long pointed ears, yellow eyes, a wide grin of sharp teeth and scraps of dirty leather armor.", "person": false}
+portraits/monsters/guard → {"tags": "chainmail, helmet, spear, tabard, blue tabard", "sentence": "A {person} of the town watch in a chainmail shirt under a blue tabard, an open steel helmet and the shaft of a spear at the shoulder.", "person": true}
+
+Answer JSON only: {"<key>": {"tags": "...", "sentence": "...", "person": false}, ...} with every key given.
+Entries:
+"""
+
 
 def load(p: str) -> dict:
     return json.loads((ROOT / p).read_text(encoding="utf-8"))
@@ -146,6 +196,112 @@ def entries() -> list[dict]:
     return out
 
 
+# --- portraits ------------------------------------------------------------------------------------------------------
+
+
+def monster_entries() -> list[dict]:
+    """Every monster template the game reads (not in rules.off.monsters), with a hint of how it looks."""
+    off = set(load("game/data/rules.json")["off"]["monsters"])
+    out = []
+    for mid, m in load("game/data/srd/monsters.json").items():
+        if mid in off:
+            continue
+        acts = [str(x.get("name_en") or x.get("name", "")) for x in m.get("actions", [])][:4]
+        traits = [str(t.get("id", "")).replace("_", " ") for t in m.get("traits", [])][:4]
+        out.append({"kind": "portraits/monsters", "id": mid, "name": m.get("name", mid), "en": m.get("name_en", ""),
+                    "hint": f"{m.get('size', '')} {m.get('type', '')}; wears {', '.join(m.get('equipment', [])) or 'nothing'}; "
+                            f"attacks {', '.join(acts) or 'none'}; traits {', '.join(traits) or 'none'}"})
+    return out
+
+
+def _pick(seed: str, options: list, i: int):
+    """The i-th of a fixed shuffle: the variants of one portrait take different options, the same on every run."""
+    opts = list(options)
+    random.Random(seed).shuffle(opts)
+    return opts[i % len(opts)] if opts else ""
+
+
+def _a(phrase: str) -> str:
+    """The phrase with its article: «an elf», «a short beard», «stubble», «leather armor»."""
+    if phrase.split()[0] in ("stubble", "sideburns") or phrase.endswith("armor"):
+        return phrase
+    return ("an " if phrase[0] in "aeiou" else "a ") + phrase
+
+
+def person_look(t: dict, rid: str, sex: str, age_id: str, i: int) -> dict:
+    """The tags and the sentence of variant i of a person of race `rid`, sex and age by the tables of portraits.json."""
+    race, age = t["races"][rid], t["ages"][age_id]
+    base = f"{rid}/{sex}/{age_id}"
+    own_sex = race.get("sex", {}).get(sex)
+    head = ", ".join(filter(None, [own_sex, race.get("ages", {}).get(age_id, "")])) if own_sex else age[sex]["tags"]
+    tags, says = [head, FRAME, race["tags"]], []
+    if race.get("hair") is not None:
+        color = age.get("hair") or _pick(base + "/hair", race["hair"], i)
+        styles = t["styles"][sex] + (t["styles"]["bald"] if age.get("bald") and sex == "male" else [])
+        style = _pick(base + "/style", styles, i)
+        tags += [style["tag"]] if style.get("bald") else [color, style["tag"]]
+        says.append(style["say"] if style.get("bald") else f"{color} {style['say']}")
+    eyes, skin = _pick(base + "/eyes", race["eyes"], i), _pick(base + "/skin", race["skin"], i)
+    tags += [eyes, skin]
+    says += [eyes, skin]
+    if sex == "male" and age.get("beard", True) and not age.get("minor"):
+        beard = _pick(base + "/beard", race.get("beards", t["beards"]), i)
+        if beard:
+            tags.append(beard)
+            says.append(_a(beard.split(",")[0]))
+    kind = age.get("clothes", "any")
+    wear = t["clothes"][kind] + ([] if kind == "child" else t["clothes"].get(sex, []))
+    cloth = f"{_pick(base + '/color', t['colors'], i)} {_pick(base + '/clothes', wear, i)}"
+    tags.append(cloth)
+    pron = "He" if sex == "male" else "She"
+    sentence = (f"{_a(race['word'] + ' ' + age[sex]['who']).capitalize()}, with {', '.join(says[:-1])} and "
+                f"{says[-1]}, wearing {_a(cloth)}.")
+    if race.get("features"):
+        sentence += f" {pron} has {race['features']}."
+    if race.get("grown") and not age.get("minor"):
+        sentence += f" {pron} is a grown-up of a small folk with adult proportions and an adult face."
+    return {"tags": ", ".join(x for x in tags if x), "sentence": sentence}
+
+
+def people_jobs() -> list[dict]:
+    """One job per race, sex and age of the engine (rules.body.age), its looks one per variant."""
+    t = json.loads(LOOKS.read_text(encoding="utf-8"))
+    races, ages = load("game/data/srd/races.json")["races"], load("game/data/rules.json")["body"]["age"]
+    jobs = []
+    for rid in races:
+        for sex in ("male", "female"):
+            for age_id, words in ages.items():
+                age = t["ages"][age_id]
+                n = int(age.get("variants", t["variants"]))
+                job = {"id": f"{rid}/{sex}/{age_id}", "kind": "portraits/people", "style": "portrait",
+                       "name": f"{races[rid]['name']}, {words[sex]}", "seeds": t["seeds"][:n],
+                       "looks": [person_look(t, rid, sex, age_id, i) for i in range(n)]}
+                if age.get("minor"):  # the negative against children of the event images, minus what draws this one
+                    job["neg_drop"], job["neg_add"] = age.get("neg_drop", []), t["minor_neg"]
+                jobs.append(job)
+    return jobs
+
+
+def monster_jobs(subjects: dict) -> tuple[list[dict], int]:
+    seeds = json.loads(LOOKS.read_text(encoding="utf-8"))["seeds"]
+    jobs, fallback = [], 0
+    for e in monster_entries():
+        s = subjects.get(f"{e['kind']}/{e['id']}")
+        if s is None:
+            fallback += 1
+            s = {"tags": f"no humans, {e['en'].lower()}", "sentence": f"A {e['en'].lower()}.", "person": False}
+        job = {"id": e["id"], "kind": e["kind"], "name": e["name"], "style": "portrait", "seeds": seeds}
+        if s.get("person"):  # an ordinary person: a man in the odd variants, a woman in the even ones
+            job["looks"] = [{"tags": f"{'1boy, solo, man' if n % 2 == 0 else '1girl, solo, woman'}, {FRAME}, {s['tags']}",
+                             "sentence": s["sentence"].replace("{person}", "man" if n % 2 == 0 else "woman")}
+                            for n in range(len(seeds))]
+        else:
+            solo = "" if "swarm" in e["id"] else "solo, "
+            job["tags"], job["sentence"] = f"{solo}portrait, looking at viewer, {s['tags']}", s["sentence"]
+        jobs.append(job)
+    return jobs, fallback
+
+
 def api_key() -> str:
     key = os.environ.get("OPENROUTER_API_KEY", "")
     env = ROOT / ".env"
@@ -158,10 +314,10 @@ def api_key() -> str:
     return key
 
 
-def describe(batch: list[dict], key: str) -> dict:
+def describe(batch: list[dict], key: str, ask: str = ASK) -> dict:
     lines = "\n".join(json.dumps({"key": f"{e['kind']}/{e['id']}", "ru": e["name"], "en": e["en"], "what": e["hint"]},
                                  ensure_ascii=False) for e in batch)
-    body = {"model": MODEL, "messages": [{"role": "user", "content": ASK + lines}],
+    body = {"model": MODEL, "messages": [{"role": "user", "content": ask + lines}],
             "response_format": {"type": "json_object"}, "temperature": 0.4,
             "provider": {"only": ["wafer"], "allow_fallbacks": True}}
     req = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=json.dumps(body).encode(),
@@ -191,9 +347,10 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--describe", action="store_true", help="ask the model for the subjects not written yet")
     p.add_argument("--redo", default="", help="kind/id,…: describe these again")
+    p.add_argument("--portraits", action="store_true", help="the portraits of people and monsters → jobs/portraits.json")
     a = p.parse_args()
 
-    all_entries = entries()
+    all_entries = monster_entries() if a.portraits else entries()
     subjects: dict = json.loads(SUBJECTS.read_text(encoding="utf-8")) if SUBJECTS.exists() else {}
     for k in filter(None, a.redo.split(",")):
         subjects.pop(k.strip(), None)
@@ -202,14 +359,25 @@ def main() -> None:
         key = api_key()
         for i in range(0, len(todo), BATCH):
             batch = todo[i:i + BATCH]
-            got = describe(batch, key)
+            got = describe(batch, key, ASK_MONSTER if a.portraits else ASK)
             for e in batch:
                 k = f"{e['kind']}/{e['id']}"
                 s = got.get(k)
                 if isinstance(s, dict) and s.get("tags") and s.get("sentence"):
-                    subjects[k] = {"tags": str(s["tags"]), "sentence": str(s["sentence"]), "dark": bool(s.get("dark"))}
+                    flag = "person" if a.portraits else "dark"
+                    subjects[k] = {"tags": str(s["tags"]), "sentence": str(s["sentence"]), flag: bool(s.get(flag))}
             SUBJECTS.write_text(json.dumps(subjects, ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8")
             print(f"described {min(i + BATCH, len(todo))}/{len(todo)}", flush=True)
+
+    if a.portraits:
+        people = people_jobs()
+        monsters, fallback = monster_jobs(subjects)
+        PORTRAIT_JOBS.parent.mkdir(parents=True, exist_ok=True)
+        PORTRAIT_JOBS.write_text(json.dumps({"jobs": people + monsters}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        frames = sum(len(j["seeds"]) for j in people + monsters)
+        print(f"{PORTRAIT_JOBS.relative_to(ROOT)}: {len(people)} people and {len(monsters)} monsters, {frames} portraits; "
+              f"{fallback} monsters by the bare name")
+        return
 
     jobs, fallback = [], 0
     for e in all_entries:

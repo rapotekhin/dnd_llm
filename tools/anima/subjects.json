@@ -3750,6 +3750,756 @@
   "sentence": "A single pale grey sphere with a round outline and a small white highlight on its upper left.",
   "tags": "sphere, ball, grey, circle, highlight"
  },
+ "portraits/monsters/acolyte": {
+  "person": true,
+  "sentence": "A {person} in a plain brown robe with a deep hood, a wooden holy symbol at the chest and a simple club held at the shoulder.",
+  "tags": "robe, hood, holy symbol, club, brown robe, belt"
+ },
+ "portraits/monsters/ankheg": {
+  "person": false,
+  "sentence": "A huge brown insect with a segmented carapace, sharp mandibles and glowing green eyes, its head and thorax filling the frame.",
+  "tags": "no humans, ankheg, insect, brown carapace, mandibles, glowing eyes, acid"
+ },
+ "portraits/monsters/ape": {
+  "person": false,
+  "sentence": "A sturdy ape with shaggy brown fur, a dark leathery face and small dark eyes, its broad shoulders and long arms filling the frame.",
+  "tags": "no humans, ape, brown fur, black face, dark eyes, fangs"
+ },
+ "portraits/monsters/archmage": {
+  "person": true,
+  "sentence": "A {person} in a long blue robe with a hood, a silver dagger at the belt and an open spellbook held against the chest.",
+  "tags": "robe, hood, dagger, spellbook, blue robe, sash"
+ },
+ "portraits/monsters/awakened_shrub": {
+  "person": false,
+  "sentence": "A small leafy shrub with a thick green mass of leaves and twigs, a knot of darker wood at its center and no face.",
+  "tags": "no humans, shrub, plant, green leaves, twigs, berries"
+ },
+ "portraits/monsters/awakened_tree": {
+  "person": false,
+  "sentence": "A huge tree with rough brown bark, a thick trunk and a crown of green leaves, its branches twisted around a dark hollow at the center.",
+  "tags": "no humans, tree, bark, green leaves, branches, trunk"
+ },
+ "portraits/monsters/axe_beak": {
+  "person": false,
+  "sentence": "A large flightless bird with shaggy brown feathers, a long neck and a huge hooked yellow beak, its black eyes fixed forward.",
+  "tags": "no humans, axe beak, brown feathers, yellow beak, long neck, black eyes"
+ },
+ "portraits/monsters/azer": {
+  "person": false,
+  "sentence": "A stocky bronze-skinned elemental with flames for hair and beard, glowing eyes, a round shield and a warhammer.",
+  "tags": "no humans, azer, fire, bronze skin, glowing eyes, shield, warhammer"
+ },
+ "portraits/monsters/baboon": {
+  "person": false,
+  "sentence": "A small baboon with shaggy brown fur, a bright red face, a long muzzle and bared fangs.",
+  "tags": "no humans, baboon, brown fur, red face, fangs, long muzzle"
+ },
+ "portraits/monsters/badger": {
+  "person": false,
+  "sentence": "A low badger with black fur and bold white stripes along its face, small dark eyes and strong claws.",
+  "tags": "no humans, badger, black fur, white stripes, claws, small eyes"
+ },
+ "portraits/monsters/bandit": {
+  "person": true,
+  "sentence": "A {person} in a hooded dark leather jerkin, a scarf over the mouth, a scimitar at the belt and a light crossbow across the chest.",
+  "tags": "leather armor, scimitar, crossbow, hood, scarf, dark leather armor"
+ },
+ "portraits/monsters/bandit_captain": {
+  "person": true,
+  "sentence": "A {person} in dark studded leather armor with a bandana over the brow, a scimitar at one shoulder and a dagger at the belt.",
+  "tags": "studded leather armor, scimitar, dagger, bandana, dark leather armor"
+ },
+ "portraits/monsters/basilisk": {
+  "person": false,
+  "sentence": "A reptilian basilisk with mottled green scales, a ridge of spikes along its brow, yellow eyes and curved fangs.",
+  "tags": "no humans, basilisk, green scales, yellow eyes, spikes, fangs"
+ },
+ "portraits/monsters/bearded_devil": {
+  "person": false,
+  "sentence": "A red-skinned fiend with curved horns, glowing yellow eyes and a thick beard of writhing tendrils, holding a glaive at the shoulder.",
+  "tags": "no humans, bearded devil, red skin, horns, glowing eyes, beard, glaive"
+ },
+ "portraits/monsters/berserker": {
+  "person": true,
+  "sentence": "A {person} in rough hide armor with fur trim, a broad belt and a heavy greataxe resting across one shoulder.",
+  "tags": "hide armor, greataxe, fur trim, belt, bracers"
+ },
+ "portraits/monsters/black_bear": {
+  "person": false,
+  "sentence": "A black bear with thick black fur, a brown muzzle, small dark eyes and heavy claws.",
+  "tags": "no humans, black bear, black fur, brown muzzle, small eyes, claws"
+ },
+ "portraits/monsters/blink_dog": {
+  "person": false,
+  "sentence": "A lean dog with short brown fur, tall pointed ears, yellow eyes and a narrow muzzle with white fangs.",
+  "tags": "no humans, blink dog, brown fur, yellow eyes, pointed ears, fangs"
+ },
+ "portraits/monsters/blood_hawk": {
+  "person": false,
+  "sentence": "A fierce hawk with brown feathers, a hooked beak, red eyes and sharp talons.",
+  "tags": "no humans, blood hawk, brown feathers, red eyes, hooked beak, talons"
+ },
+ "portraits/monsters/blue_dragon_wyrmling": {
+  "person": false,
+  "sentence": "A young blue dragon with smooth blue scales, small horns, yellow eyes and folded wings, its head and neck filling the frame.",
+  "tags": "no humans, blue dragon, wyrmling, blue scales, yellow eyes, horns, small wings"
+ },
+ "portraits/monsters/boar": {
+  "person": false,
+  "sentence": "A stocky boar with coarse brown fur, a broad snout, small dark eyes and curved white tusks.",
+  "tags": "no humans, boar, brown fur, tusks, snout, small eyes"
+ },
+ "portraits/monsters/brass_dragon_wyrmling": {
+  "person": false,
+  "sentence": "A young brass dragon with warm brass scales, small horns, yellow eyes and folded wings, its head and neck filling the frame.",
+  "tags": "no humans, brass dragon, wyrmling, brass scales, yellow eyes, horns, small wings"
+ },
+ "portraits/monsters/brown_bear": {
+  "person": false,
+  "sentence": "A huge brown bear with thick brown fur, small dark eyes, a heavy muzzle and broad claws.",
+  "tags": "no humans, brown bear, brown fur, small eyes, claws, fangs"
+ },
+ "portraits/monsters/bugbear": {
+  "person": false,
+  "sentence": "A tall goblinoid bugbear with shaggy brown fur, long ears, yellow eyes, wearing hide armor and carrying a morningstar and shield.",
+  "tags": "no humans, bugbear, brown fur, goblinoid, yellow eyes, hide armor, morningstar, shield"
+ },
+ "portraits/monsters/camel": {
+  "person": false,
+  "sentence": "A tall camel with sandy tan fur, a single hump, a long neck and dark eyes.",
+  "tags": "no humans, camel, tan fur, hump, long neck, dark eyes"
+ },
+ "portraits/monsters/cat": {
+  "person": false,
+  "sentence": "A small cat with soft grey fur, pointed ears, green eyes and fine white whiskers.",
+  "tags": "no humans, cat, grey fur, green eyes, whiskers, small fangs"
+ },
+ "portraits/monsters/centaur": {
+  "person": false,
+  "sentence": "A centaur with the lower body of a brown horse and a human torso, long hair, a bow and a pike at the shoulder.",
+  "tags": "no humans, centaur, brown horse body, human torso, long hair, bow, pike"
+ },
+ "portraits/monsters/cockatrice": {
+  "person": false,
+  "sentence": "A small cockatrice with a rooster's head, green scales, bat-like wings and yellow eyes, its hooked beak open.",
+  "tags": "no humans, cockatrice, green scales, rooster head, bat wings, yellow eyes, beak"
+ },
+ "portraits/monsters/commoner": {
+  "person": true,
+  "sentence": "A {person} in a simple brown tunic and belt, with a plain wooden club held loosely at the shoulder.",
+  "tags": "tunic, club, belt, brown tunic, boots"
+ },
+ "portraits/monsters/constrictor_snake": {
+  "person": false,
+  "sentence": "A thick constrictor snake with glossy green scales, yellow eyes, a flicking forked tongue and curved fangs.",
+  "tags": "no humans, constrictor snake, green scales, yellow eyes, forked tongue, fangs"
+ },
+ "portraits/monsters/copper_dragon_wyrmling": {
+  "person": false,
+  "sentence": "A young copper dragon with warm copper scales, small horns, yellow eyes and folded wings, its head and neck filling the frame.",
+  "tags": "no humans, copper dragon, wyrmling, copper scales, yellow eyes, horns, small wings"
+ },
+ "portraits/monsters/cult_fanatic": {
+  "person": true,
+  "sentence": "A {person} in a hooded dark leather jerkin, a plain iron dagger at the belt and a shadowed face beneath the hood.",
+  "tags": "leather armor, hood, dagger, dark cloak, belt"
+ },
+ "portraits/monsters/cultist": {
+  "person": true,
+  "sentence": "A {person} in a hooded leather jerkin, a curved scimitar at the belt and a dark cloak over the shoulders.",
+  "tags": "leather armor, hood, scimitar, dark cloak, belt"
+ },
+ "portraits/monsters/death_dog": {
+  "person": false,
+  "sentence": "A gaunt black two-headed hound with matted fur, glowing red eyes and twin snarling jaws full of white fangs.",
+  "tags": "no humans, death dog, two heads, black fur, glowing red eyes, fangs, snarling"
+ },
+ "portraits/monsters/deep_gnome_svirfneblin": {
+  "person": false,
+  "sentence": "A small grey-skinned gnome with a bald head, large nose and pale eyes, wearing a chainmail shirt and holding a war pick.",
+  "tags": "no humans, deep gnome, grey skin, bald, large nose, chainmail, war pick"
+ },
+ "portraits/monsters/deer": {
+  "person": false,
+  "sentence": "A slender brown deer with branching antlers, a pale throat and dark gentle eyes.",
+  "tags": "no humans, deer, brown fur, antlers, black eyes, white throat"
+ },
+ "portraits/monsters/dire_wolf": {
+  "person": false,
+  "sentence": "A huge grey wolf with a broad scarred muzzle, yellow eyes and long white fangs bared in a snarl.",
+  "tags": "no humans, dire wolf, grey fur, yellow eyes, fangs, snarling, scarred"
+ },
+ "portraits/monsters/draft_horse": {
+  "person": false,
+  "sentence": "A heavy brown draft horse with a thick black mane, broad muzzle and calm dark eyes.",
+  "tags": "no humans, draft horse, brown fur, black mane, brown eyes, muscular"
+ },
+ "portraits/monsters/dretch": {
+  "person": false,
+  "sentence": "A squat green-skinned demon with short horns, yellow eyes, a wide mouth of sharp teeth and long clawed hands.",
+  "tags": "no humans, dretch, green skin, horns, yellow eyes, sharp teeth, claws"
+ },
+ "portraits/monsters/drow": {
+  "person": false,
+  "sentence": "A dark purple-skinned elf with long white hair, pointed ears and red eyes, wearing a fine chainmail shirt and holding a shortsword.",
+  "tags": "no humans, drow, dark purple skin, white hair, red eyes, pointy ears, chainmail, shortsword"
+ },
+ "portraits/monsters/druid": {
+  "person": true,
+  "sentence": "A {person} in a hooded green robe of rough cloth, a leather belt and a gnarled quarterstaff held at the shoulder.",
+  "tags": "hooded robe, green robe, quarterstaff, leather belt, pouch"
+ },
+ "portraits/monsters/duergar": {
+  "person": false,
+  "sentence": "A stocky grey-skinned dwarf with a bald crown, white beard and red eyes, wearing scale mail and carrying a shield and war pick.",
+  "tags": "no humans, duergar, grey skin, red eyes, white beard, scale mail, shield, war pick"
+ },
+ "portraits/monsters/dust_mephit": {
+  "person": false,
+  "sentence": "A small grey winged elemental with a cracked dusty hide, glowing pale eyes and long clawed fingers.",
+  "tags": "no humans, dust mephit, grey skin, glowing eyes, wings, claws, dust"
+ },
+ "portraits/monsters/eagle": {
+  "person": false,
+  "sentence": "A brown eagle with a white head, hooked yellow beak and fierce golden eyes.",
+  "tags": "no humans, eagle, brown feathers, white head, yellow beak, sharp eyes"
+ },
+ "portraits/monsters/elk": {
+  "person": false,
+  "sentence": "A massive brown elk with wide branching antlers, a thick neck and dark calm eyes.",
+  "tags": "no humans, elk, brown fur, antlers, dark eyes, muscular"
+ },
+ "portraits/monsters/ettercap": {
+  "person": false,
+  "sentence": "A hunched purple-skinned creature with spidery limbs, a fanged mouth and clusters of yellow eyes.",
+  "tags": "no humans, ettercap, purple skin, spider legs, fangs, yellow eyes, claws"
+ },
+ "portraits/monsters/flying_snake": {
+  "person": false,
+  "sentence": "A small green snake with a yellow belly, tiny feathered wings and bright red eyes.",
+  "tags": "no humans, flying snake, green scales, yellow belly, wings, red eyes"
+ },
+ "portraits/monsters/gargoyle": {
+  "person": false,
+  "sentence": "A grey stone gargoyle with curved horns, glowing eyes, a fanged grin and folded bat-like wings.",
+  "tags": "no humans, gargoyle, grey stone, horns, glowing eyes, fangs, claws, wings"
+ },
+ "portraits/monsters/ghoul": {
+  "person": false,
+  "sentence": "A gaunt grey-skinned undead with hollow glowing eyes, a mouth of sharp teeth and long clawed fingers.",
+  "tags": "no humans, ghoul, grey skin, glowing eyes, sharp teeth, claws, gaunt"
+ },
+ "portraits/monsters/giant_badger": {
+  "person": false,
+  "sentence": "A large badger with coarse black fur, white face stripes, a broad snout and heavy claws.",
+  "tags": "no humans, giant badger, black fur, white stripes, claws, brown eyes"
+ },
+ "portraits/monsters/giant_boar": {
+  "person": false,
+  "sentence": "A huge bristly brown boar with a broad snout, small dark eyes and long curved tusks.",
+  "tags": "no humans, giant boar, brown fur, tusks, snout, small eyes, bristly"
+ },
+ "portraits/monsters/giant_centipede": {
+  "person": false,
+  "sentence": "A long yellow centipede with segmented armor, many legs and sharp mandibles.",
+  "tags": "no humans, giant centipede, yellow body, many legs, antennae, mandibles"
+ },
+ "portraits/monsters/giant_constrictor_snake": {
+  "person": false,
+  "sentence": "A thick green constrictor snake with dark bands, yellow eyes and a flickering forked tongue.",
+  "tags": "no humans, giant constrictor snake, green scales, yellow eyes, forked tongue, thick body"
+ },
+ "portraits/monsters/giant_eagle": {
+  "person": false,
+  "sentence": "A huge brown eagle with a white head, hooked yellow beak, piercing eyes and broad talons.",
+  "tags": "no humans, giant eagle, brown feathers, white head, yellow beak, sharp eyes, talons"
+ },
+ "portraits/monsters/giant_elk": {
+  "person": false,
+  "sentence": "A towering brown elk with enormous branching antlers, a thick mane and dark eyes.",
+  "tags": "no humans, giant elk, brown fur, huge antlers, dark eyes, muscular"
+ },
+ "portraits/monsters/giant_fire_beetle": {
+  "person": false,
+  "sentence": "A large black beetle with a hard carapace, two glowing orange spots and sharp mandibles.",
+  "tags": "no humans, giant fire beetle, black carapace, glowing spots, mandibles, antennae"
+ },
+ "portraits/monsters/giant_goat": {
+  "person": false,
+  "sentence": "A large white goat with curved horns, a shaggy beard and pale yellow eyes.",
+  "tags": "no humans, giant goat, white fur, horns, yellow eyes, beard"
+ },
+ "portraits/monsters/giant_hyena": {
+  "person": false,
+  "sentence": "A huge brown hyena with dark spots, a bristly mane, yellow eyes and a wide fanged grin.",
+  "tags": "no humans, giant hyena, brown fur, spots, fangs, yellow eyes, mane"
+ },
+ "portraits/monsters/giant_lizard": {
+  "person": false,
+  "sentence": "A large green lizard with mottled scales, yellow eyes and long clawed toes.",
+  "tags": "no humans, giant lizard, green scales, yellow eyes, claws, long tail"
+ },
+ "portraits/monsters/giant_owl": {
+  "person": false,
+  "sentence": "A huge brown owl with a pale round face, large yellow eyes, a hooked beak and heavy talons.",
+  "tags": "no humans, giant owl, brown feathers, white face, yellow eyes, beak, talons"
+ },
+ "portraits/monsters/giant_poisonous_snake": {
+  "person": false,
+  "sentence": "A thick green snake with dark markings, yellow eyes, bared fangs and a flickering forked tongue.",
+  "tags": "no humans, giant poisonous snake, green scales, yellow eyes, fangs, forked tongue"
+ },
+ "portraits/monsters/giant_rat": {
+  "person": false,
+  "sentence": "A large brown rat with coarse fur, a pink nose, red eyes, long whiskers and prominent yellow incisors.",
+  "tags": "no humans, giant rat, brown fur, pink nose, red eyes, whiskers, buck teeth"
+ },
+ "portraits/monsters/giant_rat_diseased": {
+  "person": false,
+  "sentence": "A huge rat with patchy brown fur, cloudy pink eyes, long whiskers and yellow incisors, its mangy head and shoulders hunched forward.",
+  "tags": "no humans, giant rat, diseased, brown fur, cloudy eyes, yellow teeth, whiskers, mangy fur"
+ },
+ "portraits/monsters/giant_scorpion": {
+  "person": false,
+  "sentence": "A massive black scorpion with a glossy segmented carapace, two heavy pincers raised and a curved stinger above its flat head.",
+  "tags": "no humans, giant scorpion, black carapace, pincers, stinger, segmented tail, yellow eyes"
+ },
+ "portraits/monsters/giant_spider": {
+  "person": false,
+  "sentence": "A huge black spider with glossy chitin, eight red eyes clustered on its head, hairy legs and long curved fangs.",
+  "tags": "no humans, giant spider, black chitin, eight eyes, red eyes, fangs, hairy legs"
+ },
+ "portraits/monsters/giant_vulture": {
+  "person": false,
+  "sentence": "A huge vulture with black feathers, a bare wrinkled head, a hooked grey beak and small red eyes.",
+  "tags": "no humans, giant vulture, black feathers, bald head, hooked beak, red eyes, talons"
+ },
+ "portraits/monsters/giant_wasp": {
+  "person": false,
+  "sentence": "A giant wasp with a glossy yellow-and-black striped body, large compound eyes, translucent wings and a long black stinger.",
+  "tags": "no humans, giant wasp, yellow stripes, black stripes, wings, stinger, compound eyes, antennae"
+ },
+ "portraits/monsters/giant_weasel": {
+  "person": false,
+  "sentence": "A long-bodied giant weasel with sleek brown fur, a white throat, small black eyes, whiskers and sharp teeth.",
+  "tags": "no humans, giant weasel, brown fur, white belly, black eyes, whiskers, sharp teeth"
+ },
+ "portraits/monsters/giant_wolf_spider": {
+  "person": false,
+  "sentence": "A large brown wolf spider with a striped hairy body, eight gleaming eyes and prominent fangs.",
+  "tags": "no humans, giant wolf spider, brown carapace, eight eyes, hairy legs, fangs, stripes"
+ },
+ "portraits/monsters/gnoll": {
+  "person": false,
+  "sentence": "A tall hyena-headed gnoll with spotted tawny fur, yellow eyes, a grinning muzzle of sharp teeth, wearing rough hide armor and carrying a spear.",
+  "tags": "no humans, gnoll, hyena head, spotted fur, yellow eyes, sharp teeth, hide armor, shield, spear"
+ },
+ "portraits/monsters/goat": {
+  "person": false,
+  "sentence": "A sturdy white goat with a shaggy coat, curved horns, floppy ears, a short beard and rectangular pupils.",
+  "tags": "no humans, goat, white fur, horns, horizontal pupils, beard, floppy ears"
+ },
+ "portraits/monsters/goblin": {
+  "person": false,
+  "sentence": "A small green-skinned goblin with long pointed ears, yellow eyes, a wide grin of sharp teeth and scraps of dirty leather armor.",
+  "tags": "no humans, goblin, green skin, pointy ears, yellow eyes, sharp teeth, leather armor"
+ },
+ "portraits/monsters/grick": {
+  "person": false,
+  "sentence": "A wormlike green grick with a stony hide, four long tentacles curling around a sharp beak and a flat eyeless head.",
+  "tags": "no humans, grick, green skin, tentacles, beak, stone camouflage, wormlike body"
+ },
+ "portraits/monsters/griffon": {
+  "person": false,
+  "sentence": "A griffon with the head and wings of a brown eagle, a hooked yellow beak, golden eyes and the tawny shoulders of a lion.",
+  "tags": "no humans, griffon, brown feathers, eagle head, hooked beak, yellow eyes, lion body, wings"
+ },
+ "portraits/monsters/guard": {
+  "person": true,
+  "sentence": "A {person} of the town watch in a chainmail shirt under a blue tabard, an open steel helmet and a shield and spear at the shoulder.",
+  "tags": "chainmail, helmet, spear, shield, blue tabard"
+ },
+ "portraits/monsters/harpy": {
+  "person": false,
+  "sentence": "A harpy with a gaunt feathered face, wild dark hair, sharp teeth, brown wings and clawed hands gripping a wooden club.",
+  "tags": "no humans, harpy, feathered wings, bird legs, claws, sharp teeth, long hair, club"
+ },
+ "portraits/monsters/hawk": {
+  "person": false,
+  "sentence": "A small hawk with brown speckled feathers, a hooked grey beak, fierce yellow eyes and sharp talons.",
+  "tags": "no humans, hawk, brown feathers, hooked beak, yellow eyes, talons"
+ },
+ "portraits/monsters/hell_hound": {
+  "person": false,
+  "sentence": "A massive black hound with smoldering fur, glowing red eyes, bared white fangs and small curved horns.",
+  "tags": "no humans, hell hound, black fur, glowing red eyes, fangs, horns, fire"
+ },
+ "portraits/monsters/hippogriff": {
+  "person": false,
+  "sentence": "A hippogriff with the head and wings of a brown eagle, a hooked yellow beak, golden eyes and the chest of a pale horse.",
+  "tags": "no humans, hippogriff, brown feathers, eagle head, hooked beak, yellow eyes, horse body, wings"
+ },
+ "portraits/monsters/hobgoblin": {
+  "person": false,
+  "sentence": "A broad hobgoblin with reddish-brown skin, pointed ears, yellow eyes, a grim tusked face, wearing chainmail and carrying a shield.",
+  "tags": "no humans, hobgoblin, red skin, pointy ears, yellow eyes, chainmail, shield, longsword"
+ },
+ "portraits/monsters/hyena": {
+  "person": false,
+  "sentence": "A stocky spotted hyena with tawny fur, a dark mane, rounded ears, yellow eyes and a heavy jaw of blunt teeth.",
+  "tags": "no humans, hyena, spotted fur, mane, rounded ears, yellow eyes, sharp teeth"
+ },
+ "portraits/monsters/ice_mephit": {
+  "person": false,
+  "sentence": "A small ice mephit with a jagged blue-white crystalline body, glowing pale eyes, icy horns and translucent wings.",
+  "tags": "no humans, ice mephit, ice, blue skin, glowing eyes, wings, claws, horns"
+ },
+ "portraits/monsters/imp": {
+  "person": false,
+  "sentence": "A tiny red imp with leathery bat wings, small curved horns, glowing yellow eyes, pointed ears and a barbed tail.",
+  "tags": "no humans, imp, red skin, horns, bat wings, pointed tail, glowing eyes, fangs"
+ },
+ "portraits/monsters/jackal": {
+  "person": false,
+  "sentence": "A slender jackal with sandy brown fur, a dark saddle on its back, tall pointed ears and amber eyes.",
+  "tags": "no humans, jackal, brown fur, black back, pointed ears, yellow eyes, sharp teeth"
+ },
+ "portraits/monsters/knight": {
+  "person": true,
+  "sentence": "A {person} in full plate armor, a closed steel helmet with a narrow visor, a greatsword resting at the shoulder and a heavy crossbow slung behind.",
+  "tags": "plate armor, greatsword, helmet, crossbow, gauntlets"
+ },
+ "portraits/monsters/kobold": {
+  "person": false,
+  "sentence": "A small reptilian kobold with dusty brown scales, a pointed snout, small horns, yellow eyes and a crude dagger.",
+  "tags": "no humans, kobold, brown scales, horns, yellow eyes, pointed snout, dagger, sling"
+ },
+ "portraits/monsters/lizard": {
+  "person": false,
+  "sentence": "A tiny green lizard with smooth scales, a rounded head, bright yellow eyes and a flickering forked tongue.",
+  "tags": "no humans, lizard, green scales, yellow eyes, long tail, claws, forked tongue"
+ },
+ "portraits/monsters/mage": {
+  "person": true,
+  "sentence": "A {person} in a long hooded robe, a leather belt with a dagger, an open spellbook held at the chest and faint arcane light at the fingers.",
+  "tags": "robe, hood, dagger, spellbook, glowing hands"
+ },
+ "portraits/monsters/magma_mephit": {
+  "person": false,
+  "sentence": "A small magma mephit with a cracked dark-red body, glowing orange fissures, stubby horns, glowing eyes and smoky wings.",
+  "tags": "no humans, magma mephit, magma, glowing cracks, red skin, horns, wings, glowing eyes"
+ },
+ "portraits/monsters/magmin": {
+  "person": false,
+  "sentence": "A small magmin with a squat body of dark magma, glowing orange cracks, fiery eyes and a crown of flames.",
+  "tags": "no humans, magmin, magma, fire, glowing eyes, glowing cracks, fiery hair"
+ },
+ "portraits/monsters/mastiff": {
+  "person": false,
+  "sentence": "A heavy mastiff with short brown fur, a black muzzle, drooping ears, dark eyes and a broad muscular chest.",
+  "tags": "no humans, mastiff, brown fur, black muzzle, floppy ears, brown eyes, muscular"
+ },
+ "portraits/monsters/minotaur_skeleton": {
+  "person": false,
+  "sentence": "A towering minotaur skeleton of bare off-white bone, a horned bovine skull with empty eye sockets, holding a heavy greataxe at its shoulder.",
+  "tags": "no humans, minotaur, skeleton, horned, empty eye sockets, greataxe, bare bones"
+ },
+ "portraits/monsters/mule": {
+  "person": false,
+  "sentence": "A sturdy grey mule with long upright ears, a dark muzzle and dark eyes, a short bristly mane along its neck and no harness.",
+  "tags": "no humans, mule, grey fur, long ears, dark eyes, short mane"
+ },
+ "portraits/monsters/mummy": {
+  "person": false,
+  "sentence": "A desiccated mummy wrapped in yellowed bandages, grey-brown shriveled skin and hollow glowing eyes, its chest and shoulders bound in tattered linen.",
+  "tags": "no humans, mummy, bandages, desiccated skin, hollow eyes, grey skin"
+ },
+ "portraits/monsters/noble": {
+  "person": true,
+  "sentence": "A {person} in a polished breastplate over fine dark clothes, a jeweled cloak pin at the shoulder and the hilt of a rapier at the hip.",
+  "tags": "noble, breastplate, rapier, fine clothes, jewelry, cloak"
+ },
+ "portraits/monsters/ogre": {
+  "person": false,
+  "sentence": "A massive ogre with thick grey skin, a bald domed head, small dark eyes and jutting tusks, wearing crude hide armor with a greatclub over one shoulder.",
+  "tags": "no humans, ogre, grey skin, bald, small eyes, tusks, hide armor, greatclub"
+ },
+ "portraits/monsters/ogre_zombie": {
+  "person": false,
+  "sentence": "A hulking ogre zombie with lumpy grey-green rotting skin, sunken glowing eyes and a slack jaw, a spiked morningstar resting against its shoulder.",
+  "tags": "no humans, ogre, zombie, grey skin, green skin, rotting skin, glowing eyes, morningstar, rags"
+ },
+ "portraits/monsters/orc": {
+  "person": false,
+  "sentence": "A broad orc with mottled green skin, pointed ears, yellow eyes and lower tusks, wearing rough hide armor with a greataxe across its shoulder.",
+  "tags": "no humans, orc, green skin, pointy ears, tusks, yellow eyes, hide armor, greataxe"
+ },
+ "portraits/monsters/owl": {
+  "person": false,
+  "sentence": "A small brown owl with a pale white facial disc, round yellow eyes and a hooked beak, its feathered shoulders and talons just visible.",
+  "tags": "no humans, owl, brown feathers, white face, yellow eyes, hooked beak, talons"
+ },
+ "portraits/monsters/owlbear": {
+  "person": false,
+  "sentence": "A huge bear with the head of an owl, a hooked yellow beak, round amber eyes and brown feathers over shaggy fur, its heavy claws raised.",
+  "tags": "no humans, owlbear, brown feathers, brown fur, hooked beak, yellow eyes, claws"
+ },
+ "portraits/monsters/panther": {
+  "person": false,
+  "sentence": "A sleek black panther with glossy dark fur, round yellow eyes and white fangs, its broad head and muscular shoulders filling the frame.",
+  "tags": "no humans, panther, black fur, yellow eyes, fangs, claws"
+ },
+ "portraits/monsters/pegasus": {
+  "person": false,
+  "sentence": "A noble white pegasus with a flowing white mane, large feathered wings rising behind its shoulders and dark gentle eyes.",
+  "tags": "no humans, pegasus, white fur, feathered wings, white mane, dark eyes, hooves"
+ },
+ "portraits/monsters/poisonous_snake": {
+  "person": false,
+  "sentence": "A slender green snake with banded scales, bright yellow eyes and a flickering forked tongue, its head raised above coiled shoulders.",
+  "tags": "no humans, snake, green scales, yellow eyes, forked tongue, fangs"
+ },
+ "portraits/monsters/polar_bear": {
+  "person": false,
+  "sentence": "A massive polar bear with thick white fur, a black nose, small dark eyes and heavy clawed forepaws, its head and neck filling the frame.",
+  "tags": "no humans, polar bear, white fur, black nose, dark eyes, claws"
+ },
+ "portraits/monsters/pony": {
+  "person": false,
+  "sentence": "A sturdy brown pony with a shaggy brown mane, long ears, dark eyes and a soft muzzle, its head and chest filling the frame.",
+  "tags": "no humans, pony, brown fur, brown mane, dark eyes, long ears"
+ },
+ "portraits/monsters/priest": {
+  "person": true,
+  "sentence": "A {person} in a chain shirt beneath a plain robe, a holy symbol at the chest and the head of a mace resting at one shoulder.",
+  "tags": "priest, chainmail, mace, holy symbol, robe"
+ },
+ "portraits/monsters/quasit": {
+  "person": false,
+  "sentence": "A tiny green fiend with leathery bat wings, small horns, yellow eyes and a wide fanged grin, its clawed hands raised at its chest.",
+  "tags": "no humans, quasit, green skin, bat wings, horns, claws, yellow eyes, fangs"
+ },
+ "portraits/monsters/rat": {
+  "person": false,
+  "sentence": "A scrawny grey rat with ragged fur, large pink ears, black bead eyes and yellow incisors, its whiskered snout thrust forward.",
+  "tags": "no humans, rat, grey fur, pink ears, black eyes, whiskers, fangs"
+ },
+ "portraits/monsters/raven": {
+  "person": false,
+  "sentence": "A glossy black raven with a heavy black beak, dark eyes and ruffled throat feathers, its head and shoulders filling the frame.",
+  "tags": "no humans, raven, black feathers, black beak, dark eyes, glossy feathers"
+ },
+ "portraits/monsters/rhinoceros": {
+  "person": false,
+  "sentence": "A massive grey rhinoceros with thick folded hide, a large curved horn on its snout and small dark eyes, its heavy head and shoulders filling the frame.",
+  "tags": "no humans, rhinoceros, grey skin, horn, small eyes, thick hide"
+ },
+ "portraits/monsters/riding_horse": {
+  "person": false,
+  "sentence": "A strong brown riding horse with a black mane, long face, dark eyes and a soft muzzle, its head and neck filling the frame.",
+  "tags": "no humans, horse, brown fur, black mane, dark eyes, long face"
+ },
+ "portraits/monsters/saber_toothed_tiger": {
+  "person": false,
+  "sentence": "A powerful orange saber-toothed tiger with black stripes, round yellow eyes and two long curved fangs, its broad head and shoulders filling the frame.",
+  "tags": "no humans, saber-toothed tiger, orange fur, black stripes, long fangs, yellow eyes, claws"
+ },
+ "portraits/monsters/satyr": {
+  "person": false,
+  "sentence": "A satyr with a lean upper body, pointed ears, small curved goat horns and brown fur at the shoulders, wearing leather armor with a shortsword at the hip.",
+  "tags": "no humans, satyr, goat horns, pointed ears, brown fur, leather armor, shortsword, shortbow"
+ },
+ "portraits/monsters/scorpion": {
+  "person": false,
+  "sentence": "A small brown scorpion with a glossy segmented carapace, raised pincers and a curved tail ending in a dark stinger, its body centered in the frame.",
+  "tags": "no humans, scorpion, brown carapace, pincers, stinger, black eyes"
+ },
+ "portraits/monsters/scout": {
+  "person": true,
+  "sentence": "A {person} in hooded leather armor with a longbow over one shoulder, a quiver at the back and a shortsword at the hip.",
+  "tags": "scout, leather armor, shortsword, longbow, hood, quiver"
+ },
+ "portraits/monsters/silver_dragon_wyrmling": {
+  "person": false,
+  "sentence": "A young silver dragon wyrmling with gleaming silver scales, small curved horns, bright yellow eyes and leathery wings folded behind its shoulders.",
+  "tags": "no humans, silver dragon, wyrmling, silver scales, horns, yellow eyes, wings"
+ },
+ "portraits/monsters/skeleton": {
+  "person": false,
+  "sentence": "A bare off-white skeleton with a grinning skull, empty eye sockets and a shortsword at its shoulder, a shortbow and quiver behind.",
+  "tags": "no humans, skeleton, bare bones, empty eye sockets, shortsword, shortbow, quiver"
+ },
+ "portraits/monsters/spider": {
+  "person": false,
+  "sentence": "A small black spider with a glossy round body, eight clustered eyes, hairy legs and small fangs, its head and front legs filling the frame.",
+  "tags": "no humans, spider, black carapace, eight eyes, fangs, hairy legs"
+ },
+ "portraits/monsters/sprite": {
+  "person": false,
+  "sentence": "A tiny sprite with pointed ears, green skin, shimmering dragonfly wings and a mischievous grin, wearing leather armor with a longsword at its hip.",
+  "tags": "no humans, sprite, pointed ears, green skin, dragonfly wings, leather armor, longsword, shortbow"
+ },
+ "portraits/monsters/spy": {
+  "person": true,
+  "sentence": "A {person} in dark close-fitting clothes and a low hood, a hand crossbow at one shoulder and the hilt of a shortsword at the hip.",
+  "tags": "spy, shortsword, hand crossbow, dark clothes, hood, gloves"
+ },
+ "portraits/monsters/steam_mephit": {
+  "person": false,
+  "sentence": "A small steam mephit with a wispy grey-white body, glowing eyes, clawed hands and thin wings, steam curling from its shoulders.",
+  "tags": "no humans, steam mephit, grey skin, glowing eyes, claws, steam, wings"
+ },
+ "portraits/monsters/stirge": {
+  "person": false,
+  "sentence": "A tiny red-brown flying parasite with leathery bat wings, a long needle-like proboscis and small black eyes, its rounded body plump.",
+  "tags": "no humans, stirge, red body, bat wings, proboscis, black eyes, insect legs"
+ },
+ "portraits/monsters/swarm_of_beetles": {
+  "person": false,
+  "sentence": "A tight cluster of a few black and brown beetles with glossy carapaces, twitching antennae and many thin legs.",
+  "tags": "no humans, swarm, beetle, black carapace, brown shell, antennae, insect legs"
+ },
+ "portraits/monsters/swarm_of_centipedes": {
+  "person": false,
+  "sentence": "A tight cluster of a few long yellow centipedes with segmented bodies, many pale legs and twitching antennae.",
+  "tags": "no humans, swarm, centipede, yellow body, many legs, antennae, segmented body"
+ },
+ "portraits/monsters/swarm_of_insects": {
+  "person": false,
+  "sentence": "A tight cluster of a few small black and brown insects with buzzing wings, thin legs and twitching antennae.",
+  "tags": "no humans, swarm, insect, black body, brown wings, antennae, many legs"
+ },
+ "portraits/monsters/swarm_of_poisonous_snakes": {
+  "person": false,
+  "sentence": "A tight cluster of a few slender green snakes with yellow eyes, forked tongues and small white fangs.",
+  "tags": "no humans, swarm, snake, green scales, yellow eyes, fangs, forked tongue"
+ },
+ "portraits/monsters/swarm_of_rats": {
+  "person": false,
+  "sentence": "A tight cluster of a few brown rats with coarse fur, black eyes, pink tails and twitching whiskers.",
+  "tags": "no humans, swarm, rat, brown fur, black eyes, pink tail, whiskers"
+ },
+ "portraits/monsters/swarm_of_ravens": {
+  "person": false,
+  "sentence": "A tight cluster of a few glossy black ravens with black beaks, dark eyes and ruffled feathers.",
+  "tags": "no humans, swarm, raven, black feathers, black beak, black eyes, glossy feathers"
+ },
+ "portraits/monsters/swarm_of_spiders": {
+  "person": false,
+  "sentence": "A tight cluster of a few black spiders with hairy legs, clusters of tiny eyes and small pale fangs.",
+  "tags": "no humans, swarm, spider, black body, many eyes, hairy legs, fangs"
+ },
+ "portraits/monsters/swarm_of_wasps": {
+  "person": false,
+  "sentence": "A tight cluster of a few yellow-and-black wasps with translucent wings, thin waists and sharp stingers.",
+  "tags": "no humans, swarm, wasp, yellow body, black stripes, translucent wings, stinger"
+ },
+ "portraits/monsters/thug": {
+  "person": true,
+  "sentence": "A {person} in a hooded leather jerkin with a scarred cheek, a mace at the shoulder and a heavy crossbow slung behind.",
+  "tags": "leather armor, mace, heavy crossbow, hood, scar"
+ },
+ "portraits/monsters/tiger": {
+  "person": false,
+  "sentence": "A massive tiger with orange fur, black stripes, a white muzzle and green eyes, its broad head and heavy shoulders.",
+  "tags": "no humans, tiger, orange fur, black stripes, white muzzle, green eyes, fangs"
+ },
+ "portraits/monsters/tribal_warrior": {
+  "person": true,
+  "sentence": "A {person} in a hide armor vest with painted tribal markings, a bone necklace and a spear held upright.",
+  "tags": "hide armor, spear, tribal markings, bone necklace, loincloth"
+ },
+ "portraits/monsters/veteran": {
+  "person": true,
+  "sentence": "A {person} in polished splint armor and an open helmet, a longsword at the shoulder and a shortsword at the belt.",
+  "tags": "splint armor, longsword, shortsword, heavy crossbow, helmet, scar"
+ },
+ "portraits/monsters/violet_fungus": {
+  "person": false,
+  "sentence": "A squat violet fungus with a broad purple cap, a pale fleshy stalk and dangling tendrils, its body a single lumpy mass.",
+  "tags": "no humans, fungus, purple cap, pale stalk, tendrils, no eyes"
+ },
+ "portraits/monsters/vulture": {
+  "person": false,
+  "sentence": "A hunched vulture with black feathers, a bare pink head, a hooked grey beak and small red eyes, its shoulders mantled.",
+  "tags": "no humans, vulture, black feathers, bald head, hooked beak, red eyes"
+ },
+ "portraits/monsters/warhorse": {
+  "person": false,
+  "sentence": "A strong brown warhorse with a black mane, a broad chest and dark eyes, its head held high.",
+  "tags": "no humans, horse, brown fur, black mane, brown eyes, muscular"
+ },
+ "portraits/monsters/warhorse_skeleton": {
+  "person": false,
+  "sentence": "A skeletal warhorse with bare off-white bones, a long skull, empty eye sockets and a ribcage showing through no flesh.",
+  "tags": "no humans, skeleton, horse, white bone, bare bone, empty eye sockets"
+ },
+ "portraits/monsters/weasel": {
+  "person": false,
+  "sentence": "A slender weasel with soft brown fur, a white belly, a pointed snout and small black eyes, its long body low.",
+  "tags": "no humans, weasel, brown fur, white belly, black eyes, long body"
+ },
+ "portraits/monsters/wererat_human": {
+  "person": true,
+  "sentence": "A {person} in a dark hooded leather jerkin with a shortsword at the belt and a hand crossbow held low, faint rat-like eyes.",
+  "tags": "shortsword, hand crossbow, leather armor, hood, rat-like eyes"
+ },
+ "portraits/monsters/wererat_hybrid": {
+  "person": false,
+  "sentence": "A rat-headed humanoid with sleek brown fur, whiskers, black eyes and bared incisors, wearing a leather jerkin with a shortsword and hand crossbow.",
+  "tags": "no humans, wererat, rat head, brown fur, whiskers, sharp teeth, shortsword, hand crossbow, leather armor"
+ },
+ "portraits/monsters/wererat_rat": {
+  "person": false,
+  "sentence": "A large brown rat with coarse fur, a long pink tail, black eyes and yellow incisors, its rounded body low and tense.",
+  "tags": "no humans, rat, brown fur, black eyes, whiskers, long tail, pink tail"
+ },
+ "portraits/monsters/werewolf_human": {
+  "person": true,
+  "sentence": "A {person} in a fur-trimmed leather jerkin with a spear at the shoulder, a hood and faintly feral eyes.",
+  "tags": "spear, fur cloak, leather armor, hood, feral eyes"
+ },
+ "portraits/monsters/werewolf_hybrid": {
+  "person": false,
+  "sentence": "A wolf-headed humanoid covered in thick grey fur, with yellow eyes, long fangs and clawed hands, its broad chest bare.",
+  "tags": "no humans, werewolf, wolf head, grey fur, yellow eyes, fangs, claws, muscular"
+ },
+ "portraits/monsters/werewolf_wolf": {
+  "person": false,
+  "sentence": "A large grey wolf with thick fur, pricked ears, yellow eyes and white fangs, its head low and shoulders broad.",
+  "tags": "no humans, wolf, grey fur, yellow eyes, fangs, black nose"
+ },
+ "portraits/monsters/white_dragon_wyrmling": {
+  "person": false,
+  "sentence": "A young white dragon with smooth white scales, a short snout, small horns and pale blue eyes, its neck arched above a narrow chest.",
+  "tags": "no humans, dragon, white scales, blue eyes, horns, small wings"
+ },
+ "portraits/monsters/wight": {
+  "person": false,
+  "sentence": "A gaunt undead humanoid with pallid grey skin, hollow glowing blue eyes and a cruel jaw, clad in studded leather armor with a longsword at its side.",
+  "tags": "no humans, wight, pale skin, glowing blue eyes, studded leather armor, longsword, longbow"
+ },
+ "portraits/monsters/winter_wolf": {
+  "person": false,
+  "sentence": "A huge wolf with shaggy white fur, icy blue eyes and long fangs, frost clinging to its muzzle and broad chest.",
+  "tags": "no humans, wolf, white fur, blue eyes, fangs, frost breath"
+ },
+ "portraits/monsters/wolf": {
+  "person": false,
+  "sentence": "A grey wolf with thick fur, pricked ears and amber yellow eyes, lips drawn back from white fangs.",
+  "tags": "no humans, wolf, grey fur, yellow eyes, fangs, snarling"
+ },
+ "portraits/monsters/worg": {
+  "person": false,
+  "sentence": "A large black-furred wolf-like beast with a heavy muzzle, pointed ears, red eyes and long yellow fangs, its shoulders hunched.",
+  "tags": "no humans, worg, black fur, red eyes, fangs, pointed ears"
+ },
+ "portraits/monsters/zombie": {
+  "person": false,
+  "sentence": "A shambling zombie with grey-green rotting skin, clouded white eyes and torn rags hanging from its shoulders.",
+  "tags": "no humans, zombie, grey skin, green skin, clouded eyes, tattered clothes, rags"
+ },
  "spells/acid_arrow": {
   "green": true,
   "sentence": "A single glowing green arrow of acid with a bright yellow-green tip and dripping droplets, flying diagonally to the right.",

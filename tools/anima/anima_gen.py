@@ -11,6 +11,10 @@ subject (or settings) changed: each variant keeps the prompt it was drawn from b
     python3 anima_gen.py jobs/icons.json --pick longsword=2    # the 2nd variant becomes the icon
 
     nohup python3 anima_gen.py jobs/icons.json > anima.log 2>&1 &
+    nohup python3 anima_gen.py jobs/portraits.json --steps 24 > portraits.log 2>&1 &   # people and monsters
+
+A portrait job (`style: "portrait"`) is drawn as a bust and kept whole in raw/; its variant is the face cut out of it,
+256 px WebP (variants/<id>__<n>.webp); it has its own seeds, and a person its own look per variant (`looks`).
 
 The prompt follows the Anima card (huggingface.co/circlestone-labs/Anima): quality tags first, the object in tags,
 then at least two plain sentences; ER SDE, CFG 4–5. The object is drawn on a flat background, which is cut out into a
@@ -64,6 +68,20 @@ ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
 
+# Portraits (a job's `style: "portrait"`, v0.8.4.43.5): a bust on a dark muted background, kept whole in raw/; the
+# game takes the face cut out of it (FACE of the frame's side), PORTRAIT px, WebP. The trial of 2026-11-11 with the
+# author: the face fills the token's circle, the bust at 64 px is a speck. A job may carry its `seeds` and its
+# `looks` (tags and a sentence per variant); a child's job drops «child» from the negative and adds `neg_add`.
+P_HEAD = "masterpiece, best quality, score_7, safe, "
+P_TAIL = ("It is a character portrait for a fantasy role-playing game: head and shoulders, the face centered and turned "
+          "slightly to the side, looking at the viewer, soft painterly shading, on a plain dark muted background.")
+P_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, "
+              "chromatic aberration, text, letters, watermark, signature, border, frame, multiple people, 2girls, "
+              "2boys, nsfw, nude, full body, cropped head, hands, weapon in front of face, blood, gore, "
+              "loli, shota, child")  # the last three as in the event images' MINOR_NEG (llm_server images.py)
+FACE = (0.2, 0.04, 0.8, 0.64)
+PORTRAIT = 256
+
 
 # --- Forge ----------------------------------------------------------------------------------------------------------
 
@@ -88,27 +106,52 @@ def model_settings(url: str, checkpoint: str) -> dict:
     return {"sd_model_checkpoint": found[0], "forge_additional_modules": [paths[m] for m in MODULES]}
 
 
+def portrait(job: dict) -> bool:
+    return job.get("style") == "portrait"
+
+
+def seeds_of(job: dict, seeds: list[int]) -> list[int]:
+    return list(job.get("seeds") or seeds)
+
+
 def prompt_of(job: dict, key: str) -> str:
     tag, word = KEYS[key]
     return HEAD.format(tag=tag) + job["tags"] + ".\n" + job["sentence"] + " " + TAIL.format(word=word)
 
 
-def full_prompt(job: dict, a: argparse.Namespace) -> str:
-    return prompt_of(job, job.get("key") if job.get("key") in KEYS else a.bg)
+def full_prompt(job: dict, n: int, a: argparse.Namespace) -> str:
+    look = job["looks"][n - 1] if job.get("looks") else job
+    if portrait(job):
+        return P_HEAD + look["tags"] + ".\n" + look["sentence"] + " " + P_TAIL
+    return prompt_of(look, job.get("key") if job.get("key") in KEYS else a.bg)
 
 
-def stale(out: Path, job: dict, n: int, seed: int, prompt: str) -> bool:
+def negative_of(job: dict) -> str:
+    if not portrait(job):
+        return NEGATIVE
+    drop = set(job.get("neg_drop", []))
+    tags = [t.strip() for t in P_NEGATIVE.split(",") if t.strip() not in drop]
+    return ", ".join(tags + [t.strip() for t in job.get("neg_add", "").split(",") if t.strip()])
+
+
+def stamp_of(job: dict, n: int, a: argparse.Namespace) -> str:
+    """What a variant was drawn from: the prompt, and a portrait's negative too (a child's differs)."""
+    text = full_prompt(job, n, a)
+    return text + "\n\nNEGATIVE: " + negative_of(job) if portrait(job) else text
+
+
+def stale(out: Path, job: dict, n: int, seed: int, stamp_text: str) -> bool:
     """Not drawn yet, or drawn from another prompt: its subject was edited after a `git pull`. A variant drawn
     before the stamps existed counts as current."""
     v = paths(out, job, n, seed)[1]
     if not v.exists():
         return True
     stamp = v.with_suffix(".txt")
-    return stamp.exists() and stamp.read_text(encoding="utf-8") != prompt
+    return stamp.exists() and stamp.read_text(encoding="utf-8") != stamp_text
 
 
-def draw(url: str, settings: dict, job: dict, seed: int, a: argparse.Namespace) -> Image.Image:
-    body = {"prompt": full_prompt(job, a), "negative_prompt": NEGATIVE, "steps": a.steps, "cfg_scale": a.cfg,
+def draw(url: str, settings: dict, job: dict, n: int, seed: int, a: argparse.Namespace) -> Image.Image:
+    body = {"prompt": full_prompt(job, n, a), "negative_prompt": negative_of(job), "steps": a.steps, "cfg_scale": a.cfg,
             "sampler_name": a.sampler, "width": a.side, "height": a.side, "seed": seed,
             "override_settings": settings, "override_settings_restore_afterwards": False}
     for attempt in range(5):  # Forge restarted or busy: wait and try again
@@ -158,12 +201,28 @@ def cut(raw: Image.Image) -> Image.Image:
     return out.resize((ICON, ICON), Image.LANCZOS)
 
 
+def face(raw: Image.Image) -> Image.Image:
+    """A portrait's face cut out of the bust, PORTRAIT px square."""
+    w, h = raw.size
+    box = (int(w * FACE[0]), int(h * FACE[1]), int(w * FACE[2]), int(h * FACE[3]))
+    return raw.convert("RGB").crop(box).resize((PORTRAIT, PORTRAIT), Image.LANCZOS)
+
+
+def save_variant(raw: Image.Image, job: dict, path: Path) -> None:
+    if portrait(job):
+        face(raw).save(path, "WEBP", quality=88, method=6)
+    else:
+        cut(raw).save(path)
+
+
 # --- files ----------------------------------------------------------------------------------------------------------
 
 
 def paths(out: Path, job: dict, n: int, seed: int) -> tuple[Path, Path]:
+    """The raw frame and the variant; a portrait's id may be a path itself (people/<race>/<sex>/<age>)."""
     d = out / job["kind"]
-    return d / "raw" / f"{job['id']}__{seed}.png", d / "variants" / f"{job['id']}__{n}.png"
+    ext = "webp" if portrait(job) else "png"
+    return d / "raw" / f"{job['id']}__{seed}.png", d / "variants" / f"{job['id']}__{n}.{ext}"
 
 
 def sheets(out: Path, jobs: list[dict], seeds: list[int]) -> None:
@@ -173,22 +232,23 @@ def sheets(out: Path, jobs: list[dict], seeds: list[int]) -> None:
         by_kind.setdefault(j["kind"], []).append(j)
     cell, label = ICON + 8, 150
     for kind, js in by_kind.items():
-        drawn = [j for j in js if any(paths(out, j, n, s)[1].exists() for n, s in enumerate(seeds, 1))]
+        drawn = [j for j in js if any(paths(out, j, n, s)[1].exists() for n, s in enumerate(seeds_of(j, seeds), 1))]
+        cols = max((len(seeds_of(j, seeds)) for j in drawn), default=0)
         for page in range(0, len(drawn), ROWS_PER_SHEET):
             rows = drawn[page:page + ROWS_PER_SHEET]
-            sheet = Image.new("RGB", (label + len(seeds) * cell + 8, len(rows) * cell + 8), (24, 20, 16))
+            sheet = Image.new("RGB", (label + cols * cell + 8, len(rows) * cell + 8), (24, 20, 16))
             pen = ImageDraw.Draw(sheet)
             for r, j in enumerate(rows):
                 y = 8 + r * cell
                 pen.text((8, y + ICON // 2 - 12), j["id"][:24], fill=(220, 210, 190), font=font)
                 pen.text((8, y + ICON // 2 + 2), j.get("name", "")[:24], fill=(150, 140, 120), font=font)
-                for c, seed in enumerate(seeds):
+                for c, seed in enumerate(seeds_of(j, seeds)):
                     n = c + 1
                     v = paths(out, j, n, seed)[1]
                     if not v.exists():
                         continue
                     slot = Image.new("RGBA", (ICON, ICON), (38, 36, 44, 255))
-                    slot.alpha_composite(Image.open(v).convert("RGBA"))
+                    slot.alpha_composite(Image.open(v).convert("RGBA").resize((ICON, ICON), Image.LANCZOS))
                     x = label + c * cell
                     sheet.paste(slot.convert("RGB"), (x, y))
                     pen.text((x + 3, y + 2), str(n), fill=(255, 255, 255), font=font)
@@ -203,9 +263,10 @@ def pick(out: Path, jobs: list[dict], seeds: list[int], picks: str) -> None:
     for one in filter(None, picks.split(",")):
         jid, _, n = one.partition("=")
         j = by_id.get(jid.strip())
-        if j is None or not n.strip().isdigit() or not 1 <= int(n) <= len(seeds):
-            sys.exit(f"--pick {one}: an id of the jobs and a variant 1…{len(seeds)}")
-        v = paths(out, j, int(n), seeds[int(n) - 1])[1]
+        own = seeds_of(j, seeds) if j else seeds
+        if j is None or portrait(j) or not n.strip().isdigit() or not 1 <= int(n) <= len(own):
+            sys.exit(f"--pick {one}: an id of the icon jobs and a variant 1…{len(own)} (a portrait keeps all)")
+        v = paths(out, j, int(n), own[int(n) - 1])[1]
         if not v.exists():
             sys.exit(f"--pick {one}: {v} is not drawn")
         shutil.copyfile(v, out / j["kind"] / f"{j['id']}.png")
@@ -229,6 +290,7 @@ def main() -> None:
     p.add_argument("--bg", default="dark", choices=sorted(KEYS), help="the background where a job names none")
     p.add_argument("--only", default="", help="kinds, comma-separated")
     p.add_argument("--ids", default="", help="ids, comma-separated")
+    p.add_argument("--first", type=int, default=0, help="only the first N variants of each job (a trial)")
     p.add_argument("--redraw", action="store_true", help="draw the chosen ones again")
     p.add_argument("--sheets", action="store_true", help="only the contact sheets")
     p.add_argument("--pick", default="", help="id=n,…: variant n becomes the icon")
@@ -245,8 +307,10 @@ def main() -> None:
     if a.sheets:
         return sheets(a.out, jobs, seeds)
 
-    todo = [(j, n, s) for j in jobs for n, s in enumerate(seeds, 1) if a.redraw or stale(a.out, j, n, s, full_prompt(j, a))]
-    print(f"{len(jobs)} icons x {len(seeds)} variants: {len(todo)} to draw at {a.side}px, {a.steps} steps", flush=True)
+    todo = [(j, n, s) for j in jobs for n, s in enumerate(seeds_of(j, seeds), 1)
+            if (not a.first or n <= a.first) and (a.redraw or stale(a.out, j, n, s, stamp_of(j, n, a)))]
+    frames = sum(len(seeds_of(j, seeds)) for j in jobs)
+    print(f"{len(jobs)} jobs, {frames} frames: {len(todo)} to draw at {a.side}px, {a.steps} steps", flush=True)
     if not todo:
         return sheets(a.out, jobs, seeds)
     settings = model_settings(a.url, a.checkpoint)
@@ -257,12 +321,12 @@ def main() -> None:
         raw_path.parent.mkdir(parents=True, exist_ok=True)
         cut_path.parent.mkdir(parents=True, exist_ok=True)
         t = time.time()
-        raw = draw(a.url, settings, job, seed, a)
+        raw = draw(a.url, settings, job, n, seed, a)
         raw.save(raw_path)
-        cut(raw).save(cut_path)
-        cut_path.with_suffix(".txt").write_text(full_prompt(job, a), encoding="utf-8")  # the stamp: redrawn when it changes
+        save_variant(raw, job, cut_path)
+        cut_path.with_suffix(".txt").write_text(stamp_of(job, n, a), encoding="utf-8")  # the stamp: redrawn when it changes
         icon = a.out / job["kind"] / f"{job['id']}.png"
-        if n == 1 or not icon.exists():
+        if not portrait(job) and (n == 1 or not icon.exists()):
             shutil.copyfile(cut_path, icon)
         left = (time.time() - started) / i * (len(todo) - i)
         print(f"[{i}/{len(todo)}] {job['kind']}/{job['id']} #{n} {time.time() - t:.0f}s, "

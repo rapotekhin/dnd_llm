@@ -1,11 +1,16 @@
-"""Put the drawn icons into the game: out/<kind>/variants/<id>__<n>.png → game/assets/icons/<kind>/<id>.png.
+"""Put the drawn icons and portraits into the game.
+
+    icons:      out/<kind>/variants/<id>__<n>.png        → game/assets/icons/<kind>/<id>.png (the picked variant)
+    portraits:  out/portraits/<sub>/variants/<id>__<n>.webp → game/assets/portraits/<sub>/<id>__<n>.webp (every one)
 
 The variant of each icon is read from picks.json (absent — variant 1); an icon listed under `redo` is left out, so the
-game shows its blank until the subject is fixed and drawn again. An icon already in the game is replaced only when the
-picked variant differs from it. Run `"$GODOT" --headless --path game --import` afterwards.
+game shows its blank until the subject is fixed and drawn again. A portrait keeps all its variants (the game picks one
+per person); a bad one is listed under `redo` as «portraits/<sub>/<id>__<n>» and the game shows the letter for it. A
+file already in the game is replaced only when it differs. Run `"$GODOT" --headless --path game --import` afterwards.
 
-    python tools/anima/install.py                 # every kind of the jobs
+    python tools/anima/install.py                 # every kind of the icon jobs
     python tools/anima/install.py --only spells   # one kind
+    python tools/anima/install.py --jobs tools/anima/jobs/portraits.json   # the portraits
     python tools/anima/install.py --dry           # only say what would change
 """
 from __future__ import annotations
@@ -17,7 +22,20 @@ import shutil
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ICONS = HERE.parent.parent / "game" / "assets" / "icons"
+ASSETS = HERE.parent.parent / "game" / "assets"
+
+
+def files(j: dict, variant: dict, redo: set, out: Path) -> list[tuple[Path, Path] | None]:
+    """(drawn, in the game) of each file of a job; None for one left out by `redo`."""
+    key = f"{j['kind']}/{j['id']}"
+    if j.get("style") != "portrait":
+        if key in redo:
+            return [None]
+        return [(out / j["kind"] / "variants" / f"{j['id']}__{variant.get(key, 1)}.png", ASSETS / "icons" / j["kind"] / f"{j['id']}.png")]
+    sub = j["kind"].removeprefix("portraits/")
+    return [None if f"{key}__{n}" in redo else
+            (out / j["kind"] / "variants" / f"{j['id']}__{n}.webp", ASSETS / "portraits" / sub / f"{j['id']}__{n}.webp")
+            for n in range(1, len(j["seeds"]) + 1)]
 
 
 def main() -> None:
@@ -35,26 +53,25 @@ def main() -> None:
     only = set(filter(None, a.only.split(",")))
     new = same = skipped = missing = 0
     for j in jobs:
-        key = f"{j['kind']}/{j['id']}"
         if only and j["kind"] not in only:
             continue
-        if key in redo:
-            skipped += 1
-            continue
-        src = a.out / j["kind"] / "variants" / f"{j['id']}__{variant.get(key, 1)}.png"
-        if not src.exists():
-            missing += 1
-            print("not drawn:", src.relative_to(a.out))
-            continue
-        dst = ICONS / j["kind"] / f"{j['id']}.png"
-        if dst.exists() and filecmp.cmp(src, dst, shallow=False):
-            same += 1
-            continue
-        new += 1
-        if not a.dry:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(src, dst)
-    print(f"put {new}, unchanged {same}, left blank (redo) {skipped}, not drawn {missing}" + (" (dry)" if a.dry else ""))
+        for pair in files(j, variant, redo, a.out):
+            if pair is None:
+                skipped += 1
+                continue
+            src, dst = pair
+            if not src.exists():
+                missing += 1
+                print("not drawn:", src.relative_to(a.out))
+                continue
+            if dst.exists() and filecmp.cmp(src, dst, shallow=False):
+                same += 1
+                continue
+            new += 1
+            if not a.dry:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(src, dst)
+    print(f"put {new}, unchanged {same}, left out (redo) {skipped}, not drawn {missing}" + (" (dry)" if a.dry else ""))
 
 
 if __name__ == "__main__":
