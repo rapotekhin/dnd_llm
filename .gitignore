@@ -33,3 +33,4 @@ __pycache__
 /llm_server/var/
 tools/anima/out/
 tools/anima/out_*/
+tools/anima/.venv-matte/

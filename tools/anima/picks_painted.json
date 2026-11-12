@@ -1,6 +1,9 @@
 {
  "_doc": "The picks of the painted icons (out_painted/, anima_gen.py --style painted), as picks.json is for the flat ones: `variant` — the variant put into the game (absent — 1), `redo` — drawn badly in both, left as they are in the game, `overlay` — a mark drawn by code over the icon on install (overlays.py). Read by install.py --picks.",
- "variant": {},
+ "variant": {
+  "spells/jump": 2,
+  "spells/sanctuary": 2
+ },
  "redo": [],
  "overlay": {
   "ui/nonlethal": "peace"

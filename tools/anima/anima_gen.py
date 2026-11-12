@@ -34,6 +34,7 @@ import argparse
 import base64
 import io
 import json
+import math
 import shutil
 import sys
 import time
@@ -96,23 +97,27 @@ GLYPH_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist
                   "chromatic aberration, text, letters, watermark, signature, multiple objects, duplicate, human, "
                   "person, face, photo, 3d render, realistic, solid fill, flat color, plain background, "
                   "white background, scenery, landscape")
-# The interface's buttons and the inventory's groups as BG3's skills: one embossed emblem of silver, no colour of its own,
-# cut out like a thing (the trial of 2026-11-11).
-RELIEF_HEAD = "masterpiece, best quality, score_7, safe, no humans, simple background, {tag}metallic, silver, emboss, "
-RELIEF_TAIL = ("It is an interface icon for a fantasy role-playing game: the subject as one embossed emblem of polished "
-               "silver metal, a raised relief with soft shading and bright highlights, light from the upper left, "
-               "monochrome with no other colors. The single emblem is large and centered and fills almost the whole "
-               "square, on a plain flat {word} background.")
-RELIEF_NEGATIVE = PAINTED_NEGATIVE + ", colorful, gold, gem, glow"
+# A combat ability on a plate of metal, a spell on stone (the author, 2026-11-12): the glyph's own words with the stone
+# turned into worn steel with rivets, cut as a tile.
+PLATE_HEAD = "masterpiece, best quality, score_7, safe, no humans, lineart, glowing, emblem, metal texture, steel, silver, "
+PLATE_TAIL = ("It is an ability icon for a fantasy role-playing game. The subject is drawn as one simple bold emblem "
+              "of thin glowing lines with a white-hot core and a soft colored glow, like luminous chalk or molten "
+              "metal inlaid in steel, with no solid fill. The emblem is large and centered on a square plate of "
+              "brushed silver-grey steel with a cool blue tint and a rivet in each corner that fills the whole frame, "
+              "a little darker toward its edges.")  # dark worn steel (the first trial) melted into the brown stone
 FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the tail's {word} are the job's key
     "flat": (HEAD, TAIL, NEGATIVE),
     "object": (PAINTED_HEAD, PAINTED_TAIL, PAINTED_NEGATIVE),
     "glyph": (GLYPH_HEAD, GLYPH_TAIL, GLYPH_NEGATIVE),
+    "plate": (PLATE_HEAD, PLATE_TAIL, GLYPH_NEGATIVE),
     "medal": (GLYPH_HEAD, GLYPH_TAIL, GLYPH_NEGATIVE),
-    "relief": (RELIEF_HEAD, RELIEF_TAIL, RELIEF_NEGATIVE),
 }
-FAMILY = {"spells": "glyph", "features": "glyph", "acts": "glyph", "traits": "glyph", "conditions": "medal",
-          "ui": "relief", "groups": "relief", "marks": "flat"}  # a kind (or its head before «/») in the painted style
+TILED = ("glyph", "plate")  # the families cut as a tile by its shape
+# A kind (or its head before «/») in the painted style; the rest — items, ui, groups — is an object. The interface's
+# buttons and the inventory's groups were tried as a silver relief like BG3's skills (2026-11-11): the model drew a
+# painted thing with a silver detail, and the author took painted things.
+FAMILY = {"spells": "glyph", "features": "plate", "acts": "plate", "traits": "plate", "conditions": "medal",
+          "marks": "flat"}  # a spell on stone, an ability or an act on bright steel (the author, 2026-11-12)
 ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
@@ -131,6 +136,8 @@ P_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist nam
 FACE = (0.14, 0.02, 0.86, 0.74)  # a fixed square over the head and a little of the shoulders (the author, 2026-11-11)
 PORTRAIT = 256
 TRIM = 0.03  # of a glyph's tile kept whole, each side
+TILE_WORK, TILE_FAR = 256, 24  # a glyph's tile is found at this side, by this distance from the ground
+TILT_MIN, TILT_MAX = 1.5, 30  # degrees: a tile askew by this much is turned straight
 FLAT = 0.6  # a glyph's frame whose border is this flat (a share near its median) floats on a ground: cut out
 
 
@@ -167,7 +174,7 @@ def seeds_of(job: dict, seeds: list[int]) -> list[int]:
 
 def family(job: dict, style: str = "flat") -> str:
     """How an icon is drawn and cut: flat, object (cut out), glyph (a tile cut out of black), medal (the tile in a
-    circle), relief (silver, cut out), portrait."""
+    circle), portrait."""
     if portrait(job):
         return "portrait"
     if style == "flat":
@@ -273,20 +280,112 @@ def face(raw: Image.Image) -> Image.Image:
     return raw.convert("RGB").crop(box).resize((PORTRAIT, PORTRAIT), Image.LANCZOS)
 
 
-def tile(raw: Image.Image) -> Image.Image:
-    """A glyph's tile: mostly it floats on a flat ground (black, at times white) and is cut out like a thing; when the
-    stone fills the frame (a few frames do) the border is textured, and the tile is kept whole, a thin smeared edge
-    trimmed, so the cut does not eat the stone."""
-    w, h = raw.size
-    rgb = raw.convert("RGB")
+def _ground(rgb: Image.Image) -> tuple[tuple[int, int, int], float]:
+    """The colour of a frame's border (its median) and the share of the border near it: 1.0 is a flat ground."""
+    w, h = rgb.size
     px = rgb.load()
     border = [px[x, y] for x in range(0, w, 4) for y in (0, h - 1)] + [px[x, y] for y in range(0, h, 4) for x in (0, w - 1)]
-    bg = [median(c[i] for c in border) for i in range(3)]
+    bg = tuple(int(median(c[i] for c in border)) for i in range(3))
     flat = sum(1 for c in border if sum((c[i] - bg[i]) ** 2 for i in range(3)) ** 0.5 <= NEAR) / len(border)
-    if flat >= FLAT:
+    return bg, flat
+
+
+def _hull(points: list[tuple[int, int]]) -> list[tuple[float, float]]:
+    """The convex hull of points, counter-clockwise (Andrew's monotone chain)."""
+    pts = sorted(set(points))
+    if len(pts) < 3:
+        return [(float(x), float(y)) for x, y in pts]
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    lower: list = []
+    for p in pts:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    upper: list = []
+    for p in reversed(pts):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return [(float(x), float(y)) for x, y in lower[:-1] + upper[:-1]]
+
+
+def _tilt(hull: list[tuple[float, float]]) -> float:
+    """The angle in degrees (−45…45) of the smallest rectangle around a hull: how far a tile lies askew."""
+    best, angle = None, 0.0
+    for (x0, y0), (x1, y1) in zip(hull, hull[1:] + hull[:1]):
+        t = math.atan2(y1 - y0, x1 - x0)
+        c, s = math.cos(t), math.sin(t)
+        xs = [x * c + y * s for x, y in hull]
+        ys = [-x * s + y * c for x, y in hull]
+        area = (max(xs) - min(xs)) * (max(ys) - min(ys))
+        if best is None or area < best:
+            best, angle = area, math.degrees(t)
+    return (angle + 45) % 90 - 45
+
+
+def _tile_hull(rgb: Image.Image, bg: tuple[int, int, int]) -> list[tuple[float, float]]:
+    """The hull of the tile in a frame: what is far from the ground, its cracks closed, the biggest piece of it."""
+    small = rgb.resize((TILE_WORK, TILE_WORK), Image.LANCZOS)
+    diff = ImageChops.difference(small, Image.new("RGB", small.size, bg)).convert("L")
+    fg = diff.point(lambda v: 255 if v > TILE_FAR else 0).filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.MinFilter(9))
+    n = TILE_WORK
+    on = [v > 0 for v in fg.tobytes()]
+    seen = [False] * (n * n)
+    biggest: list[int] = []
+    for start in range(n * n):  # the biggest piece: the tile, not a spark of its glow
+        if not on[start] or seen[start]:
+            continue
+        piece, stack = [], [start]
+        seen[start] = True
+        while stack:
+            i = stack.pop()
+            piece.append(i)
+            x, y = i % n, i // n
+            for j in (i - 1 if x else -1, i + 1 if x < n - 1 else -1, i - n if y else -1, i + n if y < n - 1 else -1):
+                if j >= 0 and on[j] and not seen[j]:
+                    seen[j] = True
+                    stack.append(j)
+        if len(piece) > len(biggest):
+            biggest = piece
+    rows: dict[int, list[int]] = {}
+    for i in biggest:
+        rows.setdefault(i // n, []).append(i % n)
+    edge = [(min(xs), y) for y, xs in rows.items()] + [(max(xs) + 1, y) for y, xs in rows.items()]
+    k = rgb.size[0] / n
+    return [(x * k, y * k) for x, y in _hull(edge)]
+
+
+def tile(raw: Image.Image) -> Image.Image:
+    """A glyph's tile cut out by its shape, not by colour: the cracks of its stone are as dark as the ground around it,
+    so a colour cut ate holes in it (the night run of 2026-11-11). The tile is the convex hull of what stands out from
+    the ground; a tile lying askew is turned straight; every tile is cropped to its own square, so all are one size.
+    When the stone fills the frame (its border is not flat) the frame is kept whole, a thin smeared edge trimmed."""
+    rgb = raw.convert("RGB")
+    w, h = rgb.size
+    bg, flat = _ground(rgb)
+    if flat < FLAT:
+        m = int(w * TRIM)
+        return rgb.convert("RGBA").crop((m, m, w - m, h - m)).resize((ICON, ICON), Image.LANCZOS)
+    hull = _tile_hull(rgb, bg)
+    if len(hull) < 3:
         return cut(raw)
-    m = int(w * TRIM)
-    return rgb.convert("RGBA").crop((m, m, w - m, h - m)).resize((ICON, ICON), Image.LANCZOS)
+    tilt = _tilt(hull)
+    if TILT_MIN <= abs(tilt) <= TILT_MAX:
+        rgb = rgb.rotate(tilt, resample=Image.BICUBIC, fillcolor=bg)
+        hull = _tile_hull(rgb, bg)
+    mask = Image.new("L", rgb.size)
+    ImageDraw.Draw(mask).polygon(hull, fill=255)
+    mask = mask.filter(ImageFilter.MinFilter(5)).filter(ImageFilter.GaussianBlur(1.2))  # no dark fringe, a soft edge
+    x0, y0, x1, y1 = mask.getbbox() or (0, 0, w, h)
+    side = max(x1 - x0, y1 - y0)
+    cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+    box = (cx - side // 2, cy - side // 2, cx - side // 2 + side, cy - side // 2 + side)
+    out = rgb.convert("RGBA")
+    out.putalpha(mask)
+    return out.crop(box).resize((ICON, ICON), Image.LANCZOS)
 
 
 def medal(raw: Image.Image) -> Image.Image:
@@ -309,7 +408,7 @@ def save_variant(raw: Image.Image, job: dict, path: Path, style: str = "flat") -
     how = family(job, style)
     if how == "portrait":
         face(raw).save(path, "WEBP", quality=88, method=6)
-    elif how == "glyph":
+    elif how in TILED:
         tile(raw).save(path)
     elif how == "medal":
         medal(raw).save(path)
@@ -410,8 +509,14 @@ def main() -> None:
     p.add_argument("--sheets", action="store_true", help="only the contact sheets")
     p.add_argument("--recut", action="store_true", help="cut the variants again from the raw frames, nothing drawn")
     p.add_argument("--pick", default="", help="id=n,…: variant n becomes the icon")
+    p.add_argument("--family", default="", help="kind=family,…: a trial of another family for a kind (painted)")
     a = p.parse_args()
     a.out = a.out or HERE / ("out" if a.style == "flat" else f"out_{a.style}")
+    for one in filter(None, a.family.split(",")):
+        kind, _, fam = one.partition("=")
+        if fam not in FAMILIES:
+            sys.exit(f"--family {one}: a family of {sorted(FAMILIES)}")
+        FAMILY[kind] = fam
 
     jobs: list[dict] = json.loads(a.jobs.read_text(encoding="utf-8"))["jobs"]
     if a.only:

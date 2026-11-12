@@ -4512,8 +4512,8 @@
  },
  "spells/aid": {
   "green": false,
-  "sentence": "A single glowing blue shield with a white upward arrow in its center and a bright rim, seen from the front.",
-  "tags": "shield, blue, glowing, arrow, front view"
+  "sentence": "A single blue war banner on a pole with a white plus sign on its cloth, as a flat symbol.",
+  "tags": "banner, flag, pole, blue, white plus sign"
  },
  "spells/alter_self": {
   "green": true,
@@ -4522,8 +4522,8 @@
  },
  "spells/animal_friendship": {
   "green": false,
-  "sentence": "A single glowing pink heart with a small white paw print in its center.",
-  "tags": "heart, paw print, pink, glowing"
+  "sentence": "A single big pink paw print with a tiny white heart in its largest pad, as a flat symbol.",
+  "tags": "paw print, big, pink, small heart"
  },
  "spells/animal_messenger": {
   "green": false,
@@ -4532,18 +4532,18 @@
  },
  "spells/animate_dead": {
   "green": false,
-  "sentence": "A single bone-white skull with dark purple glowing eye sockets, seen from the front.",
-  "tags": "skull, bone, dark purple, glowing, front view"
+  "sentence": "A single grey tombstone with a bony skeletal hand reaching up from the ground before it, in a dark purple glow, as a flat symbol.",
+  "tags": "tombstone, skeletal hand, grave, dark purple"
  },
  "spells/arcane_lock": {
   "green": false,
-  "sentence": "A single blue glowing padlock with a silver shackle and a dark keyhole, seen from the front.",
-  "tags": "padlock, lock, blue, glowing, keyhole, front view"
+  "sentence": "A single blue glowing keyhole inside a ring of small magic marks, as a flat symbol.",
+  "tags": "keyhole, magic circle, blue, glowing"
  },
  "spells/armor_of_agathys": {
   "dark": false,
-  "sentence": "A single light blue ice-covered chestplate seen from the front, with white frost spikes along the shoulders.",
-  "tags": "armor, chestplate, ice, light blue, white, front view"
+  "sentence": "A single crown of sharp light blue ice spikes pointing outward in a ring, as a flat symbol.",
+  "tags": "ice spikes, ring, light blue, white frost"
  },
  "spells/augury": {
   "green": false,
@@ -4567,8 +4567,8 @@
  },
  "spells/bestow_curse": {
   "green": false,
-  "sentence": "A single dark purple skull with black cracks across its surface, seen from the front.",
-  "tags": "skull, dark purple, black, cracks, front view"
+  "sentence": "A single dark purple cursed sigil branded like a mark, dripping black streaks, as a flat symbol.",
+  "tags": "curse mark, sigil, dark purple, dripping, black"
  },
  "spells/bless": {
   "green": false,
@@ -4592,8 +4592,8 @@
  },
  "spells/branding_smite": {
   "green": false,
-  "sentence": "A single golden glowing starburst with a white-hot center and short straight rays.",
-  "tags": "starburst, glowing, gold, white, radiant"
+  "sentence": "A single sword blade with a white-hot golden glowing edge, pointing up, as a flat symbol.",
+  "tags": "sword, glowing edge, gold, white-hot"
  },
  "spells/burning_hands": {
   "green": false,
@@ -4602,13 +4602,13 @@
  },
  "spells/call_lightning": {
   "green": false,
-  "sentence": "A single bright yellow lightning bolt with a white core, zigzagging downward.",
-  "tags": "lightning bolt, yellow, glowing, zigzag"
+  "sentence": "A single dark grey storm cloud with a yellow lightning bolt striking down from it, as a flat symbol.",
+  "tags": "storm cloud, lightning bolt, yellow, dark grey"
  },
  "spells/calm_emotions": {
   "green": false,
-  "sentence": "A single smooth pink glowing heart with a soft white outline, seen from the front.",
-  "tags": "heart, pink, glowing, smooth, front view"
+  "sentence": "A single pink lotus flower with open petals floating on a calm line of water, as a flat symbol.",
+  "tags": "lotus, flower, pink, calm, water"
  },
  "spells/charm_person": {
   "green": false,
@@ -4617,8 +4617,8 @@
  },
  "spells/chill_touch": {
   "green": false,
-  "sentence": "A single dark purple glowing skull with black eye sockets and a wisp of icy blue mist around it.",
-  "tags": "skull, dark purple, glowing, icy blue, front view"
+  "sentence": "A single ghostly skeletal hand of icy blue bones reaching forward, as a flat symbol.",
+  "tags": "skeletal hand, ghostly, icy blue, bones"
  },
  "spells/clairvoyance": {
   "green": false,
@@ -4632,8 +4632,8 @@
  },
  "spells/command": {
   "green": false,
-  "sentence": "A single empty pink speech bubble with a soft white outline, seen from the front.",
-  "tags": "speech bubble, pink, glowing, empty"
+  "sentence": "A single pink glowing herald's horn with three curved sound waves coming out of its mouth, as a flat symbol.",
+  "tags": "horn, sound waves, pink, glowing"
  },
  "spells/comprehend_languages": {
   "green": false,
@@ -4652,8 +4652,8 @@
  },
  "spells/counterspell": {
   "green": false,
-  "sentence": "A single glowing blue magic circle cut through by a bright white diagonal slash, its two halves drifting apart in small shards.",
-  "tags": "magic circle, broken, slash, blue, shards, glowing"
+  "sentence": "A single blue raised palm stopping a small violet star of magic, as a flat symbol.",
+  "tags": "palm, stop, blue, violet star, block"
  },
  "spells/create_food_and_water": {
   "green": false,
@@ -4682,8 +4682,8 @@
  },
  "spells/darkvision": {
   "green": false,
-  "sentence": "A single wide open eye with a glowing green-brown iris and a black pupil, seen from the front.",
-  "tags": "eye, glowing eye, green-brown, dark, front view"
+  "sentence": "A single cat's eye with a narrow slit pupil glowing green-brown in the dark, as a flat symbol.",
+  "tags": "cat eye, slit pupil, green-brown, glowing, dark"
  },
  "spells/daylight": {
   "green": false,
@@ -4692,8 +4692,8 @@
  },
  "spells/detect_evil_and_good": {
   "green": false,
-  "sentence": "A single golden glowing compass rose with four pointed arms, seen from the front.",
-  "tags": "compass, gold, glowing, star, front view"
+  "sentence": "A single pair of golden scales with one light pan and one dark pan, as a flat symbol.",
+  "tags": "scales, balance, golden, light, dark"
  },
  "spells/detect_magic": {
   "green": false,
@@ -4717,8 +4717,8 @@
  },
  "spells/dispel_magic": {
   "green": false,
-  "sentence": "A single blue glowing magic circle with a white crack splitting it, seen from the front.",
-  "tags": "magic circle, blue, glowing, broken, front view"
+  "sentence": "A single blue magic circle breaking apart into many scattered sparks, as a flat symbol.",
+  "tags": "magic circle, dissolving, sparks, scattered, blue"
  },
  "spells/divine_favor": {
   "green": false,
@@ -4752,13 +4752,13 @@
  },
  "spells/enthrall": {
   "green": false,
-  "sentence": "A single glowing pink hypnotic spiral with three small curved sound waves radiating from its right side.",
-  "tags": "spiral, hypnotic, pink, glowing, sound waves"
+  "sentence": "A single pink lute with three curved sound waves rising from its strings, as a flat symbol.",
+  "tags": "lute, sound waves, pink, glowing"
  },
  "spells/expeditious_retreat": {
   "green": true,
-  "sentence": "A single green leather boot with a brown sole, a small white wing at the heel, and three speed lines behind it, seen from the side.",
-  "tags": "boot, winged boot, speed lines, green, brown, from side"
+  "sentence": "A single trail of three green footprints with white speed lines behind them, as a flat symbol.",
+  "tags": "footprints, trail, green, speed lines"
  },
  "spells/faerie_fire": {
   "green": false,
@@ -4812,8 +4812,8 @@
  },
  "spells/flaming_sphere": {
   "green": false,
-  "sentence": "A single round sphere of orange fire with a bright yellow core and small flame tongues around its edge.",
-  "tags": "fireball, fire, sphere, orange, glowing"
+  "sentence": "A single ball of orange fire rolling along the ground, leaving a long trail of flames behind it, as a flat symbol.",
+  "tags": "fireball, rolling, fire trail, orange, flames"
  },
  "spells/floating_disk": {
   "green": false,
@@ -4832,18 +4832,18 @@
  },
  "spells/gaseous_form": {
   "green": true,
-  "sentence": "A single wispy green cloud with brown edges and a soft glow, drifting diagonally.",
-  "tags": "cloud, wisp, green, brown, glowing"
+  "sentence": "A single translucent figure made of green-brown mist, its lower half fading into vapor, as a flat symbol.",
+  "tags": "mist figure, vapor, translucent, green-brown"
  },
  "spells/gentle_repose": {
   "green": false,
-  "sentence": "A single dark purple skull seen from the front, with closed eye sockets and a soft white halo above it.",
-  "tags": "skull, dark purple, glowing, halo, front view"
+  "sentence": "A single closed wooden coffin with a soft white halo above it, as a flat symbol.",
+  "tags": "coffin, closed, halo, dark purple glow"
  },
  "spells/glyph_of_warding": {
   "green": false,
-  "sentence": "A single glowing blue geometric magic circle with sharp angular lines and a bright outer ring, seen from above.",
-  "tags": "magic circle, geometric symbol, blue, glowing, front view"
+  "sentence": "A single angular blue warding rune with a small white spark at its tip, as a flat symbol.",
+  "tags": "rune, angular symbol, blue, spark"
  },
  "spells/goodberry": {
   "green": true,
@@ -4872,8 +4872,8 @@
  },
  "spells/haste": {
   "green": true,
-  "sentence": "A single bright yellow lightning bolt with a small white wing on its side and three speed lines behind it.",
-  "tags": "lightning bolt, wing, yellow, speed lines"
+  "sentence": "Two bright yellow-green chevron arrows pointing right like a fast-forward sign, with speed lines, as a flat symbol.",
+  "tags": "double arrow, fast forward, chevrons, yellow-green, speed lines"
  },
  "spells/healing_word": {
   "green": true,
@@ -4887,13 +4887,13 @@
  },
  "spells/hellish_rebuke": {
   "green": false,
-  "sentence": "A single jagged flame of orange and red fire curling upward around a bright yellow core.",
-  "tags": "flame, fire, orange, red, glowing, burst"
+  "sentence": "A single pair of curved red devil horns wreathed in orange flames, as a flat symbol.",
+  "tags": "devil horns, flames, red, orange, infernal"
  },
  "spells/heroism": {
   "green": false,
-  "sentence": "A single glowing pink heart with a small white star above it, seen from the front.",
-  "tags": "heart, pink, glowing, star, front view"
+  "sentence": "A single pink roaring lion's head with a full mane, seen from the front, as a flat symbol.",
+  "tags": "lion head, roaring, pink, mane, glowing"
  },
  "spells/hideous_laughter": {
   "green": false,
@@ -4922,8 +4922,8 @@
  },
  "spells/illusory_script": {
   "green": false,
-  "sentence": "A single rolled parchment scroll with a violet glowing wax seal, seen from the front.",
-  "tags": "scroll, parchment, violet, wax seal, glowing"
+  "sentence": "A single violet glowing quill feather writing a wavy line of light that fades into mist, as a flat symbol.",
+  "tags": "quill, feather, violet, glowing, mist"
  },
  "spells/inflict_wounds": {
   "green": false,
@@ -4932,13 +4932,13 @@
  },
  "spells/invisibility": {
   "green": false,
-  "sentence": "A single violet glowing eye with a diagonal dark slash across it.",
-  "tags": "eye, slash, violet, glowing, transparent"
+  "sentence": "A single dotted violet outline of a standing figure fading into small sparkles, as a flat symbol.",
+  "tags": "dotted outline, silhouette, violet, fading, sparkles"
  },
  "spells/jump": {
   "green": true,
-  "sentence": "A single green coiled spring with a brown base, stretched diagonally upward.",
-  "tags": "spring, coil, green, brown, diagonal"
+  "sentence": "A single green arrow leaping up in a high arc over a small bump, with short motion lines, as a flat symbol.",
+  "tags": "arrow, arc, upward, green, motion lines"
  },
  "spells/knock": {
   "green": true,
@@ -4947,13 +4947,13 @@
  },
  "spells/lesser_restoration": {
   "green": false,
-  "sentence": "A single blue glowing shield with a small white plus sign in its center.",
-  "tags": "shield, plus sign, blue, glowing, front view"
+  "sentence": "A single broken iron shackle with its chain snapped, glowing blue, with a small white plus sign above it, as a flat symbol.",
+  "tags": "broken shackle, chain, blue, glowing, plus sign"
  },
  "spells/light": {
   "green": false,
-  "sentence": "A single glowing orange orb with short yellow rays around it.",
-  "tags": "orb, light, orange, glowing, rays"
+  "sentence": "A single faceted crystal gem glowing with warm yellow light, with short rays around it, as a flat symbol.",
+  "tags": "gem, crystal, glowing, warm yellow, light rays"
  },
  "spells/lightning_bolt": {
   "green": false,
@@ -5002,8 +5002,8 @@
  },
  "spells/mass_healing_word": {
   "green": true,
-  "sentence": "A single large green glowing plus sign with three small white sparkles around it.",
-  "tags": "plus sign, green, glowing, sparkle"
+  "sentence": "Three small green glowing plus signs in a row with white sound waves around them, as a flat symbol.",
+  "tags": "three plus signs, green, glowing, sound waves"
  },
  "spells/mending": {
   "green": true,
@@ -5032,8 +5032,8 @@
  },
  "spells/moonbeam": {
   "green": false,
-  "sentence": "A single wide pale silver cone of moonlight falling straight down from a small crescent moon at the top, lighting a round silver circle at the bottom.",
-  "tags": "moonlight, light beam, crescent moon, silver, cone of light"
+  "sentence": "A single silver crescent moon with three straight rays of pale light pointing down beneath it, as a flat symbol.",
+  "tags": "crescent moon, moonlight, silver, light rays"
  },
  "spells/pass_without_trace": {
   "dark": true,
@@ -5067,28 +5067,28 @@
  },
  "spells/produce_flame": {
   "dark": false,
-  "sentence": "A single flickering orange flame with a yellow core and red edges, rising from a small teal spark.",
-  "tags": "flame, fire, orange, yellow, glowing"
+  "sentence": "A single small orange flame burning above an open palm, as a flat symbol.",
+  "tags": "flame, open palm, hand, orange, glowing"
  },
  "spells/protection_from_energy": {
   "dark": false,
-  "sentence": "A single glowing blue shield-shaped barrier with four small gems in orange, light blue, yellow, and pale blue along its face.",
-  "tags": "shield, barrier, blue, glowing, gem, front view"
+  "sentence": "A single translucent blue bubble with three small symbols inside: a flame, a snowflake and a lightning bolt, as a flat symbol.",
+  "tags": "bubble, sphere, blue, flame, snowflake, lightning"
  },
  "spells/protection_from_evil_and_good": {
   "dark": false,
-  "sentence": "A single blue glowing circular ward with a white star in the center and a ring of pale light.",
-  "tags": "magic circle, shield, blue, glowing, star"
+  "sentence": "A single ring of small white holy water drops around a blue star, as a flat symbol.",
+  "tags": "holy water, drops, ring, blue star"
  },
  "spells/protection_from_poison": {
   "dark": false,
-  "sentence": "A single blue shield-shaped barrier with a green poison drop in its center.",
-  "tags": "shield, barrier, blue, drop, green, front view"
+  "sentence": "A single green poison drop inside a blue ring crossed by a diagonal blue bar, as a flat symbol.",
+  "tags": "poison drop, green, crossed out, blue ring"
  },
  "spells/purify_food_and_drink": {
   "dark": false,
-  "sentence": "A single brown wooden cup filled with clear water, a small green leaf floating on top.",
-  "tags": "cup, water, leaf, brown, green, front view"
+  "sentence": "A single clear green water drop with a small leaf and a white sparkle on it, as a flat symbol.",
+  "tags": "water drop, leaf, green, sparkle"
  },
  "spells/ray_of_enfeeblement": {
   "dark": true,
@@ -5101,13 +5101,13 @@
   "tags": "beam, frost, snowflake, light blue, white, diagonal"
  },
  "spells/remove_curse": {
-  "sentence": "A single violet curse sigil cracking and shattering into pieces under a bright beam of white light from above.",
-  "tags": "magic circle, cracked, shattering, white light, violet"
+  "sentence": "A single violet curse sigil split in two by a bright white crack, with small white sparks flying out, as a flat symbol.",
+  "tags": "magic circle, cracked, violet, white light, sparks"
  },
  "spells/resistance": {
   "dark": false,
-  "sentence": "A single blue glowing shield with a white four-point star in the center.",
-  "tags": "shield, barrier, blue, glowing, star, front view"
+  "sentence": "A single blue rock standing firm while white waves break against it, as a flat symbol.",
+  "tags": "rock, waves, blue, steadfast, glowing"
  },
  "spells/sacred_flame": {
   "dark": false,
@@ -5121,13 +5121,13 @@
  },
  "spells/scorching_ray": {
   "dark": false,
-  "sentence": "A single blazing orange ray of fire with a red edge and a bright yellow core, streaking diagonally.",
-  "tags": "beam, fire, orange, red, glowing, diagonal"
+  "sentence": "Three thin orange rays of fire fanning out from one bright point, as a flat symbol.",
+  "tags": "three rays, fire, orange, red, fan"
  },
  "spells/see_invisibility": {
   "dark": false,
-  "sentence": "A single golden eye with a white iris and a faint transparent outline.",
-  "tags": "eye, glowing eye, gold, white, transparent"
+  "sentence": "A single round cyan glowing lens ring with a dotted violet outline of a standing figure showing clearly inside it, as a flat symbol.",
+  "tags": "magnifying lens, round ring, cyan, dotted outline, silhouette, violet"
  },
  "spells/sending": {
   "dark": false,
@@ -5156,8 +5156,8 @@
  },
  "spells/shocking_grasp": {
   "dark": false,
-  "sentence": "A single jagged yellow lightning bolt with a white core, branching at the tip, angled diagonally.",
-  "tags": "lightning, lightning bolt, yellow, white, glowing, diagonal"
+  "sentence": "A single clenched fist crackling with yellow and white electric sparks, as a flat symbol.",
+  "tags": "fist, electricity, sparks, yellow, white"
  },
  "spells/silence": {
   "sentence": "A single grey bell with a thick red diagonal slash across it, as a sign of silence.",
@@ -5165,8 +5165,8 @@
  },
  "spells/silent_image": {
   "dark": false,
-  "sentence": "A single translucent violet cube with a white shimmering outline.",
-  "tags": "cube, illusion, violet, transparent, glowing"
+  "sentence": "A single violet picture frame with a shimmering ghostly image inside, as a flat symbol.",
+  "tags": "picture frame, illusion, violet, shimmer"
  },
  "spells/sleep": {
   "dark": false,
@@ -5185,8 +5185,8 @@
  },
  "spells/spare_the_dying": {
   "dark": true,
-  "sentence": "A single dark purple heart with a small white plus sign in its center and a thin white outline.",
-  "tags": "heart, plus sign, dark purple, glowing, front view"
+  "sentence": "A single dark purple heartbeat line with one sharp peak and a small white plus sign above it, as a flat symbol.",
+  "tags": "heartbeat line, pulse, dark purple, plus sign"
  },
  "spells/speak_with_animals": {
   "dark": false,
@@ -5225,8 +5225,8 @@
  },
  "spells/stinking_cloud": {
   "dark": false,
-  "sentence": "A single round teal cloud of thick gas with a few sickly green swirls and a soft white edge.",
-  "tags": "cloud, gas, teal, green, swirl, front view"
+  "sentence": "A single sickly yellow-green cloud of gas with a few small black flies around it, as a flat symbol.",
+  "tags": "stink cloud, yellow-green, flies, gas"
  },
  "spells/suggestion": {
   "dark": false,
@@ -5245,18 +5245,18 @@
  },
  "spells/tongues": {
   "dark": false,
-  "sentence": "A single golden glowing speech bubble with a small white spiral inside and a soft white outline.",
-  "tags": "speech bubble, golden, glowing, swirl, front view"
+  "sentence": "A single golden ear with three curved sound waves coming into it, as a flat symbol.",
+  "tags": "ear, sound waves, golden"
  },
  "spells/true_strike": {
   "dark": false,
-  "sentence": "A single golden glowing eye with a small white crosshair in its center and a thin white outline.",
-  "tags": "eye, crosshair, golden, glowing, front view"
+  "sentence": "A single golden sword tip pointing into the center of a round bullseye target, as a flat symbol.",
+  "tags": "target, bullseye, sword tip, gold"
  },
  "spells/unseen_servant": {
   "dark": false,
-  "sentence": "A single teal glowing spiral of force curling upward, with a soft white edge and a small white spark.",
-  "tags": "swirl, force, teal, glowing, spiral"
+  "sentence": "A single silver tray with a teapot floating in the air, held by no one, with teal sparkles, as a flat symbol.",
+  "tags": "tray, teapot, floating, teal, sparkles"
  },
  "spells/vampiric_touch": {
   "dark": false,
@@ -5269,13 +5269,13 @@
  },
  "spells/warding_bond": {
   "dark": false,
-  "sentence": "A single blue glowing shield with a white chain link in its center and a thin white outline.",
-  "tags": "shield, chain link, blue, glowing, front view"
+  "sentence": "Two blue glowing rings linked together like two links of a chain, as a flat symbol.",
+  "tags": "two rings, linked, chain, blue, glowing"
  },
  "spells/water_walk": {
   "dark": false,
-  "sentence": "A single green-brown boot seen from the side with a small white water ripple beneath its sole.",
-  "tags": "boot, water ripple, green, brown, from side"
+  "sentence": "A single green footprint standing on round blue water ripples, as a flat symbol.",
+  "tags": "footprint, water ripples, blue, green"
  },
  "spells/web": {
   "dark": false,
