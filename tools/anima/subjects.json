@@ -822,8 +822,8 @@
  },
  "features/fighter_fighting_style_archery": {
   "dark": false,
-  "sentence": "A single wooden bow drawn with an arrow nocked on its white string, the arrow pointing diagonally up to the right, seen from the side.",
-  "tags": "bow, drawn, nocked arrow, wooden, diagonal"
+  "sentence": "A single longbow drawn as one long curved line from the upper right corner to the lower left corner, its string pulled back with an arrow nocked and pointing up to the right; the glow runs only along the bow, the string and the arrow, the space between them empty.",
+  "tags": "longbow, drawn bow, nocked arrow, diagonal, curved limbs, empty middle"
  },
  "features/fighter_fighting_style_defense": {
   "dark": false,

@@ -29,14 +29,14 @@ HERE = Path(__file__).resolve().parent
 ASSETS = HERE.parent.parent / "game" / "assets"
 
 
-def files(j: dict, variant: dict, redo: set, out: Path, same: dict | None = None) -> list[tuple[Path, Path] | None]:
+def files(j: dict, variant: dict, redo: set, out: Path, like: dict | None = None) -> list[tuple[Path, Path] | None]:
     """(drawn, in the game) of each file of a job; None for one left out by `redo`. An icon under `same` is the picked
     variant of the icon it names (the same feature at another level, one style of two classes)."""
     key = f"{j['kind']}/{j['id']}"
     if j.get("style") != "portrait":
         if key in redo:
             return [None]
-        src = (same or {}).get(key, key)
+        src = (like or {}).get(key, key)
         kind, _, iid = src.partition("/")
         return [(out / kind / "variants" / f"{iid}__{variant.get(src, 1)}.png", ASSETS / "icons" / j["kind"] / f"{j['id']}.png")]
     sub = j["kind"].removeprefix("portraits/")
@@ -57,13 +57,13 @@ def main() -> None:
     jobs = jobs["jobs"] if isinstance(jobs, dict) else jobs
     picks = json.loads(a.picks.read_text(encoding="utf-8")) if a.picks.exists() else {}
     variant, redo, overlay = picks.get("variant", {}), set(picks.get("redo", [])), picks.get("overlay", {})
-    same = picks.get("same", {})
+    like = picks.get("same", {})
     only = set(filter(None, a.only.split(",")))
     new = same = skipped = missing = 0
     for j in jobs:
         if only and j["kind"] not in only:
             continue
-        for pair in files(j, variant, redo, a.out, same):
+        for pair in files(j, variant, redo, a.out, like):
             if pair is None:
                 skipped += 1
                 continue
