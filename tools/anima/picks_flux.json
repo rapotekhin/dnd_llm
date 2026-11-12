@@ -1,3 +1,9 @@
 {
- "variant": {}
+ "variant": {
+  "acts/parry": 2,
+  "acts/react": 2,
+  "acts/shove": 2,
+  "acts/swap": 2,
+  "acts/volley": 2
+ }
 }

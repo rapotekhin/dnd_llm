@@ -9,11 +9,13 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 INK, DARK = (250, 246, 236, 255), (30, 22, 16, 255)
+GOLD = (232, 210, 160, 255)  # the gold of the line icons (anima_gen.GOLD toward GOLD_LIT)
 WORK = 512  # the icon is drawn over at this side, then brought back to its own
 
 
-def peace(size: int, badge: tuple | None = (86, 160, 92, 255)) -> Image.Image:
-    """A peace symbol ☮ on a round green badge with a dark rim (the author's «Не убивать», 2026-11-11)."""
+def peace(size: int, badge: tuple | None = (86, 160, 92, 255), ink: tuple = INK) -> Image.Image:
+    """A peace symbol ☮ on a round badge with a dark rim (the author's «Не убивать», 2026-11-11), green by default;
+    its lines in `ink` over a dark outline, the badge left out when None."""
     im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     o = 6
@@ -23,7 +25,7 @@ def peace(size: int, badge: tuple | None = (86, 160, 92, 255)) -> Image.Image:
     c = size / 2
     r = size / 2 - (o * 2.6 if badge else o * 1.5)
     w = int(size * 0.075)
-    for col, extra in ((DARK, 8), (INK, 0)):  # a dark outline under the light lines
+    for col, extra in ((DARK, 8), (ink, 0)):  # a dark outline under the light lines
         d.ellipse([c - r, c - r, c + r, c + r], outline=col, width=int(size * 0.1) + extra)
         d.line([(c, c - r), (c, c + r)], fill=col, width=w + extra)
         for ang in (45, 135):  # from the centre down-right and down-left (y grows down)
@@ -32,7 +34,7 @@ def peace(size: int, badge: tuple | None = (86, 160, 92, 255)) -> Image.Image:
     return im
 
 
-MARKS = {"peace": peace}
+MARKS = {"peace": peace, "peace_gold": lambda side: peace(side, DARK, GOLD)}  # gold on a dark disc: over the line icons (ui)
 
 
 def apply(name: str, src: Path) -> bytes:

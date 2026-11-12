@@ -40,6 +40,12 @@
   .opt img.small { width: 64px; height: 64px; }
   .side { color: var(--muted); font-size: 12px; }
   .empty { color: var(--muted); padding: 24px 16px; }
+  main.big { grid-template-columns: repeat(auto-fill, minmax(min(840px, 100%), 1fr)); }
+  main.big .opt img.big { max-width: 256px; }
+  main.screens { grid-template-columns: 1fr; }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  figcaption { font-weight: 600; margin-bottom: 8px; }
+  figure img { width: 100%; max-width: 1600px; display: block; border-radius: 6px; background: #17130f; aspect-ratio: 16 / 9; }
   @media (max-width: 720px) { .card.wide, .card.wider { grid-column: auto; } }
   @media (max-width: 420px) { main { grid-template-columns: 1fr; } }
 </style>
@@ -58,7 +64,7 @@
 <main id="grid"></main>
 <script>
 // one set per kind: {kind, title, items, picks, seen}; the active one is in the address after «#»
-let sets = {}, order = [], active = null;
+let sets = {}, order = [], active = null, screens = [];
 const grid = document.getElementById("grid");
 const status = document.getElementById("status");
 const want = new URLSearchParams(location.search).get("ids");
@@ -77,6 +83,30 @@ function tabs() {
     b.onclick = () => { location.hash = k; };
     nav.append(b);
   }
+  if (screens.length) {
+    const b = document.createElement("button");
+    b.className = active === "preview" ? "on" : "";
+    b.textContent = "Превью";
+    b.onclick = () => { location.hash = "preview"; };
+    nav.append(b);
+  }
+}
+
+// the game's screens laid out of every pick at this moment (ui/preview.py), drawn again on each opening
+function previews() {
+  document.getElementById("title").textContent = "Превью: экраны из ваших выборов";
+  document.getElementById("count").textContent = "рамки, иконки и их варианты — как выбрано сейчас";
+  grid.className = "screens";
+  grid.textContent = "";
+  const t = Date.now();
+  for (const s of screens) {
+    const f = document.createElement("figure");
+    const cap = document.createElement("figcaption"); cap.textContent = s.title;
+    const img = new Image(); img.src = `/preview/${s.id}.png?t=${t}`; img.alt = s.title;
+    f.append(cap, img);
+    grid.append(f);
+  }
+  tabs();
 }
 
 function count() {
@@ -98,7 +128,9 @@ async function save(kind) {
 }
 
 function render() {
+  if (active === "preview") return previews();
   const s = sets[active];
+  grid.className = s.big ? "big" : "";
   const only = document.getElementById("unseen").checked;
   document.getElementById("title").textContent = s.title + (ids ? ", перерисованные" : "") + ": какой вариант";
   grid.textContent = "";
@@ -122,10 +154,11 @@ function render() {
       const opt = document.createElement("div");
       opt.className = "opt" + (s.picks[it.key] === n ? " on" : "");
       const big = new Image(); big.className = "big"; big.src = `/img/${active}/${id}/${n}.png`; big.loading = "lazy";
-      const small = new Image(); small.className = "small"; small.src = big.src; small.loading = "lazy";
       const side = document.createElement("span"); side.className = "side";
       side.textContent = it.variants.length > 2 ? `вариант ${n}` : (n === 1 ? "левый" : "правый");
-      opt.append(big, small, side);
+      opt.append(big);
+      if (!s.big) { const small = new Image(); small.className = "small"; small.src = big.src; small.loading = "lazy"; opt.append(small); }
+      opt.append(side);
       const kind = active;
       opt.onclick = () => {
         s.picks[it.key] = n; s.seen.add(it.key);
@@ -148,7 +181,7 @@ function render() {
 
 function open() {
   const k = location.hash.slice(1);
-  active = sets[k] ? k : order[0];
+  active = sets[k] || (k === "preview" && screens.length) ? k : order[0];
   render();
   window.scrollTo(0, 0);
 }
@@ -157,9 +190,10 @@ document.getElementById("unseen").onchange = render;
 window.addEventListener("hashchange", open);
 fetch("/data").then(r => r.json()).then(d => {
   for (const s of d.kinds) {
-    sets[s.kind] = { title: s.title, items: s.items, picks: s.picks, seen: new Set(s.seen) };
+    sets[s.kind] = { title: s.title, items: s.items, picks: s.picks, seen: new Set(s.seen), big: s.big };
     order.push(s.kind);
   }
+  screens = d.screens || [];
   if (!order.length) { status.textContent = "нет нарисованных вариантов"; return; }
   open();
 }).catch(() => { status.textContent = "сервер не отвечает"; });

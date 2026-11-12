@@ -1,0 +1,12 @@
+{
+ "_doc": "The picks of the interface frames in the lines style (out_ui/raw/<part>_lines_<seed>.png, paint.py): `variant` — «frames/<part>»: n, the seed SEEDS[n - 1] of preview.py (absent — 1, the seed 11). Written by pick.py, read by preview.py.",
+ "variant": {
+  "frames/accent": 3,
+  "frames/cell": 2,
+  "frames/divider": 2,
+  "frames/field": 3,
+  "frames/ring": 3,
+  "frames/tab": 3,
+  "frames/window": 2
+ }
+}
