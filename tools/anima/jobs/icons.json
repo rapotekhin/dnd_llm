@@ -6892,16 +6892,16 @@
    "id": "poisoned",
    "kind": "conditions",
    "name": "poisoned",
-   "tags": "skull, poison, drop, green, purple",
-   "sentence": "A single green drop of poison with a small white skull on it.",
+   "tags": "skull, green, poison drop, toxic",
+   "sentence": "A single green skull above a large green drop of poison.",
    "key": ""
   },
   {
    "id": "frightened",
    "kind": "conditions",
    "name": "frightened",
-   "tags": "bat, spread wings, fangs, light violet, trembling lines",
-   "sentence": "A single light violet bat with spread wings and small white fangs, with three short trembling lines on each side.",
+   "tags": "ghost, scared face, wide eyes, open mouth, pale violet",
+   "sentence": "A single pale violet ghost face with huge round eyes and a wide open screaming mouth.",
    "key": ""
   },
   {
@@ -6932,8 +6932,8 @@
    "id": "paralyzed",
    "kind": "conditions",
    "name": "paralyzed",
-   "tags": "lightning bolt, yellow, white bars, front view",
-   "sentence": "A single yellow lightning bolt with two short white vertical bars across its middle, seen from the front.",
+   "tags": "stiff figure, white silhouette, yellow sparks, ring",
+   "sentence": "A single white silhouette of a stiff standing figure inside a ring of crackling yellow sparks.",
    "key": ""
   },
   {
@@ -6964,8 +6964,8 @@
    "id": "prone",
    "kind": "conditions",
    "name": "prone",
-   "tags": "arrow, down arrow, grey, broken line",
-   "sentence": "A single thick grey arrow bending down to a flat line, a symbol of falling to the ground.",
+   "tags": "arrow, down, yellow, thick, simple",
+   "sentence": "A single thick yellow arrow pointing straight down, small enough to sit well inside the ring.",
    "key": ""
   },
   {
@@ -7204,8 +7204,8 @@
    "id": "dodge",
    "kind": "acts",
    "name": "Уклонение",
-   "tags": "curved arrow, motion lines, green, white, diagonal",
-   "sentence": "A single bright green curved arrow sweeping to the right, with two short white motion lines behind it.",
+   "tags": "boot, stepping aside, arrow flying past, motion lines",
+   "sentence": "A boot stepping quickly aside as an arrow flies past the place where it stood, with motion lines.",
    "key": ""
   },
   {
@@ -7260,16 +7260,16 @@
    "id": "grapple",
    "kind": "acts",
    "name": "Схватить",
-   "tags": "hand, grabbing, holding wrist, tight grip, forearm",
-   "sentence": "A single strong hand tightly gripping another forearm by the wrist, seen from the side, as a flat symbol.",
+   "tags": "hand, grabbing forearm, fingers digging in, three-quarter view, tension lines",
+   "sentence": "A strong hand clamping down hard on a forearm from above, its fingers digging in, seen in three-quarter view, with short tension lines.",
    "key": ""
   },
   {
    "id": "help",
    "kind": "acts",
    "name": "Помочь",
-   "tags": "interlocking rings, gold, blue, linked",
-   "sentence": "A single pair of interlocking rings, one gold and one blue, linked at the center.",
+   "tags": "two hands, clasped forearms, pulling up, three-quarter view",
+   "sentence": "Two hands clasping each other's forearms, one pulling the other up from below, seen in three-quarter view.",
    "key": ""
   },
   {
@@ -7356,8 +7356,8 @@
    "id": "shove",
    "kind": "acts",
    "name": "Сбить с ног",
-   "tags": "downward arrow, impact, white, grey, flat line",
-   "sentence": "A single thick grey downward arrow striking a short white flat line, with two impact lines.",
+   "tags": "two hands, open palms, pushing, three-quarter view, motion lines",
+   "sentence": "Two open hands pushing forward hard, seen in three-quarter view, coming in from the lower left edge and pushing toward the upper right, with short motion lines.",
    "key": ""
   },
   {

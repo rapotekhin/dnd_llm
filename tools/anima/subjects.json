@@ -26,8 +26,8 @@
  },
  "acts/dodge": {
   "dark": false,
-  "sentence": "A single bright green curved arrow sweeping to the right, with two short white motion lines behind it.",
-  "tags": "curved arrow, motion lines, green, white, diagonal"
+  "sentence": "A boot stepping quickly aside as an arrow flies past the place where it stood, with motion lines.",
+  "tags": "boot, stepping aside, arrow flying past, motion lines"
  },
  "acts/escape": {
   "dark": false,
@@ -61,13 +61,13 @@
  },
  "acts/grapple": {
   "dark": false,
-  "sentence": "A single strong hand tightly gripping another forearm by the wrist, seen from the side, as a flat symbol.",
-  "tags": "hand, grabbing, holding wrist, tight grip, forearm"
+  "sentence": "A strong hand clamping down hard on a forearm from above, its fingers digging in, seen in three-quarter view, with short tension lines.",
+  "tags": "hand, grabbing forearm, fingers digging in, three-quarter view, tension lines"
  },
  "acts/help": {
   "dark": false,
-  "sentence": "A single pair of interlocking rings, one gold and one blue, linked at the center.",
-  "tags": "interlocking rings, gold, blue, linked"
+  "sentence": "Two hands clasping each other's forearms, one pulling the other up from below, seen in three-quarter view.",
+  "tags": "two hands, clasped forearms, pulling up, three-quarter view"
  },
  "acts/hide": {
   "dark": true,
@@ -121,8 +121,8 @@
  },
  "acts/shove": {
   "dark": false,
-  "sentence": "A single thick grey downward arrow striking a short white flat line, with two impact lines.",
-  "tags": "downward arrow, impact, white, grey, flat line"
+  "sentence": "Two open hands pushing forward hard, seen in three-quarter view, coming in from the lower left edge and pushing toward the upper right, with short motion lines.",
+  "tags": "two hands, open palms, pushing, three-quarter view, motion lines"
  },
  "acts/slow_fall": {
   "dark": false,
@@ -214,8 +214,8 @@
  },
  "conditions/frightened": {
   "dark": false,
-  "sentence": "A single light violet bat with spread wings and small white fangs, with three short trembling lines on each side.",
-  "tags": "bat, spread wings, fangs, light violet, trembling lines"
+  "sentence": "A single pale violet ghost face with huge round eyes and a wide open screaming mouth.",
+  "tags": "ghost, scared face, wide eyes, open mouth, pale violet"
  },
  "conditions/glowing": {
   "dark": false,
@@ -259,8 +259,8 @@
  },
  "conditions/paralyzed": {
   "dark": false,
-  "sentence": "A single yellow lightning bolt with two short white vertical bars across its middle, seen from the front.",
-  "tags": "lightning bolt, yellow, white bars, front view"
+  "sentence": "A single white silhouette of a stiff standing figure inside a ring of crackling yellow sparks.",
+  "tags": "stiff figure, white silhouette, yellow sparks, ring"
  },
  "conditions/petrified": {
   "dark": false,
@@ -269,13 +269,13 @@
  },
  "conditions/poisoned": {
   "dark": false,
-  "sentence": "A single green drop of poison with a small white skull on it.",
-  "tags": "skull, poison, drop, green, purple"
+  "sentence": "A single green skull above a large green drop of poison.",
+  "tags": "skull, green, poison drop, toxic"
  },
  "conditions/prone": {
   "dark": false,
-  "sentence": "A single thick grey arrow bending down to a flat line, a symbol of falling to the ground.",
-  "tags": "arrow, down arrow, grey, broken line"
+  "sentence": "A single thick yellow arrow pointing straight down, small enough to sit well inside the ring.",
+  "tags": "arrow, down, yellow, thick, simple"
  },
  "conditions/restrained": {
   "dark": false,

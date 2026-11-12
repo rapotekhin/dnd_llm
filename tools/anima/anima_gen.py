@@ -105,27 +105,50 @@ PLATE_TAIL = ("It is an ability icon for a fantasy role-playing game. The subjec
               "metal inlaid in steel, with no solid fill. The emblem is large and centered on a square plate of "
               "brushed silver-grey steel with a cool blue tint and a rivet in each corner that fills the whole frame, "
               "a little darker toward its edges.")  # dark worn steel (the first trial) melted into the brown stone
-MEDAL_HEAD = "masterpiece, best quality, score_7, safe, no humans, gold, coin, medal, embossed, relief, metal texture, "
-MEDAL_TAIL = ("It is a status icon for a fantasy role-playing game. The subject is chased in raised relief on one round "
-              "medallion of warm polished gold, like an old coin: soft highlights from the upper left, darker gold in "
-              "the recesses, a thin raised rim around its edge, the subject's own colour only as a little enamel. The "
-              "medallion is large and centered and fills almost the whole square, on a plain flat dark background.")
+MEDAL_HEAD = "masterpiece, best quality, score_7, safe, no humans, flat color, simple, icon, symbol, emblem, circle, gold rim, "
+MEDAL_TAIL = ("It is a status icon for a fantasy role-playing game. One round badge: a thin polished gold ring around "
+              "a dark flat round field. Inside it the subject is drawn as one simple bold emblem in its own bright "
+              "colours with a thick dark outline, with no shading, no texture and no small details, large and "
+              "centered, so that it reads at a glance. The badge is large and centered and fills almost the whole "
+              "square, on a plain flat dark background.")
 MEDAL_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, "
-                  "chromatic aberration, text, letters, watermark, signature, multiple objects, duplicate, human, "
-                  "person, photo, square, tile, stone, glowing lines, neon, scenery, landscape")
+                  "chromatic aberration, text, letters, watermark, signature, multiple objects, duplicate, photo, "
+                  "3d render, realistic, painterly, detailed, relief, embossed, coin, glowing, neon, square, tile, "
+                  "stone, scenery, landscape")
+# a condition (the author, 2026-11-12): the glyph's tile in a circle was «не очень», a chased gold coin put the sign in
+# gold on gold and too detailed — «простая эмблемка в золотом кружочке»
+INK_HEAD = "masterpiece, best quality, score_7, safe, no humans, sketch, lineart, monochrome, thick lines, metal texture, steel, "
+INK_TAIL = ("It is an action icon for a fantasy role-playing game. The subject is drawn large as a rough sketch of a few "
+            "thick dark ink brush strokes with no fill, bold and simple like a quick chalk drawing, cropped by the frame "
+            "where it comes in from the edge. It is drawn on a square plate of brushed silver-grey steel with a cool "
+            "blue tint and a rivet in each corner that fills the whole frame, a little darker toward its edges.")
+INK_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, "
+                "chromatic aberration, text, letters, watermark, signature, multiple objects, duplicate, face, photo, "
+                "3d render, realistic, colorful, glowing, neon, painterly, solid fill, scenery, landscape, nsfw")
+# a basic act (the author, 2026-11-12): the glowing sign was not clear, a flat pictogram too bare, an illustration
+# missed every gesture; BG3's acts (looked at) are hands in three-quarter view from the lower left in a few rough
+# strokes with no fill — in dark ink on our steel the author took it over white chalk and over strokes on dark
+BRONZE_HEAD = "masterpiece, best quality, score_7, safe, no humans, lineart, glowing, emblem, metal texture, bronze, "
+BRONZE_TAIL = ("It is a trait icon for a fantasy role-playing game. The subject is drawn as one simple bold emblem of "
+               "thin glowing lines with a white-hot core and a soft colored glow, like luminous chalk or molten metal "
+               "inlaid in bronze, with no solid fill. The emblem is large and centered on a square plate of polished "
+               "warm bronze with a little green patina in its recesses and a rivet in each corner that fills the whole "
+               "frame, a little darker toward its edges.")  # a race's trait apart from the steel of features and acts
 FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the tail's {word} are the job's key
     "flat": (HEAD, TAIL, NEGATIVE),
     "object": (PAINTED_HEAD, PAINTED_TAIL, PAINTED_NEGATIVE),
     "glyph": (GLYPH_HEAD, GLYPH_TAIL, GLYPH_NEGATIVE),
     "plate": (PLATE_HEAD, PLATE_TAIL, GLYPH_NEGATIVE),
-    "medal": (MEDAL_HEAD, MEDAL_TAIL, MEDAL_NEGATIVE),  # a gold coin, chased (the author, 2026-11-12: not the tile)
+    "bronze": (BRONZE_HEAD, BRONZE_TAIL, GLYPH_NEGATIVE),
+    "ink": (INK_HEAD, INK_TAIL, INK_NEGATIVE),
+    "medal": (MEDAL_HEAD, MEDAL_TAIL, MEDAL_NEGATIVE),
 }
-TILED = ("glyph", "plate")  # the families cut as a tile by its shape
+TILED = ("glyph", "plate", "bronze", "ink")  # the families cut as a tile by its shape
 # A kind (or its head before «/») in the painted style; the rest — items, ui, groups — is an object. The interface's
 # buttons and the inventory's groups were tried as a silver relief like BG3's skills (2026-11-11): the model drew a
 # painted thing with a silver detail, and the author took painted things.
-FAMILY = {"spells": "glyph", "features": "plate", "acts": "plate", "traits": "plate", "conditions": "medal",
-          "marks": "flat"}  # a spell on stone, an ability or an act on bright steel (the author, 2026-11-12)
+FAMILY = {"spells": "glyph", "features": "plate", "acts": "ink", "traits": "bronze", "conditions": "medal",
+          "marks": "flat"}  # stone spells, steel abilities, ink acts on steel, bronze traits (2026-11-12)
 ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
