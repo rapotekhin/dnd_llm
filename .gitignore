@@ -37,3 +37,9 @@ tools/anima/.venv-matte/
 
 # The map tiles: drawn locally by tools/tiles/gen_tiles.py, not kept in git (the map falls back to the colours of `grounds.colour`)
 /game/assets/tiles/
+
+# Drawn art: icons and portraits by tools/anima, laid locally, not kept in git (the blanks of icons/_blank and the letter stand in)
+/game/assets/icons/*
+!/game/assets/icons/_blank/
+!/game/assets/icons/README.md
+/game/assets/portraits/
