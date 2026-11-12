@@ -6,6 +6,7 @@
     tools/anima/.venv-matte/Scripts/python.exe tools/tiles/gen_tiles.py matte   # props cut by BiRefNet (tools/anima/matte.py)
     python tools/tiles/gen_tiles.py sheet                    # build/tiles/sheet_ground.png, sheet_props.png to pick from
     python tools/tiles/gen_tiles.py install                  # tools/tiles/picks.json → game/assets/tiles/{ground,props,edges}/
+                                                             # and the sharp set {ground,props}_hi/ the map takes close up
 
 A ground comes out of FLUX nearly even but not seamless: it is made so by blending it with itself rolled by half
 (`seamless`), so a texture repeats under the dual grid with no seam. An edge (`grounds.edges`: two grounds whose meeting
@@ -35,6 +36,7 @@ OUT = ROOT / "build" / "tiles"
 GAME = ROOT / "game" / "assets" / "tiles"
 GROUND_PX = 512  # a ground texture's side in the game: it spans `repeat` squares of the map
 PROP_PX = 256
+HI = 2  # the sharp set the map takes close up (MapGround.HI): grounds from the raw frame, props cut twice the size
 EDGE_PX = 1024  # a sheet of 4 × 4 tiles
 FIELD_PX = 256  # the line is worked out at this size and smoothed up
 LOW, HIGH = (40, 105, 200), (70, 150, 60)  # the mask's colours: the lower ground blue, the higher green
@@ -156,7 +158,10 @@ def matte(a: argparse.Namespace) -> None:
             continue
         for raw in sorted((OUT / "raw").glob(f"{t}__*.png")):
             rgb = Image.open(raw).convert("RGB")
-            m.matte(rgb, m.mask_of(model, device, rgb)).resize((PROP_PX, PROP_PX), Image.LANCZOS).save(OUT / raw.name)
+            cut = m.matte(rgb, m.mask_of(model, device, rgb))
+            cut.resize((PROP_PX, PROP_PX), Image.LANCZOS).save(OUT / raw.name)
+            (OUT / "hi").mkdir(exist_ok=True)
+            cut.resize((PROP_PX * HI, PROP_PX * HI), Image.LANCZOS).save(OUT / "hi" / raw.name)
             print(raw.name, flush=True)
 
 
@@ -207,6 +212,23 @@ def install(a: argparse.Namespace) -> None:
         dst.parent.mkdir(parents=True, exist_ok=True)
         Image.open(src).save(dst)
         print(dst.relative_to(ROOT))
+        sharp = sharp_of(g, f"{t}__{int(picks[t])}.png")
+        if sharp is not None:
+            hi = GAME / f"{g}_hi" / f"{t}.png"
+            hi.parent.mkdir(parents=True, exist_ok=True)
+            sharp.save(hi)
+            print(hi.relative_to(ROOT))
+
+
+def sharp_of(group: str, name: str) -> Image.Image | None:
+    """The sharp picture of a pick: a ground made seamless from its raw frame as the plain one is, a prop as `matte` cut it
+    twice the size; an edge sheet has none (FLUX's frame is its size already)."""
+    if group == "ground" and (OUT / "raw" / name).exists():
+        side = GROUND_PX * HI
+        return seamless(Image.open(OUT / "raw" / name).convert("RGB")).resize((side, side), Image.LANCZOS)
+    if group == "props" and (OUT / "hi" / name).exists():
+        return Image.open(OUT / "hi" / name)
+    return None
 
 
 def main() -> None:

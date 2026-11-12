@@ -55,7 +55,7 @@ description: Use this skill when making or changing the map's tileset — ground
    Посмотри листы (Read):
    - земля показана 2×2 — не должно быть ни шва, ни заметного повтора пятна;
    - предмет показан на шахматке — без фона и без обрезков.
-4. **Выбрать** вариант в `tools/tiles/picks.json`, затем `python tools/tiles/gen_tiles.py install --only <ids>`.
+4. **Выбрать** вариант в `tools/tiles/picks.json`, затем `python tools/tiles/gen_tiles.py install --only <ids>` — он кладёт и чёткий набор для близкого зума (`ground_hi/`, `props_hi/`); для предмета перед этим нужен `matte`.
 5. **Данные** в `game/data/layouts.json` → `grounds`:
    - земля: id в `order` на свою высоту (вода ниже травы, стены и крыши выше всех; не больше 32 земель), цвет в `colour`, где она лежит — в `cells` (по символу и виду места, его семье или форме);
    - ровный край — id в `sharp`;

@@ -12,7 +12,8 @@ signal stepped(cell: Vector2i)  ## the hero reached a square of the path
 signal arrived  ## the hero reached the end of the path
 
 const MIN_TILE := 10.0
-const MAX_TILE := 76.0
+const MAX_TILE := 76.0  ## the closest view on a small field; a bigger one comes to CLOSE_CELLS
+const CLOSE_CELLS := 8.0  ## the closest view: this many squares across the field's shorter side (v0.8.4.43.21)
 const BASE_TILE := 38.0
 const SPEED := 7.0  ## squares a second
 const DRAG_FROM := 6.0  ## pixels: less is a click
@@ -276,7 +277,7 @@ func cell_at(point: Vector2) -> Vector2i:
 
 func zoom(steps: float, around_point: Vector2) -> void:
 	var at := (around_point - _corner) / _tile
-	_tile = clampf(_tile * pow(ZOOM_STEP, steps), MIN_TILE, MAX_TILE)
+	_tile = clampf(_tile * pow(ZOOM_STEP, steps), MIN_TILE, most_tile())
 	_corner = around_point - at * _tile
 	_follow = false
 	_own_view = true
@@ -286,6 +287,16 @@ func zoom(steps: float, around_point: Vector2) -> void:
 
 func tile() -> float:
 	return _tile
+
+
+## The biggest tile the wheel comes to: CLOSE_CELLS squares across the shorter side, never under MAX_TILE.
+func most_tile() -> float:
+	return maxf(MAX_TILE, minf(size.x, size.y) / CLOSE_CELLS)
+
+
+## The ground's pictures are the sharp set now (v0.8.4.43.21).
+func sharp() -> bool:
+	return _ground.sharp()
 
 
 func corner() -> Vector2:
@@ -378,6 +389,7 @@ func _draw() -> void:
 	_ground.visible = true
 	_ground.position = _corner
 	_ground.size = Vector2(int(map["w"]), int(map["h"])) * t
+	_ground.detail(t)
 	_ground.light(dim, now, cones, 0.45)
 	var rows: Array[String] = map["rows"]
 	var first := Vector2i((-_corner / t).floor()).max(Vector2i.ZERO)

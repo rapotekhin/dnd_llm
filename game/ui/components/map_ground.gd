@@ -2,10 +2,14 @@ class_name MapGround
 extends ColorRect
 ## The ground of a map under MapField: its squares' grounds and things (LayoutGen.grounds, `grounds` of
 ## data/layouts.json) drawn on a dual grid by map_ground.gdshader, with what the hero does not see darkened smooth.
-## It draws behind the field, which lays the tokens, the paths and the marks over it.
+## It draws behind the field, which lays the tokens, the paths and the marks over it. Close up it takes the sharper
+## pictures of `<group>_hi/` (v0.8.4.43.21): twice the side, built the first time the view comes that close.
 
 const GROUND_PX := 512
 const PROP_PX := 256
+const HI := 2  ## the sharp set's side, times the plain one
+const HI_FROM := 0.5  ## a ground's texel over this many screen pixels — its plain picture blurred by the mipmaps
+const HI_BACK := 0.4  ## and back under this, so a view on the line does not flicker
 const MAX_PROPS := 16
 const EDGE_PX := 1024  ## a sheet of the sixteen tiles of a drawn edge
 const MAX_GROUNDS := 32  ## the grounds of the order: a bit each in the shader's sharp mask, a row of the edge table
@@ -16,6 +20,8 @@ var _cells := ImageTexture.new()
 var _light := ImageTexture.new()
 var _size := Vector2i.ZERO
 var _light_bytes := PackedByteArray()
+var _lib: Dictionary = {}
+var _hi := false  ## the sharp set is laid
 
 
 func _init() -> void:
@@ -64,11 +70,11 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	sizes.fill(1.0)
 	for i: int in props.size():
 		sizes[i] = float(g.get("size", {}).get(props[i], 1.0))
+	_lib = lib
 	var m := material as ShaderMaterial
 	m.set_shader_parameter("cells", _cells)
 	m.set_shader_parameter("light", _light)
-	m.set_shader_parameter("grounds", _array(lib, "ground"))
-	m.set_shader_parameter("props", _array(lib, "props"))
+	_lay_set()
 	m.set_shader_parameter("map_size", Vector2(w, h))
 	m.set_shader_parameter("repeat_cells", float(g.get("repeat", 3)))
 	m.set_shader_parameter("sharp_mask", sharp)
@@ -79,6 +85,37 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	m.set_shader_parameter("edge_pairs", edges["pairs"])
 	m.set_shader_parameter("edge_cell", edge_cells(lib))
 	m.set_shader_parameter("edge_band", float(g.get("edge_band", 0.16)))
+
+
+## The set of pictures for a square of `tile` pixels: the sharp one when a plain texel takes over half a screen pixel
+## (the mipmaps would blend the picture with its halved one there), the plain one again further off.
+func detail(tile: float) -> void:
+	if _lib.is_empty():
+		return
+	var texel := tile * float(_lib["grounds"].get("repeat", 3)) / float(GROUND_PX)
+	var want := texel > HI_FROM if not _hi else texel > HI_BACK
+	if want != _hi and (not want or has_hi(_lib)):
+		_hi = want
+		_lay_set()
+
+
+## Whether the sharp set is laid now (a playtest checks the switch).
+func sharp() -> bool:
+	return _hi
+
+
+## Whether any sharp picture of a ground is installed: none — the plain set stays at every zoom.
+static func has_hi(lib: Dictionary) -> bool:
+	if not _arrays.has("has_hi"):
+		_arrays["has_hi"] = lib["grounds"]["order"].any(func(id: Variant) -> bool:
+			return ResourceLoader.exists("res://assets/tiles/ground_hi/%s.png" % id))
+	return bool(_arrays["has_hi"])
+
+
+func _lay_set() -> void:
+	var m := material as ShaderMaterial
+	m.set_shader_parameter("grounds", _array(_lib, "ground", _hi))
+	m.set_shader_parameter("props", _array(_lib, "props", _hi))
 
 
 ## What the hero does not see now (dimmed by `dark`) and the squares under watch.
@@ -158,16 +195,20 @@ static func _walled(rows: Array, x: int, y: int) -> bool:
 	return (rows[y] as String)[x] in [LayoutGen.WALL, "w", LayoutGen.SOCKET]
 
 
-## The textures of a group, a colour where none is drawn yet.
-static func _array(lib: Dictionary, group: String) -> Texture2DArray:
-	if _arrays.has(group):
-		return _arrays[group]
+## The textures of a group, a colour where none is drawn yet; `hi` — the sharp set of `<group>_hi/`, the plain picture
+## stretched where a sharp one is not drawn.
+static func _array(lib: Dictionary, group: String, hi := false) -> Texture2DArray:
+	var key := group + ("_hi" if hi else "")
+	if _arrays.has(key):
+		return _arrays[key]
 	var g: Dictionary = lib["grounds"]
 	var ids: Array = g["order"] if group == "ground" else prop_ids(lib)
-	var side := GROUND_PX if group == "ground" else PROP_PX
+	var side := (GROUND_PX if group == "ground" else PROP_PX) * (HI if hi else 1)
 	var images: Array[Image] = []
 	for id: Variant in ids:
-		var path := "res://assets/tiles/%s/%s.png" % [group, id]
+		var path := "res://assets/tiles/%s_hi/%s.png" % [group, id]
+		if not hi or not ResourceLoader.exists(path):
+			path = "res://assets/tiles/%s/%s.png" % [group, id]
 		var img: Image
 		if ResourceLoader.exists(path):
 			img = (load(path) as Texture2D).get_image()
@@ -185,5 +226,5 @@ static func _array(lib: Dictionary, group: String) -> Texture2DArray:
 		images.append(none)
 	var arr := Texture2DArray.new()
 	arr.create_from_images(images)
-	_arrays[group] = arr
+	_arrays[key] = arr
 	return arr

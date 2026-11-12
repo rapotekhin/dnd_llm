@@ -86,6 +86,15 @@ func run() -> void:
 		field.zoom(12, field.cell_point(shore))
 		await frames(3)
 		await shot("shore")
+		field.zoom(30, field.cell_point(shore))  # the closest view: 8 squares across, the sharp pictures (v0.8.4.43.21)
+		await frames(3)
+		var across: float = minf(field.size.x, field.size.y) / field.tile()
+		step("the closest view is 8 squares across", absf(across - MapField.CLOSE_CELLS) < 0.5 or field.tile() == MapField.MAX_TILE, "%.1f squares" % across)
+		step("close up the sharp pictures", field.sharp() or not MapGround.has_hi(field.lib))
+		await shot("closest")
+		field.zoom(-30, field.cell_point(shore))
+		await frames(3)
+		step("far off the plain ones again", not field.sharp())
 
 	s.room_id = "brod-tavern-hall"
 	node("EventBus").state_changed.emit()
