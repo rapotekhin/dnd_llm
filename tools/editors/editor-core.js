@@ -1074,11 +1074,14 @@ class EditorApp {
 			const parent = getAt(this.files.get(c.file).data, c.at.slice(0, -1));
 			box = parent[c.at.at(-1)] = c.type === 'array' ? [] : {};
 		}
-		const id = (prompt(`id новой записи в «${c.title}»${c.idHint ? ' (' + c.idHint + ')' : ''}:`) || '').trim();
+		// A page's own dialog of a new entry (cfg.createDialog → {id, value}, null to cancel, undefined for none), else the id by a prompt.
+		const asked = !copyOf && this.cfg.createDialog ? await this.cfg.createDialog(this, c) : undefined;
+		if (asked === null) return;  // cancelled; undefined — the page has no dialog for this collection
+		const id = asked ? asked.id : (prompt(`id новой записи в «${c.title}»${c.idHint ? ' (' + c.idHint + ')' : ''}:`) || '').trim();
 		if (!id) return;
 		if (c.get(id) !== undefined) return this.toast(`id ${id} уже занят`);
 		if (c.idPattern && !new RegExp(c.idPattern).test(id)) return this.toast(`id должен подходить под ${c.idPattern}`);
-		let nv = copyOf ? structuredClone(copyOf) : this.cfg.newEntry?.(this, c, id) ?? this.skeleton(c);
+		let nv = asked ? asked.value : copyOf ? structuredClone(copyOf) : this.cfg.newEntry?.(this, c, id) ?? this.skeleton(c);
 		if (c.type === 'array') { nv = { [c.idKey]: id, ...nv }; nv[c.idKey] = id; box.push(nv); }
 		else if (c.sorted) this.sortedInsert(c, box, id, nv);
 		else box[id] = nv;

@@ -21,6 +21,153 @@ const CELL_RU = {
 };
 const SHAPES = { building: 'здание', tunnels: 'пещера, шахта', open: 'открытое место' };
 const TOOLS = [['brush', 'Кисть'], ['rect', 'Прямоугольник'], ['frame', 'Рамка'], ['fill', 'Заливка'], ['pick', 'Пипетка']];
+// The ids of layouts.json in the author's words; the lists themselves come from the data, a new id shows itself.
+const KIND_RU = {
+	tavern: 'таверна', inn: 'постоялый двор', smithy: 'кузница', shop: 'лавка', workshop: 'мастерская', mill: 'мельница', temple: 'храм',
+	registry: 'ратуша', school: 'школа', hall: 'зал', house: 'дом', home: 'жилище', bathhouse: 'баня', prison: 'тюрьма', hideout: 'укрытие',
+	warehouse: 'склад', cave: 'пещера', mine: 'шахта', wild: 'дикое место', square: 'площадь', market: 'рынок', gate: 'ворота', arena: 'арена',
+	ruin: 'руины', land: 'земля', forest: 'лес', field: 'поле', hills: 'холмы', rocks: 'скалы', swamp: 'болото', shore: 'берег', dunes: 'дюны',
+	snowfield: 'снежное поле', camp: 'лагерь', town: 'город', ring: 'ринг',
+};
+const ROLE_RU = { hall: 'главный зал', kitchen: 'кухня', cellar: 'погреб', upstairs: 'верхний этаж', bedroom: 'спальня', store: 'кладовая', office: 'контора', cell: 'келья, камера', dorm: 'спальня учеников' };
+const SIZE_RU = { small: 'малый', medium: 'средний', large: 'большой', corridor: 'коридор', cellar: 'погреб', cave: 'пещерный' };
+const SIZE_WH = { small: [7, 5], medium: [9, 7], large: [13, 9], corridor: [12, 3], cellar: [7, 5], cave: [9, 7] };
+const TAG_RU = { water: 'вода', foul_water: 'гнилая вода', hearth: 'очаг', forge: 'горн', workbench: 'верстак', alchemy: 'алхимия', temple: 'алтарь', stage: 'сцена', market: 'прилавок', ore: 'руда' };
+const ru = (map, id) => (map[id] ? `${map[id]} (${id})` : id);
+
+// What the data offers for each field of a chunk.
+const opts = {
+	roomKinds: () => Object.keys(lib.kinds).filter((k) => MapView.shapeOf(lib, k, true) !== 'open'),
+	roles: (kinds) => {
+		const of = (k) => Object.keys(lib.kinds[k]?.rooms || lib.kinds[lib.kinds[k]?.family]?.rooms || {});
+		const want = kinds?.length ? kinds.flatMap(of) : [];
+		const all = [...new Set([...Object.values(lib.kinds).flatMap((k) => Object.keys(k.rooms || {})), ...lib.chunks.flatMap((c) => c.roles || [])])];
+		return [...new Set([...want, ...all])];
+	},
+	sizes: () => [...new Set([...(lib.sizes || []), ...lib.chunks.map((c) => c.size).filter(Boolean)])],
+	landmarks: () => [...new Set([...Object.values(lib.kinds).flatMap((k) => k.landmarks || []), ...lib.chunks.flatMap((c) => c.landmarks || [])])],
+	tags: () => [...new Set([...lib.chunks.flatMap((c) => c.tags || []), ...Object.keys(lib.mark_tags || {})])],
+};
+
+// A plain room: walls round, a door socket in the middle of each side, the entry in the middle.
+function roomRows(w, h, landmark) {
+	if (landmark) return Array.from({ length: h }, () => '.'.repeat(w));
+	return Array.from({ length: h }, (_, y) => [...Array(w)].map((_, x) => {
+		const edgeY = y === 0 || y === h - 1, edgeX = x === 0 || x === w - 1;
+		if (edgeY && edgeX) return '#';
+		if (edgeY) return x === Math.floor(w / 2) ? 'D' : '#';
+		if (edgeX) return y === Math.floor(h / 2) && h > 3 ? 'D' : '#';
+		return x === Math.floor(w / 2) && y === Math.floor(h / 2) ? 'E' : '.';
+	}).join(''));
+}
+
+// The window of a new chunk: what it is, for which place and room, its size; null — cancelled.
+function createDialog(app, c) {
+	if (c.id !== 'chunks') return undefined;
+	return new Promise((done) => {
+		const box = h('div', { class: 'modal' });
+		const close = (v) => { box.remove(); done(v); };
+		const sel = (list, label, value) => h('select', {}, list.map((x) => h('option', { value: x, selected: x === value }, label(x))));
+		const purpose = sel(['room', 'landmark'], (x) => (x === 'room' ? 'Комната здания или зал пещеры' : 'Примета открытого места (лагерь, руины, колодец…)'), 'room');
+		const kind = h('select', {}, h('option', { value: '' }, '— общий: годится любому виду —'), opts.roomKinds().map((k) => h('option', { value: k }, ru(KIND_RU, k))));
+		const role = h('select');
+		const size = sel(opts.sizes(), (s) => `${ru(SIZE_RU, s)}${SIZE_WH[s] ? ' — ' + SIZE_WH[s].join('×') : ''}`, 'medium');
+		const mark = sel(opts.landmarks(), (x) => ru(KIND_RU, x), 'wild');
+		const w = h('input', { type: 'number', min: 3, max: 40, value: 9, class: 'num' });
+		const hh = h('input', { type: 'number', min: 3, max: 40, value: 7, class: 'num' });
+		const id = h('input', { placeholder: 'например: tavern_hall_round', pattern: '[a-z0-9_]+' });
+		const err = h('div', { class: 'bad small' });
+		const fillRoles = () => {
+			const list = opts.roles(kind.value ? [kind.value] : []);
+			role.replaceChildren(...list.map((r) => h('option', { value: r }, ru(ROLE_RU, r))));
+		};
+		const suggest = () => {
+			if (id.dataset.typed) return;
+			const base = purpose.value === 'landmark' ? mark.value + '_mark' : [kind.value || 'room', role.value || size.value].join('_');
+			let n = base, i = 2;
+			while (c.get(n) !== undefined) n = `${base}_${i++}`;
+			id.value = n;
+		};
+		const rowOf = (label, el, hint) => h('label', { class: 'kv' }, h('span', { class: 'k' }, label), h('span', { class: 'v' }, el, hint ? h('div', { class: 'muted small' }, hint) : null));
+		const roomPart = h('div', {}, rowOf('Вид места', kind, 'Где генератор возьмёт этот чанк. «Общий» — для любого вида, по размеру.'), rowOf('Роль комнаты', role), rowOf('Размер', size));
+		const markPart = h('div', { hidden: true }, rowOf('Примета для', mark, 'Открытые места, на которые генератор её ставит.'));
+		const sync = () => {
+			roomPart.hidden = purpose.value !== 'room';
+			markPart.hidden = purpose.value === 'room';
+			const wh = purpose.value === 'room' ? SIZE_WH[size.value] : [7, 5];
+			if (wh) { w.value = wh[0]; hh.value = wh[1]; }
+			suggest();
+		};
+		purpose.onchange = sync;
+		kind.onchange = () => { fillRoles(); suggest(); };
+		role.onchange = suggest;
+		size.onchange = sync;
+		mark.onchange = suggest;
+		id.oninput = () => { id.dataset.typed = '1'; };
+		const ok = () => {
+			const v = id.value.trim();
+			if (!/^[a-z0-9_]+$/.test(v)) return (err.textContent = 'id — латиница, цифры и «_»');
+			if (c.get(v) !== undefined) return (err.textContent = `id ${v} уже занят`);
+			const W = Math.max(3, Number(w.value) || 9), H = Math.max(3, Number(hh.value) || 7);
+			const landmark = purpose.value === 'landmark';
+			const value = landmark
+				? { landmarks: [mark.value], marks: {}, rows: roomRows(W, H, true) }
+				: { ...(kind.value ? { kinds: [kind.value] } : { generic: true }), roles: role.value ? [role.value] : [], size: size.value, marks: { E: 'entry' }, rows: roomRows(W, H, false) };
+			close({ id: v, value });
+		};
+		fillRoles();
+		sync();
+		box.append(h('div', { class: 'modalbody narrow' },
+			h('div', { class: 'entryhead' }, h('h2', {}, 'Новый чанк'), h('span', { class: 'grow' }), h('button', { onclick: () => close(null) }, 'Отмена')),
+			h('div', { class: 'form' }, rowOf('Что это', purpose), roomPart, markPart,
+				rowOf('Ширина × высота', h('span', {}, w, ' × ', hh), 'Клеток по 5 футов. Комната получит стены, по двери посередине сторон и вход — дальше рисуйте сами.'),
+				rowOf('id', id), err),
+			h('div', { class: 'actions' }, h('span', { class: 'grow' }), h('button', { class: 'primary', onclick: ok }, 'Создать'))));
+		box.addEventListener('click', (ev) => { if (ev.target === box) close(null); });
+		box.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') ok(); if (ev.key === 'Escape') close(null); });
+		document.body.append(box);
+		kind.focus();
+	});
+}
+
+// A list of ids as chips with «✕» and a list to add one more (or another of one's own).
+function chips(values, options, label, onChange, { single = false } = {}) {
+	const cur = values || [];
+	const add = h('select', { class: 'small', onchange: (ev) => {
+		let v = ev.target.value;
+		ev.target.value = '';
+		if (v === '\u0001') v = (prompt('Своё значение (латиница)') || '').trim();
+		if (v && !cur.includes(v)) onChange(single ? [v] : [...cur, v]);
+	} }, h('option', { value: '' }, single && cur.length ? 'заменить…' : '+ добавить…'),
+		options.filter((o) => !cur.includes(o)).map((o) => h('option', { value: o }, label(o))), h('option', { value: '\u0001' }, 'другое…'));
+	return h('span', { class: 'chips' }, ...cur.map((v) => h('span', { class: 'chip' }, label(v), h('button', { class: 'x', title: 'Убрать', onclick: () => onChange(cur.filter((x) => x !== v)) }, '✕'))), add);
+}
+
+// The chunk's own fields over its picture: what it is and where the generator takes it.
+function propsPanel(app, c, e) {
+	const set = (key, v) => {
+		if (v === undefined || (Array.isArray(v) && !v.length && key !== 'roles') || v === false) delete e[key];
+		else e[key] = v;
+		app.changed(c, true);
+	};
+	const landmark = !!e.landmarks;
+	const purpose = h('select', { onchange: (ev) => {
+		if (ev.target.value === 'landmark') { for (const k of ['kinds', 'roles', 'size', 'generic', 'tags']) delete e[k]; e.landmarks = ['wild']; }
+		else { delete e.landmarks; e.kinds = []; e.roles = []; e.size = 'medium'; }
+		app.changed(c, true);
+	} }, h('option', { value: 'room', selected: !landmark }, 'комната здания или зал пещеры'), h('option', { value: 'landmark', selected: landmark }, 'примета открытого места'));
+	const row = (label, el, hint) => h('div', { class: 'prop' }, h('span', { class: 'muted' }, label), el, hint ? h('span', { class: 'muted small' }, hint) : null);
+	const parts = [row('Что это:', purpose)];
+	if (landmark) parts.push(row('Ставится на:', chips(e.landmarks, opts.landmarks(), (x) => ru(KIND_RU, x), (v) => set('landmarks', v.length ? v : ['wild']))));
+	else {
+		parts.push(row('Виды мест:', e.generic ? h('span', { class: 'muted' }, 'любой вид') : chips(e.kinds, opts.roomKinds(), (x) => ru(KIND_RU, x), (v) => set('kinds', v))),
+			row('', h('label', { class: 'small' }, h('input', { type: 'checkbox', checked: !!e.generic, onchange: (ev) => set('generic', ev.target.checked) }), ' общий — годится любому виду места своего размера')),
+			row('Роли комнаты:', chips(e.roles, opts.roles(e.kinds), (x) => ru(ROLE_RU, x), (v) => set('roles', v)), 'пусто — любая роль'),
+			row('Размер:', h('select', { onchange: (ev) => set('size', ev.target.value) }, opts.sizes().map((s) => h('option', { value: s, selected: e.size === s }, ru(SIZE_RU, s))))),
+			row('Теги комнаты:', chips(e.tags, opts.tags(), (x) => ru(TAG_RU, x), (v) => set('tags', v)), 'чанк для комнаты с таким тегом идёт первым'));
+	}
+	return h('div', { class: 'props' }, ...parts);
+}
 
 let lib = null;
 const paint = { char: '#', tool: 'brush', px: 40, symbols: true, history: new Map() };
@@ -41,7 +188,7 @@ const app = new EditorApp({
 		app.addColl({
 			id: 'chunks', title: 'Чанки', group: 'Карты', file: L, at: ['chunks'], type: 'array', idKey: 'id',
 			name: (e) => e.id,
-			sub: (e) => [e.landmarks ? 'примета: ' + e.landmarks.join(', ') : (e.kinds || ['общий']).join(', '), (e.roles || []).join(', '), e.size, size(e)].filter(Boolean).join(' · '),
+			sub: (e) => [e.landmarks ? 'примета: ' + e.landmarks.map((x) => KIND_RU[x] || x).join(', ') : e.generic && !e.kinds?.length ? 'общий' : (e.kinds || []).map((x) => KIND_RU[x] || x).join(', '), (e.roles || []).map((x) => ROLE_RU[x] || x).join(', '), SIZE_RU[e.size] || e.size, size(e)].filter(Boolean).join(' · '),
 			labels: { kinds: 'виды мест', roles: 'роли комнат', size: 'размер', marks: 'метки', rows: 'клетки', landmarks: 'примета открытой карты', generic: 'общий для любого вида', tags: 'теги комнаты' },
 			refs: [{ p: 'kinds.[]', to: 'kinds' }],
 			filterOrder: ['kinds', 'roles', 'size', 'landmarks', 'generic', 'tags'],
@@ -54,9 +201,7 @@ const app = new EditorApp({
 
 	view(app, c, id, e) { return c.id === 'chunks' ? painter(app, c, e) : null; },
 
-	newEntry() {
-		return { kinds: [], roles: [], size: 'medium', marks: { E: 'entry' }, rows: ['####D####', '#.......#', '#.......#', 'D...E...D', '#.......#', '#.......#', '####D####'] };
-	},
+	createDialog,
 
 	validate(app) { return check(); },
 	afterSave() { return 'Проверьте: gdUnit test_layout_v080.gd'; },
@@ -390,6 +535,7 @@ function painter(app, c, e) {
 	refreshTools();
 	setTimeout(redraw, 0);
 	return h('div', { class: 'painter' },
+		propsPanel(app, c, e),
 		h('div', { class: 'actions' }, tools, h('span', { class: 'grow' }),
 			h('button', { title: 'Ctrl+Z', onclick: undo }, '↶'), h('button', { title: 'Ctrl+Y', onclick: redo }, '↷'),
 			h('button', { title: 'Повернуть чанк на четверть по часовой (генератор и так пробует все повороты)', onclick: whole((r) => MapView.turned(r, 1, false)) }, 'Повернуть'),

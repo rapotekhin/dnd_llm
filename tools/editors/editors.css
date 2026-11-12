@@ -127,3 +127,12 @@ pre.diff .del { background: var(--del); }
 .painter .stage .overlay { position: absolute; left: 0; top: 0; cursor: crosshair; touch-action: none; }
 .small { font-size: 12px; }
 canvas.mapview { display: block; }
+/* chunks.html: the chunk's fields and the new chunk's window */
+.painter .props { display: grid; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 6px 0 10px; }
+.painter .prop { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.painter .prop > .muted:first-child { min-width: 110px; }
+.chips { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.chips .chip { display: inline-flex; align-items: center; gap: 2px; padding-right: 2px; }
+.chips select { font-size: 12px; }
+.modalbody.narrow { width: min(620px, 94vw); }
+.modalbody .kv { margin: 6px 0; }
