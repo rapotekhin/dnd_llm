@@ -166,10 +166,14 @@ def entries() -> list[dict]:
     for tid, t in load("game/data/srd/races.json")["traits"].items():
         out.append({"kind": "traits", "id": tid, "name": t.get("name", tid), "en": t.get("name_en", ""),
                     "hint": "race trait; " + short(t.get("desc", ""))})
+    told = load("game/data/rules.json")["conditions"]  # «Ослеплён: …» — the 5e conditions have their name only there
     for cid, c in load("game/data/rules.json")["condition_effects"].items():
         if cid.startswith("_"):
             continue
-        out.append({"kind": "conditions", "id": cid, "name": str(c.get("name", cid)), "en": cid.replace("_", " "),
+        base, _, step = cid.partition("_")
+        name = c.get("name") or (told[cid].split(":")[0] if cid in told else
+                                 f"{told[base].split(':')[0]} {step}" if base in told and step.isdigit() else cid)
+        out.append({"kind": "conditions", "id": cid, "name": str(name), "en": cid.replace("_", " "),
                     "hint": "a condition on a creature or a thing; " + short(json.dumps(c, ensure_ascii=False), 160)})
     for g in load("game/data/rules.json")["item_rules"]["groups"]["rows"]:  # the group buttons of the inventory
         out.append({"kind": "groups", "id": g["id"], "name": g["name"], "en": g["id"],

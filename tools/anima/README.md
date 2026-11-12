@@ -145,6 +145,9 @@ tools/anima/.venv-matte/Scripts/python.exe tools/anima/matte.py tools/anima/jobs
 # выбор вариантов в браузере: одна страница, кнопка на вид («Заклинания», «Действия», «Интерфейс»…), щелчок пишет
 # вариант в выбор своей папки (picks_painted.json, у действий picks_flux.json); #acts — открыть на виде, ?ids=a,b — только перерисованные
 python tools/anima/pick.py                     # http://127.0.0.1:8791/ ; --kind spells,acts — только эти виды
+# плохи все варианты — галочка «перерисовать» под карточкой и пара слов, что не так: пишется в `redraw` того же файла
+# выбора (это не `redo` — install.py ставит выбранный вариант, пока иконку не перерисуют); список отмеченных:
+python tools/anima/pick.py --marked
 python tools/anima/install.py --out tools/anima/out_painted --picks tools/anima/picks_painted.json
 ```
 

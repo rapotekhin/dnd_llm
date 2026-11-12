@@ -204,8 +204,8 @@
   "tags": "bell, silver, slash, diagonal, front view"
  },
  "conditions/enfeebled": {
-  "sentence": "A single grey steel sword snapped in two, its upper half falling away from the hilt, with a faint purple glow at the break.",
-  "tags": "broken sword, snapped blade, two pieces, grey steel, purple glow"
+  "sentence": "A single withered thin arm hanging limp with its hand drooping, a faint purple glow around the wrist, drawn as a flat emblem.",
+  "tags": "withered arm, limp hand, purple glow, flat emblem"
  },
  "conditions/exhaustion_3": {
   "dark": false,
@@ -224,8 +224,8 @@
  },
  "conditions/grappled": {
   "dark": false,
-  "sentence": "A single grey iron shackle closed in a tight circle, with a short chain link trailing from its side.",
-  "tags": "shackle, chain, grey metal, closed, loop"
+  "sentence": "A single large hand clenched tightly around a thin wrist, drawn as a bold flat emblem, seen from the side.",
+  "tags": "hand, gripping, wrist, clenched fist, flat emblem"
  },
  "conditions/guided": {
   "dark": false,
@@ -239,8 +239,8 @@
  },
  "conditions/knocked": {
   "dark": false,
-  "sentence": "A single grey metal padlock with its shackle open, seen from the front.",
-  "tags": "padlock, open, grey metal, front view"
+  "sentence": "A single flat golden padlock emblem with its shackle swung open, simple and bold, seen from the front.",
+  "tags": "padlock, open shackle, gold, flat emblem, simple"
  },
  "conditions/mocked": {
   "dark": false,
@@ -254,8 +254,8 @@
  },
  "conditions/outlined": {
   "dark": false,
-  "sentence": "A single bright orange glowing outline of a circle, with a soft yellow aura around its edge.",
-  "tags": "glowing, outline, orange, aura, circle"
+  "sentence": "A single small white humanoid silhouette outlined by a glowing violet fairy-fire edge, with tiny sparkles around it.",
+  "tags": "silhouette, glowing outline, violet fire, sparkles, flat emblem"
  },
  "conditions/paralyzed": {
   "dark": false,

@@ -6,7 +6,7 @@
 <title>Выбор вариантов</title>
 <style>
   :root { --bg: #26221e; --card: #312c27; --line: #4a423a; --ink: #ece3d4; --muted: #a99c88; --pick: #5fd16d;
-          --gold: #c9a45c; }
+          --gold: #c9a45c; --redo: #e0806f; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
   header { position: sticky; top: 0; z-index: 2; display: flex; flex-direction: column; gap: 10px;
@@ -26,6 +26,13 @@
   main { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; padding: 16px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
   .card.seen { border-color: #5a6b4a; }
+  .card.redraw { border-color: var(--redo); }
+  .mark { display: flex; gap: 8px; align-items: center; margin-top: 8px; color: var(--muted); min-height: 28px; }
+  .card.redraw .mark label { color: var(--redo); }
+  .mark input[type=text] { flex: 1; min-width: 0; font: inherit; color: var(--ink); background: #1f1c19;
+                           border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
+  .mark input[type=text]:focus { outline: none; border-color: var(--redo); }
+  nav button .r { color: var(--redo); font-size: 12px; }
   .name { margin-bottom: 8px; font-weight: 600; }
   .key { color: var(--muted); font-weight: 400; font-size: 12px; }
   .pair { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 8px; }
@@ -54,8 +61,10 @@
 <header>
   <div class="row">
     <h1 id="title">Выбор вариантов</h1>
-    <span class="hint">Щелчок по варианту выбирает его; карточка становится просмотренной. Всё сохраняется сразу.</span>
+    <span class="hint">Щелчок по варианту выбирает его; карточка становится просмотренной. Если плохи все — галочка
+      «перерисовать» и пара слов, что не так. Всё сохраняется сразу.</span>
     <label><input type="checkbox" id="unseen"> только непросмотренные</label>
+    <label><input type="checkbox" id="marked"> только к перерисовке</label>
     <span id="count"></span>
     <span id="status"></span>
   </div>
@@ -80,6 +89,8 @@ function tabs() {
     const t = document.createElement("span"); t.textContent = s.title;
     const n = document.createElement("span"); n.className = "n"; n.textContent = `${s.seen.size}/${s.items.length}`;
     b.append(t, n);
+    const marks = Object.keys(s.redraw).length;
+    if (marks) { const r = document.createElement("span"); r.className = "r"; r.textContent = `↻${marks}`; b.append(r); }
     b.onclick = () => { location.hash = k; };
     nav.append(b);
   }
@@ -113,7 +124,7 @@ function count() {
   const s = sets[active];
   const changed = s.items.filter(it => (s.picks[it.key] || 1) !== 1).length;
   document.getElementById("count").textContent =
-    `просмотрено ${s.seen.size} из ${s.items.length}, не первых ${changed}`;
+    `просмотрено ${s.seen.size} из ${s.items.length}, не первых ${changed}, перерисовать ${Object.keys(s.redraw).length}`;
   tabs();
 }
 
@@ -122,9 +133,32 @@ async function save(kind) {
   status.textContent = "сохраняю…";
   try {
     const r = await fetch("/save", { method: "POST", headers: { "Content-Type": "application/json" },
-                                     body: JSON.stringify({ kind, picks: s.picks, seen: [...s.seen] }) });
+                                     body: JSON.stringify({ kind, picks: s.picks, seen: [...s.seen],
+                                                            redraw: s.redraw }) });
     status.textContent = r.ok ? "сохранено" : "не сохранилось";
   } catch (e) { status.textContent = "не сохранилось: сервер не отвечает"; }
+}
+
+// the box «перерисовать» under a card and, once ticked, a line for what is wrong; both saved into `redraw`
+function mark(s, it, card) {
+  const kind = active;
+  const row = document.createElement("div"); row.className = "mark";
+  const label = document.createElement("label");
+  const box = document.createElement("input"); box.type = "checkbox"; box.checked = it.key in s.redraw;
+  label.append(box, " перерисовать");
+  const note = document.createElement("input"); note.type = "text"; note.placeholder = "что не так (можно пусто)";
+  note.value = s.redraw[it.key] || ""; note.hidden = !box.checked;
+  box.onchange = () => {
+    if (box.checked) { s.redraw[it.key] = note.value; s.seen.add(it.key); card.classList.add("seen"); }
+    else delete s.redraw[it.key];
+    note.hidden = !box.checked; card.classList.toggle("redraw", box.checked);
+    if (box.checked) note.focus();
+    count(); save(kind);
+  };
+  note.onchange = () => { if (box.checked) { s.redraw[it.key] = note.value; save(kind); } };
+  note.onkeydown = e => { if (e.key === "Enter") note.blur(); };
+  row.append(label, note);
+  return row;
 }
 
 function render() {
@@ -132,14 +166,16 @@ function render() {
   const s = sets[active];
   grid.className = s.big ? "big" : "";
   const only = document.getElementById("unseen").checked;
+  const marked = document.getElementById("marked").checked;
   document.getElementById("title").textContent = s.title + (ids ? ", перерисованные" : "") + ": какой вариант";
   grid.textContent = "";
   for (const it of s.items) {
     const id = it.key.split("/")[1];
     if (only && s.seen.has(it.key)) continue;
     if (ids && !ids.has(id)) continue;
+    if (marked && !(it.key in s.redraw)) continue;
     const card = document.createElement("div");
-    card.className = "card" + (s.seen.has(it.key) ? " seen" : "") +
+    card.className = "card" + (s.seen.has(it.key) ? " seen" : "") + (it.key in s.redraw ? " redraw" : "") +
       (it.variants.length > 4 ? " wider" : it.variants.length > 2 ? " wide" : "");
     const name = document.createElement("div");
     name.className = "name";
@@ -168,12 +204,12 @@ function render() {
       };
       pair.append(opt);
     }
-    card.append(name, pair);
+    card.append(name, pair, mark(s, it, card));
     grid.append(card);
   }
   if (!grid.children.length) {
     const e = document.createElement("div"); e.className = "empty";
-    e.textContent = only ? "Здесь всё просмотрено." : "Нечего выбирать.";
+    e.textContent = marked ? "Здесь ничего не отмечено к перерисовке." : only ? "Здесь всё просмотрено." : "Нечего выбирать.";
     grid.append(e);
   }
   count();
@@ -187,10 +223,12 @@ function open() {
 }
 
 document.getElementById("unseen").onchange = render;
+document.getElementById("marked").onchange = render;
 window.addEventListener("hashchange", open);
 fetch("/data").then(r => r.json()).then(d => {
   for (const s of d.kinds) {
-    sets[s.kind] = { title: s.title, items: s.items, picks: s.picks, seen: new Set(s.seen), big: s.big };
+    sets[s.kind] = { title: s.title, items: s.items, picks: s.picks, seen: new Set(s.seen), big: s.big,
+                     redraw: s.redraw || {} };
     order.push(s.kind);
   }
   screens = d.screens || [];

@@ -6884,14 +6884,14 @@
    "id": "knocked",
    "kind": "conditions",
    "name": "замок молчит",
-   "tags": "padlock, open, grey metal, front view",
-   "sentence": "A single grey metal padlock with its shackle open, seen from the front.",
+   "tags": "padlock, open shackle, gold, flat emblem, simple",
+   "sentence": "A single flat golden padlock emblem with its shackle swung open, simple and bold, seen from the front.",
    "key": ""
   },
   {
    "id": "poisoned",
    "kind": "conditions",
-   "name": "poisoned",
+   "name": "Отравлен",
    "tags": "skull, green, poison drop, toxic",
    "sentence": "A single green skull above a large green drop of poison.",
    "key": ""
@@ -6899,7 +6899,7 @@
   {
    "id": "frightened",
    "kind": "conditions",
-   "name": "frightened",
+   "name": "Испуган",
    "tags": "ghost, scared face, wide eyes, open mouth, pale violet",
    "sentence": "A single pale violet ghost face with huge round eyes and a wide open screaming mouth.",
    "key": ""
@@ -6907,7 +6907,7 @@
   {
    "id": "blinded",
    "kind": "conditions",
-   "name": "blinded",
+   "name": "Ослеплён",
    "tags": "eye, blindfold, black, diagonal, front view",
    "sentence": "A single white eye with a black diagonal band across it, seen from the front.",
    "key": "grey"
@@ -6915,7 +6915,7 @@
   {
    "id": "deafened",
    "kind": "conditions",
-   "name": "deafened",
+   "name": "Оглох",
    "tags": "bell, silver, slash, diagonal, front view",
    "sentence": "A single silver bell with a black diagonal slash across it, seen from the front.",
    "key": "grey"
@@ -6923,7 +6923,7 @@
   {
    "id": "restrained",
    "kind": "conditions",
-   "name": "restrained",
+   "name": "Опутан",
    "tags": "chain, grey metal, loop, front view",
    "sentence": "A single grey metal chain coiled into a tight loop, seen from the front.",
    "key": ""
@@ -6931,7 +6931,7 @@
   {
    "id": "paralyzed",
    "kind": "conditions",
-   "name": "paralyzed",
+   "name": "Парализован",
    "tags": "stiff figure, white silhouette, yellow sparks, ring",
    "sentence": "A single white silhouette of a stiff standing figure inside a ring of crackling yellow sparks.",
    "key": ""
@@ -6939,7 +6939,7 @@
   {
    "id": "stunned",
    "kind": "conditions",
-   "name": "stunned",
+   "name": "Ошеломлён",
    "tags": "star, yellow, spiral, white, glowing",
    "sentence": "A single yellow star with a white spiral curling around it, seen from the front.",
    "key": ""
@@ -6947,7 +6947,7 @@
   {
    "id": "petrified",
    "kind": "conditions",
-   "name": "petrified",
+   "name": "Окаменел",
    "tags": "skull, stone, grey, cracks, front view",
    "sentence": "A single grey stone skull with a few dark cracks, seen from the front.",
    "key": ""
@@ -6955,7 +6955,7 @@
   {
    "id": "unconscious",
    "kind": "conditions",
-   "name": "unconscious",
+   "name": "Без сознания",
    "tags": "closed eye, eyelashes, pale, front view",
    "sentence": "A single closed eye with long dark eyelashes, seen from the front.",
    "key": ""
@@ -6963,7 +6963,7 @@
   {
    "id": "prone",
    "kind": "conditions",
-   "name": "prone",
+   "name": "Лежит ничком",
    "tags": "arrow, down, yellow, thick, simple",
    "sentence": "A single thick yellow arrow pointing straight down, small enough to sit well inside the ring.",
    "key": ""
@@ -6971,15 +6971,15 @@
   {
    "id": "grappled",
    "kind": "conditions",
-   "name": "grappled",
-   "tags": "shackle, chain, grey metal, closed, loop",
-   "sentence": "A single grey iron shackle closed in a tight circle, with a short chain link trailing from its side.",
+   "name": "Схвачен",
+   "tags": "hand, gripping, wrist, clenched fist, flat emblem",
+   "sentence": "A single large hand clenched tightly around a thin wrist, drawn as a bold flat emblem, seen from the side.",
    "key": ""
   },
   {
    "id": "exhaustion_3",
    "kind": "conditions",
-   "name": "exhaustion_3",
+   "name": "Истощение 3",
    "tags": "hourglass, grey, sand, tilted, low",
    "sentence": "A single grey hourglass tilted to one side, with almost all its pale sand in the lower bulb.",
    "key": ""
@@ -6988,16 +6988,16 @@
    "id": "outlined",
    "kind": "conditions",
    "name": "Светится",
-   "tags": "glowing, outline, orange, aura, circle",
-   "sentence": "A single bright orange glowing outline of a circle, with a soft yellow aura around its edge.",
+   "tags": "silhouette, glowing outline, violet fire, sparkles, flat emblem",
+   "sentence": "A single small white humanoid silhouette outlined by a glowing violet fairy-fire edge, with tiny sparkles around it.",
    "key": ""
   },
   {
    "id": "enfeebled",
    "kind": "conditions",
    "name": "Ослаблен",
-   "tags": "broken sword, snapped blade, two pieces, grey steel, purple glow",
-   "sentence": "A single grey steel sword snapped in two, its upper half falling away from the hilt, with a faint purple glow at the break.",
+   "tags": "withered arm, limp hand, purple glow, flat emblem",
+   "sentence": "A single withered thin arm hanging limp with its hand drooping, a faint purple glow around the wrist, drawn as a flat emblem.",
    "key": ""
   },
   {

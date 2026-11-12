@@ -8,12 +8,15 @@ picks_painted.json. A pick is written at once into the `variant` of that file (v
 reads it); which icons were looked at is kept beside the drawings, in <out>/<kind>/seen.json. Only the icons with two
 variants at least are shown; up to six (the seeds 11 … 66 of `anima_gen.py --seeds`). The interface's frames in the
 lines style are a kind of their own (`frames`: a part's seeds of ui/paint.py, picked into ui/picks_lines.json), and
-«Превью» lays the game's screens out of every pick at the moment it is opened (ui/preview.py). Local only (127.0.0.1).
+«Превью» lays the game's screens out of every pick at the moment it is opened (ui/preview.py). A card's box
+«перерисовать» puts the icon under `redraw` of its picks file with what the author wrote is wrong with it — not `redo`:
+install.py still lays the picked variant until the icon is drawn again. Local only (127.0.0.1).
 
     python tools/anima/pick.py                                 # http://127.0.0.1:8791/ — every kind drawn
     python tools/anima/pick.py --kind spells,acts              # only these kinds
     http://127.0.0.1:8791/#acts                                # opens on the acts
     http://127.0.0.1:8791/?ids=knock,magic_weapon#spells       # only these, after a redraw
+    python tools/anima/pick.py --marked                        # the icons marked «перерисовать», with the notes
 
 Restart it after drawing new variants: the list of files is read once.
 """
@@ -79,7 +82,13 @@ def main() -> None:
     p.add_argument("--jobs", type=Path, default=HERE / "jobs" / "icons.json")
     p.add_argument("--kind", default="", help="kinds, comma-separated; every kind drawn by default")
     p.add_argument("--port", type=int, default=8791)
+    p.add_argument("--marked", action="store_true", help="print the icons marked to redraw, with the notes, and quit")
     a = p.parse_args()
+    if a.marked:
+        for f in sorted({HERE / s[2] for s in SETS.values()}):
+            for k, note in (json.loads(f.read_text(encoding="utf-8")).get("redraw", {}) if f.exists() else {}).items():
+                print(f"{k}\t{note}")
+        return
     jobs = json.loads(a.jobs.read_text(encoding="utf-8"))["jobs"]
     wanted = [k for k in (a.kind.split(",") if a.kind else SETS) if k in SETS]
     sets, files = {}, {}
@@ -99,6 +108,14 @@ def main() -> None:
     def seen_of(kind: str) -> list:
         f = sets[kind]["out"] / kind / "seen.json"
         return json.loads(f.read_text(encoding="utf-8")) if f.exists() else []
+
+    def kind_of(k: str, s: dict) -> dict:
+        """A kind for the page: its icons, the picks, the marks to redraw and what was looked at."""
+        whole = picks_of(s["picks"])
+        mine = [it["key"] for it in s["items"]]
+        return {"kind": k, "title": s["title"], "items": s["items"], "seen": seen_of(k), "big": s["big"],
+                "picks": {key: whole.get("variant", {}).get(key, 1) for key in mine},
+                "redraw": {key: whole["redraw"][key] for key in mine if key in whole.get("redraw", {})}}
 
     def icon_of(ref: str) -> Path | None:
         """An icon as picked: the chosen variant of a kind on the page, else what the game has now."""
@@ -125,11 +142,7 @@ def main() -> None:
             if path in ("/", "/index.html"):
                 self._send(200, page.read_bytes(), "text/html; charset=utf-8")
             elif path == "/data":
-                body = {"kinds": [{"kind": k, "title": s["title"], "items": s["items"], "seen": seen_of(k),
-                                   "big": s["big"],
-                                   "picks": {it["key"]: picks_of(s["picks"])["variant"].get(it["key"], 1)
-                                             for it in s["items"]}}
-                                  for k, s in sets.items()],
+                body = {"kinds": [kind_of(k, s) for k, s in sets.items()],
                         "screens": [{"id": k, "title": v} for k, v in pv.SCREENS.items()] if "frames" in sets else []}
                 self._send(200, json.dumps(body, ensure_ascii=False).encode("utf-8"), "application/json")
             elif path in files:
@@ -153,6 +166,10 @@ def main() -> None:
                 variant = {k: v for k, v in whole.get("variant", {}).items() if k not in mine}
                 variant.update({k: int(v) for k, v in got["picks"].items() if k in mine and int(v) != 1})
                 whole["variant"] = dict(sorted(variant.items()))
+                redraw = {k: v for k, v in whole.pop("redraw", {}).items() if k not in mine}
+                redraw.update({k: str(v).strip() for k, v in got.get("redraw", {}).items() if k in mine})
+                if redraw:
+                    whole["redraw"] = dict(sorted(redraw.items()))
                 s["picks"].write_text(json.dumps(whole, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
                 seen = s["out"] / got["kind"] / "seen.json"
                 seen.parent.mkdir(parents=True, exist_ok=True)  # the frames have no folder of their own drawn
