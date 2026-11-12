@@ -34,15 +34,34 @@ def peace(size: int, badge: tuple | None = (86, 160, 92, 255), ink: tuple = INK)
     return im
 
 
+def strike(size: int, ink: tuple = (214, 52, 40, 255)) -> Image.Image:
+    """A red bar across the whole icon from its upper left to its lower right over a dark outline, its ends round:
+    a sense taken away (the author's «перечёркнутый глаз», «перечёркнутый колокольчик», 2026-11-12). It stays inside
+    the gold ring of a condition's medal."""
+    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    a, b, w = size * 0.25, size * 0.75, size * 0.075
+    for col, r in ((DARK, w / 2 + 5), (ink, w / 2)):
+        d.line([(a, a), (b, b)], fill=col, width=int(r * 2))
+        for x in (a, b):
+            d.ellipse([x - r, x - r, x + r, x + r], fill=col)
+    return im
+
+
 MARKS = {"peace": peace, "peace_gold": lambda side: peace(side, DARK, GOLD)}  # gold on a dark disc: over the line icons (ui)
+WHOLE = {"strike": strike}  # marks laid over the whole icon, not in its corner
 
 
 def apply(name: str, src: Path) -> bytes:
-    """The icon at src with the overlay `name` in its lower right corner, as PNG bytes."""
+    """The icon at src with the overlay `name` (in its lower right corner, or over all of it for `WHOLE`), as PNG
+    bytes."""
     base = Image.open(src).convert("RGBA")
     big = base.resize((WORK, WORK), Image.LANCZOS)
-    side = int(WORK * 0.45)
-    big.alpha_composite(MARKS[name](side), (WORK - side - 8, WORK - side - 8))
+    if name in WHOLE:
+        big.alpha_composite(WHOLE[name](WORK))
+    else:
+        side = int(WORK * 0.45)
+        big.alpha_composite(MARKS[name](side), (WORK - side - 8, WORK - side - 8))
     buf = io.BytesIO()
     big.resize(base.size, Image.LANCZOS).save(buf, "PNG")
     return buf.getvalue()

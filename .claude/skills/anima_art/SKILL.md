@@ -23,8 +23,8 @@ description: Use this skill when drawing game art with Anima on our own Forge �
 | `subjects.json` | репо, руками | что рисовать: теги Danbooru + одна фраза по `<kind>/<id>`; `key` — фон (`grey` для тёмного предмета) |
 | `portraits.json` | репо, руками | таблицы внешности людей: раса (`tags`, `word`, `features` — строка или `{male, female, minor}`), возрасты, волосы, одежда |
 | `anima_gen.py` | сервер | рисует только недостающее или изменившееся (рядом с вариантом `.txt` — промт; нет сырого кадра этой затравки — тоже рисует); `--style flat\|painted`, `--recut`, `--sheets`, `--ids`, `--only`, `--seeds` |
-| `install.py` | репо | `picks.json` (`variant`, `redo`, `overlay`) → `game/assets/icons/<kind>/<id>.png`; `--jobs …portraits.json` → `game/assets/portraits/…` |
-| `overlays.py` | репо | знак поверх иконки кодом (пацифик на «Не убивать»; у золотых линий интерфейса `peace_gold` — золотой на тёмном круге): модель символы коверкает |
+| `install.py` | репо | `picks.json` (`variant`, `redo`, `overlay`, `same` — иконка с выбранного варианта другой: то же умение на другом уровне, тот же стиль боя у двух классов) → `game/assets/icons/<kind>/<id>.png`; `--jobs …portraits.json` → `game/assets/portraits/…` |
+| `overlays.py` | репо | знак поверх иконки кодом (пацифик на «Не убивать»; у золотых линий интерфейса `peace_gold` — золотой на тёмном круге; `strike` — красная черта через всю иконку: «Ослеплён», «Оглох»): модель символы и перечёркивание коверкает |
 | `pick.py`, `pick.html` | дома | выбор вариантов в браузере: одна страница `http://127.0.0.1:8791/`, кнопка на каждый нарисованный вид (`SETS`: папка и файл выбора вида — действия из `out_painted_flux/` в `picks_flux.json`, прочие в `picks_painted.json`), варианты иконки рядом (до шести), щелчок пишет `variant`; галочка «перерисовать» с заметкой автора пишет `redraw` (`kind/id` → что не так; не `redo`, install.py её не читает), `--marked` печатает отмеченные — их и перерисовывать, не спрашивая по одной; `#acts` — открыть на виде, `?ids=a,b` — только перерисованные; перезапуск после новых иконок |
 | `matte.py` | дома, `.venv-matte` (torch, CUDA) | вещи семейства `object` вырезает из сырых кадров BiRefNet (~0,7 с кадр на RTX 3050 Ti); запускать после каждого прогона с сервера |
 | `ui/guides.py`, `ui/paint.py`, `ui/mock.py` | репо | элементы интерфейса: свои направляющие → ControlNet → макет с нарезкой на 9 частей |
@@ -65,7 +65,7 @@ Forge: `--api`, чекпойнт `anima-aesthetic` (v1.1), модули `qwen_im
 | «small», «tiny» во фразе | крошечный предмет | убрать, «big… fills the whole square» |
 | d20 | куб | «icosahedron, many triangular faces, the number 20» |
 | дварф «weathered face, thick neck» для всех | женщины — мужики, дети — взрослые | `features: {male, female, minor}` |
-| символ (пацифик) моделью | кривой знак | `overlay` в `picks.json`, рисует `overlays.py` |
+| символ (пацифик) или перечёркнутое моделью | кривой знак, черты нет | `overlay` в `picks.json`, рисует `overlays.py` |
 | глиф «on a square tile of stone» | плитка со скруглёнными углами на чёрном, знак залит | автору понравилось больше «правильных» вариантов: не «чинить» то, что читается лучше; сравнивать в 64 px |
 | глиф на «dim stone, subtle texture» | фон тише, но знак мельчает | не брать |
 

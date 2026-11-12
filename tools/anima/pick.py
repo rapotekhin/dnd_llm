@@ -34,6 +34,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(1, str(HERE / "ui"))
 import anima_gen as gen  # noqa: E402
+import overlays  # noqa: E402
 import preview as pv  # noqa: E402
 
 SEEDS = [11, 22, 33, 44, 55, 66]
@@ -51,15 +52,19 @@ SETS = {
 }
 
 
-def variants(jobs: list[dict], kind: str, out: Path) -> tuple[list[dict], dict[str, Path]]:
-    """The icons of a kind with their drawn variants, and the file behind each picture's address."""
+def variants(jobs: list[dict], kind: str, out: Path, picks: dict) -> tuple[list[dict], dict[str, Path | bytes]]:
+    """The icons of a kind with their drawn variants, and the file behind each picture's address (with the mark of
+    `overlay` laid over, as the game gets it); an icon laid from another's (`same`) is not picked on its own."""
     items, files = [], {}
     for j in (j for j in jobs if j["kind"] == kind):
+        key = f"{kind}/{j['id']}"
         cuts = {n: gen.paths(out, j, n, s)[1] for n, s in enumerate(gen.seeds_of(j, SEEDS), 1)}
         have = [n for n, c in cuts.items() if c.exists()]
-        if len(have) >= 2:
-            items.append({"key": f"{kind}/{j['id']}", "name": j["name"], "variants": have})
-            files.update({f"/img/{kind}/{j['id']}/{n}.png": cuts[n] for n in have})
+        if len(have) >= 2 and key not in picks.get("same", {}):
+            mark = picks.get("overlay", {}).get(key)
+            items.append({"key": key, "name": j["name"], "variants": have})
+            files.update({f"/img/{kind}/{j['id']}/{n}.png": overlays.apply(mark, cuts[n]) if mark else cuts[n]
+                          for n in have})
     return sorted(items, key=lambda x: x["name"]), files
 
 
@@ -94,7 +99,8 @@ def main() -> None:
     sets, files = {}, {}
     for kind in wanted:
         title, out, picks = SETS[kind]
-        items, pics = frames(HERE / out / "raw") if kind == "frames" else variants(jobs, kind, HERE / out)
+        given = json.loads((HERE / picks).read_text(encoding="utf-8")) if (HERE / picks).exists() else {}
+        items, pics = frames(HERE / out / "raw") if kind == "frames" else variants(jobs, kind, HERE / out, given)
         if items:
             sets[kind] = {"title": title, "out": HERE / out, "picks": HERE / picks, "items": items,
                           "big": kind == "frames"}

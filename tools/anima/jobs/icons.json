@@ -4972,8 +4972,8 @@
    "id": "circle_spells_1",
    "kind": "features",
    "name": "Круговые заклинания",
-   "tags": "spellbook, open book, green glow, pages, front view",
-   "sentence": "A single open spellbook with green glowing pages and a dark cover, seen from the front.",
+   "tags": "stone circle, standing stones, green glow, druid",
+   "sentence": "A single ring of small grey standing stones on a patch of grass, a soft green glow rising in its middle.",
    "key": ""
   },
   {
@@ -5036,8 +5036,8 @@
    "id": "destroy_undead_cr_1_2_or_below",
    "kind": "features",
    "name": "Уничтожение нежити (ПО 1/2 или ниже)",
-   "tags": "skull, white, cracked, golden light, front view",
-   "sentence": "A single white skull with a crack across its forehead, surrounded by a thin golden glow, seen from the front.",
+   "tags": "skull, split in two, wide crack, holy light, gold",
+   "sentence": "A single white skull split in two halves by a wide jagged crack down its middle, the halves pushed apart, bright golden holy light shining out of the crack, seen from the front.",
    "key": ""
   },
   {
@@ -5092,8 +5092,8 @@
    "id": "domain_spells_1",
    "kind": "features",
    "name": "Заклинания домена",
-   "tags": "scroll, rolled parchment, wax seal, red, ribbon",
-   "sentence": "A single rolled parchment scroll tied with a red ribbon and sealed with a round gold wax seal.",
+   "tags": "holy book, open, golden sun symbol, glow",
+   "sentence": "A single open white prayer book with a golden sun symbol glowing above its pages, seen from the front.",
    "key": ""
   },
   {
@@ -5172,8 +5172,8 @@
    "id": "dragon_ancestor_green___poison_damage",
    "kind": "features",
    "name": "Предок-дракон: зелёный (урон ядом)",
-   "tags": "dragon head, green, poison, purple glow, front view",
-   "sentence": "A single green dragon head seen from the front, with a purple poison glow around its open mouth.",
+   "tags": "dragon head, profile, green, long neck, poison breath",
+   "sentence": "A single green dragon head in profile facing right, its long neck curving down under it, mouth open breathing a purple poison mist.",
    "key": ""
   },
   {
@@ -5204,8 +5204,8 @@
    "id": "dragon_ancestor",
    "kind": "features",
    "name": "Предок-дракон",
-   "tags": "dragon head, scales, grey, glowing, front view",
-   "sentence": "A single grey dragon head seen from the front, with a soft white glow around its scales.",
+   "tags": "dragon head, profile, grey, long neck, white glow",
+   "sentence": "A single grey dragon head in profile facing right, its long neck curving down under it, mouth open, a soft white glow around its scales.",
    "key": ""
   },
   {
@@ -5268,9 +5268,9 @@
    "id": "eldritch_invocation_book_of_ancient_secrets",
    "kind": "features",
    "name": "Мистическое воззвание: Книга древних тайн",
-   "tags": "book, closed book, dark purple, gold, glowing",
-   "sentence": "A single closed dark purple book with a gold clasp and a soft violet glow around it.",
-   "key": "grey"
+   "tags": "open book, yellowed pages, purple leather cover, violet runes, floating",
+   "sentence": "A single old open book with yellowed pages and a dark purple leather cover, glowing violet runes floating up from its pages.",
+   "key": ""
   },
   {
    "id": "eldritch_invocation_devils_sight",
@@ -5452,16 +5452,16 @@
    "id": "fighter_fighting_style_archery",
    "kind": "features",
    "name": "Боевой стиль: стрельба из лука",
-   "tags": "bow, longbow, brown, string, side view",
-   "sentence": "A single brown wooden longbow seen from the side, with a taut pale string and a slight curve.",
+   "tags": "bow, drawn, nocked arrow, wooden, diagonal",
+   "sentence": "A single wooden bow drawn with an arrow nocked on its white string, the arrow pointing diagonally up to the right, seen from the side.",
    "key": ""
   },
   {
    "id": "fighter_fighting_style_defense",
    "kind": "features",
    "name": "Боевой стиль: защита",
-   "tags": "shield, steel, blue glow, front view",
-   "sentence": "A single round steel shield with a blue glowing rim, seen from the front.",
+   "tags": "shield, heater shield, light blue glow, steel rim, boss",
+   "sentence": "A single small steel heater shield seen from the front, its whole face glowing soft light blue, with a plain steel rim and a round boss in the middle.",
    "key": ""
   },
   {
@@ -6428,8 +6428,8 @@
    "id": "skill_prof_history",
    "kind": "features",
    "name": "Навык: История",
-   "tags": "scroll, parchment, rolled, wax seal, red",
-   "sentence": "A single rolled brown parchment scroll tied with a red wax seal, seen from the side.",
+   "tags": "stone tablet, ancient, carved runes, cracked",
+   "sentence": "A single old cracked stone tablet with a rounded top, carved with rows of ancient runes, seen from the front.",
    "key": ""
   },
   {
@@ -6644,9 +6644,9 @@
    "id": "draconic_ancestry_black",
    "kind": "traits",
    "name": "Драконье наследие (чёрный)",
-   "tags": "dragon head, horns, slate grey, green eyes, acid",
-   "sentence": "A single slate grey dragon head seen from the front with two curved horns, bright acid-green eyes and green drops at its jaw.",
-   "key": ""
+   "tags": "dragon head, horns, jet black scales, green eyes, acid",
+   "sentence": "A single jet black dragon head with glossy coal-black scales seen from the front, two curved black horns, bright acid-green eyes and green drops at its jaw.",
+   "key": "grey"
   },
   {
    "id": "relentless_endurance",
@@ -6660,8 +6660,8 @@
    "id": "extra_language",
    "kind": "traits",
    "name": "Дополнительный язык",
-   "tags": "scroll, rolled parchment, wax seal, gold, front view",
-   "sentence": "A single rolled parchment scroll seen from the front, with a red wax seal and a small golden star on it.",
+   "tags": "speech bubble, runes, parchment, golden letters",
+   "sentence": "A single parchment speech bubble with a small tail, a few strange golden runes written inside it.",
    "key": ""
   },
   {
@@ -6868,8 +6868,8 @@
    "id": "glowing",
    "kind": "conditions",
    "name": "светится",
-   "tags": "glowing, orb, yellow, sparkle",
-   "sentence": "A single bright yellow glowing orb with a soft white center and a few sparkles.",
+   "tags": "silhouette, human figure, yellow rays, light, flat emblem",
+   "sentence": "A single small white human silhouette standing upright, bright yellow rays of light spreading out from it in every direction, drawn as a flat emblem.",
    "key": ""
   },
   {
@@ -6924,8 +6924,8 @@
    "id": "restrained",
    "kind": "conditions",
    "name": "Опутан",
-   "tags": "chain, grey metal, loop, front view",
-   "sentence": "A single grey metal chain coiled into a tight loop, seen from the front.",
+   "tags": "wrists, bound, rope, knot, flat emblem",
+   "sentence": "A single pair of wrists tied together with thick brown rope and a tight knot, drawn as a bold flat emblem, seen from the front.",
    "key": ""
   },
   {
@@ -6948,8 +6948,8 @@
    "id": "petrified",
    "kind": "conditions",
    "name": "Окаменел",
-   "tags": "skull, stone, grey, cracks, front view",
-   "sentence": "A single grey stone skull with a few dark cracks, seen from the front.",
+   "tags": "statue, stone figure, grey stone, cracks, flat emblem",
+   "sentence": "A single small grey stone statue of a standing man with his arms at his sides, a few cracks across it, drawn as a flat emblem, seen from the front.",
    "key": ""
   },
   {
@@ -6996,8 +6996,8 @@
    "id": "enfeebled",
    "kind": "conditions",
    "name": "Ослаблен",
-   "tags": "withered arm, limp hand, purple glow, flat emblem",
-   "sentence": "A single withered thin arm hanging limp with its hand drooping, a faint purple glow around the wrist, drawn as a flat emblem.",
+   "tags": "fist, crumbling, dust, grey stone, purple glow, flat emblem",
+   "sentence": "A single grey stone fist crumbling apart, small pieces and dust falling from its knuckles, with a faint purple glow, drawn as a flat emblem.",
    "key": ""
   },
   {
@@ -7100,8 +7100,8 @@
    "id": "consumable",
    "kind": "groups",
    "name": "Расходники",
-   "tags": "vial, green liquid, cork, glass, small",
-   "sentence": "A single small glass vial filled with bright green liquid and closed with a brown cork.",
+   "tags": "vial, empty, clear glass, cork, small",
+   "sentence": "A single small empty vial of clear glass closed with a brown cork, nothing inside it.",
    "key": ""
   },
   {
