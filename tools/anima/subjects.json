@@ -5554,8 +5554,8 @@
  },
  "ui/end_turn": {
   "dark": false,
-  "sentence": "A single brown hourglass with a yellow curved arrow circling it clockwise, seen from the front.",
-  "tags": "hourglass, arrow, sand, brown, yellow"
+  "sentence": "A single hourglass with one bold curved arrow sweeping in a wide arc around it clockwise, its arrowhead large and clear, seen from the front.",
+  "tags": "hourglass, curved arrow, circular arrow, arrowhead, clockwise"
  },
  "ui/exit": {
   "dark": false,
@@ -5689,8 +5689,8 @@
  },
  "ui/sheet": {
   "dark": false,
-  "sentence": "A single head-and-shoulders bust of a hooded adventurer seen from the front, a simple blue silhouette with a gold outline.",
-  "tags": "silhouette, bust, head and shoulders, hood, blue, gold outline, front view"
+  "sentence": "A single knight's helmet with a small crest on top seen from the front, its visor slit dark.",
+  "tags": "helmet, knight helmet, crest, visor, front view"
  },
  "ui/shop": {
   "dark": false,

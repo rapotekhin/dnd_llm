@@ -35,6 +35,7 @@ import base64
 import io
 import json
 import math
+import re
 import shutil
 import sys
 import time
@@ -134,6 +135,21 @@ BRONZE_TAIL = ("It is a trait icon for a fantasy role-playing game. The subject 
                "inlaid in bronze, with no solid fill. The emblem is large and centered on a square plate of polished "
                "warm bronze with a little green patina in its recesses and a rivet in each corner that fills the whole "
                "frame, a little darker toward its edges.")  # a race's trait apart from the steel of features and acts
+GOLD_HEAD = "masterpiece, best quality, score_7, safe, no humans, lineart, monochrome, gold, simple, icon, symbol, black background, "
+GOLD_TAIL = ("It is an interface icon for a fantasy role-playing game. The subject is drawn as one simple elegant line "
+             "drawing in pale warm gold on a plain black background: clean even lines of a bold medium thickness, only "
+             "outlines with the inside of every shape left black, no fill and no shading, only a few lines, like a "
+             "fine engraving, large and centered, filling most of the frame, so that it reads at a small size.")
+GOLD_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, "
+                 "chromatic aberration, text, letters, watermark, signature, multiple objects, duplicate, frame, "
+                 "border, circle frame, square frame, tile, plate, photo, 3d render, realistic, painterly, colorful, "
+                 "solid fill, filled shape, white fill, solid color, shading, gradient, glow, neon, scenery, landscape, "
+                 "nsfw")
+# the interface's buttons in the author's style of the interface, thin gold lines on a dark panel (2026-11-12): a line
+# drawing on black, its brightness the alpha, recoloured to one gold and fitted to the square (`gold`). The subjects
+# were written for painted things: their colours are dropped from the prompt (a «pale compass rose» came filled)
+COLOURS = re.compile(r"\b(white|black|grey|gray|slate|blue|red|green|yellow|brown|gold|golden|silver|cream|orange|"
+                     r"purple|violet|pale|dark|bright|tan|beige|amber|crimson|teal|pink)\b[ -]?", re.I)
 FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the tail's {word} are the job's key
     "flat": (HEAD, TAIL, NEGATIVE),
     "object": (PAINTED_HEAD, PAINTED_TAIL, PAINTED_NEGATIVE),
@@ -142,13 +158,17 @@ FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the ta
     "bronze": (BRONZE_HEAD, BRONZE_TAIL, GLYPH_NEGATIVE),
     "ink": (INK_HEAD, INK_TAIL, INK_NEGATIVE),
     "medal": (MEDAL_HEAD, MEDAL_TAIL, MEDAL_NEGATIVE),
+    "gold": (GOLD_HEAD, GOLD_TAIL, GOLD_NEGATIVE),
 }
 TILED = ("glyph", "plate", "bronze", "ink")  # the families cut as a tile by its shape
-# A kind (or its head before «/») in the painted style; the rest — items, ui, groups — is an object. The interface's
+# A kind (or its head before «/») in the painted style; the rest — items, groups — is an object. The interface's
 # buttons and the inventory's groups were tried as a silver relief like BG3's skills (2026-11-11): the model drew a
-# painted thing with a silver detail, and the author took painted things.
+# painted thing with a silver detail, and the author took painted things; the buttons go with the interface's thin
+# gold lines since (2026-11-12).
 FAMILY = {"spells": "glyph", "features": "plate", "acts": "ink", "traits": "bronze", "conditions": "medal",
-          "marks": "flat"}  # stone spells, steel abilities, ink acts on steel, bronze traits (2026-11-12)
+          "marks": "flat", "ui": "gold"}  # stone spells, steel abilities, ink acts on steel, bronze traits (2026-11-12)
+GOLD = (222, 196, 140)  # the gold of a line icon, its brightest lines toward GOLD_LIT
+GOLD_LIT = (250, 238, 205)
 ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
@@ -215,10 +235,20 @@ def family(job: dict, style: str = "flat") -> str:
     return FAMILY.get(job["kind"], FAMILY.get(job["kind"].split("/")[0], "object"))
 
 
+def uncolour(text: str) -> str:
+    """A subject without its colours, for a family that draws in one colour."""
+    text = COLOURS.sub("", text)
+    text = re.sub(r"\s*,(\s*,)+", ",", text)
+    return re.sub(r"\s{2,}", " ", text).strip(" ,")
+
+
 def prompt_of(job: dict, key: str, style: str = "flat") -> str:
     tag, word = KEYS[key]
-    head, tail, _ = FAMILIES[family(job, style)]
-    return head.format(tag=tag) + job["tags"] + ".\n" + job["sentence"] + " " + tail.format(word=word)
+    fam = family(job, style)
+    head, tail, _ = FAMILIES[fam]
+    tags, sentence = (uncolour(job["tags"]), uncolour(job["sentence"])) if fam == "gold" else (job["tags"],
+                                                                                              job["sentence"])
+    return head.format(tag=tag) + tags + ".\n" + sentence + " " + tail.format(word=word)
 
 
 def full_prompt(job: dict, n: int, a: argparse.Namespace) -> str:
@@ -510,6 +540,29 @@ def medal(raw: Image.Image) -> Image.Image:
     return im
 
 
+def gold(raw: Image.Image) -> Image.Image:
+    """A line icon on black: its brightness over the ground is the alpha, its colour one gold (whatever the model
+    tinted it), the drawing fitted to the square with the same margin for every icon."""
+    im = raw.convert("RGB").resize((256, 256), Image.LANCZOS)
+    lum = im.convert("L")
+    w, h = lum.size
+    border = [lum.getpixel((x, y)) for x in range(w) for y in (0, h - 1)] + \
+             [lum.getpixel((x, y)) for y in range(h) for x in (0, w - 1)]
+    lo = median(border) + 14
+    hi = lo + 80
+    alpha = lum.point(lambda v: 0 if v <= lo else 255 if v >= hi else int((v - lo) * 255 / (hi - lo)))
+    lit = lum.point(lambda v: 0 if v <= hi else min(255, int((v - hi) * 255 / max(1, 255 - hi))))
+    out = Image.composite(Image.new("RGB", (w, h), GOLD_LIT), Image.new("RGB", (w, h), GOLD), lit).convert("RGBA")
+    out.putalpha(alpha)
+    box = alpha.point(lambda v: 255 if v > 24 else 0).getbbox()
+    if box:
+        out = out.crop(box)
+    side = round(max(out.size) / 0.84)  # 8% of margin each side
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.paste(out, ((side - out.width) // 2, (side - out.height) // 2))
+    return square.resize((ICON, ICON), Image.LANCZOS)
+
+
 def save_variant(raw: Image.Image, job: dict, path: Path, style: str = "flat") -> None:
     how = family(job, style)
     if how == "portrait":
@@ -518,6 +571,8 @@ def save_variant(raw: Image.Image, job: dict, path: Path, style: str = "flat") -
         tile(raw).save(path)
     elif how == "medal":
         medal(raw).save(path)
+    elif how == "gold":
+        gold(raw).save(path)
     else:
         cut(raw).save(path)
 
