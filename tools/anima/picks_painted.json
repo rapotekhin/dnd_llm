@@ -1,5 +1,5 @@
 {
- "_doc": "The picks of the painted icons (out_painted/, anima_gen.py --style painted), as picks.json is for the flat ones: `variant` — the variant put into the game (absent — 1), `redo` — drawn badly in both, left as they are in the game, `overlay` — a mark drawn by code over the icon on install (overlays.py), `same` — an icon laid from another's picked variant, `redraw` — the author's marks «перерисовать» of pick.py with what is wrong (pick.py --marked). Read by install.py --picks.",
+ "_doc": "The picks of the painted icons (out_painted/, anima_gen.py --style painted), as picks.json is for the flat ones: `variant` — the variant put into the game (absent — 1), `redo` — drawn badly in both, left as they are in the game, `overlay` — a mark drawn by code over the icon on install (overlays.py), `same` — an icon laid from another's picked variant, `drawn` — a whole icon drawn by code (overlays.ICONS), `redraw` — the author's marks «перерисовать» of pick.py with what is wrong (pick.py --marked). Read by install.py --picks.",
  "variant": {
   "acts/grapple": 2,
   "acts/throw": 3,
@@ -118,7 +118,6 @@
   "traits/savage_attacks": 2,
   "traits/skill_versatility": 2,
   "ui/common": 2,
-  "ui/details": 2,
   "ui/empty_hand": 2,
   "ui/end_turn": 2,
   "ui/faith": 2,
@@ -129,6 +128,7 @@
   "ui/look": 2,
   "ui/map": 2,
   "ui/menu": 2,
+  "ui/nonlethal": 2,
   "ui/org_entry": 2,
   "ui/rest_long": 2,
   "ui/search": 2,
@@ -152,5 +152,9 @@
   "features/fighter_fighting_style_two_weapon_fighting": "features/ranger_fighting_style_two_weapon_fighting",
   "features/fighting_style_protection": "features/fighter_fighting_style_protection",
   "features/ranger_fighting_style_dueling": "features/fighter_fighting_style_dueling"
+ },
+ "drawn": {
+  "ui/details": "sheet_lines",
+  "ui/skills": "d20"
  }
 }

@@ -68,6 +68,70 @@ static func school_frame(b: Button, school_id: String) -> void:
 	b.add_theme_stylebox_override("hover", box(PANEL_RAISED.lightened(0.08), c, 2, 10, 4))
 
 
+## The drawn frames of `frames` (data/icons.json) laid over the theme as StyleBoxTexture, each with the content margins
+## of the flat style it replaces, so no layout moves; a file not drawn leaves its flat style — the art is not kept in
+## git (v0.8.4.43.23). Called once at the start, before any screen. The number of styles laid.
+static func skin(theme: Theme, frames: Dictionary) -> int:
+	var laid := 0
+	for slot: String in frames.get("slots", {}):
+		var file := str(frames["slots"][slot])
+		var tex := frame(frames, file)
+		if tex == null:
+			continue
+		var type := slot.get_slice("/", 0)
+		var style := slot.get_slice("/", 1)
+		theme.set_stylebox(style, type, frame_box(tex, _part_of(frames, file), _style_of(theme, style, type)))
+		laid += 1
+	return laid
+
+
+## A drawn file of `frames` by its name; null when it is not drawn.
+static func frame(frames: Dictionary, file: String) -> Texture2D:
+	var path := str(frames.get("root", "")) + file + ".png"
+	return load(path) if not frames.is_empty() and ResourceLoader.exists(path) else null
+
+
+## A drawn frame as a style: its corners as drawn (the part's `cut` at its `scale`), the edges and the middle stretched,
+## the content's margins as `like` has them and the part's `pad` more (its line stands inside the edge).
+static func frame_box(tex: Texture2D, part: Dictionary, like: StyleBox) -> StyleBoxTexture:
+	var b := StyleBoxTexture.new()
+	b.texture = tex
+	b.set_texture_margin_all(roundf(float(part.get("cut", 0)) * float(part.get("scale", 1.0))))
+	if like != null:
+		for side: int in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+			b.set_content_margin(side, maxf(0.0, like.get_content_margin(side)) + float(part.get("pad", 0)))
+	return b
+
+
+static var _cell: StyleBox = null
+static var _cell_read := false
+
+
+## The cell's drawn frame for a square of the hotbar and the inventory (IconSlot), null when it is not drawn.
+static func cell_box() -> StyleBox:
+	if not _cell_read:
+		_cell_read = true
+		var root := (Engine.get_main_loop() as SceneTree).root
+		var frames: Dictionary = root.get_node("Catalog").data.get("icons", {}).get("frames", {}) if root.has_node("Catalog") else {}
+		var tex := frame(frames, "cell")
+		_cell = frame_box(tex, _part_of(frames, "cell"), null) if tex != null else null
+	return _cell
+
+
+static func _part_of(frames: Dictionary, file: String) -> Dictionary:
+	return frames.get("parts", {}).get(str(frames.get("files", {}).get(file, {}).get("part", "")), {})
+
+
+## A style of the theme by its type or the type its variation stands on (AccentButton → Button).
+static func _style_of(theme: Theme, style: String, type: String) -> StyleBox:
+	var t := StringName(type)
+	while t != &"":
+		if theme.has_stylebox(style, t):
+			return theme.get_stylebox(style, t)
+		t = theme.get_type_variation_base(t)
+	return null
+
+
 ## The colour of what is left of HP: green over a half, yellow over a quarter, red below.
 static func hp_color(share: float) -> Color:
 	return OK if share > 0.5 else WARN if share > 0.25 else BAD

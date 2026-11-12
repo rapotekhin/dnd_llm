@@ -7,7 +7,8 @@ The variant of each icon is read from picks.json (absent — variant 1); an icon
 game shows its blank until the subject is fixed and drawn again. A portrait keeps all its variants (the game picks one
 per person); a bad one is listed under `redo` as «portraits/<sub>/<id>__<n>» and the game shows the letter for it. An
 icon under `overlay` gets a mark drawn by code over it (overlays.py: a symbol the model would spoil); an icon under
-`same` («features/domain_spells_2»: «features/domain_spells_1») is laid from the other's picked variant. A file already in
+`same` («features/domain_spells_2»: «features/domain_spells_1») is laid from the other's picked variant, one under
+`drawn` («ui/skills»: «d20») is a whole icon drawn by code (overlays.ICONS) where the model fills a geometry. A file already in
 the game is replaced only when it differs. Run `"$GODOT" --headless --path game --import` afterwards.
 
     python tools/anima/install.py                 # every kind of the icon jobs
@@ -57,7 +58,7 @@ def main() -> None:
     jobs = jobs["jobs"] if isinstance(jobs, dict) else jobs
     picks = json.loads(a.picks.read_text(encoding="utf-8")) if a.picks.exists() else {}
     variant, redo, overlay = picks.get("variant", {}), set(picks.get("redo", [])), picks.get("overlay", {})
-    like = picks.get("same", {})
+    like, drawn = picks.get("same", {}), picks.get("drawn", {})
     only = set(filter(None, a.only.split(",")))
     new = same = skipped = missing = 0
     for j in jobs:
@@ -68,12 +69,16 @@ def main() -> None:
                 skipped += 1
                 continue
             src, dst = pair
-            if not src.exists():
+            key = f"{j['kind']}/{j['id']}" if j.get("style") != "portrait" else ""
+            if key in drawn:  # the whole icon drawn by code, the model's left aside
+                body = overlays.icon(drawn[key])
+            elif not src.exists():
                 missing += 1
                 print("not drawn:", src.relative_to(a.out))
                 continue
-            mark = overlay.get(f"{j['kind']}/{j['id']}") if j.get("style") != "portrait" else None
-            body = overlays.apply(mark, src) if mark else None
+            else:
+                mark = overlay.get(key)
+                body = overlays.apply(mark, src) if mark else None
             if dst.exists() and (dst.read_bytes() == body if body else filecmp.cmp(src, dst, shallow=False)):
                 same += 1
                 continue

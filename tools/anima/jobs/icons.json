@@ -7876,17 +7876,17 @@
    "id": "skills",
    "kind": "ui",
    "name": "a twenty-sided die",
-   "tags": "d20, icosahedron, polyhedral die, triangular faces, number, blue, gem",
-   "sentence": "A single blue icosahedron die with many small triangular faces like a cut gem, the number 20 on its front face.",
-   "key": ""
+   "tags": "d20, icosahedron, polyhedral die, outline, triangular faces",
+   "sentence": "A single twenty-sided die drawn only as the thin outlines of its triangular faces, every face empty and black inside.",
+   "key": "grey"
   },
   {
    "id": "details",
    "kind": "ui",
    "name": "an upright sheet with lines of text",
-   "tags": "paper, sheet, written, lines of text, list, upright, red ribbon",
-   "sentence": "A single upright sheet of pale paper covered with neat rows of dark handwritten lines, a small red ribbon at its top corner.",
-   "key": ""
+   "tags": "scroll, unrolled, line drawing, rolled ends, lines of text",
+   "sentence": "A single unrolled scroll drawn as a line drawing, rolled at its top and bottom, four short lines of text across its middle, the scroll empty and black between the lines.",
+   "key": "grey"
   },
   {
    "id": "empty_hand",

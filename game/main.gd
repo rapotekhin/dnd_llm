@@ -5,6 +5,7 @@ var _screen: Control
 
 
 func _ready() -> void:
+	UiTheme.skin(ThemeDB.get_project_theme(), Catalog.data.get("icons", {}).get("frames", {}))  # the drawn frames, where laid
 	var bg := Panel.new()
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)

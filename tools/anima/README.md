@@ -66,7 +66,7 @@ out/<вид>/sheet_<вид>_<стр>.png    листы: строка — ико�
 
 ## 4. В игру
 
-Какой вариант каждой иконки идёт в игру, записано в `picks.json`: `variant` — иконки, у которых лучше не первый вариант, `redo` — неудачные в обоих, их игра показывает заготовкой, пока описание не поправят и не перерисуют. `overlay` — знак кодом поверх (`overlays.py`: пацифик, `strike` — красная черта через всю иконку), `same` — иконка с выбранного варианта другой (`"features/domain_spells_2": "features/domain_spells_1"`; на странице выбора такую не показывают). Файл в репо, так что выбор не теряется, когда `out/` снова приходит с сервера.
+Какой вариант каждой иконки идёт в игру, записано в `picks.json`: `variant` — иконки, у которых лучше не первый вариант, `redo` — неудачные в обоих, их игра показывает заготовкой, пока описание не поправят и не перерисуют. `overlay` — знак кодом поверх (`overlays.py`: пацифик, `strike` — красная черта через всю иконку), `same` — иконка с выбранного варианта другой (`"features/domain_spells_2": "features/domain_spells_1"`), `drawn` — иконка целиком кодом (`overlays.ICONS`: `d20`, `sheet_lines` — где модель заливает геометрию); на странице выбора такие не показывают. Файл в репо, так что выбор не теряется, когда `out/` снова приходит с сервера.
 
 ```bash
 python tools/anima/install.py            # out/<вид>/variants/<id>__<n>.png → game/assets/icons/<вид>/<id>.png
@@ -170,6 +170,7 @@ python tools/anima/ui/paint.py --styles lines                                   
 python tools/anima/ui/paint.py --styles lines --parts accent,tab,card,field,crest,divider,ring
 python tools/anima/ui/mock.py --styles lines,book,plates                         # → out_ui/mock/mock_<style>_<seed>.png
 python tools/anima/ui/preview.py                                                 # экраны по ui/picks_lines.json → out_ui/preview/
+python tools/anima/ui/frames.py                                                  # выбранные детали в игру: game/assets/ui/frames/ по строкам `frames` в game/data/icons.json, потом --import
 ```
 
 ## Время

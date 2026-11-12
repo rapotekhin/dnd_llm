@@ -48,8 +48,59 @@ def strike(size: int, ink: tuple = (214, 52, 40, 255)) -> Image.Image:
     return im
 
 
+LINE = 0.022  # a line's width to the icon's side: the gold line icons' own (ui/sheet: 2–4 px of 128)
+
+
+def _lines(d: ImageDraw.ImageDraw, segs: list, w: float, col: tuple) -> None:
+    """Segments of an even width with round ends, so the joints close."""
+    for a, b in segs:
+        d.line([a, b], fill=col, width=round(w))
+        for x, y in (a, b):
+            d.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=col)
+
+
+def d20(size: int) -> Image.Image:
+    """A twenty-sided die seen face on in thin gold lines, every face hollow (the author, 2026-11-12: the model filled
+    it): the hexagon of its silhouette, the face in the middle and the nine around it — the gold line icons' look."""
+    big = size * 4
+    im = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    c, r, ri = big / 2, big * 0.43, big * 0.43 * 0.52
+    hexa = [(c + r * math.cos(math.radians(a)), c + r * math.sin(math.radians(a))) for a in (-90, -30, 30, 90, 150, 210)]
+    top, ur, lr, bot, ll, ul = hexa
+    tri = [(c + ri * math.cos(math.radians(a)), c + ri * math.sin(math.radians(a))) for a in (-90, 30, 150)]
+    apex, br, bl = tri
+    edges = list(zip(hexa, hexa[1:] + hexa[:1])) + list(zip(tri, tri[1:] + tri[:1]))
+    edges += [(apex, top), (apex, ul), (apex, ur), (bl, ul), (bl, ll), (bl, bot), (br, ur), (br, lr), (br, bot)]
+    _lines(ImageDraw.Draw(im), edges, big * LINE, GOLD)
+    return im.resize((size, size), Image.LANCZOS)
+
+
+def sheet_lines(size: int) -> Image.Image:
+    """A sheet with a folded corner and four lines of writing in the same thin gold lines, hollow (the tab «Подробно»
+    of the character's sheet beside the helmet and the d20)."""
+    big = size * 4
+    im = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    x0, y0, x1, y1, fold = big * 0.25, big * 0.1, big * 0.75, big * 0.9, big * 0.15
+    w = big * LINE
+    edge = [(x0, y0), (x1 - fold, y0), (x1, y0 + fold), (x1, y1), (x0, y1), (x0, y0)]
+    segs = list(zip(edge, edge[1:])) + [((x1 - fold, y0), (x1 - fold, y0 + fold)), ((x1 - fold, y0 + fold), (x1, y0 + fold))]
+    for i, end in enumerate((0.7, 0.8, 0.8, 0.5)):  # the lines of writing, a share of the sheet's width, the last short
+        y = y0 + big * (0.3 + i * 0.12)
+        segs.append(((x0 + big * 0.07, y), (x0 + big * 0.07 + (x1 - x0 - big * 0.14) * end, y)))
+    _lines(ImageDraw.Draw(im), segs, w, GOLD)
+    return im.resize((size, size), Image.LANCZOS)
+
+
 MARKS = {"peace": peace, "peace_gold": lambda side: peace(side, DARK, GOLD)}  # gold on a dark disc: over the line icons (ui)
 WHOLE = {"strike": strike}  # marks laid over the whole icon, not in its corner
+ICONS = {"d20": d20, "sheet_lines": sheet_lines}  # whole icons drawn by code where the model fills or bends a geometry
+
+
+def icon(name: str, side: int = 128) -> bytes:
+    """A whole icon drawn by code (`drawn` of the picks: «ui/skills»: «d20»), as PNG bytes."""
+    buf = io.BytesIO()
+    ICONS[name](side).save(buf, "PNG")
+    return buf.getvalue()
 
 
 def apply(name: str, src: Path) -> bytes:

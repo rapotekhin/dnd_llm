@@ -54,13 +54,13 @@ SETS = {
 
 def variants(jobs: list[dict], kind: str, out: Path, picks: dict) -> tuple[list[dict], dict[str, Path | bytes]]:
     """The icons of a kind with their drawn variants, and the file behind each picture's address (with the mark of
-    `overlay` laid over, as the game gets it); an icon laid from another's (`same`) is not picked on its own."""
+    `overlay` laid over, as the game gets it); an icon laid from another's (`same`) or drawn by code (`drawn`) is not picked on its own."""
     items, files = [], {}
     for j in (j for j in jobs if j["kind"] == kind):
         key = f"{kind}/{j['id']}"
         cuts = {n: gen.paths(out, j, n, s)[1] for n, s in enumerate(gen.seeds_of(j, SEEDS), 1)}
         have = [n for n, c in cuts.items() if c.exists()]
-        if len(have) >= 2 and key not in picks.get("same", {}):
+        if len(have) >= 2 and key not in picks.get("same", {}) and key not in picks.get("drawn", {}):
             mark = picks.get("overlay", {}).get(key)
             items.append({"key": key, "name": j["name"], "variants": have})
             files.update({f"/img/{kind}/{j['id']}/{n}.png": overlays.apply(mark, cuts[n]) if mark else cuts[n]

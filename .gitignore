@@ -43,3 +43,5 @@ tools/anima/.venv-matte/
 !/game/assets/icons/_blank/
 !/game/assets/icons/README.md
 /game/assets/portraits/
+# The interface's frames: cut by tools/anima/ui/frames.py from the drawn parts, not kept in git (the theme's flat styles stand in)
+/game/assets/ui/frames/

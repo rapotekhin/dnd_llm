@@ -42,6 +42,11 @@ static func make(ref: String, name_text: String, side: int = SIZE) -> IconSlot:
 
 func _init() -> void:
 	clip_text = true  # the button's own text adds nothing to its size and is not drawn
+	var cell := UiTheme.cell_box()  # the drawn cell, not the theme's long button stretched square (v0.8.4.43.23)
+	if cell != null:
+		for k: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			add_theme_stylebox_override(k, cell)
+		add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	for k: String in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color"]:
 		add_theme_color_override(k, Color.TRANSPARENT)
 
@@ -123,7 +128,7 @@ func _notification(what: int) -> void:
 
 func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
-	var inner := r.grow(-3)
+	var inner := r.grow(-3 if flat or UiTheme.cell_box() == null else -roundf(minf(size.x, size.y) * 0.1))  # inside the drawn cell's lines
 	var dim := Color(1, 1, 1, 0.35) if disabled else Color.WHITE
 	var tex := texture(str(spec.get("path", "")))
 	if tex != null:

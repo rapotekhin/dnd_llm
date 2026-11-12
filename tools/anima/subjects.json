@@ -5535,8 +5535,8 @@
  },
  "ui/details": {
   "dark": false,
-  "sentence": "A single upright sheet of pale paper covered with neat rows of dark handwritten lines, a small red ribbon at its top corner.",
-  "tags": "paper, sheet, written, lines of text, list, upright, red ribbon"
+  "sentence": "A single unrolled scroll drawn as a line drawing, rolled at its top and bottom, four short lines of text across its middle, the scroll empty and black between the lines.",
+  "tags": "scroll, unrolled, line drawing, rolled ends, lines of text"
  },
  "ui/drink": {
   "dark": false,
@@ -5700,8 +5700,8 @@
  },
  "ui/skills": {
   "dark": false,
-  "sentence": "A single blue icosahedron die with many small triangular faces like a cut gem, the number 20 on its front face.",
-  "tags": "d20, icosahedron, polyhedral die, triangular faces, number, blue, gem"
+  "sentence": "A single twenty-sided die drawn only as the thin outlines of its triangular faces, every face empty and black inside.",
+  "tags": "d20, icosahedron, polyhedral die, outline, triangular faces"
  },
  "ui/sleep": {
   "dark": false,
