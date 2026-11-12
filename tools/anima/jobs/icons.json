@@ -1924,8 +1924,8 @@
    "id": "scale_mail_plus_1",
    "kind": "items",
    "name": "Чешуйчатый доспех +1",
-   "tags": "scale mail, armor, scales, grey metal, front view, glowing",
-   "sentence": "A single grey scale mail shirt with overlapping metal scales, seen from the front, with a faint blue glow along its edges.",
+   "tags": "scale mail, body armor, torso, scales, grey metal, short sleeves, front view, blue glow",
+   "sentence": "A single grey scale mail shirt with overlapping metal scales, short sleeves and a leather belt at the waist, seen from the front with no body inside, a faint blue magical glow along its edges.",
    "key": ""
   },
   {
