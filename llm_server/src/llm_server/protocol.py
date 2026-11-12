@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.127.0"
+PROTOCOL_VERSION = "0.128.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -267,6 +267,8 @@ class Scene(_In):
     private: bool = False  # the room is not for anyone to walk into (a kitchen, a bedroom)
     spots: list[str] = Field(default_factory=list)  # 0.104.0: places of the room to name in `approach` and `near`: «очаг [hearth]»
     hero_near: str = ""  # 0.104.0: the place the hero stands by: «стойка»
+    furniture: list[str] = Field(default_factory=list)  # 0.128.0: what the room's plan stood by the engine: «стол ×2, скамья ×3»
+    free_spots: list[str] = Field(default_factory=list)  # 0.128.0: spots left free and the bodies each takes: «место для припасов ×2 (body: barrel, crate)»
 
 
 class InventoryLine(_In):

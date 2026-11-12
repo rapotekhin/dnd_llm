@@ -61,6 +61,8 @@ NPC здесь:
 {% if scene.props %}Вокруг (только это и описывай):
 {% for p in scene.props %}- {{ p.name }} [{{ p.prop_id }}]{% if p.near %} ({{ p.near }}){% endif %}{% if p.state %} ({{ {"open": "открыто", "closed": "закрыто", "broken": "сломано", "burned": "сожжено", "moved": "сдвинуто"}.get(p.state, p.state) }}){% endif %}{% if p.owner %}, хозяин: {{ p.owner }}{% endif %}{% if p.portable %}, можно взять{% endif %}{% if p.source %}, источник {{ {"water": "воды", "foul_water": "гнилой воды"}.get(p.source, "жидкости " ~ p.source) }}{% endif %}.{% if p.description %} {{ p.description }}{% endif %}{% if p.text %} Написано: «{{ p.text }}»{% endif %}{% if p.container %} Это {{ p.container }}{% if p.locked %}, заперт{% endif %}; внутри: {{ p.contents or "пусто" }}.{% endif +%}
 {% endfor %}
+{% endif %}{% if scene.furniture %}Мебель по плану комнаты (движок, стоит на карте; её можно описывать, не дублируй её в `furnish`): {{ scene.furniture | join(", ") }}.
+{% endif %}{% if scene.free_spots %}Свободные места для крупной мебели: {{ scene.free_spots | join("; ") }} — мебель с `body` из списка места встанет туда.
 {% endif %}{% if scene.spots %}Места комнаты (для `approach` и `near`): {{ scene.spots | join(", ") }}.{% if scene.hero_near %} Герой сейчас у места: {{ scene.hero_near }}.{% endif %}
 {% endif %}{% if scene.hooks %}Зацепки: {{ scene.hooks | join("; ") }}.
 {% endif %}{% if scene.found %}Игрок уже заметил или нашёл (это факты, их можно описывать): {{ scene.found | join("; ") }}.

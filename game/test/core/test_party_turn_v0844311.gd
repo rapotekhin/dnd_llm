@@ -35,7 +35,7 @@ func _militia(s: GameSession) -> String:
 
 ## `f` stands beside `o`.
 func _beside(s: GameSession, f: Dictionary, o: Dictionary) -> void:
-	FightGrid.put(f, FightGrid.free_near(s, data, FightGrid.cell(o) + Vector2i(1, 0), int(f.get("span", 1))))
+	FightGrid.put(f, FightGrid.free_near(s, data, FightGrid.cell(o), int(f.get("span", 1))))  # the room's things may stand on its east
 	assert_int(FightGrid.dist(f, o)).is_equal(1)
 
 

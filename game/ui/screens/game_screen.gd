@@ -457,7 +457,7 @@ func _look(s: GameSession, cell: Vector2i) -> void:
 		var at := Vector2i(int(t["x"]), int(t["y"]))
 		if str(t["kind"]) == "foe" and (EncounterRules.lurking(s, s.room_id).get("hidden", []) as Array).has(str(t["id"])):
 			return false
-		return now.has(at) or str(t["kind"]) in ["station", "prop", "trap"])
+		return now.has(at) or str(t["kind"]) in ["station", "prop", "thing", "trap"])
 	_rounds = WatchRules.by_rounds(s, Catalog.data, _field.map, now)
 	_field.queue_redraw()
 	var refs := ",".join(_field.things.map(func(t: Dictionary) -> String: return str(t["ref"])))

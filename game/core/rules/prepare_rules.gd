@@ -176,6 +176,11 @@ static func frame(s: GameSession, data: Dictionary, job: Dictionary) -> String:
 			var marks := MapSpots.words(s, data, room)
 			if not marks.is_empty():
 				lines.append("Места комнаты: %s." % ", ".join(marks))
+			var furniture := MapSpots.furniture_words(s, data, room)  # v0.8.4.43.26
+			if not (furniture["stood"] as Array).is_empty():
+				lines.append("Уже стоят (движок): %s." % ", ".join(furniture["stood"]))
+			if not (furniture["free"] as Array).is_empty():
+				lines.append("Свободные места: %s." % "; ".join(furniture["free"]))
 			lines.append("Кандидаты (item_id — название, цена):")
 			for id: String in candidates(s, data, room):
 				var def: Dictionary = data["items"]["catalog"][id]

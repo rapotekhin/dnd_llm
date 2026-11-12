@@ -38,7 +38,7 @@ func test_everyone_of_every_room_stands_on_a_free_square_of_that_room() -> void:
 		var map := WalkRules.view(s, data)
 		var seen := {}
 		for t: Dictionary in MapSpots.of(s, data, map):
-			if str(t["kind"]) == "station":
+			if str(t["kind"]) == "station" or int(t.get("bars", 0)) & MapSpots.PATH:  # a thing that bars the way stands on its own
 				continue
 			var at := _at(t)
 			assert_bool(seen.has(at)).override_failure_message("%s: two on %s" % [room, at]).is_false()
@@ -186,3 +186,63 @@ func test_a_thing_turns_by_the_seed_and_its_squares_follow() -> void:
 	assert_array(MapSpots.footprint([3, 2], Vector2i(1, 1), 0)).has_size(6).contains([Vector2i(3, 2)])
 	assert_array(MapSpots.footprint([3, 2], Vector2i(1, 1), 1)).has_size(6).contains([Vector2i(2, 3)])
 	assert_array(MapSpots.footprint([3, 2], Vector2i(1, 1), 1)).not_contains([Vector2i(3, 1)])
+
+
+## v0.8.4.43.26: the spots of a chunk. The tavern's hall has its own tables with benches beside them, its counter along
+## the whole run of its marks; another seed — another hall; the spots left free and what stands go to the master.
+func test_a_room_stands_its_own_things_on_its_spots_with_their_companions() -> void:
+	var s := _session()
+	s.props[s.room_id] = []
+	var things := _tokens(s).filter(func(t: Dictionary) -> bool: return str(t["kind"]) == "thing")
+	var tables := things.filter(func(t: Dictionary) -> bool: return str(t["body"]) == "table")
+	assert_int(tables.size()).is_greater(0)
+	var benches := things.filter(func(t: Dictionary) -> bool: return str(t["body"]) == "bench")
+	assert_int(benches.size()).is_greater(0)
+	for b: Dictionary in benches:  # a bench stands by a table
+		var by := tables.any(func(t: Dictionary) -> bool:
+			return (b["cells"] as Array).any(func(c: Vector2i) -> bool:
+				return (t["cells"] as Array).any(func(d: Vector2i) -> bool: return WalkRules.distance(c, d) <= 1)))
+		assert_bool(by).is_true()
+	var counters := things.filter(func(t: Dictionary) -> bool: return str(t["body"]) == "counter")
+	var view := WalkRules.view(s, data)
+	var index := (view["ids"] as Array).find(s.room_id)
+	var run := (view["marks"] as Array).filter(func(m: Dictionary) -> bool: return str(m["name"]) == "counter" and int(m["room"]) == index)
+	var covered := {}
+	for t: Dictionary in counters:
+		for c: Vector2i in t["cells"]:
+			covered[c] = true
+	for m: Dictionary in run:  # the counter's marks covered whole, a counter of three squares along them
+		assert_bool(covered.has(Vector2i(int(m["x"]), int(m["y"])))).is_true()
+	assert_int(covered.size()).is_equal(run.size())
+	var seen := {}
+	for t: Dictionary in _tokens(s):
+		for c: Vector2i in t.get("cells", [_at(t)]):
+			assert_bool(seen.has(c) and str(t["kind"]) != "station").override_failure_message(str(c)).is_false()
+			seen[c] = true
+	var other := _session()
+	other.game_seed = s.game_seed + 7
+	other.props[other.room_id] = []
+	var a := JSON.stringify(things.map(func(t: Dictionary) -> String: return str(t["body"]) + str(t["cells"])))
+	var b2 := JSON.stringify(_tokens(other).filter(func(t: Dictionary) -> bool: return str(t["kind"]) == "thing").map(func(t: Dictionary) -> String: return str(t["body"]) + str(t["cells"])))
+	assert_str(a).is_not_equal(b2)
+	var words := MapSpots.furniture_words(s, data)
+	assert_array(words["stood"]).is_not_empty()
+
+
+func test_the_masters_furniture_takes_a_free_spot_of_its_group() -> void:
+	var s := _session()
+	s.props[s.room_id] = []
+	var free := MapSpots.free_spots(s, data)
+	var storage := free.filter(func(sp: Dictionary) -> bool: return str(sp["group"]) == "storage")
+	if storage.is_empty():  # every spot of the seed filled: another seed
+		for i: int in 20:
+			s.game_seed += 1
+			storage = MapSpots.free_spots(s, data).filter(func(sp: Dictionary) -> bool: return str(sp["group"]) == "storage")
+			if not storage.is_empty():
+				break
+	assert_array(storage).is_not_empty()
+	var spots: Array = storage.map(func(sp: Dictionary) -> Vector2i: return sp["at"])
+	s.props[s.room_id] = [{"id": "cask", "name": "Бочка", "item_id": "", "owner": "", "text": "", "state": "", "body": "barrel"}]
+	assert_bool(spots.has(_at(_token(s, "prop:cask")))).is_true()
+	var cask := _at(_token(s, "prop:cask"))
+	assert_bool(MapSpots.free_spots(s, data).any(func(sp: Dictionary) -> bool: return sp["at"] == cask)).is_false()

@@ -105,52 +105,243 @@
 	"terrains": {"_doc": "v0.8.4.31, the author's feedback (the master's open places were empty fields): an open room whose site names no kind takes one by its location's terrain, else `default`.",
 		"grassland": "field", "forest": "forest", "hills": "hills", "mountains": "rocks", "mountain": "rocks", "swamp": "swamp", "coast": "shore",
 		"desert": "dunes", "arctic": "snowfield", "underdark": "rocks", "default": "wild"},
+	"spots": {
+		"_doc": "Spots of things (v0.8.4.43.26): a mark `spot:<group>` of a chunk is a square where a thing of the group may stand. The engine fills a share `fill` of a room's spots by the seed with a body of the group (`bodies` by the place's kind, its family, its shape, `*` — weights) and lays round each its companions of `near` (a body's rows: `body`, `chance`, `count`, `same_turn` — laid the way it is); the spots left free are told to the master, who puts the furniture of its words there, a body of the spot's group. A station's mark stands as its thing (rules.map.station_bodies) and takes its companions too.",
+		"groups": {
+			"table": {
+				"name": "стол",
+				"fill": 0.9,
+				"bodies": {
+					"*": {
+						"table": 1
+					}
+				}
+			},
+			"seat": {
+				"name": "скамья",
+				"fill": 0.9,
+				"bodies": {
+					"*": {
+						"bench": 3,
+						"stool": 1
+					}
+				}
+			},
+			"storage": {
+				"name": "место для припасов",
+				"fill": 0.6,
+				"bodies": {
+					"smithy": {
+						"crate": 2,
+						"barrel": 1,
+						"shelf": 1
+					},
+					"shop": {
+						"shelf": 3,
+						"crate": 1,
+						"chest": 1
+					},
+					"temple": {
+						"chest": 1,
+						"cabinet": 1,
+						"plant_pot": 1
+					},
+					"registry": {
+						"cabinet": 2,
+						"shelf": 2,
+						"chest": 1
+					},
+					"mill": {
+						"crate": 1,
+						"barrel": 2
+					},
+					"*": {
+						"barrel": 2,
+						"crate": 2,
+						"chest": 1,
+						"shelf": 1,
+						"cabinet": 1
+					}
+				}
+			},
+			"decor": {
+				"name": "место для украшения",
+				"fill": 0.5,
+				"bodies": {
+					"temple": {
+						"statue": 2,
+						"plant_pot": 1
+					},
+					"*": {
+						"plant_pot": 3,
+						"statue": 1
+					}
+				}
+			},
+			"pillar": {
+				"name": "колонна",
+				"fill": 1.0,
+				"bodies": {
+					"*": {
+						"pillar": 1
+					}
+				}
+			},
+			"cave": {
+				"name": "место в пещере",
+				"fill": 0.6,
+				"bodies": {
+					"mine": {
+						"crate": 2,
+						"barrel": 1,
+						"bones": 1,
+						"boulder": 1
+					},
+					"*": {
+						"bones": 2,
+						"mushrooms": 2,
+						"boulder": 1
+					}
+				}
+			}
+		},
+		"near": {
+			"bed": [
+				{
+					"body": "nightstand",
+					"chance": 0.7
+				},
+				{
+					"body": "chest",
+					"chance": 0.5
+				},
+				{
+					"body": "plant_pot",
+					"chance": 0.25
+				}
+			],
+			"table": [
+				{
+					"body": "bench",
+					"chance": 0.85,
+					"count": 2,
+					"same_turn": true
+				},
+				{
+					"body": "stool",
+					"chance": 0.35
+				}
+			],
+			"hearth": [
+				{
+					"body": "barrel",
+					"chance": 0.35
+				},
+				{
+					"body": "stool",
+					"chance": 0.4
+				}
+			],
+			"counter": [
+				{
+					"body": "barrel",
+					"chance": 0.4
+				},
+				{
+					"body": "crate",
+					"chance": 0.3
+				}
+			],
+			"workbench": [
+				{
+					"body": "crate",
+					"chance": 0.5
+				},
+				{
+					"body": "stool",
+					"chance": 0.4
+				}
+			],
+			"forge": [
+				{
+					"body": "barrel",
+					"chance": 0.4
+				}
+			],
+			"altar": [
+				{
+					"body": "plant_pot",
+					"chance": 0.6,
+					"count": 2
+				}
+			],
+			"campfire": [
+				{
+					"body": "stump",
+					"chance": 0.6,
+					"count": 2
+				}
+			],
+			"boulder": [
+				{
+					"body": "mushrooms",
+					"chance": 0.3
+				}
+			],
+			"bones": [
+				{
+					"body": "bones",
+					"chance": 0.3
+				}
+			]
+		}
+	},
 	"chunks": [
-		{"id": "tavern_hall", "kinds": ["tavern"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "H": "hearth", "S": "stage", "E": "entry"},
+		{"id": "tavern_hall", "kinds": ["tavern"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "H": "hearth", "S": "stage", "E": "entry", "t": "spot:table", "s": "spot:storage", "d": "spot:decor"},
 			"rows": [
 				"#####D#####D###",
-				"#.............#",
+				"#s............#",
 				"#.CCCCCC....H.#",
 				"#.............#",
-				"#..BB....BB...#",
-				"D..BB....BB...D",
+				"#...t.....t...#",
+				"D.............D",
 				"#.............#",
-				"#..BB....BB...#",
-				"#..BB....BB.S.#",
+				"#...t.....t...#",
+				"#...........S.#",
 				"#.............#",
-				"#......E......#",
+				"#s.....E.....d#",
 				"###D#####D#####"
 			]},
-		{"id": "tavern_hall_long", "kinds": ["tavern"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "H": "hearth", "E": "entry"},
+		{"id": "tavern_hall_long", "kinds": ["tavern"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "H": "hearth", "E": "entry", "t": "spot:table", "s": "spot:storage", "d": "spot:decor"},
 			"rows": [
 				"###D#######D###",
-				"#H............#",
+				"#H...........s#",
 				"#.............#",
-				"D.BBB.BBB.BBB.D",
+				"D..t...t...t..D",
 				"#.............#",
 				"#.CCCCCCCCC...#",
-				"#.............#",
-				"#......E......#",
+				"#s............#",
+				"#......E.....d#",
 				"####D#####D####"
 			]},
-		{"id": "kitchen", "kinds": ["tavern", "house"], "roles": ["kitchen"], "size": "medium", "marks": {"H": "hearth", "E": "entry"},
+		{"id": "kitchen", "kinds": ["tavern", "house"], "roles": ["kitchen"], "size": "medium", "marks": {"H": "hearth", "E": "entry", "t": "spot:table", "s": "spot:storage"},
 			"rows": [
 				"###D#####",
-				"#H......#",
-				"#.BBB...#",
+				"#H...s..#",
+				"#..t....#",
 				"D.......D",
-				"#.....B.#",
-				"#.E...B.#",
+				"#.....s.#",
+				"#.E...s.#",
 				"####D####"
 			]},
-		{"id": "cellar", "kinds": ["tavern", "house", "cave"], "roles": ["cellar"], "size": "cellar", "marks": {"E": "entry"},
+		{"id": "cellar", "kinds": ["tavern", "house", "cave"], "roles": ["cellar"], "size": "cellar", "marks": {"E": "entry", "s": "spot:storage"},
 			"rows": [
 				"####D####",
-				"#BB...BB#",
+				"#s.s.s.s#",
 				"#.......#",
-				"D..B.B..D",
+				"D..s.s..D",
 				"#.......#",
-				"#BB.E.BB#",
+				"#s.sEs.s#",
 				"####D####"
 			]},
 		{"id": "guest_rooms", "kinds": ["tavern"], "roles": ["upstairs"], "size": "large", "marks": {"E": "entry", "R": "bed"},
@@ -166,85 +357,85 @@
 				"#R..#.#..R#",
 				"#####D#####"
 			]},
-		{"id": "shop_room", "kinds": ["shop"], "roles": ["hall"], "size": "medium", "marks": {"C": "counter", "E": "entry"},
+		{"id": "shop_room", "kinds": ["shop"], "roles": ["hall"], "size": "medium", "marks": {"C": "counter", "E": "entry", "s": "spot:storage", "d": "spot:decor"},
 			"rows": [
 				"####D####",
-				"#BB...BB#",
+				"#s.s.s.s#",
 				"#.CCCCC.#",
 				"D.......D",
 				"#.......#",
-				"#BB.E.BB#",
+				"#s..E..d#",
 				"####D####"
 			]},
-		{"id": "smithy", "kinds": ["smithy"], "roles": ["hall"], "size": "large", "marks": {"F": "forge", "A": "anvil", "E": "entry", "W": "bench"},
+		{"id": "smithy", "kinds": ["smithy"], "roles": ["hall"], "size": "large", "marks": {"F": "forge", "A": "anvil", "E": "entry", "W": "bench", "s": "spot:storage"},
 			"rows": [
 				"#####D#####",
 				"#FF.....W.#",
 				"#FF.......#",
 				"D....A....D",
 				"#.........#",
-				"#BB.....BB#",
+				"#s.......s#",
 				"#....E....#",
 				"#####D#####"
 			]},
-		{"id": "store", "kinds": ["shop", "smithy", "mill"], "roles": ["store"], "size": "small", "marks": {"E": "entry"},
+		{"id": "store", "kinds": ["shop", "smithy", "mill"], "roles": ["store"], "size": "small", "marks": {"E": "entry", "s": "spot:storage"},
 			"rows": [
 				"###D###",
-				"#BB.BB#",
+				"#s.s.s#",
 				"D.....D",
-				"#B.E.B#",
+				"#s.E.s#",
 				"###D###"
 			]},
-		{"id": "mill_room", "kinds": ["mill"], "size": "medium", "marks": {"M": "millstone", "E": "entry"},
+		{"id": "mill_room", "kinds": ["mill"], "size": "medium", "marks": {"M": "millstone", "E": "entry", "s": "spot:storage"},
 			"rows": [
 				"####D####",
 				"#.......#",
 				"#..MMM..#",
 				"D..MMM..D",
 				"#.......#",
-				"#BB.E.BB#",
+				"#s..E..s#",
 				"####D####"
 			]},
-		{"id": "temple_nave", "kinds": ["temple"], "roles": ["hall"], "size": "large", "marks": {"A": "altar", "E": "entry"},
+		{"id": "temple_nave", "kinds": ["temple"], "roles": ["hall"], "size": "large", "marks": {"A": "altar", "E": "entry", "b": "spot:seat", "d": "spot:decor", "s": "spot:storage"},
 			"rows": [
 				"#####D#####",
-				"#....A....#",
+				"#d...A...d#",
 				"#.........#",
-				"D.B.....B.D",
+				"D.b.....b.D",
 				"#.........#",
-				"#.B.....B.#",
+				"#.b.....b.#",
 				"#.........#",
-				"#.B.....B.#",
-				"#....E....#",
+				"#.b.....b.#",
+				"#s...E...s#",
 				"#####D#####"
 			]},
-		{"id": "town_hall", "kinds": ["registry"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "E": "entry"},
+		{"id": "town_hall", "kinds": ["registry"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "E": "entry", "s": "spot:storage", "b": "spot:seat", "d": "spot:decor"},
 			"rows": [
 				"###D#####D###",
-				"#...........#",
+				"#s.........s#",
 				"#.CCCCCCCCC.#",
 				"D...........D",
-				"#.B.......B.#",
-				"#.....E.....#",
+				"#.b.......b.#",
+				"#d....E....d#",
 				"###D#####D###"
 			]},
-		{"id": "school_hall", "kinds": ["school"], "roles": ["hall"], "size": "large", "marks": {"T": "desk", "E": "entry"},
+		{"id": "school_hall", "kinds": ["school"], "roles": ["hall"], "size": "large", "marks": {"T": "desk", "E": "entry", "t": "spot:table", "s": "spot:storage"},
 			"rows": [
 				"#####D#####",
 				"#....T....#",
 				"#.........#",
-				"D.BB...BB.D",
+				"D.t....t..D",
 				"#.........#",
-				"#.BB...BB.#",
-				"#....E....#",
+				"#.t....t..#",
+				"#s...E...s#",
 				"#####D#####"
 			]},
-		{"id": "office", "kinds": ["registry", "school", "temple"], "roles": ["office", "cell", "store"], "size": "small", "marks": {"T": "desk", "E": "entry"},
+		{"id": "office", "kinds": ["registry", "school", "temple"], "roles": ["office", "cell", "store"], "size": "small", "marks": {"T": "desk", "E": "entry", "s": "spot:storage", "d": "spot:decor"},
 			"rows": [
 				"###D###",
-				"#T....#",
+				"#T...s#",
 				"D.....D",
-				"#BB.E.#",
+				"#s.E.d#",
 				"###D###"
 			]},
 		{"id": "dorm", "kinds": ["school"], "roles": ["dorm"], "size": "medium", "marks": {"R": "bed", "E": "entry"},
@@ -267,22 +458,22 @@
 				"#T..E...#",
 				"####D####"
 			]},
-		{"id": "home_room", "kinds": ["house"], "roles": ["hall", "bedroom"], "size": "medium", "marks": {"H": "hearth", "R": "bed", "E": "entry"},
+		{"id": "home_room", "kinds": ["house"], "roles": ["hall", "bedroom"], "size": "medium", "marks": {"H": "hearth", "R": "bed", "E": "entry", "t": "spot:table", "s": "spot:storage", "d": "spot:decor"},
 			"rows": [
 				"####D####",
 				"#R....H.#",
 				"#.......#",
-				"D..BB...D",
+				"D..t....D",
 				"#.......#",
-				"#...E...#",
+				"#s..E..d#",
 				"####D####"
 			]},
-		{"id": "room_small", "generic": true, "size": "small", "marks": {"E": "entry"},
+		{"id": "room_small", "generic": true, "size": "small", "marks": {"E": "entry", "s": "spot:storage", "d": "spot:decor"},
 			"rows": [
 				"###D###",
-				"#.....#",
+				"#s....#",
 				"D..E..D",
-				"#.....#",
+				"#....d#",
 				"###D###"
 			]},
 		{"id": "room_small_tall", "generic": true, "size": "small", "marks": {"E": "entry"},
@@ -295,36 +486,36 @@
 				"#...#",
 				"##D##"
 			]},
-		{"id": "room_medium", "generic": true, "size": "medium", "marks": {"E": "entry"},
+		{"id": "room_medium", "generic": true, "size": "medium", "marks": {"E": "entry", "s": "spot:storage", "d": "spot:decor"},
 			"rows": [
 				"####D####",
-				"#.......#",
+				"#s.....d#",
 				"#.......#",
 				"D...E...D",
 				"#.......#",
-				"#.......#",
+				"#s......#",
 				"####D####"
 			]},
-		{"id": "room_medium_pillars", "generic": true, "size": "medium", "marks": {"E": "entry"},
+		{"id": "room_medium_pillars", "generic": true, "size": "medium", "marks": {"E": "entry", "p": "spot:pillar"},
 			"rows": [
 				"####D####",
 				"#.......#",
-				"#.B...B.#",
+				"#.p...p.#",
 				"D...E...D",
-				"#.B...B.#",
+				"#.p...p.#",
 				"#.......#",
 				"####D####"
 			]},
-		{"id": "room_large", "generic": true, "size": "large", "marks": {"E": "entry"},
+		{"id": "room_large", "generic": true, "size": "large", "marks": {"E": "entry", "t": "spot:table", "s": "spot:storage", "d": "spot:decor"},
 			"rows": [
 				"###D#####D###",
+				"#s.........d#",
 				"#...........#",
-				"#...........#",
-				"#...........#",
+				"#...t...t...#",
 				"D.....E.....D",
+				"#...t...t...#",
 				"#...........#",
-				"#...........#",
-				"#...........#",
+				"#s.........s#",
 				"###D#####D###"
 			]},
 		{"id": "corridor", "generic": true, "size": "corridor", "marks": {"E": "entry"},
@@ -333,30 +524,30 @@
 				"D.....E....D",
 				"###D####D###"
 			]},
-		{"id": "cellar_plain", "generic": true, "size": "cellar", "marks": {"E": "entry"},
+		{"id": "cellar_plain", "generic": true, "size": "cellar", "marks": {"E": "entry", "s": "spot:storage"},
 			"rows": [
 				"###D###",
-				"#B...B#",
+				"#s...s#",
 				"D..E..D",
-				"#B...B#",
+				"#s...s#",
 				"###D###"
 			]},
-		{"id": "cave_small", "generic": true, "kinds": ["cave"], "roles": ["hall"], "size": "cave", "marks": {"E": "entry"},
+		{"id": "cave_small", "generic": true, "kinds": ["cave"], "roles": ["hall"], "size": "cave", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				"  ##D##  ",
 				" ##...## ",
-				"##.%...##",
+				"##c%..c##",
 				"D...E...D",
 				"##.....# ",
 				" ##...## ",
 				"  ##D##  "
 			]},
-		{"id": "cave_large", "kinds": ["cave"], "roles": ["hall"], "size": "large", "marks": {"E": "entry"},
+		{"id": "cave_large", "kinds": ["cave"], "roles": ["hall"], "size": "large", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				"   ###D###   ",
-				"  ##.....##  ",
+				"  ##c...c##  ",
 				" ##...%...###",
-				"##.........##",
+				"##c........##",
 				"D.....E.....D",
 				"##..B......# ",
 				" #.......### ",
@@ -364,10 +555,10 @@
 				"   ##...##   ",
 				"    ##D##    "
 			]},
-		{"id": "gallery", "kinds": ["mine"], "size": "corridor", "marks": {"E": "entry", "O": "vein"},
+		{"id": "gallery", "kinds": ["mine"], "size": "corridor", "marks": {"E": "entry", "O": "vein", "c": "spot:cave"},
 			"rows": [
 				"#####D######D#####",
-				"#O....%...B.....##",
+				"#Oc...%c..B.....##",
 				"D.......E........D",
 				"##..B......%....O#",
 				" ####D######D#### "
@@ -382,12 +573,12 @@
 				"##...##",
 				" ##D## "
 			]},
-		{"id": "cave_grotto", "kinds": ["cave"], "roles": ["hall"], "size": "medium", "marks": {"E": "entry"},
+		{"id": "cave_grotto", "kinds": ["cave"], "roles": ["hall"], "size": "medium", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				" ####D###  ",
-				"##......## ",
+				"##c....c## ",
 				"#..##....##",
-				"#..##.%...D",
+				"#..##c%...D",
 				"##....E..# ",
 				" #.......# ",
 				"##..B..### ",
@@ -395,24 +586,24 @@
 				"####.##    ",
 				"   #D#     "
 			]},
-		{"id": "cave_pillars", "kinds": ["cave"], "roles": ["hall"], "size": "large", "marks": {"E": "entry"},
+		{"id": "cave_pillars", "kinds": ["cave"], "roles": ["hall"], "size": "large", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				"  ####D####  ",
-				" ##.......## ",
+				" ##c....c.## ",
 				"##..B...B..##",
 				"#...........#",
 				"D..%..E..%..D",
 				"#...........#",
-				"##..B...B..##",
+				"##c.B...B..##",
 				" ##.......## ",
 				"  ####D####  "
 			]},
-		{"id": "cave_lake", "kinds": ["cave"], "roles": ["hall"], "tags": ["water"], "size": "large", "marks": {"E": "entry", "W": "water"},
+		{"id": "cave_lake", "kinds": ["cave"], "roles": ["hall"], "tags": ["water"], "size": "large", "marks": {"E": "entry", "W": "water", "c": "spot:cave"},
 			"rows": [
 				"   ####D###  ",
-				"  ##......## ",
+				"  ##c....c## ",
 				" ##..~~~...##",
-				"##..~~W~~...#",
+				"##c.~~W~~...#",
 				"D...~~~~~...D",
 				"##...~~~..%.#",
 				" #.........##",
@@ -420,69 +611,69 @@
 				"  ###...###  ",
 				"    ##D##    "
 			]},
-		{"id": "cave_stream", "kinds": ["cave"], "roles": ["hall"], "tags": ["water"], "size": "medium", "marks": {"E": "entry", "W": "water"},
+		{"id": "cave_stream", "kinds": ["cave"], "roles": ["hall"], "tags": ["water"], "size": "medium", "marks": {"E": "entry", "W": "water", "c": "spot:cave"},
 			"rows": [
 				"  ##D####  ",
-				" ##..~..## ",
-				"##...~W..##",
+				" ##..~c.## ",
+				"##c..~W..##",
 				"D...~~...%D",
 				"##..~..E.##",
 				" ##.~~...# ",
 				"  ##.~~### ",
 				"   #D##    "
 			]},
-		{"id": "cave_den", "kinds": ["cave"], "roles": ["hall"], "size": "medium", "marks": {"E": "entry"},
+		{"id": "cave_den", "kinds": ["cave"], "roles": ["hall"], "size": "medium", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				"   ##D##   ",
 				"  ##...### ",
-				" ##..%...##",
+				" ##c.%.c.##",
 				"##.......B#",
-				"#..B..E...#",
+				"#c.B..E...#",
 				"##.......##",
 				" ###..%### ",
 				"   ##.##   ",
 				"    #D#    "
 			]},
-		{"id": "cave_crack", "kinds": ["cave"], "roles": ["hall"], "size": "small", "marks": {"E": "entry"},
+		{"id": "cave_crack", "kinds": ["cave"], "roles": ["hall"], "size": "small", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				"##D##    ",
 				"#..###   ",
-				"##..%##  ",
+				"##c.%##  ",
 				" ##..E## ",
-				"  ##...##",
+				"  ##c..##",
 				"   ##..%D",
 				"    #####"
 			]},
-		{"id": "cave_winding", "kinds": ["cave"], "size": "corridor", "marks": {"E": "entry"},
+		{"id": "cave_winding", "kinds": ["cave"], "size": "corridor", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				"#D#      ",
 				"#..##    ",
-				"##..##   ",
+				"##c.##   ",
 				" ##.%#   ",
-				"  #..### ",
+				"  #.c### ",
 				"  ##.E.##",
 				"   ###..D",
 				"     ####"
 			]},
-		{"id": "cave_fork", "kinds": ["cave"], "size": "medium", "marks": {"E": "entry"},
+		{"id": "cave_fork", "kinds": ["cave"], "size": "medium", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				"##D###D##",
 				"#..# #..#",
-				"##..#..##",
+				"##c.#.c##",
 				" ##..E.# ",
 				"  #...## ",
 				" ##.%.#  ",
 				" #..###  ",
 				" #D#     "
 			]},
-		{"id": "cave_narrows", "kinds": ["cave"], "size": "medium", "marks": {"E": "entry"},
+		{"id": "cave_narrows", "kinds": ["cave"], "size": "medium", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				"  ##D##  ",
 				" ##...## ",
-				"##..%..##",
+				"##c.%.c##",
 				"#...E...#",
 				"##.....##",
-				" ###.### ",
+				" ###c### ",
 				"  ##.##  ",
 				" ##...## ",
 				"##..%..##",
@@ -490,30 +681,30 @@
 				"##.....##",
 				" ###D### "
 			]},
-		{"id": "mine_drift", "kinds": ["mine"], "size": "corridor", "marks": {"E": "entry", "O": "vein"},
+		{"id": "mine_drift", "kinds": ["mine"], "size": "corridor", "marks": {"E": "entry", "O": "vein", "c": "spot:cave"},
 			"rows": [
 				"##D#####     ",
-				"#..O..###    ",
+				"#..Oc.###    ",
 				"##.....%#####",
-				" ###..E.....D",
+				" ###..E.c...D",
 				"   ##B..O..##",
 				"    #####D## "
 			]},
-		{"id": "mine_stope", "kinds": ["mine"], "roles": ["hall"], "size": "large", "marks": {"E": "entry", "O": "vein"},
+		{"id": "mine_stope", "kinds": ["mine"], "roles": ["hall"], "size": "large", "marks": {"E": "entry", "O": "vein", "c": "spot:cave"},
 			"rows": [
 				" #####D#####  ",
-				"##O........## ",
-				"#..B....B...##",
+				"##Oc....c..## ",
+				"#..B....B..c##",
 				"D.....%......D",
 				"#.....E....O.#",
 				"##..B....B..##",
 				" #.%.......## ",
 				" ####D######  "
 			]},
-		{"id": "mine_cavein", "kinds": ["mine"], "size": "medium", "marks": {"E": "entry"},
+		{"id": "mine_cavein", "kinds": ["mine"], "size": "medium", "marks": {"E": "entry", "c": "spot:cave"},
 			"rows": [
 				"####D####",
-				"#..%%%..#",
+				"#c.%%%c.#",
 				"#.B%%%B.#",
 				"D...E...D",
 				"##.....##",

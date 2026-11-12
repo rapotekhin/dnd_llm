@@ -389,7 +389,7 @@ func _scene(s: GameSession, data: Dictionary, map: Dictionary, now: Dictionary, 
 			fighting["npc:" + npc] = true
 	for t: Dictionary in MapSpots.of(s, data, map):
 		var cell := Vector2i(int(t["x"]), int(t["y"]))
-		if not fighting.has(str(t["ref"])) and (now.has(cell) or str(t["kind"]) in ["station", "prop"]):
+		if not fighting.has(str(t["ref"])) and (now.has(cell) or str(t["kind"]) in ["station", "prop", "thing"]):
 			out.append(t)
 	out.append_array(MapSpots.crowd(s))
 	return out

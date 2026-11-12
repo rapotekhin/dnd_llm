@@ -40,6 +40,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 	for id: String in s.npcs_here(world.world, s.room_id):
 		if s.summaries.has("dialogue:" + id):
 			summaries["dialogue:" + id] = s.summaries["dialogue:" + id]
+	var furniture := MapSpots.furniture_words(s, data)
 	var out := {
 		"scene": {
 			"location_name": loc.get("name", loc_id), "location_description": loc.get("description", ""),
@@ -49,6 +50,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"exits": exits, "npcs": npcs, "hooks": hooks(s, data, room), "flags": s.flags,
 			"found": ExplorationRules.found_texts(s, data["world"], s.room_id), "sneaking": s.sneaking,
 			"props": props, "spots": MapSpots.words(s, data), "hero_near": str(near.get("hero", "")),
+			"furniture": furniture["stood"], "free_spots": furniture["free"],  # v0.8.4.43.26: what the room's plan stood, where is room
 			"creatures": CreatureRules.snapshot(s, data, s.room_id) + EncounterRules.snapshot(s, data, s.room_id),  # v0.7.22.11, v0.7.22.12
 			"closed_exits": WayRules.closed_texts(s, data["world"], s.room_id),
 			"summons": AllyRules.summon_lines(s, data),  # v0.7.22.22

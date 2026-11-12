@@ -776,10 +776,24 @@
           "title": "Found",
           "type": "array"
         },
+        "free_spots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Free Spots",
+          "type": "array"
+        },
         "furnish": {
           "default": false,
           "title": "Furnish",
           "type": "boolean"
+        },
+        "furniture": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Furniture",
+          "type": "array"
         },
         "hero_near": {
           "default": "",

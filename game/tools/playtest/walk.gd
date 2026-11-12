@@ -230,10 +230,15 @@ func _far_from(cell: Vector2i, room: String, lib: Dictionary) -> Vector2i:
 func _far(room: String, lib: Dictionary) -> Vector2i:
 	var best := Vector2i(-1, -1)
 	var length := -1
+	var s: GameSession = node("GameState").session
+	var keep := s.room_id
+	s.room_id = room  # the things of that room bar its squares once the hero is there (v0.8.4.43.26)
+	var things := MapSpots.walls(MapSpots.of(s, node("Catalog").data, WalkRules.view(s, node("Catalog").data)))
+	s.room_id = keep
 	for y: int in int(field.map["h"]):
 		for x: int in int(field.map["w"]):
 			var cell := Vector2i(x, y)
-			if WalkRules.room_of(field.map, cell) != room or not WalkRules.passable(field.map, lib, cell) or cell == field.hero_cell():
+			if WalkRules.room_of(field.map, cell) != room or not WalkRules.passable(field.map, lib, cell) or cell == field.hero_cell() 					or int(things.get(cell, 0)) & MapSpots.PATH:
 				continue
 			var steps := WalkRules.path(field.map, lib, field.hero_cell(), cell).size()
 			if steps > length:

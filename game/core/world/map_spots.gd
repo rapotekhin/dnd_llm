@@ -8,7 +8,11 @@ extends RefCounted
 ## v0.8.4.43.23: a thing with a body (rules.things.bodies) takes the squares of its `size`, turned as the seed says, and a
 ## station of a mark stands as its thing (`rules.map.station_bodies`); `walls` — what the squares of things bar, for the
 ## walk, the eye and the fight.
+## v0.8.4.43.26: the spots of a chunk (marks `spot:<group>`, `layouts.json` → `spots`) get the room's own things by the
+## seed — a share of them filled with a body of the group, each with its companions (`near`); a mark of a station stands
+## as its thing on every square of it; the spots left free are the master's, its furniture with a body stands there.
 
+const SPOT := "spot:"  ## a mark of a chunk where a thing of a group may stand (v0.8.4.43.26)
 const PATH := 1  ## a square of a thing bars the way
 const SIGHT := 2  ## and the eye
 
@@ -21,11 +25,22 @@ static func cfg(data: Dictionary) -> Dictionary:
 ## of a person, a creature or a foe (PortraitRules, "" — the letter). Those who walk with the hero are not here: they stand
 ## by the hero.
 static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dictionary]:
+	return _of(s, data, map)["tokens"]
+
+
+## The spots of the room no thing stands on (v0.8.4.43.26): [{"group", "at"}], for the master and its furniture.
+static func free_spots(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	return _of(s, data, WalkRules.view(s, data))["free"]
+
+
+## {"tokens": the tokens of `of`, "free": the spots left free}.
+static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary:
 	var lib: Dictionary = data["layouts"]
 	var cells := _cells(map, lib, s.room_id)
 	var out: Array[Dictionary] = []
+	var free: Array[Dictionary] = []
 	if cells.is_empty():
-		return out
+		return {"tokens": out, "free": free}
 	var taken := {}
 	for e: Dictionary in map["exits"]:
 		taken[Vector2i(int(e["ax"]), int(e["ay"]))] = true
@@ -35,21 +50,58 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 	var spots := _clear(map, lib, cells)  # nobody and nothing stands in a doorway: a click there opens the door (v0.8.4.42.1)
 	var walls := {}  # the squares of things that bar the way (a fight makes them blocks, FightField)
 	var ways := _ways_in(map, s.room_id)
+	var bodies: Dictionary = cfg(data).get("station_bodies", {})
+	var room_key := "%d|%s" % [s.game_seed, s.room_id]
 	for m: Dictionary in map["marks"]:
 		var mark := str(m["name"])
-		if int(m["room"]) == index and stations.has(mark) and not seen.has(mark):
-			seen[mark] = true
-			var at := Vector2i(int(m["x"]), int(m["y"]))
-			var t := _token("station:" + mark, "station", mark, _word(data, mark), at)
-			var body_id := str(cfg(data).get("station_bodies", {}).get(mark, ""))
-			if not body_id.is_empty():  # the mark's square is its thing's: the rest of it where it fits round the mark
-				var around: Array[Vector2i] = spots.duplicate()
-				if not around.has(at):
-					around.append(at)
-				_with_body(data, t, body_id, _lay(data, body_id, "%d|%s" % [s.game_seed, mark], at, around, cells, ways, walls, taken, true), walls)
-			for c: Vector2i in t.get("cells", [at]):
-				taken[c] = true
-			out.append(t)
+		var at := Vector2i(int(m["x"]), int(m["y"]))
+		if int(m["room"]) != index or taken.has(at):
+			continue
+		var station := stations.has(mark) and not seen.has(mark)
+		var body_id := str(bodies.get(mark, ""))
+		if not station and body_id.is_empty():
+			continue
+		var t := _token("station:" + mark, "station", mark, _word(data, mark), at) if station \
+			else _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, body_id), at)
+		if not station:
+			t["still"] = true
+		seen[mark] = true
+		if not body_id.is_empty():  # the mark's square is its thing's: the rest of it where it fits round the mark, along it
+			var want := {}
+			for o: Dictionary in map["marks"]:
+				if str(o["name"]) == mark and int(o["room"]) == index:
+					want[Vector2i(int(o["x"]), int(o["y"]))] = true
+			var around: Array[Vector2i] = spots.duplicate()
+			if not around.has(at):
+				around.append(at)
+			_with_body(data, t, body_id, _lay(data, body_id, "%s|%s|%d,%d" % [room_key, mark, at.x, at.y], at, around, cells, ways, walls, taken, true, want), walls)
+		for c: Vector2i in t.get("cells", [at]):
+			taken[c] = true
+		out.append(t)
+		if not body_id.is_empty():
+			_companions(data, t, room_key, spots, cells, ways, walls, taken, out)
+	var keys := LayoutGen.ground_keys(lib, map)
+	for sp: Dictionary in spot_marks(map, index):  # the room's own things on its spots, by the seed
+		var at: Vector2i = sp["at"]
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash("%s|spot|%d,%d" % [room_key, at.x, at.y])
+		var group: Dictionary = (lib.get("spots", {}).get("groups", {}) as Dictionary).get(str(sp["group"]), {})
+		if taken.has(at) or rng.randf() >= float(group.get("fill", 0.5)):
+			free.append(sp)
+			continue
+		var body_id := _pick(_weights(group.get("bodies", {}), keys), rng)
+		var laid := _lay(data, body_id, "%s|%d,%d" % [room_key, at.x, at.y], at, spots, cells, ways, walls, taken, true) if not body_id.is_empty() else {"loose": true}
+		if bool(laid.get("loose", false)):
+			free.append(sp)
+			continue
+		var t := _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, body_id), at)
+		t["still"] = true
+		t["spot"] = str(sp["group"])
+		_with_body(data, t, body_id, laid, walls)
+		for c: Vector2i in t["cells"]:
+			taken[c] = true
+		out.append(t)
+		_companions(data, t, room_key, spots, cells, ways, walls, taken, out)
 	var world := WorldView.new(data["world"])
 	var followers := Being.followers(s)
 	var part := TimeRules.part_name(s, data)
@@ -86,11 +138,120 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 		var t := _token("prop:" + str(p["id"]), "prop", str(p["id"]), str(p["name"]), at)
 		var body_id := ThingRules.body_id(data, p)
 		if not body_id.is_empty():
-			_with_body(data, t, body_id, _lay(data, body_id, "%d|%s" % [s.game_seed, str(p["id"])], at, spots, cells, ways, walls, taken, p.get("at") is Array), walls)
+			var key := "%d|%s" % [s.game_seed, str(p["id"])]
+			var laid := {}
+			if not p.get("at") is Array and str(p.get("near", "")).is_empty():  # the master's furniture on a free spot of its group
+				var sp := _free_spot_for(lib, keys, body_id, free, taken, key)
+				if not sp.is_empty():
+					laid = _lay(data, body_id, key, sp["at"], spots, cells, ways, walls, taken, true)
+					if bool(laid.get("loose", false)):
+						laid = {}
+					else:
+						free.erase(sp)
+			if laid.is_empty():
+				laid = _lay(data, body_id, key, at, spots, cells, ways, walls, taken, p.get("at") is Array)
+			_with_body(data, t, body_id, laid, walls)
 		for c: Vector2i in t.get("cells", [at]):
 			taken[c] = true
 		out.append(t)
+	return {"tokens": out, "free": free}
+
+
+## The marks `spot:<group>` of a room of the map: [{"group", "at"}] in the map's order.
+static func spot_marks(map: Dictionary, index: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for m: Dictionary in map["marks"]:
+		var name := str(m["name"])
+		if int(m["room"]) == index and name.begins_with(SPOT):
+			out.append({"group": name.substr(SPOT.length()), "at": Vector2i(int(m["x"]), int(m["y"]))})
 	return out
+
+
+## A free spot whose group holds `body_id` for this place, the first by the seed of `key`; {} — none.
+static func _free_spot_for(lib: Dictionary, keys: Array[String], body_id: String, free: Array[Dictionary], taken: Dictionary, key: String) -> Dictionary:
+	var groups: Dictionary = lib.get("spots", {}).get("groups", {})
+	var fits := free.filter(func(sp: Dictionary) -> bool:
+		var weights: Variant = _weights(groups.get(str(sp["group"]), {}).get("bodies", {}), keys)
+		return weights is Dictionary and (weights as Dictionary).has(body_id) and not taken.has(sp["at"]))
+	if fits.is_empty():
+		return {}
+	return fits[absi(key.hash()) % fits.size()]
+
+
+## A body by weights {id: weight}; "" — none.
+static func _pick(weights: Variant, rng: RandomNumberGenerator) -> String:
+	if not weights is Dictionary or (weights as Dictionary).is_empty():
+		return ""
+	var total := 0.0
+	for id: String in weights:
+		total += float(weights[id])
+	var roll := rng.randf() * total
+	for id: String in weights:
+		roll -= float(weights[id])
+		if roll < 0.0:
+			return id
+	return str((weights as Dictionary).keys().back())
+
+
+## The things that stand by a thing (`layouts.json` → `spots.near`): each row by its chance, `count` times, on squares
+## beside the thing's own; one laid the way the thing is with `same_turn` (benches along a table). Nothing fits — none.
+static func _companions(data: Dictionary, t: Dictionary, room_key: String, spots: Array[Vector2i], cells: Array[Vector2i], ways: Array[Vector2i],
+		walls: Dictionary, taken: Dictionary, out: Array[Dictionary]) -> void:
+	var rows: Array = data["layouts"].get("spots", {}).get("near", {}).get(str(t.get("body", "")), [])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("%s|near|%s" % [room_key, str(t["ref"])])
+	var n := 0
+	for row: Dictionary in rows:
+		for i: int in int(row.get("count", 1)):
+			if rng.randf() >= float(row.get("chance", 1.0)):
+				continue
+			var body_id := str(row["body"])
+			var key := "%s|%s|%d" % [room_key, str(t["ref"]), n]
+			n += 1
+			var laid := _lay(data, body_id, key, t["corner"], spots, cells, ways, walls, taken, false, {}, t["cells"], int(t["turn"]) if bool(row.get("same_turn", false)) else -1)
+			if bool(laid.get("loose", false)):
+				continue
+			var at: Vector2i = laid["cells"][0]
+			var c := _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, body_id), at)
+			c["still"] = true
+			_with_body(data, c, body_id, laid, walls)
+			for sq: Vector2i in c["cells"]:
+				taken[sq] = true
+			out.append(c)
+
+
+static func _body_name(data: Dictionary, body_id: String) -> String:
+	return str(ThingRules.cfg(data)["bodies"].get(body_id, {}).get("name", body_id)).capitalize()
+
+
+## The room's things in words for the master (v0.8.4.43.26): what the engine stood there — «стол ×2, скамья ×3» — and the
+## spots left free with the bodies each takes — «место для припасов ×2 (barrel, crate, chest)».
+static func furniture_words(s: GameSession, data: Dictionary, room := "") -> Dictionary:
+	var keep := s.room_id
+	if not room.is_empty():
+		s.room_id = room  # a read of another room (the second line's furnishing): put back below
+	var map := WalkRules.view(s, data)
+	var got := _of(s, data, map)
+	s.room_id = keep
+	var count := {}
+	for t: Dictionary in got["tokens"]:
+		if str(t["kind"]) in ["thing", "station"] and not str(t.get("body", "")).is_empty():
+			var name := str(ThingRules.cfg(data)["bodies"].get(str(t["body"]), {}).get("name", t["body"]))
+			count[name] = int(count.get(name, 0)) + 1
+	var stood: Array[String] = []
+	for name: String in count:
+		stood.append(name if int(count[name]) == 1 else "%s ×%d" % [name, count[name]])
+	var groups: Dictionary = data["layouts"].get("spots", {}).get("groups", {})
+	var keys := LayoutGen.ground_keys(data["layouts"], map)
+	var by_group := {}
+	for sp: Dictionary in got["free"]:
+		by_group[str(sp["group"])] = int(by_group.get(str(sp["group"]), 0)) + 1
+	var free: Array[String] = []
+	for g: String in by_group:
+		var weights: Variant = _weights(groups.get(g, {}).get("bodies", {}), keys)
+		var ids: Array = (weights as Dictionary).keys() if weights is Dictionary else []
+		free.append("%s ×%d (body: %s)" % [str(groups.get(g, {}).get("name", g)), by_group[g], ", ".join(ids)])
+	return {"stood": stood, "free": free}
 
 
 ## What the squares of the things among `tokens` bar: {square: PATH | SIGHT} (v0.8.4.43.23). The walk, the eye and a
@@ -121,8 +282,10 @@ static func footprint(size: Array, at: Vector2i, turn: int) -> Array[Vector2i]:
 ## A thing of a body laid near `at`: its squares all free among `spots` and not `taken`, turned as the seed of `key` says
 ## first; one that bars the way keeps every way of the room joined. `must` — one of its squares is `at` itself (a station
 ## of a mark, a thing put by hand). {"at": top left, "turn", "cells"}; nothing fits — one square at `at`.
+## `want` — of the fits the one with most squares in it (a counter along its marks); `beside` — one of its squares next to
+## one of these (a companion); `turn_first` — that turn tried first. Nothing fits — "loose".
 static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, spots: Array[Vector2i], cells: Array[Vector2i],
-		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary, must: bool) -> Dictionary:
+		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary, must: bool, want: Dictionary = {}, beside: Array = [], turn_first: int = -1) -> Dictionary:
 	var body: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
 	var size: Array = body.get("size", [1, 1])
 	var bars := (body.get("blocks", []) as Array).has("path")
@@ -132,6 +295,15 @@ static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, s
 			free[c] = true
 	var h := absi(key.hash())
 	var turns: Array[int] = [h % 4, (h + 1) % 4, (h + 2) % 4, (h + 3) % 4]
+	if turn_first >= 0:
+		turns = [turn_first % 4, (turn_first + 2) % 4, (turn_first + 1) % 4, (turn_first + 3) % 4]
+	var near := {}
+	for c: Vector2i in beside:
+		for dy: int in [-1, 0, 1]:
+			for dx: int in [-1, 0, 1]:
+				near[c + Vector2i(dx, dy)] = true
+	var best := {}
+	var best_score := -1
 	var starts: Array[Vector2i] = [at]
 	if not must:
 		starts = spots.filter(func(c: Vector2i) -> bool: return free.has(c))
@@ -148,10 +320,22 @@ static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, s
 					var mine := footprint(size, start - Vector2i(ox, oy), turn)
 					if not mine.all(func(c: Vector2i) -> bool: return free.has(c)):
 						continue
+					if not beside.is_empty() and not mine.any(func(c: Vector2i) -> bool: return near.has(c)):
+						continue
 					if bars and not _joined_without(cells, ways, walls, mine):
 						continue
-					return {"at": start - Vector2i(ox, oy), "turn": turn, "cells": mine}
-	return {"at": at, "turn": turns[0], "cells": [at] as Array[Vector2i]}
+					var laid := {"at": start - Vector2i(ox, oy), "turn": turn, "cells": mine}
+					if want.is_empty():
+						return laid
+					var score := mine.filter(func(c: Vector2i) -> bool: return want.has(c)).size()
+					if score > best_score:
+						best = laid
+						best_score = score
+		if not beside.is_empty() and WalkRules.distance(start, at) > 4:
+			break
+	if not best.is_empty():
+		return best
+	return {"at": at, "turn": turns[0], "cells": [at] as Array[Vector2i], "loose": true}
 
 
 ## A token takes its thing's body: its squares, its turn, what it bars; its own square is one of them. The squares that
@@ -160,7 +344,7 @@ static func _with_body(data: Dictionary, t: Dictionary, body_id: String, laid: D
 	var body: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
 	var mine: Array[Vector2i] = laid["cells"]
 	var blocks: Array = body.get("blocks", [])
-	var bars := (PATH if blocks.has("path") else 0) | (SIGHT if blocks.has("sight") else 0)
+	var bars := (PATH if blocks.has("path") and not bool(laid.get("loose", false)) else 0) | (SIGHT if blocks.has("sight") else 0)
 	t["body"] = body_id
 	t["turn"] = int(laid["turn"])
 	t["cells"] = mine
@@ -392,13 +576,37 @@ static func _off_the_way(cells: Array[Vector2i], spots: Array[Vector2i], ways: A
 
 
 ## Every way of the room joined with the squares of `extra` barred too.
+## v0.8.4.43.26: and no square of the room's floor shut off from the rest (a corner walled by a hearth, a table and its
+## benches), unless it was shut off before.
 static func _joined_without(cells: Array[Vector2i], ways: Array[Vector2i], walls: Dictionary, extra: Array[Vector2i]) -> bool:
-	if ways.size() < 2:
-		return true
 	var more := walls.duplicate()
 	for c: Vector2i in extra:
 		more[c] = true
-	return _joined(cells, ways, more, Vector2i(-1, -1)) or not _joined(cells, ways, walls, Vector2i(-1, -1))
+	return _whole(cells, ways, more) or not _whole(cells, ways, walls)
+
+
+## The free squares of the room and its ways one region: each reached from any other over the free ones.
+static func _whole(cells: Array[Vector2i], ways: Array[Vector2i], walls: Dictionary) -> bool:
+	var open := {}
+	for c: Vector2i in cells:
+		if not walls.has(c):
+			open[c] = true
+	for c: Vector2i in ways:
+		if not walls.has(c):
+			open[c] = true
+	if open.is_empty():
+		return true
+	var first: Vector2i = open.keys()[0]
+	var seen := {first: true}
+	var front: Array[Vector2i] = [first]
+	while not front.is_empty():
+		var c: Vector2i = front.pop_back()
+		for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var n := c + d
+			if open.has(n) and not seen.has(n):
+				seen[n] = true
+				front.append(n)
+	return seen.size() == open.size()
 
 
 ## Every way of the room reached from the first over its free squares, with `walls` and `extra` barred.
@@ -505,7 +713,7 @@ static func words(s: GameSession, data: Dictionary, room := "") -> Array[String]
 	for m: Dictionary in map["marks"]:
 		var mark := str(m["name"])
 		var line := "%s [%s]" % [_word(data, mark), mark]
-		if int(m["room"]) == index and mark != LayoutGen.ENTRY and not out.has(line):
+		if int(m["room"]) == index and mark != LayoutGen.ENTRY and not mark.begins_with(SPOT) and not out.has(line):
 			out.append(line)
 	return out
 
@@ -564,3 +772,12 @@ static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[Stri
 	var kept := LayoutGen.on_grid(LayoutRules.map_of(s, data, s.room_id), cell)
 	moved[str(p["who"])] = {"room": s.room_id, "part": TimeRules.part_name(s, data), "x": kept.x, "y": kept.y}
 	return []
+
+
+## The weights of a spot group's bodies for this place: the first row of `row` by `keys` (LayoutGen.ground_keys); {} — none.
+static func _weights(row: Variant, keys: Array[String]) -> Dictionary:
+	if row is Dictionary:
+		for k: String in keys:
+			if (row as Dictionary).has(k) and row[k] is Dictionary:
+				return row[k]
+	return {}
