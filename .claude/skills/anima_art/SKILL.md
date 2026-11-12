@@ -25,7 +25,7 @@ description: Use this skill when drawing game art with Anima on our own Forge �
 | `anima_gen.py` | сервер | рисует только недостающее или изменившееся (рядом с вариантом `.txt` — промт; нет сырого кадра этой затравки — тоже рисует); `--style flat\|painted`, `--recut`, `--sheets`, `--ids`, `--only`, `--seeds` |
 | `install.py` | репо | `picks.json` (`variant`, `redo`, `overlay`) → `game/assets/icons/<kind>/<id>.png`; `--jobs …portraits.json` → `game/assets/portraits/…` |
 | `overlays.py` | репо | знак поверх иконки кодом (пацифик на «Не убивать»): модель символы коверкает |
-| `pick.py`, `pick.html` | дома | выбор вариантов в браузере: варианты иконки рядом (до шести), щелчок пишет `variant` в `picks_painted.json`; `?ids=a,b` — только перерисованные; перезапуск после новых вариантов |
+| `pick.py`, `pick.html` | дома | выбор вариантов в браузере: одна страница `http://127.0.0.1:8791/`, кнопка на каждый нарисованный вид (`SETS`: папка и файл выбора вида — действия из `out_painted_flux/` в `picks_flux.json`, прочие в `picks_painted.json`), варианты иконки рядом (до шести), щелчок пишет `variant`; `#acts` — открыть на виде, `?ids=a,b` — только перерисованные; перезапуск после новых иконок |
 | `matte.py` | дома, `.venv-matte` (torch, CUDA) | вещи семейства `object` вырезает из сырых кадров BiRefNet (~0,7 с кадр на RTX 3050 Ti); запускать после каждого прогона с сервера |
 | `ui/guides.py`, `ui/paint.py`, `ui/mock.py` | репо | элементы интерфейса: свои направляющие → ControlNet → макет с нарезкой на 9 частей |
 

@@ -160,8 +160,8 @@
   "tags": "potion, round bottle, green liquid, cork, sparkle"
  },
  "acts/volley": {
-  "sentence": "A single fan of three arrows flying up to the right side by side, brown shafts, grey heads and white fletchings.",
-  "tags": "arrows, three arrows, volley, flying, diagonal"
+  "sentence": "Two standing human silhouettes side by side, a thin faded crosshair on the left one and a bold crosshair on the right one, joined by a curved dotted arrow leaping from the left to the right.",
+  "tags": "crosshair, reticle, two silhouettes, curved arrow, dotted arc, target"
  },
  "acts/walk": {
   "dark": false,

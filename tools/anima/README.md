@@ -127,7 +127,7 @@ python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style painted --sh
 
 ```bash
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style painted --only acts --backend openrouter   # 34 × 2, ~5 мин, ~$0.6
-python tools/anima/pick.py --kind acts --out tools/anima/out_painted_flux --picks tools/anima/picks_flux.json
+python tools/anima/pick.py                     # http://127.0.0.1:8791/#acts
 python tools/anima/install.py --out tools/anima/out_painted_flux --picks tools/anima/picks_flux.json --only acts
 ```
 
@@ -142,8 +142,9 @@ nohup python3 anima_gen.py jobs/icons.json --style painted --steps 20 --only fea
 python3 anima_gen.py jobs/icons.json --style painted --ids fireball,bless,longsword --first 1
 # дома: out_painted/<вид>/ с сервера в tools/anima/out_painted/; группы вырезать моделью
 tools/anima/.venv-matte/Scripts/python.exe tools/anima/matte.py tools/anima/jobs/icons.json --only groups
-# выбор вариантов в браузере: щелчок пишет его в picks_painted.json; ?ids=a,b — только перерисованные
-python tools/anima/pick.py --kind features
+# выбор вариантов в браузере: одна страница, кнопка на вид («Заклинания», «Действия», «Интерфейс»…), щелчок пишет
+# вариант в выбор своей папки (picks_painted.json, у действий picks_flux.json); #acts — открыть на виде, ?ids=a,b — только перерисованные
+python tools/anima/pick.py                     # http://127.0.0.1:8791/ ; --kind spells,acts — только эти виды
 python tools/anima/install.py --out tools/anima/out_painted --picks tools/anima/picks_painted.json
 ```
 
