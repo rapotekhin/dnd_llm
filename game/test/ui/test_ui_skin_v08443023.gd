@@ -29,6 +29,11 @@ func test_a_frame_keeps_its_corners_and_the_flat_styles_margins() -> void:
 	assert_float(b.content_margin_top).is_equal(10.0)
 	var card := UiTheme.frame_box(ImageTexture.create_from_image(img), {"cut": 40, "scale": 0.4, "pad": 6}, flat)
 	assert_float(card.content_margin_top).is_equal(16.0)  # the card's line stands 7 px inside: the text keeps off it
+	var window := UiTheme.frame_box(ImageTexture.create_from_image(img), {"cut": 120, "scale": 0.36, "pad": [12, 10]}, flat)
+	assert_float(window.content_margin_left).is_equal(26.0)  # across: the line 12 px in
+	assert_float(window.content_margin_bottom).is_equal(20.0)  # down
+	var line := UiTheme.frame_box(ImageTexture.create_from_image(img), {"scale": 0.5, "pad": [0, 5]}, null)
+	assert_float(line.get_minimum_size().y).is_equal(10.0)  # a separator's line has its height with no flat style under it
 
 
 func test_no_drawn_file_leaves_the_flat_style() -> void:
@@ -40,6 +45,12 @@ func test_no_drawn_file_leaves_the_flat_style() -> void:
 	assert_int(UiTheme.skin(theme, f)).is_equal(0)
 	assert_object(theme.get_stylebox("normal", "Button")).is_same(flat)
 	assert_object(UiTheme.frame({}, "button")).is_null()
+
+
+func test_no_ornament_drawn_is_no_ornament() -> void:
+	var sep: HSeparator = auto_free(HSeparator.new())
+	UiTheme.adorn(sep)  # no file in a test run: nothing connected, nothing drawn
+	assert_int(sep.get_signal_connection_list("draw").size()).is_equal(0) if UiTheme.ornament("divider_mark") == null else assert_bool(true).is_true()
 
 
 func test_a_variation_takes_the_margins_of_its_base() -> void:

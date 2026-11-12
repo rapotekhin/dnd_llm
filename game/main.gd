@@ -6,6 +6,8 @@ var _screen: Control
 
 func _ready() -> void:
 	UiTheme.skin(ThemeDB.get_project_theme(), Catalog.data.get("icons", {}).get("frames", {}))  # the drawn frames, where laid
+	if UiTheme.ornament("divider_mark") != null:
+		get_tree().node_added.connect(UiTheme.adorn)  # the divider's mark on every separator
 	var bg := Panel.new()
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)

@@ -193,16 +193,19 @@
 		"SwapSets": "weapon_set"
 	},
 	"frames": {
-		"_doc": "v0.8.4.43.23, read only by UiTheme.skin and UiTheme.frame: the interface's frames in the lines style (the author's pick of 2026-11-12), drawn by tools/anima/ui/paint.py and cut by tools/anima/ui/frames.py into <root><file>.png. A part's `cut` is the margin of its nine pieces in the drawn picture's px and `scale` the drawn px to the game's (the corners keep their size, the edges and the middle stretch); `files` are the pictures made of a part, `look` how its picture is changed (hover, pressed, disabled, warm — the main button's gold, on and off — a tab); `slots` give a style of the project's theme («Type/style») a file, laid as a StyleBoxTexture with the content margins of the flat style it replaces, wider by the part's `pad` where its drawn line stands inside the edge (a card's line, 7 px in, met the text of a menu). A file not drawn leaves the flat style: the art is not kept in git.",
+		"_doc": "v0.8.4.43.23, read only by UiTheme.skin and UiTheme.frame: the interface's frames in the lines style (the author's pick of 2026-11-12), drawn by tools/anima/ui/paint.py and cut by tools/anima/ui/frames.py into <root><file>.png. A part's `cut` is the margin of its nine pieces in the drawn picture's px and `scale` the drawn px to the game's (the corners keep their size, the edges and the middle stretch); `files` are the pictures made of a part, `look` how its picture is changed (hover, pressed, disabled, warm — the main button's gold, on and off — a tab); `slots` give a style of the project's theme («Type/style») a file, laid as a StyleBoxTexture with the content margins of the flat style it replaces, wider by the part's `pad` [across, down] — how far its drawn line stands inside the edge, so the text keeps the gap it had from the flat border (the author, 2026-11-12: «текст начинается слишком от края»). The ornaments are laid by code where the theme has no place for them: the crest over a window's top (UiTheme.crest), the divider's mark in the middle of every HSeparator (UiTheme.adorn), the ring round a portrait with its HP in the ring's channel (Portrait). `look` of an ornament: lit — its brightness as alpha, crest — cropped to what is drawn, line and mark — a divider's stretched line and its middle mark; a file's own `scale` stands over its part's (the mark larger than the thin line). A file not drawn leaves the flat style: the art is not kept in git.",
 		"root": "res://assets/ui/frames/",
 		"parts": {
-			"window": {"cut": 120, "scale": 0.36},
+			"window": {"cut": 120, "scale": 0.36, "pad": [8, 8]},
 			"button": {"cut": 76, "scale": 0.15},
 			"accent": {"cut": 76, "scale": 0.15},
 			"tab": {"cut": 66, "scale": 0.16},
-			"card": {"cut": 40, "scale": 0.4, "pad": 6},
+			"card": {"cut": 40, "scale": 0.4, "pad": [12, 6]},
 			"field": {"cut": 24, "scale": 0.21},
-			"cell": {"cut": 0, "scale": 0.25}
+			"cell": {"cut": 0, "scale": 0.25},
+			"crest": {"scale": 0.48},
+			"divider": {"scale": 0.5, "pad": [0, 5]},
+			"ring": {"scale": 0.375}
 		},
 		"files": {
 			"window": {"part": "window"},
@@ -220,7 +223,11 @@
 			"tab_on": {"part": "tab", "look": "on"},
 			"tab_off": {"part": "tab", "look": "off"},
 			"tab_hover": {"part": "tab"},
-			"cell": {"part": "cell"}
+			"cell": {"part": "cell"},
+			"crest": {"part": "crest", "look": "crest"},
+			"divider_line": {"part": "divider", "look": "line"},
+			"divider_mark": {"part": "divider", "look": "mark", "scale": 0.8},
+			"ring": {"part": "ring", "look": "lit"}
 		},
 		"slots": {
 			"SidePanel/panel": "window",
@@ -250,7 +257,8 @@
 			"LineEdit/read_only": "field_off",
 			"TextEdit/normal": "field",
 			"TextEdit/focus": "field_focus",
-			"TextEdit/read_only": "field_off"
+			"TextEdit/read_only": "field_off",
+			"HSeparator/separator": "divider_line"
 		}
 	}
 }

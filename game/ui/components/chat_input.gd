@@ -36,7 +36,8 @@ func fit() -> void:
 	var lines := get_total_visible_line_count()
 	if text.is_empty():
 		var font := get_theme_font("font")
-		var drawn := font.get_multiline_string_size(tr(placeholder_text), HORIZONTAL_ALIGNMENT_LEFT, size.x - box.x, get_theme_font_size("font_size"))
+		var room := size.x - box.x - get_v_scroll_bar().get_combined_minimum_size().x  # the hint wraps short of the scroll bar's place
+		var drawn := font.get_multiline_string_size(tr(placeholder_text), HORIZONTAL_ALIGNMENT_LEFT, room, get_theme_font_size("font_size"))
 		lines = ceili(drawn.y / font.get_height(get_theme_font_size("font_size")))
 	var want := clampf(lines * get_line_height() + box.y, _min_height, MAX_HEIGHT)
 	if not is_equal_approx(custom_minimum_size.y, want):

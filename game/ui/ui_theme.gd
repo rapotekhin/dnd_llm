@@ -92,30 +92,69 @@ static func frame(frames: Dictionary, file: String) -> Texture2D:
 
 
 ## A drawn frame as a style: its corners as drawn (the part's `cut` at its `scale`), the edges and the middle stretched,
-## the content's margins as `like` has them and the part's `pad` more (its line stands inside the edge).
+## the content's margins as `like` has them and the part's `pad` [across, down] more — how far its drawn line stands
+## inside the edge, so the text keeps the gap it had from the flat border.
 static func frame_box(tex: Texture2D, part: Dictionary, like: StyleBox) -> StyleBoxTexture:
 	var b := StyleBoxTexture.new()
 	b.texture = tex
 	b.set_texture_margin_all(roundf(float(part.get("cut", 0)) * float(part.get("scale", 1.0))))
-	if like != null:
-		for side: int in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
-			b.set_content_margin(side, maxf(0.0, like.get_content_margin(side)) + float(part.get("pad", 0)))
+	var pad: Variant = part.get("pad", 0)
+	var across := float(pad[0]) if pad is Array else float(pad)
+	var down := float(pad[1]) if pad is Array else float(pad)
+	for side: int in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		var was := maxf(0.0, like.get_content_margin(side)) if like != null else 0.0
+		var more := across if side == SIDE_LEFT or side == SIDE_RIGHT else down
+		if like != null or more > 0.0:
+			b.set_content_margin(side, was + more)
 	return b
 
 
+static var _ornaments := {}  # a file of `frames` → its texture or null, read once
 static var _cell: StyleBox = null
-static var _cell_read := false
+
+
+## A drawn file of the game's own `frames` (Catalog), null when it is not drawn: an ornament laid by code.
+static func ornament(file: String) -> Texture2D:
+	if not _ornaments.has(file):
+		_ornaments[file] = frame(_frames(), file)
+	return _ornaments[file]
 
 
 ## The cell's drawn frame for a square of the hotbar and the inventory (IconSlot), null when it is not drawn.
 static func cell_box() -> StyleBox:
-	if not _cell_read:
-		_cell_read = true
-		var root := (Engine.get_main_loop() as SceneTree).root
-		var frames: Dictionary = root.get_node("Catalog").data.get("icons", {}).get("frames", {}) if root.has_node("Catalog") else {}
-		var tex := frame(frames, "cell")
-		_cell = frame_box(tex, _part_of(frames, "cell"), null) if tex != null else null
+	if _cell == null and ornament("cell") != null:
+		_cell = frame_box(ornament("cell"), _part_of(_frames(), "cell"), null)
 	return _cell
+
+
+## The crest over a window's top edge, in its middle, half above it (the author's pick of the lines style), on the
+## panel's own drawing; a window narrower than the crest takes it smaller.
+static func crest(panel: Control) -> void:
+	var tex := ornament("crest")
+	if tex == null:
+		return
+	panel.draw.connect(func() -> void:
+		var w := minf(tex.get_width(), panel.size.x * 0.5)
+		var h := tex.get_height() * w / tex.get_width()
+		panel.draw_texture_rect(tex, Rect2(Vector2((panel.size.x - w) / 2, -h / 2), Vector2(w, h)), false))
+	panel.queue_redraw()
+
+
+## A node as it enters the tree: an HSeparator gets the divider's mark in its middle over the stretched line the theme
+## draws (StyleBoxTexture cannot keep a mark unstretched). Connected to SceneTree.node_added by main.gd.
+static func adorn(node: Node) -> void:
+	var tex := ornament("divider_mark") if node is HSeparator else null
+	if tex == null:
+		return
+	var sep := node as HSeparator
+	sep.draw.connect(func() -> void:
+		var at := (sep.size - tex.get_size()) / 2
+		sep.draw_texture(tex, at.floor()))
+
+
+static func _frames() -> Dictionary:
+	var root := (Engine.get_main_loop() as SceneTree).root
+	return root.get_node("Catalog").data.get("icons", {}).get("frames", {}) if root.has_node("Catalog") else {}
 
 
 static func _part_of(frames: Dictionary, file: String) -> Dictionary:

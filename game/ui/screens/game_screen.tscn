@@ -240,7 +240,7 @@ theme_override_constants/separation = 6
 
 [node name="InputRow" type="HBoxContainer" parent="Margin/Row/Right/Col"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 4
 
 [node name="AttachButton" type="MenuButton" parent="Margin/Row/Right/Col/InputRow"]
 unique_name_in_owner = true

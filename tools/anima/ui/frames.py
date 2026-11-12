@@ -13,9 +13,9 @@ import argparse
 import json
 from pathlib import Path
 
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageFilter
 
-from mock import GAME, OUT, outline, states, unground
+from mock import BG, GAME, OUT, lit, outline, states, unground
 from preview import PICKS, seeds_of
 
 LOOKS = {"hover": "наведение", "pressed": "нажата", "disabled": "недоступна"}  # mock.states by its names
@@ -37,12 +37,51 @@ def look_of(img: Image.Image, look: str) -> Image.Image:
     return img
 
 
+def ornament(img: Image.Image, look: str) -> Image.Image:
+    """An ornament painted on black (crest, divider, ring): its brightness is its alpha (mock.lit). `lit` keeps the
+    whole square (the ring: its circles stand where the portrait's are counted), `crest` crops it to what is drawn;
+    a divider is split into its stretched `line` — the left half up to the middle mark mirrored, so the mark is not
+    stretched with it — and its `mark`, the diamond with its dots laid once in the middle."""
+    orn = lit(img)
+    if look == "lit":
+        return orn
+    box = orn.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox() or (0, 0, *orn.size)
+    if look == "crest":  # a cartouche: the window's top line broken under a dark ground round its strokes
+        pad = 26
+        orn = orn.crop((box[0] - pad, box[1] - pad, box[2] + pad, box[3] + pad))
+        orn = Image.merge("RGBA", [*ImageEnhance.Brightness(orn.convert("RGB")).enhance(1.45).split(), orn.getchannel("A")])
+        ground = orn.getchannel("A").filter(ImageFilter.MaxFilter(45)).filter(ImageFilter.MinFilter(19))  # closed: the loops filled
+        ground = ground.filter(ImageFilter.GaussianBlur(4))
+        out = Image.new("RGBA", orn.size, (*BG, 0))
+        out.putalpha(ground)
+        out.alpha_composite(orn)
+        return out
+    orn = orn.crop(box)
+    w, h = orn.size
+    alpha = orn.getchannel("A")
+    tall = [x for x in range(w) if sum(1 for y in range(h) if alpha.getpixel((x, y)) > 60) > 3]  # the mark is taller than the line
+    mid = (min(tall), max(tall) + 1) if tall else (w // 2, w // 2)
+    gap = max(2, (mid[1] - mid[0]) // 3)  # the dots beside the mark go with it
+    a, b = max(0, mid[0] - gap * 2), min(w, mid[1] + gap * 2)
+    if look == "mark":  # the dots and the diamond alone: the stretched line runs on under them
+        return orn.crop((max(0, mid[0] - 1), 0, min(w, mid[1] + 1), h))
+    half = orn.crop((0, 0, a, h))
+    line = Image.new("RGBA", (a * 2, h), (0, 0, 0, 0))
+    line.paste(half, (0, 0))
+    line.paste(half.transpose(Image.FLIP_LEFT_RIGHT), (a, 0))
+    return line
+
+
 def make(raw: Path, seed: int, part: str, look: str, scale: float) -> Image.Image:
-    """One file: the drawn part in its look, cut out of its ground by the part's own line, at the game's px."""
+    """One file: the drawn part in its look, cut out of its ground by the part's own line (an ornament by its
+    brightness), at the game's px."""
     plain = Image.open(raw / f"{part}_lines_{seed}.png").convert("RGB")
-    shape = outline("button" if part == "accent" else part, "thin", plain.size)
-    cut = unground(look_of(plain, look), shape)
-    cut.putalpha(unground(plain, shape).getchannel("A"))  # a darkened look keeps the alpha of the plain picture
+    if look in ("lit", "crest", "line", "mark"):
+        cut = ornament(plain, look)
+    else:
+        shape = outline("button" if part == "accent" else part, "thin", plain.size)
+        cut = unground(look_of(plain, look), shape)
+        cut.putalpha(unground(plain, shape).getchannel("A"))  # a darkened look keeps the alpha of the plain picture
     w, h = cut.size
     return cut.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.LANCZOS)
 
@@ -58,9 +97,9 @@ def main() -> None:
     for name, f in frames["files"].items():
         part = frames["parts"][f["part"]]
         out = dst / f"{name}.png"
-        img = make(a.raw, seed_of[f["part"]], f["part"], f.get("look", ""), part["scale"])
+        img = make(a.raw, seed_of[f["part"]], f["part"], f.get("look", ""), f.get("scale", part["scale"]))  # a file's own scale first
         print(f"{name:16s} {f['part']}_lines_{seed_of[f['part']]} {f.get('look', ''):13s} {img.size[0]}×{img.size[1]}"
-              f"  margin {round(part['cut'] * part['scale'])}")
+              f"  margin {round(part.get('cut', 0) * part['scale'])}")
         if not a.dry:
             dst.mkdir(parents=True, exist_ok=True)
             img.save(out)

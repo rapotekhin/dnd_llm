@@ -6,6 +6,12 @@ extends IconSlot
 ## icon's card (`tip_title`, `tip_body`). `face` draws a face in a circle anywhere: the map's tokens, the fight's bodies.
 ## No autoload names: a playtest's script may compile this first.
 
+## Where the drawn ring's lines stand, a share of the portrait's half side (measured on assets/ui/frames/ring.png): the
+## face inside the inner line, the HP along the channel between the inner line and the outer one.
+const RING_INNER := 0.833
+const RING_CHANNEL := 0.865
+const RING_WIDTH := 0.045
+
 var letter := "?"
 var hp := 0
 var top := 1
@@ -81,14 +87,32 @@ func _draw() -> void:
 	var centre := size / 2
 	var rad := minf(size.x, size.y) / 2 - 4
 	var share := clampf(float(hp) / maxi(1, top), 0.0, 1.0)
-	draw_circle(centre, rad, UiTheme.PANEL_RAISED)
-	var drawn := face(self, picture, centre, rad - 1.5, Color(0.42, 0.42, 0.42) if down else Color.WHITE)
-	if picked:
-		draw_arc(centre, rad + 2.5, 0, TAU, 48, UiTheme.ACCENT_BRIGHT, 3.0)
-	draw_arc(centre, rad, 0, TAU, 48, UiTheme.BORDER, 3.0)
-	draw_arc(centre, rad, -PI / 2, -PI / 2 + TAU * share, 48, UiTheme.hp_color(share), maxf(3.0, rad / 11.0))
-	if temp > 0:
-		draw_arc(centre, rad - 5, -PI / 2, -PI / 2 + TAU * clampf(float(temp) / maxi(1, top), 0.0, 1.0), 32, UiTheme.TEMP_HP, 2.0)
+	var tint := Color(0.42, 0.42, 0.42) if down else Color.WHITE
+	var temp_share := clampf(float(temp) / maxi(1, top), 0.0, 1.0)
+	var ring := UiTheme.ornament("ring")
+	var drawn := false
+	if ring != null:  # the drawn ring (v0.8.4.43.23): the face inside its inner line, the HP in the channel between its lines
+		var half := minf(size.x, size.y) / 2
+		var inner := half * RING_INNER
+		draw_circle(centre, inner, UiTheme.PANEL_RAISED)
+		drawn = face(self, picture, centre, inner, tint)
+		var width := maxf(2.0, half * RING_WIDTH)
+		draw_arc(centre, half * RING_CHANNEL, 0, TAU, 48, UiTheme.BG, width)
+		draw_arc(centre, half * RING_CHANNEL, -PI / 2, -PI / 2 + TAU * share, 48, UiTheme.hp_color(share), width)
+		draw_texture_rect(ring, Rect2(centre - Vector2(half, half), Vector2(half, half) * 2), false)
+		if picked:
+			draw_arc(centre, half - 1.5, 0, TAU, 48, UiTheme.ACCENT_BRIGHT, 2.5)
+		if temp > 0:
+			draw_arc(centre, inner - 2.5, -PI / 2, -PI / 2 + TAU * temp_share, 32, UiTheme.TEMP_HP, 2.0)
+	else:
+		draw_circle(centre, rad, UiTheme.PANEL_RAISED)
+		drawn = face(self, picture, centre, rad - 1.5, tint)
+		if picked:
+			draw_arc(centre, rad + 2.5, 0, TAU, 48, UiTheme.ACCENT_BRIGHT, 3.0)
+		draw_arc(centre, rad, 0, TAU, 48, UiTheme.BORDER, 3.0)
+		draw_arc(centre, rad, -PI / 2, -PI / 2 + TAU * share, 48, UiTheme.hp_color(share), maxf(3.0, rad / 11.0))
+		if temp > 0:
+			draw_arc(centre, rad - 5, -PI / 2, -PI / 2 + TAU * temp_share, 32, UiTheme.TEMP_HP, 2.0)
 	var font := get_theme_font("font")
 	var big := int(rad * (0.8 if numbers else 0.95))
 	if not drawn:

@@ -57,6 +57,7 @@ func _bind() -> void:
 	if width <= 0.0:
 		dim.color = Color(UiTheme.BG, 0.94)  # a full window hides what is under it (Л1)
 	_panel = UiScenes.need(self, "%ModalPanel")
+	UiTheme.crest(_panel)  # the drawn crest over the window's top, where laid (v0.8.4.43.23)
 	title = UiScenes.need(self, "%ModalTitle")
 	close_x = UiScenes.need(self, "%CloseX")
 	close_x.pressed.connect(func() -> void: close_requested.emit())
