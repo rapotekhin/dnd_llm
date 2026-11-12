@@ -1321,7 +1321,10 @@ static func grounds(lib: Dictionary, map: Dictionary) -> PackedByteArray:
 		var line: String = rows[y]
 		for x: int in mini(w, line.length()):
 			var c := line[x]
-			if c == BLANK:
+			if c == BLANK and not by_char.has(c):  # the blank between the rooms: what `cells` has for it here, else none
+				var under := _by_keys(lib["grounds"]["cells"].get(BLANK, {}), keys)
+				by_char[c] = order.find(under) if not under.is_empty() else -1
+			if c == BLANK and int(by_char[c]) < 0:
 				continue
 			if not by_char.has(c):
 				var at := order.find(ground_of(lib, keys, c))

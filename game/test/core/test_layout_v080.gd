@@ -610,6 +610,34 @@ func test_a_shore_has_a_beach_round_its_water_and_a_desert_no_patches_of_earth()
 	assert_bool(Array(LayoutGen.grounds(layouts, dunes)).has(order.find("dirt"))).is_false()
 
 
+func test_a_caves_halls_are_ragged_in_rock_and_still_meet_by_their_sockets() -> void:
+	for c: Dictionary in _room_chunks():  # a cave's chunk is no box: a blank outside its walls somewhere
+		var kinds: Array = c.get("kinds", [])
+		if not kinds.is_empty() and kinds.all(func(k: Variant) -> bool: return k in ["cave", "mine"]):
+			assert_bool((c["rows"] as Array).any(func(r: Variant) -> bool: return str(r).contains(LayoutGen.BLANK))).override_failure_message(str(c["id"])).is_true()
+	var asks: Array[Dictionary] = []
+	for i: int in 4:
+		var links: Array = []
+		if i > 0:
+			links.append("r%d" % (i - 1))
+		if i < 3:
+			links.append("r%d" % (i + 1))
+		asks.append({"id": "r%d" % i, "kind": "cave", "role": "hall" if i == 0 else "", "tags": [], "size": "medium", "links": links,
+			"exits": [{"to": "out", "side": "s", "kind": "door"}] if i == 0 else []})
+	var order: Array = layouts["grounds"]["order"]
+	for sd: int in 4:
+		var map := LayoutGen.stitched(layouts, asks, sd * 13 + 1, {})
+		assert_array(map.get("left", [])).override_failure_message("seed %d" % sd).is_empty()
+		map["shape"] = "tunnels"
+		map["kind"] = "cave"
+		var got := LayoutGen.grounds(layouts, map)
+		var rows: Array = map["rows"]
+		for y: int in rows.size():  # the blank between the halls is rock, as their walls are
+			for x: int in (rows[y] as String).length():
+				if (rows[y] as String)[x] == LayoutGen.BLANK:
+					assert_int(got[y * int(map["w"]) + x]).is_equal(order.find("rock"))
+
+
 func test_an_open_maps_grounds_lie_in_patches_with_no_lone_square() -> void:
 	for kind: String in ["wild", "forest", "swamp", "shore", "square"]:
 		for sd: int in 4:

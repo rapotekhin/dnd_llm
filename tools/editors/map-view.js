@@ -85,7 +85,7 @@ const MapView = (() => {
 		for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
 			const c = rows[y][x] ?? BLANK;
 			const i = (y * w + x) * 4;
-			if (c === BLANK) out[i] = 255;
+			if (c === BLANK) { const g = byKeys(lib.grounds.cells[BLANK], keys); const at = g ? order.indexOf(g) : -1; out[i] = at >= 0 ? at : 255; } // rock in tunnels
 			else { const at = order.indexOf(groundOf(lib, keys, c)); out[i] = at >= 0 ? at : floor; }
 			const prop = props.indexOf(propOf(lib, keys, c));
 			out[i + 1] = prop + 1;

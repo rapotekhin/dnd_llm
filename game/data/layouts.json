@@ -1,5 +1,5 @@
 {
-	"_doc": "Layouts of places (v0.8.0, LayoutGen, LayoutRules): a square is 5 ft. `cells` — what a character of a chunk means; `open.gap` / `open.room_gap` — squares a new way keeps from the ways already there on an open map and in a building's room (v0.8.4.36), `open.road_cost` — what a square costs a road, a character that is not there stops it; `kinds` — a place's kind by the tag of its site: its shape (building, tunnels, open), family, rooms with roles and their limit, the size and scatter of an open map; `chunks` — parts of maps: `rows` of `cells`, D — a door socket on the edge, letters of `marks` — named floor squares, a blank — leave the map as it is (landmarks). Rotations and mirrors make new variants of a chunk. The chain of picking a chunk: kind and role, family and role, the room's tags, a generic chunk of the size.",
+	"_doc": "Layouts of places (v0.8.0, LayoutGen, LayoutRules): a square is 5 ft. `cells` — what a character of a chunk means; `open.gap` / `open.room_gap` — squares a new way keeps from the ways already there on an open map and in a building's room (v0.8.4.36), `open.road_cost` — what a square costs a road, a character that is not there stops it; `kinds` — a place's kind by the tag of its site: its shape (building, tunnels, open), family, rooms with roles and their limit, the size and scatter of an open map; `chunks` — parts of maps: `rows` of `cells`, D — a door socket on the edge, letters of `marks` — named floor squares, a blank — leave the map as it is (landmarks), and outside a chunk's own walls (a cave's ragged hall), drawn as rock in tunnels (`grounds.cells`). Rotations and mirrors make new variants of a chunk. The chain of picking a chunk: kind and role, family and role, the room's tags, a generic chunk of the size.",
 	"cells": {
 		"#": {"name": "wall", "solid": true, "opaque": true},
 		"w": {"name": "window", "solid": true},
@@ -32,7 +32,7 @@
 			"#": {"tunnels": "rock", "*": "wall"}, "D": {"tunnels": "rock", "*": "wall"}, "w": "wall", "r": "roof",
 			"~": {"swamp": "still_water", "tunnels": "still_water", "*": "water"},
 			"%": {"dunes": "thorns", "snowfield": "ice", "rocks": "scree", "hills": "tall_grass", "field": "farmland", "camp": "tall_grass", "swamp": "reeds", "*": "mud"},
-			"=": "cobble", ",": "dirt", "o": "pit"
+			"=": "cobble", ",": "dirt", "o": "pit", " ": {"tunnels": "rock"}
 		},
 		"props": {
 			"T": {"*": "tree"},
@@ -343,53 +343,202 @@
 			]},
 		{"id": "cave_small", "generic": true, "kinds": ["cave"], "roles": ["hall"], "size": "cave", "marks": {"E": "entry"},
 			"rows": [
-				"###D#####",
-				"##....###",
-				"#...%..##",
+				"  ##D##  ",
+				" ##...## ",
+				"##.%...##",
 				"D...E...D",
-				"##.....##",
-				"###..####",
-				"####D####"
+				"##.....# ",
+				" ##...## ",
+				"  ##D##  "
 			]},
 		{"id": "cave_large", "kinds": ["cave"], "roles": ["hall"], "size": "large", "marks": {"E": "entry"},
 			"rows": [
-				"#####D#####",
-				"###.....###",
-				"##...%...##",
-				"#.........#",
-				"D....E....D",
-				"#..B......#",
-				"##......###",
-				"###....####",
-				"#####D#####"
+				"   ###D###   ",
+				"  ##.....##  ",
+				" ##...%...###",
+				"##.........##",
+				"D.....E.....D",
+				"##..B......# ",
+				" #.......### ",
+				" ###.....#   ",
+				"   ##...##   ",
+				"    ##D##    "
 			]},
 		{"id": "gallery", "kinds": ["mine"], "size": "corridor", "marks": {"E": "entry", "O": "vein"},
 			"rows": [
 				"#####D######D#####",
-				"#O....%..........#",
+				"#O....%...B.....##",
 				"D.......E........D",
-				"#..........%....O#",
-				"#####D######D#####"
+				"##..B......%....O#",
+				" ####D######D#### "
 			]},
 		{"id": "mine_turn", "kinds": ["mine"], "size": "medium", "marks": {"E": "entry"},
 			"rows": [
-				"###D###",
-				"###.###",
+				" ##D## ",
+				"##...##",
 				"#.....#",
 				"D..E..D",
 				"#.....#",
-				"###.###",
-				"###D###"
+				"##...##",
+				" ##D## "
+			]},
+		{"id": "cave_grotto", "kinds": ["cave"], "roles": ["hall"], "size": "medium", "marks": {"E": "entry"},
+			"rows": [
+				" ####D###  ",
+				"##......## ",
+				"#..##....##",
+				"#..##.%...D",
+				"##....E..# ",
+				" #.......# ",
+				"##..B..### ",
+				"D.....##   ",
+				"####.##    ",
+				"   #D#     "
+			]},
+		{"id": "cave_pillars", "kinds": ["cave"], "roles": ["hall"], "size": "large", "marks": {"E": "entry"},
+			"rows": [
+				"  ####D####  ",
+				" ##.......## ",
+				"##..B...B..##",
+				"#...........#",
+				"D..%..E..%..D",
+				"#...........#",
+				"##..B...B..##",
+				" ##.......## ",
+				"  ####D####  "
+			]},
+		{"id": "cave_lake", "kinds": ["cave"], "roles": ["hall"], "tags": ["water"], "size": "large", "marks": {"E": "entry", "W": "water"},
+			"rows": [
+				"   ####D###  ",
+				"  ##......## ",
+				" ##..~~~...##",
+				"##..~~W~~...#",
+				"D...~~~~~...D",
+				"##...~~~..%.#",
+				" #.........##",
+				" ##...E...## ",
+				"  ###...###  ",
+				"    ##D##    "
+			]},
+		{"id": "cave_stream", "kinds": ["cave"], "roles": ["hall"], "tags": ["water"], "size": "medium", "marks": {"E": "entry", "W": "water"},
+			"rows": [
+				"  ##D####  ",
+				" ##..~..## ",
+				"##...~W..##",
+				"D...~~...%D",
+				"##..~..E.##",
+				" ##.~~...# ",
+				"  ##.~~### ",
+				"   #D##    "
+			]},
+		{"id": "cave_den", "kinds": ["cave"], "roles": ["hall"], "size": "medium", "marks": {"E": "entry"},
+			"rows": [
+				"   ##D##   ",
+				"  ##...### ",
+				" ##..%...##",
+				"##.......B#",
+				"#..B..E...#",
+				"##.......##",
+				" ###..%### ",
+				"   ##.##   ",
+				"    #D#    "
+			]},
+		{"id": "cave_crack", "kinds": ["cave"], "roles": ["hall"], "size": "small", "marks": {"E": "entry"},
+			"rows": [
+				"##D##    ",
+				"#..###   ",
+				"##..%##  ",
+				" ##..E## ",
+				"  ##...##",
+				"   ##..%D",
+				"    #####"
+			]},
+		{"id": "cave_winding", "kinds": ["cave"], "size": "corridor", "marks": {"E": "entry"},
+			"rows": [
+				"#D#      ",
+				"#..##    ",
+				"##..##   ",
+				" ##.%#   ",
+				"  #..### ",
+				"  ##.E.##",
+				"   ###..D",
+				"     ####"
+			]},
+		{"id": "cave_fork", "kinds": ["cave"], "size": "medium", "marks": {"E": "entry"},
+			"rows": [
+				"##D###D##",
+				"#..# #..#",
+				"##..#..##",
+				" ##..E.# ",
+				"  #...## ",
+				" ##.%.#  ",
+				" #..###  ",
+				" #D#     "
+			]},
+		{"id": "cave_narrows", "kinds": ["cave"], "size": "medium", "marks": {"E": "entry"},
+			"rows": [
+				"  ##D##  ",
+				" ##...## ",
+				"##..%..##",
+				"#...E...#",
+				"##.....##",
+				" ###.### ",
+				"  ##.##  ",
+				" ##...## ",
+				"##..%..##",
+				"D.......D",
+				"##.....##",
+				" ###D### "
+			]},
+		{"id": "mine_drift", "kinds": ["mine"], "size": "corridor", "marks": {"E": "entry", "O": "vein"},
+			"rows": [
+				"##D#####     ",
+				"#..O..###    ",
+				"##.....%#####",
+				" ###..E.....D",
+				"   ##B..O..##",
+				"    #####D## "
+			]},
+		{"id": "mine_stope", "kinds": ["mine"], "roles": ["hall"], "size": "large", "marks": {"E": "entry", "O": "vein"},
+			"rows": [
+				" #####D#####  ",
+				"##O........## ",
+				"#..B....B...##",
+				"D.....%......D",
+				"#.....E....O.#",
+				"##..B....B..##",
+				" #.%.......## ",
+				" ####D######  "
+			]},
+		{"id": "mine_cavein", "kinds": ["mine"], "size": "medium", "marks": {"E": "entry"},
+			"rows": [
+				"####D####",
+				"#..%%%..#",
+				"#.B%%%B.#",
+				"D...E...D",
+				"##.....##",
+				" ##%%%## ",
+				"  ##D##  "
+			]},
+		{"id": "mine_shaft", "kinds": ["mine"], "size": "small", "marks": {"E": "entry"},
+			"rows": [
+				" ##D## ",
+				"##...##",
+				"#..o..#",
+				"D.ooo.D",
+				"#..o..#",
+				"##.E.##",
+				" ##D## "
 			]},
 		{"id": "flooded", "tags": ["foul_water", "water"], "size": "medium", "marks": {"E": "entry", "W": "water"},
 			"rows": [
-				"####D####",
-				"#~~~~~~~#",
-				"#~~W~~~~#",
-				"D.......D",
-				"#.......#",
-				"#...E...#",
-				"####D####"
+				"  ##D###   ",
+				" ##~~~~##  ",
+				"##~~W~~~## ",
+				"D..~~~....D",
+				"#........# ",
+				"##...E..## ",
+				" ###D###   "
 			]},
 		{"id": "camp", "landmarks": ["wild"], "marks": {"H": "camp"},
 			"rows": [
