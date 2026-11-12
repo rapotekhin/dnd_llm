@@ -1268,25 +1268,44 @@ static func ground_shape(map: Dictionary) -> String:
 	return str(map.get("shape", "open" if map.get("open", false) else "building"))
 
 
-## The ground of a character on a map of `shape`, by `grounds.cells`: a string for any shape, a dictionary by shape.
-static func ground_of(lib: Dictionary, shape: String, c: String) -> String:
+## The keys a map's ground and things are read by, the most exact first: its kind (`map["kind"]`, kept by LayoutRules),
+## the kinds of its family, its shape, "*". A temple's floor is its own, a house's falls to the building's.
+static func ground_keys(lib: Dictionary, map: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	var kind := str(map.get("kind", ""))
+	while not kind.is_empty() and not out.has(kind):
+		out.append(kind)
+		kind = str(lib["kinds"].get(kind, {}).get("family", ""))
+	out.append(ground_shape(map))
+	out.append("*")
+	return out
+
+
+## The first value of `row` by `keys`; a row that is not a dictionary is the same for every place.
+static func _by_keys(row: Variant, keys: Array[String]) -> String:
+	if not row is Dictionary:
+		return str(row)
+	for k: String in keys:
+		if (row as Dictionary).has(k):
+			return str(row[k])
+	return ""
+
+
+## The ground of a character on a map read by `keys` (ground_keys), by `grounds.cells`.
+static func ground_of(lib: Dictionary, keys: Array[String], c: String) -> String:
 	var cells: Dictionary = lib["grounds"]["cells"]
-	var row: Variant = cells.get(c, cells["."])
-	if row is Dictionary:
-		return str((row as Dictionary).get(shape, (row as Dictionary).get("*", "")))
-	return str(row)
+	return _by_keys(cells.get(c, cells["."]), keys)
 
 
 ## The thing drawn on a square of `c`, by `grounds.props`; "" — none.
-static func prop_of(lib: Dictionary, shape: String, c: String) -> String:
-	var row: Dictionary = lib["grounds"]["props"].get(c, {})
-	return str(row.get(shape, row.get("*", "")))
+static func prop_of(lib: Dictionary, keys: Array[String], c: String) -> String:
+	return _by_keys(lib["grounds"]["props"].get(c, {}), keys)
 
 
 ## Every square's ground as its place in `grounds.order` (w * h, row by row); NO_GROUND off the map.
 static func grounds(lib: Dictionary, map: Dictionary) -> PackedByteArray:
 	var order: Array = lib["grounds"]["order"]
-	var shape := ground_shape(map)
+	var keys := ground_keys(lib, map)
 	var w := int(map["w"])
 	var rows: Array = map["rows"]
 	var out := PackedByteArray()
@@ -1300,28 +1319,58 @@ static func grounds(lib: Dictionary, map: Dictionary) -> PackedByteArray:
 			if c == BLANK:
 				continue
 			if not by_char.has(c):
-				var at := order.find(ground_of(lib, shape, c))
-				by_char[c] = at if at >= 0 else order.find(ground_of(lib, shape, FLOOR))
+				var at := order.find(ground_of(lib, keys, c))
+				by_char[c] = at if at >= 0 else order.find(ground_of(lib, keys, FLOOR))
 			out[y * w + x] = int(by_char[c])
 	_patch(lib, map, out)
 	return out
 
 
 ## Patches of `grounds.patches` over the floor's own ground, by the map's seed: the same map gets the same patches.
+## The rows of the first key of the map that has them (an empty list — none); a row with `share` lies in blobs, a row
+## with `near` is a rim of `width` squares round the squares of that character (a beach round the water).
 static func _patch(lib: Dictionary, map: Dictionary, out: PackedByteArray) -> void:
 	var order: Array = lib["grounds"]["order"]
-	var shape := ground_shape(map)
-	var under := order.find(ground_of(lib, shape, FLOOR))
+	var keys := ground_keys(lib, map)
+	var under := order.find(ground_of(lib, keys, FLOOR))
 	var w := int(map["w"])
 	var h := int(map["h"])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([map.get("seed", 0), map.get("id", "")])
-	for row: Dictionary in lib["grounds"].get("patches", {}).get(shape, []):
+	var all: Dictionary = lib["grounds"].get("patches", {})
+	var rows: Array = []
+	for k: String in keys:
+		if all.has(k):
+			rows = all[k]
+			break
+	for row: Dictionary in rows:
 		var to := order.find(str(row["ground"]))
 		if to < 0:
+			continue
+		if row.has("near"):
+			_rim(map, out, under, to, str(row["near"]), int(row.get("width", 1)))
 			continue
 		var field := blobs(w, h, int(row.get("cell", 6)), rng)
 		var cut := _share_cut(field, float(row["share"]))
 		for i: int in out.size():
 			if out[i] == under and field[i] >= cut:
 				out[i] = to
+
+
+## The squares of the floor's ground within `width` of a square of `near` become `to`.
+static func _rim(map: Dictionary, out: PackedByteArray, under: int, to: int, near: String, width: int) -> void:
+	var w := int(map["w"])
+	var h := int(map["h"])
+	var rows: Array = map["rows"]
+	var at := func(x: int, y: int) -> String:
+		return str(rows[y])[x] if y >= 0 and y < rows.size() and x >= 0 and x < str(rows[y]).length() else ""
+	for y: int in h:
+		for x: int in w:
+			if out[y * w + x] != under:
+				continue
+			var hit := false
+			for dy: int in range(-width, width + 1):
+				for dx: int in range(-width, width + 1):
+					hit = hit or at.call(x + dx, y + dy) == near
+			if hit:
+				out[y * w + x] = to

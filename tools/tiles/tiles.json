@@ -15,13 +15,26 @@
     "cave": "the rough grey stone floor of a cave with cracks and grit",
     "pit": "a deep dark chasm, nearly black with faint rough rock",
     "wall": "the top of a thick rough stone masonry wall, grey stones of different sizes with mortar",
-    "roof": "a roof of dark brown wooden shingles laid in overlapping straight rows, weathered, with a little moss"
+    "roof": "a roof of dark brown wooden shingles laid in overlapping straight rows, weathered, with a little moss",
+    "rock": "the rough natural rock of a cave wall seen from above, dark grey and brown stone with jagged cracks, ledges and grit, solid and impassable",
+    "still_water": "dark still stagnant water of a cave pool or a swamp, murky green brown, almost black in the depths, a little scum and a few floating leaves, no ripples",
+    "sand": "fine pale golden sand of a dry desert or a beach, soft wind ripples and a few tiny pebbles",
+    "thorns": "dry desert sand overgrown with low thorny scrub, dead twigs and dry grey brown bushes with spines",
+    "snow": "fresh white snow on the ground, soft drifts and faint blue shadows, a few small footprints-free hollows",
+    "ice": "a frozen crust of bluish white ice and hard packed snow, cracked plates and frosty streaks",
+    "stony": "rocky mountain ground, grey gravel and small flat stones with thin patches of dry soil",
+    "scree": "loose scree, a slope of broken sharp grey rocks and stones of different sizes",
+    "tall_grass": "tall dense wild grass and weeds, green and straw yellow blades, unmowed meadow",
+    "farmland": "a ploughed field, straight parallel furrows of dark brown earth with a few green sprouts",
+    "reeds": "a dense bed of reeds and cattails in shallow murky marsh water, green and brown stalks",
+    "flagstone": "a floor of large square grey stone flagstones laid in straight rows, worn smooth, thin dark joints"
   },
   "props": {
     "tree": "the round leafy crown of a broad deciduous oak tree, dense green foliage",
     "boulder": "a large mossy grey boulder seen exactly from straight above like a satellite photo: only its rounded top is visible, no sides, no perspective",
     "table": "a rectangular wooden tavern table seen exactly from straight above like a floor plan: only the flat tabletop of planks is visible with two clay mugs and a candle on it, no legs, no sides, no perspective",
-    "door": "a closed rectangular wooden door made of vertical planks with iron bands, lying flat"
+    "door": "a closed rectangular wooden door made of vertical planks with iron bands, lying flat",
+    "rubble": "a heap of broken stone rubble and fallen masonry blocks from a ruined wall, grey stones of different sizes"
   },
   "edges": {
     "*": "a natural meeting of the two with a soft uneven border",

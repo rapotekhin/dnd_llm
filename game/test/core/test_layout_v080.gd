@@ -561,9 +561,11 @@ func test_new_ways_are_laid_apart_from_the_old() -> void:
 func test_every_square_has_a_ground_of_the_order_and_every_cell_one_of_its_own() -> void:
 	var g: Dictionary = layouts["grounds"]
 	var order: Array = g["order"]
-	for c: String in layouts["cells"]:
-		for shape: String in ["open", "building", "tunnels"]:
-			assert_bool(order.has(LayoutGen.ground_of(layouts, shape, c))).override_failure_message("%s in %s" % [c, shape]).is_true()
+	assert_int(order.size()).is_less_equal(MapGround.MAX_GROUNDS)
+	for kind: String in layouts["kinds"]:
+		var keys := LayoutGen.ground_keys(layouts, {"kind": kind, "shape": LayoutGen.shape_of(layouts, kind, true)})
+		for c: String in layouts["cells"]:
+			assert_bool(order.has(LayoutGen.ground_of(layouts, keys, c))).override_failure_message("%s in %s" % [c, kind]).is_true()
 	for row: Variant in g["props"].values():
 		for id: Variant in (row as Dictionary).values():
 			assert_bool(g["size"].has(id)).override_failure_message(str(id)).is_true()
@@ -575,8 +577,37 @@ func test_every_square_has_a_ground_of_the_order_and_every_cell_one_of_its_own()
 		LayoutGen.NO_GROUND, order.find("grass"), order.find("dirt")])
 	map["shape"] = "building"
 	assert_int(LayoutGen.grounds(plain, map)[1]).is_equal(order.find("planks"))
-	assert_str(LayoutGen.prop_of(layouts, "building", "B")).is_equal("table")
-	assert_str(LayoutGen.prop_of(layouts, "open", "B")).is_equal("boulder")
+	assert_str(LayoutGen.prop_of(layouts, ["building", "*"], "B")).is_equal("table")
+	assert_str(LayoutGen.prop_of(layouts, ["open", "*"], "B")).is_equal("boulder")
+
+
+func test_a_place_of_a_kind_gets_its_own_ground_its_family_and_shape_the_rest() -> void:
+	var at := func(map: Dictionary, c: String) -> String:
+		return LayoutGen.ground_of(layouts, LayoutGen.ground_keys(layouts, map), c)
+	assert_array(LayoutGen.ground_keys(layouts, {"kind": "inn", "shape": "building"})).is_equal(["inn", "tavern", "house", "building", "*"])
+	assert_str(at.call({"kind": "temple", "shape": "building"}, ".")).is_equal("flagstone")
+	assert_str(at.call({"kind": "inn", "shape": "building"}, ".")).is_equal("planks")
+	assert_str(at.call({"kind": "cave", "shape": "tunnels"}, "#")).is_equal("rock")
+	assert_str(at.call({"kind": "tavern", "shape": "building"}, "#")).is_equal("wall")
+	assert_str(at.call({"kind": "dunes", "shape": "open"}, ".")).is_equal("sand")
+	assert_str(at.call({"kind": "swamp", "shape": "open"}, "~")).is_equal("still_water")
+	assert_str(at.call({"shape": "open"}, ".")).is_equal("grass")
+	assert_str(LayoutGen.prop_of(layouts, LayoutGen.ground_keys(layouts, {"kind": "ruin", "shape": "open"}), "B")).is_equal("rubble")
+
+
+func test_a_shore_has_a_beach_round_its_water_and_a_desert_no_patches_of_earth() -> void:
+	var order: Array = layouts["grounds"]["order"]
+	var rim := layouts.duplicate(true)
+	rim["grounds"]["patches"]["shore"] = (rim["grounds"]["patches"]["shore"] as Array).filter(func(r: Dictionary) -> bool: return r.has("near"))
+	var map := {"id": "r", "w": 5, "h": 3, "rows": [".....", "..~..", "....."], "shape": "open", "kind": "shore", "seed": 1}
+	var got := LayoutGen.grounds(rim, map)
+	assert_int(got[0]).is_equal(order.find("grass"))
+	assert_int(got[1]).is_equal(order.find("sand"))
+	assert_int(got[7]).is_equal(order.find("water"))
+	assert_int(got[4]).is_equal(order.find("grass"))
+	var dunes := LayoutGen.open_map(layouts, {"id": "d", "kind": "dunes", "tags": [], "exits": []}, 4)
+	dunes["kind"] = "dunes"
+	assert_bool(Array(LayoutGen.grounds(layouts, dunes)).has(order.find("dirt"))).is_false()
 
 
 func test_an_open_maps_grounds_lie_in_patches_with_no_lone_square() -> void:

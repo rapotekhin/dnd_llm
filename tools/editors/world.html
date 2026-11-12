@@ -229,7 +229,7 @@ function layoutPanel(app, c, e) {
 	rows ? h('pre', {}, rows.join('\n')) : null,
 	rows && app.store.mount === '' ? (() => {
 		if (roomView?.store !== app.store) roomView = new MapView.View(app.store, lib);
-		roomView.draw(MapView.stamped(rows, chunk?.marks || {}), 'building', 24);
+		roomView.draw(MapView.stamped(rows, chunk?.marks || {}), MapView.groundKeys(lib, chunk?.kinds?.[0], 'building'), 24);
 		return roomView.canvas;
 	})() : null,
 	h('div', { class: 'linkrow' }, drawn, h('button', { onclick: () => {

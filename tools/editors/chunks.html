@@ -279,6 +279,7 @@ function painter(app, c, e) {
 	const hist = paint.history.get(e.id) || { back: [], fwd: [] };
 	paint.history.set(e.id, hist);
 	const shape = () => paint.shape || MapView.chunkShape(lib, e);
+	const placeKeys = () => MapView.groundKeys(lib, e.landmarks ? e.landmarks[0] : e.kinds?.[0], shape());
 	const over = h('canvas', { class: 'overlay' });
 	const stage = h('div', { class: 'stage' }, view.canvas, over);
 	const status = h('div', { class: 'muted small' });
@@ -390,7 +391,7 @@ function painter(app, c, e) {
 			for (let y = 0; y < H(); y++) for (let x = 0; x < W(); x++) {
 				const ch = at(x, y);
 				if (ch === ' ') continue;
-				g.fillStyle = lib.grounds.colour?.[MapView.groundOf(lib, shape(), ch in marks ? '.' : ch)] || '#777';
+				g.fillStyle = lib.grounds.colour?.[MapView.groundOf(lib, placeKeys(), ch in marks ? '.' : ch)] || '#777';
 				g.fillRect(x * px, y * px, px, px);
 			}
 		}
@@ -432,7 +433,7 @@ function painter(app, c, e) {
 	}
 
 	function redraw() {
-		view.draw(MapView.stamped(e.rows, e.marks), shape(), paint.px).then(() => {
+		view.draw(MapView.stamped(e.rows, e.marks), placeKeys(), paint.px).then(() => {
 			if (view.failed) note.textContent = 'Предпросмотр: ' + view.failed + '. Видны цвета земель.';
 			else note.textContent = view.drawn ? '' : 'Нарисованных краёв нет: края по маске.';
 			overlay();

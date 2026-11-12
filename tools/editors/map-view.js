@@ -7,7 +7,7 @@
 const MapView = (() => {
 	const SHADER = 'game/ui/components/map_ground.gdshader';
 	const TILES = 'game/assets/tiles/';
-	const GROUND_PX = 512, PROP_PX = 256, EDGE_PX = 1024, MAX_PROPS = 16;
+	const GROUND_PX = 512, PROP_PX = 256, EDGE_PX = 1024, MAX_PROPS = 16, MAX_GROUNDS = 32;
 	const BLANK = ' ', FLOOR = '.', SOCKET = 'D';
 
 	// LayoutGen.turned: a quarter turn clockwise `rot` times after a mirror.
@@ -33,15 +33,22 @@ const MapView = (() => {
 		return shapeOf(lib, chunk.kinds?.[0] || '', true);
 	}
 
-	function groundOf(lib, shape, c) {
-		const cells = lib.grounds.cells;
-		const row = cells[c] ?? cells[FLOOR];
-		return typeof row === 'object' ? row[shape] ?? row['*'] ?? '' : String(row);
+	// LayoutGen.ground_keys: the kind, the kinds of its family, the shape, '*'.
+	function groundKeys(lib, kind, shape) {
+		const out = [];
+		for (let k = kind || ''; k && !out.includes(k); k = lib.kinds?.[k]?.family || '') out.push(k);
+		return [...out, shape, '*'];
 	}
 
-	function propOf(lib, shape, c) {
-		const row = lib.grounds.props[c] || {};
-		return row[shape] ?? row['*'] ?? '';
+	const byKeys = (row, keys) => (row && typeof row === 'object' ? String(row[keys.find((k) => k in row)] ?? '') : String(row ?? ''));
+
+	function groundOf(lib, keys, c) {
+		const cells = lib.grounds.cells;
+		return byKeys(cells[c] ?? cells[FLOOR], keys);
+	}
+
+	function propOf(lib, keys, c) {
+		return byKeys(lib.grounds.props[c] || {}, keys);
 	}
 
 	function propIds(lib) {
@@ -69,18 +76,18 @@ const MapView = (() => {
 	const walled = (rows, x, y) => y >= 0 && y < rows.length && x >= 0 && x < rows[y].length && ['#', 'w', SOCKET].includes(rows[y][x]);
 
 	// The cells texture of MapGround.lay: r — the ground's place in the order (255 none), g — a prop + 1, b — a turn.
-	function cellBytes(lib, rows, shape) {
+	function cellBytes(lib, rows, keys) {
 		const order = lib.grounds.order;
 		const props = propIds(lib);
 		const h = rows.length, w = Math.max(...rows.map((r) => r.length));
 		const out = new Uint8Array(w * h * 4);
-		const floor = order.indexOf(groundOf(lib, shape, FLOOR));
+		const floor = order.indexOf(groundOf(lib, keys, FLOOR));
 		for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
 			const c = rows[y][x] ?? BLANK;
 			const i = (y * w + x) * 4;
 			if (c === BLANK) out[i] = 255;
-			else { const at = order.indexOf(groundOf(lib, shape, c)); out[i] = at >= 0 ? at : floor; }
-			const prop = props.indexOf(propOf(lib, shape, c));
+			else { const at = order.indexOf(groundOf(lib, keys, c)); out[i] = at >= 0 ? at : floor; }
+			const prop = props.indexOf(propOf(lib, keys, c));
 			out[i + 1] = prop + 1;
 			out[i + 2] = prop >= 0 && walled(rows, x - 1, y) && walled(rows, x + 1, y) ? 1 : 0;
 			out[i + 3] = 255;
@@ -174,17 +181,17 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			this.units = {};
 			this.array('grounds', 0, GROUND_PX, await Promise.all(order.map(async (id) => (await picture(this.store, `${TILES}ground/${id}.png`, GROUND_PX)) || solid(GROUND_PX, g.colour?.[id]))), true);
 			this.array('props', 1, PROP_PX, await Promise.all(props.map(async (id) => (await picture(this.store, `${TILES}props/${id}.png`, PROP_PX)) || solid(PROP_PX, null))), false);
-			const sheets = [], table = new Uint8Array(16 * 16 * 4);
+			const sheets = [], table = new Uint8Array(MAX_GROUNDS * MAX_GROUNDS * 4);
 			for (const pair of g.edges || []) {
 				const low = order.indexOf(pair.low), high = order.indexOf(pair.high);
 				const pic = low >= 0 && high >= 0 ? await picture(this.store, `${TILES}edges/${pair.low}__${pair.high}.png`, EDGE_PX) : null;
 				if (!pic) continue;
 				sheets.push(pic);
-				const i = (high * 16 + low) * 4;
+				const i = (high * MAX_GROUNDS + low) * 4;
 				table[i] = sheets.length; table[i + 3] = 255;
 			}
 			this.array('edges', 2, sheets.length ? EDGE_PX : 4, sheets.length ? sheets : [solid(4, null)], false);
-			this.tex2d('edge_pairs', 3, 16, 16, table, gl.NEAREST);
+			this.tex2d('edge_pairs', 3, MAX_GROUNDS, MAX_GROUNDS, table, gl.NEAREST);
 			this.tex2d('light', 4, 1, 1, new Uint8Array(4), gl.LINEAR);
 			const sharp = (g.sharp || []).reduce((m, id) => (order.includes(id) ? m | (1 << order.indexOf(id)) : m), 0);
 			const sizes = new Float32Array(MAX_PROPS).fill(1);
@@ -234,12 +241,14 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			return t;
 		}
 
-		// `rows` with marks already stamped as floor; `px` — a square's side on screen.
-		async draw(rows, shape, px) {
+		// `rows` with marks already stamped as floor, `keys` — groundKeys of the place; `px` — a square's side on screen;
+		// `grounds` — the squares' grounds as the game counted them (LayoutGen.grounds with its patches), when known.
+		async draw(rows, keys, px, grounds = null) {
 			await this.ready;
 			if (this.failed || !rows.length) return;
 			const gl = this.gl;
-			const m = cellBytes(this.lib, rows, shape);
+			const m = cellBytes(this.lib, rows, keys);
+			if (grounds) grounds.forEach((g, i) => { m.bytes[i * 4] = g; });
 			const dpr = window.devicePixelRatio || 1;
 			this.canvas.width = Math.round(m.w * px * dpr);
 			this.canvas.height = Math.round(m.h * px * dpr);
@@ -255,5 +264,5 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 		}
 	}
 
-	return { View, turned, shapeOf, chunkShape, groundOf, propOf, propIds, edgeCells, stamped, cellBytes, glsl, BLANK, FLOOR, SOCKET };
+	return { View, turned, shapeOf, chunkShape, groundKeys, groundOf, propOf, propIds, edgeCells, stamped, cellBytes, glsl, BLANK, FLOOR, SOCKET };
 })();

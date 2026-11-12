@@ -8,6 +8,7 @@ const GROUND_PX := 512
 const PROP_PX := 256
 const MAX_PROPS := 16
 const EDGE_PX := 1024  ## a sheet of the sixteen tiles of a drawn edge
+const MAX_GROUNDS := 32  ## the grounds of the order: a bit each in the shader's sharp mask, a row of the edge table
 
 static var _arrays: Dictionary = {}  ## the textures of the grounds and of the things, built once: {"ground": …, "props": …}
 
@@ -33,7 +34,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	var props := prop_ids(lib)
 	var w := int(map["w"])
 	var h := int(map["h"])
-	var shape := LayoutGen.ground_shape(map)
+	var keys := LayoutGen.ground_keys(lib, map)
 	var grounds := LayoutGen.grounds(lib, map)
 	var rows: Array = map["rows"]
 	var bytes := PackedByteArray()
@@ -44,7 +45,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 			var i := (y * w + x) * 4
 			bytes[i] = grounds[y * w + x]
 			var c := line[x] if x < line.length() else LayoutGen.BLANK
-			var prop := props.find(LayoutGen.prop_of(lib, shape, c))
+			var prop := props.find(LayoutGen.prop_of(lib, keys, c))
 			bytes[i + 1] = prop + 1
 			bytes[i + 2] = 1 if prop >= 0 and _walled(rows, x - 1, y) and _walled(rows, x + 1, y) else 0
 			bytes[i + 3] = 255
@@ -124,7 +125,7 @@ static func _edges(lib: Dictionary) -> Dictionary:
 	if _arrays.has("edges"):
 		return _arrays["edges"]
 	var order: Array = lib["grounds"]["order"]
-	var table := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	var table := Image.create(MAX_GROUNDS, MAX_GROUNDS, false, Image.FORMAT_RGBA8)
 	table.fill(Color(0, 0, 0, 0))
 	var images: Array[Image] = []
 	for pair: Dictionary in lib["grounds"].get("edges", []):
