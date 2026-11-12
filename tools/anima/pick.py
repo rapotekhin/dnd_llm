@@ -7,13 +7,16 @@ are drawn by FLUX into out_painted_flux/ and picked into picks_flux.json, the re
 picks_painted.json. A pick is written at once into the `variant` of that file (variant 1 is left out, as install.py
 reads it); which icons were looked at is kept beside the drawings, in <out>/<kind>/seen.json. Only the icons with two
 variants at least are shown; up to six (the seeds 11 … 66 of `anima_gen.py --seeds`). The interface's frames in the
-lines style are a kind of their own (`frames`: a part's seeds of ui/paint.py, picked into ui/picks_lines.json), and
+lines style are a kind of their own (`frames`: a part's seeds of ui/paint.py, picked into ui/picks_lines.json); the
+icons of the lines style are sets of their own (`lines_spells`…: out_lines/, the acts out_lines_flux/, picked into
+picks_lines_icons.json), and
 «Превью» lays the game's screens out of every pick at the moment it is opened (ui/preview.py). A card's box
 «перерисовать» puts the icon under `redraw` of its picks file with what the author wrote is wrong with it — not `redo`:
 install.py still lays the picked variant until the icon is drawn again. Local only (127.0.0.1).
 
     python tools/anima/pick.py                                 # http://127.0.0.1:8791/ — every kind drawn
     python tools/anima/pick.py --kind spells,acts              # only these kinds
+    python tools/anima/pick.py --kind lines_spells,lines_features,lines_acts,lines_traits   # the lines style alone
     http://127.0.0.1:8791/#acts                                # opens on the acts
     http://127.0.0.1:8791/?ids=knock,magic_weapon#spells       # only these, after a redraw
     python tools/anima/pick.py --marked                        # the icons marked «перерисовать», with the notes
@@ -38,7 +41,10 @@ import overlays  # noqa: E402
 import preview as pv  # noqa: E402
 
 SEEDS = [11, 22, 33, 44, 55, 66]
-# a kind → its title on the button, the folder it is drawn into, its picks file (in the order of the buttons)
+# a set → its title on the button, the folder it is drawn into, its picks file, and the kind of the jobs when the set
+# is not named by it (in the order of the buttons). The lines style is a trial of its own (the author, 2026-11-12):
+# its sets are the same kinds drawn into out_lines/ (the acts by FLUX into out_lines_flux/, as the painted ones: Anima's
+# hands pray where FLUX's clasp forearms) and picked into picks_lines_icons.json, apart from the painted.
 SETS = {
     "spells": ("Заклинания", "out_painted", "picks_painted.json"),
     "features": ("Умения", "out_painted", "picks_painted.json"),
@@ -49,12 +55,23 @@ SETS = {
     "groups": ("Группы вещей", "out_painted", "picks_painted.json"),
     "items": ("Вещи", "out_painted", "picks_painted.json"),
     "frames": ("Рамки интерфейса", "out_ui", "ui/picks_lines.json"),
+    "lines_spells": ("Заклинания · линии", "out_lines", "picks_lines_icons.json", "spells"),
+    "lines_features": ("Умения · линии", "out_lines", "picks_lines_icons.json", "features"),
+    "lines_acts": ("Действия · линии", "out_lines_flux", "picks_lines_icons.json", "acts"),
+    "lines_traits": ("Черты рас · линии", "out_lines", "picks_lines_icons.json", "traits"),
 }
 
 
-def variants(jobs: list[dict], kind: str, out: Path, picks: dict) -> tuple[list[dict], dict[str, Path | bytes]]:
+def kind_of_set(name: str) -> str:
+    """The kind of the jobs a set shows: its fourth field, else its own name."""
+    return SETS[name][3] if len(SETS[name]) > 3 else name
+
+
+def variants(jobs: list[dict], kind: str, out: Path, picks: dict,
+             name: str = "") -> tuple[list[dict], dict[str, Path | bytes]]:
     """The icons of a kind with their drawn variants, and the file behind each picture's address (with the mark of
-    `overlay` laid over, as the game gets it); an icon laid from another's (`same`) or drawn by code (`drawn`) is not picked on its own."""
+    `overlay` laid over, as the game gets it); an icon laid from another's (`same`) or drawn by code (`drawn`) is not
+    picked on its own. The addresses go under the set's `name` (a kind drawn in two styles is two sets)."""
     items, files = [], {}
     for j in (j for j in jobs if j["kind"] == kind):
         key = f"{kind}/{j['id']}"
@@ -63,7 +80,7 @@ def variants(jobs: list[dict], kind: str, out: Path, picks: dict) -> tuple[list[
         if len(have) >= 2 and key not in picks.get("same", {}) and key not in picks.get("drawn", {}):
             mark = picks.get("overlay", {}).get(key)
             items.append({"key": key, "name": j["name"], "variants": have})
-            files.update({f"/img/{kind}/{j['id']}/{n}.png": overlays.apply(mark, cuts[n]) if mark else cuts[n]
+            files.update({f"/img/{name or kind}/{j['id']}/{n}.png": overlays.apply(mark, cuts[n]) if mark else cuts[n]
                           for n in have})
     return sorted(items, key=lambda x: x["name"]), files
 
@@ -85,7 +102,7 @@ def png(img) -> bytes:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--jobs", type=Path, default=HERE / "jobs" / "icons.json")
-    p.add_argument("--kind", default="", help="kinds, comma-separated; every kind drawn by default")
+    p.add_argument("--kind", default="", help="sets, comma-separated (spells, lines_spells…); every set drawn by default")
     p.add_argument("--port", type=int, default=8791)
     p.add_argument("--marked", action="store_true", help="print the icons marked to redraw, with the notes, and quit")
     a = p.parse_args()
@@ -97,22 +114,23 @@ def main() -> None:
     jobs = json.loads(a.jobs.read_text(encoding="utf-8"))["jobs"]
     wanted = [k for k in (a.kind.split(",") if a.kind else SETS) if k in SETS]
     sets, files = {}, {}
-    for kind in wanted:
-        title, out, picks = SETS[kind]
+    for name in wanted:
+        title, out, picks = SETS[name][:3]
+        kind = kind_of_set(name)
         given = json.loads((HERE / picks).read_text(encoding="utf-8")) if (HERE / picks).exists() else {}
-        items, pics = frames(HERE / out / "raw") if kind == "frames" else variants(jobs, kind, HERE / out, given)
+        items, pics = frames(HERE / out / "raw") if kind == "frames" else variants(jobs, kind, HERE / out, given, name)
         if items:
-            sets[kind] = {"title": title, "out": HERE / out, "picks": HERE / picks, "items": items,
-                          "big": kind == "frames"}
+            sets[name] = {"title": title, "out": HERE / out, "picks": HERE / picks, "items": items,
+                          "big": kind == "frames", "kind": kind}
             files.update(pics)
     page = HERE / "pick.html"
-    lock = threading.Lock()  # two kinds share one picks file: one save at a time
+    lock = threading.Lock()  # two sets share one picks file: one save at a time
 
     def picks_of(path: Path) -> dict:
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"variant": {}}
 
-    def seen_of(kind: str) -> list:
-        f = sets[kind]["out"] / kind / "seen.json"
+    def seen_of(name: str) -> list:
+        f = sets[name]["out"] / sets[name]["kind"] / "seen.json"
         return json.loads(f.read_text(encoding="utf-8")) if f.exists() else []
 
     def kind_of(k: str, s: dict) -> dict:
@@ -177,7 +195,7 @@ def main() -> None:
                 if redraw:
                     whole["redraw"] = dict(sorted(redraw.items()))
                 s["picks"].write_text(json.dumps(whole, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-                seen = s["out"] / got["kind"] / "seen.json"
+                seen = s["out"] / s["kind"] / "seen.json"
                 seen.parent.mkdir(parents=True, exist_ok=True)  # the frames have no folder of their own drawn
                 seen.write_text(json.dumps(sorted(got["seen"]), ensure_ascii=False, indent=1) + "\n",
                                 encoding="utf-8")

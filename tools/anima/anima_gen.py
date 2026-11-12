@@ -89,7 +89,7 @@ PAINTED_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, arti
                     "chromatic aberration, text, letters, watermark, signature, border, frame, multiple objects, "
                     "duplicate, human, person, face, hands, photo, 3d render, flat color, minimalism, vector art, "
                     "vignette, gradient background, small object")
-STYLES = ("flat", "painted")  # flat: every icon as before; painted: each kind by its family (FAMILY)
+STYLES = ("flat", "painted", "lines")  # flat: every icon as before; painted: by its family (FAMILY); lines: LINES
 # The painted style follows the families of BG3's icons (docs/design/ux/bg3-icons.md, the author 2026-11-11): a thing is
 # a painted object cut out of its background; a spell, a feature or an act is a bright glowing emblem on a tile of
 # cracked stone, which the model draws as a rounded tile on black, so the same cut leaves the tile with clear corners;
@@ -160,6 +160,20 @@ GOLD_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist 
 # were written for painted things: their colours are dropped from the prompt (a «pale compass rose» came filled)
 COLOURS = re.compile(r"\b(white|black|grey|gray|slate|blue|red|green|yellow|brown|gold|golden|silver|cream|orange|"
                      r"purple|violet|pale|dark|bright|tan|beige|amber|crimson|teal|pink)\b[ -]?", re.I)
+# The lines style (the author, 2026-11-12): spells, features, acts and traits as the interface's buttons — thin lines
+# on black with no fill, cut by brightness — each kind in a frame of its own: a spell in a gold ring with its sign in
+# the colour of its school, a feature and an act in a gold square, a race's trait in a silver one. The model draws the
+# sign alone in white lines; its colour and the frame are laid by code (`lines`, LINES): a geometric frame is what the
+# model bends (the d20 filled, an arrow broke the medal's ring), so every frame is the same width and margin, the sign
+# always inside it, and the colour exactly the game's (`tint` of a job: its school's colour of icons.json) — changed by
+# --recut with nothing drawn again.
+SIGN_HEAD = "masterpiece, best quality, score_7, safe, no humans, lineart, monochrome, white lines, simple, icon, symbol, black background, "
+SIGN_TAIL = ("It is an icon for a fantasy role-playing game. The subject is drawn as one simple elegant line drawing "
+             "in thin white lines on a plain black background: clean even lines of a medium thickness, only outlines "
+             "with the inside of every shape left black, no fill and no shading, only a few lines, like a fine "
+             "engraving, large and centered, filling most of the frame, so that it reads at a small size. Nothing is "
+             "drawn around it: no frame, no ring and no border.")
+SIGN_NEGATIVE = GOLD_NEGATIVE + ", ring frame, round frame, medallion, badge, coin"
 FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the tail's {word} are the job's key
     "flat": (HEAD, TAIL, NEGATIVE),
     "object": (PAINTED_HEAD, PAINTED_TAIL, PAINTED_NEGATIVE),
@@ -169,7 +183,9 @@ FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the ta
     "ink": (INK_HEAD, INK_TAIL, INK_NEGATIVE),
     "medal": (MEDAL_HEAD, MEDAL_TAIL, MEDAL_NEGATIVE),
     "gold": (GOLD_HEAD, GOLD_TAIL, GOLD_NEGATIVE),
+    "sign": (SIGN_HEAD, SIGN_TAIL, SIGN_NEGATIVE),
 }
+UNCOLOURED = ("gold", "sign")  # the families in one colour: the subject's colours are dropped from the prompt
 TILED = ("glyph", "plate", "bronze", "ink")  # the families cut as a tile by its shape
 # A kind (or its head before «/») in the painted style; the rest — items, groups — is an object. The interface's
 # buttons and the inventory's groups were tried as a silver relief like BG3's skills (2026-11-11): the model drew a
@@ -179,6 +195,16 @@ FAMILY = {"spells": "glyph", "features": "plate", "acts": "ink", "traits": "bron
           "marks": "flat", "ui": "gold"}  # stone spells, steel abilities, ink acts on steel, bronze traits (2026-11-12)
 GOLD = (222, 196, 140)  # the gold of a line icon, its brightest lines toward GOLD_LIT
 GOLD_LIT = (250, 238, 205)
+SILVER = (200, 208, 218)
+# The lines style: a kind → its frame (ring or square), the frame's colour, the sign's colour where the job has no
+# `tint` of its own (a spell's is its school's, a dragon's ancestry its dragon's); any other kind is drawn as the
+# interface's gold buttons, with no frame.
+LINES = {"spells": ("ring", GOLD, GOLD), "features": ("square", GOLD, GOLD), "acts": ("square", GOLD, GOLD),
+         "traits": ("square", SILVER, SILVER)}
+LIT = 0.55  # the brightest lines of a sign toward white by this share
+# the frame at the icon's side 1.0: its margin, the outer and the inner line, the gap between, the sign's pad inside
+EDGE, OUTER, INNER, GAP, PAD = 0.035, 0.026, 0.013, 0.022, 0.05
+SIGN_LINE = 0.018  # the sign's lines at least this wide: 2 px of a 128 icon, 1 px at 64
 ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
@@ -242,6 +268,8 @@ def family(job: dict, style: str = "flat") -> str:
         return "portrait"
     if style == "flat":
         return "flat"
+    if style == "lines":
+        return "sign" if job["kind"] in LINES else "gold"
     return FAMILY.get(job["kind"], FAMILY.get(job["kind"].split("/")[0], "object"))
 
 
@@ -256,8 +284,8 @@ def prompt_of(job: dict, key: str, style: str = "flat") -> str:
     tag, word = KEYS[key]
     fam = family(job, style)
     head, tail, _ = FAMILIES[fam]
-    tags, sentence = (uncolour(job["tags"]), uncolour(job["sentence"])) if fam == "gold" else (job["tags"],
-                                                                                              job["sentence"])
+    tags, sentence = (uncolour(job["tags"]), uncolour(job["sentence"])) if fam in UNCOLOURED else (job["tags"],
+                                                                                                   job["sentence"])
     return head.format(tag=tag) + tags + ".\n" + sentence + " " + tail.format(word=word)
 
 
@@ -632,6 +660,105 @@ def gold(raw: Image.Image) -> Image.Image:
     return square.resize((ICON, ICON), Image.LANCZOS)
 
 
+def colour(hex_or_rgb) -> tuple[int, int, int] | None:
+    """«#d0704f» or (r, g, b) → (r, g, b); None for nothing."""
+    if not hex_or_rgb:
+        return None
+    if isinstance(hex_or_rgb, str):
+        h = hex_or_rgb.lstrip("#")
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return tuple(hex_or_rgb)
+
+
+def sign(raw: Image.Image, ink: tuple, side: int) -> Image.Image:
+    """A line drawing on black as `gold` cuts it — its brightness over the ground the alpha — in one colour `ink`, its
+    brightest lines toward white; cropped to the drawing, at a work side `side`."""
+    lum = raw.convert("L").resize((side, side), Image.LANCZOS)
+    w, h = lum.size
+    border = [lum.getpixel((x, y)) for x in range(0, w, 2) for y in (0, h - 1)] + \
+             [lum.getpixel((x, y)) for y in range(0, h, 2) for x in (0, w - 1)]
+    lo = median(border) + 14
+    hi = lo + 80
+    alpha = lum.point(lambda v: 0 if v <= lo else 255 if v >= hi else int((v - lo) * 255 / (hi - lo)))
+    lit = lum.point(lambda v: 0 if v <= hi else min(255, int((v - hi) * 255 / max(1, 255 - hi))))
+    bright = tuple(round(c + (255 - c) * LIT) for c in ink)
+    out = Image.composite(Image.new("RGB", (w, h), bright), Image.new("RGB", (w, h), ink), lit).convert("RGBA")
+    out.putalpha(alpha)
+    box = alpha.point(lambda v: 255 if v > 24 else 0).getbbox()
+    return out.crop(box) if box else out
+
+
+def stroke(alpha: Image.Image) -> float:
+    """The mean width of a drawing's lines in px: twice its area over its edge (a line of width w and length L has
+    the area wL and the edge 2L)."""
+    on = alpha.point(lambda v: 255 if v > 128 else 0)
+    area = on.histogram()[255]
+    edge = ImageChops.subtract(on, on.filter(ImageFilter.MinFilter(3))).histogram()[255]
+    return 2 * area / max(1, edge)
+
+
+def bolder(im: Image.Image, width: float) -> Image.Image:
+    """A sign's lines grown to `width` px where they are thinner (the model draws a hair line, scaled down it vanished
+    beside the frame at 64 px): its alpha spread by a square of the missing width, its colour as it was."""
+    grow = int(round(width - stroke(im.getchannel("A"))))
+    if grow < 2:
+        return im
+    out = im.copy()  # MaxFilter takes an odd size and adds size − 1 to a line
+    out.putalpha(im.getchannel("A").filter(ImageFilter.MaxFilter(grow + 1 if grow % 2 == 0 else grow + 2)))
+    return out
+
+
+def _reach(im: Image.Image) -> float:
+    """How far the drawing reaches from the centre of its box: the radius of the circle it fits in."""
+    a = im.getchannel("A").resize((max(1, im.width // 4), max(1, im.height // 4)), Image.BOX)
+    cx, cy, k = a.width / 2, a.height / 2, 4
+    far = 0.0
+    for i, v in enumerate(a.tobytes()):
+        if v > 24:
+            x, y = i % a.width + 0.5, i // a.width + 0.5
+            far = max(far, math.hypot(x - cx, y - cy))
+    return max(1.0, far * k)
+
+
+def frame(shape: str, col: tuple, side: int) -> tuple[Image.Image, float]:
+    """A frame of the interface's lines drawn by code at `side` px, transparent: an outer line and a thinner inner one,
+    and four small diamonds on a ring as on the portrait's ring; and the room it leaves for the sign — the radius of the
+    circle inside a ring, half the side of the square inside a square."""
+    im = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    s = side
+    o, w1, w2, gap = s * EDGE, s * OUTER, s * INNER, s * GAP
+    c = s / 2
+    inner = o + w1 + gap  # the inner line's outer edge from the side
+    if shape == "ring":
+        d.ellipse((o, o, s - o, s - o), outline=col, width=round(w1))
+        d.ellipse((inner, inner, s - inner, s - inner), outline=col, width=round(w2))
+        r, k = s * 0.045, (o + w1 / 2)
+        for x, y in ((c, k), (s - k, c), (c, s - k), (k, c)):  # a diamond across the outer line, dark in its middle
+            d.polygon([(x, y - r), (x + r * 0.7, y), (x, y + r), (x - r * 0.7, y)], fill=col)
+            d.polygon([(x, y - r * 0.45), (x + r * 0.3, y), (x, y + r * 0.45), (x - r * 0.3, y)], fill=(0, 0, 0, 0))
+        return im, c - inner - w2 - s * PAD
+    d.rectangle((o, o, s - o, s - o), outline=col, width=round(w1))
+    d.rectangle((inner, inner, s - inner, s - inner), outline=col, width=round(w2))
+    return im, c - inner - w2 - s * PAD
+
+
+def lines(raw: Image.Image, job: dict) -> Image.Image:
+    """An icon of the lines style: the sign the model drew in white lines, in its colour (the job's `tint`, else the
+    kind's), fitted into the frame code draws around it (LINES)."""
+    shape, col, ink = LINES[job["kind"]]
+    work = ICON * 4  # drawn 4× larger and shrunk: smooth lines
+    out, room = frame(shape, col, work)
+    ink = colour(job.get("tint")) or ink
+    drawn = sign(raw, ink, work)
+    k = room / _reach(drawn) if shape == "ring" else 2 * room / max(drawn.size)
+    drawn = drawn.resize((max(1, round(drawn.width * k)), max(1, round(drawn.height * k))), Image.LANCZOS)
+    layer = Image.new("RGBA", (work, work), ink + (0,))  # its colour round it: no dark fringe as it grows
+    layer.paste(drawn, ((work - drawn.width) // 2, (work - drawn.height) // 2))
+    out.alpha_composite(bolder(layer, work * SIGN_LINE))
+    return out.resize((ICON, ICON), Image.LANCZOS)
+
+
 def save_variant(raw: Image.Image, job: dict, path: Path, style: str = "flat") -> None:
     how = family(job, style)
     if how == "portrait":
@@ -642,6 +769,8 @@ def save_variant(raw: Image.Image, job: dict, path: Path, style: str = "flat") -
         medal(raw).save(path)
     elif how == "gold":
         gold(raw).save(path)
+    elif how == "sign":
+        lines(raw, job).save(path)
     else:
         cut(raw).save(path)
 

@@ -3478,7 +3478,9 @@
    "name": "Кислотная стрела",
    "tags": "arrow, acid, green, dripping, glowing, diagonal",
    "sentence": "A single glowing green arrow of acid with a bright yellow-green tip and dripping droplets, flying diagonally to the right.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "acid_splash",
@@ -3486,7 +3488,9 @@
    "name": "Брызги кислоты",
    "tags": "acid, splash, green, bubbles, drop",
    "sentence": "A single round splash of bright green acid with a few bubbles and droplets flying outward.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "aid",
@@ -3494,7 +3498,9 @@
    "name": "Помощь",
    "tags": "banner, flag, pole, blue, white plus sign",
    "sentence": "A single blue war banner on a pole with a white plus sign on its cloth, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "alter_self",
@@ -3502,7 +3508,9 @@
    "name": "Смена облика",
    "tags": "chameleon, lizard, green, brown spots, side view",
    "sentence": "A single small green chameleon with brown spots, seen from the side, its tail curled.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "animal_friendship",
@@ -3510,7 +3518,9 @@
    "name": "Дружба с животными",
    "tags": "paw print, big, pink, small heart",
    "sentence": "A single big pink paw print with a tiny white heart in its largest pad, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "animal_messenger",
@@ -3518,7 +3528,9 @@
    "name": "Посыльный-животное",
    "tags": "bird, flying, pink, glowing, side view",
    "sentence": "A single small pink glowing bird flying to the right with its wings spread wide.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "animate_dead",
@@ -3526,7 +3538,9 @@
    "name": "Оживление мёртвых",
    "tags": "tombstone, skeletal hand, grave, dark purple",
    "sentence": "A single grey tombstone with a bony skeletal hand reaching up from the ground before it, in a dark purple glow, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "arcane_lock",
@@ -3534,7 +3548,9 @@
    "name": "Магический замок",
    "tags": "keyhole, magic circle, blue, glowing",
    "sentence": "A single blue glowing keyhole inside a ring of small magic marks, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "augury",
@@ -3542,7 +3558,9 @@
    "name": "Гадание",
    "tags": "bones, divination, rune sticks, golden disc, eye",
    "sentence": "A single round golden divination disc with three small white bone sticks lying across it and a small glowing eye above them.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "bane",
@@ -3550,7 +3568,9 @@
    "name": "Бедствие",
    "tags": "down arrow, pink, glowing, broken",
    "sentence": "A single glowing pink arrow pointing down, with a jagged crack across its middle.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "barkskin",
@@ -3558,7 +3578,9 @@
    "name": "Кора",
    "tags": "shield, bark, brown, green moss, front view",
    "sentence": "A single rough brown shield shaped like tree bark with a few green moss patches, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "beacon_of_hope",
@@ -3566,7 +3588,9 @@
    "name": "Маяк надежды",
    "tags": "lantern, beacon, blue, glowing, white light, front view",
    "sentence": "A single blue glowing lantern with a bright white flame inside, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "bestow_curse",
@@ -3574,7 +3598,9 @@
    "name": "Проклятие",
    "tags": "curse mark, sigil, dark purple, dripping, black",
    "sentence": "A single dark purple cursed sigil branded like a mark, dripping black streaks, as a flat symbol.",
-   "key": "grey"
+   "key": "grey",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "bless",
@@ -3582,7 +3608,9 @@
    "name": "Благословение",
    "tags": "star, four-pointed star, pink, glowing, white center",
    "sentence": "A single glowing pink four-pointed star with a bright white center.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "blindness_deafness",
@@ -3590,7 +3618,9 @@
    "name": "Слепота/глухота",
    "tags": "eye, dark purple, glowing, slash, front view",
    "sentence": "A single glowing dark purple eye with a black diagonal slash across it.",
-   "key": "grey"
+   "key": "grey",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "blink",
@@ -3598,7 +3628,9 @@
    "name": "Мерцание",
    "tags": "star, sparkle, teal, glowing, motion lines",
    "sentence": "A single teal glowing four-pointed star flickering, with a few short motion lines around it.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "blur",
@@ -3606,7 +3638,9 @@
    "name": "Размытость",
    "tags": "ring, violet, glowing, wavy, front view",
    "sentence": "A single violet glowing ring with wavy doubled edges, slightly transparent, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "branding_smite",
@@ -3614,7 +3648,9 @@
    "name": "Клеймящая кара",
    "tags": "sword, glowing edge, gold, white-hot",
    "sentence": "A single sword blade with a white-hot golden glowing edge, pointing up, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "burning_hands",
@@ -3622,7 +3658,9 @@
    "name": "Горящие руки",
    "tags": "flame, fire, fan, orange, red, glowing",
    "sentence": "A single fan-shaped burst of orange and red flame, wide at the top and narrow at the bottom.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "call_lightning",
@@ -3630,7 +3668,9 @@
    "name": "Призыв молнии",
    "tags": "storm cloud, lightning bolt, yellow, dark grey",
    "sentence": "A single dark grey storm cloud with a yellow lightning bolt striking down from it, as a flat symbol.",
-   "key": "grey"
+   "key": "grey",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "calm_emotions",
@@ -3638,7 +3678,9 @@
    "name": "Успокоение чувств",
    "tags": "lotus, flower, pink, calm, water",
    "sentence": "A single pink lotus flower with open petals floating on a calm line of water, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "charm_person",
@@ -3646,7 +3688,9 @@
    "name": "Очарование личности",
    "tags": "heart, pink, glowing, sparkle, front view",
    "sentence": "A single pink glowing heart with a small white sparkle at its upper right.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "chill_touch",
@@ -3654,7 +3698,9 @@
    "name": "Холодное прикосновение",
    "tags": "skeletal hand, ghostly, icy blue, bones",
    "sentence": "A single ghostly skeletal hand of icy blue bones reaching forward, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "clairvoyance",
@@ -3662,7 +3708,9 @@
    "name": "Ясновидение",
    "tags": "eye, golden, glowing, front view",
    "sentence": "A single golden glowing eye with a bright white pupil, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "color_spray",
@@ -3670,7 +3718,9 @@
    "name": "Цветной спрей",
    "tags": "rainbow, light, fan, glowing, colorful",
    "sentence": "A single fan-shaped burst of rainbow light, wide at the top and narrow at the bottom.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "command",
@@ -3678,7 +3728,9 @@
    "name": "Приказ",
    "tags": "horn, sound waves, pink, glowing",
    "sentence": "A single pink glowing herald's horn with three curved sound waves coming out of its mouth, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "comprehend_languages",
@@ -3686,7 +3738,9 @@
    "name": "Постижение языков",
    "tags": "open book, outline, rune, amber, glowing lines",
    "sentence": "A single simple outline of an open book drawn in glowing amber lines, with one bright rune floating above its pages, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "conjure_animals",
@@ -3694,7 +3748,9 @@
    "name": "Призыв зверей",
    "tags": "wolf head, teal, glowing, front view",
    "sentence": "A single teal glowing wolf head seen from the front, ears up and mouth closed.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "continual_flame",
@@ -3702,7 +3758,9 @@
    "name": "Вечный огонь",
    "tags": "flame, fire, orange, glowing, yellow core",
    "sentence": "A single steady orange flame with a bright yellow core, standing upright.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "counterspell",
@@ -3710,7 +3768,9 @@
    "name": "Контрзаклинание",
    "tags": "palm, stop, blue, violet star, block",
    "sentence": "A single blue raised palm stopping a small violet star of magic, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "create_food_and_water",
@@ -3718,7 +3778,9 @@
    "name": "Создание пищи и воды",
    "tags": "bread, loaf, water drop, sparkles, food",
    "sentence": "A single round loaf of brown bread with a blue water drop beside it and a few white sparkles above.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "create_or_destroy_water",
@@ -3726,7 +3788,9 @@
    "name": "Создание или уничтожение воды",
    "tags": "water drop, blue, sparkle",
    "sentence": "A single bright blue water drop with a small white sparkle at its upper left.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "cure_wounds",
@@ -3734,7 +3798,9 @@
    "name": "Лечение ран",
    "tags": "heart, glowing, plus sign, green, sparkle",
    "sentence": "A single green glowing heart with a small white plus sign in its middle and a few sparkles around it.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "dancing_lights",
@@ -3742,7 +3808,9 @@
    "name": "Пляшущие огоньки",
    "tags": "glowing orb, yellow, light, sparkle",
    "sentence": "A single small glowing yellow orb with a soft white center and a short trail of light.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "darkness",
@@ -3750,7 +3818,9 @@
    "name": "Тьма",
    "tags": "sphere, black, dark purple, glowing, front view",
    "sentence": "A single black sphere with a thin dark purple glowing edge, seen from the front.",
-   "key": "grey"
+   "key": "grey",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "darkvision",
@@ -3758,7 +3828,9 @@
    "name": "Тёмное зрение",
    "tags": "cat eye, slit pupil, green-brown, glowing, dark",
    "sentence": "A single cat's eye with a narrow slit pupil glowing green-brown in the dark, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "daylight",
@@ -3766,7 +3838,9 @@
    "name": "Дневной свет",
    "tags": "sun, glowing, gold, white, rays",
    "sentence": "A single golden-white glowing sun with short straight rays, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "detect_evil_and_good",
@@ -3774,7 +3848,9 @@
    "name": "Обнаружение добра и зла",
    "tags": "scales, balance, golden, light, dark",
    "sentence": "A single pair of golden scales with one light pan and one dark pan, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "detect_magic",
@@ -3782,7 +3858,9 @@
    "name": "Обнаружение магии",
    "tags": "magic circle, gold, glowing, ring, front view",
    "sentence": "A single golden glowing ring with a small white star at its center, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "detect_poison_and_disease",
@@ -3790,7 +3868,9 @@
    "name": "Обнаружение яда и болезней",
    "tags": "drop, gold, glowing, skull, front view",
    "sentence": "A single golden glowing drop with a small black skull at its center, seen from the front.",
-   "key": "grey"
+   "key": "grey",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "detect_thoughts",
@@ -3798,7 +3878,9 @@
    "name": "Обнаружение мыслей",
    "tags": "brain, glowing, gold, mind, sparkles",
    "sentence": "A single golden glowing brain seen from the side with a few small sparkles around it.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "disguise_self",
@@ -3806,7 +3888,9 @@
    "name": "Маскировка",
    "tags": "mask, violet, glowing, front view",
    "sentence": "A single violet glowing mask with empty black eye holes, seen from the front.",
-   "key": "grey"
+   "key": "grey",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "dispel_magic",
@@ -3814,7 +3898,9 @@
    "name": "Развеивание магии",
    "tags": "magic circle, dissolving, sparks, scattered, blue",
    "sentence": "A single blue magic circle breaking apart into many scattered sparks, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "divine_favor",
@@ -3822,7 +3908,9 @@
    "name": "Божественное благоволение",
    "tags": "mace, golden, radiant, holy glow, light rays",
    "sentence": "A single golden mace pointing up, its round head glowing bright white with short rays of holy light around it.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "druidcraft",
@@ -3830,7 +3918,9 @@
    "name": "Друидизм",
    "tags": "leaf, green, glowing, front view",
    "sentence": "A single green glowing leaf with a brown stem, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "eldritch_blast",
@@ -3838,7 +3928,9 @@
    "name": "Мистический заряд",
    "tags": "energy bolt, violet, glowing, crackling, diagonal",
    "sentence": "A single violet glowing bolt of crackling energy, angled diagonally upward to the right.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "enhance_ability",
@@ -3846,7 +3938,9 @@
    "name": "Улучшение характеристики",
    "tags": "paw print, glowing, green, brown, from above",
    "sentence": "A single glowing green paw print with a brown outline and a small upward arrow in its center, seen from above.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "enlarge_reduce",
@@ -3854,7 +3948,9 @@
    "name": "Увеличение/уменьшение",
    "tags": "double-headed arrow, arrow, green, brown, diagonal",
    "sentence": "A single green double-headed arrow with brown edges, one head large and one small, pointing diagonally upward.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "entangle",
@@ -3862,7 +3958,9 @@
    "name": "Опутывание",
    "tags": "vines, thorn, tangled, teal, glowing",
    "sentence": "A single tangled knot of teal thorny vines curling in a loose spiral, with small glowing leaves.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "enthrall",
@@ -3870,7 +3968,9 @@
    "name": "Завораживание",
    "tags": "lute, sound waves, pink, glowing",
    "sentence": "A single pink lute with three curved sound waves rising from its strings, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "expeditious_retreat",
@@ -3878,7 +3978,9 @@
    "name": "Стремительное отступление",
    "tags": "footprints, trail, green, speed lines",
    "sentence": "A single trail of three green footprints with white speed lines behind them, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "faerie_fire",
@@ -3886,7 +3988,9 @@
    "name": "Огонь фей",
    "tags": "sparkles, fairy dust, glowing motes, violet, pink",
    "sentence": "A single cluster of bright violet and pink glowing motes swirling in a loose ring, like sparkling fairy dust.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "false_life",
@@ -3894,7 +3998,9 @@
    "name": "Ложная жизнь",
    "tags": "heart, dark purple, glowing, crack",
    "sentence": "A single dark purple heart with a black crack across it and a faint violet glow around its edge.",
-   "key": "grey"
+   "key": "grey",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "fear",
@@ -3902,7 +4008,9 @@
    "name": "Страх",
    "tags": "skull, ghost, violet, glowing, front view",
    "sentence": "A single glowing violet ghostly skull seen from the front, with wide empty eye sockets and a wavy lower edge.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "feather_fall",
@@ -3910,7 +4018,9 @@
    "name": "Падение пёрышком",
    "tags": "feather, green, brown, glowing, diagonal",
    "sentence": "A single green feather with brown edges drifting diagonally downward, with a soft glow and a small white downward arrow beneath it.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "find_familiar",
@@ -3918,7 +4028,9 @@
    "name": "Найти фамильяра",
    "tags": "cat, cat head, teal, glowing, front view",
    "sentence": "A single glowing teal cat head seen from the front, with pointed ears and bright white eyes.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "find_steed",
@@ -3926,7 +4038,9 @@
    "name": "Найти скакуна",
    "tags": "horse, horse head, teal, glowing, front view",
    "sentence": "A single glowing teal horse head seen from the front, with a flowing mane and bright white eyes.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "find_traps",
@@ -3934,7 +4048,9 @@
    "name": "Обнаружение ловушек",
    "tags": "bear trap, gold, glowing, front view",
    "sentence": "A single glowing gold bear trap with open jagged jaws, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "fire_bolt",
@@ -3942,7 +4058,9 @@
    "name": "Огненный снаряд",
    "tags": "fire, bolt, flame, orange, red, diagonal",
    "sentence": "A single streaking bolt of orange and red fire with a bright yellow core, angled diagonally upward.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "fireball",
@@ -3950,7 +4068,9 @@
    "name": "Огненный шар",
    "tags": "fireball, fire, flame, orange, glowing",
    "sentence": "A single round ball of orange fire with a bright yellow core and a few flame tongues licking upward.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "flame_blade",
@@ -3958,7 +4078,9 @@
    "name": "Огненный клинок",
    "tags": "scimitar, fire, flame, orange, red, diagonal",
    "sentence": "A single curved scimitar-shaped blade of orange and red fire, with a bright yellow edge, pointing diagonally upward.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "flaming_sphere",
@@ -3966,7 +4088,9 @@
    "name": "Огненная сфера",
    "tags": "fireball, rolling, fire trail, orange, flames",
    "sentence": "A single ball of orange fire rolling along the ground, leaving a long trail of flames behind it, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "floating_disk",
@@ -3974,7 +4098,9 @@
    "name": "Парящий диск",
    "tags": "disk, floating, teal, glowing, from side",
    "sentence": "A single flat teal disk of glowing force hovering horizontally, seen from a slight side angle.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "fly",
@@ -3982,7 +4108,9 @@
    "name": "Полёт",
    "tags": "wing, feather, green, brown, glowing",
    "sentence": "A single spread green feathered wing with brown tips and a soft glow, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "fog_cloud",
@@ -3990,7 +4118,9 @@
    "name": "Облако тумана",
    "tags": "cloud, fog, teal, glowing",
    "sentence": "A single puffy teal cloud with soft rounded edges and a faint glow, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "gaseous_form",
@@ -3998,7 +4128,9 @@
    "name": "Газообразная форма",
    "tags": "mist figure, vapor, translucent, green-brown",
    "sentence": "A single translucent figure made of green-brown mist, its lower half fading into vapor, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "gentle_repose",
@@ -4006,7 +4138,9 @@
    "name": "Мирный покой",
    "tags": "coffin, closed, halo, dark purple glow",
    "sentence": "A single closed wooden coffin with a soft white halo above it, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "glyph_of_warding",
@@ -4014,7 +4148,9 @@
    "name": "Глиф охраны",
    "tags": "rune, angular symbol, blue, spark",
    "sentence": "A single angular blue warding rune with a small white spark at its tip, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "goodberry",
@@ -4022,7 +4158,9 @@
    "name": "Волшебные ягоды",
    "tags": "berries, cluster, big, green leaves, glowing, close-up",
    "sentence": "A big cluster of five round glowing green berries on a short sprig with two leaves, filling the whole square.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "grease",
@@ -4030,7 +4168,9 @@
    "name": "Жир",
    "tags": "puddle, grease, teal, glossy",
    "sentence": "A single glossy teal puddle of grease with rounded edges and a few bright highlights, seen from above.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "guidance",
@@ -4038,7 +4178,9 @@
    "name": "Наставление",
    "tags": "compass, needle, gold, glowing, front view",
    "sentence": "A single gold glowing compass needle pointing straight up, with a bright white center, seen from above.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "guiding_bolt",
@@ -4046,7 +4188,9 @@
    "name": "Направляющий снаряд",
    "tags": "bolt, light, gold, white, glowing, diagonal",
    "sentence": "A single streaking bolt of gold and white light with a bright glowing core, angled diagonally upward.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "gust_of_wind",
@@ -4054,7 +4198,9 @@
    "name": "Порыв ветра",
    "tags": "wind, swirl, gust, pale blue, white",
    "sentence": "A single pale blue gust of wind made of three curved white-edged lines, blowing from left to right.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "haste",
@@ -4062,7 +4208,9 @@
    "name": "Ускорение",
    "tags": "double arrow, fast forward, chevrons, yellow-green, speed lines",
    "sentence": "Two bright yellow-green chevron arrows pointing right like a fast-forward sign, with speed lines, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "healing_word",
@@ -4070,7 +4218,9 @@
    "name": "Лечебное слово",
    "tags": "plus sign, glowing, green, sound waves",
    "sentence": "A single glowing green plus sign with two small white sound waves curving from its right side.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "heat_metal",
@@ -4078,7 +4228,9 @@
    "name": "Раскалить металл",
    "tags": "ingot, metal, red, orange, glowing, heat waves",
    "sentence": "A single rectangular iron ingot glowing red and orange, with small heat waves rising from its top.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "hellish_rebuke",
@@ -4086,7 +4238,9 @@
    "name": "Адский упрёк",
    "tags": "devil horns, flames, red, orange, infernal",
    "sentence": "A single pair of curved red devil horns wreathed in orange flames, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "heroism",
@@ -4094,7 +4248,9 @@
    "name": "Героизм",
    "tags": "lion head, roaring, pink, mane, glowing",
    "sentence": "A single pink roaring lion's head with a full mane, seen from the front, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "hideous_laughter",
@@ -4102,7 +4258,9 @@
    "name": "Отвратительный смех",
    "tags": "jester hat, pink, bells, diagonal",
    "sentence": "A single pink jester's hat with three floppy points and small white bells, tilted to one side.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "hold_person",
@@ -4110,7 +4268,9 @@
    "name": "Удержание человека",
    "tags": "chain, pink, glowing, circle",
    "sentence": "A single glowing pink chain curled into a tight circle, its links closed.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "hunters_mark",
@@ -4118,7 +4278,9 @@
    "name": "Метка охотника",
    "tags": "crosshair, target, gold, glowing, arrowhead, front view",
    "sentence": "A single gold glowing crosshair ring with a small arrowhead at its center, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "hypnotic_pattern",
@@ -4126,7 +4288,9 @@
    "name": "Гипнотический узор",
    "tags": "spiral, pattern, violet, glowing",
    "sentence": "A single violet glowing spiral pattern of three curved lines, turning inward.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "identify",
@@ -4134,7 +4298,9 @@
    "name": "Опознание",
    "tags": "magnifying glass, gold, glowing, glass, front view",
    "sentence": "A single gold-rimmed magnifying glass with a clear round lens, handle pointing down.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "illusory_script",
@@ -4142,7 +4308,9 @@
    "name": "Иллюзорные письмена",
    "tags": "quill, feather, violet, glowing, mist",
    "sentence": "A single violet glowing quill feather writing a wavy line of light that fades into mist, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "inflict_wounds",
@@ -4150,7 +4318,9 @@
    "name": "Нанесение ран",
    "tags": "claw marks, slash, dark purple, glowing, three lines",
    "sentence": "A single set of three dark purple glowing claw marks slashing diagonally.",
-   "key": ""
+   "key": "",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "invisibility",
@@ -4158,7 +4328,9 @@
    "name": "Невидимость",
    "tags": "dotted outline, silhouette, violet, fading, sparkles",
    "sentence": "A single dotted violet outline of a standing figure fading into small sparkles, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "jump",
@@ -4166,7 +4338,9 @@
    "name": "Прыжок",
    "tags": "arrow, arc, upward, green, motion lines",
    "sentence": "A single green arrow leaping up in a high arc over a small bump, with short motion lines, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "knock",
@@ -4174,7 +4348,9 @@
    "name": "Отпирание",
    "tags": "key, green, brown, glowing, diagonal",
    "sentence": "A single green glowing key with a brown handle, pointing diagonally up.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "lesser_restoration",
@@ -4182,7 +4358,9 @@
    "name": "Малое восстановление",
    "tags": "broken shackle, chain, blue, glowing, plus sign",
    "sentence": "A single broken iron shackle with its chain snapped, glowing blue, with a small white plus sign above it, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "light",
@@ -4190,7 +4368,9 @@
    "name": "Свет",
    "tags": "gem, crystal, glowing, warm yellow, light rays",
    "sentence": "A single faceted crystal gem glowing with warm yellow light, with short rays around it, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "lightning_bolt",
@@ -4198,7 +4378,9 @@
    "name": "Молния",
    "tags": "lightning bolt, lightning, yellow, glowing, diagonal",
    "sentence": "A single jagged yellow lightning bolt striking diagonally downward, with a bright white core.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "longstrider",
@@ -4206,7 +4388,9 @@
    "name": "Длинношаг",
    "tags": "boot, green, brown, speed lines, side view",
    "sentence": "A single green leather boot with a brown sole and three white speed lines behind it, seen from the side.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "mage_armor",
@@ -4214,7 +4398,9 @@
    "name": "Доспех мага",
    "tags": "breastplate, armor, blue, glowing, front view",
    "sentence": "A single blue glowing breastplate of translucent force, seen from the front, with no body inside.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "mage_hand",
@@ -4222,7 +4408,9 @@
    "name": "Волшебная рука",
    "tags": "glove, teal, glowing, front view",
    "sentence": "A single teal glowing glove with open fingers, seen from the front, empty.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "magic_circle",
@@ -4230,7 +4418,9 @@
    "name": "Магический круг",
    "tags": "magic circle, geometric symbol, blue, glowing, front view",
    "sentence": "A single blue glowing magic circle made of two rings and simple geometric shapes.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "magic_missile",
@@ -4238,7 +4428,9 @@
    "name": "Волшебная стрела",
    "tags": "dart, violet, glowing, force, diagonal",
    "sentence": "A single violet glowing dart pointing diagonally upward, with two faint violet copies trailing behind it.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "magic_mouth",
@@ -4246,7 +4438,9 @@
    "name": "Волшебный рот",
    "tags": "seashell, spiral shell, violet, glowing",
    "sentence": "A single violet glowing spiral seashell with a soft white sparkle at its opening, seen from the side.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "magic_weapon",
@@ -4254,7 +4448,9 @@
    "name": "Волшебное оружие",
    "tags": "sword, vertical, point down, glowing runes, blue, sparkles, square tile",
    "sentence": "A single short steel sword standing upright with its point down, three bright blue glowing runes along its blade and small blue sparkles around it, as a flat symbol. The sword is small in the middle of a wide square slab, with plenty of stone on its left and right.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "major_image",
@@ -4262,7 +4458,9 @@
    "name": "Большое изображение",
    "tags": "cube, violet, glowing, transparent, diagonal",
    "sentence": "A single violet glowing cube with a shimmering transparent surface, seen at an angle.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "mass_healing_word",
@@ -4270,7 +4468,9 @@
    "name": "Массовое исцеляющее слово",
    "tags": "three plus signs, green, glowing, sound waves",
    "sentence": "Three small green glowing plus signs in a row with white sound waves around them, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "mending",
@@ -4278,7 +4478,9 @@
    "name": "Починка",
    "tags": "cup, crack, golden stitches, repair, glow",
    "sentence": "A single grey metal cup split by a crack, a line of glowing golden stitches closing the crack.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "message",
@@ -4286,7 +4488,9 @@
    "name": "Послание",
    "tags": "speech bubble, green, glowing, sound waves",
    "sentence": "A single green glowing speech bubble with three white sound waves inside.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "minor_illusion",
@@ -4294,7 +4498,9 @@
    "name": "Малая иллюзия",
    "tags": "wisp, violet, glowing, sparkle",
    "sentence": "A single small violet glowing wisp with a few white sparkles around it.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "mirror_image",
@@ -4302,7 +4508,9 @@
    "name": "Зеркальное отражение",
    "tags": "mirror, violet, glowing, three, shards",
    "sentence": "A single oval violet mirror with three overlapping translucent copies behind it.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "misty_step",
@@ -4310,7 +4518,9 @@
    "name": "Туманный шаг",
    "tags": "mist, swirl, teal, silver, glowing",
    "sentence": "A single swirling cloud of teal and silver mist with a bright center.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "moonbeam",
@@ -4318,7 +4528,9 @@
    "name": "Лунный луч",
    "tags": "crescent moon, moonlight, silver, light rays",
    "sentence": "A single silver crescent moon with three straight rays of pale light pointing down beneath it, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "pass_without_trace",
@@ -4326,7 +4538,9 @@
    "name": "Незаметный путь",
    "tags": "cloak, hood, dark blue, shadow, front view",
    "sentence": "A single empty dark blue hooded cloak with a black opening, seen from the front, its hem fading into shadow.",
-   "key": "grey"
+   "key": "grey",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "phantom_steed",
@@ -4334,7 +4548,9 @@
    "name": "Призрачный скакун",
    "tags": "horse, saddle, bridle, violet, glowing, from side",
    "sentence": "A single translucent violet horse with a dark saddle and bridle, seen from the side, its legs fading into mist.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "plant_growth",
@@ -4342,7 +4558,9 @@
    "name": "Рост растений",
    "tags": "vine, leaf, green, brown, curling",
    "sentence": "A single thick green vine with three broad leaves curling upward from a brown stem.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "poison_spray",
@@ -4350,7 +4568,9 @@
    "name": "Ядовитый брызг",
    "tags": "poison, gas, cloud, green, purple, swirl",
    "sentence": "A single billowing cloud of green poison gas with purple edges, curled into a round puff.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "prayer_of_healing",
@@ -4358,7 +4578,9 @@
    "name": "Молитва исцеления",
    "tags": "plus sign, glowing, green, white, ring",
    "sentence": "A single warm white glowing plus sign inside a soft green ring of light.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "prestidigitation",
@@ -4366,7 +4588,9 @@
    "name": "Фокусы",
    "tags": "sparkle, star, green, brown, glowing",
    "sentence": "A single small green-brown star with a few white sparkles around it.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "produce_flame",
@@ -4374,7 +4598,9 @@
    "name": "Создание пламени",
    "tags": "flame, open palm, hand, orange, glowing",
    "sentence": "A single small orange flame burning above an open palm, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "protection_from_energy",
@@ -4382,7 +4608,9 @@
    "name": "Защита от стихий",
    "tags": "bubble, sphere, blue, flame, snowflake, lightning",
    "sentence": "A single translucent blue bubble with three small symbols inside: a flame, a snowflake and a lightning bolt, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "protection_from_evil_and_good",
@@ -4390,7 +4618,9 @@
    "name": "Защита от зла и добра",
    "tags": "holy water, drops, ring, blue star",
    "sentence": "A single ring of small white holy water drops around a blue star, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "protection_from_poison",
@@ -4398,7 +4628,9 @@
    "name": "Защита от яда",
    "tags": "poison drop, green, crossed out, blue ring",
    "sentence": "A single green poison drop inside a blue ring crossed by a diagonal blue bar, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "purify_food_and_drink",
@@ -4406,7 +4638,9 @@
    "name": "Очищение пищи и питья",
    "tags": "water drop, leaf, green, sparkle",
    "sentence": "A single clear green water drop with a small leaf and a white sparkle on it, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "ray_of_enfeeblement",
@@ -4414,7 +4648,9 @@
    "name": "Луч ослабления",
    "tags": "beam, dark purple, black, glowing, diagonal",
    "sentence": "A single jagged black beam of dark purple energy, tapering to a point, angled diagonally.",
-   "key": "grey"
+   "key": "grey",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "ray_of_frost",
@@ -4422,7 +4658,9 @@
    "name": "Луч холода",
    "tags": "beam, frost, snowflake, light blue, white, diagonal",
    "sentence": "A single light blue beam of frost with a white snowflake at its tip, angled diagonally.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "remove_curse",
@@ -4430,7 +4668,9 @@
    "name": "Снятие проклятия",
    "tags": "magic circle, cracked, violet, white light, sparks",
    "sentence": "A single violet curse sigil split in two by a bright white crack, with small white sparks flying out, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "resistance",
@@ -4438,7 +4678,9 @@
    "name": "Устойчивость",
    "tags": "rock, waves, blue, steadfast, glowing",
    "sentence": "A single blue rock standing firm while white waves break against it, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "sacred_flame",
@@ -4446,7 +4688,9 @@
    "name": "Священное пламя",
    "tags": "flame, fire, gold, white, glowing",
    "sentence": "A single column of golden-white flame falling downward, with a bright white core.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "sanctuary",
@@ -4454,7 +4698,9 @@
    "name": "Святилище",
    "tags": "barrier, dome, blue, glowing, white",
    "sentence": "A single glowing blue dome of light with a white ring at its base.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "scorching_ray",
@@ -4462,7 +4708,9 @@
    "name": "Испепеляющий луч",
    "tags": "three rays, fire, orange, red, fan",
    "sentence": "Three thin orange rays of fire fanning out from one bright point, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "see_invisibility",
@@ -4470,7 +4718,9 @@
    "name": "Видение невидимого",
    "tags": "magnifying lens, round ring, cyan, dotted outline, silhouette, violet",
    "sentence": "A single round cyan glowing lens ring with a dotted violet outline of a standing figure showing clearly inside it, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "sending",
@@ -4478,7 +4728,9 @@
    "name": "Посыл",
    "tags": "speech bubble, glowing, orange, white, swirl",
    "sentence": "A single orange glowing speech bubble with a white swirl inside.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "shatter",
@@ -4486,7 +4738,9 @@
    "name": "Расколоть",
    "tags": "bell, cracked, grey metal, sound waves, pale blue, diagonal",
    "sentence": "A single grey metal bell with a jagged crack across its side and pale blue rings radiating outward.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "shield_of_faith",
@@ -4494,7 +4748,9 @@
    "name": "Щит веры",
    "tags": "shield, barrier, blue, glowing, halo, front view",
    "sentence": "A single blue glowing shield with a white halo around it, seen from the front.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "shield",
@@ -4502,7 +4758,9 @@
    "name": "Щит",
    "tags": "magic shield, hexagon, barrier, blue, glowing, front view",
    "sentence": "A single glowing blue hexagonal barrier of light, slightly transparent, with a brighter edge.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "shillelagh",
@@ -4510,7 +4768,9 @@
    "name": "Шилалах",
    "tags": "club, staff, wood, brown, green, glowing, diagonal",
    "sentence": "A single brown wooden club with a green glowing vine wrapped around it, angled diagonally.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "shocking_grasp",
@@ -4518,7 +4778,9 @@
    "name": "Электрическое прикосновение",
    "tags": "fist, electricity, sparks, yellow, white",
    "sentence": "A single clenched fist crackling with yellow and white electric sparks, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "silence",
@@ -4526,7 +4788,9 @@
    "name": "Тишина",
    "tags": "bell, crossed out, red slash, no sound, grey",
    "sentence": "A single grey bell with a thick red diagonal slash across it, as a sign of silence.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "silent_image",
@@ -4534,7 +4798,9 @@
    "name": "Беззвучный образ",
    "tags": "stag head, antlers, violet, dotted lines, shimmer, mirage",
    "sentence": "A single violet stag's head with wide antlers drawn in shimmering dotted lines, half transparent like a mirage, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "illusion",
+   "tint": "#8a7fc8"
   },
   {
    "id": "sleep",
@@ -4542,7 +4808,9 @@
    "name": "Сон",
    "tags": "crescent moon, moon, pink, white, glowing",
    "sentence": "A single pink crescent moon with a small white star and a soft glow.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "sleet_storm",
@@ -4550,7 +4818,9 @@
    "name": "Ледяной шторм",
    "tags": "snowflake, ice, light blue, white, glowing",
    "sentence": "A single large light blue snowflake with white icy streaks around it.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "slow",
@@ -4558,7 +4828,9 @@
    "name": "Замедление",
    "tags": "hourglass, sand, brown, green, glowing",
    "sentence": "A single brown hourglass with green sand frozen mid-fall.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "spare_the_dying",
@@ -4566,7 +4838,9 @@
    "name": "Пощада умирающего",
    "tags": "heartbeat line, pulse, dark purple, plus sign",
    "sentence": "A single dark purple heartbeat line with one sharp peak and a small white plus sign above it, as a flat symbol.",
-   "key": "grey"
+   "key": "grey",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "speak_with_animals",
@@ -4574,7 +4848,9 @@
    "name": "Разговор с животными",
    "tags": "wolf head, golden, open mouth, speech bubble, front view",
    "sentence": "A single golden wolf head seen from the front, its open mouth forming a small white speech bubble shape.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "speak_with_dead",
@@ -4582,7 +4858,9 @@
    "name": "Разговор с мертвецами",
    "tags": "skull, bone white, speech bubble, light blue",
    "sentence": "A single pale bone-white skull seen from the front with a small light blue speech bubble beside its jaw.",
-   "key": ""
+   "key": "",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "speak_with_plants",
@@ -4590,7 +4868,9 @@
    "name": "Разговор с растениями",
    "tags": "leaf, plant, green, brown, speech bubble, front view",
    "sentence": "A single green-brown leaf seen from the front with a small white speech bubble shape in its center.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "spider_climb",
@@ -4598,7 +4878,9 @@
    "name": "Паучий лаз",
    "tags": "spider, green, brown, eight legs, top view",
    "sentence": "A single green-brown spider seen from above with eight legs spread wide and a small white outline.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "spike_growth",
@@ -4606,7 +4888,9 @@
    "name": "Рост шипов",
    "tags": "thorns, spikes, green, brown, front view",
    "sentence": "A single cluster of sharp green-brown thorns and spikes rising from a small brown patch.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "spirit_guardians",
@@ -4614,7 +4898,9 @@
    "name": "Духовные стражи",
    "tags": "ring, halo, wings, teal, glowing, front view",
    "sentence": "A single teal glowing ring with three small white wing shapes around it and a soft white outline.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "spiritual_weapon",
@@ -4622,7 +4908,9 @@
    "name": "Духовное оружие",
    "tags": "warhammer, glowing, orange, spectral, diagonal",
    "sentence": "A single glowing orange spectral warhammer floating diagonally, its head to the upper right, with a soft white outline.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "stinking_cloud",
@@ -4630,7 +4918,9 @@
    "name": "Зловонное облако",
    "tags": "stink cloud, yellow-green, flies, gas",
    "sentence": "A single sickly yellow-green cloud of gas with a few small black flies around it, as a flat symbol.",
-   "key": "grey"
+   "key": "grey",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "suggestion",
@@ -4638,7 +4928,9 @@
    "name": "Внушение",
    "tags": "speech bubble, pink, glowing, swirl, front view",
    "sentence": "A single pink glowing speech bubble with a small white spiral inside and a soft white outline.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "thaumaturgy",
@@ -4646,7 +4938,9 @@
    "name": "Чудотворство",
    "tags": "flame, green, brown, glowing, spark",
    "sentence": "A single green-brown flame with a bright white core and a few small white sparks rising from it.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "thunderwave",
@@ -4654,7 +4948,9 @@
    "name": "Громовая волна",
    "tags": "sound wave, ring, pale blue, glowing, front view",
    "sentence": "A single pale blue ring of sound waves expanding outward, with a bright white center and jagged edges.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "tongues",
@@ -4662,7 +4958,9 @@
    "name": "Язык богов",
    "tags": "ear, sound waves, golden",
    "sentence": "A single golden ear with three curved sound waves coming into it, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "true_strike",
@@ -4670,7 +4968,9 @@
    "name": "Верный удар",
    "tags": "target, bullseye, sword tip, gold",
    "sentence": "A single golden sword tip pointing into the center of a round bullseye target, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "divination",
+   "tint": "#b9b0d8"
   },
   {
    "id": "unseen_servant",
@@ -4678,7 +4978,9 @@
    "name": "Невидимый слуга",
    "tags": "tray, teapot, floating, teal, sparkles",
    "sentence": "A single silver tray with a teapot floating in the air, held by no one, with teal sparkles, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "vampiric_touch",
@@ -4686,7 +4988,9 @@
    "name": "Вампирическое прикосновение",
    "tags": "fangs, vampire, blood drops, red, violet glow",
    "sentence": "A single pair of white fangs dripping two red drops of blood, with a thin violet glow around them.",
-   "key": ""
+   "key": "",
+   "school": "necromancy",
+   "tint": "#7fa07a"
   },
   {
    "id": "vicious_mockery",
@@ -4694,7 +4998,9 @@
    "name": "Злая насмешка",
    "tags": "jester mask, grin, tongue out, pink, violet",
    "sentence": "A single pink and violet jester mask with a wide mocking grin and its tongue sticking out.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "warding_bond",
@@ -4702,7 +5008,9 @@
    "name": "Защитная связь",
    "tags": "two rings, linked, chain, blue, glowing",
    "sentence": "Two blue glowing rings linked together like two links of a chain, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "water_walk",
@@ -4710,7 +5018,9 @@
    "name": "Хождение по воде",
    "tags": "footprint, water ripples, blue, green",
    "sentence": "A single green footprint standing on round blue water ripples, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "transmutation",
+   "tint": "#c8b45a"
   },
   {
    "id": "web",
@@ -4718,7 +5028,9 @@
    "name": "Паутина",
    "tags": "spider web, teal, glowing, front view",
    "sentence": "A single teal glowing spider web with thick white strands and a few small white droplets.",
-   "key": ""
+   "key": "",
+   "school": "conjuration",
+   "tint": "#c99a4a"
   },
   {
    "id": "wind_wall",
@@ -4726,7 +5038,9 @@
    "name": "Стена ветра",
    "tags": "wind, tornado, swirl, pale blue, white",
    "sentence": "A single tall pale blue column of swirling wind with white streaks, standing upright.",
-   "key": ""
+   "key": "",
+   "school": "evocation",
+   "tint": "#d0704f"
   },
   {
    "id": "zone_of_truth",
@@ -4734,7 +5048,9 @@
    "name": "Зона правды",
    "tags": "ring, eye, pink, glowing, front view",
    "sentence": "A single pink glowing ring with a small white eye in its center and a thin white outline.",
-   "key": ""
+   "key": "",
+   "school": "enchantment",
+   "tint": "#c77fa8"
   },
   {
    "id": "armor_of_agathys",
@@ -4742,7 +5058,9 @@
    "name": "Броня Агатиса",
    "tags": "ice spikes, ring, light blue, white frost",
    "sentence": "A single crown of sharp light blue ice spikes pointing outward in a ring, as a flat symbol.",
-   "key": ""
+   "key": "",
+   "school": "abjuration",
+   "tint": "#6f9fc0"
   },
   {
    "id": "action_surge_1_use",
@@ -6574,7 +6892,8 @@
    "name": "Драконье происхождение (белый)",
    "tags": "dragon head, white, horns, scales, front view",
    "sentence": "A single white dragon head seen from the front, with two curved horns and pale blue scales.",
-   "key": ""
+   "key": "",
+   "tint": "#eef4fa"
   },
   {
    "id": "draconic_ancestry_silver",
@@ -6582,7 +6901,8 @@
    "name": "Драконье происхождение (серебряный)",
    "tags": "dragon head, silver, horns, scales, front view",
    "sentence": "A single silver dragon head seen from the front, with two curved horns and shiny pale scales.",
-   "key": ""
+   "key": "",
+   "tint": "#c9d3de"
   },
   {
    "id": "draconic_ancestry_red",
@@ -6590,7 +6910,8 @@
    "name": "Драконье происхождение (красный)",
    "tags": "dragon head, red, horns, scales, front view",
    "sentence": "A single red dragon head seen from the front, with two curved horns and darker red scales.",
-   "key": ""
+   "key": "",
+   "tint": "#d8503c"
   },
   {
    "id": "draconic_ancestry_green",
@@ -6598,7 +6919,8 @@
    "name": "Драконье происхождение (зелёный)",
    "tags": "dragon head, green, horns, scales, front view",
    "sentence": "A single green dragon head seen from the front, with two curved horns and lighter green scales.",
-   "key": ""
+   "key": "",
+   "tint": "#64b06a"
   },
   {
    "id": "draconic_ancestry_gold",
@@ -6606,7 +6928,8 @@
    "name": "Драконье происхождение (золотой)",
    "tags": "dragon head, gold, horns, scales, front view",
    "sentence": "A single gold dragon head seen from the front, with two curved horns and bright yellow scales.",
-   "key": ""
+   "key": "",
+   "tint": "#e6c24a"
   },
   {
    "id": "draconic_ancestry_copper",
@@ -6614,7 +6937,8 @@
    "name": "Драконье происхождение (медный)",
    "tags": "dragon head, copper, horns, scales, front view",
    "sentence": "A single copper dragon head seen from the front, with two curved horns and warm orange-brown scales.",
-   "key": ""
+   "key": "",
+   "tint": "#d07a4a"
   },
   {
    "id": "draconic_ancestry_bronze",
@@ -6622,7 +6946,8 @@
    "name": "Драконье происхождение (бронзовый)",
    "tags": "dragon head, bronze, horns, scales, front view",
    "sentence": "A single bronze dragon head seen from the front, with two curved horns and dark brown scales.",
-   "key": ""
+   "key": "",
+   "tint": "#b98a52"
   },
   {
    "id": "draconic_ancestry_brass",
@@ -6630,7 +6955,8 @@
    "name": "Драконье происхождение (латунный)",
    "tags": "dragon head, brass, horns, scales, front view",
    "sentence": "A single brass dragon head seen from the front, with two curved horns and yellow-brown scales.",
-   "key": ""
+   "key": "",
+   "tint": "#d2a85a"
   },
   {
    "id": "draconic_ancestry_blue",
@@ -6638,7 +6964,8 @@
    "name": "Драконье происхождение (синий)",
    "tags": "dragon head, blue, horns, scales, front view",
    "sentence": "A single blue dragon head seen from the front, with two curved horns and pale blue scales.",
-   "key": ""
+   "key": "",
+   "tint": "#5f95d8"
   },
   {
    "id": "draconic_ancestry_black",
@@ -6646,7 +6973,8 @@
    "name": "Драконье наследие (чёрный)",
    "tags": "dragon head, horns, jet black scales, green eyes, acid",
    "sentence": "A single jet black dragon head with glossy coal-black scales seen from the front, two curved black horns, bright acid-green eyes and green drops at its jaw.",
-   "key": "grey"
+   "key": "grey",
+   "tint": "#8c86a0"
   },
   {
    "id": "relentless_endurance",

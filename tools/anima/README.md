@@ -46,7 +46,7 @@ tail -f anima.log                               # [12/1856] items/longsword #1 1
 | `--side` (768), `--steps` (20), `--cfg` (4.5), `--sampler` (`ER SDE`) | генерация; карточка Anima: 512–1536 px, CFG 4–5, ER SDE |
 | `--seeds` (`11,22`) | по варианту на сид |
 | `--bg` (`dark`) | фон, где задание не задало свой: `dark`, `grey`, `white`, `green` |
-| `--style` (`flat`) | стиль иконки: `flat` — плоский минимализм в `out/`, `painted` — живописный в `out_painted/` (раздел 6) |
+| `--style` (`flat`) | стиль иконки: `flat` — плоский минимализм в `out/`, `painted` — живописный в `out_painted/` (раздел 6), `lines` — тонкие линии в рамке кодом в `out_lines/` (раздел 7) |
 | `--recut` | перерезать варианты из сырых кадров, ничего не рисуя |
 | `--only items,spells` | только эти виды |
 | `--ids longsword,fireball --redraw` | перерисовать эти |
@@ -151,7 +151,44 @@ python tools/anima/pick.py --marked
 python tools/anima/install.py --out tools/anima/out_painted --picks tools/anima/picks_painted.json
 ```
 
-## 7. Элементы интерфейса
+## 7. Иконки в стиле «линии» (проба)
+
+Автор, 2026-11-12: заклинания, умения, действия и черты рас — как кнопки интерфейса (`ui`, семейство `gold`): тонкие линии на чёрном без заливки, вырезанные по яркости, но каждый вид в своей рамке и своём цвете. Это проба стиля: `--style lines` рисует в `out_lines/`, выбор — в `picks_lines_icons.json`; живописные иконки в `out_painted/` и в игре не трогаются.
+
+| Вид | Рамка | Знак |
+|---|---|---|
+| `spells` | золотое кольцо в две линии с четырьмя ромбами, как кольцо портрета интерфейса | цветом своей школы: `tint` задания = `schools` из `game/data/icons.json` по `school_id` заклинания (`make_jobs.py`) |
+| `features`, `acts` | золотой квадрат в две линии, как ячейка панели | золотом; действия рисует FLUX (`out_lines_flux/`), как и живописные: на пробе у Anima «Помочь» — молитвенно сложенные руки, у FLUX — сцепленные предплечья |
+| `traits` | серебряный квадрат в две линии | серебром; у драконьих предков — цветом своего дракона (`tint` в `subjects.json`: десять черт отличаются только цветом) |
+
+**Модель рисует только знак — белыми линиями на чёрном, без рамки** (семейство `sign`: промт кнопок `gold`, «white lines… nothing is drawn around it: no frame, no ring and no border», цвета сюжета выкинуты `uncolour`). Рамку и цвет кладёт код (`lines` в `anima_gen.py`, таблица `LINES`):
+- геометрию модель портит: d20 залила, у медалей состояний торчащая стрелка рвала кольцо, у живописных плиток рамка выходила с наклоном и скруглением. Кодом рамка у всех 454 иконок одной толщины и одного поля, знак всегда внутри неё и не задевает её (вписан в круг по самой дальней точке рисунка, в квадрат — по рамке рисунка);
+- цвет школы ровно тот, что у игры, а не «примерно розовый» модели; белые линии режутся по яркости чище цветных (тёмно-фиолетовая некромантия на чёрном почти не видна);
+- рамку, цвета и толщину можно менять **без перерисовки**: `--recut` переделывает варианты из сырых кадров (`LINES`, `EDGE`/`OUTER`/`INNER`/`GAP`/`PAD`, `SIGN_LINE`); штамп варианта — только промт знака, так что смена цвета школы не перерисовывает кадр.
+
+Линии знака модель рисует волосяными, а уменьшенные в рамку они пропадали рядом с её линией в 64 px: код доводит их до ширины `SIGN_LINE` (2 px на иконке 128, 1 px в 64), растягивая прозрачность (`bolder`).
+
+```bash
+# проба дома, по одному варианту: несколько каждого вида
+python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only spells,features,traits --ids fireball,shield,rage,darkvision --first 1
+# на сервере, на ночь: заклинания, умения, черты — 420 иконок × 2 варианта = 840 кадров, ~4,4 ч при 20 шагах;
+# остановленный прогон продолжается той же командой
+nohup python3 anima_gen.py jobs/icons.json --style lines --steps 20 --only spells,features,traits > lines.log 2>&1 &
+tail -f lines.log                              # [12/840] spells/fireball #1 19s, left ~4.3 h
+# дома: действия через FLUX — 34 × 2 = 68 кадров, ~5 мин, ~$0.6 → out_lines_flux/
+python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only acts --backend openrouter
+# out_lines/ с сервера в tools/anima/out_lines/; выбор на той же странице — вкладки «· линии»
+python tools/anima/pick.py                     # http://127.0.0.1:8791/#lines_spells
+python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only spells,features,traits --recut   # другая рамка или цвет
+python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only acts --backend openrouter --recut
+# в игру — только если автор возьмёт стиль: поверх живописных
+python tools/anima/install.py --out tools/anima/out_lines --picks tools/anima/picks_lines_icons.json --only spells,features,traits
+python tools/anima/install.py --out tools/anima/out_lines_flux --picks tools/anima/picks_lines_icons.json --only acts
+```
+
+Проба 2026-11-12 (23 иконки, по варианту): знаки чистые, своих рамок модель не рисует. Цвета школ — как в игре; преобразование (охра) и вызов (янтарь) ближе всех к золоту кольца — если сольются, цвета меняются перерезкой.
+
+## 8. Элементы интерфейса
 
 Рамки окон, кнопки, ячейки, вкладки, подсказки и украшения — своим рисунком (пробы 2026-11-11 и 2026-11-12). Геометрию рисует код (`ui/guides.py`: глубина и линии, семьи направляющих heavy / thin / book / plate), Anima раскрашивает через ControlNet LLLite (`ui/paint.py`: `anima-lllite-depth-1` + `anima-lllite-lineart-1`; стиль — теги, фраза на каждую деталь, хвост, добавка к негативу и семья направляющих), `ui/mock.py` режет на 9 частей и собирает макет; `ui/preview.py` — экраны игры (экран, бой, снаряжение, книга заклинаний, лист) из деталей стиля «линии» по выбору `ui/picks_lines.json` и выбранных иконок; на странице выбора это вкладки «Рамки интерфейса» и «Превью». Чужой арт (BG3, Pathfinder) только смотрим, опорой не берём. Второй вызов LLLite ломает модель Forge (500 «'NoneType' object is not callable»): `paint.py` выгружает чекпойнт после каждого кадра — не запускать рядом с другим заданием.
 

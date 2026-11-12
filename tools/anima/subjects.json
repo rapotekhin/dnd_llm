@@ -5326,52 +5326,62 @@
  "traits/draconic_ancestry_black": {
   "dark": true,
   "sentence": "A single jet black dragon head with glossy coal-black scales seen from the front, two curved black horns, bright acid-green eyes and green drops at its jaw.",
-  "tags": "dragon head, horns, jet black scales, green eyes, acid"
+  "tags": "dragon head, horns, jet black scales, green eyes, acid",
+  "tint": "#8c86a0"
  },
  "traits/draconic_ancestry_blue": {
   "dark": false,
   "sentence": "A single blue dragon head seen from the front, with two curved horns and pale blue scales.",
-  "tags": "dragon head, blue, horns, scales, front view"
+  "tags": "dragon head, blue, horns, scales, front view",
+  "tint": "#5f95d8"
  },
  "traits/draconic_ancestry_brass": {
   "dark": false,
   "sentence": "A single brass dragon head seen from the front, with two curved horns and yellow-brown scales.",
-  "tags": "dragon head, brass, horns, scales, front view"
+  "tags": "dragon head, brass, horns, scales, front view",
+  "tint": "#d2a85a"
  },
  "traits/draconic_ancestry_bronze": {
   "dark": false,
   "sentence": "A single bronze dragon head seen from the front, with two curved horns and dark brown scales.",
-  "tags": "dragon head, bronze, horns, scales, front view"
+  "tags": "dragon head, bronze, horns, scales, front view",
+  "tint": "#b98a52"
  },
  "traits/draconic_ancestry_copper": {
   "dark": false,
   "sentence": "A single copper dragon head seen from the front, with two curved horns and warm orange-brown scales.",
-  "tags": "dragon head, copper, horns, scales, front view"
+  "tags": "dragon head, copper, horns, scales, front view",
+  "tint": "#d07a4a"
  },
  "traits/draconic_ancestry_gold": {
   "dark": false,
   "sentence": "A single gold dragon head seen from the front, with two curved horns and bright yellow scales.",
-  "tags": "dragon head, gold, horns, scales, front view"
+  "tags": "dragon head, gold, horns, scales, front view",
+  "tint": "#e6c24a"
  },
  "traits/draconic_ancestry_green": {
   "dark": false,
   "sentence": "A single green dragon head seen from the front, with two curved horns and lighter green scales.",
-  "tags": "dragon head, green, horns, scales, front view"
+  "tags": "dragon head, green, horns, scales, front view",
+  "tint": "#64b06a"
  },
  "traits/draconic_ancestry_red": {
   "dark": false,
   "sentence": "A single red dragon head seen from the front, with two curved horns and darker red scales.",
-  "tags": "dragon head, red, horns, scales, front view"
+  "tags": "dragon head, red, horns, scales, front view",
+  "tint": "#d8503c"
  },
  "traits/draconic_ancestry_silver": {
   "dark": false,
   "sentence": "A single silver dragon head seen from the front, with two curved horns and shiny pale scales.",
-  "tags": "dragon head, silver, horns, scales, front view"
+  "tags": "dragon head, silver, horns, scales, front view",
+  "tint": "#c9d3de"
  },
  "traits/draconic_ancestry_white": {
   "dark": false,
   "sentence": "A single white dragon head seen from the front, with two curved horns and pale blue scales.",
-  "tags": "dragon head, white, horns, scales, front view"
+  "tags": "dragon head, white, horns, scales, front view",
+  "tint": "#eef4fa"
  },
  "traits/dwarven_combat_training": {
   "dark": false,

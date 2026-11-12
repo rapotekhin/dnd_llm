@@ -1,0 +1,12 @@
+{
+ "_doc": "The picks of the icons in the lines style (out_lines/, anima_gen.py --style lines), apart from the painted ones of picks_painted.json: `variant` — «<kind>/<id>»: n (absent — 1), written by pick.py on its tabs «· линии»; `same` — an icon laid from another's pick, as in picks_painted.json; `redraw` — the author's marks. Into the game only by choice: install.py --out tools/anima/out_lines --picks tools/anima/picks_lines_icons.json.",
+ "variant": {},
+ "same": {
+  "features/circle_spells_2": "features/circle_spells_1",
+  "features/domain_spells_2": "features/domain_spells_1",
+  "features/domain_spells_3": "features/domain_spells_1",
+  "features/fighter_fighting_style_two_weapon_fighting": "features/ranger_fighting_style_two_weapon_fighting",
+  "features/fighting_style_protection": "features/fighter_fighting_style_protection",
+  "features/ranger_fighting_style_dueling": "features/fighter_fighting_style_dueling"
+ }
+}

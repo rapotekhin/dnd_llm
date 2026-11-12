@@ -159,6 +159,7 @@ def entries() -> list[dict]:
                                                    short(it.get("desc", ""), 160)]))})
     for sid, sp in load("game/data/srd/spells.json").items():
         out.append({"kind": "spells", "id": sid, "name": sp.get("name", sid), "en": sp.get("name_en", ""),
+                    "school": sp.get("school_id", ""),
                     "hint": f"spell, school {sp.get('school_id', '')}; " + short(sp.get("desc", ""))})
     for fid, f in load("game/data/srd/classes.json")["features"].items():
         out.append({"kind": "features", "id": fid, "name": f.get("name", fid), "en": f.get("name_en", ""),
@@ -400,6 +401,7 @@ def main() -> None:
               f"{fallback} monsters by the bare name")
         return
 
+    schools = {k: v for k, v in load("game/data/icons.json")["schools"].items() if not k.startswith("_")}
     jobs, fallback = [], 0
     for e in all_entries:
         s = subjects.get(f"{e['kind']}/{e['id']}")
@@ -407,8 +409,15 @@ def main() -> None:
             fallback += 1
             name = (e["en"] or e["id"].replace("_", " ")).lower()
             s = {"tags": name, "sentence": f"A single {name}, a simple emblem."}
-        jobs.append({"id": e["id"], "kind": e["kind"], "name": e["name"], "tags": s["tags"], "sentence": s["sentence"],
-                     "key": key_of(s)})
+        job = {"id": e["id"], "kind": e["kind"], "name": e["name"], "tags": s["tags"], "sentence": s["sentence"],
+               "key": key_of(s)}
+        if e.get("school"):
+            job["school"] = e["school"]
+        # the colour of the sign in the lines style: the subject's own (a dragon's ancestry), else the school's
+        tint = s.get("tint") or schools.get(e.get("school", ""))
+        if tint:
+            job["tint"] = tint
+        jobs.append(job)
     JOBS.parent.mkdir(parents=True, exist_ok=True)
     JOBS.write_text(json.dumps({"jobs": jobs}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     kinds: dict[str, int] = {}
