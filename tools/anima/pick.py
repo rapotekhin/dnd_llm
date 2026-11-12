@@ -155,6 +155,7 @@ def main() -> None:
                 whole["variant"] = dict(sorted(variant.items()))
                 s["picks"].write_text(json.dumps(whole, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
                 seen = s["out"] / got["kind"] / "seen.json"
+                seen.parent.mkdir(parents=True, exist_ok=True)  # the frames have no folder of their own drawn
                 seen.write_text(json.dumps(sorted(got["seen"]), ensure_ascii=False, indent=1) + "\n",
                                 encoding="utf-8")
             self._send(200, b"ok", "text/plain")
