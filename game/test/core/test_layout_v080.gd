@@ -623,3 +623,23 @@ func test_patches_of_ground_come_out_the_same_for_one_map() -> void:
 	var a := LayoutGen.grounds(layouts, map)
 	assert_array(Array(a)).is_equal(Array(LayoutGen.grounds(layouts, map)))
 	assert_bool(Array(a).has((layouts["grounds"]["order"] as Array).find("dirt"))).is_true()
+
+
+func test_an_edge_sheet_is_laid_on_corners_that_give_each_case_once() -> void:
+	var g: Dictionary = layouts["grounds"]
+	var rows: Array = g["edge_layout"]
+	assert_int(rows.size()).is_equal(5)
+	var seen := {}
+	for y: int in 4:
+		for x: int in 4:
+			seen["%s%s%s%s" % [str(rows[y])[x], str(rows[y])[x + 1], str(rows[y + 1])[x], str(rows[y + 1])[x + 1]]] = true
+	assert_int(seen.size()).is_equal(16)
+	var cells := Array(MapGround.edge_cells(layouts))
+	cells.sort()
+	assert_array(cells).is_equal(range(16))
+	var order: Array = g["order"]
+	for pair: Dictionary in g["edges"]:
+		var low := order.find(pair["low"])
+		var high := order.find(pair["high"])
+		assert_bool(low >= 0 and high > low).override_failure_message(str(pair)).is_true()
+		assert_bool((g["sharp"] as Array).has(pair["high"])).override_failure_message(str(pair)).is_false()

@@ -17,7 +17,7 @@
 		"r": {"name": "roof", "solid": true, "opaque": true}
 	},
 	"grounds": {
-		"_doc": "What a map is drawn of (LayoutGen.grounds, MapField's dual grid): the ground of a square by its character of `cells` — a string for any shape of the place, a dictionary by shape with `*` for the rest, a character not here takes the one of `.`; `order` — the grounds from the lowest layer to the highest: at a meeting of grounds the higher one lies over; `sharp` — a ground whose edge stays on the square's border (walls), the others meet by a rough line between the squares' centres; `patches` — by shape, patches of another ground over the floor's own ground, `share` of the floor, blobs of about `cell` squares, by the map's seed; `props` — a thing drawn on the square by the character and the shape; `repeat` — squares one texture spans; `colour` — a ground with no texture yet. Textures: assets/tiles/ground/<id>.png, things: assets/tiles/props/<id>.png (tools/tiles/gen_tiles.py).",
+		"_doc": "What a map is drawn of (LayoutGen.grounds, MapField's dual grid): the ground of a square by its character of `cells` — a string for any shape of the place, a dictionary by shape with `*` for the rest, a character not here takes the one of `.`; `order` — the grounds from the lowest layer to the highest: at a meeting of grounds the higher one lies over; `sharp` — a ground whose edge stays on the square's border (walls), the others meet by a rough line between the squares' centres; `patches` — by shape, patches of another ground over the floor's own ground, `share` of the floor, blobs of about `cell` squares, by the map's seed; `props` — a thing drawn on the square by the character and the shape; `repeat` — squares one texture spans; `colour` — a ground with no texture yet; `edges` — pairs of grounds whose meeting is drawn (a sheet of the 16 dual-grid tiles, assets/tiles/edges/<low>__<high>.png, its alpha the line between them), the rest meet by the mask; `edge_layout` — the 5×5 corners the sheet is laid on (1 — the higher ground), its sixteen 2×2 windows each case once; `edge_band` — how wide the drawn edge lies on both sides of the line. Textures: assets/tiles/ground/<id>.png, things: assets/tiles/props/<id>.png (tools/tiles/gen_tiles.py).",
 		"order": ["pit", "water", "mud", "dirt", "grass", "cobble", "cave", "planks", "wall", "roof"],
 		"sharp": ["wall", "roof"],
 		"patches": {"open": [{"ground": "dirt", "share": 0.08, "cell": 7}]},
@@ -33,7 +33,10 @@
 		},
 		"size": {"tree": 1.7, "boulder": 1.0, "table": 0.95, "door": 1.0},
 		"repeat": 3,
-		"colour": {"pit": "#0d0b09", "water": "#2c4a5c", "mud": "#33301c", "dirt": "#6b5838", "grass": "#3f5a2e", "cobble": "#7f7a6c", "cave": "#4a463f", "planks": "#5a4330", "wall": "#5e4d3a", "roof": "#4a3428"}
+		"colour": {"pit": "#0d0b09", "water": "#2c4a5c", "mud": "#33301c", "dirt": "#6b5838", "grass": "#3f5a2e", "cobble": "#7f7a6c", "cave": "#4a463f", "planks": "#5a4330", "wall": "#5e4d3a", "roof": "#4a3428"},
+		"edges": [{"low": "water", "high": "grass"}, {"low": "water", "high": "dirt"}, {"low": "water", "high": "mud"}],
+		"edge_layout": ["11100", "01010", "00011", "01100", "11100"],
+		"edge_band": 0.22
 	},
 	"sizes": ["small", "medium", "large"],
 	"mark_tags": {"hearth": "hearth", "forge": "forge", "workbench": "bench", "alchemy": "bench", "temple": "altar", "stage": "stage", "market": "stall", "water": "water", "ore": "vein"},

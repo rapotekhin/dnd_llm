@@ -5,16 +5,21 @@
     python tools/tiles/gen_tiles.py draw --only grass,tree   # some of them again
     tools/anima/.venv-matte/Scripts/python.exe tools/tiles/gen_tiles.py matte   # props cut by BiRefNet (tools/anima/matte.py)
     python tools/tiles/gen_tiles.py sheet                    # build/tiles/sheet_ground.png, sheet_props.png to pick from
-    python tools/tiles/gen_tiles.py install                  # tools/tiles/picks.json → game/assets/tiles/{ground,props}/
+    python tools/tiles/gen_tiles.py install                  # tools/tiles/picks.json → game/assets/tiles/{ground,props,edges}/
 
 A ground comes out of FLUX nearly even but not seamless: it is made so by blending it with itself rolled by half
-(`seamless`), so a texture repeats under the dual grid with no seam. The key is OPENROUTER_API_KEY of the environment
+(`seamless`), so a texture repeats under the dual grid with no seam. An edge (`grounds.edges`: two grounds whose meeting
+is drawn) is ONE frame of the sixteen dual-grid tiles: FLUX repaints a mask of the pair laid on `grounds.edge_layout`
+(5×5 corners, each 2×2 window a case once, so the sheet is a small continuous map), the line crossing every tile's side
+at its middle; the sheet keeps the line in its alpha (0.5 on the line), and the shader takes only a band of it round
+the line over the grounds' own textures. The key is OPENROUTER_API_KEY of the environment
 or of the repo's .env, never printed (anima_gen.openrouter_key).
 """
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -30,7 +35,14 @@ OUT = ROOT / "build" / "tiles"
 GAME = ROOT / "game" / "assets" / "tiles"
 GROUND_PX = 512  # a ground texture's side in the game: it spans `repeat` squares of the map
 PROP_PX = 256
+EDGE_PX = 1024  # a sheet of 4 × 4 tiles
+FIELD_PX = 256  # the line is worked out at this size and smoothed up
+LOW, HIGH = (40, 105, 200), (70, 150, 60)  # the mask's colours: the lower ground blue, the higher green
 SEEDS = (11, 22, 33, 44)
+
+
+def grounds_lib() -> dict:
+    return json.loads((ROOT / "game" / "data" / "layouts.json").read_text(encoding="utf-8"))["grounds"]
 
 
 def jobs(only: str) -> list[tuple[str, str, str]]:
@@ -42,7 +54,53 @@ def jobs(only: str) -> list[tuple[str, str, str]]:
         for tid, subject in spec[group].items():
             if not want or tid in want:
                 out.append((group, tid, spec["style"][style].replace("{subject}", subject)))
+    for pair in grounds_lib().get("edges", []):
+        low, high = str(pair["low"]), str(pair["high"])
+        tid = f"{low}__{high}"
+        if not want or tid in want:
+            text = spec["style"]["edge"].replace("{low}", spec["ground"][low]).replace("{high}", spec["ground"][high])
+            out.append(("edges", tid, text.replace("{meet}", spec["edges"].get(tid, spec["edges"]["*"]))))
     return out
+
+
+def _hash(x: float, y: float) -> float:
+    v = math.sin(x * 127.1 + y * 311.7) * 43758.5453
+    return v - math.floor(v)
+
+
+def _noise(x: float, y: float) -> float:
+    ix, iy = math.floor(x), math.floor(y)
+    fx, fy = x - ix, y - iy
+    ux, uy = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy)
+    a, b, c, d = _hash(ix, iy), _hash(ix + 1, iy), _hash(ix, iy + 1), _hash(ix + 1, iy + 1)
+    return (a + (b - a) * ux) * (1 - uy) + (c + (d - c) * ux) * uy
+
+
+def edge_field() -> Image.Image:
+    """The line of an edge sheet as a grey picture, EDGE_PX: 128 on the line, the higher ground above it. Each tile's
+    corners of `edge_layout` mixed over the tile, a rough line on top that dies out on the tile's sides, so the line
+    crosses every side at its middle and any two tiles meet."""
+    rows = [str(r) for r in grounds_lib()["edge_layout"]]
+    tile = FIELD_PX / 4
+    img = Image.new("L", (FIELD_PX, FIELD_PX))
+    px = img.load()
+    for y in range(FIELD_PX):
+        for x in range(FIELD_PX):
+            sx, sy = (x + 0.5) / tile, (y + 0.5) / tile
+            ix, iy = min(3, int(sx)), min(3, int(sy))
+            fx, fy = sx - ix, sy - iy
+            c = [int(rows[iy][ix]), int(rows[iy][ix + 1]), int(rows[iy + 1][ix]), int(rows[iy + 1][ix + 1])]
+            cov = (c[0] * (1 - fx) + c[1] * fx) * (1 - fy) + (c[2] * (1 - fx) + c[3] * fx) * fy
+            damp = math.sin(math.pi * fx) * math.sin(math.pi * fy)
+            v = cov + (_noise(sx * 1.6, sy * 1.6) - 0.5) * 0.35 * damp
+            px[x, y] = max(0, min(255, round((0.5 + (v - 0.5) * 2.0) * 255)))
+    return img.resize((EDGE_PX, EDGE_PX), Image.BICUBIC)
+
+
+def edge_mask(field: Image.Image) -> Image.Image:
+    """The two flat colours FLUX repaints: the higher ground where the field is above the line."""
+    hi = field.point(lambda v: 255 if v >= 128 else 0)
+    return Image.composite(Image.new("RGB", field.size, HIGH), Image.new("RGB", field.size, LOW), hi)
 
 
 def seamless(img: Image.Image) -> Image.Image:
@@ -68,9 +126,11 @@ def draw(a: argparse.Namespace) -> None:
     todo = [(g, t, p, n) for g, t, p in jobs(a.only) for n in range(a.variants)
             if a.force or not (OUT / "raw" / f"{t}__{n}.png").exists()]
     spent = 0.0
+    field = edge_field() if any(g == "edges" for g, *_ in todo) else None
+    refs = [edge_mask(field)] if field else None
     with ThreadPoolExecutor(4) as pool:
-        futures = {pool.submit(anima_gen.openrouter_frame, p, SEEDS[n % len(SEEDS)] + n, key, a.model): (g, t, n)
-                   for g, t, p, n in todo}
+        futures = {pool.submit(anima_gen.openrouter_frame, p, SEEDS[n % len(SEEDS)] + n, key, a.model,
+                               "1:1", refs if g == "edges" else None): (g, t, n) for g, t, p, n in todo}
         for f in as_completed(futures):
             g, t, n = futures[f]
             img, cost = f.result()
@@ -78,6 +138,10 @@ def draw(a: argparse.Namespace) -> None:
             img.save(OUT / "raw" / f"{t}__{n}.png")
             if g == "ground":
                 seamless(img).resize((GROUND_PX, GROUND_PX), Image.LANCZOS).save(OUT / f"{t}__{n}.png")
+            elif g == "edges":  # the painting, the line in its alpha
+                sheet_rgba = img.resize((EDGE_PX, EDGE_PX), Image.LANCZOS).convert("RGBA")
+                sheet_rgba.putalpha(field)
+                sheet_rgba.save(OUT / f"{t}__{n}.png")
             print(f"{t}__{n}  ${cost:.4f}", flush=True)
     print(f"{len(todo)} frames, ${spent:.3f}")
 
@@ -98,7 +162,7 @@ def matte(a: argparse.Namespace) -> None:
 
 def sheet(a: argparse.Namespace) -> None:
     """A sheet per group: each ground as 2×2 of itself (a seam shows), each prop on a checker."""
-    for group in ("ground", "props"):
+    for group in ("ground", "props", "edges"):
         rows = [(t, sorted(OUT.glob(f"{t}__*.png"))) for g, t, _ in jobs(a.only) if g == group]
         rows = [r for r in rows if r[1]]
         if not rows:
@@ -112,7 +176,14 @@ def sheet(a: argparse.Namespace) -> None:
             for j, f in enumerate(files):
                 img = Image.open(f).convert("RGBA")
                 at = (label + j * (cell + 8), i * (cell + 8))
-                if group == "ground":
+                if group == "edges":  # the painting with its tile grid
+                    rgb = img.convert("RGB").resize((cell, cell), Image.LANCZOS)
+                    dd = ImageDraw.Draw(rgb)
+                    for k in range(1, 4):
+                        dd.line([k * cell // 4, 0, k * cell // 4, cell], fill=(255, 210, 60))
+                        dd.line([0, k * cell // 4, cell, k * cell // 4], fill=(255, 210, 60))
+                    out.paste(rgb, at)
+                elif group == "ground":
                     half = img.resize((cell // 2, cell // 2), Image.LANCZOS)
                     for k in range(4):
                         out.paste(half, (at[0] + (k % 2) * cell // 2, at[1] + (k // 2) * cell // 2))

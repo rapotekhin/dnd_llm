@@ -332,9 +332,18 @@ def draw_openrouter(job: dict, n: int, seed: int, a: argparse.Namespace) -> tupl
 
 
 def openrouter_frame(prompt: str, seed: int, key: str, model: str = OPENROUTER_MODEL,
-                     aspect: str = "1:1") -> tuple[Image.Image, float]:
-    """One frame of a prompt by a model of OpenRouter and its cost in USD (the map's tiles draw by it too)."""
-    body = json.dumps({"model": model, "prompt": prompt, "n": 1, "aspect_ratio": aspect, "seed": seed}).encode()
+                     aspect: str = "1:1", refs: list[Image.Image] | None = None) -> tuple[Image.Image, float]:
+    """One frame of a prompt by a model of OpenRouter and its cost in USD (the map's tiles draw by it too); `refs` —
+    pictures it repaints (input_references, a mask of the map's edges)."""
+    ask = {"model": model, "prompt": prompt, "n": 1, "aspect_ratio": aspect, "seed": seed}
+    if refs:
+        urls = []
+        for ref in refs:
+            buf = io.BytesIO()
+            ref.save(buf, "PNG")
+            urls.append("data:image/png;base64," + base64.b64encode(buf.getvalue()).decode())
+        ask["input_references"] = [{"type": "image_url", "image_url": {"url": u}} for u in urls]
+    body = json.dumps(ask).encode()
     for attempt in range(5):
         req = urllib.request.Request(OPENROUTER_IMAGES, data=body, headers={
             "Authorization": f"Bearer {key}", "Content-Type": "application/json"})

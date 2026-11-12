@@ -7,6 +7,7 @@ extends ColorRect
 const GROUND_PX := 512
 const PROP_PX := 256
 const MAX_PROPS := 16
+const EDGE_PX := 1024  ## a sheet of the sixteen tiles of a drawn edge
 
 static var _arrays: Dictionary = {}  ## the textures of the grounds and of the things, built once: {"ground": …, "props": …}
 
@@ -72,6 +73,11 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	m.set_shader_parameter("sharp_mask", sharp)
 	m.set_shader_parameter("prop_size", sizes)
 	m.set_shader_parameter("watch_tint", UiTheme.BAD)
+	var edges := _edges(lib)
+	m.set_shader_parameter("edges", edges["sheets"])
+	m.set_shader_parameter("edge_pairs", edges["pairs"])
+	m.set_shader_parameter("edge_cell", edge_cells(lib))
+	m.set_shader_parameter("edge_band", float(g.get("edge_band", 0.16)))
 
 
 ## What the hero does not see now (dimmed by `dark`) and the squares under watch.
@@ -96,6 +102,53 @@ static func prop_ids(lib: Dictionary) -> Array[String]:
 			if not out.has(str(id)):
 				out.append(str(id))
 	return out
+
+
+## The tile of an edge sheet for each case of four corners (8 TL + 4 TR + 2 BL + BR, 1 — the higher ground): its
+## place y * 4 + x among the sixteen windows of `grounds.edge_layout`.
+static func edge_cells(lib: Dictionary) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	out.resize(16)
+	var rows: Array = lib["grounds"].get("edge_layout", [])
+	if rows.size() < 5:
+		return out
+	for y: int in 4:
+		for x: int in 4:
+			var bit := func(dx: int, dy: int) -> int: return int(str(rows[y + dy])[x + dx])
+			out[bit.call(0, 0) * 8 + bit.call(1, 0) * 4 + bit.call(0, 1) * 2 + bit.call(1, 1)] = y * 4 + x
+	return out
+
+
+## The drawn edges: a sheet per pair of `grounds.edges` whose picture is laid, and a table of pairs → sheet + 1.
+static func _edges(lib: Dictionary) -> Dictionary:
+	if _arrays.has("edges"):
+		return _arrays["edges"]
+	var order: Array = lib["grounds"]["order"]
+	var table := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	table.fill(Color(0, 0, 0, 0))
+	var images: Array[Image] = []
+	for pair: Dictionary in lib["grounds"].get("edges", []):
+		var path := "res://assets/tiles/edges/%s__%s.png" % [pair["low"], pair["high"]]
+		var low := order.find(pair["low"])
+		var high := order.find(pair["high"])
+		if not ResourceLoader.exists(path) or low < 0 or high < 0 or images.size() >= 255:
+			continue
+		var img := (load(path) as Texture2D).get_image()
+		if img.is_compressed():
+			img.decompress()
+		img.convert(Image.FORMAT_RGBA8)
+		img.resize(EDGE_PX, EDGE_PX, Image.INTERPOLATE_LANCZOS)
+		img.generate_mipmaps()
+		images.append(img)
+		table.set_pixel(low, high, Color8(images.size(), 0, 0, 255))
+	if images.is_empty():
+		var none := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+		none.generate_mipmaps()
+		images.append(none)
+	var sheets := Texture2DArray.new()
+	sheets.create_from_images(images)
+	_arrays["edges"] = {"sheets": sheets, "pairs": ImageTexture.create_from_image(table)}
+	return _arrays["edges"]
 
 
 static func _walled(rows: Array, x: int, y: int) -> bool:

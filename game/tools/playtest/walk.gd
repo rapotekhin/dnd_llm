@@ -81,6 +81,11 @@ func run() -> void:
 	step("a drag moves the view", field.corner() != corner, "%s → %s" % [corner, field.corner()])
 	step("a drag is no click", not field.walking())
 	await shot("zoomed")
+	var shore := _shore()  # the drawn edge of water and grass, close (v0.8.4.43.17)
+	if step("a shore on the square", shore != Vector2i(-1, -1)):
+		field.zoom(12, field.cell_point(shore))
+		await frames(3)
+		await shot("shore")
 
 	s.room_id = "brod-tavern-hall"
 	node("EventBus").state_changed.emit()
@@ -223,6 +228,19 @@ func _far(room: String, lib: Dictionary) -> Vector2i:
 			if steps > length:
 				length = steps
 				best = cell
+	return best
+
+
+## A square of water with grass beside it on the map, the one nearest the view's middle; (-1, -1) — none.
+func _shore() -> Vector2i:
+	var rows: Array = field.map["rows"]
+	var best := Vector2i(-1, -1)
+	var mid: Vector2i = field.cell_at(field.size / 2.0)
+	for y: int in range(1, rows.size() - 1):
+		for x: int in range(1, (rows[y] as String).length() - 1):
+			if rows[y][x] == "~" and (rows[y][x + 1] == "." or rows[y][x - 1] == ".") \
+					and (best.x < 0 or Vector2i(x, y).distance_to(mid) < best.distance_to(mid)):
+				best = Vector2i(x, y)
 	return best
 
 

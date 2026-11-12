@@ -3,6 +3,8 @@
 // A higher ground of `grounds.order` lies over a lower one; a sharp one (a wall) keeps the square's border, with a
 // bevel and a shadow on what is south and east of it. Then the things of the squares (a tree overflows its square),
 // then what the hero does not see now (`light`, sampled smooth between the squares' centres).
+// Where only two grounds meet and their pair has a drawn edge (`grounds.edges`), the line and a band round it come
+// from that pair's sheet of the sixteen tiles (`edges`, the line in its alpha); inside, the grounds' own textures.
 shader_type canvas_item;
 
 uniform sampler2D cells : filter_nearest;  // r — the ground's place in the order (255 none), g — a prop + 1, b — a quarter turn
@@ -16,6 +18,11 @@ uniform float prop_size[16];
 uniform float rough = 0.22;
 uniform float soft = 0.05;
 uniform vec4 watch_tint : source_color = vec4(0.75, 0.25, 0.2, 1.0);
+uniform sampler2DArray edges : filter_linear_mipmap;  // a sheet of 4 × 4 tiles per pair, the line in alpha (0.5)
+uniform sampler2D edge_pairs : filter_nearest;  // at (lower, higher): r — the pair's sheet + 1, 0 — none
+uniform int edge_cell[16];  // the case of the four corners (8 TL + 4 TR + 2 BL + BR, 1 — higher) → its tile y * 4 + x
+uniform float edge_band = 0.16;
+uniform int edge_px = 1024;  // a sheet's side
 
 ivec2 clamped(ivec2 c) {
 	return clamp(c, ivec2(0), ivec2(map_size) - 1);
@@ -57,10 +64,31 @@ void fragment() {
 	int g1 = ground_at(i + ivec2(1, 0));
 	int g2 = ground_at(i + ivec2(0, 1));
 	int g3 = ground_at(i + ivec2(1, 1));
-	float wobble = (noise(p * 2.7) * 0.65 + noise(p * 7.3) * 0.35 - 0.5) * 2.0 * rough;
+	// the rough line dies out on the display tile's sides: it crosses each side at its middle, as a drawn edge does
+	float wobble = (noise(p * 2.7) * 0.65 + noise(p * 7.3) * 0.35 - 0.5) * 2.0 * rough * sqrt(sin(PI * f.x) * sin(PI * f.y));
 
 	int now = min(min(g0, g1), min(g2, g3));
+	int top_g = max(max(g0, g1), max(g2, g3));
+	bool two = now >= 0 && now != top_g && (g0 == now || g0 == top_g) && (g1 == now || g1 == top_g)
+		&& (g2 == now || g2 == top_g) && (g3 == now || g3 == top_g) && !sharp(top_g);
+	int layer = two ? int(texelFetch(edge_pairs, ivec2(now, top_g), 0).r * 255.0 + 0.5) - 1 : -1;
 	vec4 col = now < 0 ? vec4(0.0) : ground(now, p);
+	if (layer >= 0) {  // a drawn edge: the line of the sheet, its painting in a band round it
+		int key = int(g0 == top_g) * 8 + int(g1 == top_g) * 4 + int(g2 == top_g) * 2 + int(g3 == top_g);
+		int cell = edge_cell[key];
+		// the mip by the screen, no deeper than 3, and the point kept inside its own tile by that mip's texel, so
+		// filtering never reaches the next tile of the sheet (a different case)
+		vec2 at = f * float(edge_px) / 4.0;
+		float lod = clamp(log2(max(length(dFdx(at)), length(dFdy(at)))), 0.0, 3.0);
+		float inset = exp2(lod) * 1.5 / (float(edge_px) / 4.0);
+		vec2 uv = (vec2(float(cell % 4), float(cell / 4)) + clamp(f, vec2(inset), vec2(1.0 - inset))) / 4.0;
+		vec4 e = textureLod(edges, vec3(uv, float(layer)), lod);
+		float d = (e.a - 0.5) * 0.5;  // how far above the line, as the sheet's own measure
+		col = d >= 0.0 ? ground(top_g, p) : col;
+		col.rgb = mix(col.rgb, e.rgb, 1.0 - smoothstep(edge_band * 0.6, edge_band, abs(d)));
+		col.a = 1.0;
+		now = top_g;
+	}
 	for (int step = 0; step < 4; step++) {
 		int k = 999;  // the next ground above `now` among the four
 		if (g0 > now) k = min(k, g0);
