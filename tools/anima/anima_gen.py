@@ -13,6 +13,12 @@ subject (or settings) changed: each variant keeps the prompt it was drawn from b
     nohup python3 anima_gen.py jobs/icons.json > anima.log 2>&1 &
     nohup python3 anima_gen.py jobs/portraits.json --steps 24 > portraits.log 2>&1 &   # people and monsters
     nohup python3 anima_gen.py jobs/icons.json --style painted --only items,spells > painted.log 2>&1 &   # → out_painted/, by families
+    python3 anima_gen.py jobs/icons.json --style painted --only acts --backend openrouter   # → out_painted_flux/, FLUX
+
+`--backend openrouter` draws the same prompts by a model of OpenRouter (`--model`, FLUX 3 Klein by default, ~$0.009 a
+frame) instead of Forge, a few at a time (`--parallel`), on the key OPENROUTER_API_KEY of the environment or of the
+repo's .env; into its own folder (out_<style>_<model>/), picked into its own picks file. It has no negative prompt, and
+its seed is taken but not kept to: a variant drawn again comes out another picture. The cut is the same.
 
 A portrait job (`style: "portrait"`) is drawn as a bust and kept whole in raw/; its variant is the face cut out of it,
 256 px WebP (variants/<id>__<n>.webp); it has its own seeds, and a person its own look per variant (`looks`).
@@ -35,6 +41,7 @@ import base64
 import io
 import json
 import math
+import os
 import re
 import shutil
 import sys
@@ -42,6 +49,7 @@ import time
 import urllib.error
 import urllib.request
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from statistics import median
 
@@ -50,6 +58,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 HERE = Path(__file__).resolve().parent
 
 CHECKPOINT = "anima-aesthetic"  # a part of the checkpoint's title on Forge
+OPENROUTER_IMAGES = "https://openrouter.ai/api/v1/images"
+OPENROUTER_MODEL = "black-forest-labs/flux-3-image-klein"  # the acts by it read their gestures far better (2026-11-12)
 MODULES = ("qwen_image_vae.safetensors", "qwen_3_06b_base.safetensors")  # what an Anima checkpoint needs on Forge
 # The A/B of 2026-11-10 (one seed, one change at a time): a dark background with no tag of its own draws the object
 # biggest and boldest; a solid green, grey or magenta one shrinks it and spoils abstract emblems, and «a dark outline»
@@ -268,8 +278,11 @@ def negative_of(job: dict, style: str = "flat") -> str:
 
 
 def stamp_of(job: dict, n: int, a: argparse.Namespace) -> str:
-    """What a variant was drawn from: the prompt, and the negative of a portrait (a child's differs) or a painted one."""
+    """What a variant was drawn from: the prompt, and the negative of a portrait (a child's differs) or a painted one;
+    a model of OpenRouter by its name (it takes no negative)."""
     text = full_prompt(job, n, a)
+    if getattr(a, "backend", "forge") == "openrouter":
+        return text + "\n\nMODEL: " + a.model
     style = getattr(a, "style", "flat")
     return text + "\n\nNEGATIVE: " + negative_of(job, style) if portrait(job) or style != "flat" else text
 
@@ -297,6 +310,48 @@ def draw(url: str, settings: dict, job: dict, n: int, seed: int, a: argparse.Nam
             print(f"  forge: {exc}; again in {30 * (attempt + 1)} s", flush=True)
             time.sleep(30 * (attempt + 1))
     raise RuntimeError("forge does not answer")
+
+
+def openrouter_key() -> str:
+    """OPENROUTER_API_KEY of the environment, or of the repo's .env when this folder sits in the repo; never printed."""
+    key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    env = HERE.parents[1] / ".env"
+    if not key and env.exists():
+        for line in env.read_text(encoding="utf-8").splitlines():
+            name, _, value = line.strip().partition("=")
+            if name == "OPENROUTER_API_KEY" and value.strip():
+                key = value.strip().strip('"').strip("'")
+    if not key:
+        sys.exit("--backend openrouter: no OPENROUTER_API_KEY in the environment or in .env")
+    return key
+
+
+def draw_openrouter(job: dict, n: int, seed: int, a: argparse.Namespace) -> tuple[Image.Image, float]:
+    """A frame by a model of OpenRouter and its cost in USD; the prompt is the same as Forge's, with no negative."""
+    body = json.dumps({"model": a.model, "prompt": full_prompt(job, n, a), "n": 1, "aspect_ratio": "1:1",
+                       "seed": seed}).encode()
+    for attempt in range(5):
+        req = urllib.request.Request(OPENROUTER_IMAGES, data=body, headers={
+            "Authorization": f"Bearer {a.key}", "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=180) as r:
+                data = json.loads(r.read())
+            first = data["data"][0]
+            if first.get("b64_json"):
+                raw = base64.b64decode(first["b64_json"])
+            else:
+                with urllib.request.urlopen(first["url"], timeout=120) as r:
+                    raw = r.read()
+            cost = float((data.get("usage") or {}).get("cost") or 0)
+            return Image.open(io.BytesIO(raw)).convert("RGB"), cost
+        except urllib.error.HTTPError as exc:
+            if exc.code in (400, 401, 402, 403, 404):  # a wrong model, no key, no money: nothing to wait for
+                raise RuntimeError(f"openrouter: HTTP {exc.code} {exc.read()[:200]!r}") from None
+            print(f"  openrouter: HTTP {exc.code}; again in {20 * (attempt + 1)} s", flush=True)
+        except (urllib.error.URLError, TimeoutError, ConnectionError, KeyError, IndexError, ValueError) as exc:
+            print(f"  openrouter: {exc}; again in {20 * (attempt + 1)} s", flush=True)
+        time.sleep(20 * (attempt + 1))
+    raise RuntimeError("openrouter does not answer")
 
 
 # --- the cut --------------------------------------------------------------------------------------------------------
@@ -671,8 +726,13 @@ def main() -> None:
     p.add_argument("--recut", action="store_true", help="cut the variants again from the raw frames, nothing drawn")
     p.add_argument("--pick", default="", help="id=n,…: variant n becomes the icon")
     p.add_argument("--family", default="", help="kind=family,…: a trial of another family for a kind (painted)")
+    p.add_argument("--backend", default="forge", choices=("forge", "openrouter"), help="who draws")
+    p.add_argument("--model", default=OPENROUTER_MODEL, help="the model of OpenRouter (--backend openrouter)")
+    p.add_argument("--parallel", type=int, default=0, help="frames at a time: 1 on Forge, 4 on OpenRouter")
     a = p.parse_args()
-    a.out = a.out or HERE / ("out" if a.style == "flat" else f"out_{a.style}")
+    by_model = "_" + a.model.split("/")[-1].split("-")[0] if a.backend == "openrouter" else ""  # out_painted_flux/
+    a.out = a.out or HERE / (("out" if a.style == "flat" else f"out_{a.style}") + by_model)
+    a.parallel = a.parallel or (4 if a.backend == "openrouter" else 1)
     for one in filter(None, a.family.split(",")):
         kind, _, fam = one.partition("=")
         if fam not in FAMILIES:
@@ -695,27 +755,47 @@ def main() -> None:
     todo = [(j, n, s) for j in jobs for n, s in enumerate(seeds_of(j, seeds), 1)
             if (not a.first or n <= a.first) and (a.redraw or stale(a.out, j, n, s, stamp_of(j, n, a)))]
     frames = sum(len(seeds_of(j, seeds)) for j in jobs)
-    print(f"{len(jobs)} jobs, {frames} frames: {len(todo)} to draw at {a.side}px, {a.steps} steps", flush=True)
+    how = f"by {a.model}" if a.backend == "openrouter" else f"at {a.side}px, {a.steps} steps"
+    print(f"{len(jobs)} jobs, {frames} frames: {len(todo)} to draw {how} → {a.out}", flush=True)
     if not todo:
         return sheets(a.out, jobs, seeds)
-    settings = model_settings(a.url, a.checkpoint)
-    print("model", settings["sd_model_checkpoint"], flush=True)
-    started = time.time()
-    for i, (job, n, seed) in enumerate(todo, 1):
+    if a.backend == "openrouter":
+        a.key = openrouter_key()
+
+        def render(job: dict, n: int, seed: int) -> tuple[Image.Image, float]:
+            return draw_openrouter(job, n, seed, a)
+    else:
+        settings = model_settings(a.url, a.checkpoint)
+        print("model", settings["sd_model_checkpoint"], flush=True)
+
+        def render(job: dict, n: int, seed: int) -> tuple[Image.Image, float]:
+            return draw(a.url, settings, job, n, seed, a), 0.0
+
+    def one(job: dict, n: int, seed: int) -> tuple[float, float]:
         raw_path, cut_path = paths(a.out, job, n, seed)
         raw_path.parent.mkdir(parents=True, exist_ok=True)
         cut_path.parent.mkdir(parents=True, exist_ok=True)
         t = time.time()
-        raw = draw(a.url, settings, job, n, seed, a)
+        raw, cost = render(job, n, seed)
         raw.save(raw_path)
         save_variant(raw, job, cut_path, a.style)
         cut_path.with_suffix(".txt").write_text(stamp_of(job, n, a), encoding="utf-8")  # the stamp: redrawn when it changes
         icon = a.out / job["kind"] / f"{job['id']}.png"
         if not portrait(job) and (n == 1 or not icon.exists()):
             shutil.copyfile(cut_path, icon)
-        left = (time.time() - started) / i * (len(todo) - i)
-        print(f"[{i}/{len(todo)}] {job['kind']}/{job['id']} #{n} {time.time() - t:.0f}s, "
-              f"left ~{left / 3600:.1f} h", flush=True)
+        return time.time() - t, cost
+
+    started, spent = time.time(), 0.0
+    with ThreadPoolExecutor(max_workers=a.parallel) as pool:
+        running = {pool.submit(one, *t): t for t in todo}
+        for i, done in enumerate(as_completed(running), 1):
+            job, n, _ = running[done]
+            took, cost = done.result()
+            spent += cost
+            left = (time.time() - started) / i * (len(todo) - i)
+            paid = f", ${spent:.3f} so far" if a.backend == "openrouter" else ""
+            print(f"[{i}/{len(todo)}] {job['kind']}/{job['id']} #{n} {took:.0f}s, left ~{left / 3600:.1f} h{paid}",
+                  flush=True)
     sheets(a.out, jobs, seeds)
 
 
