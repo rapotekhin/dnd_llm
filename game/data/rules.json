@@ -3149,16 +3149,17 @@
 		"lair": 8
 	},
 	"map": {
-		"_doc": "v0.8.2, MapSpots: squares of the people and things of a room. `reach` — squares from which an act is done, a spell goes by the SRD; `stations` — marks the map shows as a place to use; `trader_marks` — where a trader stands, the first the room has; `by_mark` — squares within which the hero counts as at a mark; `distance` — squares to words for the master; `mark_words` — a mark in the master's words.",
+		"_doc": "v0.8.2, MapSpots: squares of the people and things of a room. `reach` — squares from which an act is done, a spell goes by the SRD; `stations` — marks the map shows as a place to use; `station_bodies` — the thing a station stands as, drawn and taking its squares round the mark (v0.8.4.43.23); `trader_marks` — where a trader stands, the first the room has; `by_mark` — squares within which the hero counts as at a mark; `distance` — squares to words for the master; `mark_words` — a mark in the master's words.",
 		"reach": {"talk": 4, "touch": 1},
 		"stations": ["forge", "anvil", "bench", "hearth", "altar", "stage", "vein", "water", "bed", "camp"],
+		"station_bodies": {"forge": "forge", "anvil": "anvil", "bench": "workbench", "hearth": "hearth", "altar": "altar", "bed": "bed", "camp": "campfire"},
 		"trader_marks": ["counter", "stall", "anvil", "desk", "altar"],
 		"by_mark": 2,
 		"distance": [{"at": 0, "word": "рядом"}, {"at": 3, "word": "в нескольких шагах"}, {"at": 9, "word": "в другом конце"}],
 		"mark_words": {"hearth": "очаг", "counter": "стойка", "bed": "кровать", "bench": "верстак", "water": "вода", "stone": "камень", "forge": "горн", "millstone": "жёрнов", "anvil": "наковальня", "vein": "жила", "desk": "стол", "stall": "прилавок", "stage": "сцена", "camp": "стоянка", "altar": "алтарь", "ring": "круг", "cell": "клетка"}
 	},
 	"things": {
-		"_doc": "v0.7.65, ThingRules: the body of any thing, a door too. AC by the material, HP by size (by weight, `up_to` lb) and frailty (DMG); a door has its own `door_hp`. `immune` — damage types that do nothing to a thing. `by_type` — the material of a catalog item by its type. Fire lasts burn_minutes, catches what stands beside it after spread_minutes, a wet thing does not burn (the coat of water, rules.liquids, v0.8.4.28.2). master_damage — the most the master's words do to a thing at once; status_minutes — how long a status it lays stays. bodies: what a thing does on the map (v0.8): cells, blocks (path, sight, shots), cover (half, three_quarters, full), made_of.",
+		"_doc": "v0.7.65, ThingRules: the body of any thing, a door too. AC by the material, HP by size (by weight, `up_to` lb) and frailty (DMG); a door has its own `door_hp`. `immune` — damage types that do nothing to a thing. `by_type` — the material of a catalog item by its type. Fire lasts burn_minutes, catches what stands beside it after spread_minutes, a wet thing does not burn (the coat of water, rules.liquids, v0.8.4.28.2). master_damage — the most the master's words do to a thing at once; status_minutes — how long a status it lays stays. bodies: what a thing does on the map (v0.8): blocks (path, sight, shots), cover (half, three_quarters, full), made_of; `size` — the squares it takes [long, short], a turn lays it the other way (v0.8.4.43.23), its picture assets/tiles/props/<id>.png drawn from above.",
 		"materials": {
 		 "wood": {
 		  "name": "дерево",
@@ -3252,111 +3253,35 @@
 		"master_damage": 40,
 		"status_minutes": 60,
 		"bodies": {
-		 "table": {
-		  "name": "стол",
-		  "cells": 2,
-		  "blocks": [
-		   "path"
-		  ],
-		  "cover": "half",
-		  "made_of": "wood",
-		  "weight": 60
-		 },
-		 "bench": {
-		  "name": "скамья",
-		  "cells": 2,
-		  "blocks": [],
-		  "cover": "half",
-		  "made_of": "wood",
-		  "weight": 30
-		 },
-		 "cabinet": {
-		  "name": "шкаф",
-		  "cells": 2,
-		  "blocks": [
-		   "path",
-		   "sight",
-		   "shots"
-		  ],
-		  "cover": "full",
-		  "made_of": "wood",
-		  "weight": 120
-		 },
-		 "barrel": {
-		  "name": "бочка",
-		  "cells": 1,
-		  "blocks": [
-		   "path"
-		  ],
-		  "cover": "half",
-		  "made_of": "wood",
-		  "weight": 70
-		 },
-		 "chest": {
-		  "name": "сундук",
-		  "cells": 1,
-		  "blocks": [
-		   "path"
-		  ],
-		  "cover": "half",
-		  "made_of": "wood",
-		  "weight": 25
-		 },
-		 "pillar": {
-		  "name": "колонна",
-		  "cells": 1,
-		  "blocks": [
-		   "path",
-		   "sight",
-		   "shots"
-		  ],
-		  "cover": "three_quarters",
-		  "made_of": "stone",
-		  "weight": 900
-		 },
-		 "statue": {
-		  "name": "статуя",
-		  "cells": 1,
-		  "blocks": [
-		   "path",
-		   "shots"
-		  ],
-		  "cover": "three_quarters",
-		  "made_of": "stone",
-		  "weight": 600
-		 },
-		 "tree": {
-		  "name": "дерево",
-		  "cells": 1,
-		  "blocks": [
-		   "path",
-		   "sight",
-		   "shots"
-		  ],
-		  "cover": "three_quarters",
-		  "made_of": "wood",
-		  "weight": 900
-		 },
-		 "boulder": {
-		  "name": "валун",
-		  "cells": 2,
-		  "blocks": [
-		   "path",
-		   "shots"
-		  ],
-		  "cover": "full",
-		  "made_of": "stone",
-		  "weight": 1500
-		 },
-		 "curtain": {
-		  "name": "занавесь",
-		  "cells": 1,
-		  "blocks": [
-		   "sight"
-		  ],
-		  "made_of": "cloth",
-		  "weight": 5
-		 }
+			"table": {"name": "стол", "size": [2, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 60},
+			"bench": {"name": "скамья", "size": [2, 1], "blocks": [], "cover": "half", "made_of": "wood", "weight": 30},
+			"stool": {"name": "табурет", "size": [1, 1], "blocks": [], "made_of": "wood", "weight": 6},
+			"cabinet": {"name": "шкаф", "size": [2, 1], "blocks": ["path", "sight", "shots"], "cover": "full", "made_of": "wood", "weight": 120},
+			"shelf": {"name": "стеллаж", "size": [2, 1], "blocks": ["path", "sight", "shots"], "cover": "full", "made_of": "wood", "weight": 80},
+			"barrel": {"name": "бочка", "size": [1, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 70},
+			"chest": {"name": "сундук", "size": [1, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 25},
+			"crate": {"name": "ящик", "size": [1, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 30},
+			"bed": {"name": "кровать", "size": [2, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 80},
+			"nightstand": {"name": "прикроватный столик", "size": [1, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 15},
+			"plant_pot": {"name": "горшок с растением", "size": [1, 1], "blocks": [], "made_of": "stone", "weight": 10},
+			"hearth": {"name": "очаг", "size": [2, 1], "blocks": ["path"], "cover": "half", "made_of": "stone", "weight": 900},
+			"forge": {"name": "горн", "size": [2, 2], "blocks": ["path"], "cover": "half", "made_of": "stone", "weight": 1500},
+			"anvil": {"name": "наковальня", "size": [1, 1], "blocks": ["path"], "cover": "half", "made_of": "iron", "weight": 300},
+			"workbench": {"name": "верстак", "size": [2, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 100},
+			"altar": {"name": "алтарь", "size": [2, 1], "blocks": ["path"], "cover": "half", "made_of": "stone", "weight": 900},
+			"counter": {"name": "прилавок", "size": [3, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 200},
+			"well": {"name": "колодец", "size": [2, 2], "blocks": ["path"], "cover": "half", "made_of": "stone", "weight": 2000},
+			"cart": {"name": "телега", "size": [3, 2], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 400},
+			"campfire": {"name": "костёр", "size": [1, 1], "blocks": [], "made_of": "wood", "weight": 20},
+			"pillar": {"name": "колонна", "size": [1, 1], "blocks": ["path", "sight", "shots"], "cover": "three_quarters", "made_of": "stone", "weight": 900},
+			"statue": {"name": "статуя", "size": [1, 1], "blocks": ["path", "shots"], "cover": "three_quarters", "made_of": "stone", "weight": 600},
+			"tree": {"name": "дерево", "size": [1, 1], "blocks": ["path", "sight", "shots"], "cover": "three_quarters", "made_of": "wood", "weight": 900},
+			"bush": {"name": "куст", "size": [1, 1], "blocks": ["path", "sight"], "cover": "half", "made_of": "wood", "weight": 20},
+			"stump": {"name": "пень", "size": [1, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 100},
+			"boulder": {"name": "валун", "size": [2, 2], "blocks": ["path", "shots"], "cover": "full", "made_of": "stone", "weight": 1500},
+			"mushrooms": {"name": "грибы", "size": [1, 1], "blocks": [], "made_of": "wood", "weight": 2},
+			"bones": {"name": "кости", "size": [1, 1], "blocks": [], "made_of": "bone", "weight": 10},
+			"curtain": {"name": "занавесь", "size": [1, 1], "blocks": ["sight"], "made_of": "cloth", "weight": 5}
 		}
 	},
 	"ways": {

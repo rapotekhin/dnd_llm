@@ -422,7 +422,10 @@ func _refresh_field(s: GameSession) -> void:
 			walkers.append({"ref": "cr:" + str(cr["id"]), "mark": str(cr["name"]).left(1), "name": str(cr["name"]).get_slice(" ", 0),
 				"portrait": PortraitRules.of(s, Catalog.data, cr)})
 	_things = MapSpots.of(s, Catalog.data, view).filter(func(t: Dictionary) -> bool:
-		return str(t["kind"]) != "station" or _side.mark_has_acts(str(t["id"])))
+		return str(t["kind"]) != "station" or _side.mark_has_acts(str(t["id"])) or MapGround.drawn(str(t.get("body", ""))))
+	for t: Dictionary in _things:  # a station with nothing to do here is only drawn: no click, no menu (v0.8.4.43.23)
+		if str(t["kind"]) == "station" and not _side.mark_has_acts(str(t["id"])):
+			t["still"] = true
 	_things.append_array(MapSpots.foes(s, Catalog.data, view))
 	_things.append_array(MapSpots.traps(s, Catalog.data, view))
 	_things.append_array(MapSpots.others(s, Catalog.data, view))

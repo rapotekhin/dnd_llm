@@ -187,10 +187,10 @@ static func _build(s: GameSession, data: Dictionary) -> Dictionary:
 		if at.x >= 0 and at.y >= 0 and at.x < w and at.y < h:
 			flags[at.y * w + at.x] = flags[at.y * w + at.x] & ~(SOLID | LOW | OPAQUE)
 			cost[at.y * w + at.x] = 1
-	for key: String in s.combat.get("blocks", {}):  # things pushed about the field (a barrel, a crate)
+	for key: String in s.combat.get("blocks", {}):  # things of the field: pushed about, of the room by their bodies
 		var at := y_x(key)
 		if at.x >= 0 and at.y >= 0 and at.x < w and at.y < h:
-			flags[at.y * w + at.x] = flags[at.y * w + at.x] | SOLID | LOW
+			flags[at.y * w + at.x] = flags[at.y * w + at.x] | int(s.combat["blocks"][key].get("flags", SOLID | LOW))
 	return {"map": m, "w": w, "h": h, "flags": flags, "cost": cost}
 
 

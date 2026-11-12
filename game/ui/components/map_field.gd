@@ -29,7 +29,10 @@ var hero_mark := ""  ## the hero's letter; empty — no hero on this map (the au
 var hero_face := ""  ## the hero's face (PortraitRules.of, v0.8.4.43.5.2); "" — its letter
 var pointed := Vector2i(-1, -1)  ## a token pointed at from its portrait (v0.8.4.43.8): a bright ring and its name
 var clicks := true  ## false while a conversation holds the field
-var things: Array[Dictionary] = []  ## those who stand on the map and what lies on it: MapSpots.of (v0.8.2)
+var things: Array[Dictionary] = []:  ## those who stand on the map and what lies on it: MapSpots.of (v0.8.2)
+	set(v):
+		things = v
+		_ground.place(v)  # a thing with a body is drawn from above on its squares (v0.8.4.43.23)
 var labels := false  ## every name is written while the key is held
 var reach: Dictionary = {}  ## the squares the picked shot or spell gets to: tinted, with a rim
 var instant := false  ## a walk ends at once: the playtests' game time does not come from frames
@@ -93,6 +96,7 @@ func show_map(m: Dictionary, world_lib: Dictionary) -> void:
 	map = m
 	lib = world_lib
 	_ground.lay(lib, map)
+	_ground.place(things)
 	if not same:
 		_own_view = false
 		if _in_fight:
@@ -321,7 +325,9 @@ func ref_at(cell: Vector2i) -> String:
 		if Vector2i((tok["pos"] as Vector2).round()) == cell:
 			return str(tok["ref"])
 	for th: Dictionary in things:
-		if Vector2i(int(th["x"]), int(th["y"])) == cell:
+		if bool(th.get("still", false)):
+			continue
+		if Vector2i(int(th["x"]), int(th["y"])) == cell or (th.get("cells", []) as Array).has(cell):
 			return str(th["ref"])
 	return ""
 
@@ -584,11 +590,25 @@ func _texture(path: String, box: Rect2) -> bool:
 	return true
 
 
-## A person is a round token, a beast a smaller one, a thing a square. The name shows under the cursor or while the key is held.
+## A person is a round token, a beast a smaller one, a thing a square — a thing drawn from above (its body's picture,
+## MapGround) only its name and a thin frame round its squares under the cursor. The name shows under the cursor or while
+## the key is held.
 func _thing(th: Dictionary) -> void:
 	var cell := Vector2i(int(th["x"]), int(th["y"]))
-	var name_on := labels or cell == _hover or cell == pointed
+	var mine: Array = th.get("cells", [])
+	var over := cell == _hover or mine.has(_hover)
+	var name_on := labels or over or cell == pointed
 	var label := str(th["name"]) if name_on else ""
+	if MapGround.drawn(str(th.get("body", ""))) and not mine.is_empty():
+		if over and not bool(th.get("still", false)):
+			var lo: Vector2i = mine[0]
+			var hi: Vector2i = mine[mine.size() - 1]
+			draw_rect(Rect2(_corner + Vector2(lo) * _tile, Vector2(hi - lo + Vector2i.ONE) * _tile), Color(UiTheme.ACCENT, 0.8), false, maxf(1.5, _tile * 0.04))
+		if not label.is_empty() and str(th["kind"]) != "station":
+			var lo: Vector2i = mine[0]
+			var hi: Vector2i = mine[mine.size() - 1]
+			_name(_corner + (Vector2(lo + hi) / 2.0 + Vector2(0.5, 1.0)) * _tile + Vector2(0.0, 16.0), label, over)
+		return
 	match str(th["kind"]):
 		"npc":
 			var a := int(th["attitude"])

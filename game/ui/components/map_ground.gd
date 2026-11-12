@@ -10,7 +10,7 @@ const PROP_PX := 256
 const HI := 2  ## the sharp set's side, times the plain one
 const HI_FROM := 0.5  ## a ground's texel over this many screen pixels — its plain picture blurred by the mipmaps
 const HI_BACK := 0.4  ## and back under this, so a view on the line does not flicker
-const MAX_PROPS := 16
+const MAX_PROPS := 64  ## the shader's arrays of props
 const EDGE_PX := 1024  ## a sheet of the sixteen tiles of a drawn edge
 const MAX_GROUNDS := 32  ## the grounds of the order: a bit each in the shader's sharp mask, a row of the edge table
 
@@ -20,6 +20,7 @@ var _cells := ImageTexture.new()
 var _light := ImageTexture.new()
 var _size := Vector2i.ZERO
 var _light_bytes := PackedByteArray()
+var _base := PackedByteArray()  ## the cells as the map's rows draw them, before the things of the room
 var _lib: Dictionary = {}
 var _hi := false  ## the sharp set is laid
 
@@ -55,6 +56,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 			bytes[i + 1] = prop + 1
 			bytes[i + 2] = 1 if prop >= 0 and _walled(rows, x - 1, y) and _walled(rows, x + 1, y) else 0
 			bytes[i + 3] = 255
+	_base = bytes
 	_cells.set_image(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, bytes))
 	_size = Vector2i(w, h)
 	_light_bytes = PackedByteArray()
@@ -68,8 +70,13 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	var sizes := PackedFloat32Array()
 	sizes.resize(MAX_PROPS)
 	sizes.fill(1.0)
-	for i: int in props.size():
+	var dims := PackedVector2Array()
+	dims.resize(MAX_PROPS)
+	var bodies := bodies_of()
+	for i: int in mini(props.size(), MAX_PROPS):
 		sizes[i] = float(g.get("size", {}).get(props[i], 1.0))
+		var sz: Array = (bodies.get(props[i], {}) as Dictionary).get("size", [1, 1])
+		dims[i] = Vector2(float(sz[0]), float(sz[1]))
 	_lib = lib
 	var m := material as ShaderMaterial
 	m.set_shader_parameter("cells", _cells)
@@ -79,6 +86,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	m.set_shader_parameter("repeat_cells", float(g.get("repeat", 3)))
 	m.set_shader_parameter("sharp_mask", sharp)
 	m.set_shader_parameter("prop_size", sizes)
+	m.set_shader_parameter("prop_dims", dims)
 	m.set_shader_parameter("watch_tint", UiTheme.BAD)
 	var edges := _edges(lib)
 	m.set_shader_parameter("edges", edges["sheets"])
@@ -132,13 +140,46 @@ func light(dim: bool, now: Dictionary, cones: Dictionary, dark: float) -> void:
 	_light.update(Image.create_from_data(_size.x, _size.y, false, Image.FORMAT_RGBA8, _light_bytes))
 
 
-## The things of `grounds.props` in one order: a thing's place in the texture of the things.
+## The things on the squares of a room (v0.8.4.43.23): each token with a body drawn from above on its squares, kept on its
+## top left square with its turn. A thing with no picture keeps its token.
+func place(tokens: Array[Dictionary]) -> void:
+	if _base.is_empty() or _lib.is_empty():
+		return
+	var bytes := _base.duplicate()
+	var props := prop_ids(_lib)
+	for t: Dictionary in tokens:
+		var at := props.find(str(t.get("body", "")))
+		if at < 0 or not t.has("corner"):
+			continue
+		var c: Vector2i = t["corner"]
+		if c.x < 0 or c.y < 0 or c.x >= _size.x or c.y >= _size.y:
+			continue
+		var i := (c.y * _size.x + c.x) * 4
+		bytes[i + 1] = at + 1
+		bytes[i + 2] = int(t.get("turn", 0)) % 4
+	_cells.set_image(Image.create_from_data(_size.x, _size.y, false, Image.FORMAT_RGBA8, bytes))
+
+
+## Whether a body has its picture drawn (assets/tiles/props/<id>.png): a token without one stays a square.
+static func drawn(body_id: String) -> bool:
+	return not body_id.is_empty() and ResourceLoader.exists("res://assets/tiles/props/%s.png" % body_id)
+
+
+## The things of the map: the bodies of rules.things (v0.8.4.43.23).
+static func bodies_of() -> Dictionary:
+	return Catalog.data.get("rules", {}).get("things", {}).get("bodies", {}) if Catalog.data is Dictionary else {}
+
+
+## The things of `grounds.props` and the bodies of the map in one order: a thing's place in the texture of the things.
 static func prop_ids(lib: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	for row: Variant in lib["grounds"]["props"].values():
 		for id: Variant in (row as Dictionary).values():
 			if not out.has(str(id)):
 				out.append(str(id))
+	for id: Variant in bodies_of():
+		if not out.has(str(id)) and out.size() < MAX_PROPS:
+			out.append(str(id))
 	return out
 
 

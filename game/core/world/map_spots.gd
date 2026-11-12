@@ -5,6 +5,12 @@ extends RefCounted
 ## Nothing here is kept except a move by the master's words: the rest follows from the seed, so a save holds no squares
 ## of people. People do not block the way. The master never sees squares: `words` and `near_word` speak for them.
 ## v0.8.3: foes before a fight stand away from the ways in (`foes`), a trap and a cache lie on a square (`secret_cell`).
+## v0.8.4.43.23: a thing with a body (rules.things.bodies) takes the squares of its `size`, turned as the seed says, and a
+## station of a mark stands as its thing (`rules.map.station_bodies`); `walls` — what the squares of things bar, for the
+## walk, the eye and the fight.
+
+const PATH := 1  ## a square of a thing bars the way
+const SIGHT := 2  ## and the eye
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -26,17 +32,27 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 	var index := (map["ids"] as Array).find(s.room_id)
 	var stations: Array = cfg(data)["stations"]
 	var seen := {}
+	var spots := _clear(map, lib, cells)  # nobody and nothing stands in a doorway: a click there opens the door (v0.8.4.42.1)
+	var walls := {}  # the squares of things that bar the way (a fight makes them blocks, FightField)
+	var ways := _ways_in(map, s.room_id)
 	for m: Dictionary in map["marks"]:
 		var mark := str(m["name"])
 		if int(m["room"]) == index and stations.has(mark) and not seen.has(mark):
 			seen[mark] = true
 			var at := Vector2i(int(m["x"]), int(m["y"]))
-			taken[at] = true
-			out.append(_token("station:" + mark, "station", mark, _word(data, mark), at))
+			var t := _token("station:" + mark, "station", mark, _word(data, mark), at)
+			var body_id := str(cfg(data).get("station_bodies", {}).get(mark, ""))
+			if not body_id.is_empty():  # the mark's square is its thing's: the rest of it where it fits round the mark
+				var around: Array[Vector2i] = spots.duplicate()
+				if not around.has(at):
+					around.append(at)
+				_with_body(data, t, body_id, _lay(data, body_id, "%d|%s" % [s.game_seed, mark], at, around, cells, ways, walls, taken, true), walls)
+			for c: Vector2i in t.get("cells", [at]):
+				taken[c] = true
+			out.append(t)
 	var world := WorldView.new(data["world"])
 	var followers := Being.followers(s)
 	var part := TimeRules.part_name(s, data)
-	var spots := _clear(map, lib, cells)  # nobody and nothing stands in a doorway: a click there opens the door (v0.8.4.42.1)
 	for id: String in _sorted(s.npcs_here(data["world"], s.room_id)):
 		if followers.has(id):
 			continue
@@ -63,30 +79,112 @@ static func of(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Dicti
 		var at := _seeded(spots, taken, "%d|%s" % [s.game_seed, id])
 		taken[at] = true
 		out.append(_token("body:" + id, "body", id, str(b["name"]), at))
-	var walls := {}  # the squares of things that bar the way (a fight makes them blocks, FightField)
-	var ways := _ways_in(map, s.room_id)
 	for p: Dictionary in PropRules.room_props(s, s.room_id):
 		if not _shown(data, p):
 			continue
 		var at := _prop_cell(s, data, map, spots, taken, out, p)
-		if (ThingRules.body(data, p).get("blocks", []) as Array).has("path"):
-			at = _off_the_way(cells, spots, ways, walls, taken, at)
-			walls[at] = true
-		taken[at] = true
-		out.append(_token("prop:" + str(p["id"]), "prop", str(p["id"]), str(p["name"]), at))
+		var t := _token("prop:" + str(p["id"]), "prop", str(p["id"]), str(p["name"]), at)
+		var body_id := ThingRules.body_id(data, p)
+		if not body_id.is_empty():
+			_with_body(data, t, body_id, _lay(data, body_id, "%d|%s" % [s.game_seed, str(p["id"])], at, spots, cells, ways, walls, taken, p.get("at") is Array), walls)
+		for c: Vector2i in t.get("cells", [at]):
+			taken[c] = true
+		out.append(t)
 	return out
+
+
+## What the squares of the things among `tokens` bar: {square: PATH | SIGHT} (v0.8.4.43.23). The walk, the eye and a
+## fight read it; a thing that bars nothing is not here.
+static func walls(tokens: Array[Dictionary]) -> Dictionary:
+	var out := {}
+	for t: Dictionary in tokens:
+		var bits := int(t.get("bars", 0))
+		if bits == 0:
+			continue
+		for c: Vector2i in t.get("cells", []):
+			out[c] = int(out.get(c, 0)) | bits
+	return out
+
+
+## The squares a thing of `size` [long, short] takes from `at`, its top left, turned by `turn` quarters: an odd turn lays
+## it the other way.
+static func footprint(size: Array, at: Vector2i, turn: int) -> Array[Vector2i]:
+	var w := int(size[1]) if turn % 2 == 1 else int(size[0])
+	var h := int(size[0]) if turn % 2 == 1 else int(size[1])
+	var out: Array[Vector2i] = []
+	for y: int in h:
+		for x: int in w:
+			out.append(at + Vector2i(x, y))
+	return out
+
+
+## A thing of a body laid near `at`: its squares all free among `spots` and not `taken`, turned as the seed of `key` says
+## first; one that bars the way keeps every way of the room joined. `must` — one of its squares is `at` itself (a station
+## of a mark, a thing put by hand). {"at": top left, "turn", "cells"}; nothing fits — one square at `at`.
+static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, spots: Array[Vector2i], cells: Array[Vector2i],
+		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary, must: bool) -> Dictionary:
+	var body: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
+	var size: Array = body.get("size", [1, 1])
+	var bars := (body.get("blocks", []) as Array).has("path")
+	var free := {}
+	for c: Vector2i in spots:
+		if not taken.has(c) or (must and c == at):
+			free[c] = true
+	var h := absi(key.hash())
+	var turns: Array[int] = [h % 4, (h + 1) % 4, (h + 2) % 4, (h + 3) % 4]
+	var starts: Array[Vector2i] = [at]
+	if not must:
+		starts = spots.filter(func(c: Vector2i) -> bool: return free.has(c))
+		starts.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+			var da := WalkRules.distance(a, at)
+			var db := WalkRules.distance(b, at)
+			return da < db or (da == db and (a.y < b.y or (a.y == b.y and a.x < b.x))))
+	for start: Vector2i in starts:
+		for turn: int in turns:
+			var w := int(size[1]) if turn % 2 == 1 else int(size[0])
+			var hh := int(size[0]) if turn % 2 == 1 else int(size[1])
+			for oy: int in hh:  # the start square is one of its squares: each of its squares there in turn
+				for ox: int in w:
+					var mine := footprint(size, start - Vector2i(ox, oy), turn)
+					if not mine.all(func(c: Vector2i) -> bool: return free.has(c)):
+						continue
+					if bars and not _joined_without(cells, ways, walls, mine):
+						continue
+					return {"at": start - Vector2i(ox, oy), "turn": turn, "cells": mine}
+	return {"at": at, "turn": turns[0], "cells": [at] as Array[Vector2i]}
+
+
+## A token takes its thing's body: its squares, its turn, what it bars; its own square is one of them. The squares that
+## bar the way join `walls`.
+static func _with_body(data: Dictionary, t: Dictionary, body_id: String, laid: Dictionary, walls: Dictionary) -> void:
+	var body: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
+	var mine: Array[Vector2i] = laid["cells"]
+	var blocks: Array = body.get("blocks", [])
+	var bars := (PATH if blocks.has("path") else 0) | (SIGHT if blocks.has("sight") else 0)
+	t["body"] = body_id
+	t["turn"] = int(laid["turn"])
+	t["cells"] = mine
+	t["corner"] = laid["at"]
+	t["bars"] = bars
+	if not mine.has(Vector2i(int(t["x"]), int(t["y"]))):
+		t["x"] = mine[0].x
+		t["y"] = mine[0].y
+	if bars & PATH:
+		for c: Vector2i in mine:
+			walls[c] = true
 
 
 static func _token(ref: String, kind: String, id: String, name: String, at: Vector2i) -> Dictionary:
 	return {"ref": ref, "kind": kind, "id": id, "name": name, "mark": name.left(1), "portrait": "", "x": at.x, "y": at.y, "attitude": 0}
 
 
-## Furniture and decor stay words; on the map is what can be taken or used.
+## On the map is what can be taken or used and a thing with a body (v0.8.4.43.23: drawn from above, it takes its
+## squares); the rest of the furniture and decor stays words.
 static func _shown(data: Dictionary, p: Dictionary) -> bool:
 	if p.has("wares") or bool(p.get("hidden", false)):
 		return false
 	return not str(p.get("item_id", "")).is_empty() or not str(p.get("container", "")).is_empty() or p.has("source") \
-		or not str(p.get("text", "")).is_empty() or QuestGen.is_board(data, p)
+		or not str(p.get("text", "")).is_empty() or QuestGen.is_board(data, p) or not ThingRules.body_id(data, p).is_empty()
 
 
 static func _npc_cell(s: GameSession, data: Dictionary, map: Dictionary, room: String, cells: Array[Vector2i], taken: Dictionary, id: String, part: String) -> Vector2i:
@@ -259,7 +357,7 @@ static func _cells(map: Dictionary, lib: Dictionary, room: String) -> Array[Vect
 	for y: int in int(map["h"]):
 		for x: int in int(map["w"]):
 			var cell := Vector2i(x, y)
-			if WalkRules.room_of(map, cell) == room and WalkRules.passable(map, lib, cell):
+			if WalkRules.room_of(map, cell) == room and WalkRules.floor_at(map, lib, cell):
 				out.append(cell)
 	return out
 
@@ -291,6 +389,16 @@ static func _off_the_way(cells: Array[Vector2i], spots: Array[Vector2i], ways: A
 		if _joined(cells, ways, walls, c):
 			return c
 	return at
+
+
+## Every way of the room joined with the squares of `extra` barred too.
+static func _joined_without(cells: Array[Vector2i], ways: Array[Vector2i], walls: Dictionary, extra: Array[Vector2i]) -> bool:
+	if ways.size() < 2:
+		return true
+	var more := walls.duplicate()
+	for c: Vector2i in extra:
+		more[c] = true
+	return _joined(cells, ways, more, Vector2i(-1, -1)) or not _joined(cells, ways, walls, Vector2i(-1, -1))
 
 
 ## Every way of the room reached from the first over its free squares, with `walls` and `extra` barred.

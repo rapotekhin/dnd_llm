@@ -7,7 +7,7 @@
 const MapView = (() => {
 	const SHADER = 'game/ui/components/map_ground.gdshader';
 	const TILES = 'game/assets/tiles/';
-	const GROUND_PX = 512, PROP_PX = 256, EDGE_PX = 1024, MAX_PROPS = 16, MAX_GROUNDS = 32;
+	const GROUND_PX = 512, PROP_PX = 256, EDGE_PX = 1024, MAX_PROPS = 64, MAX_GROUNDS = 32;
 	const BLANK = ' ', FLOOR = '.', SOCKET = 'D';
 
 	// LayoutGen.turned: a quarter turn clockwise `rot` times after a mirror.

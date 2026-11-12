@@ -2,19 +2,22 @@
 // centres stand around it, so two grounds meet by a rough line between the centres, not on a square's border.
 // A higher ground of `grounds.order` lies over a lower one; a sharp one (a wall) keeps the square's border, with a
 // bevel and a shadow on what is south and east of it. Then the things of the squares (a tree overflows its square),
-// then what the hero does not see now (`light`, sampled smooth between the squares' centres).
+// then what the hero does not see now (`light`, sampled smooth between the squares' centres). A thing of many squares
+// (v0.8.4.43.23) is kept on its top left square: its picture, square, spans its long side round the middle of its squares,
+// turned by its quarter turns.
 // Where only two grounds meet and their pair has a drawn edge (`grounds.edges`), the line and a band round it come
 // from that pair's sheet of the sixteen tiles (`edges`, the line in its alpha); inside, the grounds' own textures.
 shader_type canvas_item;
 
-uniform sampler2D cells : filter_nearest;  // r — the ground's place in the order (255 none), g — a prop + 1, b — a quarter turn
+uniform sampler2D cells : filter_nearest;  // r — the ground's place in the order (255 none), g — a prop + 1 on its top left square, b — its quarter turns
 uniform sampler2D light : filter_linear;   // r — darkness, g — under watch
 uniform sampler2DArray grounds : filter_linear_mipmap, repeat_enable;
 uniform sampler2DArray props : filter_linear_mipmap;
 uniform vec2 map_size = vec2(1.0);
 uniform float repeat_cells = 3.0;
 uniform int sharp_mask = 0;  // a bit per ground of the order
-uniform float prop_size[16];
+uniform float prop_size[64];
+uniform vec2 prop_dims[64];  // a prop's squares [long, short]; none — one square
 uniform float rough = 0.22;
 uniform float soft = 0.05;
 uniform vec4 watch_tint : source_color = vec4(0.75, 0.25, 0.2, 1.0);
@@ -124,16 +127,18 @@ void fragment() {
 		col.rgb *= 1.0 - 0.4 * s;
 	}
 
-	for (int dy = -1; dy <= 1; dy++) {  // the things of this square and of those around that overflow onto it
-		for (int dx = -1; dx <= 1; dx++) {
+	for (int dy = -3; dy <= 1; dy++) {  // the things of this square and of those around whose squares or overflow reach it
+		for (int dx = -3; dx <= 1; dx++) {
 			ivec2 n = here + ivec2(dx, dy);
 			if (n.x < 0 || n.y < 0 || n.x >= int(map_size.x) || n.y >= int(map_size.y)) continue;
 			vec4 cell = texelFetch(cells, n, 0);
 			int prop = int(cell.g * 255.0 + 0.5) - 1;
 			if (prop < 0) continue;
-			float size = prop_size[prop];
-			vec2 at = (p - (vec2(n) + 0.5)) / size;
 			int turn = int(cell.b * 255.0 + 0.5);
+			vec2 dims = max(prop_dims[prop], vec2(1.0));
+			vec2 span = turn % 2 == 1 ? dims.yx : dims;
+			float size = prop_size[prop] * max(dims.x, dims.y);
+			vec2 at = (p - (vec2(n) + span * 0.5)) / size;
 			for (int r = 0; r < turn; r++) at = vec2(-at.y, at.x);
 			vec2 uv = at + 0.5;
 			vec2 shade_uv = uv - vec2(0.06, 0.08) / size;

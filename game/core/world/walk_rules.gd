@@ -36,6 +36,7 @@ static func view(s: GameSession, data: Dictionary) -> Dictionary:
 		if ids.has(from) and known[ids.find(from)] == 1 and WayRules.open_exits(s, data["world"], from).has(str(e["to"])):
 			exits.append(e)
 	out["exits"] = exits
+	out["walls"] = MapSpots.walls(MapSpots.of(s, data, out))  # the things of the room bar the way and the eye (v0.8.4.43.23)
 	return out
 
 
@@ -48,6 +49,11 @@ static func room_of(map: Dictionary, cell: Vector2i) -> String:
 
 
 static func passable(map: Dictionary, lib: Dictionary, cell: Vector2i) -> bool:
+	return floor_at(map, lib, cell) and int((map.get("walls", {}) as Dictionary).get(cell, 0)) & MapSpots.PATH == 0
+
+
+## The map's own floor, the things on it aside (v0.8.4.43.23: where a thing may be laid).
+static func floor_at(map: Dictionary, lib: Dictionary, cell: Vector2i) -> bool:
 	if cell.x < 0 or cell.y < 0 or cell.x >= int(map["w"]) or cell.y >= int(map["h"]):
 		return false
 	return not LayoutGen.solid(lib, (map["rows"] as Array[String])[cell.y][cell.x])

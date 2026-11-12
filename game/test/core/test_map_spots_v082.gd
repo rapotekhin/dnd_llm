@@ -148,3 +148,41 @@ func test_a_way_up_stays_in_the_room_and_stops_in_reach() -> void:
 	assert_array(WalkRules.near(map, lib, Vector2i(0, 0), Vector2i(2, 0), 1, "a")).is_equal([Vector2i(1, 0)])
 	assert_array(WalkRules.near(map, lib, Vector2i(1, 0), Vector2i(2, 0), 1, "a")).is_empty()
 	assert_array(WalkRules.near(map, lib, Vector2i(0, 0), Vector2i(4, 0), 1, "a")).is_empty()
+
+
+## v0.8.4.43.23: a thing of many squares. A table takes two squares in a line, both bar the way of the walk and are blocks
+## of a fight; a cabinet bars the eye; the forge of the smithy's mark is two by two round its mark.
+func test_a_thing_of_many_squares_takes_them_all_on_the_walk_the_eye_and_the_fight() -> void:
+	var s := _session()
+	s.props[s.room_id] = [
+		{"id": "long", "name": "Стол", "item_id": "", "owner": "", "text": "", "state": "", "body": "table"},
+		{"id": "wardrobe", "name": "Шкаф", "item_id": "", "owner": "", "text": "", "state": "", "body": "cabinet"},
+		{"id": "pot", "name": "Горшок", "item_id": "", "owner": "", "text": "", "state": "", "body": "plant_pot"},
+	]
+	var table := _token(s, "prop:long")
+	var cells: Array = table["cells"]
+	assert_int(cells.size()).is_equal(2)
+	assert_int(WalkRules.distance(cells[0], cells[1])).is_equal(1)
+	assert_bool(cells.has(_at(table))).is_true()
+	var view := WalkRules.view(s, data)
+	for c: Vector2i in cells:
+		assert_bool(WalkRules.passable(view, data["layouts"], c)).override_failure_message(str(c)).is_false()
+	for c: Vector2i in _token(s, "prop:wardrobe")["cells"]:
+		assert_bool(SightRules.veiled(view, c)).is_true()
+	for c: Vector2i in _token(s, "prop:pot")["cells"]:  # a pot is walked past: it bars nothing
+		assert_bool(WalkRules.passable(view, data["layouts"], c)).is_true()
+	CombatRules.start(s, data, [{"monster": "goblin", "count": 1}])
+	FightField.lay(s, data)
+	for c: Vector2i in cells:
+		var b: Dictionary = s.combat["blocks"].get(FightGrid.tag(c), {})
+		assert_str(str(b.get("body", ""))).is_equal("table")
+		assert_int(int(b["flags"]) & FightGrid.SOLID).is_equal(FightGrid.SOLID)
+	var forge := _token(_session("brod-smithy"), "station:forge")
+	assert_int((forge["cells"] as Array).size()).is_equal(4)
+	assert_bool((forge["cells"] as Array).has(_at(forge))).is_true()
+
+
+func test_a_thing_turns_by_the_seed_and_its_squares_follow() -> void:
+	assert_array(MapSpots.footprint([3, 2], Vector2i(1, 1), 0)).has_size(6).contains([Vector2i(3, 2)])
+	assert_array(MapSpots.footprint([3, 2], Vector2i(1, 1), 1)).has_size(6).contains([Vector2i(2, 3)])
+	assert_array(MapSpots.footprint([3, 2], Vector2i(1, 1), 1)).not_contains([Vector2i(3, 1)])

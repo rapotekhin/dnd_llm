@@ -90,7 +90,9 @@ func run() -> void:
 		await frames(3)
 		var across: float = minf(field.size.x, field.size.y) / field.tile()
 		step("the closest view is 8 squares across", absf(across - MapField.CLOSE_CELLS) < 0.5 or field.tile() == MapField.MAX_TILE, "%.1f squares" % across)
-		step("close up the sharp pictures", field.sharp() or not MapGround.has_hi(field.lib))
+		var texel: float = field.tile() * float(field.lib["grounds"].get("repeat", 3)) / float(MapGround.GROUND_PX)
+		step("close up the sharp pictures where a texel is over half a pixel", field.sharp() == (texel > MapGround.HI_FROM and MapGround.has_hi(field.lib)),
+			"tile %.0f, texel %.2f, sharp %s" % [field.tile(), texel, field.sharp()])
 		await shot("closest")
 		field.zoom(-30, field.cell_point(shore))
 		await frames(3)

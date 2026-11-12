@@ -144,9 +144,19 @@ static func spec(data: Dictionary, s: GameSession, p: Dictionary) -> Dictionary:
 	return d
 
 
-## The body of a thing of the room: {cells, blocks, cover, made_of}; {} — it stands in nobody's way.
+## The body of a thing of the room: {size, blocks, cover, made_of}; {} — it stands in nobody's way.
 static func body(data: Dictionary, p: Dictionary) -> Dictionary:
-	return cfg(data)["bodies"].get(str(p.get("body", "")), {})
+	return cfg(data)["bodies"].get(body_id(data, p), {})
+
+
+## The id of a thing's body: its own, else the one of its container's kind (a chest, a barrel, a crate — v0.8.4.43.23);
+## "" — none.
+static func body_id(data: Dictionary, p: Dictionary) -> String:
+	var bodies: Dictionary = cfg(data)["bodies"]
+	for id: String in [str(p.get("body", "")), str(p.get("container", ""))]:
+		if bodies.has(id):
+			return id
+	return ""
 
 
 ## A quest's thing is not broken while the quest needs it, unless the pack or the master says so.

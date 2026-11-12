@@ -806,7 +806,7 @@ class PropSpec(_Out):
     # 0.70.0: water can be drawn here (a well, a stream, a river); 0.108.0: any liquid id of the engine — wine from a
     # barrel, oil from a vat (checked by the engine)
     source: str | None = None
-    body: str | None = None  # 0.99.0: what it does on the map: table, bench, cabinet, barrel, chest, pillar, statue, tree, boulder, curtain
+    body: str | None = None  # 0.99.0: what it does on the map, a row of rules.things.bodies (its squares, what it bars, its picture)
     near: str | None = None  # 0.104.0: where on the map: a place of scene.spots or an npc_id of the scene; no squares
 
 

@@ -42,14 +42,17 @@ static func lay(s: GameSession, data: Dictionary) -> void:
 				ground.append(FightGrid.tag(Vector2i(x, y)))
 	if not ground.is_empty():
 		SpellEffects.add_zone(s, zone_of("hazard", hz, ground))
-	for p: Dictionary in PropRules.room_props(s, s.room_id):
-		var body := ThingRules.body(data, p)
-		if (body.get("blocks", []) as Array).has("path"):
-			for t: Dictionary in MapSpots.of(s, data, m):
-				if str(t["ref"]) == "prop:" + str(p["id"]):
-					var b := _block(data, str(p["body"]), str(p["name"]))
-					b["prop"] = str(p["id"])
-					s.combat["blocks"][FightGrid.tag(Vector2i(int(t["x"]), int(t["y"])))] = b
+	for t: Dictionary in MapSpots.of(s, data, m):  # each square of a thing of the room: what its body bars (v0.8.4.43.23)
+		if str(t.get("body", "")).is_empty():
+			continue
+		var b := _block(data, str(t["body"]), str(t["name"]))
+		if int(b["flags"]) == 0:
+			continue
+		if str(t["kind"]) == "prop":
+			b["prop"] = str(t["id"])
+		b["span"] = (t["cells"] as Array).size()
+		for c: Vector2i in t["cells"]:
+			s.combat["blocks"][FightGrid.tag(c)] = b.duplicate()
 	SpellEffects.lay_glyphs(s, data)  # the hero's runes of this room (v0.8.4.26.3)
 	FightGrid.changed(s)
 
@@ -150,9 +153,18 @@ static func auras(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 		SpellEffects.add_zone(s, zone_of(id, row, []))
 
 
+## A thing on a square of a fight: its flags by its body — what bars the way is solid, what bars the eye or a shot is
+## opaque (full cover past it), a low thing gives half cover.
 static func _block(data: Dictionary, body_id: String, name: String) -> Dictionary:
 	var b: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
-	return {"body": body_id, "name": name, "hp": int(cfg(data)["blocks"]["hp"]), "weight": int(b.get("weight", 0)), "made_of": str(b.get("made_of", "wood"))}
+	var blocks: Array = b.get("blocks", [])
+	var flags := FightGrid.SOLID if blocks.has("path") else 0
+	if blocks.has("sight") or blocks.has("shots"):
+		flags |= FightGrid.OPAQUE
+	elif str(b.get("cover", "")) == "half":
+		flags |= FightGrid.LOW
+	return {"body": body_id, "name": name, "hp": int(cfg(data)["blocks"]["hp"]), "weight": int(b.get("weight", 0)), "made_of": str(b.get("made_of", "wood")),
+		"flags": flags}
 
 
 ## The start of a round: who came after the hero, the fire, who heard.
@@ -309,7 +321,7 @@ static func why_not(s: GameSession, data: Dictionary, f: Dictionary, how: String
 		var at := block_near(s, f)
 		var b: Dictionary = s.combat["blocks"][FightGrid.tag(at)]
 		var strength := Sheet.ability(s, data, f, "str")
-		if int(b["weight"]) > strength * int(cfg(data)["blocks"]["per_str"]):
+		if int(b["weight"]) > strength * int(cfg(data)["blocks"]["per_str"]) or int(b.get("span", 1)) > 1:  # a thing of many squares stays
 			return "COMBAT_TOO_HEAVY"
 		if not _block_can_go(s, data, at + (at - FightGrid.cell(f)).sign()):
 			return "COMBAT_BLOCK_STUCK"

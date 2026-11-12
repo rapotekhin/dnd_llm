@@ -108,7 +108,8 @@ static func _cast(map: Dictionary, lib: Dictionary, from: Vector2i, radius: int,
 			var inside := x >= 0 and y >= 0 and x < w and y < h
 			if inside and dx * dx + dy * dy <= far:
 				out[Vector2i(x, y)] = true
-			var wall := not inside or (opaque(lib, rows[y][x]) and not (round and bool(lib["cells"].get(rows[y][x], {}).get("thin", false))))
+			var wall := not inside or (opaque(lib, rows[y][x]) and not (round and bool(lib["cells"].get(rows[y][x], {}).get("thin", false)))) \
+				or veiled(map, Vector2i(x, y))
 			if blocked:
 				if wall:
 					next = right
@@ -140,9 +141,14 @@ static func _clear(map: Dictionary, lib: Dictionary, a: Vector2i, b: Vector2i) -
 		if twice < d.x:
 			err += d.x
 			at.y += step.y
-		if at != b and opaque(lib, rows[at.y][at.x]):
+		if at != b and (opaque(lib, rows[at.y][at.x]) or veiled(map, at)):
 			return false
 	return true
+
+
+## A thing on the square bars the eye (a cabinet, a bush — MapSpots.walls of the map, v0.8.4.43.23).
+static func veiled(map: Dictionary, at: Vector2i) -> bool:
+	return int((map.get("walls", {}) as Dictionary).get(at, 0)) & MapSpots.SIGHT != 0
 
 
 ## What the hero sees from `cell` now. A Fog Cloud or Darkness of a fight closes the view like a wall, and from inside it

@@ -47,6 +47,50 @@ def grounds_lib() -> dict:
     return json.loads((ROOT / "game" / "data" / "layouts.json").read_text(encoding="utf-8"))["grounds"]
 
 
+def bodies() -> dict:
+    """The things of the map with their squares (rules.things.bodies): a prop of that id is drawn and cut to its size."""
+    return json.loads((ROOT / "game" / "data" / "rules.json").read_text(encoding="utf-8"))["things"]["bodies"]
+
+
+def size_of(tid: str) -> tuple[int, int]:
+    w, h = bodies().get(tid, {}).get("size", [1, 1])
+    return int(w), int(h)
+
+
+def aspect(tid: str) -> str:
+    """The frame FLUX draws a thing in: the long side of its squares across."""
+    w, h = size_of(tid)
+    frames = {"1:1": 1.0, "3:2": 1.5, "16:9": 16 / 9, "21:9": 21 / 9}
+    return min(frames, key=lambda k: abs(frames[k] - w / h))
+
+
+def keyed(rgb: Image.Image, mask: Image.Image) -> Image.Image:
+    """The cut's mask with what plainly differs from the frame's flat grey background kept too: BiRefNet takes a flat
+    tabletop seen from above for the background and keeps only what lies on it; a soft shadow stays out."""
+    from PIL import ImageFilter
+    border = [rgb.getpixel((x, y)) for x in range(0, rgb.width, 16) for y in (0, rgb.height - 1)]         + [rgb.getpixel((x, y)) for y in range(0, rgb.height, 16) for x in (0, rgb.width - 1)]
+    back = tuple(sorted(c[i] for c in border)[len(border) // 2] for i in range(3))
+    flat = Image.new("RGB", rgb.size, back)
+    diff = ImageChops.difference(rgb, flat).convert("L")
+    strong = diff.point(lambda v: 0 if v < 34 else 255 if v > 56 else int((v - 34) * 255 / 22))
+    strong = strong.filter(ImageFilter.MedianFilter(5))
+    out = ImageChops.lighter(mask.convert("L").resize(rgb.size), strong)
+    return out
+
+
+def fit(cut: Image.Image, tid: str, side: int) -> Image.Image:
+    """A cut thing laid in its square texture as the map draws it: its own picture cropped to what is drawn, stretched to
+    its squares' w:h and centred in a square of the long side (MapGround reads a thing of w × h squares so)."""
+    box = cut.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox() or (0, 0, cut.width, cut.height)
+    w, h = size_of(tid)
+    long = max(w, h)
+    pad = 0.92  # a little air round it, for its shadow
+    body = cut.crop(box).resize((max(1, round(side * pad * w / long)), max(1, round(side * pad * h / long))), Image.LANCZOS)
+    out = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    out.paste(body, ((side - body.width) // 2, (side - body.height) // 2), body)
+    return out
+
+
 def jobs(only: str) -> list[tuple[str, str, str]]:
     """(group, id, prompt) of tiles.json, `only` some ids."""
     spec = json.loads((HERE / "tiles.json").read_text(encoding="utf-8"))
@@ -132,7 +176,7 @@ def draw(a: argparse.Namespace) -> None:
     refs = [edge_mask(field)] if field else None
     with ThreadPoolExecutor(4) as pool:
         futures = {pool.submit(anima_gen.openrouter_frame, p, SEEDS[n % len(SEEDS)] + n, key, a.model,
-                               "1:1", refs if g == "edges" else None): (g, t, n) for g, t, p, n in todo}
+                               aspect(t) if g == "props" else "1:1", refs if g == "edges" else None): (g, t, n) for g, t, p, n in todo}
         for f in as_completed(futures):
             g, t, n = futures[f]
             img, cost = f.result()
@@ -158,10 +202,11 @@ def matte(a: argparse.Namespace) -> None:
             continue
         for raw in sorted((OUT / "raw").glob(f"{t}__*.png")):
             rgb = Image.open(raw).convert("RGB")
-            cut = m.matte(rgb, m.mask_of(model, device, rgb))
-            cut.resize((PROP_PX, PROP_PX), Image.LANCZOS).save(OUT / raw.name)
+            cut = rgb.convert("RGBA")  # the whole frame with its mask: `fit` crops it, no size lost on the way
+            cut.putalpha(keyed(rgb, m.mask_of(model, device, rgb)))
+            fit(cut, t, PROP_PX).save(OUT / raw.name)
             (OUT / "hi").mkdir(exist_ok=True)
-            cut.resize((PROP_PX * HI, PROP_PX * HI), Image.LANCZOS).save(OUT / "hi" / raw.name)
+            fit(cut, t, PROP_PX * HI).save(OUT / "hi" / raw.name)
             print(raw.name, flush=True)
 
 
