@@ -1,0 +1,23 @@
+---
+description: Use this skill when making or changing the map's tileset — grounds (textures under the dual grid) and props (things on a square) drawn by FLUX over OpenRouter with tools/tiles/gen_tiles.py, wired into `grounds` of game/data/layouts.json, and when the map generator must lay a ground so the dual grid draws it well. Trigger on "тайлсет", "тайлы", "нарисуй землю", "текстура карты", "песок / снег / пещера на карте", "дуал-грид", "dual grid", "предмет на клетке", "крыша", "tileset", "tiles", and on edits under tools/tiles/**, game/assets/tiles/**, game/ui/components/map_ground.*, `grounds` of layouts.json. Do NOT use for icons and portraits (that is `anima_art`), for the fight's surfaces of anims.json, or for the master's event images.
+globs:
+  - "tools/tiles/**"
+  - "game/assets/tiles/**"
+  - "game/ui/components/map_ground.*"
+alwaysApply: false
+---
+
+# map_tiles
+
+The map's tileset: grounds and props drawn by FLUX, their place in `grounds` of layouts.json and in the map generator.
+
+The full procedure is in [.claude/skills/map_tiles/SKILL.md](mdc:.claude/skills/map_tiles/SKILL.md).
+
+Read that file when this rule triggers, then follow it.
+
+**Quick reference:**
+
+- What is drawn, what is drawn by another's picture, what is missing, what next: `docs/design/tileset.md` — read it first, update it last
+- `gen_tiles.py draw --only ids` → `matte` (props, in tools/anima/.venv-matte) → `sheet` → pick in `tools/tiles/picks.json` → `install`; the prompts are in `tools/tiles/tiles.json`
+- Data: `grounds.cells` (by character and shape), `order`, `sharp`, `props` + `size`, `patches`, `colour`; a ground in patches is a `scatter` row with `blob: true`
+- One seamless texture per ground — the dual grid shader makes the edges; no corner tiles, no lone squares, no colour in `MapField`
