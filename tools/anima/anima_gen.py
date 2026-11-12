@@ -205,6 +205,7 @@ LIT = 0.55  # the brightest lines of a sign toward white by this share
 # the frame at the icon's side 1.0: its margin, the outer and the inner line, the gap between, the sign's pad inside
 EDGE, OUTER, INNER, GAP, PAD = 0.035, 0.026, 0.013, 0.022, 0.05
 SIGN_LINE = 0.018  # the sign's lines at least this wide: 2 px of a 128 icon, 1 px at 64
+SEEDS = {"flat": "11,22", "painted": "11,22", "lines": "11,22,33"}  # a variant per seed; three of the lines (the author)
 ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
@@ -859,7 +860,7 @@ def main() -> None:
     p.add_argument("--steps", type=int, default=20)
     p.add_argument("--cfg", type=float, default=4.5)
     p.add_argument("--sampler", default="ER SDE")
-    p.add_argument("--seeds", default="11,22", help="one variant per seed")
+    p.add_argument("--seeds", default="", help="one variant per seed; 11,22, the lines style 11,22,33 (SEEDS)")
     p.add_argument("--bg", default="dark", choices=sorted(KEYS), help="the background where a job names none")
     p.add_argument("--only", default="", help="kinds, comma-separated")
     p.add_argument("--ids", default="", help="ids, comma-separated")
@@ -887,7 +888,7 @@ def main() -> None:
         jobs = [j for j in jobs if j["kind"] in a.only.split(",")]
     if a.ids:
         jobs = [j for j in jobs if j["id"] in a.ids.split(",")]
-    seeds = [int(s) for s in a.seeds.split(",")]
+    seeds = [int(s) for s in (a.seeds or SEEDS.get(a.style, SEEDS["flat"])).split(",")]
     if a.pick:
         return pick(a.out, jobs, seeds, a.pick)
     if a.sheets:

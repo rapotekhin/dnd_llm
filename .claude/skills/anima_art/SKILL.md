@@ -107,7 +107,7 @@ nohup python3 anima_gen.py jobs/portraits.json --steps 24 > portraits.log 2>&1 &
 tail -f painted.log                           # [12/1186] items/longsword #1 19s, left ~6.1 h
 ```
 
-Стиль «линии» (заклинания, умения, черты рас — 840 кадров, ~4,4 ч; действия дома через FLUX, `--backend openrouter --only acts`, ~$0.6):
+Стиль «линии» (заклинания, умения, черты рас по три варианта — 1260 кадров, ~6,7 ч; действия дома через FLUX, `--backend openrouter --only acts`, ~$0.9):
 
 ```bash
 nohup python3 anima_gen.py jobs/icons.json --style lines --steps 20 --only spells,features,traits > lines.log 2>&1 &

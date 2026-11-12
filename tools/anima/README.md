@@ -171,11 +171,12 @@ python tools/anima/install.py --out tools/anima/out_painted --picks tools/anima/
 ```bash
 # проба дома, по одному варианту: несколько каждого вида
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only spells,features,traits --ids fireball,shield,rage,darkvision --first 1
-# на сервере, на ночь: заклинания, умения, черты — 420 иконок × 2 варианта = 840 кадров, ~4,4 ч при 20 шагах;
+# на сервере, на ночь: заклинания, умения, черты — 420 иконок × 3 варианта = 1260 кадров, ~6,7 ч при 20 шагах
+# (три варианта у стиля «линии» сами, `SEEDS`: 11, 22, 33 — так и --recut, и --sheets видят третий);
 # остановленный прогон продолжается той же командой
 nohup python3 anima_gen.py jobs/icons.json --style lines --steps 20 --only spells,features,traits > lines.log 2>&1 &
-tail -f lines.log                              # [12/840] spells/fireball #1 19s, left ~4.3 h
-# дома: действия через FLUX — 34 × 2 = 68 кадров, ~5 мин, ~$0.6 → out_lines_flux/
+tail -f lines.log                              # [12/1260] spells/fireball #1 19s, left ~6.6 h
+# дома: действия через FLUX — 34 × 3 = 102 кадра, ~7 мин, ~$0.9 → out_lines_flux/
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only acts --backend openrouter
 # out_lines/ с сервера в tools/anima/out_lines/; выбор на той же странице — вкладки «· линии»
 python tools/anima/pick.py                     # http://127.0.0.1:8791/#lines_spells
