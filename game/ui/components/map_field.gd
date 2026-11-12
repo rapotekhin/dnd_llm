@@ -70,9 +70,17 @@ var _dragged := false
 var _press_at := Vector2.ZERO
 var _moves: Dictionary = {}  ## a body's squares still to walk, by id
 var _body_at: Dictionary = {}  ## where a body is drawn now, by id
+var _ground := MapGround.new()  ## the squares' grounds and things on a dual grid, under everything the field draws
 
 
 func _ready() -> void:
+	var back := ColorRect.new()  # the field's own ground: a child behind the parent, so the map's ground lies over it
+	back.color = UiTheme.BG
+	back.show_behind_parent = true
+	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	back.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(back)
+	add_child(_ground)
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	resized.connect(_on_resized)
@@ -83,6 +91,7 @@ func show_map(m: Dictionary, world_lib: Dictionary) -> void:
 	var same: bool = not map.is_empty() and map["id"] == m["id"]
 	map = m
 	lib = world_lib
+	_ground.lay(lib, map)
 	if not same:
 		_own_view = false
 		if _in_fight:
@@ -360,33 +369,33 @@ func _press(b: InputEventMouseButton) -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), UiTheme.BG)
 	_names.clear()
 	_exit_boxes.clear()
 	if map.is_empty():
+		_ground.visible = false
 		return
 	var t := _tile
+	_ground.visible = true
+	_ground.position = _corner
+	_ground.size = Vector2(int(map["w"]), int(map["h"])) * t
+	_ground.light(dim, now, cones, 0.45)
 	var rows: Array[String] = map["rows"]
 	var first := Vector2i((-_corner / t).floor()).max(Vector2i.ZERO)
 	var last := Vector2i(((size - _corner) / t).ceil()).min(Vector2i(int(map["w"]), int(map["h"])))
+	var squares := _in_fight and t >= LABEL_FROM  # the squares are counted in a fight only: out of it the ground is whole
 	for y: int in range(first.y, last.y):
 		for x: int in range(first.x, last.x):
 			var c: String = rows[y][x]
-			var cell := Vector2i(x, y)
 			if c == LayoutGen.BLANK:
 				continue
 			var at := _corner + Vector2(x, y) * t
-			var fill: Color = UiTheme.TILES.get(c, UiTheme.TILES["."])
-			if (x + y) % 2 == 1 and c != LayoutGen.WALL:
-				fill = fill.darkened(0.05)
-			if dim and not now.has(cell):
-				fill = fill.darkened(0.45)
-			elif cones.has(cell):
-				fill = fill.lerp(UiTheme.BAD, 0.32)
-			draw_rect(Rect2(at, Vector2(t, t)), fill)
-			if c == LayoutGen.WALL and y > 0 and rows[y - 1][x] != LayoutGen.WALL:
-				draw_rect(Rect2(at, Vector2(t, maxf(2.0, t * 0.14))), UiTheme.TILES["#"].lightened(0.25))
-			elif t >= LABEL_FROM:
+			if c == "^":  # a hazard seen on its square
+				draw_rect(Rect2(at, Vector2(t, t)).grow(-t * 0.12), Color(UiTheme.TILES["^"], 0.55))
+			elif c == "w":  # a window: glass across the wall
+				var across := y > 0 and rows[y - 1][x] in [LayoutGen.WALL, "w"]
+				var glass := Rect2(at + Vector2(t * 0.38, t * 0.1), Vector2(t * 0.24, t * 0.8)) if across else Rect2(at + Vector2(t * 0.1, t * 0.38), Vector2(t * 0.8, t * 0.24))
+				draw_rect(glass, UiTheme.TILES["w"])
+			if squares and c != LayoutGen.WALL:
 				draw_rect(Rect2(at, Vector2(t, t)), Color(0, 0, 0, 0.14), false, 1.0)
 	_draw_fight_squares(t)
 	if clicks and _hover.x >= 0 and _hover.y >= 0 and _hover.x < int(map["w"]) and _hover.y < int(map["h"]):

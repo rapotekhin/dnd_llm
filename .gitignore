@@ -34,3 +34,6 @@ __pycache__
 tools/anima/out/
 tools/anima/out_*/
 tools/anima/.venv-matte/
+
+# The map tiles: drawn locally by tools/tiles/gen_tiles.py, not kept in git (the map falls back to the colours of `grounds.colour`)
+/game/assets/tiles/

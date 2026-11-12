@@ -1,0 +1,25 @@
+{
+  "_doc": "The map's tiles drawn by FLUX over OpenRouter (tools/tiles/gen_tiles.py): a ground is a seamless texture under the dual grid of MapField, a prop a thing on a square cut out of its frame. The ids are the ones of `grounds` in game/data/layouts.json.",
+  "style": {
+    "ground": "Seamless tileable texture, straight top-down orthographic view looking directly down at the ground, {subject}. Hand-painted fantasy RPG battle map texture, painterly brushwork like a painted tabletop map, muted natural colours, soft even diffuse light, flat, no perspective, no horizon, no objects standing out, no border, no frame, no text, the same density of detail across the whole image.",
+    "prop": "Straight top-down orthographic view from directly above of {subject}, one single object centred in the frame with empty space around it. Hand-painted fantasy RPG battle map token art, painterly brushwork, muted natural colours, soft light from the upper left, isolated on a plain flat light grey background, no ground texture, no text, no border."
+  },
+  "ground": {
+    "grass": "a meadow of short green grass with a few clover leaves and tiny wildflowers",
+    "dirt": "packed brown earth of a footpath with small pebbles and dry patches",
+    "cobble": "an old road paved with rounded grey cobblestones and earth between them",
+    "water": "clear shallow river water, blue green, gentle ripples, a few pebbles visible on the bottom",
+    "mud": "wet dark mud with brambles, roots and puddles",
+    "planks": "a floor of old wooden planks laid in straight rows, warm brown, worn and scuffed",
+    "cave": "the rough grey stone floor of a cave with cracks and grit",
+    "pit": "a deep dark chasm, nearly black with faint rough rock",
+    "wall": "the top of a thick rough stone masonry wall, grey stones of different sizes with mortar",
+    "roof": "a roof of dark brown wooden shingles laid in overlapping straight rows, weathered, with a little moss"
+  },
+  "props": {
+    "tree": "the round leafy crown of a broad deciduous oak tree, dense green foliage",
+    "boulder": "a large mossy grey boulder seen exactly from straight above like a satellite photo: only its rounded top is visible, no sides, no perspective",
+    "table": "a rectangular wooden tavern table seen exactly from straight above like a floor plan: only the flat tabletop of planks is visible with two clay mugs and a candle on it, no legs, no sides, no perspective",
+    "door": "a closed rectangular wooden door made of vertical planks with iron bands, lying flat"
+  }
+}

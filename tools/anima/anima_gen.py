@@ -328,11 +328,16 @@ def openrouter_key() -> str:
 
 def draw_openrouter(job: dict, n: int, seed: int, a: argparse.Namespace) -> tuple[Image.Image, float]:
     """A frame by a model of OpenRouter and its cost in USD; the prompt is the same as Forge's, with no negative."""
-    body = json.dumps({"model": a.model, "prompt": full_prompt(job, n, a), "n": 1, "aspect_ratio": "1:1",
-                       "seed": seed}).encode()
+    return openrouter_frame(full_prompt(job, n, a), seed, a.key, a.model)
+
+
+def openrouter_frame(prompt: str, seed: int, key: str, model: str = OPENROUTER_MODEL,
+                     aspect: str = "1:1") -> tuple[Image.Image, float]:
+    """One frame of a prompt by a model of OpenRouter and its cost in USD (the map's tiles draw by it too)."""
+    body = json.dumps({"model": model, "prompt": prompt, "n": 1, "aspect_ratio": aspect, "seed": seed}).encode()
     for attempt in range(5):
         req = urllib.request.Request(OPENROUTER_IMAGES, data=body, headers={
-            "Authorization": f"Bearer {a.key}", "Content-Type": "application/json"})
+            "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=180) as r:
                 data = json.loads(r.read())

@@ -556,3 +556,70 @@ func test_new_ways_are_laid_apart_from_the_old() -> void:
 					if str(e["to"]) != to:
 						var d := maxi(absi(int(e["x"]) - int(new_one["x"])), absi(int(e["y"]) - int(new_one["y"])))
 						assert_int(d).override_failure_message("%s seed %d: %s beside %s" % [kind, sd, to, e["to"]]).is_greater_equal(gap)
+
+
+func test_every_square_has_a_ground_of_the_order_and_every_cell_one_of_its_own() -> void:
+	var g: Dictionary = layouts["grounds"]
+	var order: Array = g["order"]
+	for c: String in layouts["cells"]:
+		for shape: String in ["open", "building", "tunnels"]:
+			assert_bool(order.has(LayoutGen.ground_of(layouts, shape, c))).override_failure_message("%s in %s" % [c, shape]).is_true()
+	for row: Variant in g["props"].values():
+		for id: Variant in (row as Dictionary).values():
+			assert_bool(g["size"].has(id)).override_failure_message(str(id)).is_true()
+	var plain := layouts.duplicate(true)
+	plain["grounds"]["patches"] = {}
+	var map := {"w": 3, "h": 2, "rows": ["#.~", " T,"], "shape": "open"}
+	var got := LayoutGen.grounds(plain, map)
+	assert_array(Array(got)).is_equal([order.find("wall"), order.find("grass"), order.find("water"),
+		LayoutGen.NO_GROUND, order.find("grass"), order.find("dirt")])
+	map["shape"] = "building"
+	assert_int(LayoutGen.grounds(plain, map)[1]).is_equal(order.find("planks"))
+	assert_str(LayoutGen.prop_of(layouts, "building", "B")).is_equal("table")
+	assert_str(LayoutGen.prop_of(layouts, "open", "B")).is_equal("boulder")
+
+
+func test_an_open_maps_grounds_lie_in_patches_with_no_lone_square() -> void:
+	for kind: String in ["wild", "forest", "swamp", "shore", "square"]:
+		for sd: int in 4:
+			var ask := {"id": "r", "kind": kind, "tags": ["water"] if kind == "shore" else [], "exits": [{"to": "a", "side": "n", "kind": "edge"}]}
+			var map := LayoutGen.open_map(layouts, ask, sd * 7 + 3)
+			var rows: Array = map["rows"]
+			for y: int in rows.size():
+				for x: int in (rows[y] as String).length():
+					var c: String = rows[y][x]
+					if not c in ["~", "%"]:
+						continue
+					var same := 0
+					for side: String in LayoutGen.SIDES:
+						var n: Vector2i = Vector2i(x, y) + LayoutGen.STEP[side]
+						if n.y >= 0 and n.y < rows.size() and n.x >= 0 and n.x < (rows[n.y] as String).length() and rows[n.y][n.x] == c:
+							same += 1
+					assert_int(same).override_failure_message("%s seed %d: a lone %s at %d,%d" % [kind, sd, c, x, y]).is_greater_equal(1)
+
+
+func test_a_building_on_an_open_map_has_walls_round_a_roof() -> void:
+	var ask := {"id": "r", "kind": "square", "tags": [], "exits": [{"to": "a", "side": "n", "kind": "door"}, {"to": "b", "side": "s", "kind": "door"}]}
+	var map := LayoutGen.open_map(layouts, ask, 5)
+	var roofs := 0
+	for e: Dictionary in map["exits"]:
+		if not e.has("box"):
+			continue
+		var b: Array = e["box"]
+		for y: int in range(int(b[1]), int(b[1]) + int(b[3])):
+			for x: int in range(int(b[0]), int(b[0]) + int(b[2])):
+				var c: String = map["rows"][y][x]
+				var edge := x == int(b[0]) or y == int(b[1]) or x == int(b[0]) + int(b[2]) - 1 or y == int(b[1]) + int(b[3]) - 1
+				if c == LayoutGen.DOOR:
+					continue
+				assert_str(c).override_failure_message("%d,%d" % [x, y]).is_equal(LayoutGen.WALL if edge else LayoutGen.ROOF)
+				roofs += 1 if c == LayoutGen.ROOF else 0
+	assert_int(roofs).is_greater(0)
+
+
+func test_patches_of_ground_come_out_the_same_for_one_map() -> void:
+	var map := LayoutGen.open_map(layouts, {"id": "r", "kind": "wild", "tags": [], "exits": []}, 9)
+	map["seed"] = 9
+	var a := LayoutGen.grounds(layouts, map)
+	assert_array(Array(a)).is_equal(Array(LayoutGen.grounds(layouts, map)))
+	assert_bool(Array(a).has((layouts["grounds"]["order"] as Array).find("dirt"))).is_true()

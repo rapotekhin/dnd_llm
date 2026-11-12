@@ -170,6 +170,8 @@ static func _build(s: GameSession, data: Dictionary, id: String, on_map: Array[S
 	else:
 		map = LayoutGen.stitched(lib(data), asks, seed_of(s, id), kept)
 	map["id"] = id
+	map["shape"] = OPEN if map.get("open", false) else shape_of(WorldView.new(data["world"]), data, id)  # what its ground is drawn of
+	map["seed"] = seed_of(s, id)  # the patches of its ground
 	if int(map["faults"]) >= int(lib(data)["sound"]["retry_from"]):
 		push_warning("LayoutRules: %s stays faulty after the tries: %d" % [id, int(map["faults"])])
 	if not s.layouts.has("picks"):

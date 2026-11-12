@@ -16,6 +16,7 @@ const SOCKET := "D"
 const DOOR := "+"
 const ROAD := "="
 const PATH := ","
+const ROOF := "r"  ## the roof of a building on an open map, inside its walls
 const BLANK := " "
 const SIDES: Array[String] = ["n", "e", "s", "w"]
 const STEP: Dictionary = {"n": Vector2i(0, -1), "e": Vector2i(1, 0), "s": Vector2i(0, 1), "w": Vector2i(-1, 0)}
@@ -707,18 +708,94 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 	picks["ways"] = _ways_of(out, str(ask["id"]))
 	var paved := ROAD if tags.has("road") or tags.has("market") or bool(kind.get("paved", false)) else PATH
 	picks["roads"] = _roads(out, lib, center, paved, kept, seed_value)
+	_tidy(out, scattered, tags.has("water"))
 	out["picks"] = picks
 	return out
 
 
+## The patches of an open map once its roads, buildings and ways have cut them: no lone square of them is left.
+static func _tidy(out: Dictionary, scattered: Array, pond: bool) -> void:
+	var grid: Array[PackedStringArray] = []
+	for r: String in out["rows"]:
+		grid.append(r.split(""))
+	var cut: Array[String] = []
+	if pond:
+		cut.append("~")
+	for row: Dictionary in scattered:
+		if bool(row.get("blob", false)) and not cut.has(str(row["cell"])):
+			cut.append(str(row["cell"]))
+	if cut.is_empty():
+		return
+	for c: String in cut:
+		_despeckle(grid, c, false)
+	var rows: Array[String] = []
+	for line: PackedStringArray in grid:
+		rows.append("".join(line))
+	out["rows"] = rows
+
+
+## What a kind scatters over its open map: things (trees, rocks) one by one where the noise is thick; a ground (`blob`:
+## water, brambles) as patches of the noise above its share, with no lone squares, so the dual grid draws them whole.
 static func _scatter(grid: Array[PackedStringArray], rows: Array, cell: int, rng: RandomNumberGenerator) -> void:
 	for row: Dictionary in rows:
-		var coarse := _coarse(grid[0].size(), grid.size(), cell, rng)
 		var share := float(row["share"])
+		var c := str(row["cell"])
+		if bool(row.get("blob", false)):
+			var field := blobs(grid[0].size(), grid.size(), cell, rng)
+			var cut := _share_cut(field, share)
+			for y: int in grid.size():
+				for x: int in grid[y].size():
+					if field[y * grid[y].size() + x] >= cut:
+						grid[y][x] = c
+			_despeckle(grid, c)
+			continue
+		var coarse := _coarse(grid[0].size(), grid.size(), cell, rng)
 		for y: int in grid.size():
 			for x: int in grid[y].size():
 				if rng.randf() < share * 2.0 * _noise(coarse, cell, x, y):
-					grid[y][x] = str(row["cell"])
+					grid[y][x] = c
+
+
+## Smooth noise of two octaves over w × h, row by row: patches about `cell` squares across with rough edges.
+static func blobs(w: int, h: int, cell: int, rng: RandomNumberGenerator) -> PackedFloat32Array:
+	var big := _coarse(w, h, cell, rng)
+	var fine_cell := maxi(2, cell / 2)
+	var fine := _coarse(w, h, fine_cell, rng)
+	var out := PackedFloat32Array()
+	out.resize(w * h)
+	for y: int in h:
+		for x: int in w:
+			out[y * w + x] = _noise(big, cell, x, y) * 0.7 + _noise(fine, fine_cell, x, y) * 0.3
+	return out
+
+
+## The value above which `share` of the field lies.
+static func _share_cut(field: PackedFloat32Array, share: float) -> float:
+	if share <= 0.0 or field.is_empty():
+		return INF
+	var sorted := field.duplicate()
+	sorted.sort()
+	return sorted[clampi(int(sorted.size() * (1.0 - share)), 0, sorted.size() - 1)]
+
+
+## A patch's lone squares and one-square gaps: a square of `c` with fewer than two of its sides of `c` turns to floor,
+## a floor square with three or four becomes `c`.
+static func _despeckle(grid: Array[PackedStringArray], c: String, fill := true) -> void:
+	for _pass: int in (2 if fill else 64):  # removing alone runs until nothing is left to remove
+		var flip: Array[Vector2i] = []
+		for y: int in grid.size():
+			for x: int in grid[y].size():
+				var same := 0
+				for side: String in SIDES:
+					var n: Vector2i = Vector2i(x, y) + STEP[side]
+					if n.y >= 0 and n.y < grid.size() and n.x >= 0 and n.x < grid[n.y].size() and grid[n.y][n.x] == c:
+						same += 1
+				if (grid[y][x] == c and same < 2) or (fill and grid[y][x] == FLOOR and same >= 3):
+					flip.append(Vector2i(x, y))
+		if flip.is_empty():
+			return
+		for at: Vector2i in flip:
+			grid[at.y][at.x] = FLOOR if grid[at.y][at.x] == c else c
 
 
 static func _coarse(w: int, h: int, cell: int, rng: RandomNumberGenerator) -> Array[PackedFloat32Array]:
@@ -747,10 +824,12 @@ static func _pond(grid: Array[PackedStringArray], share: float, rng: RandomNumbe
 	var rx := maxf(3.0, sqrt(share * w * h / PI) * rng.randf_range(0.8, 1.3))
 	var ry := maxf(3.0, share * w * h / PI / rx)
 	var center := Vector2(rng.randf_range(rx + 2.0, w - rx - 2.0), rng.randf_range(ry + 2.0, h - ry - 2.0))
+	var shore := blobs(w, h, 4, rng)  # a bank of its own, not a drawn ellipse
 	for y: int in h:
 		for x: int in w:
-			if pow((x - center.x) / rx, 2.0) + pow((y - center.y) / ry, 2.0) <= 1.0:
+			if pow((x - center.x) / rx, 2.0) + pow((y - center.y) / ry, 2.0) <= 0.75 + 0.5 * shore[y * w + x]:
 				grid[y][x] = "~"
+	_despeckle(grid, "~")
 
 
 static func _landmark(lib: Dictionary, kind: Dictionary, kept_one: Dictionary, w: int, h: int, rng: RandomNumberGenerator) -> Dictionary:
@@ -780,7 +859,7 @@ static func _lay(out: Dictionary, grid: Array[PackedStringArray], at: Dictionary
 			var c: String = rows[y][x]
 			var gx := int(at["x"]) + x
 			var gy := int(at["y"]) + y
-			if c == BLANK or gy < 0 or gy >= grid.size() or gx < 0 or gx >= grid[0].size() or grid[gy][gx] == DOOR or grid[gy][gx] == WALL or taken.has(Vector2i(gx, gy)):
+			if c == BLANK or gy < 0 or gy >= grid.size() or gx < 0 or gx >= grid[0].size() or grid[gy][gx] == DOOR or _built(grid[gy][gx]) or taken.has(Vector2i(gx, gy)):
 				continue
 			if legend.has(c):
 				out["marks"].append({"name": str(legend[c]), "x": gx, "y": gy, "room": 0})
@@ -879,7 +958,7 @@ static func _edge(out: Dictionary, grid: Array[PackedStringArray], e: Dictionary
 		for spot: Array in spots:
 			var at := _edge_cell(str(spot[0]), int(spot[1]), w, h)
 			var before: Vector2i = at + STEP[OPPOSITE[str(spot[0])]]
-			if not taken.has(at) and not taken.has(before) and grid[before.y][before.x] != WALL and grid[before.y][before.x] != DOOR 					and (not far or _gap_to(out, at) >= gap):
+			if not taken.has(at) and not taken.has(before) and not _built(grid[before.y][before.x]) and grid[before.y][before.x] != DOOR 					and (not far or _gap_to(out, at) >= gap):
 				pick = spot
 				found = true
 				break
@@ -973,16 +1052,24 @@ static func _box_free(grid: Array[PackedStringArray], at: Dictionary, taken: Dic
 			if taken.has(Vector2i(x + bx, y + by)):
 				return false
 	for cell: Vector2i in [at["door"], at["front"]]:
-		if taken.has(cell) or grid[cell.y][cell.x] == WALL or grid[cell.y][cell.x] == DOOR:
+		if taken.has(cell) or _built(grid[cell.y][cell.x]) or grid[cell.y][cell.x] == DOOR:
 			return false
 	return true
 
 
+## A square of a building on an open map: its wall or its roof.
+static func _built(c: String) -> bool:
+	return c == WALL or c == ROOF
+
+
+## A building on an open map: its walls round the edge and its roof inside, both solid.
 static func _wall_box(grid: Array[PackedStringArray], x: int, y: int, bw: int, bh: int, boxes: Dictionary) -> void:
 	for by: int in bh:
 		for bx: int in bw:
 			if grid[y + by][x + bx] != DOOR:
-				grid[y + by][x + bx] = WALL
+				var edge := bx == 0 or by == 0 or bx == bw - 1 or by == bh - 1
+				if edge or grid[y + by][x + bx] != WALL:  # where two buildings meet, the wall of the first stays
+					grid[y + by][x + bx] = WALL if edge else ROOF
 			boxes[Vector2i(x + bx, y + by)] = true
 
 
@@ -1097,7 +1184,7 @@ static func _cheapest(w: int, h: int, weights: PackedInt32Array, net: Array[int]
 static func _clear(grid: Array[PackedStringArray], center: Vector2i, r: int) -> void:
 	for y: int in range(center.y - r, center.y + r + 1):
 		for x: int in range(center.x - r, center.x + r + 1):
-			if grid[y][x] != WALL and grid[y][x] != DOOR:
+			if not _built(grid[y][x]) and grid[y][x] != DOOR:
 				grid[y][x] = FLOOR
 
 
@@ -1169,3 +1256,72 @@ static func reached(out: Dictionary, lib: Dictionary, from: Vector2i) -> Diction
 				seen[n] = true
 				queue.append(n)
 	return seen
+
+
+# --- the ground a map is drawn of (the dual grid of MapField) ---------------------------------------------------------
+
+const NO_GROUND := 255  ## a square off the map: nothing is drawn there
+
+
+## The shape of a map for its ground: kept by LayoutRules, an open map without it is open.
+static func ground_shape(map: Dictionary) -> String:
+	return str(map.get("shape", "open" if map.get("open", false) else "building"))
+
+
+## The ground of a character on a map of `shape`, by `grounds.cells`: a string for any shape, a dictionary by shape.
+static func ground_of(lib: Dictionary, shape: String, c: String) -> String:
+	var cells: Dictionary = lib["grounds"]["cells"]
+	var row: Variant = cells.get(c, cells["."])
+	if row is Dictionary:
+		return str((row as Dictionary).get(shape, (row as Dictionary).get("*", "")))
+	return str(row)
+
+
+## The thing drawn on a square of `c`, by `grounds.props`; "" — none.
+static func prop_of(lib: Dictionary, shape: String, c: String) -> String:
+	var row: Dictionary = lib["grounds"]["props"].get(c, {})
+	return str(row.get(shape, row.get("*", "")))
+
+
+## Every square's ground as its place in `grounds.order` (w * h, row by row); NO_GROUND off the map.
+static func grounds(lib: Dictionary, map: Dictionary) -> PackedByteArray:
+	var order: Array = lib["grounds"]["order"]
+	var shape := ground_shape(map)
+	var w := int(map["w"])
+	var rows: Array = map["rows"]
+	var out := PackedByteArray()
+	out.resize(w * int(map["h"]))
+	out.fill(NO_GROUND)
+	var by_char: Dictionary = {}
+	for y: int in rows.size():
+		var line: String = rows[y]
+		for x: int in mini(w, line.length()):
+			var c := line[x]
+			if c == BLANK:
+				continue
+			if not by_char.has(c):
+				var at := order.find(ground_of(lib, shape, c))
+				by_char[c] = at if at >= 0 else order.find(ground_of(lib, shape, FLOOR))
+			out[y * w + x] = int(by_char[c])
+	_patch(lib, map, out)
+	return out
+
+
+## Patches of `grounds.patches` over the floor's own ground, by the map's seed: the same map gets the same patches.
+static func _patch(lib: Dictionary, map: Dictionary, out: PackedByteArray) -> void:
+	var order: Array = lib["grounds"]["order"]
+	var shape := ground_shape(map)
+	var under := order.find(ground_of(lib, shape, FLOOR))
+	var w := int(map["w"])
+	var h := int(map["h"])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([map.get("seed", 0), map.get("id", "")])
+	for row: Dictionary in lib["grounds"].get("patches", {}).get(shape, []):
+		var to := order.find(str(row["ground"]))
+		if to < 0:
+			continue
+		var field := blobs(w, h, int(row.get("cell", 6)), rng)
+		var cut := _share_cut(field, float(row["share"]))
+		for i: int in out.size():
+			if out[i] == under and field[i] >= cut:
+				out[i] = to

@@ -173,8 +173,9 @@ func test_a_building_on_free_ground_of_the_yard_is_a_box_like_the_packs() -> voi
 	for dy: int in int(box[3]):
 		for dx: int in int(box[2]):
 			var sq := corner + Vector2i(dx, dy)
-			if sq != at:
-				assert_str(_char(s, sq)).is_equal("#")
+			if sq != at:  # its walls round the edge and its roof inside, as a building of the pack (LayoutGen._wall_box)
+				var edge := dx == 0 or dy == 0 or dx == int(box[2]) - 1 or dy == int(box[3]) - 1
+				assert_str(_char(s, sq)).is_equal(LayoutGen.WALL if edge else LayoutGen.ROOF)
 	s.room_id = shed
 	var inner := _map(s)  # inside — the box's own size, its door on the side it was put
 	assert_int(int(inner["w"]) * int(inner["h"])).is_equal(int(box[2]) * int(box[3]))
