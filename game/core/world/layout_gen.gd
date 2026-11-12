@@ -100,8 +100,13 @@ static func candidates(lib: Dictionary, ask: Dictionary, rng: RandomNumberGenera
 	var size := str(ask.get("size", "medium"))
 	var rooms_only: Array = (lib["chunks"] as Array).filter(func(c: Dictionary) -> bool: return not c.has("landmarks"))
 	var out: Array[Dictionary] = []
-	_step(out, rooms_only.filter(func(c: Dictionary) -> bool:
-		return tags.any(func(t: Variant) -> bool: return (c.get("tags", []) as Array).has(t))), rng)
+	var shared := func(c: Dictionary) -> int:  # the room's tags a chunk carries
+		return tags.filter(func(t: Variant) -> bool: return (c.get("tags", []) as Array).has(t)).size()
+	var tagged := rooms_only.filter(func(c: Dictionary) -> bool: return shared.call(c) > 0)
+	if rng != null:
+		_shuffle(tagged, rng)  # one shuffle of them all, as ever: the seed's later draws stay where they were
+	for n: int in range(tags.size(), 0, -1):  # then more of the room's tags first, the shuffled order kept within
+		_step(out, tagged.filter(func(c: Dictionary) -> bool: return shared.call(c) == n), null)
 	var family := kind
 	while not family.is_empty():
 		var step_family := family
