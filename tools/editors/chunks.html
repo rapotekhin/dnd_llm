@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Редактор чанков</title>
+<link rel="stylesheet" href="editors.css">
+</head>
+<body>
+<div id="app"></div>
+<script src="editor-core.js"></script>
+<script src="map-view.js"></script>
+<script>
+'use strict';
+
+const L = 'game/data/layouts.json';
+// The cells' names of layouts.json `cells` in the author's words; a new cell shows its own name.
+const CELL_RU = {
+	wall: 'стена', window: 'окно', floor: 'пол', road: 'дорога', path: 'тропа', door: 'дверь', difficult: 'труднопроходимо',
+	hazard: 'опасность', water: 'вода', pit: 'яма', tree: 'дерево', block: 'препятствие (стол, валун)', socket: 'гнездо двери', roof: 'крыша',
+};
+const SHAPES = { building: 'здание', tunnels: 'пещера, шахта', open: 'открытое место' };
+const TOOLS = [['brush', 'Кисть'], ['rect', 'Прямоугольник'], ['frame', 'Рамка'], ['fill', 'Заливка'], ['pick', 'Пипетка']];
+
+let lib = null;
+const paint = { char: '#', tool: 'brush', px: 40, symbols: true, history: new Map() };
+
+const app = new EditorApp({
+	key: 'chunks',
+	title: 'Редактор чанков',
+	viewTitle: 'Рисунок',
+	welcome: `
+		<h2>Редактор чанков</h2>
+		<p>Чанки карт мест из <code>game/data/layouts.json</code>: комнаты зданий, залы пещер, приметы открытых мест. Рисуйте клетками, ставьте метки и гнёзда дверей; справа сразу видно, как игра нарисует чанк по двойной сетке своими текстурами.</p>
+		<p><b>Открыть папку</b> — корень репозитория (нужен Chrome или Edge): тогда страница читает шейдер карты и текстуры <code>game/assets/tiles</code>. Или <code>python tools/editors/serve.py</code> — и любой браузер.</p>
+		<p class="muted">Без корня (только <code>game/data</code>) чанки правятся, но предпросмотр не рисуется.</p>`,
+
+	async load(app) {
+		await app.readFile(L);
+		lib = app.files.get(L).data;
+		app.addColl({
+			id: 'chunks', title: 'Чанки', group: 'Карты', file: L, at: ['chunks'], type: 'array', idKey: 'id',
+			name: (e) => e.id,
+			sub: (e) => [e.landmarks ? 'примета: ' + e.landmarks.join(', ') : (e.kinds || ['общий']).join(', '), (e.roles || []).join(', '), e.size, size(e)].filter(Boolean).join(' · '),
+			labels: { kinds: 'виды мест', roles: 'роли комнат', size: 'размер', marks: 'метки', rows: 'клетки', landmarks: 'примета открытой карты', generic: 'общий для любого вида', tags: 'теги комнаты' },
+			refs: [{ p: 'kinds.[]', to: 'kinds' }],
+			filterOrder: ['kinds', 'roles', 'size', 'landmarks', 'generic', 'tags'],
+			computed: { 'ширина': (e) => e.rows?.[0]?.length, 'высота': (e) => e.rows?.length },
+		});
+		app.addColl({ id: 'kinds', title: 'Виды мест', group: 'Справка', file: L, at: ['kinds'], sub: (e) => [e.shape && SHAPES[e.shape], e.family && 'семья: ' + e.family].filter(Boolean).join(' · ') });
+		app.addColl({ id: 'cells', title: 'Клетки', group: 'Справка', file: L, at: ['cells'], name: (e, id) => `«${id}» ${CELL_RU[e.name] || e.name}` });
+		app.addColl({ id: 'grounds', title: 'Земли', group: 'Справка', file: L, at: ['grounds'], type: 'single', singleId: 'grounds' });
+	},
+
+	view(app, c, id, e) { return c.id === 'chunks' ? painter(app, c, e) : null; },
+
+	newEntry() {
+		return { kinds: [], roles: [], size: 'medium', marks: { E: 'entry' }, rows: ['####D####', '#.......#', '#.......#', 'D...E...D', '#.......#', '#.......#', '####D####'] };
+	},
+
+	validate(app) { return check(); },
+	afterSave() { return 'Проверьте: gdUnit test_layout_v080.gd'; },
+});
+
+const size = (e) => (e.rows?.length ? `${e.rows[0].length}×${e.rows.length}` : '');
+const cellName = (ch) => { const d = lib.cells[ch]; return d ? CELL_RU[d.name] || d.name : null; };
+
+// The checks of test_layout_v080.gd: a rectangle of known cells; a room's floor joins up and every socket on the
+// edge opens onto it.
+function check() {
+	const errs = [];
+	const seen = new Set();
+	for (const ch of lib.chunks || []) {
+		const push = (msg) => errs.push({ coll: 'chunks', id: ch.id, msg });
+		if (seen.has(ch.id)) push(`id ${ch.id} повторяется`);
+		seen.add(ch.id);
+		for (const m of problems(ch)) push(m);
+	}
+	return errs;
+}
+
+function problems(ch) {
+	const out = [];
+	const rows = ch.rows || [];
+	const marks = ch.marks || {};
+	if (!rows.length) return ['нет клеток'];
+	const w = rows[0].length;
+	rows.forEach((r, y) => { if (r.length !== w) out.push(`строка ${y + 1}: ${r.length} клеток вместо ${w}`); });
+	const odd = new Set();
+	for (const r of rows) for (const c of r) if (!(c in marks) && !(c in lib.cells) && c !== MapView.BLANK) odd.add(c);
+	if (odd.size) out.push(`неизвестные клетки: ${[...odd].map((c) => `«${c}»`).join(' ')}`);
+	for (const k of Object.keys(marks)) if (k.length !== 1) out.push(`метка «${k}»: одна буква`);
+	if (ch.landmarks || out.length) return out;
+	const grid = MapView.stamped(rows, marks);
+	const solid = (c) => !!lib.cells[c]?.solid || c === MapView.BLANK;
+	const floors = [];
+	grid.forEach((r, y) => [...r].forEach((c, x) => { if (!solid(c)) floors.push(x + ',' + y); }));
+	const reach = new Set(floors.length ? [floors[0]] : []);
+	const todo = [...reach];
+	while (todo.length) {
+		const [x, y] = todo.pop().split(',').map(Number);
+		for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+			const k = `${x + dx},${y + dy}`;
+			if (!reach.has(k) && grid[y + dy]?.[x + dx] !== undefined && !solid(grid[y + dy][x + dx])) { reach.add(k); todo.push(k); }
+		}
+	}
+	if (reach.size !== floors.length) out.push(`пол из нескольких кусков: ${floors.length - reach.size} клеток не соединены`);
+	const socks = sockets(rows);
+	if (!socks.length) out.push('нет гнёзд дверей D');
+	for (const s of socks) {
+		if (!s.edge) out.push(`гнездо (${s.x + 1}, ${s.y + 1}) не на краю`);
+		else if (!reach.has(`${s.x - s.dx},${s.y - s.dy}`)) out.push(`гнездо (${s.x + 1}, ${s.y + 1}) не выходит на пол`);
+	}
+	return out;
+}
+
+// LayoutGen.sockets: the side by the edge it stands on; one inside the chunk is a fault.
+function sockets(rows) {
+	const h = rows.length, w = rows[0].length, out = [];
+	rows.forEach((r, y) => [...r].forEach((c, x) => {
+		if (c !== MapView.SOCKET) return;
+		const side = y === 0 ? [0, -1] : y === h - 1 ? [0, 1] : x === 0 ? [-1, 0] : x === w - 1 ? [1, 0] : null;
+		out.push({ x, y, edge: !!side, dx: side?.[0] ?? 0, dy: side?.[1] ?? 0 });
+	}));
+	return out;
+}
+
+/* ---------- the painter ---------- */
+
+function painter(app, c, e) {
+	const views = (paint.views ||= new Map());
+	if (!views.has(app.store)) views.set(app.store, new MapView.View(app.store, lib));
+	const view = views.get(app.store);
+	const hist = paint.history.get(e.id) || { back: [], fwd: [] };
+	paint.history.set(e.id, hist);
+	const shape = () => paint.shape || MapView.chunkShape(lib, e);
+	const over = h('canvas', { class: 'overlay' });
+	const stage = h('div', { class: 'stage' }, view.canvas, over);
+	const status = h('div', { class: 'muted small' });
+	const issues = h('ul', { class: 'errs' });
+	let drag = null;  // {from: [x, y], to: [x, y], button}
+	let hover = null;
+
+	const snapshot = () => ({ rows: [...e.rows], marks: { ...(e.marks || {}) } });
+	const commit = (before) => {
+		if (Fmt.equal(before, snapshot())) return;
+		hist.back.push(before);
+		if (hist.back.length > 200) hist.back.shift();
+		hist.fwd = [];
+		app.changed(c);
+		redraw();
+	};
+	const restore = (s) => {
+		e.rows = s.rows;
+		if (Object.keys(s.marks).length || e.marks) e.marks = s.marks;
+		app.changed(c);
+		refreshMarks();
+		redraw();
+	};
+	const undo = () => { const s = hist.back.pop(); if (s) { hist.fwd.push(snapshot()); restore(s); } };
+	const redo = () => { const s = hist.fwd.pop(); if (s) { hist.back.push(snapshot()); restore(s); } };
+
+	const W = () => e.rows[0]?.length || 0, H = () => e.rows.length;
+	const at = (x, y) => e.rows[y]?.[x];
+	const put = (x, y, ch) => {
+		if (y < 0 || y >= H() || x < 0 || x >= W()) return;
+		const r = e.rows[y];
+		e.rows[y] = r.slice(0, x) + ch + r.slice(x + 1);
+	};
+	const cellAt = (ev) => {
+		const b = over.getBoundingClientRect();
+		return [Math.floor((ev.clientX - b.left) / paint.px), Math.floor((ev.clientY - b.top) / paint.px)];
+	};
+	const box = (a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
+	const fill = (x, y, ch) => {
+		const was = at(x, y);
+		if (was === undefined || was === ch) return;
+		const todo = [[x, y]];
+		while (todo.length) {
+			const [px, py] = todo.pop();
+			if (at(px, py) !== was) continue;
+			put(px, py, ch);
+			todo.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
+		}
+	};
+
+	over.oncontextmenu = (ev) => ev.preventDefault();
+	over.onpointerdown = (ev) => {
+		over.setPointerCapture(ev.pointerId);
+		const p = cellAt(ev);
+		const ch = ev.button === 2 ? MapView.FLOOR : paint.char;
+		if (paint.tool === 'pick' || ev.altKey) { const got = at(...p); if (got !== undefined) { paint.char = got; refreshPalette(); } return; }
+		drag = { from: p, to: p, before: snapshot(), ch };
+		if (paint.tool === 'fill') { fill(p[0], p[1], ch); commit(drag.before); drag = null; return; }
+		if (paint.tool === 'brush') { put(p[0], p[1], ch); redraw(); }
+		overlay();
+	};
+	over.onpointermove = (ev) => {
+		const p = cellAt(ev);
+		hover = p;
+		const ch = at(...p);
+		status.textContent = ch === undefined ? '' : `(${p[0] + 1}, ${p[1] + 1}) «${ch}» ${ch in (e.marks || {}) ? 'метка: ' + e.marks[ch] : cellName(ch) || (ch === ' ' ? 'пусто — карта как есть' : '?')}`;
+		if (drag) {
+			if (paint.tool === 'brush' && (p[0] !== drag.to[0] || p[1] !== drag.to[1])) line(drag.to, p, (x, y) => put(x, y, drag.ch));
+			drag.to = p;
+			if (paint.tool === 'brush') redraw();
+		}
+		overlay();
+	};
+	over.onpointerup = () => {
+		if (!drag) return;
+		const [x0, y0, x1, y1] = box(drag.from, drag.to);
+		if (paint.tool === 'rect') for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, drag.ch);
+		if (paint.tool === 'frame') for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (x === x0 || x === x1 || y === y0 || y === y1) put(x, y, drag.ch);
+		const before = drag.before;
+		drag = null;
+		commit(before);
+	};
+	over.onpointerleave = () => { hover = null; status.textContent = ''; overlay(); };
+
+	function line(a, b, f) {
+		let [x, y] = a;
+		const dx = Math.abs(b[0] - x), dy = -Math.abs(b[1] - y), sx = x < b[0] ? 1 : -1, sy = y < b[1] ? 1 : -1;
+		let err = dx + dy;
+		for (;;) {
+			f(x, y);
+			if (x === b[0] && y === b[1]) return;
+			const e2 = 2 * err;
+			if (e2 >= dy) { err += dy; x += sx; }
+			if (e2 <= dx) { err += dx; y += sy; }
+		}
+	}
+
+	// The symbols, the grid, the marks and the sockets over the game's picture.
+	function overlay() {
+		const px = paint.px, dpr = window.devicePixelRatio || 1;
+		over.width = W() * px * dpr; over.height = H() * px * dpr;
+		over.style.width = W() * px + 'px'; over.style.height = H() * px + 'px';
+		const g = over.getContext('2d');
+		g.scale(dpr, dpr);
+		g.textAlign = 'center'; g.textBaseline = 'middle';
+		const marks = e.marks || {};
+		const bad = new Set(sockets(e.rows).filter((s) => !s.edge).map((s) => s.x + ',' + s.y));
+		if (view.failed) {  // no picture: the grounds' colours
+			for (let y = 0; y < H(); y++) for (let x = 0; x < W(); x++) {
+				const ch = at(x, y);
+				if (ch === ' ') continue;
+				g.fillStyle = lib.grounds.colour?.[MapView.groundOf(lib, shape(), ch in marks ? '.' : ch)] || '#777';
+				g.fillRect(x * px, y * px, px, px);
+			}
+		}
+		g.strokeStyle = 'rgba(255,255,255,0.12)';
+		g.lineWidth = 1;
+		for (let x = 0; x <= W(); x++) { g.beginPath(); g.moveTo(x * px + 0.5, 0); g.lineTo(x * px + 0.5, H() * px); g.stroke(); }
+		for (let y = 0; y <= H(); y++) { g.beginPath(); g.moveTo(0, y * px + 0.5); g.lineTo(W() * px, y * px + 0.5); g.stroke(); }
+		g.font = `600 ${Math.round(px * 0.42)}px ui-monospace, Consolas, monospace`;
+		for (let y = 0; y < H(); y++) for (let x = 0; x < W(); x++) {
+			const ch = at(x, y), cx = x * px + px / 2, cy = y * px + px / 2;
+			if (ch === ' ') { g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x * px, y * px, px, px); continue; }
+			if (ch in marks) {
+				g.fillStyle = 'rgba(208,138,76,0.9)';
+				g.beginPath(); g.arc(cx, cy, px * 0.34, 0, 7); g.fill();
+				g.fillStyle = '#17181a'; g.fillText(ch, cx, cy + 1);
+				continue;
+			}
+			if (ch === MapView.SOCKET) {
+				g.strokeStyle = bad.has(x + ',' + y) ? '#ff5a4f' : '#ffd36a';
+				g.lineWidth = 3;
+				g.strokeRect(x * px + 4, y * px + 4, px - 8, px - 8);
+				g.lineWidth = 1;
+			}
+			if (paint.symbols && ch !== MapView.FLOOR) {
+				g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillText(ch, cx + 1, cy + 2);
+				g.fillStyle = 'rgba(255,255,255,0.92)'; g.fillText(ch, cx, cy + 1);
+			}
+		}
+		if (drag && (paint.tool === 'rect' || paint.tool === 'frame')) {
+			const [x0, y0, x1, y1] = box(drag.from, drag.to);
+			g.strokeStyle = '#ffd36a'; g.lineWidth = 2;
+			g.strokeRect(x0 * px + 1, y0 * px + 1, (x1 - x0 + 1) * px - 2, (y1 - y0 + 1) * px - 2);
+		} else if (hover && at(...hover) !== undefined) {
+			g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 2;
+			g.strokeRect(hover[0] * px + 1, hover[1] * px + 1, px - 2, px - 2);
+		}
+		const list = problems(e);
+		issues.replaceChildren(...list.map((m) => h('li', {}, m)));
+	}
+
+	function redraw() {
+		view.draw(MapView.stamped(e.rows, e.marks), shape(), paint.px).then(() => {
+			if (view.failed) note.textContent = 'Предпросмотр: ' + view.failed + '. Видны цвета земель.';
+			else note.textContent = view.drawn ? '' : 'Нарисованных краёв нет: края по маске.';
+			overlay();
+		});
+		overlay();
+	}
+
+	/* the palette: cells of layouts.json, the chunk's marks, blank */
+	const palette = h('div', { class: 'palette' });
+	const markBox = h('div', { class: 'palette' });
+	const chip = (ch, label, title) => h('button', { class: 'cell' + (paint.char === ch ? ' on' : ''), title: title || label, onclick: () => { paint.char = ch; if (paint.tool === 'pick') paint.tool = 'brush'; refreshPalette(); refreshTools(); } },
+		h('code', {}, ch === ' ' ? '␣' : ch), ' ', label);
+	function refreshPalette() {
+		const cells = Object.entries(lib.cells).map(([ch, d]) => chip(ch, CELL_RU[d.name] || d.name, `${d.name}${d.solid ? ', непроходимо' : ''}${d.opaque ? ', закрывает вид' : ''}${d.cost ? ', шаг ×' + d.cost : ''}`));
+		palette.replaceChildren(...cells, chip(' ', 'пусто', 'Пусто: карта под чанком остаётся как есть (для примет открытых мест)'));
+		refreshMarks();
+	}
+	function refreshMarks() {
+		const marks = e.marks || {};
+		markBox.replaceChildren(h('span', { class: 'muted' }, 'Метки:'),
+			...Object.entries(marks).map(([ch, name]) => h('span', { class: 'markchip' }, chip(ch, name, `Метка «${ch}»: ${name} — клетка пола с именем`),
+				h('button', { class: 'x', title: 'Переименовать', onclick: () => renameMark(ch) }, '✎'),
+				h('button', { class: 'x', title: 'Убрать метку (клетки станут полом)', onclick: () => dropMark(ch) }, '✕'))),
+			h('button', { class: 'small', onclick: addMark }, '+ метка'));
+	}
+	const known = () => [...new Set(lib.chunks.flatMap((x) => Object.values(x.marks || {})))].sort();
+	function addMark() {
+		const name = (prompt(`Имя метки (что стоит на клетке). Уже есть: ${known().join(', ')}`) || '').trim();
+		if (!name) return;
+		const marks = e.marks || {};
+		const free = [...'ABCEFGHIJKLMNOPQSUVXYZ'].filter((x) => !(x in marks) && !(x in lib.cells));
+		const want = name[0].toUpperCase();
+		const ch = (prompt('Буква метки на рисунке', free.includes(want) ? want : free[0]) || '').trim();
+		if (ch.length !== 1) return;
+		if (ch in marks) return app.toast(`Буква «${ch}» уже занята меткой ${marks[ch]}`);
+		if (ch in lib.cells && !confirm(`«${ch}» — клетка «${cellName(ch)}»: в этом чанке она станет меткой. Продолжить?`)) return;
+		const before = snapshot();
+		e.marks = { ...marks, [ch]: name };
+		paint.char = ch;
+		commit(before);
+		refreshPalette();
+	}
+	function renameMark(ch) {
+		const name = (prompt(`Новое имя метки «${ch}»`, e.marks[ch]) || '').trim();
+		if (!name) return;
+		const before = snapshot();
+		e.marks = { ...e.marks, [ch]: name };
+		commit(before);
+		refreshMarks();
+	}
+	function dropMark(ch) {
+		const before = snapshot();
+		const { [ch]: _, ...rest } = e.marks;
+		e.marks = rest;
+		e.rows = e.rows.map((r) => r.replaceAll(ch, MapView.FLOOR));
+		commit(before);
+		if (paint.char === ch) paint.char = '#';
+		refreshPalette();
+	}
+
+	const tools = h('div', { class: 'palette' });
+	function refreshTools() {
+		tools.replaceChildren(...TOOLS.map(([id, label]) => h('button', { class: paint.tool === id ? 'on' : '', onclick: () => { paint.tool = id; refreshTools(); } }, label)));
+	}
+
+	/* the size, turns and mirrors */
+	const whole = (f) => () => { const before = snapshot(); e.rows = f(e.rows); commit(before); };
+	const grow = (side, n) => whole((rows) => {
+		const w = rows[0].length;
+		if (n < 0) {
+			if ((side === 'n' || side === 's') && rows.length <= 1) return rows;
+			if ((side === 'w' || side === 'e') && w <= 1) return rows;
+			return side === 'n' ? rows.slice(1) : side === 's' ? rows.slice(0, -1) : side === 'w' ? rows.map((r) => r.slice(1)) : rows.map((r) => r.slice(0, -1));
+		}
+		const fillCh = paint.char.length === 1 && !(paint.char in (e.marks || {})) ? paint.char : MapView.FLOOR;
+		return side === 'n' ? [fillCh.repeat(w), ...rows] : side === 's' ? [...rows, fillCh.repeat(w)] : side === 'w' ? rows.map((r) => fillCh + r) : rows.map((r) => r + fillCh);
+	});
+	const sideBtns = (side, label) => h('span', { class: 'grow2' }, label, h('button', { class: 'small', title: 'Добавить ряд текущей клеткой', onclick: grow(side, 1) }, '+'), h('button', { class: 'small', title: 'Убрать крайний ряд', onclick: grow(side, -1) }, '−'));
+
+	const shapeSel = h('select', { title: 'На какой карте показать чанк: земля пола у здания, пещеры и открытого места своя', onchange: (ev) => { paint.shape = ev.target.value || null; redraw(); } },
+		h('option', { value: '' }, `карта: по виду (${SHAPES[MapView.chunkShape(lib, e)]})`),
+		...Object.entries(SHAPES).map(([k, v]) => h('option', { value: k, selected: paint.shape === k }, 'карта: ' + v)));
+	const zoom = h('select', { onchange: (ev) => { paint.px = Number(ev.target.value); redraw(); } },
+		...[24, 32, 40, 56, 72].map((n) => h('option', { value: n, selected: paint.px === n }, `клетка ${n} px`)));
+	const symbols = h('label', { class: 'small' }, h('input', { type: 'checkbox', checked: paint.symbols, onchange: (ev) => { paint.symbols = ev.target.checked; overlay(); } }), ' символы');
+	const note = h('div', { class: 'muted small' });
+
+	const keys = (ev) => {
+		if (!document.body.contains(stage)) return removeEventListener('keydown', keys);
+		if (ev.target?.closest?.('input, textarea, select')) return;
+		if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { ev.preventDefault(); ev.shiftKey ? redo() : undo(); }
+		else if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y') { ev.preventDefault(); redo(); }
+		else if (!ev.ctrlKey && !ev.metaKey && !ev.altKey && ev.key.length === 1 && (ev.key in lib.cells || ev.key in (e.marks || {}) || ev.key === ' ')) { ev.preventDefault(); paint.char = ev.key; refreshPalette(); }
+	};
+	removeEventListener('keydown', paint.keys || (() => {}));
+	paint.keys = keys;
+	addEventListener('keydown', keys);
+
+	refreshPalette();
+	refreshTools();
+	setTimeout(redraw, 0);
+	return h('div', { class: 'painter' },
+		h('div', { class: 'actions' }, tools, h('span', { class: 'grow' }),
+			h('button', { title: 'Ctrl+Z', onclick: undo }, '↶'), h('button', { title: 'Ctrl+Y', onclick: redo }, '↷'),
+			h('button', { title: 'Повернуть чанк на четверть по часовой (генератор и так пробует все повороты)', onclick: whole((r) => MapView.turned(r, 1, false)) }, 'Повернуть'),
+			h('button', { title: 'Отразить слева направо', onclick: whole((r) => MapView.turned(r, 0, true)) }, 'Отразить')),
+		palette, markBox,
+		h('div', { class: 'actions' }, sideBtns('n', 'сверху'), sideBtns('s', 'снизу'), sideBtns('w', 'слева'), sideBtns('e', 'справа'),
+			h('span', { class: 'grow' }), shapeSel, zoom, symbols),
+		h('p', { class: 'muted small' }, 'Левая кнопка — текущая клетка, правая — пол, Alt — пипетка. Клавиша с символом клетки или метки выбирает её. Гнёзда D — места дверей на краю чанка, рамкой: жёлтая — верно, красная — не на краю.'),
+		stage, status, note, issues);
+}
+</script>
+</body>
+</html>

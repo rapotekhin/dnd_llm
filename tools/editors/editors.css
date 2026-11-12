@@ -117,3 +117,13 @@ pre.diff .del { background: var(--del); }
 	.body { grid-template-columns: 170px 300px 1fr; }
 	.kv { grid-template-columns: 1fr; gap: 2px; }
 }
+/* chunks.html: the painter */
+.painter .palette { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0; }
+.painter .palette button.on, .painter .actions button.on { background: var(--on); border-color: var(--accent); font-weight: 600; }
+.painter button.cell code { font-weight: 700; }
+.painter .markchip { display: inline-flex; align-items: center; }
+.painter .grow2 { display: inline-flex; gap: 2px; align-items: center; font-size: 12px; color: var(--muted); margin-right: 8px; }
+.painter .stage { position: relative; display: inline-block; margin-top: 8px; background: #111; border: 1px solid var(--line); line-height: 0; }
+.painter .stage .overlay { position: absolute; left: 0; top: 0; cursor: crosshair; touch-action: none; }
+.small { font-size: 12px; }
+canvas.mapview { display: block; }

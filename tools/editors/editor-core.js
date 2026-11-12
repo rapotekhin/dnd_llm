@@ -191,6 +191,15 @@ class DirStore {
 			return out.sort();
 		} catch { return []; }
 	}
+	async blob(path) {
+		const r = this.rel(path);
+		if (r === null) return null;
+		const parts = r.split('/');
+		try {
+			const d = await this.dir(parts.slice(0, -1), false);
+			return await (await d.getFileHandle(parts.at(-1))).getFile();
+		} catch { return null; }
+	}
 	canWrite(path) { return this.rel(path) !== null; }
 }
 
@@ -211,6 +220,10 @@ class HttpStore {
 		const r = await fetch('/__list?dir=' + encodeURIComponent(path), { cache: 'no-store' });
 		return r.ok ? await r.json() : [];
 	}
+	async blob(path) {
+		const r = await fetch('/' + path, { cache: 'no-store' }).catch(() => null);
+		return r?.ok ? await r.blob() : null;
+	}
 	canWrite() { return true; }
 }
 
@@ -227,6 +240,7 @@ class FileListStore {
 	}
 	rel(path) { return this.mount !== null && path.startsWith(this.mount) ? path.slice(this.mount.length) : null; }
 	async read(path) { const f = this.files.get(this.rel(path)); return f ? await f.text() : null; }
+	async blob(path) { return this.files.get(this.rel(path)) || null; }
 	async write(path, text) {
 		const a = document.createElement('a');
 		a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
@@ -771,9 +785,13 @@ class EditorApp {
 		const scroll = main.scrollTop;
 		const tabs = h('div', { class: 'tabs' });
 		const body = h('div', { class: 'tabbody' });
-		const showForm = () => { body.replaceChildren(this.form(c, id)); mark(0); };
-		const showJson = () => { body.replaceChildren(this.jsonTab(c, id)); mark(1); };
+		const view = this.cfg.view?.(this, c, id, e);
+		const v0 = view ? 1 : 0;
+		const showView = () => { body.replaceChildren(view); mark(0); this.tab = 'view'; };
+		const showForm = () => { body.replaceChildren(this.form(c, id)); mark(v0); this.tab = 'form'; };
+		const showJson = () => { body.replaceChildren(this.jsonTab(c, id)); mark(v0 + 1); this.tab = 'json'; };
 		const mark = (n) => [...tabs.children].forEach((b, j) => b.classList.toggle('on', j === n));
+		if (view) tabs.append(h('button', { onclick: showView }, this.cfg.viewTitle || 'Вид'));
 		tabs.append(h('button', { onclick: showForm }, 'Форма'), h('button', { onclick: showJson }, 'JSON'));
 		const head = h('div', { class: 'entryhead' },
 			h('h2', {}, this.entryName(c, id, e)),
@@ -791,7 +809,9 @@ class EditorApp {
 			errs.length ? h('ul', { class: 'errs' }, errs.map((x) => h('li', {}, x.msg))) : null,
 			this.links(c, id, e),
 			tabs, body].filter(Boolean));
-		showForm();
+		if (view && this.tab !== 'form' && this.tab !== 'json') showView();
+		else if (this.tab === 'json') showJson();
+		else showForm();
 		main.scrollTop = scroll;
 	}
 

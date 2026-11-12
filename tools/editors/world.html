@@ -9,6 +9,7 @@
 <body>
 <div id="app"></div>
 <script src="editor-core.js"></script>
+<script src="map-view.js"></script>
 <script>
 'use strict';
 
@@ -201,15 +202,9 @@ const app = new EditorApp({
 	afterSave() { return 'Проверьте пакет: uv run --project llm_server python tools/validate_data.py'; },
 });
 
-// The room's map (v0.8.0): a chunk pinned with its turn, or the room drawn by hand. The same turn as LayoutGen.turned.
-function turnedRows(rows, rot, flip) {
-	let out = rows.map((r) => (flip ? [...r].reverse().join('') : r));
-	for (let i = 0; i < ((rot % 4) + 4) % 4; i++) {
-		const w = out[0].length;
-		out = Array.from({ length: w }, (_, x) => out.map((r) => r[x]).reverse().join(''));
-	}
-	return out;
-}
+// The room's map (v0.8.0): a chunk pinned with its turn (MapView.turned, as LayoutGen.turned), or the room drawn by
+// hand; drawn as the game draws it when the repo's root is open (tools/editors/map-view.js).
+let roomView = null;
 
 function layoutPanel(app, c, e) {
 	const lib = app.files.get(`${D}layouts.json`)?.data;
@@ -224,7 +219,7 @@ function layoutPanel(app, c, e) {
 	const pinned = (id, rot, flip) => set({ chunk: id ? { id, rot, flip } : undefined });
 	const rooms = lib.chunks.filter((x) => !x.landmarks);
 	const chunk = lib.chunks.find((x) => x.id === pin.id);
-	const rows = e.layout?.rows || (chunk ? turnedRows(chunk.rows, pin.rot || 0, !!pin.flip) : null);
+	const rows = e.layout?.rows || (chunk ? MapView.turned(chunk.rows, pin.rot || 0, !!pin.flip) : null);
 	const drawn = h('textarea', { rows: 8, cols: 30, title: 'Комната от руки: строки чанка, как в game/data/layouts.json' }, (e.layout?.rows || []).join('\n'));
 	return [h('div', { class: 'linkrow' }, h('span', { class: 'muted' }, 'Планировка:'),
 		h('select', { title: 'Закрепить чанк; без него комнату выберет генератор', onchange: (ev) => pinned(ev.target.value, pin.rot || 0, !!pin.flip) },
@@ -232,6 +227,11 @@ function layoutPanel(app, c, e) {
 		chunk ? h('button', { onclick: () => pinned(pin.id, ((pin.rot || 0) + 1) % 4, !!pin.flip) }, 'Повернуть') : null,
 		chunk ? h('button', { onclick: () => pinned(pin.id, pin.rot || 0, !pin.flip) }, 'Отразить') : null),
 	rows ? h('pre', {}, rows.join('\n')) : null,
+	rows && app.store.mount === '' ? (() => {
+		if (roomView?.store !== app.store) roomView = new MapView.View(app.store, lib);
+		roomView.draw(MapView.stamped(rows, chunk?.marks || {}), 'building', 24);
+		return roomView.canvas;
+	})() : null,
 	h('div', { class: 'linkrow' }, drawn, h('button', { onclick: () => {
 		const lines = drawn.value.split('\n').map((x) => x.trimEnd()).filter(Boolean);
 		set({ rows: lines.length ? lines : undefined });
