@@ -105,12 +105,20 @@ PLATE_TAIL = ("It is an ability icon for a fantasy role-playing game. The subjec
               "metal inlaid in steel, with no solid fill. The emblem is large and centered on a square plate of "
               "brushed silver-grey steel with a cool blue tint and a rivet in each corner that fills the whole frame, "
               "a little darker toward its edges.")  # dark worn steel (the first trial) melted into the brown stone
+MEDAL_HEAD = "masterpiece, best quality, score_7, safe, no humans, gold, coin, medal, embossed, relief, metal texture, "
+MEDAL_TAIL = ("It is a status icon for a fantasy role-playing game. The subject is chased in raised relief on one round "
+              "medallion of warm polished gold, like an old coin: soft highlights from the upper left, darker gold in "
+              "the recesses, a thin raised rim around its edge, the subject's own colour only as a little enamel. The "
+              "medallion is large and centered and fills almost the whole square, on a plain flat dark background.")
+MEDAL_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, "
+                  "chromatic aberration, text, letters, watermark, signature, multiple objects, duplicate, human, "
+                  "person, photo, square, tile, stone, glowing lines, neon, scenery, landscape")
 FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the tail's {word} are the job's key
     "flat": (HEAD, TAIL, NEGATIVE),
     "object": (PAINTED_HEAD, PAINTED_TAIL, PAINTED_NEGATIVE),
     "glyph": (GLYPH_HEAD, GLYPH_TAIL, GLYPH_NEGATIVE),
     "plate": (PLATE_HEAD, PLATE_TAIL, GLYPH_NEGATIVE),
-    "medal": (GLYPH_HEAD, GLYPH_TAIL, GLYPH_NEGATIVE),
+    "medal": (MEDAL_HEAD, MEDAL_TAIL, MEDAL_NEGATIVE),  # a gold coin, chased (the author, 2026-11-12: not the tile)
 }
 TILED = ("glyph", "plate")  # the families cut as a tile by its shape
 # A kind (or its head before «/») in the painted style; the rest — items, ui, groups — is an object. The interface's
@@ -138,7 +146,9 @@ PORTRAIT = 256
 TRIM = 0.03  # of a glyph's tile kept whole, each side
 TILE_WORK, TILE_FAR = 256, 24  # a glyph's tile is found at this side, by this distance from the ground
 TILT_MIN, TILT_MAX = 1.5, 30  # degrees: a tile askew by this much is turned straight
-FLAT = 0.6  # a glyph's frame whose border is this flat (a share near its median) floats on a ground: cut out
+FLAT = 0.6  # a glyph's frame whose border is this flat (a share near its ground) floats on a ground: cut out
+GROUND_FITS = 3  # the ground's surface fitted again and again to the border near the last one
+OUTSIDE = 0.03  # a frame with more of its outside-the-tile this far from the ground is stone all over: kept whole
 
 
 # --- Forge ----------------------------------------------------------------------------------------------------------
@@ -280,14 +290,66 @@ def face(raw: Image.Image) -> Image.Image:
     return raw.convert("RGB").crop(box).resize((PORTRAIT, PORTRAIT), Image.LANCZOS)
 
 
-def _ground(rgb: Image.Image) -> tuple[tuple[int, int, int], float]:
-    """The colour of a frame's border (its median) and the share of the border near it: 1.0 is a flat ground."""
+def _terms(u: float, t: float) -> tuple[float, ...]:
+    return (1.0, u, t, u * u, t * t, u * t)
+
+
+def _fit(rows: list[tuple[float, ...]], ys: list[float]) -> list[float]:
+    """Least squares by the normal equations, solved by Gaussian elimination (no numpy on the Forge machine)."""
+    n = len(rows[0])
+    a = [[sum(r[i] * r[j] for r in rows) + (1e-6 if i == j else 0.0) for j in range(n)]
+         + [sum(r[i] * y for r, y in zip(rows, ys))] for i in range(n)]
+    for c in range(n):
+        p = max(range(c, n), key=lambda r: abs(a[r][c]))
+        a[c], a[p] = a[p], a[c]
+        for r in range(n):
+            if r != c and a[c][c]:
+                f = a[r][c] / a[c][c]
+                a[r] = [x - f * y for x, y in zip(a[r], a[c])]
+    return [a[i][n] / a[i][i] if a[i][i] else 0.0 for i in range(n)]
+
+
+def _at(coef: list[list[float]], terms: tuple[float, ...]) -> tuple[float, float, float]:
+    return tuple(sum(c * t for c, t in zip(ch, terms)) for ch in coef)
+
+
+def _ground(rgb: Image.Image) -> tuple[tuple, float]:
+    """The ground of a frame: a smooth surface of colour fitted to its border, and the share of the border near it
+    (1.0 is a ground with no texture). A painted ground is often a gradient or a vignette — the steel plates of
+    2026-11-12 lay on a dark blue sliding into teal, and a ground of one colour kept it as the plate's own. The surface
+    is a quadratic in the place per channel, fitted only to the border that is ground: it starts from the border's
+    median, and each fit takes the border within FAR of the last one — a plate touching the frame's edge stays out.
+    Inside the frame the surface keeps to the colours of that border: a quadratic bulging brighter in the middle took
+    the dark stone at a tile's edge for ground. The ground is (the surface, its lowest and its highest colour)."""
     w, h = rgb.size
     px = rgb.load()
-    border = [px[x, y] for x in range(0, w, 4) for y in (0, h - 1)] + [px[x, y] for y in range(0, h, 4) for x in (0, w - 1)]
-    bg = tuple(int(median(c[i] for c in border)) for i in range(3))
-    flat = sum(1 for c in border if sum((c[i] - bg[i]) ** 2 for i in range(3)) ** 0.5 <= NEAR) / len(border)
-    return bg, flat
+    pts = [(x, y) for x in range(0, w, 4) for y in (0, h - 1)] + [(x, y) for y in range(0, h, 4) for x in (0, w - 1)]
+    cols = [px[p] for p in pts]
+    terms = [_terms(x / (w - 1), y / (h - 1)) for x, y in pts]
+    coef = [[float(median(c[ch] for c in cols)), 0.0, 0.0, 0.0, 0.0, 0.0] for ch in range(3)]
+    ground = list(range(len(pts)))
+    for _ in range(GROUND_FITS):
+        dist = [math.dist(cols[i], _at(coef, terms[i])) for i in range(len(pts))]
+        near = [i for i in range(len(pts)) if dist[i] <= FAR]
+        if len(near) < len(pts) // 10:
+            break
+        ground = near
+        coef = [_fit([terms[i] for i in ground], [cols[i][ch] for i in ground]) for ch in range(3)]
+    dist = [math.dist(cols[i], _at(coef, terms[i])) for i in range(len(pts))]
+    lo = tuple(min(cols[i][ch] for i in ground) for ch in range(3))
+    hi = tuple(max(cols[i][ch] for i in ground) for ch in range(3))
+    return (coef, lo, hi), sum(1 for d in dist if d <= NEAR) / len(pts)
+
+
+def _off_ground(rgb: Image.Image, ground: tuple) -> Image.Image:
+    """How far each place of a frame stands from its ground (`_ground`), TILE_WORK px, grey."""
+    coef, lo, hi = ground
+    k = 64  # the surface is smooth: drawn small, stretched
+    surface = Image.new("RGB", (k, k))
+    surface.putdata([tuple(max(lo[ch], min(hi[ch], int(v))) for ch, v in
+                           enumerate(_at(coef, _terms(x / (k - 1), y / (k - 1))))) for y in range(k) for x in range(k)])
+    small = rgb.resize((TILE_WORK, TILE_WORK), Image.LANCZOS)
+    return ImageChops.difference(small, surface.resize(small.size, Image.BILINEAR)).convert("L")
 
 
 def _hull(points: list[tuple[int, int]]) -> list[tuple[float, float]]:
@@ -326,10 +388,9 @@ def _tilt(hull: list[tuple[float, float]]) -> float:
     return (angle + 45) % 90 - 45
 
 
-def _tile_hull(rgb: Image.Image, bg: tuple[int, int, int]) -> list[tuple[float, float]]:
-    """The hull of the tile in a frame: what is far from the ground, its cracks closed, the biggest piece of it."""
-    small = rgb.resize((TILE_WORK, TILE_WORK), Image.LANCZOS)
-    diff = ImageChops.difference(small, Image.new("RGB", small.size, bg)).convert("L")
+def _tile_hull(diff: Image.Image, side: int) -> list[tuple[float, float]]:
+    """The hull of the tile in a frame of `side` px, by its distance from the ground (`_off_ground`): what is far from
+    the ground, its cracks closed, the biggest piece of it."""
     fg = diff.point(lambda v: 255 if v > TILE_FAR else 0).filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.MinFilter(9))
     n = TILE_WORK
     on = [v > 0 for v in fg.tobytes()]
@@ -354,28 +415,50 @@ def _tile_hull(rgb: Image.Image, bg: tuple[int, int, int]) -> list[tuple[float, 
     for i in biggest:
         rows.setdefault(i // n, []).append(i % n)
     edge = [(min(xs), y) for y, xs in rows.items()] + [(max(xs) + 1, y) for y, xs in rows.items()]
-    k = rgb.size[0] / n
+    k = side / n
     return [(x * k, y * k) for x, y in _hull(edge)]
+
+
+def _outside(diff: Image.Image, hull: list[tuple[float, float]], side: int) -> float:
+    """The share of a frame outside the tile's hull that is far from the ground: about none when the tile floats on a
+    ground; the cracks and edges of slabs around the glyph when the stone fills the frame (thaumaturgy, major image of
+    2026-11-12: a border of smooth slabs passed for a ground)."""
+    k = diff.size[0] / side
+    inside = Image.new("L", diff.size)
+    ImageDraw.Draw(inside).polygon([(x * k, y * k) for x, y in hull], fill=255)
+    far, ins = diff.point(lambda v: 255 if v > TILE_FAR else 0).tobytes(), inside.tobytes()
+    out = sum(1 for i in ins if not i)
+    return sum(1 for f, i in zip(far, ins) if f and not i) / max(1, out)
+
+
+def _whole(rgb: Image.Image) -> Image.Image:
+    """A frame of stone all over, kept whole, a thin smeared edge trimmed."""
+    w, h = rgb.size
+    m = int(w * TRIM)
+    return rgb.convert("RGBA").crop((m, m, w - m, h - m)).resize((ICON, ICON), Image.LANCZOS)
 
 
 def tile(raw: Image.Image) -> Image.Image:
     """A glyph's tile cut out by its shape, not by colour: the cracks of its stone are as dark as the ground around it,
     so a colour cut ate holes in it (the night run of 2026-11-11). The tile is the convex hull of what stands out from
     the ground; a tile lying askew is turned straight; every tile is cropped to its own square, so all are one size.
-    When the stone fills the frame (its border is not flat) the frame is kept whole, a thin smeared edge trimmed."""
+    When the stone fills the frame (its border is not flat, or the outside of the tile is textured) the frame is
+    kept whole."""
     rgb = raw.convert("RGB")
     w, h = rgb.size
-    bg, flat = _ground(rgb)
+    ground, flat = _ground(rgb)
     if flat < FLAT:
-        m = int(w * TRIM)
-        return rgb.convert("RGBA").crop((m, m, w - m, h - m)).resize((ICON, ICON), Image.LANCZOS)
-    hull = _tile_hull(rgb, bg)
+        return _whole(rgb)
+    diff = _off_ground(rgb, ground)
+    hull = _tile_hull(diff, w)
     if len(hull) < 3:
         return cut(raw)
+    if _outside(diff, hull, w) > OUTSIDE:  # slabs of stone smooth at the edge: the frame is stone, not a ground
+        return _whole(rgb)
     tilt = _tilt(hull)
     if TILT_MIN <= abs(tilt) <= TILT_MAX:
-        rgb = rgb.rotate(tilt, resample=Image.BICUBIC, fillcolor=bg)
-        hull = _tile_hull(rgb, bg)
+        rgb = rgb.rotate(tilt, resample=Image.BICUBIC)
+        hull = _tile_hull(diff.rotate(tilt, resample=Image.BILINEAR), w)  # what the turn brings in is no tile
     mask = Image.new("L", rgb.size)
     ImageDraw.Draw(mask).polygon(hull, fill=255)
     mask = mask.filter(ImageFilter.MinFilter(5)).filter(ImageFilter.GaussianBlur(1.2))  # no dark fringe, a soft edge

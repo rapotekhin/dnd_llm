@@ -1,8 +1,23 @@
 {
  "_doc": "The picks of the painted icons (out_painted/, anima_gen.py --style painted), as picks.json is for the flat ones: `variant` — the variant put into the game (absent — 1), `redo` — drawn badly in both, left as they are in the game, `overlay` — a mark drawn by code over the icon on install (overlays.py). Read by install.py --picks.",
  "variant": {
+  "spells/comprehend_languages": 2,
+  "spells/enlarge_reduce": 4,
+  "spells/feather_fall": 2,
+  "spells/find_familiar": 2,
+  "spells/fire_bolt": 2,
+  "spells/flaming_sphere": 2,
+  "spells/heat_metal": 2,
+  "spells/heroism": 2,
   "spells/jump": 2,
-  "spells/sanctuary": 2
+  "spells/knock": 4,
+  "spells/longstrider": 2,
+  "spells/magic_weapon": 4,
+  "spells/minor_illusion": 2,
+  "spells/pass_without_trace": 2,
+  "spells/sanctuary": 2,
+  "spells/shillelagh": 2,
+  "spells/silent_image": 3
  },
  "redo": [],
  "overlay": {

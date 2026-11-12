@@ -61,8 +61,8 @@
  },
  "acts/grapple": {
   "dark": false,
-  "sentence": "A single grey metal grappling hook with three curved prongs and a short brown rope, pointing down diagonally.",
-  "tags": "grappling hook, hook, grey metal, rope, diagonal"
+  "sentence": "A single strong hand tightly gripping another forearm by the wrist, seen from the side, as a flat symbol.",
+  "tags": "hand, grabbing, holding wrist, tight grip, forearm"
  },
  "acts/help": {
   "dark": false,
@@ -4637,8 +4637,8 @@
  },
  "spells/comprehend_languages": {
   "green": false,
-  "sentence": "A single open golden book with blank pages and a soft glow, seen from the front.",
-  "tags": "book, open book, golden, glowing, front view"
+  "sentence": "A single simple outline of an open book drawn in glowing amber lines, with one bright rune floating above its pages, as a flat symbol.",
+  "tags": "open book, outline, rune, amber, glowing lines"
  },
  "spells/conjure_animals": {
   "green": false,
@@ -4992,8 +4992,8 @@
  },
  "spells/magic_weapon": {
   "green": false,
-  "sentence": "A single steel longsword with a soft green glow along its blade and a brown handle, lying diagonally.",
-  "tags": "longsword, sword, steel blade, green glow, brown handle, diagonal"
+  "sentence": "A single short steel sword standing upright with its point down, three bright blue glowing runes along its blade and small blue sparkles around it, as a flat symbol. The sword is small in the middle of a wide square slab, with plenty of stone on its left and right.",
+  "tags": "sword, vertical, point down, glowing runes, blue, sparkles, square tile"
  },
  "spells/major_image": {
   "green": false,
@@ -5165,8 +5165,8 @@
  },
  "spells/silent_image": {
   "dark": false,
-  "sentence": "A single violet picture frame with a shimmering ghostly image inside, as a flat symbol.",
-  "tags": "picture frame, illusion, violet, shimmer"
+  "sentence": "A single violet stag's head with wide antlers drawn in shimmering dotted lines, half transparent like a mirage, as a flat symbol.",
+  "tags": "stag head, antlers, violet, dotted lines, shimmer, mirage"
  },
  "spells/sleep": {
   "dark": false,

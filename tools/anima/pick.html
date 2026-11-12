@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Выбор вариантов</title>
+<style>
+  :root { --bg: #26221e; --card: #312c27; --line: #4a423a; --ink: #ece3d4; --muted: #a99c88; --pick: #5fd16d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center;
+           padding: 12px 16px; background: #1d1a17ee; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0; font-size: 17px; font-weight: 600; }
+  .hint { color: var(--muted); }
+  #status { margin-left: auto; color: var(--muted); }
+  label { cursor: pointer; user-select: none; }
+  main { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  .card.seen { border-color: #5a6b4a; }
+  .name { margin-bottom: 8px; font-weight: 600; }
+  .key { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .pair { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 8px; }
+  .card.wide { grid-column: span 2; }
+  .card.wider { grid-column: span 3; }
+  .opt { position: relative; padding: 6px; border: 3px solid transparent; border-radius: 10px; cursor: pointer;
+         background: #1f1c19; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .opt:hover { border-color: #6b6155; }
+  .opt.on { border-color: var(--pick); }
+  .opt.on::after { content: "✓"; position: absolute; top: 4px; right: 8px; color: var(--pick); font-weight: 700; font-size: 16px; }
+  .opt img.big { width: 100%; max-width: 128px; aspect-ratio: 1; image-rendering: auto; }
+  .opt img.small { width: 64px; height: 64px; }
+  .side { color: var(--muted); font-size: 12px; }
+  @media (max-width: 420px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Какой вариант</h1>
+  <span class="hint">Щелчок по варианту выбирает его; карточка становится просмотренной. Всё сохраняется сразу.</span>
+  <label><input type="checkbox" id="unseen"> только непросмотренные</label>
+  <span id="count"></span>
+  <span id="status"></span>
+</header>
+<main id="grid"></main>
+<script>
+let data, picks, seen;
+const grid = document.getElementById("grid");
+const status = document.getElementById("status");
+
+function count() {
+  const changed = data.items.filter(it => (picks[it.key] || 1) !== 1).length;
+  document.getElementById("count").textContent =
+    `просмотрено ${seen.size} из ${data.items.length}, не первых ${changed}`;
+}
+
+async function save() {
+  status.textContent = "сохраняю…";
+  try {
+    const r = await fetch("/save", { method: "POST", headers: { "Content-Type": "application/json" },
+                                     body: JSON.stringify({ picks, seen: [...seen] }) });
+    status.textContent = r.ok ? "сохранено" : "не сохранилось";
+  } catch (e) { status.textContent = "не сохранилось: сервер не отвечает"; }
+}
+
+function render() {
+  const only = document.getElementById("unseen").checked;
+  const want = new URLSearchParams(location.search).get("ids");
+  const ids = want ? new Set(want.split(",")) : null;
+  grid.textContent = "";
+  for (const it of data.items) {
+    const id = it.key.split("/")[1];
+    if (only && seen.has(it.key)) continue;
+    if (ids && !ids.has(id)) continue;
+    const card = document.createElement("div");
+    card.className = "card" + (seen.has(it.key) ? " seen" : "") + (it.variants.length > 4 ? " wider" : it.variants.length > 2 ? " wide" : "");
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = it.name + " ";
+    const key = document.createElement("span");
+    key.className = "key"; key.textContent = id;
+    name.append(key);
+    const pair = document.createElement("div");
+    pair.className = "pair";
+    pair.style.setProperty("--n", it.variants.length);
+    for (const n of it.variants) {
+      const opt = document.createElement("div");
+      opt.className = "opt" + (picks[it.key] === n ? " on" : "");
+      const big = new Image(); big.className = "big"; big.src = `/img/${id}/${n}.png`; big.loading = "lazy";
+      const small = new Image(); small.className = "small"; small.src = big.src; small.loading = "lazy";
+      const side = document.createElement("span"); side.className = "side";
+      side.textContent = it.variants.length > 2 ? `вариант ${n}` : (n === 1 ? "левый" : "правый");
+      opt.append(big, small, side);
+      opt.onclick = () => {
+        picks[it.key] = n; seen.add(it.key);
+        pair.querySelectorAll(".opt").forEach((o, i) => o.classList.toggle("on", it.variants[i] === n));
+        card.classList.add("seen");
+        count(); save();
+      };
+      pair.append(opt);
+    }
+    card.append(name, pair);
+    grid.append(card);
+  }
+  count();
+}
+
+document.getElementById("unseen").onchange = render;
+fetch("/data").then(r => r.json()).then(d => {
+  data = d; picks = d.picks; seen = new Set(d.seen);
+  const kinds = { spells: "Заклинания", features: "Умения", acts: "Действия", traits: "Черты рас", conditions: "Состояния",
+                  groups: "Группы вещей", items: "Вещи", ui: "Интерфейс" };
+  document.getElementById("title").textContent = (kinds[d.kind] || d.kind) +
+    (new URLSearchParams(location.search).get("ids") ? ", перерисованные" : "") + ": какой вариант";
+  render();
+}).catch(() => { status.textContent = "сервер не отвечает"; });
+</script>
+</body>
+</html>
