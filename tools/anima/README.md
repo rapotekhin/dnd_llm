@@ -140,12 +140,23 @@ python tools/anima/install.py --out tools/anima/out_painted --picks tools/anima/
 
 ## 7. Элементы интерфейса
 
-Рамки окон, кнопки, ячейки панели действий — своим рисунком в стиле портретов (проба 2026-11-11). Геометрию рисует код (`ui/guides.py`: глубина и линии), Anima раскрашивает материал через ControlNet LLLite (`ui/paint.py`: `anima-lllite-depth-1` + `anima-lllite-lineart-1`), `ui/mock.py` режет на 9 частей и собирает макет с кнопкой в четырёх состояниях. Чужой арт (BG3 и др.) опорой не берём. Второй вызов LLLite ломает модель Forge (500 «'NoneType' object is not callable»): `paint.py` выгружает чекпойнт после каждого кадра — не запускать рядом с другим заданием.
+Рамки окон, кнопки, ячейки, вкладки, подсказки и украшения — своим рисунком (пробы 2026-11-11 и 2026-11-12). Геометрию рисует код (`ui/guides.py`: глубина и линии, семьи направляющих heavy / thin / book / plate), Anima раскрашивает через ControlNet LLLite (`ui/paint.py`: `anima-lllite-depth-1` + `anima-lllite-lineart-1`; стиль — теги, фраза на каждую деталь, хвост, добавка к негативу и семья направляющих), `ui/mock.py` режет на 9 частей и собирает макет; `--screen` — экран игры из деталей стиля «линии». Чужой арт (BG3, Pathfinder) только смотрим, опорой не берём. Второй вызов LLLite ломает модель Forge (500 «'NoneType' object is not callable»): `paint.py` выгружает чекпойнт после каждого кадра — не запускать рядом с другим заданием.
+
+Стили проб: `leather`, `wood` (тяжёлая кайма, первая проба), `lines` (тёмная панель в две тонкие золотые линии), `book` (лист пергамента с чернильной линией и кругами в углах), `plates` (сталь с заклёпками вокруг тёмного камня, как наши иконки). **Выбор автора 2026-11-12 — `lines`.** Его детали: `window`, `button`, `accent`, `tab`, `card`, `field`, `cell` — панели, режутся на 9 частей; `crest` (над заголовком окна), `divider`, `ring` (рамка портрета) — украшения на чёрном, кладутся целиком, их яркость — прозрачность.
+
+Уроки проб:
+- слово «window» модель рисует окном компьютера с заголовком и крестиком — в промте «panel»; «страница книги» — раскрытая книга, нужен «one flat sheet»;
+- орнамент посередине края при нарезке растянется — только углы, а гербик над заголовком — отдельная деталь;
+- вокруг рамки модель часто оставляет белое или чёрное поле: макет срезает белое заливкой от углов, скругление кнопки и вкладки — маской по направляющей; в игре там прозрачность;
+- акцентную кнопку модель красит почти как обычную — тёплое золото темы кладётся кодом;
+- нарисованная рамка бывает шире направляющей (у `plates` вдвое): поле нарезки (`mock.CUT`) подгоняется по кадру.
 
 ```bash
-python tools/anima/ui/guides.py      # → out_ui/guides/
-python tools/anima/ui/paint.py       # → out_ui/raw/<part>_<material>_<seed>.png, ~40 с кадр
-python tools/anima/ui/mock.py        # → out_ui/mock/
+python tools/anima/ui/guides.py                                                  # → out_ui/guides/
+python tools/anima/ui/paint.py --styles lines                                    # → out_ui/raw/<part>_<style>_<seed>.png, 20–90 с кадр
+python tools/anima/ui/paint.py --styles lines --parts accent,tab,card,field,crest,divider,ring
+python tools/anima/ui/mock.py --styles lines,book,plates                         # → out_ui/mock/mock_<style>_<seed>.png
+python tools/anima/ui/mock.py --screen window=22,button=11 --seeds 33            # экран, каждая деталь своим сидом
 ```
 
 ## Время
