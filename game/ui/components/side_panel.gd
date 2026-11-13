@@ -98,7 +98,7 @@ func _ready() -> void:
 		col.add_child(_strip)
 	for spec: Array in [["SheetButton", "BTN_CHARACTER_SHEET", sheet_requested, "character_sheet"], ["MapButton", "BTN_MAP", map_requested, "map"],
 			["JournalButton", "BTN_JOURNAL", journal_requested, "journal"], ["GameMenuButton", "BTN_MENU", menu_requested, "pause_menu"]]:
-		var b := IconSlot.make(IconRules.button(Catalog.data, spec[0]), tr(spec[1]), 52)  # v0.8.4.43: icons in the corner
+		var b := IconSlot.make(IconRules.button(Catalog.data, spec[0]), tr(spec[1]), ActionBar.WIN)  # v0.8.4.43: icons in the corner, over the rests
 		b.name = spec[0]
 		b.tooltip_text = Hotkeys.tip(tr(spec[1]), spec[3], SaveManager.keys)  # v0.7.22.27
 		b.pressed.connect((spec[2] as Signal).emit)

@@ -35,6 +35,7 @@ var _reverse: Button
 var _scroll: ScrollContainer
 var _cells: GridContainer
 var shown: Array[String] = []  ## the ids in the cells now, in their order
+var _fit_rows := 0  # the rows the list's height holds: the empty cells go down to its bottom (v0.8.4.43.38)
 
 
 func _init(grid_tag: String = "Inv", cell_prefix: String = "Item_", cols: int = 8) -> void:
@@ -95,6 +96,7 @@ func _init(grid_tag: String = "Inv", cell_prefix: String = "Item_", cols: int = 
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	_scroll.resized.connect(_fill_down)
 	add_child(_scroll)
 	_cells = GridContainer.new()
 	_cells.name = tag + "Cells"
@@ -152,13 +154,14 @@ func show_items(inv: Dictionary) -> void:
 		move_child(nl, 1)
 
 
-## The empty cells of the grid to whole rows, as in BG3.
+## The empty cells of the grid to whole rows, as in BG3, down to the list's bottom (the author: «сетку предметов вниз
+## продлить»); more things than cells — more rows, the list scrolls and the window keeps its height.
 func _pad() -> void:
 	for ch in _cells.get_children():
 		if ch is Panel:
 			_cells.remove_child(ch)
 			ch.queue_free()
-	var pad := maxi(min_rows * columns, int(ceil(float(shown.size()) / columns)) * columns) - shown.size()
+	var pad := maxi(maxi(min_rows, _fit_rows) * columns, int(ceil(float(shown.size()) / columns)) * columns) - shown.size()
 	_scroll.custom_minimum_size.y = min_rows * (cell_side + 4)  # a window that shrinks to its content still shows the rows
 	for i in pad:
 		var empty := Panel.new()
@@ -166,6 +169,14 @@ func _pad() -> void:
 		empty.mouse_filter = Control.MOUSE_FILTER_PASS
 		empty.add_theme_stylebox_override("panel", UiTheme.box(Color(0, 0, 0, 0.25), UiTheme.BORDER.darkened(0.35), 1, 0, 3))
 		_cells.add_child(empty)
+
+
+## As many rows as the list's height holds: the empty cells reach its bottom.
+func _fill_down() -> void:
+	var fit := int((_scroll.size.y + 4.0) / (cell_side + 4.0))
+	if fit != _fit_rows:
+		_fit_rows = fit
+		_pad()
 
 
 ## As many columns as its width holds: the grid fills its side of a window.

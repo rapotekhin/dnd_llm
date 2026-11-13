@@ -17,6 +17,13 @@ extends PanelContainer
 ## to edge (IconSlot), the empty slots faint, no scroll bar beside the grid, the tabs of kinds in the drawn tab's frame,
 ## the end of the turn an hourglass as in BG3.
 ## v0.8.4.43.34 (the author: «иконки всё ещё кажутся маленькими… сделать иконки больше по размеру»): cells of 72 (80 left too few columns beside the map).
+## v0.8.4.43.38 (the author picked the second of five layouts: «слишком много пустого места»): no row of its own for the
+## counters or the tabs — the counters a plaque on the frame's top edge over the portrait and the weapons, the tabs of
+## kinds folder tabs on the edge over the grid; inside the frame only the portrait, the weapons, the grid, the round
+## button and the windows over the rests in one column 2 x 3. The frame is drawn under the strip of the edge (`_draw`);
+## each block is a column of its head on the edge and its body inside, so the heads stand over their own bodies. The bar
+## takes the whole width under the map and its grid every column that fits (the author: «лучше её растянуть и сделать
+## больше ячеек»), the grid in the middle of the room left.
 
 signal circle_picked(circle: int)
 
@@ -37,6 +44,11 @@ const KIND_TITLES := {"common": "BAR_KIND_COMMON", "combat": "BAR_KIND_COMBAT", 
 const TABS := ["", "common", "combat", "class", "items", "deeds", "passive"]
 const CELL := 72
 const GAP := 4
+const STRIP := 36  ## the strip of the frame's top edge: the counters' plaque and the tabs of kinds stand in it
+const OVERLAP := 6  ## how far the plaque and the tabs come down over the frame's line
+const PAD := Vector2(14, 10)  ## the frame's margins across and down
+const WIN := 48  ## a window's and a rest's cell in the column 2 x 3
+const DIVIDER := 11  ## a divider's width between two sections: its line and its margins
 const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
 
 var windows: GridContainer  ## the sheet, the map, the journal, the menu — icons in the corner
@@ -54,13 +66,15 @@ var _portrait: Portrait
 var _hands: GridContainer
 var _sets: HBoxContainer
 var _counters: HBoxContainer
+var _plaque: PanelContainer  # the counters' plaque on the frame's edge
+var _inside: StyleBoxEmpty  # the bar's own margins: the frame is drawn by `_draw`, under the edge's strip
 var _centre: VBoxContainer  # the counters, the grid and the tabs
 var _rows_box: VBoxContainer  # «+» and «−» of the rows
 var _grid_scroll: ScrollContainer
 var _grid: HBoxContainer
 var _tabs: HBoxContainer
 var _round: CenterContainer
-var _rests: VBoxContainer
+var _rests: HBoxContainer
 var _stage := {}  # key of KEYS → hidden Container the owner fills
 var _laid_cols := -1  # the columns of the last laying
 var _park: Control  # hidden: the cells not on the grid now wait here, never freed with a slot
@@ -80,7 +94,11 @@ func _init() -> void:
 	_park.name = "Parked"
 	_park.visible = false
 	add_child(_park)
-	theme_type_variation = UiTheme.CARD
+	_inside = StyleBoxEmpty.new()
+	_inside.content_margin_left = PAD.x
+	_inside.content_margin_right = PAD.x
+	_inside.content_margin_bottom = PAD.y
+	add_theme_stylebox_override("panel", _inside)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 0)
 	add_child(col)
@@ -88,15 +106,29 @@ func _init() -> void:
 	_body.name = "Hotbar"
 	_body.add_theme_constant_override("separation", 10)
 	col.add_child(_body)
+	var hero := _block("HeroBlock")  # the counters on the edge over the portrait and the weapons of both hands
+	_plaque = PanelContainer.new()
+	_plaque.name = "CountersPlaque"
+	_plaque.size_flags_vertical = Control.SIZE_SHRINK_END
+	_plaque.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL, UiTheme.ACCENT, 2, 8, 4))
+	hero.get_child(0).add_child(_plaque)
+	_counters = HBoxContainer.new()
+	_counters.name = "Counters"
+	_counters.add_theme_constant_override("separation", 12)
+	_counters.alignment = BoxContainer.ALIGNMENT_CENTER
+	_plaque.add_child(_counters)
+	var own := HBoxContainer.new()
+	own.add_theme_constant_override("separation", 8)
+	hero.add_child(own)
 	_portrait = Portrait.of("", 112)  # one drawing with the left column's portraits (v0.8.4.43.4)
 	_portrait.name = "HeroPortrait"
 	_portrait.numbers = true
 	_portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_body.add_child(_portrait)
+	own.add_child(_portrait)
 	var weapons := VBoxContainer.new()
 	weapons.add_theme_constant_override("separation", GAP)
 	weapons.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_body.add_child(weapons)
+	own.add_child(weapons)
 	_hands = GridContainer.new()
 	_hands.name = "Hands"
 	_hands.columns = 2
@@ -106,20 +138,19 @@ func _init() -> void:
 	_sets.name = "Sets"
 	_sets.add_theme_constant_override("separation", GAP)
 	weapons.add_child(_sets)
-	var centre := VBoxContainer.new()
-	centre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	centre.add_theme_constant_override("separation", 4)
-	_body.add_child(centre)
+	var centre := _block("GridBlock", BoxContainer.ALIGNMENT_BEGIN)  # the tabs of kinds on the edge over the grid
+	centre.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER  # the room past the last column round it
 	_centre = centre
-	_counters = HBoxContainer.new()
-	_counters.name = "Counters"
-	_counters.add_theme_constant_override("separation", 14)
-	_counters.custom_minimum_size = Vector2(0, 26)
-	_counters.alignment = BoxContainer.ALIGNMENT_CENTER
-	centre.add_child(_counters)
+	var indent := Control.new()  # the folder tabs a little in from the grid's corner
+	indent.custom_minimum_size = Vector2(8, 0)
+	centre.get_child(0).add_child(indent)
+	_tabs = HBoxContainer.new()
+	_tabs.name = "KindTabs"
+	_tabs.add_theme_constant_override("separation", 4)
+	_tabs.size_flags_vertical = Control.SIZE_SHRINK_END
+	centre.get_child(0).add_child(_tabs)
 	var grid_row := HBoxContainer.new()
 	grid_row.add_theme_constant_override("separation", 4)
-	grid_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	centre.add_child(grid_row)
 	_grid_scroll = ScrollContainer.new()
 	_grid_scroll.name = "Cells"
@@ -134,6 +165,7 @@ func _init() -> void:
 	var rows := VBoxContainer.new()  # more or fewer rows of slots, as the BG3 forum asked
 	_rows_box = rows
 	rows.add_theme_constant_override("separation", 2)
+	rows.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	grid_row.add_child(rows)
 	for spec: Array in [["RowsMore", "+", 1, "BAR_ROWS_MORE"], ["RowsLess", "−", -1, "BAR_ROWS_LESS"]]:
 		var b := Button.new()
@@ -149,41 +181,42 @@ func _init() -> void:
 			SaveManager.save_settings()
 			_relay())
 		rows.add_child(b)
-	_tabs = HBoxContainer.new()
-	_tabs.name = "KindTabs"
-	_tabs.add_theme_constant_override("separation", 6)
-	_tabs.alignment = BoxContainer.ALIGNMENT_CENTER
-	centre.add_child(_tabs)
+	var right := _block("RoundBlock")  # the round button, the windows over the rests in one column 2 x 3
+	var corner_row := HBoxContainer.new()
+	corner_row.add_theme_constant_override("separation", 10)
+	right.add_child(corner_row)
 	_round = CenterContainer.new()
 	_round.name = "Round"
-	_round.custom_minimum_size = Vector2(92, 0)
-	_body.add_child(_round)
+	_round.custom_minimum_size = Vector2(84, 0)
+	corner_row.add_child(_round)
 	end_turn = Button.new()
 	end_turn.name = "EndTurnButton"
 	end_turn.tooltip_text = "BTN_END_TURN"  # an hourglass as in BG3, its words at the cursor
 	end_turn.expand_icon = true
 	end_turn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	end_turn.add_theme_constant_override("icon_max_width", 64)
+	end_turn.add_theme_constant_override("icon_max_width", 60)
 	end_turn.focus_mode = Control.FOCUS_NONE
 	end_turn.theme_type_variation = UiTheme.ACCENT_BUTTON
-	end_turn.custom_minimum_size = Vector2(88, 88)
-	end_turn.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.ACCENT.darkened(0.55), UiTheme.ACCENT, 3, 6, 44))
-	end_turn.add_theme_stylebox_override("hover", UiTheme.box(UiTheme.ACCENT.darkened(0.4), UiTheme.ACCENT_BRIGHT, 3, 6, 44))
-	end_turn.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.ACCENT.darkened(0.3), UiTheme.ACCENT_BRIGHT, 3, 6, 44))
-	end_turn.add_theme_stylebox_override("disabled", UiTheme.box(UiTheme.PANEL, UiTheme.BORDER, 3, 6, 44))
+	end_turn.custom_minimum_size = Vector2(84, 84)
+	end_turn.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.ACCENT.darkened(0.55), UiTheme.ACCENT, 3, 6, 42))
+	end_turn.add_theme_stylebox_override("hover", UiTheme.box(UiTheme.ACCENT.darkened(0.4), UiTheme.ACCENT_BRIGHT, 3, 6, 42))
+	end_turn.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.ACCENT.darkened(0.3), UiTheme.ACCENT_BRIGHT, 3, 6, 42))
+	end_turn.add_theme_stylebox_override("disabled", UiTheme.box(UiTheme.PANEL, UiTheme.BORDER, 3, 6, 42))
 	_round.add_child(end_turn)
-	_rests = VBoxContainer.new()
-	_rests.name = "Rests"
-	_rests.add_theme_constant_override("separation", GAP)
-	_rests.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_body.add_child(_rests)
+	var corner := VBoxContainer.new()
+	corner.add_theme_constant_override("separation", GAP)
+	corner.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	corner_row.add_child(corner)
 	windows = GridContainer.new()
 	windows.name = "Windows"
 	windows.columns = 2
 	windows.add_theme_constant_override("h_separation", GAP)
 	windows.add_theme_constant_override("v_separation", GAP)
-	windows.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_body.add_child(windows)
+	corner.add_child(windows)
+	_rests = HBoxContainer.new()
+	_rests.name = "Rests"
+	_rests.add_theme_constant_override("separation", GAP)
+	corner.add_child(_rests)
 	talk = HBoxContainer.new()
 	talk.name = "TalkActs"
 	talk.add_theme_constant_override("separation", 8)
@@ -300,10 +333,34 @@ func _ready() -> void:
 
 
 func _show() -> void:
-	size_flags_horizontal = Control.SIZE_FILL if _talking else Control.SIZE_SHRINK_CENTER
+	size_flags_horizontal = Control.SIZE_FILL  # the whole width under the map, in a conversation too
 	_body.visible = not _talking
 	talk.visible = _talking
 	end_turn.visible = _fight
+	_inside.content_margin_top = PAD.y if _talking else 0.0  # a conversation's acts inside the frame from its top
+	queue_redraw()
+
+
+## A block of the bar: its head in the strip of the frame's top edge, its body inside the frame under it.
+func _block(node_name: String, align := BoxContainer.ALIGNMENT_CENTER) -> VBoxContainer:
+	var block := VBoxContainer.new()
+	block.name = node_name
+	block.add_theme_constant_override("separation", int(PAD.y) - OVERLAP)
+	_body.add_child(block)
+	var head := HBoxContainer.new()
+	head.name = "Head"
+	head.custom_minimum_size = Vector2(0, STRIP)
+	head.alignment = align
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	block.add_child(head)
+	return block
+
+
+## The card's drawn frame under the strip of the edge: the plaque and the tabs stand over its top line (in a conversation
+## the frame is the whole bar).
+func _draw() -> void:
+	var top := 0.0 if _talking else float(STRIP - OVERLAP)
+	draw_style_box(get_theme_stylebox("panel", UiTheme.CARD), Rect2(0, top, size.x, size.y - top))
 
 
 func _relay() -> void:
@@ -412,7 +469,12 @@ func _lay_grid() -> void:
 	var kinds := {}
 	for key: String in cells:
 		kinds[key] = cells[key][0]
-	var sections := HotbarLayout.place(SaveManager.hotbar, HotbarLayout.BAR, kinds, total, "fight" if _fight else "peace")
+	var side := "fight" if _fight else "peace"
+	var sections := HotbarLayout.place(SaveManager.hotbar, HotbarLayout.BAR, kinds, total, side)
+	var fit := _columns(sections.size() if _filter.is_empty() else 1)  # the dividers between the sections take their room
+	if fit != total:
+		total = fit
+		sections = HotbarLayout.place(SaveManager.hotbar, HotbarLayout.BAR, kinds, total, side)
 	_drawn_kinds = {}
 	var shown := []  # [the section's index in the layout, the section] to draw
 	for i in sections.size():
@@ -464,10 +526,13 @@ func _lay_grid() -> void:
 						ic.dropped_off.connect(_on_off)
 
 
-## The columns the grid has room for.
-func _columns() -> int:
-	var others := size.x - _centre.size.x + _rows_box.size.x + 4  # the portrait, the hands, the round button, the rests, the windows
-	return maxi(1, int((_whole() - others - 8) / (CELL + GAP)) - 1)
+## The columns the grid has room for when it is cut into `sections`: the bar's whole width but its margins, the other
+## blocks (the portrait and the hands, the round button and the windows), «+ −» and the dividers.
+func _columns(sections := 1) -> int:
+	var others := _body.get_combined_minimum_size().x - _centre.get_combined_minimum_size().x + PAD.x * 2 \
+		+ _rows_box.get_combined_minimum_size().x + 4
+	var room := _whole() - others + sections * GAP - (sections - 1) * DIVIDER
+	return maxi(1, int(room / (CELL + GAP)))
 
 
 ## The width the bar may take: its place under the map.
@@ -486,7 +551,7 @@ func _divider(i: int) -> Control:
 	var d := ColorRect.new()
 	d.name = "Line"
 	d.color = UiTheme.BAD.darkened(0.3)
-	d.custom_minimum_size = Vector2(5, 0)
+	d.custom_minimum_size = Vector2(DIVIDER - 6, 0)
 	d.mouse_default_cursor_shape = Control.CURSOR_HSIZE
 	d.tooltip_text = tr("BAR_DIVIDER_TIP")
 	pad.add_child(d)
@@ -729,6 +794,7 @@ func _lay_counters() -> void:
 			picked_circle = 0 if picked_circle == lv else lv
 			circle_picked.emit.call_deferred(picked_circle))  # the counters are laid again: never under the press
 		_counters.add_child(b)
+	_plaque.visible = _counters.get_child_count() > 0
 
 
 func _counter(node_name: String, text: String, n: int, color: Color, tip: String) -> void:
@@ -756,7 +822,7 @@ func _lay_rests() -> void:
 				cell.custom_minimum_size = Vector2(80, 80)
 				_round.add_child(cell)
 			continue
-		cell.custom_minimum_size = Vector2(CELL - 8, CELL - 8)
+		cell.custom_minimum_size = Vector2(WIN, WIN)
 		if _fight and cell is BaseButton:
 			(cell as BaseButton).disabled = true
 		_rests.add_child(cell)
