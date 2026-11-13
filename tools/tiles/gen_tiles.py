@@ -85,7 +85,10 @@ def fit(cut: Image.Image, tid: str, side: int) -> Image.Image:
     w, h = size_of(tid)
     long = max(w, h)
     pad = 0.92  # a little air round it, for its shadow
-    body = cut.crop(box).resize((max(1, round(side * pad * w / long)), max(1, round(side * pad * h / long))), Image.LANCZOS)
+    body = cut.crop(box)
+    if w != h and (body.width > body.height) != (w > h):  # drawn across its squares (a bed standing up): laid along them
+        body = body.transpose(Image.Transpose.ROTATE_90)
+    body = body.resize((max(1, round(side * pad * w / long)), max(1, round(side * pad * h / long))), Image.LANCZOS)
     out = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     out.paste(body, ((side - body.width) // 2, (side - body.height) // 2), body)
     return out

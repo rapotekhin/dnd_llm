@@ -234,7 +234,8 @@ static func _taken(s: GameSession, data: Dictionary, map: Dictionary, who: Strin
 	for d: Dictionary in map["doors"]:
 		out[Vector2i(int(d["x"]), int(d["y"]))] = true
 	for m: Dictionary in map["marks"]:
-		out[Vector2i(int(m["x"]), int(m["y"]))] = true
+		if not str(m["name"]).begins_with(LayoutGen.SET):  # a furnishing's thing that may stand there is no mark of the place
+			out[Vector2i(int(m["x"]), int(m["y"]))] = true
 	for room: Variant in map["ids"]:
 		for p: Dictionary in s.props.get(str(room), []):
 			if p.get("at") is Array:

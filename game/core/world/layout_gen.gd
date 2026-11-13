@@ -27,6 +27,7 @@ const OPPOSITE: Dictionary = {"n": "s", "e": "w", "s": "n", "w": "e"}
 const ROTATIONS := 4
 const FILL := "B"  ## what fills a pocket of an open map nobody can reach, unless the kind scatters something
 const ENTRY := "entry"
+const SET := "set:"  ## a thing of a chunk's furnishing as a mark of the map (v0.8.4.43.31)
 const TRY_STEP := 1000  ## how far apart the seeds of two tries are: an open map takes two of its own
 
 
@@ -43,6 +44,50 @@ static func turned(rows: Array, rot: int, flip: bool) -> Array[String]:
 			out[i] = out[i].reverse()
 	for _i: int in posmod(rot, ROTATIONS):
 		out = _quarter(out)
+	return out
+
+
+## Where a square of an unturned chunk of `w`×`h` lands once the chunk is mirrored and turned `rot` quarters (`turned`).
+static func turn_cell(c: Vector2i, w: int, h: int, rot: int, flip: bool) -> Vector2i:
+	var p := Vector2i(w - 1 - c.x, c.y) if flip else c
+	var size := Vector2i(w, h)
+	for _i: int in posmod(rot, ROTATIONS):
+		p = Vector2i(size.y - 1 - p.y, p.x)
+		size = Vector2i(size.y, size.x)
+	return p
+
+
+## An offset between two squares of a chunk once it is mirrored and turned: `turn_cell` without its shift.
+static func turn_offset(o: Vector2i, rot: int, flip: bool) -> Vector2i:
+	var p := Vector2i(-o.x, o.y) if flip else o
+	for _i: int in posmod(rot, ROTATIONS):
+		p = Vector2i(-p.y, p.x)
+	return p
+
+
+## A thing's quarter turns once its chunk is mirrored and turned: a thing's picture turns against the clock
+## (map_ground.gdshader) and the chunk with it, a mirror turns it round where it looks along the mirror.
+static func turn_of(turn: int, rot: int, flip: bool) -> int:
+	return posmod((2 - turn if flip else turn) - rot, ROTATIONS)
+
+
+## The things of a chunk's furnishings (`furnish`: [{"name", "things": [{"body", "x", "y", "turn"}]}], v0.8.4.43.31) as
+## marks of the map: `set:<body>` on the square its top left lands on once the chunk is turned and mirrored, with its own
+## `turn`, the chunk's `rot` and `flip` (MapSpots lays its squares) and the furnishing's place `set`.
+static func furnish_marks(at: Dictionary, pos: Vector2i, index: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var sets: Array = at.get("furnish", [])
+	if sets.is_empty():
+		return out
+	var rows: Array = at["rows"]
+	var rot := posmod(int(at.get("rot", 0)), ROTATIONS)
+	var flip := bool(at.get("flip", false))
+	var w := str(rows[0]).length() if rot % 2 == 0 else rows.size()
+	var h := rows.size() if rot % 2 == 0 else str(rows[0]).length()
+	for i: int in sets.size():
+		for t: Dictionary in (sets[i] as Dictionary).get("things", []):
+			var c := pos + turn_cell(Vector2i(int(t["x"]), int(t["y"])), w, h, rot, flip)
+			out.append({"name": SET + str(t["body"]), "x": c.x, "y": c.y, "room": index, "set": i, "turn": int(t.get("turn", 0)), "rot": rot, "flip": flip})
 	return out
 
 
@@ -396,7 +441,7 @@ static func _replace(lib: Dictionary, ask: Dictionary, pick: Dictionary, grid: D
 			if int(other["x"]) == cell.x and int(other["y"]) == cell.y and (ask.get("links", []) as Array).has(ids[int(other["room"])]):
 				join = other
 	var out := {"chunk": src["id"], "rot": int(pick.get("rot", 0)), "flip": bool(pick.get("flip", false)), "x": pos.x, "y": pos.y, "rows": rows,
-		"marks": src.get("marks", {}), "join": join}
+		"marks": src.get("marks", {}), "furnish": src.get("furnish", []), "join": join}
 	if pick.get("door") is Array:
 		var door := Vector2i(int(pick["door"][0]), int(pick["door"][1]))
 		out["door"] = [door.x, door.y]
@@ -429,7 +474,7 @@ static func _place(lib: Dictionary, ask: Dictionary, grid: Dictionary, free: Arr
 			var pos := _position(rows, ask, grid, free, ids, rng, reserved)
 			if pos.is_empty():
 				continue
-			pos.merge({"chunk": src["id"], "rot": turn.x, "flip": turn.y == 1, "rows": rows, "marks": src.get("marks", {})})
+			pos.merge({"chunk": src["id"], "rot": turn.x, "flip": turn.y == 1, "rows": rows, "marks": src.get("marks", {}), "furnish": src.get("furnish", [])})
 			return pos
 	return {}
 
@@ -505,6 +550,7 @@ static func _stamp(at: Dictionary, index: int, grid: Dictionary, owner: Dictiona
 				owner[cell] = index
 			elif c != SOCKET and grid[cell] == SOCKET:  # a wall laid on a free socket: the socket is gone
 				grid[cell] = WALL
+	marks.append_array(furnish_marks(at, pos, index))
 	var join: Dictionary = at.get("join", {})
 	if not join.is_empty():
 		var door := Vector2i(int(join["x"]), int(join["y"]))
@@ -669,8 +715,9 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 		grid.append(line)
 	var tags: Array = ask.get("tags", [])
 	var tiled := false
+	var furnished: Array[Dictionary] = []  # the furnishings of the pieces, marks once the map has them
 	if own.is_empty():
-		tiled = _tiles(lib, kind, tags, grid, rng)  # a kind with `tiles`: the map laid of open chunks, the noise only for the small things
+		tiled = _tiles(lib, kind, tags, grid, rng, furnished)  # a kind with `tiles`: the map laid of open chunks, the noise only for the small things
 		_scatter(grid, kind.get("scatter", []), int(cfg["noise_cell"]), rng, float(cfg.get("tile_scatter", 1.0)) if tiled else 1.0, tiled)
 		if tags.has("water") and not tiled:
 			_pond(grid, float(cfg["pond"]), rng)
@@ -683,6 +730,7 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 		center = Vector2i(int(ask["center"][0]), int(ask["center"][1])) - origin
 	var out := {"w": w, "h": h, "ids": [str(ask["id"])], "marks": [] as Array[Dictionary], "doors": [] as Array[Dictionary], "exits": [] as Array[Dictionary],
 		"left": [] as Array[String], "origin": origin, "open": true}
+	out["marks"].append_array(furnished)
 	var was_landmark: Dictionary = (kept.get("landmark", {}) as Dictionary).duplicate()
 	if was_landmark.has("x"):
 		was_landmark["x"] = int(was_landmark["x"]) - origin.x
@@ -835,7 +883,7 @@ static func _noise(coarse: Array[PackedFloat32Array], cell: int, x: int, y: int)
 ## neighbours': a stream or a path crosses a side only at its middle (`_tile_codes`), water to water, path to path. A
 ## side no chunk meets (none fits) takes the chunk with the fewest sides wrong. The kind's tag `water` makes ponds and
 ## streams thrice likelier. false — the kind has no `tiles`.
-static func _tiles(lib: Dictionary, kind: Dictionary, tags: Array, grid: Array[PackedStringArray], rng: RandomNumberGenerator) -> bool:
+static func _tiles(lib: Dictionary, kind: Dictionary, tags: Array, grid: Array[PackedStringArray], rng: RandomNumberGenerator, marks: Array[Dictionary] = []) -> bool:
 	var weights: Dictionary = kind.get("tiles", {})
 	if weights.is_empty():
 		return false
@@ -856,7 +904,7 @@ static func _tiles(lib: Dictionary, kind: Dictionary, tags: Array, grid: Array[P
 		for rot: int in ROTATIONS:
 			for flip: bool in [false, true]:
 				var rows := turned(c["rows"], rot, flip)
-				pool.append({"rows": rows, "codes": _tile_codes(rows), "weight": base * w, "base": base})
+				pool.append({"rows": rows, "codes": _tile_codes(rows), "weight": base * w, "base": base, "rot": rot, "flip": flip, "furnish": c.get("furnish", [])})
 	if pool.is_empty():
 		return false
 	var h := grid.size()
@@ -881,6 +929,7 @@ static func _tiles(lib: Dictionary, kind: Dictionary, tags: Array, grid: Array[P
 						pick = p
 			placed[Vector2i(tx, ty)] = pick
 			var rows: Array[String] = pick["rows"]
+			marks.append_array(furnish_marks(pick, Vector2i(tx * n - off.x, ty * n - off.y), 0))
 			for y: int in n:
 				var gy := ty * n + y - off.y
 				if gy < 0 or gy >= h:
@@ -957,7 +1006,8 @@ static func _landmark(lib: Dictionary, kind: Dictionary, kept_one: Dictionary, w
 	var rows := turned(src["rows"], int(kept.get("rot", 0)), bool(kept.get("flip", false)))
 	var x := int(kept.get("x", (w - rows[0].length()) / 2 + rng.randi_range(-w / 6, w / 6)))
 	var y := int(kept.get("y", (h - rows.size()) / 2 + rng.randi_range(-h / 6, h / 6)))
-	return {"chunk": src["id"], "rot": int(kept.get("rot", 0)), "flip": bool(kept.get("flip", false)), "x": x, "y": y, "rows": rows, "marks": src.get("marks", {})}
+	return {"chunk": src["id"], "rot": int(kept.get("rot", 0)), "flip": bool(kept.get("flip", false)), "x": x, "y": y, "rows": rows, "marks": src.get("marks", {}),
+		"furnish": src.get("furnish", [])}
 
 
 static func _lay(out: Dictionary, grid: Array[PackedStringArray], at: Dictionary, taken: Dictionary) -> void:
@@ -974,6 +1024,7 @@ static func _lay(out: Dictionary, grid: Array[PackedStringArray], at: Dictionary
 				out["marks"].append({"name": str(legend[c]), "x": gx, "y": gy, "room": 0})
 				c = FLOOR
 			grid[gy][gx] = c
+	out["marks"].append_array(furnish_marks(at, Vector2i(int(at["x"]), int(at["y"])), 0))
 
 
 ## The ways out: a box with a door on the way to a building, the edge of the map otherwise. A kept way stands where it

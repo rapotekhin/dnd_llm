@@ -51,9 +51,27 @@ const MapView = (() => {
 		return byKeys(lib.grounds.props[c] || {}, keys);
 	}
 
-	function propIds(lib) {
+	// MapGround.prop_ids: the things of `grounds.props`, then the bodies of rules.things (v0.8.4.43.24) — a thing's place.
+	function propIds(lib, bodies = {}) {
 		const out = [];
 		for (const row of Object.values(lib.grounds.props)) for (const id of Object.values(row)) if (!out.includes(String(id))) out.push(String(id));
+		for (const id of Object.keys(bodies)) if (!out.includes(id) && out.length < MAX_PROPS) out.push(id);
+		return out;
+	}
+
+	// LayoutGen.turn_cell / turn_offset / turn_of (v0.8.4.43.31): a square, an offset and a thing's turn on a chunk
+	// mirrored and turned `rot` quarters clockwise; a thing's picture turns against the clock.
+	function turnCell([x, y], w, h, rot, flip) {
+		let p = flip ? [w - 1 - x, y] : [x, y], size = [w, h];
+		for (let i = 0; i < ((rot % 4) + 4) % 4; i++) { p = [size[1] - 1 - p[1], p[0]]; size = [size[1], size[0]]; }
+		return p;
+	}
+	const turnOf = (turn, rot, flip) => ((((flip ? 2 - turn : turn) - rot) % 4) + 4) % 4;
+	// MapSpots.footprint: the squares a thing of `size` [long, short] takes from its top left, `turn` odd — the other way.
+	function footprint(size, x, y, turn) {
+		const [w, hh] = turn % 2 ? [size[1], size[0]] : [size[0], size[1]];
+		const out = [];
+		for (let j = 0; j < hh; j++) for (let i = 0; i < w; i++) out.push([x + i, y + j]);
 		return out;
 	}
 
@@ -107,6 +125,7 @@ const MapView = (() => {
 		return `#version 300 es
 precision highp float; precision highp int; precision highp sampler2D; precision highp sampler2DArray;
 #define PI 3.14159265358979
+#define TIME 0.0
 in vec2 v_uv;
 out vec4 out_color;
 ${body}`;
@@ -140,11 +159,18 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 		return c;
 	}
 
-	// One view: a canvas that draws `rows` of a lib; `draw(rows, shape)` again after an edit.
+	// A thing's picture (game/assets/tiles/props/<id>.png) for the editor's own drawing; null — not drawn yet.
+	const thingPic = (store, id) => picture(store, `${TILES}props/${id}.png`, PROP_PX);
+	// A ground's picture, through `grounds.same` (v0.8.4.43.28); null — none, its colour then.
+	const groundPic = (store, lib, id) => picture(store, `${TILES}ground/${lib.grounds.same?.[id] || id}.png`, GROUND_PX);
+
+	// One view: a canvas that draws `rows` of a lib; `draw(rows, shape)` again after an edit. `bodies` — rules.things.bodies:
+	// the things of a chunk's furnishings drawn as the game draws them (v0.8.4.43.31).
 	class View {
-		constructor(store, lib) {
+		constructor(store, lib, bodies = {}) {
 			this.store = store;
 			this.lib = lib;
+			this.bodies = bodies;
 			this.canvas = document.createElement('canvas');
 			this.canvas.className = 'mapview';
 			this.ready = this.init().catch((e) => { this.failed = e.message; });
@@ -177,9 +203,9 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
 			const g = this.lib.grounds;
 			const order = g.order;
-			const props = propIds(this.lib);
+			const props = (this.props = propIds(this.lib, this.bodies));
 			this.units = {};
-			this.array('grounds', 0, GROUND_PX, await Promise.all(order.map(async (id) => (await picture(this.store, `${TILES}ground/${id}.png`, GROUND_PX)) || solid(GROUND_PX, g.colour?.[id]))), true);
+			this.array('grounds', 0, GROUND_PX, await Promise.all(order.map(async (id) => (await groundPic(this.store, this.lib, id)) || solid(GROUND_PX, g.colour?.[id]))), true);
 			this.array('props', 1, PROP_PX, await Promise.all(props.map(async (id) => (await picture(this.store, `${TILES}props/${id}.png`, PROP_PX)) || solid(PROP_PX, null))), false);
 			const sheets = [], table = new Uint8Array(MAX_GROUNDS * MAX_GROUNDS * 4);
 			for (const pair of g.edges || []) {
@@ -195,8 +221,17 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			this.tex2d('light', 4, 1, 1, new Uint8Array(4), gl.LINEAR);
 			const sharp = (g.sharp || []).reduce((m, id) => (order.includes(id) ? m | (1 << order.indexOf(id)) : m), 0);
 			const sizes = new Float32Array(MAX_PROPS).fill(1);
-			props.forEach((id, i) => { if (i < MAX_PROPS) sizes[i] = Number(g.size?.[id] ?? 1); });
+			const dims = new Float32Array(MAX_PROPS * 2).fill(1);
+			props.forEach((id, i) => {
+				if (i >= MAX_PROPS) return;
+				sizes[i] = Number(g.size?.[id] ?? 1);
+				const sz = this.bodies[id]?.size || [1, 1];
+				dims[i * 2] = Number(sz[0]); dims[i * 2 + 1] = Number(sz[1]);
+			});
+			const kin = new Int32Array(MAX_GROUNDS).map((_, i) => (i < order.length ? Math.max(0, order.indexOf(g.same?.[order[i]] || order[i])) : i));
 			const u = (n) => gl.getUniformLocation(prog, n);
+			gl.uniform2fv(u('prop_dims'), dims);
+			gl.uniform1iv(u('kin'), kin);
 			gl.uniform1f(u('repeat_cells'), Number(g.repeat ?? 3));
 			gl.uniform1i(u('sharp_mask'), sharp);
 			gl.uniform1fv(u('prop_size'), sizes);
@@ -242,13 +277,21 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 		}
 
 		// `rows` with marks already stamped as floor, `keys` — groundKeys of the place; `px` — a square's side on screen;
-		// `grounds` — the squares' grounds as the game counted them (LayoutGen.grounds with its patches), when known.
-		async draw(rows, keys, px, grounds = null) {
+		// `grounds` — the squares' grounds as the game counted them (LayoutGen.grounds with its patches), when known;
+		// `things` — [{body, x, y, turn}] at their top left squares (MapGround.place).
+		async draw(rows, keys, px, grounds = null, things = []) {
 			await this.ready;
 			if (this.failed || !rows.length) return;
 			const gl = this.gl;
 			const m = cellBytes(this.lib, rows, keys);
 			if (grounds) grounds.forEach((g, i) => { m.bytes[i * 4] = g; });
+			for (const t of things) {
+				const at = this.props.indexOf(t.body);
+				if (at < 0 || t.x < 0 || t.y < 0 || t.x >= m.w || t.y >= m.h) continue;
+				const i = (t.y * m.w + t.x) * 4;
+				m.bytes[i + 1] = at + 1;
+				m.bytes[i + 2] = (t.turn || 0) % 4;
+			}
 			const dpr = window.devicePixelRatio || 1;
 			this.canvas.width = Math.round(m.w * px * dpr);
 			this.canvas.height = Math.round(m.h * px * dpr);
@@ -264,5 +307,6 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 		}
 	}
 
-	return { View, turned, shapeOf, chunkShape, groundKeys, groundOf, propOf, propIds, edgeCells, stamped, cellBytes, glsl, BLANK, FLOOR, SOCKET };
+	return { View, turned, shapeOf, chunkShape, groundKeys, groundOf, propOf, propIds, edgeCells, stamped, cellBytes, glsl, turnCell, turnOf, footprint,
+		thingPic, groundPic, BLANK, FLOOR, SOCKET };
 })();

@@ -14,6 +14,7 @@
 'use strict';
 
 const L = 'game/data/layouts.json';
+const R = 'game/data/rules.json';  // the bodies of things for the furnishings (v0.8.4.43.31)
 // The cells' names of layouts.json `cells` in the author's words; a new cell shows its own name.
 const CELL_RU = {
 	wall: 'стена', window: 'окно', floor: 'пол', road: 'дорога', path: 'тропа', door: 'дверь', difficult: 'труднопроходимо',
@@ -180,7 +181,7 @@ function propsPanel(app, c, e) {
 }
 
 let lib = null;
-const paint = { char: '#', tool: 'brush', px: 40, symbols: true, history: new Map() };
+const paint = { char: '#', tool: 'brush', px: 40, symbols: true, history: new Map(), mode: 'cells', turn: 0 };
 
 const app = new EditorApp({
 	key: 'chunks',
@@ -188,18 +189,19 @@ const app = new EditorApp({
 	viewTitle: 'Рисунок',
 	welcome: `
 		<h2>Редактор чанков</h2>
-		<p>Чанки карт мест из <code>game/data/layouts.json</code>: комнаты зданий, залы пещер, приметы открытых мест. Рисуйте клетками, ставьте метки и гнёзда дверей; справа сразу видно, как игра нарисует чанк по двойной сетке своими текстурами.</p>
+		<p>Чанки карт мест из <code>game/data/layouts.json</code>: комнаты зданий, залы пещер, приметы и куски открытых мест. Режим «Клетки» — рисуйте клетками из каталога слева, ставьте метки и гнёзда дверей. Режим «Обстановка» — расставляйте вещи из каталога: у чанка может быть много обстановок, игра смешивает их вещи так, чтобы они не мешали друг другу. Рисунок — как его нарисует игра, по двойной сетке своими текстурами.</p>
 		<p><b>Открыть папку</b> — корень репозитория (нужен Chrome или Edge): тогда страница читает шейдер карты и текстуры <code>game/assets/tiles</code>. Или <code>python tools/editors/serve.py</code> — и любой браузер.</p>
 		<p class="muted">Без корня (только <code>game/data</code>) чанки правятся, но предпросмотр не рисуется.</p>`,
 
 	async load(app) {
 		await app.readFile(L);
+		await app.readFile(R, { optional: true });
 		lib = app.files.get(L).data;
 		app.addColl({
 			id: 'chunks', title: 'Чанки', group: 'Карты', file: L, at: ['chunks'], type: 'array', idKey: 'id',
 			name: (e) => e.id,
 			sub: (e) => [e.tile ? 'кусок открытого места: ' + ru(TILE_RU, e.tile) : e.landmarks ? 'примета: ' + e.landmarks.map((x) => KIND_RU[x] || x).join(', ') : e.generic && !e.kinds?.length ? 'общий' : (e.kinds || []).map((x) => KIND_RU[x] || x).join(', '), (e.roles || []).map((x) => ROLE_RU[x] || x).join(', '), SIZE_RU[e.size] || e.size, size(e)].filter(Boolean).join(' · '),
-			labels: { kinds: 'виды мест', roles: 'роли комнат', size: 'размер', marks: 'метки', rows: 'клетки', landmarks: 'примета открытой карты', generic: 'общий для любого вида', tags: 'теги комнаты' },
+			labels: { kinds: 'виды мест', roles: 'роли комнат', size: 'размер', marks: 'метки', rows: 'клетки', furnish: 'обстановки', landmarks: 'примета открытой карты', generic: 'общий для любого вида', tags: 'теги комнаты' },
 			refs: [{ p: 'kinds.[]', to: 'kinds' }],
 			filterOrder: ['kinds', 'roles', 'size', 'landmarks', 'generic', 'tags'],
 			computed: { 'ширина': (e) => e.rows?.[0]?.length, 'высота': (e) => e.rows?.length },
@@ -234,7 +236,9 @@ function check() {
 	return errs;
 }
 
-function problems(ch) {
+const problems = (ch) => [...cellProblems(ch), ...furnishProblems(ch)];
+
+function cellProblems(ch) {
 	const out = [];
 	const rows = ch.rows || [];
 	const marks = ch.marks || {};
@@ -291,9 +295,99 @@ function sockets(rows) {
 
 /* ---------- the painter ---------- */
 
+// rules.things.bodies: the things a furnishing may set (v0.8.4.43.31), {} while rules.json is not read.
+const bodies = () => app.files.get(R)?.data?.things?.bodies || {};
+const RULES_MAP = () => app.files.get(R)?.data?.map || {};
+const bodyName = (id) => bodies()[id]?.name || id;
+const dimsOf = (id, turn) => { const s = bodies()[id]?.size || [1, 1]; return turn % 2 ? [s[1], s[0]] : [s[0], s[1]]; };
+const cellsOf = (t) => MapView.footprint(bodies()[t.body]?.size || [1, 1], t.x, t.y, t.turn || 0);
+// A mark whose square a station takes in the game (rules.map.stations, station_bodies): no thing of a furnishing there.
+const stationAt = (ch, x, y) => { const c = ch.rows?.[y]?.[x], name = (ch.marks || {})[c]; return name && (RULES_MAP().stations || []).concat(Object.keys(RULES_MAP().station_bodies || {})).includes(name) ? name : ''; };
+
+// The furnishings' faults (the checks of MapSpots: a thing on floor squares inside its chunk, none over another).
+function furnishProblems(ch) {
+	const out = [];
+	const rows = ch.rows || [];
+	const marks = ch.marks || {};
+	const known = bodies();
+	const floor = (x, y) => { const c = rows[y]?.[x]; return c !== undefined && c !== MapView.BLANK && (c in marks || !lib.cells[c]?.solid); };
+	(ch.furnish || []).forEach((set, i) => {
+		const name = `обстановка «${set.name || i + 1}»`;
+		const seen = new Map();
+		for (const t of set.things || []) {
+			if (Object.keys(known).length && !known[t.body]) { out.push(`${name}: неизвестная вещь ${t.body}`); continue; }
+			for (const [x, y] of cellsOf(t)) {
+				if (!floor(x, y)) out.push(`${name}: ${bodyName(t.body)} (${x + 1}, ${y + 1}) не на полу`);
+				else if (stationAt(ch, x, y)) out.push(`${name}: ${bodyName(t.body)} (${x + 1}, ${y + 1}) на метке «${stationAt(ch, x, y)}» — там игра ставит её`);
+				const k = x + ',' + y;
+				if (seen.has(k)) out.push(`${name}: ${bodyName(t.body)} и ${seen.get(k)} на одной клетке (${x + 1}, ${y + 1})`);
+				seen.set(k, bodyName(t.body));
+			}
+		}
+	});
+	return [...new Set(out)];
+}
+
+// A seeded random of the preview: mulberry32.
+function seeded(a) {
+	return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+// What the generator may lay in this chunk (MapSpots._furnished): every thing of every furnishing in an order of the seed,
+// each standing where its squares are free floor and the floor stays one piece; a station's mark is taken first.
+function mixOf(e, seed) {
+	const rnd = seeded(seed);
+	const all = (e.furnish || []).flatMap((set, i) => (set.things || []).map((t) => ({ ...t, set: i })));
+	for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+	const rows = e.rows, marks = e.marks || {};
+	const stations = new Set([...(RULES_MAP().stations || []), ...Object.keys(RULES_MAP().station_bodies || {})]);
+	const taken = new Set();
+	const floor = new Set();
+	rows.forEach((r, y) => [...r].forEach((c, x) => {
+		if (c === MapView.BLANK || (!(c in marks) && lib.cells[c]?.solid) || lib.cells[c]?.keep_free) return;
+		floor.add(x + ',' + y);
+		if (c in marks && stations.has(marks[c])) taken.add(x + ',' + y);
+	}));
+	const walls = new Set();
+	const whole = (extra) => {  // MapSpots._whole: the free floor one piece
+		const open = [...floor].filter((k) => !walls.has(k) && !extra.has(k));
+		if (!open.length) return true;
+		const seen = new Set([open[0]]), todo = [open[0]], set = new Set(open);
+		while (todo.length) {
+			const [x, y] = todo.pop().split(',').map(Number);
+			for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = `${x + dx},${y + dy}`; if (set.has(k) && !seen.has(k)) { seen.add(k); todo.push(k); } }
+		}
+		return seen.size === set.size;
+	};
+	const out = [];
+	for (const t of all) {
+		const b = bodies()[t.body];
+		if (!b) continue;
+		const mine = cellsOf(t).map(([x, y]) => x + ',' + y);
+		if (!mine.every((k) => floor.has(k) && !taken.has(k))) continue;
+		if ((b.blocks || []).includes('path') && !whole(new Set(mine))) continue;
+		mine.forEach((k) => { taken.add(k); if ((b.blocks || []).includes('path')) walls.add(k); });
+		out.push(t);
+	}
+	return out;
+}
+
+// The groups of the catalog of things: the groups of spots (layouts.json → spots), the stations, the rest.
+function thingGroups() {
+	const ids = Object.keys(bodies());
+	const out = [];
+	const used = new Set();
+	const st = new Set(Object.values(RULES_MAP().station_bodies || {}));
+	const take = (name, list) => { const l = list.filter((id) => ids.includes(id) && !used.has(id)); l.forEach((id) => used.add(id)); if (l.length) out.push([name, l]); };
+	take('Станции', ids.filter((id) => st.has(id)));
+	for (const g of Object.values(lib.spots?.groups || {})) take(g.name, [...new Set(Object.values(g.bodies || {}).flatMap((w) => Object.keys(w)))]);
+	take('Прочее', ids);
+	return out;
+}
+
 function painter(app, c, e) {
 	const views = (paint.views ||= new Map());
-	if (!views.has(app.store)) views.set(app.store, new MapView.View(app.store, lib));
+	if (!views.has(app.store)) views.set(app.store, new MapView.View(app.store, lib, bodies()));
 	const view = views.get(app.store);
 	const hist = paint.history.get(e.id) || { back: [], fwd: [] };
 	paint.history.set(e.id, hist);
@@ -303,23 +397,27 @@ function painter(app, c, e) {
 	const stage = h('div', { class: 'stage' }, view.canvas, over);
 	const status = h('div', { class: 'muted small' });
 	const issues = h('ul', { class: 'errs' });
-	let drag = null;  // {from: [x, y], to: [x, y], button}
+	const furnishing = () => paint.mode === 'furnish';
+	let drag = null;  // cells: {from, to, before, ch}; things: {move: index, off: [dx, dy], before}
 	let hover = null;
 
-	const snapshot = () => ({ rows: [...e.rows], marks: { ...(e.marks || {}) } });
+	const snapshot = () => ({ rows: [...e.rows], marks: { ...(e.marks || {}) }, furnish: JSON.parse(JSON.stringify(e.furnish || [])) });
 	const commit = (before) => {
 		if (Fmt.equal(before, snapshot())) return;
 		hist.back.push(before);
 		if (hist.back.length > 200) hist.back.shift();
 		hist.fwd = [];
+		if (!e.furnish?.length) delete e.furnish;
 		app.changed(c);
 		redraw();
 	};
 	const restore = (s) => {
 		e.rows = s.rows;
 		if (Object.keys(s.marks).length || e.marks) e.marks = s.marks;
+		if (s.furnish.length) e.furnish = s.furnish; else delete e.furnish;
 		app.changed(c);
 		refreshMarks();
+		refreshSets();
 		redraw();
 	};
 	const undo = () => { const s = hist.back.pop(); if (s) { hist.fwd.push(snapshot()); restore(s); } };
@@ -349,12 +447,80 @@ function painter(app, c, e) {
 		}
 	};
 
+	/* furnishings: lists of things; the active one is edited, the others shown faint */
+	const sets = () => (e.furnish ||= []);
+	const active = () => {
+		const list = sets();
+		const i = Math.min(paint.sets?.[e.id] ?? 0, list.length - 1);
+		return i >= 0 ? list[i] : null;
+	};
+	const activeIndex = () => sets().indexOf(active());
+	const floorAt = (x, y) => { const ch = at(x, y); return ch !== undefined && ch !== MapView.BLANK && (ch in (e.marks || {}) || !lib.cells[ch]?.solid); };
+	const thingAt = (set, x, y) => (set?.things || []).findIndex((t) => cellsOf(t).some(([a, b]) => a === x && b === y));
+	const fits = (set, t, skip = -1) => cellsOf(t).every(([x, y]) => floorAt(x, y) && !stationAt(e, x, y) && (set.things || []).every((o, i) => i === skip || !cellsOf(o).some(([a, b]) => a === x && b === y)));
+	const centred = (body, turn, p) => { const [w, hh] = dimsOf(body, turn); return { x: p[0] - Math.floor((w - 1) / 2), y: p[1] - Math.floor((hh - 1) / 2) }; };
+	const ghost = () => (paint.body && hover && furnishing() && paint.preview == null ? { body: paint.body, turn: paint.turn || 0, ...centred(paint.body, paint.turn || 0, hover) } : null);
+	const shown = () => (paint.preview != null ? mixOf(e, paint.preview) : furnishing() || paint.showThings !== false ? active()?.things || [] : []);
+	const rotate = () => {
+		if (!furnishing()) return;
+		if (paint.body) { paint.turn = ((paint.turn || 0) + 1) % 4; overlay(); return; }
+		const set = active(), i = paint.sel ?? -1;
+		const t = set?.things?.[i];
+		if (!t) return;
+		const before = snapshot();
+		const turn = ((t.turn || 0) + 1) % 4;
+		const next = { ...t, turn };
+		if (!fits(set, next, i)) return app.toast('Повёрнутая вещь не помещается: заденет стену или другую вещь');
+		if (turn) t.turn = turn; else delete t.turn;
+		commit(before);
+	};
+	const removeSel = () => {
+		const set = active(), i = paint.sel ?? -1;
+		if (!set?.things?.[i]) return;
+		const before = snapshot();
+		set.things.splice(i, 1);
+		paint.sel = null;
+		commit(before);
+		refreshSets();
+	};
+
 	over.oncontextmenu = (ev) => ev.preventDefault();
 	over.onpointerdown = (ev) => {
 		over.setPointerCapture(ev.pointerId);
 		const p = cellAt(ev);
+		hover = p;  // a click with no move before it still places where it is
+		if (furnishing()) {
+			if (paint.preview != null) return;
+			let set = active();
+			if (ev.button === 2) {  // the right button takes away the thing under it
+				const i = thingAt(set, ...p);
+				if (i < 0) { paint.body = null; refreshCatalog(); overlay(); return; }
+				const before = snapshot();
+				set.things.splice(i, 1);
+				paint.sel = null;
+				commit(before);
+				refreshSets();
+				return;
+			}
+			const g = ghost();
+			if (g) {
+				if (!set) { sets().push({ name: 'Обстановка 1', things: [] }); set = active(); }
+				if (!fits(set, g)) return app.toast('Здесь не встанет: нужна клетка пола, свободная от вещей этой обстановки и от меток станций (очаг, кровать, горн…)');
+				const before = snapshot();
+				(set.things ||= []).push({ body: g.body, x: g.x, y: g.y, ...(g.turn ? { turn: g.turn } : {}) });
+				paint.sel = set.things.length - 1;
+				commit(before);
+				refreshSets();
+				return;
+			}
+			const i = thingAt(set, ...p);
+			paint.sel = i >= 0 ? i : null;
+			if (i >= 0) drag = { move: i, off: [p[0] - set.things[i].x, p[1] - set.things[i].y], before: snapshot() };
+			overlay();
+			return;
+		}
 		const ch = ev.button === 2 ? MapView.FLOOR : paint.char;
-		if (paint.tool === 'pick' || ev.altKey) { const got = at(...p); if (got !== undefined) { paint.char = got; refreshPalette(); } return; }
+		if (paint.tool === 'pick' || ev.altKey) { const got = at(...p); if (got !== undefined) { paint.char = got; refreshCatalog(); } return; }
 		drag = { from: p, to: p, before: snapshot(), ch };
 		if (paint.tool === 'fill') { fill(p[0], p[1], ch); commit(drag.before); drag = null; return; }
 		if (paint.tool === 'brush') { put(p[0], p[1], ch); redraw(); }
@@ -362,22 +528,32 @@ function painter(app, c, e) {
 	};
 	over.onpointermove = (ev) => {
 		const p = cellAt(ev);
+		const moved = !hover || hover[0] !== p[0] || hover[1] !== p[1];
 		hover = p;
 		const ch = at(...p);
-		status.textContent = ch === undefined ? '' : `(${p[0] + 1}, ${p[1] + 1}) «${ch}» ${ch in (e.marks || {}) ? 'метка: ' + e.marks[ch] : cellName(ch) || (ch === ' ' ? 'пусто — карта как есть' : '?')}`;
+		const thing = furnishing() ? active()?.things?.[thingAt(active(), ...p)] : null;
+		status.textContent = ch === undefined ? '' : `(${p[0] + 1}, ${p[1] + 1}) «${ch}» ${ch in (e.marks || {}) ? 'метка: ' + e.marks[ch] : cellName(ch) || (ch === ' ' ? 'пусто — карта как есть' : '?')}${thing ? ' · ' + bodyName(thing.body) : ''}`;
+		if (drag?.move != null) {
+			const set = active(), t = set.things[drag.move];
+			const next = { ...t, x: p[0] - drag.off[0], y: p[1] - drag.off[1] };
+			if (moved && fits(set, next, drag.move)) { t.x = next.x; t.y = next.y; redraw(); }
+			return;
+		}
 		if (drag) {
 			if (paint.tool === 'brush' && (p[0] !== drag.to[0] || p[1] !== drag.to[1])) line(drag.to, p, (x, y) => put(x, y, drag.ch));
 			drag.to = p;
 			if (paint.tool === 'brush') redraw();
 		}
-		overlay();
+		if (moved) overlay();
 	};
 	over.onpointerup = () => {
 		if (!drag) return;
-		const [x0, y0, x1, y1] = box(drag.from, drag.to);
-		if (paint.tool === 'rect') for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, drag.ch);
-		if (paint.tool === 'frame') for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (x === x0 || x === x1 || y === y0 || y === y1) put(x, y, drag.ch);
 		const before = drag.before;
+		if (drag.move == null) {
+			const [x0, y0, x1, y1] = box(drag.from, drag.to);
+			if (paint.tool === 'rect') for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, drag.ch);
+			if (paint.tool === 'frame') for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (x === x0 || x === x1 || y === y0 || y === y1) put(x, y, drag.ch);
+		}
 		drag = null;
 		commit(before);
 	};
@@ -396,11 +572,44 @@ function painter(app, c, e) {
 		}
 	}
 
-	// The symbols, the grid, the marks and the sockets over the game's picture.
+	// A thing's picture over its squares as map_ground.gdshader lays it: a square of the long side, turned against the clock.
+	const pics = new Map();
+	const pic = (id) => {
+		if (!pics.has(id)) { pics.set(id, null); MapView.thingPic(app.store, id).then((b) => { pics.set(id, b); overlay(); }); }
+		return pics.get(id);
+	};
+	function drawThing(g, t, alpha, outline, dash = false) {
+		const px = paint.px;
+		const [w, hh] = dimsOf(t.body, t.turn || 0);
+		const s = bodies()[t.body]?.size || [1, 1];
+		const side = Math.max(s[0], s[1]) * Number(lib.grounds.size?.[t.body] ?? 1) * px;
+		const img = pic(t.body);
+		g.save();
+		g.globalAlpha = alpha;
+		if (img) {
+			g.translate((t.x + w / 2) * px, (t.y + hh / 2) * px);
+			g.rotate(-(t.turn || 0) * Math.PI / 2);
+			g.drawImage(img, -side / 2, -side / 2, side, side);
+		} else {
+			g.fillStyle = 'rgba(160,120,70,0.8)';
+			g.fillRect(t.x * px + 3, t.y * px + 3, w * px - 6, hh * px - 6);
+		}
+		g.restore();
+		if (outline) {
+			g.save();
+			g.strokeStyle = outline; g.lineWidth = 2;
+			if (dash) g.setLineDash([5, 4]);
+			g.strokeRect(t.x * px + 1.5, t.y * px + 1.5, w * px - 3, hh * px - 3);
+			g.restore();
+		}
+	}
+
+	// The symbols, the grid, the marks, the sockets and the furnishings over the game's picture.
 	function overlay() {
 		const px = paint.px, dpr = window.devicePixelRatio || 1;
 		over.width = W() * px * dpr; over.height = H() * px * dpr;
 		over.style.width = W() * px + 'px'; over.style.height = H() * px + 'px';
+		over.style.cursor = furnishing() && !paint.body ? 'default' : 'crosshair';
 		const g = over.getContext('2d');
 		g.scale(dpr, dpr);
 		g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -413,19 +622,23 @@ function painter(app, c, e) {
 				g.fillStyle = lib.grounds.colour?.[MapView.groundOf(lib, placeKeys(), ch in marks ? '.' : ch)] || '#777';
 				g.fillRect(x * px, y * px, px, px);
 			}
+			for (const t of shown()) drawThing(g, t, 1, null);
 		}
 		g.strokeStyle = 'rgba(255,255,255,0.12)';
 		g.lineWidth = 1;
 		for (let x = 0; x <= W(); x++) { g.beginPath(); g.moveTo(x * px + 0.5, 0); g.lineTo(x * px + 0.5, H() * px); g.stroke(); }
 		for (let y = 0; y <= H(); y++) { g.beginPath(); g.moveTo(0, y * px + 0.5); g.lineTo(W() * px, y * px + 0.5); g.stroke(); }
 		g.font = `600 ${Math.round(px * 0.42)}px ui-monospace, Consolas, monospace`;
+		const symbols = paint.symbols && !furnishing();
 		for (let y = 0; y < H(); y++) for (let x = 0; x < W(); x++) {
 			const ch = at(x, y), cx = x * px + px / 2, cy = y * px + px / 2;
 			if (ch === ' ') { g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x * px, y * px, px, px); continue; }
 			if (ch in marks) {
+				g.globalAlpha = furnishing() ? 0.45 : 1;
 				g.fillStyle = 'rgba(208,138,76,0.9)';
 				g.beginPath(); g.arc(cx, cy, px * 0.34, 0, 7); g.fill();
 				g.fillStyle = '#17181a'; g.fillText(ch, cx, cy + 1);
+				g.globalAlpha = 1;
 				continue;
 			}
 			if (ch === MapView.SOCKET) {
@@ -434,12 +647,28 @@ function painter(app, c, e) {
 				g.strokeRect(x * px + 4, y * px + 4, px - 8, px - 8);
 				g.lineWidth = 1;
 			}
-			if (paint.symbols && ch !== MapView.FLOOR) {
+			if (symbols && ch !== MapView.FLOOR) {
 				g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillText(ch, cx + 1, cy + 2);
 				g.fillStyle = 'rgba(255,255,255,0.92)'; g.fillText(ch, cx, cy + 1);
 			}
 		}
-		if (drag && (paint.tool === 'rect' || paint.tool === 'frame')) {
+		if (furnishing()) {
+			if (paint.preview != null) {  // which furnishing each thing of the mix came from
+				g.font = `700 ${Math.round(px * 0.32)}px system-ui, sans-serif`;
+				for (const t of mixOf(e, paint.preview)) {
+					g.fillStyle = 'rgba(23,24,26,0.8)';
+					g.beginPath(); g.arc(t.x * px + px * 0.24, t.y * px + px * 0.24, px * 0.2, 0, 7); g.fill();
+					g.fillStyle = '#ffd36a'; g.fillText(String(t.set + 1), t.x * px + px * 0.24, t.y * px + px * 0.25);
+				}
+			} else {
+				const mine = activeIndex();
+				if (paint.others) sets().forEach((set, i) => { if (i !== mine) for (const t of set.things || []) drawThing(g, t, 0.35, 'rgba(255,255,255,0.45)', true); });
+				const sel = active()?.things?.[paint.sel ?? -1];
+				if (sel) drawThing(g, sel, 0, '#ffd36a');
+				const gh = ghost();
+				if (gh) drawThing(g, gh, 0.75, fits(active() || { things: [] }, gh) ? '#7bd88f' : '#ff5a4f');
+			}
+		} else if (drag && (paint.tool === 'rect' || paint.tool === 'frame')) {
 			const [x0, y0, x1, y1] = box(drag.from, drag.to);
 			g.strokeStyle = '#ffd36a'; g.lineWidth = 2;
 			g.strokeRect(x0 * px + 1, y0 * px + 1, (x1 - x0 + 1) * px - 2, (y1 - y0 + 1) * px - 2);
@@ -447,12 +676,11 @@ function painter(app, c, e) {
 			g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 2;
 			g.strokeRect(hover[0] * px + 1, hover[1] * px + 1, px - 2, px - 2);
 		}
-		const list = problems(e);
-		issues.replaceChildren(...list.map((m) => h('li', {}, m)));
+		issues.replaceChildren(...problems(e).map((m) => h('li', {}, m)));
 	}
 
 	function redraw() {
-		view.draw(MapView.stamped(e.rows, e.marks), placeKeys(), paint.px).then(() => {
+		view.draw(MapView.stamped(e.rows, e.marks), placeKeys(), paint.px, null, shown()).then(() => {
 			if (view.failed) note.textContent = 'Предпросмотр: ' + view.failed + '. Видны цвета земель.';
 			else note.textContent = view.drawn ? '' : 'Нарисованных краёв нет: края по маске.';
 			overlay();
@@ -460,24 +688,59 @@ function painter(app, c, e) {
 		overlay();
 	}
 
-	/* the palette: cells of layouts.json, the chunk's marks, blank */
-	const palette = h('div', { class: 'palette' });
-	const markBox = h('div', { class: 'palette' });
-	const chip = (ch, label, title) => h('button', { class: 'cell' + (paint.char === ch ? ' on' : ''), title: title || label, onclick: () => { paint.char = ch; if (paint.tool === 'pick') paint.tool = 'brush'; refreshPalette(); refreshTools(); } },
-		h('code', {}, ch === ' ' ? '␣' : ch), ' ', label);
-	function refreshPalette() {
-		const cells = Object.entries(lib.cells).map(([ch, d]) => chip(ch, CELL_RU[d.name] || d.name, `${d.name}${d.solid ? ', непроходимо' : ''}${d.opaque ? ', закрывает вид' : ''}${d.cost ? ', шаг ×' + d.cost : ''}`));
-		palette.replaceChildren(...cells, chip(' ', 'пусто', 'Пусто: карта под чанком остаётся как есть (для примет открытых мест)'));
+	/* the catalog on the left: the cells as pictures in «Клетки», the things in «Обстановка» */
+	const catalog = h('div', { class: 'catalog' });
+	const markBox = h('div', { class: 'catgroup' });
+	const thumb = (draw) => {
+		const cv = h('canvas', { class: 'thumb', width: 96, height: 96 });
+		draw(cv.getContext('2d')).catch?.(() => {});
+		return cv;
+	};
+	const groundThumb = (ch) => thumb(async (g) => {
+		const id = ch === MapView.BLANK ? '' : MapView.groundOf(lib, placeKeys(), ch in (e.marks || {}) ? MapView.FLOOR : ch);
+		g.fillStyle = ch === MapView.BLANK ? '#1b1b1d' : lib.grounds.colour?.[id] || '#666';
+		g.fillRect(0, 0, 96, 96);
+		const img = id ? await MapView.groundPic(app.store, lib, id) : null;
+		if (img) g.drawImage(img, 0, 0, img.width / Number(lib.grounds.repeat ?? 3), img.height / Number(lib.grounds.repeat ?? 3), 0, 0, 96, 96);
+		const prop = ch === MapView.BLANK ? '' : MapView.propOf(lib, placeKeys(), ch);
+		const pp = prop ? await MapView.thingPic(app.store, prop) : null;
+		if (pp) g.drawImage(pp, 0, 0, 96, 96);
+		if (ch === MapView.SOCKET) { g.strokeStyle = '#ffd36a'; g.lineWidth = 8; g.strokeRect(12, 12, 72, 72); }
+		if (ch in (e.marks || {})) { g.fillStyle = 'rgba(208,138,76,0.95)'; g.beginPath(); g.arc(48, 48, 26, 0, 7); g.fill(); g.fillStyle = '#17181a'; g.font = '700 30px ui-monospace, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ch, 48, 50); }
+	});
+	const card = (on, pictureEl, label, sub, title, onclick) => h('button', { class: 'card' + (on ? ' on' : ''), title, onclick }, pictureEl, h('span', { class: 'cardname' }, label), sub ? h('span', { class: 'muted cardsub' }, sub) : null);
+	const cellCard = (ch, label, title) => card(paint.char === ch, groundThumb(ch), label, ch === ' ' ? '␣' : ch, title, () => { paint.char = ch; if (paint.tool === 'pick') paint.tool = 'brush'; refreshCatalog(); refreshTools(); });
+	function refreshCatalog() {
+		if (furnishing()) return refreshThings();
+		const cells = Object.entries(lib.cells).map(([ch, d]) => cellCard(ch, CELL_RU[d.name] || d.name, `«${ch}» ${d.name}${d.solid ? ', непроходимо' : ''}${d.opaque ? ', закрывает вид' : ''}${d.cost ? ', шаг ×' + d.cost : ''}`));
 		refreshMarks();
+		catalog.replaceChildren(h('div', { class: 'cathead' }, 'Клетки'), h('div', { class: 'cards' }, ...cells, cellCard(' ', 'пусто', 'Пусто: карта под чанком остаётся как есть (для примет открытых мест)')), markBox);
 	}
 	function refreshMarks() {
 		const marks = e.marks || {};
-		markBox.replaceChildren(h('span', { class: 'muted' }, 'Метки:'),
-			...Object.entries(marks).map(([ch, name]) => h('span', { class: 'markchip' }, chip(ch, name, `Метка «${ch}»: ${name} — клетка пола с именем`),
-				h('button', { class: 'x', title: 'Переименовать', onclick: () => renameMark(ch) }, '✎'),
-				h('button', { class: 'x', title: 'Убрать метку (клетки станут полом)', onclick: () => dropMark(ch) }, '✕'))),
-			h('button', { class: 'small', onclick: addMark }, '+ метка'));
+		markBox.replaceChildren(h('div', { class: 'cathead' }, 'Метки ', h('button', { class: 'small', onclick: addMark }, '+ метка')),
+			h('div', { class: 'cards' }, ...Object.entries(marks).map(([ch, name]) => h('span', { class: 'markcard' },
+				cellCard(ch, name, `Метка «${ch}»: ${name} — клетка пола с именем`),
+				h('span', { class: 'markbtns' }, h('button', { class: 'x', title: 'Переименовать', onclick: () => renameMark(ch) }, '✎'),
+					h('button', { class: 'x', title: 'Убрать метку (клетки станут полом)', onclick: () => dropMark(ch) }, '✕'))))));
 	}
+	function refreshThings() {
+		const q = (paint.search || '').toLowerCase();
+		const search = h('input', { class: 'search', placeholder: 'поиск вещи…', value: paint.search || '', oninput: (ev) => { paint.search = ev.target.value; refreshThings(); search.focus(); search.setSelectionRange(9e9, 9e9); } });
+		if (!Object.keys(bodies()).length) return catalog.replaceChildren(h('p', { class: 'muted small' }, 'Нет game/data/rules.json — вещей не знаю.'));
+		const groups = thingGroups().map(([name, ids]) => {
+			const list = ids.filter((id) => !q || id.includes(q) || bodyName(id).toLowerCase().includes(q));
+			if (!list.length) return null;
+			return h('div', { class: 'catgroup' }, h('div', { class: 'cathead' }, name), h('div', { class: 'cards' }, ...list.map((id) => {
+				const b = bodies()[id];
+				const cv = thumb(async (g) => { const img = await MapView.thingPic(app.store, id); if (img) g.drawImage(img, 0, 0, 96, 96); else { g.fillStyle = '#5a4630'; g.fillRect(16, 30, 64, 36); } });
+				return card(paint.body === id, cv, b.name || id, `${b.size[0]}×${b.size[1]}${(b.blocks || []).includes('path') ? ' · преграда' : ''}`, `${b.name || id} (${id}): клеток ${b.size.join('×')}${(b.blocks || []).length ? ', закрывает: ' + b.blocks.join(', ') : ''}`,
+					() => { paint.body = paint.body === id ? null : id; paint.turn = 0; paint.sel = null; refreshThings(); overlay(); });
+			})));
+		}).filter(Boolean);
+		catalog.replaceChildren(h('div', { class: 'cathead' }, 'Вещи'), search, ...groups);
+	}
+
 	const known = () => [...new Set(lib.chunks.flatMap((x) => Object.values(x.marks || {})))].sort();
 	function addMark() {
 		const name = (prompt(`Имя метки (что стоит на клетке). Уже есть: ${known().join(', ')}`) || '').trim();
@@ -493,7 +756,7 @@ function painter(app, c, e) {
 		e.marks = { ...marks, [ch]: name };
 		paint.char = ch;
 		commit(before);
-		refreshPalette();
+		refreshCatalog();
 	}
 	function renameMark(ch) {
 		const name = (prompt(`Новое имя метки «${ch}»`, e.marks[ch]) || '').trim();
@@ -501,7 +764,7 @@ function painter(app, c, e) {
 		const before = snapshot();
 		e.marks = { ...e.marks, [ch]: name };
 		commit(before);
-		refreshMarks();
+		refreshCatalog();
 	}
 	function dropMark(ch) {
 		const before = snapshot();
@@ -510,7 +773,38 @@ function painter(app, c, e) {
 		e.rows = e.rows.map((r) => r.replaceAll(ch, MapView.FLOOR));
 		commit(before);
 		if (paint.char === ch) paint.char = '#';
-		refreshPalette();
+		refreshCatalog();
+	}
+
+	/* the bar of furnishings */
+	const setBar = h('div', { class: 'palette setbar' });
+	const pickSet = (i) => { (paint.sets ||= {})[e.id] = i; paint.sel = null; paint.preview = null; refreshSets(); redraw(); };
+	function refreshSets() {
+		const list = sets();
+		const mine = activeIndex();
+		const edit = (f) => () => { const before = snapshot(); f(); commit(before); refreshSets(); };
+		setBar.replaceChildren(...[h('span', { class: 'muted' }, 'Обстановки:'),
+			...list.map((set, i) => h('button', { class: i === mine && paint.preview == null ? 'on' : '', title: 'Сделать текущей: её вещи правятся', onclick: () => pickSet(i) }, `${set.name || 'Обстановка ' + (i + 1)} (${(set.things || []).length})`)),
+			h('button', { class: 'small', title: 'Новая пустая обстановка', onclick: edit(() => { list.push({ name: `Обстановка ${list.length + 1}`, things: [] }); (paint.sets ||= {})[e.id] = list.length - 1; }) }, '+ новая'),
+			mine >= 0 ? h('button', { class: 'small', title: 'Копия текущей — поменять в ней пару вещей', onclick: edit(() => { list.push({ ...JSON.parse(JSON.stringify(list[mine])), name: (list[mine].name || 'Обстановка') + ' — копия' }); (paint.sets ||= {})[e.id] = list.length - 1; }) }, '⧉ копия') : null,
+			mine >= 0 ? h('button', { class: 'small', title: 'Переименовать текущую', onclick: () => { const n = (prompt('Имя обстановки', list[mine].name || '') || '').trim(); if (n) edit(() => { list[mine].name = n; })(); } }, '✎') : null,
+			mine >= 0 ? h('button', { class: 'small', title: 'Удалить текущую', onclick: () => { if (confirm(`Удалить «${list[mine].name}»?`)) edit(() => { list.splice(mine, 1); (paint.sets ||= {})[e.id] = Math.max(0, mine - 1); })(); } }, '✕') : null,
+			h('span', { class: 'grow' }),
+			h('label', { class: 'small', title: 'Вещи остальных обстановок — бледно, пунктиром' }, h('input', { type: 'checkbox', checked: !!paint.others, onchange: (ev) => { paint.others = ev.target.checked; overlay(); } }), ' другие обстановки'),
+			list.length ? h('button', { class: paint.preview != null ? 'on' : '', title: 'Как генератор смешает обстановки: каждая вещь из любой обстановки, если не мешает уже поставленным и не перекрывает проход. Нажать ещё — другой сид.',
+				onclick: () => { paint.preview = Math.floor(Math.random() * 1e9); paint.body = null; refreshSets(); refreshThings(); redraw(); } }, '🎲 Пример генерации') : null,
+			paint.preview != null ? h('button', { class: 'small', onclick: () => { paint.preview = null; refreshSets(); redraw(); } }, 'К правке') : null].filter(Boolean));
+		setBar.style.display = furnishing() ? '' : 'none';
+		setHelp.style.display = furnishing() ? '' : 'none';
+	}
+	const setHelp = h('p', { class: 'muted small' }, 'Выберите вещь слева — она следует за курсором, R поворачивает, щелчок ставит в текущую обстановку (вещь остаётся выбранной — можно ставить ещё). Без выбранной вещи: щелчок выделяет, перетаскивание двигает, R поворачивает, Delete или правая кнопка убирает. Esc снимает выбор. Обстановки могут ставить вещи на одни и те же клетки: игра возьмёт из них непересекающийся набор.');
+
+	const modeBar = h('div', { class: 'palette modes' });
+	function refreshMode() {
+		modeBar.replaceChildren(...[['cells', 'Клетки'], ['furnish', 'Обстановка']].map(([id, label]) =>
+			h('button', { class: (paint.mode || 'cells') === id ? 'on' : '', onclick: () => { paint.mode = id; paint.preview = null; paint.sel = null; refreshMode(); refreshCatalog(); refreshTools(); refreshSets(); redraw(); } }, label)));
+		setBar.style.display = furnishing() ? '' : 'none';
+		tools.style.display = furnishing() ? 'none' : '';
 	}
 
 	const tools = h('div', { class: 'palette' });
@@ -518,26 +812,45 @@ function painter(app, c, e) {
 		tools.replaceChildren(...TOOLS.map(([id, label]) => h('button', { class: paint.tool === id ? 'on' : '', onclick: () => { paint.tool = id; refreshTools(); } }, label)));
 	}
 
-	/* the size, turns and mirrors */
-	const whole = (f) => () => { const before = snapshot(); e.rows = f(e.rows); commit(before); };
-	const grow = (side, n) => whole((rows) => {
-		const w = rows[0].length;
-		if (n < 0) {
-			if ((side === 'n' || side === 's') && rows.length <= 1) return rows;
-			if ((side === 'w' || side === 'e') && w <= 1) return rows;
-			return side === 'n' ? rows.slice(1) : side === 's' ? rows.slice(0, -1) : side === 'w' ? rows.map((r) => r.slice(1)) : rows.map((r) => r.slice(0, -1));
+	/* the size, turns and mirrors: the furnishings turn with the chunk */
+	const turnAll = (rot, flip) => () => {
+		const before = snapshot();
+		const w = W(), hh = H();
+		for (const set of e.furnish || []) for (const t of set.things || []) {
+			const cells = cellsOf(t).map((p) => MapView.turnCell(p, w, hh, rot, flip));
+			t.x = Math.min(...cells.map((p) => p[0]));
+			t.y = Math.min(...cells.map((p) => p[1]));
+			const turn = MapView.turnOf(t.turn || 0, rot, flip);
+			if (turn) t.turn = turn; else delete t.turn;
 		}
-		const fillCh = paint.char.length === 1 && !(paint.char in (e.marks || {})) ? paint.char : MapView.FLOOR;
-		return side === 'n' ? [fillCh.repeat(w), ...rows] : side === 's' ? [...rows, fillCh.repeat(w)] : side === 'w' ? rows.map((r) => fillCh + r) : rows.map((r) => r + fillCh);
-	});
+		e.rows = MapView.turned(e.rows, rot, flip);
+		commit(before);
+	};
+	const shiftThings = (dx, dy) => { for (const set of e.furnish || []) for (const t of set.things || []) { t.x += dx; t.y += dy; } };
+	const grow = (side, n) => () => {
+		const before = snapshot();
+		const rows = e.rows, w = rows[0].length;
+		if (n < 0) {
+			if ((side === 'n' || side === 's') && rows.length <= 1) return;
+			if ((side === 'w' || side === 'e') && w <= 1) return;
+			e.rows = side === 'n' ? rows.slice(1) : side === 's' ? rows.slice(0, -1) : side === 'w' ? rows.map((r) => r.slice(1)) : rows.map((r) => r.slice(0, -1));
+		} else {
+			const fillCh = paint.char.length === 1 && !(paint.char in (e.marks || {})) ? paint.char : MapView.FLOOR;
+			e.rows = side === 'n' ? [fillCh.repeat(w), ...rows] : side === 's' ? [...rows, fillCh.repeat(w)] : side === 'w' ? rows.map((r) => fillCh + r) : rows.map((r) => r + fillCh);
+		}
+		if (side === 'n') shiftThings(0, n);
+		if (side === 'w') shiftThings(n, 0);
+		commit(before);
+	};
 	const sideBtns = (side, label) => h('span', { class: 'grow2' }, label, h('button', { class: 'small', title: 'Добавить ряд текущей клеткой', onclick: grow(side, 1) }, '+'), h('button', { class: 'small', title: 'Убрать крайний ряд', onclick: grow(side, -1) }, '−'));
 
-	const shapeSel = h('select', { title: 'На какой карте показать чанк: земля пола у здания, пещеры и открытого места своя', onchange: (ev) => { paint.shape = ev.target.value || null; redraw(); } },
+	const shapeSel = h('select', { title: 'На какой карте показать чанк: земля пола у здания, пещеры и открытого места своя', onchange: (ev) => { paint.shape = ev.target.value || null; refreshCatalog(); redraw(); } },
 		h('option', { value: '' }, `карта: по виду (${SHAPES[MapView.chunkShape(lib, e)]})`),
 		...Object.entries(SHAPES).map(([k, v]) => h('option', { value: k, selected: paint.shape === k }, 'карта: ' + v)));
 	const zoom = h('select', { onchange: (ev) => { paint.px = Number(ev.target.value); redraw(); } },
 		...[24, 32, 40, 56, 72].map((n) => h('option', { value: n, selected: paint.px === n }, `клетка ${n} px`)));
 	const symbols = h('label', { class: 'small' }, h('input', { type: 'checkbox', checked: paint.symbols, onchange: (ev) => { paint.symbols = ev.target.checked; overlay(); } }), ' символы');
+	const things = h('label', { class: 'small', title: 'Показывать вещи текущей обстановки и в режиме клеток' }, h('input', { type: 'checkbox', checked: paint.showThings !== false, onchange: (ev) => { paint.showThings = ev.target.checked; redraw(); } }), ' вещи');
 	const note = h('div', { class: 'muted small' });
 
 	const keys = (ev) => {
@@ -545,26 +858,35 @@ function painter(app, c, e) {
 		if (ev.target?.closest?.('input, textarea, select')) return;
 		if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { ev.preventDefault(); ev.shiftKey ? redo() : undo(); }
 		else if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y') { ev.preventDefault(); redo(); }
-		else if (!ev.ctrlKey && !ev.metaKey && !ev.altKey && ev.key.length === 1 && (ev.key in lib.cells || ev.key in (e.marks || {}) || ev.key === ' ')) { ev.preventDefault(); paint.char = ev.key; refreshPalette(); }
+		else if (furnishing()) {
+			if (ev.key.toLowerCase() === 'r' || ev.key.toLowerCase() === 'к') { ev.preventDefault(); rotate(); }
+			else if (ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); removeSel(); }
+			else if (ev.key === 'Escape') { paint.body = null; paint.sel = null; refreshThings(); overlay(); }
+		}
+		else if (!ev.ctrlKey && !ev.metaKey && !ev.altKey && ev.key.length === 1 && (ev.key in lib.cells || ev.key in (e.marks || {}) || ev.key === ' ')) { ev.preventDefault(); paint.char = ev.key; refreshCatalog(); }
 	};
 	removeEventListener('keydown', paint.keys || (() => {}));
 	paint.keys = keys;
 	addEventListener('keydown', keys);
 
-	refreshPalette();
+	refreshMode();
+	refreshCatalog();
 	refreshTools();
+	refreshSets();
 	setTimeout(redraw, 0);
 	return h('div', { class: 'painter' },
 		propsPanel(app, c, e),
-		h('div', { class: 'actions' }, tools, h('span', { class: 'grow' }),
+		h('div', { class: 'actions' }, modeBar, tools, h('span', { class: 'grow' }),
 			h('button', { title: 'Ctrl+Z', onclick: undo }, '↶'), h('button', { title: 'Ctrl+Y', onclick: redo }, '↷'),
-			h('button', { title: 'Повернуть чанк на четверть по часовой (генератор и так пробует все повороты)', onclick: whole((r) => MapView.turned(r, 1, false)) }, 'Повернуть'),
-			h('button', { title: 'Отразить слева направо', onclick: whole((r) => MapView.turned(r, 0, true)) }, 'Отразить')),
-		palette, markBox,
+			h('button', { title: 'Повернуть чанк на четверть по часовой вместе с обстановками (генератор и так пробует все повороты)', onclick: turnAll(1, false) }, 'Повернуть'),
+			h('button', { title: 'Отразить слева направо вместе с обстановками', onclick: turnAll(0, true) }, 'Отразить')),
+		setBar, setHelp,
 		h('div', { class: 'actions' }, sideBtns('n', 'сверху'), sideBtns('s', 'снизу'), sideBtns('w', 'слева'), sideBtns('e', 'справа'),
-			h('span', { class: 'grow' }), shapeSel, zoom, symbols),
-		h('p', { class: 'muted small' }, 'Левая кнопка — текущая клетка, правая — пол, Alt — пипетка. Клавиша с символом клетки или метки выбирает её. Гнёзда D — места дверей на краю чанка, рамкой: жёлтая — верно, красная — не на краю.'),
-		stage, status, note, issues);
+			h('span', { class: 'grow' }), shapeSel, zoom, symbols, things),
+		h('div', { class: 'workspace' }, catalog,
+			h('div', { class: 'stagecol' },
+				h('p', { class: 'muted small' }, 'Клетки: левая кнопка — выбранная клетка, правая — пол, Alt — пипетка; клавиша с символом выбирает клетку. Гнёзда D — места дверей на краю чанка: жёлтая рамка — верно, красная — не на краю.'),
+				stage, status, note, issues)));
 }
 </script>
 </body>

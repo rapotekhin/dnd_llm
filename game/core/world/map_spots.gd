@@ -80,6 +80,7 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 		out.append(t)
 		if not body_id.is_empty():
 			_companions(data, t, room_key, spots, cells, ways, walls, taken, out)
+	_furnished(data, map, index, room_key, spots, cells, ways, walls, taken, out)
 	var keys := LayoutGen.ground_keys(lib, map)
 	for sp: Dictionary in spot_marks(map, index):  # the room's own things on its spots, by the seed
 		var at: Vector2i = sp["at"]
@@ -155,6 +156,65 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 			taken[c] = true
 		out.append(t)
 	return {"tokens": out, "free": free}
+
+
+## The things of the room's furnishings (marks `set:<body>` of LayoutGen.furnish_marks, v0.8.4.43.31): all the
+## furnishings of its chunk mixed — each thing in an order of the seed stands if its squares are free floor and it cuts no
+## way; one that meets a thing already standing is left out. A room gets the bed of one furnishing, the cabinet of another.
+static func _furnished(data: Dictionary, map: Dictionary, index: int, room_key: String, spots: Array[Vector2i], cells: Array[Vector2i],
+		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary, out: Array[Dictionary]) -> void:
+	var marks: Array[Dictionary] = []
+	for m: Dictionary in map["marks"]:
+		if int(m["room"]) == index and str(m["name"]).begins_with(LayoutGen.SET):
+			marks.append(m)
+	if marks.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(room_key + "|furnish")
+	for i: int in range(marks.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var was := marks[i]
+		marks[i] = marks[j]
+		marks[j] = was
+	var floor := {}
+	for c: Vector2i in spots:
+		floor[c] = true
+	var bodies: Dictionary = ThingRules.cfg(data)["bodies"]
+	for m: Dictionary in marks:
+		var body_id := str(m["name"]).substr(LayoutGen.SET.length())
+		if not bodies.has(body_id):
+			continue
+		var laid := set_laid(data, m)
+		var mine: Array[Vector2i] = laid["cells"]
+		if not mine.all(func(c: Vector2i) -> bool: return floor.has(c) and not taken.has(c)):
+			continue
+		if (bodies[body_id].get("blocks", []) as Array).has("path") and not _joined_without(cells, ways, walls, mine):
+			continue
+		var at: Vector2i = laid["at"]
+		var t := _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, body_id), at)
+		t["still"] = true
+		t["set"] = int(m.get("set", 0))
+		_with_body(data, t, body_id, laid, walls)
+		for c: Vector2i in mine:
+			taken[c] = true
+		out.append(t)
+
+
+## The squares of a thing of a furnishing on the map from its mark: {"at": top left, "turn", "cells"}.
+static func set_laid(data: Dictionary, m: Dictionary) -> Dictionary:
+	var body_id := str(m["name"]).substr(LayoutGen.SET.length())
+	var size: Array = ThingRules.cfg(data)["bodies"].get(body_id, {}).get("size", [1, 1])
+	var rot := int(m.get("rot", 0))
+	var flip := bool(m.get("flip", false))
+	var turn := int(m.get("turn", 0))
+	var from := Vector2i(int(m["x"]), int(m["y"]))
+	var mine: Array[Vector2i] = []
+	var corner := Vector2i(1 << 30, 1 << 30)
+	for o: Vector2i in footprint(size, Vector2i.ZERO, turn):
+		var c := from + LayoutGen.turn_offset(o, rot, flip)
+		mine.append(c)
+		corner = Vector2i(mini(corner.x, c.x), mini(corner.y, c.y))
+	return {"at": corner, "turn": LayoutGen.turn_of(turn, rot, flip), "cells": mine}
 
 
 ## The marks `spot:<group>` of a room of the map: [{"group", "at"}] in the map's order.
@@ -713,7 +773,7 @@ static func words(s: GameSession, data: Dictionary, room := "") -> Array[String]
 	for m: Dictionary in map["marks"]:
 		var mark := str(m["name"])
 		var line := "%s [%s]" % [_word(data, mark), mark]
-		if int(m["room"]) == index and mark != LayoutGen.ENTRY and not mark.begins_with(SPOT) and not out.has(line):
+		if int(m["room"]) == index and mark != LayoutGen.ENTRY and not mark.begins_with(SPOT) and not mark.begins_with(LayoutGen.SET) and not out.has(line):
 			out.append(line)
 	return out
 
@@ -729,7 +789,7 @@ static func near_words(s: GameSession, data: Dictionary) -> Dictionary:
 	var length := int(cfg(data)["by_mark"]) + 1
 	for m: Dictionary in map["marks"]:
 		var d := WalkRules.distance(hero, Vector2i(int(m["x"]), int(m["y"])))
-		if int(m["room"]) == index and str(m["name"]) != LayoutGen.ENTRY and d < length:
+		if int(m["room"]) == index and str(m["name"]) != LayoutGen.ENTRY and not str(m["name"]).begins_with(LayoutGen.SET) and d < length:
 			length = d
 			out["hero"] = _word(data, str(m["name"]))
 	return out
