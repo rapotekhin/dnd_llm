@@ -135,7 +135,7 @@ func show_items(inv: Dictionary) -> void:
 		cell.tip_title = ItemRules.display_name(data["items"], items, id)
 		cell.text = line(id, int(inv[id]))
 		cell.tooltip_text = cell.text if not cell.text.is_empty() else cell.tip_title
-		cell.tip_body = DetailsPanel.item_text(GameState.session.character, data, items, id)
+		cell.set_card(CardInfo.item(GameState.session.character, data, items, id))
 		if setup.is_valid():
 			setup.call(cell)
 		_cells.add_child(cell)

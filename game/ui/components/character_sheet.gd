@@ -530,13 +530,13 @@ func _spell_cell(parent: Control, c: Dictionary, id: String, ready: bool) -> Ico
 	var sp: Dictionary = d["spells"].get(id, {})
 	var cell := IconSlot.make(IconRules.ref("spells", id), "", SPELL_CELL)
 	cell.name = "Spell_" + id
-	cell.text = "%s · %s" % [sp.get("casting_time", ""), sp.get("range", "")]
+	cell.text = str(sp.get("name", id))  # the card says the rest (v0.8.4.43.33)
 	if not ready:
 		cell.text += "\n" + tr("BOOK_NOT_PREPARED")
 		cell.disabled = true  # drawn faded by the cell itself; its card still comes on the hover
 	cell.tooltip_text = cell.text
 	parent.add_child(cell)
-	_details.hook(cell, str(sp.get("name", id)), DetailsPanel.spell_text(d, id))
+	_details.hook(cell, str(sp.get("name", id)), "", CardInfo.spell(d, id, 0, c))
 	if ready:
 		cell.drag_key = "spell:" + id
 		cell.pressed.connect(_cast_menu.bind(cell, c, id))
@@ -612,7 +612,7 @@ func _class_acts(flow: HFlowContainer, c: Dictionary, can_act: bool) -> void:
 		cell.tooltip_text = cell.text
 		cell.drag_key = "feature:" + rid
 		flow.add_child(cell)
-		_details.hook(cell, str(r["name"]), str(d["classes"]["features"].get(feat, {}).get("desc", "")))
+		_details.hook(cell, str(r["name"]), "", CardInfo.feature(d, rid, c))
 		if Stock.table(d, c)[rid].has("spell"):  # spent by casting its spell (v0.8.4.26.1)
 			continue
 		var opts: Array = []  # [[label, why, do]]
@@ -661,7 +661,7 @@ func _book_common(box: VBoxContainer) -> void:
 		cell.tooltip_text = a.title()
 		cell.drag_key = "Do_" + a.id
 		flow.add_child(cell)
-		_details.hook(cell, a.title(), a.tip())
+		_details.hook(cell, a.title(), "", CardInfo.act(GameState.session, Catalog.data, Sheet.HERO, a))
 
 
 ## The reactions as in BG3's book (v0.8.4.43.7): each its icon and its own «Спрашивать / Всегда / Никогда», kept on the

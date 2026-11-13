@@ -75,7 +75,7 @@ func _slot(c: Dictionary, slot: String, spare: bool) -> ItemCell:
 	else:
 		cell.tip_title = ItemRules.display_name(data["items"], s.items, id)
 		cell.text = tr("SLOT_" + slot.to_upper())
-		cell.tip_body = DetailsPanel.item_text(c, data, s.items, id)
+		cell.set_card(CardInfo.item(c, data, s.items, id))
 		var shots := Gear.ready_shots(data, s.items, c, id)
 		if shots >= 0:  # v0.8.4.42.6: the shots at hand on the bow's cell
 			cell.badge = str(shots)
@@ -271,7 +271,7 @@ func _belt(c: Dictionary) -> Control:
 		else:
 			cell.tip_title = ItemRules.display_name(data["items"], s.items, id)
 			cell.text = ItemGrid.line(id, qty)
-			cell.tip_body = DetailsPanel.item_text(c, data, s.items, id)
+			cell.set_card(CardInfo.item(c, data, s.items, id))
 		cell.tooltip_text = cell.text
 		if mine:
 			var at := i

@@ -24,16 +24,35 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	var marked := marks_line(c, data, id)  # v0.8.4.35: what a service laid on a copy
 	if not marked.is_empty():
 		out.append(marked)
+	var meta := meta_parts(def, true)
+	if not meta.is_empty():
+		out.append(" · ".join(meta))
+	out.append_array(notes(c, data, session_items, id, def))
+	var text := str(def.get("description", ""))
+	if not text.is_empty():
+		out.append(text)
+	if not str(def.get("text", "")).is_empty():  # a letter, a diary, an inscription (v0.7.18)
+		out.append(TranslationServer.translate("ITEM_WRITTEN").format({"text": def["text"]}))
+	return out
+
+
+## Rarity, weight and price of a thing: «Редкий», «6 фнт», «10 зм» (the rarity only when asked and not common).
+static func meta_parts(def: Dictionary, rarity_too: bool) -> Array[String]:
 	var meta: Array[String] = []
 	var rarity := str(def.get("rarity", ""))
-	if not rarity.is_empty() and rarity != "common":
+	if rarity_too and not rarity.is_empty() and rarity != "common":
 		meta.append(TranslationServer.translate("RARITY_" + rarity.to_upper()))
 	if float(def.get("weight", 0)) > 0:
 		meta.append(TranslationServer.translate("ITEM_WEIGHT").format({"n": _num(float(def["weight"]))}))
 	if int(def.get("value_cp", 0)) > 0:
 		meta.append(Money.format(int(def["value_cp"])))
-	if not meta.is_empty():
-		out.append(" · ".join(meta))
+	return meta
+
+
+## What a thing does beyond its numbers, a line each: proficiency, use, what it lays worn or on a hit, its spells and
+## charges, attunement, spoiling, a curse, the master's making (the lines of the card and of `lines`).
+static func notes(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, def: Dictionary) -> Array[String]:
+	var out: Array[String] = []
 	var prof := proficiency_line(c, def, ItemRules.plain_of(data["items"], session_items, id))
 	if not prof.is_empty():
 		out.append(prof)
@@ -68,12 +87,19 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 		out.append(_t("ITEM_CURSED_LINE"))
 	if bool(def.get("master", false)):
 		out.append(_t("ITEM_MASTER"))
-	var text := str(def.get("description", ""))
-	if not text.is_empty():
-		out.append(text)
-	if not str(def.get("text", "")).is_empty():  # a letter, a diary, an inscription (v0.7.18)
-		out.append(TranslationServer.translate("ITEM_WRITTEN").format({"text": def["text"]}))
 	return out
+
+
+## The kind of a thing in a word, without its numbers: «Воинское оружие ближнего боя», «Тяжёлый доспех», «Щит», «Снаряжение».
+static func kind_name(def: Dictionary) -> String:
+	if def.has("weapon"):
+		var w: Dictionary = def["weapon"]
+		return _t("ITEM_WEAPON_%s_%s" % [str(w.get("category", "simple")).to_upper(), str(w.get("range", "melee")).to_upper()])
+	if def.has("armor"):
+		var cat := str(def["armor"]["category"])
+		return _t("ITEM_SHIELD") if cat == "shield" else _t("ITEM_ARMOR_" + cat.to_upper())
+	var it := str(def.get("item_type", ""))
+	return "" if it.is_empty() else _t("ITEM_TYPE_" + it.to_upper())
 
 
 ## «Воинское оружие ближнего боя · 1к8 рубящий (двумя руками 1к10)», «Тяжёлый доспех · КД 16 · Сила 13 · помеха
@@ -81,15 +107,15 @@ static func lines(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 static func kind_line(data: Dictionary, def: Dictionary) -> String:
 	if def.has("weapon"):
 		var w: Dictionary = def["weapon"]
-		var kind: String = _t("ITEM_WEAPON_%s_%s" % [str(w.get("category", "simple")).to_upper(), str(w.get("range", "melee")).to_upper()])
-		var dmg := "%s %s" % [_dice(str(w.get("damage", ""))), str(data["misc"]["damage_types"].get(str(w.get("damage_type", "")), ""))]
+		var kind := kind_name(def)
+		var dmg := "%s %s" % [dice_text(str(w.get("damage", ""))), str(data["misc"]["damage_types"].get(str(w.get("damage_type", "")), ""))]
 		var plus := ItemRules.plus(def, ["magic_plus"])
 		if plus > 0:
 			dmg = "%s +%d" % [dmg, plus]
 		dmg += _elements(data, def)
 		var parts: Array[String] = [kind, dmg.strip_edges()]
 		if w.has("versatile"):
-			parts.append(_t("ITEM_VERSATILE").format({"dice": _dice(str(w["versatile"]))}))
+			parts.append(_t("ITEM_VERSATILE").format({"dice": dice_text(str(w["versatile"]))}))
 		var rng: Array = w.get("reach_ft", [])
 		if rng.size() == 2:
 			parts.append(_t("ITEM_RANGE").format({"near": int(rng[0]), "far": int(rng[1])}))
@@ -100,18 +126,23 @@ static func kind_line(data: Dictionary, def: Dictionary) -> String:
 		if str(a["category"]) == "shield":
 			return _t("ITEM_SHIELD_LINE").format({"n": int(a["base"]) + plus})
 		var dex := "" if not bool(a["dex"]) else (_t("ITEM_DEX") if a.get("max_dex") == null else _t("ITEM_DEX_MAX").format({"n": int(a["max_dex"])}))
-		var parts: Array[String] = [_t("ITEM_ARMOR_" + str(a["category"]).to_upper()), "%s%s" % [_t("ITEM_AC").format({"n": int(a["base"]) + plus}), dex]]
+		var parts: Array[String] = [kind_name(def), "%s%s" % [_t("ITEM_AC").format({"n": int(a["base"]) + plus}), dex]]
 		if int(a.get("str_min", 0)) > 0:
 			parts.append(_t("ITEM_STR_MIN").format({"n": int(a["str_min"])}))
 		if bool(a.get("stealth_disadvantage", false)):
 			parts.append(_t("ITEM_STEALTH_DIS"))
 		return " · ".join(parts)
-	var it := str(def.get("item_type", ""))
-	return "" if it.is_empty() else _t("ITEM_TYPE_" + it.to_upper())
+	return kind_name(def)
 
 
 ## «Свойства: фехтовальное, лёгкое, магическое +1»; "" when none to show.
 static func properties_line(def: Dictionary) -> String:
+	var names := property_names(def)
+	return "" if names.is_empty() else TranslationServer.translate("ITEM_PROPERTIES").format({"list": ", ".join(names)})
+
+
+## The words of a thing's properties: «фехтовальное», «лёгкое», a made property's own name.
+static func property_names(def: Dictionary) -> Array[String]:
 	var names: Array[String] = []
 	for p: Variant in def.get("properties", []):
 		var key := "ITEM_PROP_" + str(p).to_upper()
@@ -120,7 +151,7 @@ static func properties_line(def: Dictionary) -> String:
 			names.append(n)
 	for n: Variant in def.get("built", []):
 		names.append(str(n))
-	return "" if names.is_empty() else TranslationServer.translate("ITEM_PROPERTIES").format({"list": ", ".join(names)})
+	return names
 
 
 ## «Сделано у мастера: посеребрено — 1 из 2»: the marks of the copies `h` holds (v0.8.4.35); "" when none.
@@ -245,26 +276,26 @@ static func _t(key: String) -> String:
 	return TranslationServer.translate(key)
 
 
-static func _dmg(w: Dictionary) -> String:
+static func damage_text(w: Dictionary) -> String:
 	var b := int(w["bonus"])
-	return "%s%s" % [_dice(str(w["dice"])), ("+%d" % b) if b > 0 else (str(b) if b < 0 else "")]
+	return "%s%s" % [dice_text(str(w["dice"])), ("+%d" % b) if b > 0 else (str(b) if b < 0 else "")]
 
 
 ## A weapon's whole damage by its profile: «1к4+2 колющий + 1к6 огонь» (v0.8.4.30, the author's feedback: the fire of an
 ## elemental blade was told only in its description).
 static func damage(data: Dictionary, session_items: Dictionary, w: Dictionary) -> String:
-	var main := "%s %s" % [_dmg(w), str(data["misc"]["damage_types"].get(str(w.get("type", "")), ""))]
+	var main := "%s %s" % [damage_text(w), str(data["misc"]["damage_types"].get(str(w.get("type", "")), ""))]
 	return main.strip_edges() + _elements(data, ItemRules.def_of(data["items"], session_items, str(w.get("id", ""))))
 
 
 static func _elements(data: Dictionary, def: Dictionary) -> String:
 	var out := ""
 	for el: Dictionary in ItemRules.elements(data, def):
-		out += " + %s %s" % [_dice(str(el["dice"])), data["misc"]["damage_types"][el["type"]]]
+		out += " + %s %s" % [dice_text(str(el["dice"])), data["misc"]["damage_types"][el["type"]]]
 	return out
 
 
-static func _dice(d: String) -> String:
+static func dice_text(d: String) -> String:
 	return d.replace("d", "к")
 
 

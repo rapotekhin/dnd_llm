@@ -13,6 +13,9 @@ extends PanelContainer
 ## (`HotbarLayout.key_of`); the fight's acts have a section of their own, «Боевые». What the other mode offers stands in its
 ## slot grey with why: out of a fight the fight's acts (`rules.combat.bar`) «только в бою», in a fight the place's acts
 ## «не в бою». A cell is dragged in any tab of kinds; a divider follows the mouse and snaps to the nearest column.
+## v0.8.4.43.33 (the author: «много пустого места», «иконки мелкие»): larger cells with an icon of its own frame laid edge
+## to edge (IconSlot), the empty slots faint, no scroll bar beside the grid, the tabs of kinds in the drawn tab's frame,
+## the end of the turn an hourglass as in BG3.
 
 signal circle_picked(circle: int)
 
@@ -31,7 +34,7 @@ const PASSIVE := "BAR_PASSIVE"
 const KIND_TITLES := {"common": "BAR_KIND_COMMON", "combat": "BAR_KIND_COMBAT", "class": "BAR_KIND_CLASS", "items": "BAR_KIND_ITEMS",
 	"deeds": "BAR_DEEDS", "passive": "BAR_KIND_PASSIVE"}
 const TABS := ["", "common", "combat", "class", "items", "deeds", "passive"]
-const CELL := 56
+const CELL := 64
 const GAP := 4
 const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
 
@@ -50,6 +53,8 @@ var _portrait: Portrait
 var _hands: GridContainer
 var _sets: HBoxContainer
 var _counters: HBoxContainer
+var _centre: VBoxContainer  # the counters, the grid and the tabs
+var _rows_box: VBoxContainer  # «+» and «−» of the rows
 var _grid_scroll: ScrollContainer
 var _grid: HBoxContainer
 var _tabs: HBoxContainer
@@ -104,27 +109,29 @@ func _init() -> void:
 	centre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	centre.add_theme_constant_override("separation", 4)
 	_body.add_child(centre)
+	_centre = centre
 	_counters = HBoxContainer.new()
 	_counters.name = "Counters"
 	_counters.add_theme_constant_override("separation", 14)
 	_counters.custom_minimum_size = Vector2(0, 26)
+	_counters.alignment = BoxContainer.ALIGNMENT_CENTER
 	centre.add_child(_counters)
 	var grid_row := HBoxContainer.new()
 	grid_row.add_theme_constant_override("separation", 4)
+	grid_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	centre.add_child(grid_row)
 	_grid_scroll = ScrollContainer.new()
 	_grid_scroll.name = "Cells"
 	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_grid_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_grid_scroll.resized.connect(func() -> void:  # only a new count of columns lays the bar again: a laying that
-		if _columns() != _laid_cols:  # changes a size by a pixel must not lay it once more, for ever
-			_relay())
+	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER  # the rows a wheel away: no bar beside the grid
+	_grid_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN  # as wide as its cells: the bar hugs them (v0.8.4.43.33)
 	grid_row.add_child(_grid_scroll)
 	_grid = HBoxContainer.new()
 	_grid.name = "Grid"
 	_grid.add_theme_constant_override("separation", 0)
 	_grid_scroll.add_child(_grid)
 	var rows := VBoxContainer.new()  # more or fewer rows of slots, as the BG3 forum asked
+	_rows_box = rows
 	rows.add_theme_constant_override("separation", 2)
 	grid_row.add_child(rows)
 	for spec: Array in [["RowsMore", "+", 1, "BAR_ROWS_MORE"], ["RowsLess", "−", -1, "BAR_ROWS_LESS"]]:
@@ -152,12 +159,13 @@ func _init() -> void:
 	_body.add_child(_round)
 	end_turn = Button.new()
 	end_turn.name = "EndTurnButton"
-	end_turn.text = "BTN_END_TURN"
+	end_turn.tooltip_text = "BTN_END_TURN"  # an hourglass as in BG3, its words at the cursor
+	end_turn.expand_icon = true
+	end_turn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	end_turn.add_theme_constant_override("icon_max_width", 64)
 	end_turn.focus_mode = Control.FOCUS_NONE
 	end_turn.theme_type_variation = UiTheme.ACCENT_BUTTON
 	end_turn.custom_minimum_size = Vector2(88, 88)
-	end_turn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	end_turn.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 	end_turn.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.ACCENT.darkened(0.55), UiTheme.ACCENT, 3, 6, 44))
 	end_turn.add_theme_stylebox_override("hover", UiTheme.box(UiTheme.ACCENT.darkened(0.4), UiTheme.ACCENT_BRIGHT, 3, 6, 44))
 	end_turn.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.ACCENT.darkened(0.3), UiTheme.ACCENT_BRIGHT, 3, 6, 44))
@@ -282,7 +290,16 @@ func tidy() -> void:
 	_relay()
 
 
+## The bar as wide as what it holds, in the middle under the map as in BG3; a conversation's acts take the whole width.
+func _ready() -> void:
+	if get_parent() is Control:
+		(get_parent() as Control).resized.connect(func() -> void:  # only a new count of columns lays the bar again: a
+			if _columns() != _laid_cols:  # laying that changes a size by a pixel must not lay it once more, for ever
+				_relay())
+
+
 func _show() -> void:
+	size_flags_horizontal = Control.SIZE_FILL if _talking else Control.SIZE_SHRINK_CENTER
 	_body.visible = not _talking
 	talk.visible = _talking
 	end_turn.visible = _fight
@@ -314,22 +331,24 @@ func _cells() -> Dictionary:
 	for o: Array in other:
 		if not out.has(o[0]) and o[2] is IconSlot:
 			var src := o[2] as IconSlot
-			out[o[0]] = [str(o[1]), _ghost(str(o[0]), src.spec, src.tip_title if not src.tip_title.is_empty() else src.text.get_slice("\n", 0), src.tip_body)]
+			out[o[0]] = [str(o[1]), _ghost(str(o[0]), src.spec, src.tip_title if not src.tip_title.is_empty() else src.text.get_slice("\n", 0), src.tip_body, src.card)]
 	if not _fight:
 		for id: Variant in CombatRules.cfg(Catalog.data).get("bar", {}).get("acts", []):
 			var act := Acts.one(str(id))
 			if act != null and not out.has("Do_" + str(id)):
-				out["Do_" + str(id)] = ["combat", _ghost("Do_" + str(id), IconRules.of(Catalog.data, {}, "acts/" + str(id)), act.title(), act.tip())]
+				out["Do_" + str(id)] = ["combat", _ghost("Do_" + str(id), IconRules.of(Catalog.data, {}, "acts/" + str(id)), act.title(), act.tip(),
+					CardInfo.act(GameState.session, Catalog.data, Sheet.HERO, act))]
 	return out
 
 
 ## A grey cell of an act the other mode offers: its look, «только в бою» or «не в бою»; dragged like any cell.
-func _ghost(key: String, look: Dictionary, title: String, body: String) -> IconSlot:
+func _ghost(key: String, look: Dictionary, title: String, body: String, card: Dictionary = {}) -> IconSlot:
 	var g := IconSlot.new()
 	g.name = "Ghost_" + key.replace(":", "_")
 	g.spec = look
 	g.tip_title = title
 	g.tip_body = body
+	g.card = card
 	g.text = title
 	g.tooltip_text = "%s\n%s" % [title, tr("BAR_NOT_IN_FIGHT" if _fight else "BAR_ONLY_FIGHT")]
 	g.disabled = true
@@ -370,7 +389,7 @@ func _detach(cell: Node) -> void:
 
 
 func _lay_grid() -> void:
-	if _dragging_divider or _grid_scroll.size.x < CELL * 2:  # under the hand, or not sized yet: `resized` lays it then
+	if _dragging_divider or _whole() < CELL * 4:  # under the hand, or not sized yet: `resized` lays it then
 		return
 	for slot: Node in _grid.find_children("*", "HotSlot", true, false):  # every cell out before its slot goes: the
 		for ch: Node in slot.get_children():  # other mode's too — a cell is freed only by the box that made it
@@ -446,7 +465,13 @@ func _lay_grid() -> void:
 
 ## The columns the grid has room for.
 func _columns() -> int:
-	return maxi(1, int((_grid_scroll.size.x - 8) / (CELL + GAP)) - 1)
+	var others := size.x - _centre.size.x + _rows_box.size.x + 4  # the portrait, the hands, the round button, the rests, the windows
+	return maxi(1, int((_whole() - others - 8) / (CELL + GAP)) - 1)
+
+
+## The width the bar may take: its place under the map.
+func _whole() -> float:
+	return (get_parent() as Control).size.x if get_parent() is Control else size.x
 
 
 ## The divider after the layout's section `i` (v0.8.4.43.14, the author: «плавными как в BG3, лёгкими на движение»): the
@@ -526,12 +551,16 @@ func _on_off(key: String) -> void:
 
 func _lay_tabs() -> void:
 	var kinds := _drawn_kinds
+	if end_turn.icon == null:
+		end_turn.icon = IconSlot.texture(str(IconRules.of(Catalog.data, {}, "ui/end_turn").get("path", "")))
+		end_turn.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if _tabs.get_child_count() == 0:  # made once: a filter pressed is never freed under its own signal
 		for k: String in TABS:
 			var b := Button.new()
 			b.name = "Filter_" + (k if k != "" else "all")
 			b.text = KIND_TITLES.get(k, "BAR_ALL")
-			b.flat = true
+			for look: Array in [["normal", "tab_unselected"], ["hover", "tab_hovered"], ["pressed", "tab_selected"], ["hover_pressed", "tab_selected"]]:
+				b.add_theme_stylebox_override(look[0], get_theme_stylebox(look[1], "TabContainer"))  # the drawn tab's frame
 			b.toggle_mode = true
 			b.focus_mode = Control.FOCUS_NONE
 			b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
@@ -613,7 +642,7 @@ func _lay_hands() -> void:
 				ItemRules.display_name(Catalog.data["items"], s.items, id) if not id.is_empty() else tr("SLOT_EMPTY_HAND"), CELL + 8)
 			shown.name = spec[2]
 			if not id.is_empty():
-				shown.tip_body = DetailsPanel.item_text(c, Catalog.data, s.items, id)
+				shown.set_card(CardInfo.item(c, Catalog.data, s.items, id))
 			cell = shown
 		cell.custom_minimum_size = Vector2(CELL + 8, CELL + 8)
 		_hands.add_child(cell)

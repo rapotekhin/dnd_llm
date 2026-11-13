@@ -1,7 +1,7 @@
 class_name IconRules
 extends RefCounted
 ## The one place an icon is chosen (v0.8.4.43). A ref is "<kind>/<id>" (items/longsword, spells/fireball, ui/map); the
-## answer says what to draw, a window only shows it: {ref, path, real, tint, frame, marks [{what, id, color, path}]}.
+## answer says what to draw, a window only shows it: {ref, path, real, tint, frame, framed, marks [{what, id, color, path}]}.
 ## `path` — the picture: a file by id (or `shared`) → for a made or magic thing its plain base's file
 ## (ItemRules.plain_of) → its group's file → the blank of the kind → _blank/default.png. `real` — the picture shows this
 ## very thing or its base (a blank does not, and the window adds the name over it). Marks are a damage type, a material,
@@ -40,6 +40,7 @@ static func of(data: Dictionary, session_items: Dictionary, r: String) -> Dictio
 		out["real"] = out["path"] != ""
 	if out["path"] == "":
 		out["path"] = blank(data, kind)
+	out["framed"] = out["real"] and (cfg(data).get("framed", []) as Array).has(kind)  # its own frame drawn in: laid edge to edge (v0.8.4.43.33)
 	return out
 
 

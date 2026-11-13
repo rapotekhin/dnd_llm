@@ -1033,7 +1033,7 @@ func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 		func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t),
 		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", _blow_far(main))
 	if not main_id.is_empty():
-		_details.hook(main_b, str(main["name"]), DetailsPanel.item_text(c, data, s.items, main_id))
+		_details.hook(main_b, str(main["name"]), "", CardInfo.item(c, data, s.items, main_id))
 	if Attack.throwable(Attack.of_weapon(main)):  # v0.8.4.31: a dagger or a spear thrown by its own button, it leaves the hand
 		var throw_b := _action(w, "Throw_main", tr("COMBAT_THROW").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), me,
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"throw": true}),
@@ -1047,7 +1047,7 @@ func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "stowed"}),
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "stowed"}),
 			func(t: String) -> Dictionary: return CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.attack_preview(s, data, t, false)), "", _far(spare))
-		_details.hook(spare_b, str(spare["name"]), DetailsPanel.item_text(c, data, s.items, spare_id))
+		_details.hook(spare_b, str(spare["name"]), "", CardInfo.item(c, data, s.items, spare_id))
 	if not main_id.is_empty():  # fists with a weapon in hand (v0.7.22.11, big test #45)
 		var fist := CombatRules.weapon_profile(c, data, s.items, "")
 		_action(w, "Attack_unarmed", tr("COMBAT_ATTACK").format({"name": fist["name"], "hit": "%+d" % int(fist["to_hit"]), "dmg": _dmg_text(fist)}), me,
@@ -1097,7 +1097,7 @@ func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 				func(t: String) -> String: return GameState.combat_cast(id, slot, t),
 				func(t: String) -> String: return Acts.one("cast").can(s, data, CombatRules.player(s), t, {"spell": id, "slot": slot}),
 				func(t: String) -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t))
-			_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
+			_details.hook(ab, str(spell.get("name", id)), "", CardInfo.spell(data, id, slot, c))
 		_act_sub = ""
 		for sa: Dictionary in SpellEffects.actions(s, data):  # v0.7.13.5: the spells that go on each turn
 			var said := str(sa["id"])
@@ -1154,7 +1154,7 @@ func _draw_companion(s: GameSession, data: Dictionary, who: Dictionary, me: bool
 			func(t: String) -> String: return GameState.combat_act("cast", t, how),
 			func(t: String) -> String: return Acts.one("cast").can(s, data, who, t, how),
 			func(t: String) -> Dictionary: return ActionRules.as_by(s, data, who, id, {}, func() -> Dictionary: return CombatRules.cast_preview(s, data, id, slot, t)))
-		_details.hook(ab, str(spell.get("name", id)), DetailsPanel.spell_text(data, id, slot))
+		_details.hook(ab, str(spell.get("name", id)), "", CardInfo.spell(data, id, slot, Sheet.holder(s, who)))
 	_act_sub = ""
 
 
@@ -1185,7 +1185,7 @@ func _draw_shared(s: GameSession, data: Dictionary, who: Dictionary, c: Dictiona
 		for r: Dictionary in res:
 			var b := _button(fb, "Feature_" + str(r["id"]), "%s (%d/%d)" % [r["name"], r["left"], r["max"]], me and int(r["left"]) > 0)
 			var rid := str(r["id"])
-			_details.hook(b, str(r["name"]), DetailsPanel.feature_text(data, rid))
+			_details.hook(b, str(r["name"]), "", CardInfo.feature(data, rid, c))
 			b.pressed.connect(func() -> void: _do(GameState.combat_use_feature(rid)))
 	# Items.
 	var usable: Array[String] = []
@@ -1224,7 +1224,7 @@ func _draw_shared(s: GameSession, data: Dictionary, who: Dictionary, c: Dictiona
 					label += tr("COMBAT_BONUS_SHORT")  # v0.7.22.3: a potion — a bonus action
 				item_btn = _button(ib, "Item_" + id, label, me)
 				item_btn.pressed.connect(func() -> void: _do(GameState.combat_act("use_item", "", {"item": id})))
-			_details.hook(item_btn, str(d.get("name", id)), DetailsPanel.item_text(c, data, s.items, id))
+			_details.hook(item_btn, str(d.get("name", id)), "", CardInfo.item(c, data, s.items, id))
 	# Common.
 	var g := _tab_box("COMBAT_TAB_COMMON")
 	for act: Act in Acts.on_tab(s, data, who, "common"):
@@ -1373,6 +1373,11 @@ func _act_button(parent: Control, act: Act, row: Dictionary, me: bool) -> void:
 			else:
 				ConfirmBox.ask(self, ask[0], ask[1], ask[2], func() -> void: _do(GameState.combat_act(id, "", how))))
 	b.tooltip_text = tr(stop) if not stop in ["", "COMBAT_BAD_TARGET", "COMBAT_NOT_YOUR_TURN"] else str(row["tip"])
+	if b is IconSlot:  # its card as in BG3: what it does and what it costs (v0.8.4.43.33); the line under the name only why not
+		(b as IconSlot).set_card(CardInfo.act(s, data, hero, act, str(row["tip"])))
+		(b as IconSlot).tip_title = str(row["text"]).trim_suffix(tr("COMBAT_BONUS_SHORT"))
+		if b.tooltip_text == str(row["tip"]):
+			b.tooltip_text = (b as IconSlot).tip_title
 
 
 ## A button that needs a target: pressing it lights the bodies that can be hit. `aims` — the spell whose target is a square.

@@ -256,7 +256,7 @@ func _damage(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary, t
 	if not sp.has("damage_at_slot") and not sp.has("damage_at_level"):
 		return out
 	var slot := int(how.get("slot", 0))
-	var r := CombatRules.dice_range(CombatRules._spell_dice(sp, maxi(slot, int(sp.get("level", 0))), MonsterRules._caster_level(data, f)))
+	var r := CombatRules.dice_range(CombatRules.spell_dice(sp, maxi(slot, int(sp.get("level", 0))), MonsterRules._caster_level(data, f)))
 	var multi: Dictionary = CombatRules.cfg(data)["multi"].get(spell, {})
 	var n := SpellEffects.count(data, spell, slot, MonsterRules._caster_level(data, f))
 	var attack := int(ActionRules.scope(s, data, f, spell)["attack"])

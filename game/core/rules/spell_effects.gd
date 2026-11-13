@@ -733,7 +733,7 @@ static func _dice(data: Dictionary, spell_id: String, slot: int) -> String:
 		return best
 	if not spell.has("damage_at_slot") and not spell.has("damage_at_level"):
 		return ""  # Grease, Fog Cloud: no damage of their own (v0.7.13.6)
-	return CombatRules._spell_dice(spell, maxi(slot, int(spell["level"])), 1)
+	return CombatRules.spell_dice(spell, maxi(slot, int(spell["level"])), 1)
 
 
 static func zones(s: GameSession) -> Array:
@@ -1210,7 +1210,7 @@ static func apply_hit_reaction(s: GameSession, data: Dictionary, f: Dictionary, 
 static func rebuke(s: GameSession, data: Dictionary, f: Dictionary, spell_id: String, slot: int, lines: Array[String], by: Dictionary = {}) -> void:
 	var sp: Dictionary = data["spells"][spell_id]
 	var hero := by.is_empty()
-	var dice := CombatRules._spell_dice(sp, slot, int(s.character.get("level", 1)) if hero else int(by["level"]))
+	var dice := CombatRules.spell_dice(sp, slot, int(s.character.get("level", 1)) if hero else int(by["level"]))
 	var dc := int(ActionRules.numbers(s, data, spell_id).get("dc", s.character.get("spell_dc", 10))) if hero else int(by["dc"])  # its own DC: a foe's spell may be landing around this
 	lines.append_array(_save_hit(s, data, str(sp["name"]), str(sp["damage_type"]), str(sp["save"]["ability"]), dice, dc, f,
 		str(sp["save"].get("success", "half")) == "half", hero))

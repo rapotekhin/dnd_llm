@@ -17,8 +17,19 @@ extends PanelContainer
 ## text says that the right button pins it, and pinned it scrolls; `tip_card` is the same card for an icon's own tooltip;
 ## `pin_card` pins an icon's card in the one card of the screen for icons (`_pins`), the right button on it again or the
 ## lock lets it go, as on any card.
+## v0.8.4.43.33 (the author, as in BG3): a card of a spell, a feature, a thing or an act is drawn from its data (`CardInfo`):
+## the name and what it is under it, its icon in the corner, the headline number with its dice by damage type, what it lays
+## with the icon of the condition, the description, how it works (duration, range, area, attack or save, concentration)
+## and a band at the bottom with what it takes (● an action, ▲ a bonus action, ◆ a reaction, ■ a slot) and a thing's
+## weight and price. A text without a card is drawn as before, with the icon of its cell when it has one.
 
 var _title: Label
+var _sub: Label  # what it is, under the name: «Заклинание 1 круга · Воплощение»
+var _icon: TextureRect
+var _foot: VBoxContainer  # the band of what it takes, rebuilt with each card
+var _card := {}  # the card shown now ({} — a plain text)
+var _look := {}  # the icon of what is shown (IconRules.of), {} — none
+var _plain := ""  # the plain text shown now: the pin's identity
 var _body: RichTextLabel
 var _lock: Button
 var _pinned := ""  # the title of the pinned text ("" — nothing pinned): kept across a rebuild of the rows
@@ -35,8 +46,12 @@ var _screen: WeakRef  # the screen of the pinned icon
 
 static var _pins: DetailsPanel  # the one card an icon is pinned in (`pin_card`)
 
-const CARD_WIDTH := 380.0
-const CARD_MAX_BODY := 280.0  # a longer text is cut at this height and scrolls inside a pinned card
+const CARD_WIDTH := 460.0
+const CARD_MAX_BODY := 340.0  # a longer text is cut at this height and scrolls inside a pinned card
+const CARD_ICON := 72.0  # the icon in the corner of a card, as in BG3
+const BIG_SIZE := 30  # the headline number
+## The colours of a cost's glyph, as the counters over the hotbar.
+const COST_COLORS := {"action": "8fb36f", "bonus": "d1a14a", "reaction": "b98fd8", "slot": "6f9fc8", "free": "9a8f7e", "time": "c9a45c", "move": "e6c47e"}
 
 
 func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void:
@@ -48,20 +63,31 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 	col.add_theme_constant_override("separation", 6)
 	add_child(col)
 	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
 	col.add_child(head)
+	var names := VBoxContainer.new()
+	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	names.add_theme_constant_override("separation", 0)
+	head.add_child(names)
 	_title = Label.new()
 	_title.name = "DetailsTitle"
 	_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title.add_theme_color_override("font_color", UiTheme.ACCENT)
-	head.add_child(_title)
+	names.add_child(_title)
+	_sub = _sub_label("")
+	_sub.name = "DetailsSub"
+	names.add_child(_sub)
+	_icon = _icon_rect({})
+	_icon.name = "DetailsIcon"
 	_lock = Button.new()
 	_lock.name = "DetailsUnpin"
 	_lock.flat = true
 	_lock.visible = false
 	_lock.pressed.connect(_on_lock)
 	head.add_child(_lock)
+	head.add_child(_icon)
 	_body = RichTextLabel.new()
 	_body.name = "DetailsText"
 	_body.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -74,6 +100,9 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 	col.add_child(_body)
 	_more = _more_label()
 	col.add_child(_more)
+	_foot = VBoxContainer.new()
+	_foot.name = "DetailsFoot"
+	col.add_child(_foot)
 	show_text(TranslationServer.translate("DETAILS_HINT"), "")
 	_lock.visible = false  # the hint is nothing to pin
 	if floating:
@@ -86,7 +115,7 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 		_body.fit_content = true
 		_body.scroll_active = false
 		_body.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
-		_title.custom_minimum_size = Vector2(CARD_WIDTH - 140, 0)  # a wrapped title has a width before it is laid out
+		_title.custom_minimum_size = Vector2(CARD_WIDTH - 140 - CARD_ICON, 0)  # a wrapped title has a width before it is laid out
 		_hold(false)
 
 
@@ -138,7 +167,7 @@ func _process(_delta: float) -> void:
 	if _pinned.is_empty() and not _still_wanted():
 		visible = false
 		return
-	if _pinned.is_empty():
+	if _pinned.is_empty() or not size.is_equal_approx(get_combined_minimum_size()):  # a pinned one too, once its lines settle
 		_place()
 
 
@@ -175,10 +204,11 @@ func column(lower: Control, width: int = 440) -> VBoxContainer:
 
 
 ## Shows a text unless another one is pinned; a floating card at what is hovered now, or beside the focused button.
-func show_text(title: String, body: String) -> void:
+## `card` — a card of `CardInfo` drawn instead of the bare text, `look` — the icon (IconRules.of), by the card's own when {}.
+func show_text(title: String, body: String, card: Dictionary = {}, look: Dictionary = {}) -> void:
 	if not _pinned.is_empty():
 		return
-	_put(title, body)
+	_put(title, body, card, look)
 	if floating:
 		_float_up(body)
 
@@ -203,10 +233,24 @@ func _float_up(body: String) -> void:
 	_place()
 
 
-func _put(title: String, body: String) -> void:
+func _put(title: String, body: String, card: Dictionary = {}, look: Dictionary = {}) -> void:
 	_title.text = title
-	_body.text = body
+	_plain = body
+	_card = card
+	_look = look if not look.is_empty() else look_of(card)
+	_body.bbcode_enabled = not card.is_empty()
+	_body.text = card_text(card) if not card.is_empty() else body
 	_body.scroll_to_line(0)
+	_sub.text = str(card.get("sub", ""))
+	_sub.visible = not _sub.text.is_empty()
+	_title.add_theme_color_override("font_color", Color(str(card["title_color"])) if str(card.get("title_color", "")) != "" else UiTheme.ACCENT)
+	_set_icon(_icon, _look)
+	for n: Node in _foot.get_children():
+		_foot.remove_child(n)
+		n.queue_free()
+	var band := _foot_band(card)
+	if band != null:
+		_foot.add_child(band)
 	_lock.visible = not floating or not _pinned.is_empty()  # an unpinned card takes no click: the right button pins it
 	_lock.text = "DETAILS_UNPIN" if not _pinned.is_empty() else "DETAILS_PIN"
 	_lock.tooltip_text = "DETAILS_UNPIN_TIP" if not _pinned.is_empty() else "DETAILS_PIN_TIP"
@@ -216,15 +260,16 @@ func _on_lock() -> void:
 	if not _pinned.is_empty():
 		unpin()
 	else:
-		pin(_shown, _title.text, _body.text)
+		pin(_shown, _title.text, _plain, _card, _look)
 
 
 func title() -> String:
 	return _title.text
 
 
+## The plain text shown: a card's own words (`CardInfo.plain`) when a card is up.
 func body() -> String:
-	return _body.text
+	return _plain
 
 
 func pinned() -> String:
@@ -232,11 +277,11 @@ func pinned() -> String:
 
 
 ## Pins this text (the right button): it stays until unpinned, `control` is lit.
-func pin(control: Control, title_text: String, body_text: String) -> void:
+func pin(control: Control, title_text: String, body_text: String, card: Dictionary = {}, look: Dictionary = {}) -> void:
 	_unlight()
 	_pinned = title_text
 	_pinned_body = body_text
-	_put(title_text, body_text)
+	_put(title_text, body_text, card, look)
 	_light(control)
 	if floating and is_inside_tree():
 		if not visible:  # pinned straight away: by the cursor over its thing, else beside the thing
@@ -264,7 +309,7 @@ func unpin() -> void:
 
 ## Pins the card of an icon (the right button on an IconSlot, v0.8.4.43.15) in the one card of the screen for icons; on
 ## the same one again lets it go. `left` — beside the icon on its left, where a menu opened at the cursor leaves room.
-static func pin_card(control: Control, title_text: String, body_text: String, left := false) -> void:
+static func pin_card(control: Control, title_text: String, body_text: String, left := false, card: Dictionary = {}, look: Dictionary = {}) -> void:
 	if control == null or not control.is_inside_tree():
 		return
 	if _pins == null or not is_instance_valid(_pins):
@@ -286,7 +331,7 @@ static func pin_card(control: Control, title_text: String, body_text: String, le
 	_pins._screen = weakref(top)
 	_pins._left = left
 	_pins.visible = false  # stands anew by this icon
-	_pins.pin(control, title_text, body_text)
+	_pins.pin(control, title_text, body_text, card, look)
 	if left:
 		_pins._beside = true
 		_pins._place()
@@ -298,21 +343,41 @@ static func pinned_card() -> DetailsPanel:
 
 
 ## The card an icon shows at the cursor (IconSlot's tooltip, v0.8.4.43.15): the name on top, the act's line, the text —
-## one width, a long text cut at `CARD_MAX_BODY` with «the right button pins it» under it.
-static func tip_card(title_text: String, line: String, body_text: String) -> PanelContainer:
+## one width, a long text cut at `CARD_MAX_BODY` with «the right button pins it» under it. With a `card` of `CardInfo`
+## (v0.8.4.43.33) its body is the card's, the icon in the corner (`look`, else the card's own), the band of what it takes.
+static func tip_card(title_text: String, line: String, body_text: String, card: Dictionary = {}, look: Dictionary = {}) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.name = "TipCard"
 	panel.theme_type_variation = UiTheme.CARD
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
+	col.add_theme_constant_override("separation", 6)
 	panel.add_child(col)
-	var head := Label.new()
-	head.name = "TipTitle"
-	head.text = title_text
-	head.theme_type_variation = UiTheme.ACCENT_LABEL
-	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	head.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
+	var icon := look if not look.is_empty() else look_of(card)
+	var head := HBoxContainer.new()
+	head.name = "TipHead"
+	head.add_theme_constant_override("separation", 10)
 	col.add_child(head)
+	var names := VBoxContainer.new()
+	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	names.add_theme_constant_override("separation", 0)
+	head.add_child(names)
+	var title := Label.new()
+	title.name = "TipTitle"
+	title.text = title_text
+	title.theme_type_variation = UiTheme.ACCENT_LABEL
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_font_size_override("font_size", UiTheme.SIZE_BODY)
+	if str(card.get("title_color", "")) != "":
+		title.add_theme_color_override("font_color", Color(str(card["title_color"])))
+	var with_icon := not icon.is_empty() and IconSlot.texture(str(icon.get("path", ""))) != null
+	title.custom_minimum_size = Vector2(CARD_WIDTH - 24 - (CARD_ICON + 10 if with_icon else 0.0), 0)
+	names.add_child(title)
+	if str(card.get("sub", "")) != "":
+		names.add_child(_sub_label(str(card["sub"])))
+	if with_icon:
+		var rect := _icon_rect(icon)
+		rect.name = "TipIcon"
+		head.add_child(rect)
 	if line != "" and line != title_text:
 		var l := Label.new()
 		l.name = "TipLine"
@@ -320,14 +385,15 @@ static func tip_card(title_text: String, line: String, body_text: String) -> Pan
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
 		col.add_child(l)
-	if body_text != "":
+	var shown := card_text(card) if not card.is_empty() else body_text
+	if shown != "":
 		var body := RichTextLabel.new()
 		body.name = "TipText"
 		body.bbcode_enabled = true
 		body.fit_content = true
 		body.scroll_active = false
 		body.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
-		body.text = body_text
+		body.text = shown
 		body.add_theme_color_override("default_color", UiTheme.MUTED)
 		col.add_child(body)
 		var more := _more_label()
@@ -338,14 +404,127 @@ static func tip_card(title_text: String, line: String, body_text: String) -> Pan
 			more.visible = true
 		# A tooltip takes its size when it comes up: the text's height by its font, before it is laid out …
 		var font := body.get_theme_font("normal_font")
-		var plain := RegEx.create_from_string("\\[[^\\]]*\\]").sub(body_text, "", true)
+		var plain := CardInfo.plain(card) if not card.is_empty() else RegEx.create_from_string("\\[[^\\]]*\\]").sub(body_text, "", true)
 		if font != null and font.get_multiline_string_size(plain, HORIZONTAL_ALIGNMENT_LEFT, CARD_WIDTH - 24,
 				body.get_theme_font_size("normal_font_size")).y > CARD_MAX_BODY:
 			cut.call()
 		body.resized.connect(func() -> void:  # … and once it is, should the font have told less
 			if is_instance_valid(body) and body.fit_content and body.get_content_height() > CARD_MAX_BODY + 4:
 				cut.call())
+	var band := _foot_band(card)
+	if band != null:
+		col.add_child(band)
 	return panel
+
+
+## The body of a card in BBCode: the headline number, its dice by damage type, what it lays with the condition's icon,
+## how it works, the description, the notes.
+static func card_text(card: Dictionary) -> String:
+	var t: Array[String] = []
+	var text := UiTheme.TEXT.to_html(false)
+	var muted := UiTheme.MUTED.to_html(false)
+	if str(card.get("big", "")) != "":
+		t.append("[font_size=%d][color=#%s]%s[/color][/font_size]" % [BIG_SIZE, text, _esc(str(card["big"]))])
+	for d: Dictionary in card.get("dice", []):
+		var hue := str(d.get("color", "")).trim_prefix("#")
+		var col := UiTheme.OK.to_html(false) if bool(d.get("heal", false)) else (hue if hue != "" else muted)
+		t.append("[color=#%s]%s[/color]  [color=#%s]%s%s[/color]" % [text, _esc(str(d["text"])), col, "◆ " if hue != "" else "", _esc(str(d.get("type", "")))])
+	for st: Dictionary in card.get("status", []):
+		var path := str(look_of({"icon": st["icon"]}).get("path", ""))
+		t.append(("[img=28x28]%s[/img] " % path if path != "" else "") + "[color=#%s]%s[/color]" % [text, _esc(str(st["text"]))])
+	if not (card.get("props", []) as Array).is_empty():  # before the text: a long one is cut, how it works stays in sight
+		t.append("[color=#%s]%s[/color]" % [UiTheme.ACCENT.to_html(false), _esc("     ".join(card["props"]))])
+	if str(card.get("desc", "")) != "":
+		if not t.is_empty():
+			t.append("")
+		t.append("[color=#%s]%s[/color]" % [text, _esc(str(card["desc"]))])
+	for n: Variant in card.get("notes", []):
+		t.append("[color=#%s]%s[/color]" % [muted, _esc(str(n))])
+	return "\n".join(t)
+
+
+## The band at the bottom of a card: what it takes, glyph by glyph, and a thing's weight and price on the right; null — none.
+static func _foot_band(card: Dictionary) -> PanelContainer:
+	var costs: Array = card.get("cost", [])
+	var foot: Array = card.get("foot", [])
+	if costs.is_empty() and foot.is_empty():
+		return null
+	var band := PanelContainer.new()
+	band.name = "CardFoot"
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0, 0, 0, 0.35)
+	box.border_color = UiTheme.BORDER
+	box.border_width_top = 1
+	box.set_content_margin_all(6)
+	box.content_margin_left = 10
+	box.content_margin_right = 10
+	band.add_theme_stylebox_override("panel", box)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	band.add_child(row)
+	var left := RichTextLabel.new()
+	left.name = "CardCost"
+	left.bbcode_enabled = true
+	left.fit_content = true
+	left.scroll_active = false
+	left.autowrap_mode = TextServer.AUTOWRAP_OFF
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	left.add_theme_color_override("default_color", UiTheme.TEXT)
+	left.text = "    ".join(costs.map(func(c: Dictionary) -> String:
+		return "[color=#%s]%s[/color] %s" % [COST_COLORS.get(str(c["kind"]), "9a8f7e"), CardInfo.GLYPH.get(str(c["kind"]), "•"), _esc(str(c["text"]))]))
+	row.add_child(left)
+	if not foot.is_empty():
+		var right := Label.new()
+		right.name = "CardFootRight"
+		right.text = " · ".join(foot)
+		right.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		right.add_theme_color_override("font_color", UiTheme.MUTED)
+		row.add_child(right)
+	return band
+
+
+## The icon of a card by its ref (IconRules.of); {} — none.
+static func look_of(card: Dictionary) -> Dictionary:
+	var r := str(card.get("icon", ""))
+	var root := (Engine.get_main_loop() as SceneTree).root  # no autoload names: a playtest's script compiles this first
+	if r.is_empty() or not root.has_node("Catalog"):
+		return {}
+	var session: GameSession = root.get_node("GameState").session if root.has_node("GameState") else null
+	return IconRules.of(root.get_node("Catalog").data, session.items if session != null else {}, r)
+
+
+static func _icon_rect(look: Dictionary) -> TextureRect:
+	var rect := TextureRect.new()
+	rect.custom_minimum_size = Vector2(CARD_ICON, CARD_ICON)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_set_icon(rect, look)
+	return rect
+
+
+static func _set_icon(rect: TextureRect, look: Dictionary) -> void:
+	rect.texture = IconSlot.texture(str(look.get("path", "")))
+	rect.modulate = Color(str(look["tint"])) if str(look.get("tint", "")) != "" else Color.WHITE
+	rect.visible = rect.texture != null
+
+
+static func _sub_label(text: String) -> Label:
+	var sub := Label.new()
+	sub.name = "TipSub"
+	sub.text = text
+	sub.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sub.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
+	sub.add_theme_color_override("font_color", UiTheme.MUTED)
+	return sub
+
+
+static func _esc(s: String) -> String:
+	return s.replace("[", "[lb]")
 
 
 static func _more_label() -> Label:
@@ -370,17 +549,22 @@ func _unlight() -> void:
 	_lit = null
 
 
-## Shows this text when `control` is hovered, focused or pressed; the right button pins it (or unpins it again).
-func hook(control: Control, title_text: String, body_text: String) -> void:
+## Shows this text when `control` is hovered, focused or pressed; the right button pins it (or unpins it again). `card` —
+## a card of `CardInfo` drawn instead of the text (its plain words are the text when `body_text` is empty).
+func hook(control: Control, title_text: String, body_text: String, card: Dictionary = {}) -> void:
+	if body_text.is_empty() and not card.is_empty():
+		body_text = CardInfo.plain(card)
 	if body_text.is_empty() and title_text.is_empty():
 		return
+	var look: Dictionary = (control as IconSlot).spec if control is IconSlot else {}
 	if control is IconSlot:  # an icon tells what it is at the cursor (v0.8.4.43, as in BG3)
 		(control as IconSlot).tip_title = title_text
 		(control as IconSlot).tip_body = body_text
+		(control as IconSlot).card = card
 	var shown := func() -> void:
 		if _pinned.is_empty():
 			_shown = control
-		show_text(title_text, body_text)
+		show_text(title_text, body_text, card, look)
 	if not (floating and control is IconSlot):  # an icon's own card is at the cursor already
 		control.mouse_entered.connect(shown)
 		if control is BaseButton:
@@ -392,50 +576,7 @@ func hook(control: Control, title_text: String, body_text: String) -> void:
 			if _pinned == title_text and _pinned_body == body_text:
 				unpin()
 			else:
-				pin(control, title_text, body_text)
+				pin(control, title_text, body_text, card, look)
 			control.accept_event())
 	if _pinned == title_text and _pinned_body == body_text:  # the rows were rebuilt: the pinned one is lit again
 		_light(control)
-
-
-# --- texts ----------------------------------------------------------------------------------------------------
-
-
-static func item_text(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> String:
-	var lines := ItemInfo.lines(c, data, session_items, id)
-	var cmp := ItemInfo.compare(c, data, session_items, id)
-	if not cmp.is_empty():
-		lines.append(cmp)
-	return "\n".join(lines)
-
-
-static func spell_text(data: Dictionary, id: String, slot: int = 0) -> String:
-	var s: Dictionary = data["spells"].get(id, {})
-	if s.is_empty():
-		return ""
-	var lv := int(s.get("level", 0))
-	var head: String = TranslationServer.translate("DETAILS_CANTRIP") if lv == 0 else TranslationServer.translate("DETAILS_CIRCLE").format({"n": lv})
-	var school := str(s.get("school", ""))
-	var lines: Array[String] = ["%s%s · %s · %s · %s%s" % [head, (" · " + school) if not school.is_empty() else "", s.get("casting_time", ""), s.get("range", ""),
-		s.get("duration", ""), (" · " + TranslationServer.translate("DETAILS_CONCENTRATION")) if bool(s.get("concentration", false)) else ""]]
-	if not str(s.get("desc", "")).is_empty():
-		lines.append(str(s["desc"]))
-	if SpellRules.by_master(data, id):
-		lines.append(TranslationServer.translate("DETAILS_BY_MASTER"))
-	var grown := SpellRules.at_slot(data, id, slot)  # v0.7.22.19: what the chosen slot gives
-	if not grown.is_empty():
-		lines.append(grown)
-	return "\n".join(lines)
-
-
-## A class feature or a race trait by id, or a resource of Stock (its first feature).
-static func feature_text(data: Dictionary, id: String) -> String:
-	for pool: Dictionary in [data["classes"]["features"], data["races"]["traits"]]:
-		if pool.has(id):
-			return str(pool[id].get("desc", ""))
-	var res: Dictionary = data["rules"]["resources"].get(id, {})
-	for f: Variant in res.get("features", []):
-		var t := feature_text(data, str(f))
-		if not t.is_empty():
-			return t
-	return ""

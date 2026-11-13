@@ -27,7 +27,7 @@ func test_a_higher_slot_shows_what_it_gives() -> void:
 	assert_str(SpellRules.at_slot(data, "magic_missile", 3)).contains("снарядов 5")
 	assert_str(SpellRules.at_slot(data, "fire_bolt", 0)).is_empty()
 	assert_str(SpellRules.describe(data, "burning_hands", 2)).contains("усилено: урон 4к6")
-	assert_str(DetailsPanel.spell_text(data, "magic_missile", 2)).contains("Ячейкой 2 круга")
+	assert_str(CardInfo.plain(CardInfo.spell(data, "magic_missile", 2))).contains("Ячейкой 2 круга")
 
 
 func test_the_shield_hint_uses_the_hits_own_roll() -> void:

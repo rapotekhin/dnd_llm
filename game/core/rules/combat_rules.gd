@@ -1236,7 +1236,7 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 	var sp: Dictionary = data["spells"][spell_id]
 	var level := caster_level(s)
 	lines.append_array(SpellEffects.end_on_attack(Sheet.holder(s, me)))  # a spell at a foe ends Sanctuary (v0.7.13.2)
-	var dice := _spell_dice(sp, slot, level)
+	var dice := spell_dice(sp, slot, level)
 	var t := aimed(s, target_id)
 	if str(sp.get("damage_type", "")) == "fire" and not t.is_empty():
 		FightField.kindle(s, data, area_cells(s, data, sp, t) if sp.has("area") else FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
@@ -1386,7 +1386,7 @@ static func _pick_shot(s: GameSession, data: Dictionary, v: Dictionary, target_i
 		var t := fighter(s, target_id)
 		var dtype := str(sp.get("damage_type", ""))
 		var ok := Sheet.saved(s, data, t, str(sp["save"]["ability"]), spell_dc(s), "magic", false, lines)
-		var dmg := 0 if ok else Sheet.taken(s, data, t, dtype, roll_dice(s.rng, _empowered(s, _spell_dice(sp, slot, caster_level(s)))))
+		var dmg := 0 if ok else Sheet.taken(s, data, t, dtype, roll_dice(s.rng, _empowered(s, spell_dice(sp, slot, caster_level(s)))))
 		lines.append("%s: %s — %d (%s)" % [sp["name"], t["name"], dmg, data["misc"]["damage_types"].get(dtype, dtype)])
 		if dmg > 0:
 			Harm.take(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(caster(s)))
@@ -1435,7 +1435,7 @@ static func volley_shot(s: GameSession, data: Dictionary, target_id: String) -> 
 		if scoped:
 			s.combat.erase("by")
 	else:
-		_bolt(s, data, str(v["spell"]), int(v["slot"]), t, _spell_dice(sp, int(v["slot"]), int(s.character.get("level", 1))), lines)
+		_bolt(s, data, str(v["spell"]), int(v["slot"]), t, spell_dice(sp, int(v["slot"]), int(s.character.get("level", 1))), lines)
 	v["left"] = int(v["left"]) - 1
 	v["last"] = target_id
 	if int(v["left"]) <= 0 or enemies(s).is_empty() or (v.has("picks") and not _can_pick_more(s, data)):
@@ -1582,7 +1582,7 @@ static func _heighten(s: GameSession) -> bool:
 	return true
 
 
-static func _spell_dice(sp: Dictionary, slot: int, level: int) -> String:
+static func spell_dice(sp: Dictionary, slot: int, level: int) -> String:
 	if sp.has("damage_at_slot"):
 		return str(sp["damage_at_slot"].get(str(maxi(slot, int(sp["level"]))), sp["damage_at_slot"].values()[0]))
 	var best := "1d6"
@@ -2567,7 +2567,7 @@ static func cast_preview(s: GameSession, data: Dictionary, spell_id: String, slo
 		var held := Roll.chance_of(s, data, t, {"save": sab, "dc": spell_dc(s), "tag": _spell_tag(data, spell_id, cspec["conditions"])})
 		return {"save": true, "condition": conds, "chance": 100 - held, "adv": [], "dis": [], "immune": not _can_be(s, data, t, cspec)}
 	var level := caster_level(s)
-	var dice := _spell_dice(sp, maxi(slot, int(sp.get("level", 0))), level)
+	var dice := spell_dice(sp, maxi(slot, int(sp.get("level", 0))), level)
 	var r := dice_range(dice)
 	var out := {"min": r[0], "max": r[1], "count": SpellEffects.count(data, spell_id, slot, level), "adv": [], "dis": [], "save": false, "half": false, "chance": 100}
 	if bool(cfg(data)["multi"].get(spell_id, {}).get("auto_hit", false)):

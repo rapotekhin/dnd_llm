@@ -204,7 +204,7 @@ func _tip(id: String) -> String:
 	if data["classes"]["subclasses"].has(id):
 		return InfoBox.subclass_text(data, id)
 	if data["spells"].has(id):
-		return DetailsPanel.spell_text(data, id)
+		return CardInfo.plain(CardInfo.spell(data, id))
 	var f: Dictionary = data["classes"]["features"].get(id, {})
 	if f.is_empty():
 		return ""
@@ -213,7 +213,7 @@ func _tip(id: String) -> String:
 		var once := Stock.table(data).values().any(func(r: Dictionary) -> bool:  # charges of its own (v0.8.4.26.1)
 			return (r.get("features", []) as Array).has(id) and str(r.get("spell", "")) == str(sid))
 		out += "\n\n%s (%s)\n%s" % [data["spells"].get(str(sid), {}).get("name", sid), "раз за долгий отдых, без ячейки" if once else "по желанию, без ячейки",
-			DetailsPanel.spell_text(data, str(sid))]
+			CardInfo.plain(CardInfo.spell(data, str(sid)))]
 	return out
 
 

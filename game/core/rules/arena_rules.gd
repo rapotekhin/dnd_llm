@@ -231,7 +231,7 @@ static func hero_dpr(s: GameSession, data: Dictionary, ac: int) -> float:
 	for sp: String in SpellRules.ready(c):  # an attack cantrip, when it does more than the weapon
 		var d: Dictionary = data["spells"].get(sp, {})
 		if int(d.get("level", 1)) == 0 and str(d.get("attack", "")) != "" and CombatRules.is_engine_spell(data, sp):
-			best = maxf(best, _hit_p(int(c.get("spell_attack", 0)), ac) * _avg(CombatRules._spell_dice(d, 0, int(c.get("level", 1)))))
+			best = maxf(best, _hit_p(int(c.get("spell_attack", 0)), ac) * _avg(CombatRules.spell_dice(d, 0, int(c.get("level", 1)))))
 	return best
 
 

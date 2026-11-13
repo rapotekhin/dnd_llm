@@ -17,6 +17,8 @@
 		"groups",
 		"ui"
 	],
+	"framed": ["spells", "features", "traits", "acts"],
+	"_framed_doc": "Kinds whose drawn icon carries its own frame (the lines style, v0.8.4.43.30): a cell lays it edge to edge with no frame of its own (v0.8.4.43.33).",
 	"shared": {
 		"_doc": "\"<kind>/<id>\": \"<kind>/<id>\" — the second's file stands for the first. «slots/<slot>» — the faded picture of an empty slot of the doll (v0.8.4.43.6); «toggles/<id>» — a passive of rules.toggles on the hotbar (v0.8.4.43.7).",
 		"slots/head": "items/helm_of_telepathy",

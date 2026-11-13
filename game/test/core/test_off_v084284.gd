@@ -46,8 +46,8 @@ func test_the_text_of_a_spell_of_the_master_says_so() -> void:
 	var line := TranslationServer.translate("DETAILS_BY_MASTER")
 	for id: String in data["rules"]["spellcasting"]["by_master"]:
 		assert_bool(data["spells"].has(id)).override_failure_message(id).is_true()
-		assert_str(DetailsPanel.spell_text(data, id)).contains(line)
-	assert_str(DetailsPanel.spell_text(data, "fire_bolt")).not_contains(line)
+		assert_str(CardInfo.plain(CardInfo.spell(data, id))).contains(line)
+	assert_str(CardInfo.plain(CardInfo.spell(data, "fire_bolt"))).not_contains(line)
 
 
 func test_a_mule_carries_a_size_larger_by_its_own_trait() -> void:

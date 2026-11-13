@@ -497,7 +497,7 @@ func _spell_options(ids: Array) -> Array:
 	var out: Array = []
 	for id: Variant in ids:
 		var s: Dictionary = spells[str(id)]
-		out.append({"id": id, "label": str(s["name"]), "tooltip": DetailsPanel.spell_text(data(), str(id)), "school": str(s.get("school_id", ""))})
+		out.append({"id": id, "label": str(s["name"]), "tooltip": CardInfo.plain(CardInfo.spell(data(), str(id))), "school": str(s.get("school_id", ""))})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return str(a["label"]) < str(b["label"]))
 	return out
 

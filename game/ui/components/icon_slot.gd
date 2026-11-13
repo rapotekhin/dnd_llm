@@ -10,14 +10,21 @@ extends Button
 ## v0.8.4.43.15 (the author: «описание не содержит названия способности»): the card's title is the name — `tip_title`, else
 ## the cell's own text, never the line of its tooltip; the card is `DetailsPanel.tip_card`, one size; the right button
 ## pins it (`pin_card`) so it stays when the cursor goes.
+## v0.8.4.43.33 (the author: «разрешение иконок ужасное, они все мелкие и детали потеряны»): an icon that carries its own
+## frame (`framed`, the lines style) is laid edge to edge with no frame of the cell around it, a lit edge when hovered; a
+## picture is shrunk through its mipmaps, so thin lines stay whole; the card is the one of `CardInfo` when the cell has it.
 
 signal dropped_off(key: String)
 
 const SIZE := 56
 
-static var _textures := {}  # path → Texture2D
+static var _textures := {}  # path → Texture2D with its mipmaps
 
-var spec: Dictionary = {}
+var spec: Dictionary = {}:
+	set(v):
+		spec = v
+		_restyle()
+var card: Dictionary = {}  ## the card of `CardInfo` at the cursor ({} — the plain `tip_body`)
 var badge := ""  ## «×2», «1/3» — the corner's number
 var cost := ""  ## "bonus" — a triangle in the corner, as the bonus action's mark
 var tip_title := ""  ## the card's title; the text's first line when empty
@@ -42,21 +49,47 @@ static func make(ref: String, name_text: String, side: int = SIZE) -> IconSlot:
 
 func _init() -> void:
 	clip_text = true  # the button's own text adds nothing to its size and is not drawn
-	var cell := UiTheme.cell_box()  # the drawn cell, not the theme's long button stretched square (v0.8.4.43.23)
-	if cell != null:
-		for k: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
-			add_theme_stylebox_override(k, cell)
-		add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_restyle()
+	add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	for k: String in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color"]:
 		add_theme_color_override(k, Color.TRANSPARENT)
 
 
+## The cell's frame: the drawn cell (not the theme's long button stretched square, v0.8.4.43.23) — none under an icon
+## that has its own.
+func _restyle() -> void:
+	var cell: StyleBox = StyleBoxEmpty.new() if bool(spec.get("framed", false)) else UiTheme.cell_box()
+	if cell == null:
+		return
+	for k: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		add_theme_stylebox_override(k, cell)
+
+
+## A picture by its path with its mipmaps made (an icon is drawn far smaller than its file: without them a thin line
+## breaks into dots); null — none.
 static func texture(path: String) -> Texture2D:
 	if path.is_empty():
 		return null
 	if not _textures.has(path):
-		_textures[path] = load(path) if ResourceLoader.exists(path) else null
+		var tex: Texture2D = load(path) if ResourceLoader.exists(path) else null
+		if tex != null and not tex.has_mipmaps():
+			var img := tex.get_image()
+			if img != null:
+				if img.is_compressed():
+					img.decompress()
+				img.generate_mipmaps()
+				tex = ImageTexture.create_from_image(img)
+		_textures[path] = tex
 	return _textures[path]
+
+
+## Gives the cell its card of `CardInfo`: the title, the plain words for the tests and the chat, the card at the cursor.
+func set_card(c: Dictionary) -> void:
+	card = c
+	if not c.is_empty():
+		tip_title = str(c.get("title", tip_title))
+		tip_body = CardInfo.plain(c)
 
 
 func set_icon(ref: String) -> void:
@@ -68,7 +101,7 @@ func set_icon(ref: String) -> void:
 
 ## The card at the cursor: the name, the act's line when it says more, the description.
 func _make_custom_tooltip(for_text: String) -> Object:
-	return DetailsPanel.tip_card(card_title(for_text), card_line(for_text), tip_body)
+	return DetailsPanel.tip_card(card_title(for_text), card_line(for_text), tip_body, card, spec)
 
 
 ## The name on the card: `tip_title`, else the cell's own text (its name), else the first line of its tooltip.
@@ -78,17 +111,23 @@ func card_title(for_text: String) -> String:
 	return text.get_slice("\n", 0) if text != "" else for_text.get_slice("\n", 0)
 
 
-## The act's line under the name: the tooltip without the name it begins with.
+## The act's line under the name: the tooltip without the name it begins with. Under a card the circle «(2)» and the marks
+## «[бонус]», «[по желанию]» of a button's label go too: the card says them in its head and its band.
 func card_line(for_text: String) -> String:
 	var title := card_title(for_text)
 	var line := for_text.strip_edges()
-	return line.substr(title.length()).strip_edges() if line.begins_with(title) else line
+	line = line.substr(title.length()).strip_edges() if line.begins_with(title) else line
+	if not card.is_empty():
+		for mark: String in [tr("COMBAT_BONUS_SHORT"), tr("SPELL_AT_WILL_SHORT")]:
+			line = line.replace(mark.strip_edges(), "")
+		line = RegEx.create_from_string("^\\(\\d+\\)").sub(line.strip_edges(), "").strip_edges()
+	return line
 
 
 ## Pins this cell's card (the right button): it stays on the screen until the right button on it again or its lock.
 func pin_card(left := false) -> void:
 	var line := card_line(tooltip_text)
-	DetailsPanel.pin_card(self, card_title(tooltip_text), "\n\n".join([line, tip_body].filter(func(x: String) -> bool: return x != "")), left)
+	DetailsPanel.pin_card(self, card_title(tooltip_text), "\n\n".join([line, tip_body].filter(func(x: String) -> bool: return x != "")), left, card, spec)
 
 
 func _gui_input(ev: InputEvent) -> void:
@@ -128,12 +167,15 @@ func _notification(what: int) -> void:
 
 func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
-	var inner := r.grow(-3 if flat or UiTheme.cell_box() == null else -roundf(minf(size.x, size.y) * 0.1))  # inside the drawn cell's lines
+	var framed := bool(spec.get("framed", false))
+	var inner := r if framed else r.grow(-3 if flat or UiTheme.cell_box() == null else -roundf(minf(size.x, size.y) * 0.1))  # inside the drawn cell's lines
 	var dim := Color(1, 1, 1, 0.35) if disabled else Color.WHITE
 	var tex := texture(str(spec.get("path", "")))
 	if tex != null:
 		var tint: Color = Color(str(spec["tint"])) if str(spec.get("tint", "")) != "" else Color.WHITE
 		draw_texture_rect(tex, inner, false, tint * dim)
+		if framed and is_hovered() and not disabled:  # its own frame lit: the cell has none to light
+			draw_texture_rect(tex, inner, false, Color(1, 0.95, 0.8, 0.35))
 	var frame := str(spec.get("frame", ""))
 	if frame != "":
 		draw_rect(r.grow(-1), Color(frame) * dim, false, 2.0)

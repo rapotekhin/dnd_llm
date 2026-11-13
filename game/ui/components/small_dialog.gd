@@ -267,9 +267,9 @@ func _prep_box(id: String, n: int, data: Dictionary) -> CheckBox:
 	cb.button_pressed = picks.has(id)
 	cb.disabled = not picks.has(id) and picks.size() >= n
 	if _details != null:
-		_details.hook(cb, str(sp.get("name", id)), DetailsPanel.spell_text(data, id))
+		_details.hook(cb, str(sp.get("name", id)), "", CardInfo.spell(data, id, 0, GameState.session.character))
 	else:
-		cb.tooltip_text = DetailsPanel.spell_text(data, id)
+		cb.tooltip_text = CardInfo.plain(CardInfo.spell(data, id, 0, GameState.session.character))
 	cb.toggled.connect(func(on: bool) -> void:
 		if on and not picks.has(id) and picks.size() < n:
 			picks.append(id)

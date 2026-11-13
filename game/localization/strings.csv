@@ -2203,3 +2203,35 @@ DETAILS_MORE,"Правая кнопка — закрепить и прочита
 SHORT_REST_TIP,"Час передышки: потратьте кости хитов, чтобы вернуть хиты. Умения «до короткого отдыха» восстанавливаются (Второе дыхание, ки, ячейки колдуна)."
 LONG_REST_TIP,"Восемь часов сна в комнате трактира, дома или в лагере с едой: все хиты и ячейки заклинаний, половина костей хитов, истощение уменьшается. Пока вы спите, идёт время."
 WAIT_TIP,"Пропустить время: час, до утра, дня, вечера, ночи или сколько скажете."
+CARD_SPELL_SUB,Заклинание {n} круга
+CARD_CANTRIP_SUB,Заговор
+CARD_RITUAL,ритуал
+CARD_BIG_DAMAGE,{lo}–{hi} урона
+CARD_BIG_HEAL,{lo}–{hi} хитов
+CARD_BIG_SHIELD,+{n} КД
+CARD_HEALING,лечение
+CARD_PLUS_MOD, + мод.
+CARD_AREA_SPHERE,сфера {n} фт
+CARD_AREA_CONE,конус {n} фт
+CARD_AREA_CUBE,куб {n} фт
+CARD_AREA_CYLINDER,цилиндр {n} фт
+CARD_AREA_LINE,линия {n} фт
+CARD_ATTACK_RANGED,Дальнобойная атака заклинанием
+CARD_ATTACK_MELEE,Рукопашная атака заклинанием
+CARD_SAVE_HALF,половина при успехе
+CARD_CONCENTRATION,Концентрация
+CARD_COST_ACTION,Действие
+CARD_COST_BONUS,Бонусное действие
+CARD_COST_REACTION,Реакция
+CARD_COST_MOVE,Перемещение
+CARD_COST_FREE,Без действия
+CARD_COST_SLOT,Ячейка {n} круга
+CARD_COST_AT_WILL,Без ячейки
+CARD_FEATURE_SUB,"Умение класса · {class}, {n} уровень"
+CARD_FEATURE,Умение класса
+CARD_TRAIT_SUB,Черта расы
+CARD_ACT,Действие в бою
+CARD_USES,Заряды {left}/{max}
+CARD_RECHARGE_SHORT,после короткого отдыха
+CARD_RECHARGE_LONG,после долгого отдыха
+ITEM_SHIELD,Щит

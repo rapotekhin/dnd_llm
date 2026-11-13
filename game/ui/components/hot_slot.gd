@@ -14,7 +14,8 @@ func _init() -> void:
 
 
 func _draw() -> void:
-	draw_style_box(UiTheme.box(Color(0, 0, 0, 0.35), UiTheme.BORDER.darkened(0.3), 1, 0, 4), Rect2(Vector2.ZERO, size))
+	if get_child_count() == 0:  # an empty slot is faint, a filled one is its cell (v0.8.4.43.33: the icons stand out)
+		draw_style_box(UiTheme.box(Color(0, 0, 0, 0.18), UiTheme.BORDER.darkened(0.5), 1, 0, 4), Rect2(Vector2.ZERO, size))
 
 
 func _can_drop_data(_at: Vector2, data: Variant) -> bool:

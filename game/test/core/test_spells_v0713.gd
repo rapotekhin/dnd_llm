@@ -101,9 +101,9 @@ func test_every_engine_spell_matches_the_srd() -> void:
 				assert_str(str(sp["heal_at_slot"][k])).override_failure_message(id + " " + k).is_equal(str(row[3][k]))
 			continue
 		var lv0 := int(row[0]) == 0
-		assert_str(CombatRules._spell_dice(sp, 0 if lv0 else int(row[0]), 1)).override_failure_message(id).is_equal(str(row[2]))
+		assert_str(CombatRules.spell_dice(sp, 0 if lv0 else int(row[0]), 1)).override_failure_message(id).is_equal(str(row[2]))
 		for k: String in row[3]:
-			var at := CombatRules._spell_dice(sp, 0, int(k)) if lv0 else CombatRules._spell_dice(sp, int(k), 1)
+			var at := CombatRules.spell_dice(sp, 0, int(k)) if lv0 else CombatRules.spell_dice(sp, int(k), 1)
 			assert_str(at).override_failure_message("%s at %s" % [id, k]).is_equal(str(row[3][k]))
 		if str(row[4]).is_empty():
 			assert_bool(sp.has("attack") or id == "magic_missile").override_failure_message(id + " attack").is_true()
@@ -140,8 +140,8 @@ func test_condition_spells_match_the_srd() -> void:
 
 func test_fire_bolt_grows_with_the_caster() -> void:
 	var sp: Dictionary = data["spells"]["fire_bolt"]
-	assert_str(CombatRules._spell_dice(sp, 0, 4)).is_equal("1d10")
-	assert_str(CombatRules._spell_dice(sp, 0, 5)).is_equal("2d10")
+	assert_str(CombatRules.spell_dice(sp, 0, 4)).is_equal("1d10")
+	assert_str(CombatRules.spell_dice(sp, 0, 5)).is_equal("2d10")
 
 
 func test_guiding_bolt_gives_advantage_to_the_next_attack() -> void:

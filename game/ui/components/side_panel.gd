@@ -662,12 +662,12 @@ func _hotbar_pins(s: GameSession, can_act: bool) -> void:
 			cell.badge = count.get_string(1) if count.get_string(1) != "" else "×" + count.get_string(2)
 		match kind:
 			"spell":
-				cell.tip_title = str(Catalog.data["spells"][id]["name"])
-				cell.tip_body = DetailsPanel.spell_text(Catalog.data, id, int(slots[0]) if not slots.is_empty() else 0)
+				cell.set_card(CardInfo.spell(Catalog.data, id, int(slots[0]) if not slots.is_empty() else 0, c))
 			"feature":
-				cell.tip_body = DetailsPanel.feature_text(Catalog.data, id)
+				cell.set_card(CardInfo.feature(Catalog.data, id, c))
+				cell.tip_title = str(ch["name"]).get_slice(" (", 0)
 			"item":
-				cell.tip_body = DetailsPanel.item_text(c, Catalog.data, s.items, id)
+				cell.set_card(CardInfo.item(c, Catalog.data, s.items, id))
 		cell.tooltip_text = str(ch["name"]) + "\n" + tr("BAR_PIN_TIP")
 		box.add_child(cell)
 

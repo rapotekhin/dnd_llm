@@ -98,7 +98,7 @@ func run() -> void:
 		await _hover(longest)
 		var tip := _shown_tip()
 		var cut := tip != null and (tip.find_child("DetailsMore", true, false) as Label).visible
-		step("its card one size: the text cut with «правая кнопка — закрепить»", cut and tip.size.y < DetailsPanel.CARD_MAX_BODY + 200, str(tip.size) if tip != null else "нет")
+		step("its card one size: the text cut with «правая кнопка — закрепить»", cut and tip.size.y < DetailsPanel.CARD_MAX_BODY + DetailsPanel.CARD_ICON + 200, str(tip.size) if tip != null else "нет")
 		await shot("tip_long_spell")
 		await _unhover()
 		_rmb(longest)
