@@ -18,6 +18,13 @@ uniform vec2 surface_flow[16];  // how a surface's picture drifts, squares a sec
 uniform vec2 surface_move[16];  // x — how it ripples, y — how it flickers (fire)
 uniform vec2 map_size = vec2(1.0);
 uniform float repeat_cells = 3.0;
+// v0.8.4.43.41 `grounds.blend`: a ground's texture read twice — as it is and mirrored and shifted — and mixed by a wide
+// noise of `blend_scale`, the border `blend_edge` wide; its tone a little lighter or darker in wide patches (`macro_amp`
+// at `macro_scale`), so a meadow shows no repeat every few squares.
+uniform float blend_scale = 0.0;
+uniform float blend_edge = 0.15;
+uniform float macro_amp = 0.0;
+uniform float macro_scale = 0.07;
 uniform int sharp_mask = 0;  // a bit per ground of the order
 uniform vec4 ground_move[32];  // v0.8.4.43.32 `grounds.motion`: xy — drift, z — ripple, w — glow (lava)
 uniform int kin[32];  // a ground's kin: the ground whose texture it has (`grounds.same`), else itself
@@ -88,7 +95,14 @@ vec2 prop_uv(ivec2 n, vec2 p, int prop, int turn, out float size) {
 vec4 ground(int g, vec2 p) {
 	vec4 m = ground_move[g];
 	vec2 sp = p + m.xy * TIME + m.z * vec2(sin(TIME * 1.1 + p.y * 2.3), cos(TIME * 0.9 + p.x * 2.1));
-	vec4 t = texture(grounds, vec3(sp / repeat_cells, float(g)));
+	vec2 uv = sp / repeat_cells;
+	vec4 t = texture(grounds, vec3(uv, float(g)));
+	if (blend_scale > 0.0) {
+		float k = noise(p * blend_scale + vec2(31.7, 17.3) + float(g) * 5.1);
+		float w = smoothstep(0.5 - blend_edge, 0.5 + blend_edge, k);
+		if (w > 0.0) t = mix(t, texture(grounds, vec3(vec2(-uv.x, uv.y) + vec2(0.43, 0.29), float(g))), w);
+	}
+	if (macro_amp > 0.0) t.rgb *= 1.0 + macro_amp * (noise(p * macro_scale + vec2(7.9, 3.3)) * 2.0 - 1.0);
 	t.rgb *= 1.0 + m.w * (noise(p * 1.7 + vec2(TIME * 0.6, -TIME * 0.4)) - 0.4);
 	return t;
 }

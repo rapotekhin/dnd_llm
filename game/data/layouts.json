@@ -58,6 +58,7 @@
 			"stony": "#6f6a60", "scree": "#77736a", "tall_grass": "#5b6e34", "high_grass": "#7d8a3c", "cliff_top": "#7d8a3c", "cliff": "#5a4a38", "farmland": "#5a4630", "reeds": "#4c5a34", "flagstone": "#6e6c66"},
 		"same": {"_doc": "v0.8.4.43.28: a ground drawn with the texture of another — the rim of high ground over a cliff is its top's grass, its own id gives the cliff's drawn edge with the lowland", "cliff_top": "high_grass"},
 		"turn": {"_doc": "v0.8.4.43.36: how a thing of a square turns (LayoutGen.prop_turn): `walls` — across a wall with walls on both sides (a door), `fall` — down from the high ground (a waterfall, its picture falls top to bottom)", "door": "walls", "waterfall": "fall", "lavafall": "fall"},
+		"blend": {"_doc": "v0.8.4.43.41: no repeat of a ground every few squares — its texture read twice, as it is and mirrored and shifted, mixed by a noise of `scale` per square with a border `edge` wide; its tone lighter or darker by `macro` in patches of `macro_scale` (map_ground.gdshader `ground`)", "scale": 0.18, "edge": 0.14, "macro": 0.09, "macro_scale": 0.07},
 		"exits": {"_doc": "v0.8.4.43.40: the thing drawn on the square of a way out by its kind — `edge` the rim of an open map, `stairs` a way down to another floor, `stairs_up` a way up; a door is its own `+`. Turned so its top looks out of the map or to the wall the stairs stand by (LayoutGen.props_laid with the map's exits)", "edge": "signpost", "stairs": "stairs_down", "stairs_up": "stairs_up"},
 		"variants": {"_doc": "v0.8.4.43.37: a thing drawn in more pictures than one: `<id>`, `<id>_v1`, `<id>_v2`… — each square takes one by its number (LayoutGen.variant, by the map's seed), so a grove is not one tree copied", "tree": 3, "boulder": 3, "rubble": 3, "bush": 3, "stump": 3, "mushrooms": 2, "bones": 3, "boulder_pair": 2, "boulder_ridge": 2, "tree_pair": 2, "grove": 2},
 		"natural": {"_doc": "v0.8.4.43.37: things that grow or lie as nature put them: each square sizes and shifts its picture a little by its number (`scale`, `shift` of a square), and a soft shade lies on the ground round them, merged with the shade of those beside", "scale": 0.12, "shift": 0.1, "shade": 0.2, "of": ["tree", "boulder", "rubble", "bush", "stump", "mushrooms", "bones", "boulder_pair", "boulder_ridge", "tree_pair", "grove"]},
@@ -65,7 +66,7 @@
 		"strips": {"_doc": "v0.8.4.43.36: a thing drawn as a strip of one FLUX frame (gen_tiles.py `strips`): a square takes its part by its like neighbours across its fall (LayoutGen.prop_at) — alone, the left end, the middle, the right end; the picture of each is `<thing>_<part>`", "parts": ["one", "left", "mid", "right"], "of": ["waterfall", "lavafall"]},
 		"shimmer": {"_doc": "v0.8.4.43.36: a thing whose picture moves in the shader along its own top to bottom (falling water): how strong", "waterfall": 0.45, "lavafall": 0.35},
 		"motion": {"_doc": "v0.8.4.43.32: a ground that moves in the shader: `flow` — how its picture drifts, squares a second; `waver` — how it ripples; `glow` — how it flickers and shines through the dark (lava). A ground not here stands still.", "magma": {"flow": [0.012, 0.008], "waver": 0.035, "glow": 0.35}},
-		"edges": [{"low": "magma", "high": "cave"}, {"low": "magma", "high": "stony"}, {"low": "magma", "high": "grass"}, {"low": "grass", "high": "cliff_top", "gain": 1.0, "band": 0.42}, {"low": "tall_grass", "high": "cliff_top", "gain": 1.0, "band": 0.42}, {"low": "water", "high": "planks", "_doc": "v0.8.4.43.36: the deck of a bridge over the water"}, {"low": "water", "high": "grass"}, {"low": "water", "high": "dirt"}, {"low": "water", "high": "mud"}],
+		"edges": [{"low": "magma", "high": "cave"}, {"low": "magma", "high": "stony"}, {"low": "magma", "high": "grass"}, {"low": "grass", "high": "cliff_top", "gain": 1.0, "band": 0.42}, {"low": "tall_grass", "high": "cliff_top", "gain": 1.0, "band": 0.42}, {"low": "water", "high": "planks", "_doc": "v0.8.4.43.36: the deck of a bridge over the water"}, {"low": "water", "high": "grass"}, {"low": "water", "high": "dirt"}, {"low": "water", "high": "mud"}, {"low": "pit", "high": "cave"}, {"low": "pit", "high": "grass"}, {"low": "pit", "high": "dirt"}, {"low": "pit", "high": "stony"}, {"low": "cave", "high": "rock"}, {"low": "grass", "high": "cobble"}, {"low": "dirt", "high": "cobble"}, {"low": "water", "high": "sand"}, {"low": "still_water", "high": "cave"}, {"low": "still_water", "high": "reeds"}, {"low": "still_water", "high": "mud"}, {"low": "still_water", "high": "grass"}, {"low": "still_water", "high": "sand"}],
 		"edge_layout": ["11100", "01010", "00011", "01100", "11100"],
 		"edge_band": 0.22
 	},
@@ -155,6 +156,7 @@
 				"name": "место для припасов",
 				"fill": 0.6,
 				"bodies": {
+					"square": {"crate": 2, "barrel": 2, "cart": 1},
 					"smithy": {
 						"crate": 2,
 						"barrel": 1,
@@ -789,11 +791,11 @@
 			]},
 		{"id": "stones", "landmarks": ["wild", "ruin"], "marks": {"A": "stone"},
 			"rows": [
-				"..B.B..",
+				"..A.A..",
 				".......",
-				"B..A..B",
+				"A..A..A",
 				".......",
-				"..B.B.."
+				"..A.A.."
 			]},
 		{"id": "ruined_walls", "landmarks": ["ruin"], "marks": {"A": "stone"},
 			"rows": [
@@ -807,17 +809,17 @@
 		{"id": "well", "landmarks": ["town", "market", "gate"], "marks": {"W": "water"},
 			"rows": [
 				".....",
-				".BWB.",
+				"..W..",
 				".....",
 				"....."
 			]},
-		{"id": "stalls", "landmarks": ["market"], "marks": {"C": "stall"},
+		{"id": "stalls", "landmarks": ["market"], "marks": {"C": "stall", "s": "spot:storage"},
 			"rows": [
-				"BBB.BBB.BBB",
+				"s.s.....s.s",
 				".C...C...C.",
 				"...........",
 				".C...C...C.",
-				"BBB.BBB.BBB"
+				"s.s.....s.s"
 			]},
 		{"id": "fighting_ring", "landmarks": ["ring"], "marks": {"R": "ring"},
 			"rows": [

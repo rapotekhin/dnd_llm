@@ -92,6 +92,11 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	_lay_set()
 	m.set_shader_parameter("map_size", Vector2(w, h))
 	m.set_shader_parameter("repeat_cells", float(g.get("repeat", 3)))
+	var blend: Dictionary = g.get("blend", {})  # a ground mixed with itself mirrored, its tone in wide patches (v0.8.4.43.41)
+	m.set_shader_parameter("blend_scale", float(blend.get("scale", 0.0)))
+	m.set_shader_parameter("blend_edge", float(blend.get("edge", 0.15)))
+	m.set_shader_parameter("macro_amp", float(blend.get("macro", 0.0)))
+	m.set_shader_parameter("macro_scale", float(blend.get("macro_scale", 0.07)))
 	m.set_shader_parameter("sharp_mask", sharp)
 	var kin := PackedInt32Array()  # a ground drawn as another counts as that one where two grounds meet (v0.8.4.43.28)
 	for i: int in 32:

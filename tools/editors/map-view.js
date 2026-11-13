@@ -327,6 +327,11 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			order.forEach((id, i) => { const r = g.motion?.[id]; if (i < MAX_GROUNDS && r) move.set([Number(r.flow?.[0] || 0), Number(r.flow?.[1] || 0), Number(r.waver || 0), Number(r.glow || 0)], i * 4); });
 			gl.uniform4fv(u('ground_move'), move);
 			gl.uniform1f(u('repeat_cells'), Number(g.repeat ?? 3));
+			const blend = g.blend || {};  // MapGround: a ground mixed with itself mirrored, its tone in wide patches
+			gl.uniform1f(u('blend_scale'), Number(blend.scale || 0));
+			gl.uniform1f(u('blend_edge'), Number(blend.edge ?? 0.15));
+			gl.uniform1f(u('macro_amp'), Number(blend.macro || 0));
+			gl.uniform1f(u('macro_scale'), Number(blend.macro_scale ?? 0.07));
 			gl.uniform1i(u('sharp_mask'), sharp);
 			gl.uniform1fv(u('prop_size'), sizes);
 			const natural = g.natural || {};
