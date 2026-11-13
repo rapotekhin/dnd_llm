@@ -107,12 +107,17 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 16
 
-[node name="DollBox" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/GearPage"]
-unique_name_in_owner = true
+[node name="DollScroll" type="ScrollContainer" parent="ModalPanel/Col/SheetSplit/GearPage"]
 custom_minimum_size = Vector2(440, 0)
 layout_mode = 2
+horizontal_scroll_mode = 0
 
-[node name="SampleDoll" type="Label" parent="ModalPanel/Col/SheetSplit/GearPage/DollBox" groups=["editor_sample"]]
+[node name="DollBox" type="VBoxContainer" parent="ModalPanel/Col/SheetSplit/GearPage/DollScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SampleDoll" type="Label" parent="ModalPanel/Col/SheetSplit/GearPage/DollScroll/DollBox" groups=["editor_sample"]]
 layout_mode = 2
 auto_translate_mode = 2
 text = "Кукла: слоты, два набора оружия, пояс"

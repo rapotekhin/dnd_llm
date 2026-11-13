@@ -24,6 +24,11 @@ extends PanelContainer
 ## each block is a column of its head on the edge and its body inside, so the heads stand over their own bodies. The bar
 ## takes the whole width under the map and its grid every column that fits (the author: «лучше её растянуть и сделать
 ## больше ячеек»), the grid in the middle of the room left.
+## v0.8.4.43.39 (the author: «что происходит с UI при увеличении … по щелчку +. Ничего не ломается?»): from one row to four
+## the blocks stand in the middle of the frame's height, the grid keeps the height of its rows whatever stands beside it
+## («+ −» small enough for one row), the windows and the rests one grid that takes as many lines as the rows' height holds
+## — two columns of three lines, three of two by one row. The heads of the edge are one height, the tallest of them (the
+## tabs, the plaque), and the frame's line under them by `line`: the plaque and the tabs stand on it as one.
 
 signal circle_picked(circle: int)
 
@@ -68,13 +73,14 @@ var _sets: HBoxContainer
 var _counters: HBoxContainer
 var _plaque: PanelContainer  # the counters' plaque on the frame's edge
 var _inside: StyleBoxEmpty  # the bar's own margins: the frame is drawn by `_draw`, under the edge's strip
+var _heads: Array[Control] = []  # the blocks' heads on the edge: one height
+var line := float(STRIP - OVERLAP)  ## the frame's top line under the heads, from the bar's top
 var _centre: VBoxContainer  # the counters, the grid and the tabs
 var _rows_box: VBoxContainer  # «+» and «−» of the rows
 var _grid_scroll: ScrollContainer
 var _grid: HBoxContainer
 var _tabs: HBoxContainer
 var _round: CenterContainer
-var _rests: HBoxContainer
 var _stage := {}  # key of KEYS → hidden Container the owner fills
 var _laid_cols := -1  # the columns of the last laying
 var _park: Control  # hidden: the cells not on the grid now wait here, never freed with a slot
@@ -110,7 +116,7 @@ func _init() -> void:
 	_plaque = PanelContainer.new()
 	_plaque.name = "CountersPlaque"
 	_plaque.size_flags_vertical = Control.SIZE_SHRINK_END
-	_plaque.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL, UiTheme.ACCENT, 2, 8, 4))
+	_plaque.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL, UiTheme.ACCENT, 2, 5, 4))
 	hero.get_child(0).add_child(_plaque)
 	_counters = HBoxContainer.new()
 	_counters.name = "Counters"
@@ -119,6 +125,7 @@ func _init() -> void:
 	_plaque.add_child(_counters)
 	var own := HBoxContainer.new()
 	own.add_theme_constant_override("separation", 8)
+	own.size_flags_vertical = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER  # in the middle of the frame's height
 	hero.add_child(own)
 	_portrait = Portrait.of("", 112)  # one drawing with the left column's portraits (v0.8.4.43.4)
 	_portrait.name = "HeroPortrait"
@@ -151,12 +158,14 @@ func _init() -> void:
 	centre.get_child(0).add_child(_tabs)
 	var grid_row := HBoxContainer.new()
 	grid_row.add_theme_constant_override("separation", 4)
+	grid_row.size_flags_vertical = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
 	centre.add_child(grid_row)
 	_grid_scroll = ScrollContainer.new()
 	_grid_scroll.name = "Cells"
 	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER  # the rows a wheel away: no bar beside the grid
 	_grid_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN  # as wide as its cells: the bar hugs them (v0.8.4.43.33)
+	_grid_scroll.size_flags_vertical = Control.SIZE_SHRINK_CENTER  # as tall as its rows, never a part of one more
 	grid_row.add_child(_grid_scroll)
 	_grid = HBoxContainer.new()
 	_grid.name = "Grid"
@@ -175,6 +184,10 @@ func _init() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.tooltip_text = spec[3]
 		b.custom_minimum_size = Vector2(22, 22)
+		for look: String in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:  # small enough for one row
+			var bare := StyleBoxEmpty.new()
+			bare.set_content_margin_all(2)
+			b.add_theme_stylebox_override(look, bare)
 		var d: int = spec[2]
 		b.pressed.connect(func() -> void:
 			HotbarLayout.set_rows(SaveManager.hotbar, HotbarLayout.rows(SaveManager.hotbar) + d)
@@ -184,6 +197,7 @@ func _init() -> void:
 	var right := _block("RoundBlock")  # the round button, the windows over the rests in one column 2 x 3
 	var corner_row := HBoxContainer.new()
 	corner_row.add_theme_constant_override("separation", 10)
+	corner_row.size_flags_vertical = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
 	right.add_child(corner_row)
 	_round = CenterContainer.new()
 	_round.name = "Round"
@@ -203,20 +217,13 @@ func _init() -> void:
 	end_turn.add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.ACCENT.darkened(0.3), UiTheme.ACCENT_BRIGHT, 3, 6, 42))
 	end_turn.add_theme_stylebox_override("disabled", UiTheme.box(UiTheme.PANEL, UiTheme.BORDER, 3, 6, 42))
 	_round.add_child(end_turn)
-	var corner := VBoxContainer.new()
-	corner.add_theme_constant_override("separation", GAP)
-	corner.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	corner_row.add_child(corner)
-	windows = GridContainer.new()
+	windows = GridContainer.new()  # the windows, then the rests (`_lay_rests`): one grid by the rows' height
 	windows.name = "Windows"
 	windows.columns = 2
 	windows.add_theme_constant_override("h_separation", GAP)
 	windows.add_theme_constant_override("v_separation", GAP)
-	corner.add_child(windows)
-	_rests = HBoxContainer.new()
-	_rests.name = "Rests"
-	_rests.add_theme_constant_override("separation", GAP)
-	corner.add_child(_rests)
+	windows.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	corner_row.add_child(windows)
 	talk = HBoxContainer.new()
 	talk.name = "TalkActs"
 	talk.add_theme_constant_override("separation", 8)
@@ -353,13 +360,29 @@ func _block(node_name: String, align := BoxContainer.ALIGNMENT_CENTER) -> VBoxCo
 	head.alignment = align
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	block.add_child(head)
+	_heads.append(head)
 	return block
+
+
+## The heads one height — the tallest of what stands in them — so the blocks' bodies start level and the plaque and the
+## tabs stand on one line of the frame.
+func _even_heads() -> void:
+	var h := float(STRIP)
+	for head: Control in _heads:
+		for ch: Node in head.get_children():
+			if ch is Control and (ch as Control).visible:
+				h = maxf(h, (ch as Control).get_combined_minimum_size().y)
+	for head: Control in _heads:
+		head.custom_minimum_size.y = h
+	if not is_equal_approx(line, h - OVERLAP):
+		line = h - OVERLAP
+		queue_redraw()
 
 
 ## The card's drawn frame under the strip of the edge: the plaque and the tabs stand over its top line (in a conversation
 ## the frame is the whole bar).
 func _draw() -> void:
-	var top := 0.0 if _talking else float(STRIP - OVERLAP)
+	var top := 0.0 if _talking else line
 	draw_style_box(get_theme_stylebox("panel", UiTheme.CARD), Rect2(0, top, size.x, size.y - top))
 
 
@@ -436,9 +459,10 @@ func _lay() -> void:
 	_lay_hands()
 	_lay_counters()
 	_lay_passives()
+	_lay_rests()  # the windows' lines before the grid counts its room
 	_lay_grid()
 	_lay_tabs()
-	_lay_rests()
+	_even_heads()
 
 
 func _detach(cell: Node) -> void:
@@ -785,6 +809,10 @@ func _lay_counters() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		b.text = "%s %s%s" % [ROMAN[lv], "●".repeat(left), "○".repeat(maxi(0, full - left))]
+		for look: String in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:  # a line of the plaque, not a button's height
+			var bare := StyleBoxEmpty.new()
+			bare.set_content_margin_all(1)
+			b.add_theme_stylebox_override(look, bare)
 		b.button_pressed = _fight and picked_circle == lv
 		b.add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL)
 		b.add_theme_color_override("font_color", UiTheme.TEMP_HP)
@@ -810,8 +838,6 @@ func _counter(node_name: String, text: String, n: int, color: Color, tip: String
 
 ## The round button: the end of the turn in a fight, the wait out of it; the short and the long rest beside.
 func _lay_rests() -> void:
-	for n: Node in _rests.get_children():
-		_rests.remove_child(n)
 	for n: Node in _round.get_children():
 		if n != end_turn:
 			_round.remove_child(n)
@@ -825,5 +851,8 @@ func _lay_rests() -> void:
 		cell.custom_minimum_size = Vector2(WIN, WIN)
 		if _fight and cell is BaseButton:
 			(cell as BaseButton).disabled = true
-		_rests.add_child(cell)
+		windows.add_child(cell)  # after the windows, in their grid
+	var tall := maxf(HotbarLayout.rows(SaveManager.hotbar) * (CELL + GAP), _portrait.get_combined_minimum_size().y)  # the lines the frame holds
+	var lines := clampi(int((tall + GAP) / (WIN + GAP)), 1, 3)
+	windows.columns = maxi(1, ceili(float(windows.get_child_count()) / lines))
 
