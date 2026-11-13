@@ -83,7 +83,7 @@ func _rebuild() -> void:
 				picks.erase("subclass")
 			else:
 				picks["subclass"] = sel[0]
-			picks.erase("options"), true)
+			picks.erase("options"))
 	var feats: Dictionary = data["classes"]["features"]
 	for o: Dictionary in p["options"]:
 		var fid := str(o["id"])
@@ -93,7 +93,7 @@ func _rebuild() -> void:
 			picks.get("options", {}).get(fid, []), func(sel: Array) -> void:
 				var chosen: Dictionary = picks.get("options", {})
 				chosen[fid] = sel
-				picks["options"] = chosen, true)
+				picks["options"] = chosen)
 	if int(p["expertise"]) > 0:
 		_checks(tr("LVL_EXPERTISE").format({"n": p["expertise"]}), "exp", p["expertise_pool"], func(id: String) -> String: return CharacterRules.expertise_word(data, id),
 			int(p["expertise"]), picks.get("expertise", []), func(sel: Array) -> void: picks["expertise"] = sel)
@@ -197,9 +197,9 @@ func _clean(p: Dictionary) -> Dictionary:
 
 
 ## A «pick n of these» list of icons (`PickGrid`); a tile is `Pick_<group>_<id>`.
-func _grid(title_text: String, group: String, options: Array, n: int, chosen: Array, on_change: Callable, named := false) -> void:
+func _grid(title_text: String, group: String, options: Array, n: int, chosen: Array, on_change: Callable) -> void:
 	_box.add_child(HSeparator.new())
-	var g := PickGrid.make(title_text, options, n, chosen, [], [], "Pick_%s_" % group, named)
+	var g := PickGrid.make(title_text, options, n, chosen, [], [], "Pick_%s_" % group)
 	g.changed.connect(func(sel: Array) -> void:
 		on_change.call(sel)
 		_rebuild.call_deferred())
@@ -250,6 +250,9 @@ func _asi(c: Dictionary) -> void:
 		var value := Label.new()
 		value.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		value.text = "%d → %d" % [score, score + add] if add > 0 else str(score)
+		var font := value.get_theme_font("font")  # the column as wide as «20 → 20»: the buttons stay where they were when a
+		if font != null:  # raise is picked (the author, 2026-11-13: «UI сдвигается из-за появления нового текста»)
+			value.custom_minimum_size.x = ceilf(font.get_string_size("20 → 20", HORIZONTAL_ALIGNMENT_LEFT, -1, value.get_theme_font_size("font_size")).x) + 4.0
 		grid.add_child(value)
 		var minus := Button.new()
 		minus.name = "Asi_minus_" + a

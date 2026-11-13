@@ -335,6 +335,7 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			gl.uniform1f(u('macro_scale'), Number(blend.macro_scale ?? 0.07));
 			gl.uniform1i(u('sharp_mask'), sharp);
 			gl.uniform1fv(u('prop_size'), sizes);
+			gl.uniform1fv(u('prop_thin'), new Float32Array(MAX_PROPS).map((_, i) => Number(g.thin?.[propBase(this.lib, props[i] || '')] ?? 0)));  // a bench narrower than its squares
 			const natural = g.natural || {};
 			gl.uniform1fv(u('prop_jitter'), new Float32Array(MAX_PROPS).map((_, i) => ((natural.of || []).includes(propBase(this.lib, props[i] || '')) ? 1 : 0)));
 			gl.uniform1f(u('jitter_scale'), Number(natural.scale || 0));

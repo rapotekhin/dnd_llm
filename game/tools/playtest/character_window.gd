@@ -95,9 +95,13 @@ func run() -> void:
 		step("cast from the book: a slot spent, the hero healed, the window closed", SpellRules.slots_left(c, 1) == slots - 1 and int(c["hp"]) > hurt and not sheet.visible,
 			"slots %d → %d, HP %d → %d" % [slots, SpellRules.slots_left(c, 1), hurt, int(c["hp"])])
 
-	# A spell taken off the hotbar comes back from the book.
+	# A spell taken off the hotbar comes back from the book. The bar of 1600 px holds 9 columns, fewer than a druid's 19 cells
+	# in two rows, and it shows no more than fits (v0.8.4.43.49, the groups as a deck, no scroll): the tab «Класс» shows the
+	# whole group, as a player opens it.
+	bar.call("set_filter", "class")
+	await frames(4)
 	var pinned: IconSlot = find(bar, "Pin_spell_cure_wounds")
-	if step("Cure Wounds on the hotbar", pinned != null and pinned.is_visible_in_tree()):
+	if step("Cure Wounds on the hotbar", pinned != null and pinned.is_visible_in_tree(), str((HotbarLayout.mode(node("SaveManager").hotbar, HotbarLayout.BAR)["sections"] as Array).map(func(x: Dictionary) -> String: return "%s %d/%d %s" % [x["kind"], int(x["cols"]), int(x.get("skip", 0)), str(x.get("grid", []))]))):
 		pinned.dropped_off.emit(pinned.drag_key)
 		await frames(4)
 		step("dragged off the bar, it is gone", not _on_bar(bar, "Pin_spell_cure_wounds"))
@@ -112,6 +116,7 @@ func run() -> void:
 			free._drop_data(Vector2.ZERO, {"hotbar": from_book.drag_key})
 			await frames(6)
 			step("dragged from the book, it is on the bar again", _on_bar(bar, "Pin_spell_cure_wounds"))
+	bar.call("set_filter", "")
 	if not sheet.visible:
 		sheet.call("open_tab", 1)
 		await frames(3)

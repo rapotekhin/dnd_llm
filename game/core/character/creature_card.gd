@@ -161,12 +161,14 @@ static func reactions(m: Dictionary) -> Array[String]:
 	return out
 
 
-## [{name, text, kind}]: its template's traits («trait»), the features of its class («feature») and the traits of its race
-## («race») — a person's as its class and race give them in a fight.
+## [{name, text, kind, icon}]: its template's traits («trait»), the features of its class («feature») and the traits of its
+## race («race») — a person's as its class and race give them in a fight; `icon` its ref for IconRules (v0.8.4.43.49, the
+## author: «способности … нашими иконками»): a template's trait with no picture of its own gets the blank of traits.
 static func features(data: Dictionary, m: Dictionary, me: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for t: Dictionary in m.get("traits", []):
-		out.append({"name": str(t.get("name", "")), "text": str(t.get("desc", "")), "kind": "trait"})
+		out.append({"name": str(t.get("name", "")), "text": str(t.get("desc", "")), "kind": "trait",
+			"icon": IconRules.ref("traits", str(t.get("id", t.get("name_en", "")))).to_lower()})
 	for pair: Array in [["features", data["classes"]["features"], "feature"], ["traits", data["races"]["traits"], "race"]]:
 		var pool: Dictionary = pair[1]
 		var seen: Array[String] = []
@@ -175,24 +177,28 @@ static func features(data: Dictionary, m: Dictionary, me: Dictionary) -> Array[D
 			if row.is_empty() or seen.has(str(row.get("name", ""))):
 				continue
 			seen.append(str(row.get("name", "")))
-			out.append({"name": str(row.get("name", id)), "text": str(row.get("desc", "")), "kind": pair[2]})
+			out.append({"name": str(row.get("name", id)), "text": str(row.get("desc", "")), "kind": pair[2], "id": str(id),
+				"icon": IconRules.ref("features" if pair[2] == "feature" else "traits", str(id))})
 	return out
 
 
-## {dc, list: [names], slots: [{circle, left, max}]}: its template's spells with what is left of «N/день», the spells of
-## a sheet in the hero's form, what is left of its slots.
+## {dc, list: [names], ids: [their ids], slots: [{circle, left, max}]}: its template's spells with what is left of «N/день»,
+## the spells of a sheet in the hero's form, what is left of its slots.
 static func spells(data: Dictionary, m: Dictionary, me: Dictionary) -> Dictionary:
 	var sc: Dictionary = m.get("spellcasting", {})
 	var names: Array[String] = []
+	var ids: Array[String] = []
 	for x: Dictionary in sc.get("spells", []):
 		var id := str(x["id"])
 		if data["spells"].has(id):
 			var per := int(x.get("per_day", 0))
 			names.append(str(data["spells"][id]["name"]) + (" (%d/%d в день)" % [per - int(me.get("used", {}).get("spell:" + id, 0)), per] if per > 0 else ""))
+			ids.append(id)
 	for id: Variant in SpellRules.ready(me):
 		var name := str(data["spells"].get(str(id), {}).get("name", ""))
-		if not name.is_empty() and not names.has(name):
+		if not name.is_empty() and not names.has(name) and not ids.has(str(id)):
 			names.append(name)
+			ids.append(str(id))
 	var slots: Array[Dictionary] = []
 	var full: Dictionary = sc.get("slots", {})
 	for k in range(1, 6):
@@ -200,19 +206,21 @@ static func spells(data: Dictionary, m: Dictionary, me: Dictionary) -> Dictionar
 		var most := int(me["slots_max"][k - 1]) if own else int(full.get(str(k), 0))
 		if most > 0:
 			slots.append({"circle": k, "left": SpellRules.slots_left(me, k) if own else most, "max": most})
-	return {"dc": int(sc.get("dc", 0)), "list": names, "slots": slots}
+	return {"dc": int(sc.get("dc", 0)), "list": names, "ids": ids, "slots": slots}
 
 
 # --- what guards it -------------------------------------------------------------------------------------------------
 
 
-## [{word, what, source}]: the damage it takes none of, half of or twice (Sheet.defenses, type by type), what halves all of
-## it, the conditions that do not hold on it — each with where it comes from.
+## [{kind, word, what, source, names, icons}]: the damage it takes none of, half of or twice (Sheet.defenses, type by
+## type), what halves all of it, the conditions that do not hold on it — each with where it comes from; `names` and
+## `icons` each type or condition apart, its ref (`conditions/immune@acid`) for IconRules.
 static func defenses(s: GameSession, data: Dictionary, who: Dictionary) -> Array[Dictionary]:
 	var dtypes: Dictionary = data["misc"]["damage_types"]
 	var m := Sheet.template(data, who)
 	var own: Array = (m.get("immunities", []) as Array) + (m.get("resistances", []) as Array) + (m.get("vulnerabilities", []) as Array)
 	var groups := {}  # "kind|source": [what]
+	var refs := {}  # "kind|source": [the icon of each]
 	for dtype: String in dtypes:
 		var d := Sheet.defenses(s, data, who, dtype, false, false)
 		for key: String in ["immune", "resist", "vulnerable"]:
@@ -223,18 +231,22 @@ static func defenses(s: GameSession, data: Dictionary, who: Dictionary) -> Array
 				elif src == str(dtypes[dtype]):  # a status's resistance is named by its type in a damage line: the card names its source
 					src = _resist_source(Sheet.holder(s, who), dtype, src)
 				_group(groups, key, src, str(dtypes[dtype]))
+				_group(refs, key, src, "conditions/%s@%s" % [{"immune": "immune", "resist": "resistant", "vulnerable": "vulnerable"}[key], dtype])
 	var all := ConditionRules.flag_of(Sheet.holder(s, who), data, "resist_all")
 	if not all.is_empty():
 		_group(groups, "resist", all, "весь урон")
+		_group(refs, "resist", all, "conditions/resistant")
 	for cond: String in data["rules"]["conditions"]:
 		var why := "природа" if CombatRules.immune_to(data, who, cond) else HeroDefense.immune(s, data, who, cond, "")
 		if not why.is_empty():
 			_group(groups, "no_condition", why, ConditionRules.name_of(data, cond).to_lower())
+			_group(refs, "no_condition", why, IconRules.ref("conditions", cond))
 	var words := {"immune": "Иммунитет", "resist": "Сопротивление", "vulnerable": "Уязвимость", "no_condition": "Не бывает"}
 	var out: Array[Dictionary] = []
 	for key: String in groups:
 		var kind := key.get_slice("|", 0)
-		out.append({"kind": kind, "word": words[kind], "what": ", ".join(groups[key]), "source": key.get_slice("|", 1)})
+		out.append({"kind": kind, "word": words[kind], "what": ", ".join(groups[key]), "source": key.get_slice("|", 1),
+			"names": groups[key], "icons": refs.get(key, [])})
 	return out
 
 

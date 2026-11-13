@@ -1,5 +1,5 @@
 {
- "_doc": "The looks of people's portraits for make_jobs.py --portraits: a portrait per race (races.json), sex and age (rules.body.age), `variants` of each (an age's own `variants` wins: a child has 1). A variant's look is drawn from the lists below by a fixed shuffle per race, sex and age, so the 5 variants differ in hair, eyes, skin, clothes and beard and stay the same on every run; edit a list here and only the looks that change are drawn again. A race overrides what it lacks: `hair` null — no hair (scales instead), `beards` [] — none, `ages` — its own words of an age, `sex` — its own tags of a sex.",
+ "_doc": "The looks of people's portraits for make_jobs.py --portraits: a portrait per race (races.json) — and per subrace with a row of its own here (drow) —, sex and age (rules.body.age), `variants` of each (an age's own `variants` wins: a child has 1). A variant's look is drawn from the lists below by a fixed shuffle per race, sex and age, so the 5 variants differ in hair, eyes, skin, clothes and beard and stay the same on every run; edit a list here and only the looks that change are drawn again. A race overrides what it lacks: `hair` null — no hair (scales instead), `beards` [] — none, `ages` — its own words of an age, `sex` — its own tags of a sex.",
  "variants": 5,
  "seeds": [11, 22, 33, 44, 55],
  "ages": {
@@ -56,6 +56,11 @@
           "skin": ["pale skin", "fair skin", "light tan skin", "bronze skin"],
           "hair": ["silver hair", "blonde hair", "platinum blonde hair", "black hair", "copper hair", "dark brown hair"],
           "eyes": ["green eyes", "blue eyes", "violet eyes", "amber eyes", "grey eyes"], "beards": []},
+  "drow": {"tags": "dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin", "word": "dark elf",
+           "features": "a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian",
+           "skin": ["dark grey skin", "charcoal grey skin", "ash grey skin", "slate grey skin", "obsidian black skin"],
+           "hair": ["white hair", "silver hair", "platinum hair", "snow-white hair", "pale silver hair"],
+           "eyes": ["red eyes", "crimson eyes", "lilac eyes", "light purple eyes", "glowing red eyes"], "beards": []},
   "dwarf": {"tags": "dwarf, stocky, broad face", "word": "dwarf", "features": {"male": "a broad weathered face, a strong nose and a thick neck", "female": "a broad face with soft feminine features, rosy cheeks and a strong nose", "minor": "a round chubby face, a button nose and rosy cheeks"},
             "skin": ["ruddy skin", "fair skin", "tan skin", "brown skin"],
             "hair": ["red hair", "brown hair", "black hair", "auburn hair", "blonde hair"],

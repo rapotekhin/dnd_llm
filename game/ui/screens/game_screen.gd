@@ -163,6 +163,7 @@ func _ready() -> void:
 	side.map_requested.connect(func() -> void: _map.open())
 	side.journal_requested.connect(func() -> void: _journal.open())
 	side.level_up_requested.connect(func() -> void: _level_up.open())
+	EventBus.level_up_requested.connect(func() -> void: _level_up.open())  # the arrow over a portrait (v0.8.4.43.49)
 	side.short_rest_requested.connect(func() -> void: _short_rest.open())
 	side.long_rest_requested.connect(func() -> void: _long_rest.open())
 	side.pockets_requested.connect(func(npc: String) -> void: _theft.open(npc))
@@ -482,6 +483,8 @@ func _on_cell(cell: Vector2i) -> void:
 	# A spell of the hero's side pinned: the hero's or a person's token is its target, as a portrait is (v0.8.4.43.10).
 	if (ref.begins_with("npc:") or ref.is_empty() and cell == _field.hero_cell() and not FightUi.onto()) and _side.aim_at(SidePanel.aim_of(ref)):
 		return
+	if (ref.begins_with("npc:") or ref.begins_with("foe:")) and _strike(ref):
+		return
 	if not ref.is_empty() and not ref.begins_with("far:"):
 		_touch(ref)
 		return
@@ -498,6 +501,27 @@ func _on_cell(cell: Vector2i) -> void:
 	_exit_to = str(plan["exit"])
 	_at_door = false
 	_walk(plan["path"])
+
+
+## A blow or a hostile spell readied on the hotbar out of a fight (v0.8.4.43.49, the author: «огненный шар, выстрел или
+## удар можно навести на цель и вне боя»): a click on a person or a foe of the map starts the fight with it — a blow at arm's
+## length after the hero walks up. False — nothing readied, the click does its own act.
+func _strike(ref: String) -> bool:
+	var target := ref.get_slice(":", 1)
+	var said := func(err: String) -> void:
+		if not err.is_empty():
+			EventBus.message.emit(tr(err))
+	if not GameState.poised.is_empty():
+		if GameState.poised_melee():
+			_approach(ref, "touch", func() -> void: said.call(GameState.strike_at(target)))
+		else:
+			said.call(GameState.strike_at(target))
+		return true
+	var why := GameState.aim_hostile(target)
+	if why == "ATTACH_AIM_NONE":
+		return false
+	said.call(why)
+	return true
 
 
 ## The left button on someone or something (v0.8.4.43.4, as in BG3): its main act — a person is talked to, a body

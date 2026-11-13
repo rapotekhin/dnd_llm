@@ -141,8 +141,8 @@ func run() -> void:
 	await frames(3)
 	step("two swaps cost nothing", CombatRules.economy(s).hash() == money.hash(), str(CombatRules.economy(s)))
 	await shot("fight_sets")
-	var shoot: Button = find(screen(), "Attack_stowed")
-	if step("the bow's attack among the sword's", shoot != null and not shoot.disabled, shoot.text if shoot != null else ""):
+	var shoot: Button = find(screen(), "Attack_ranged")  # «Стрельба» with the bow put away (v0.8.4.43.49)
+	if step("«Стрельба» with the bow among the sword's", shoot != null and not shoot.disabled and shoot.tooltip_text.contains("лук"), shoot.tooltip_text if shoot != null else ""):
 		await press(shoot)
 		await frames(2)
 		await click_cell(at)

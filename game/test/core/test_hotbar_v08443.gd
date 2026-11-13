@@ -46,9 +46,9 @@ func test_a_hidden_cell_is_off_until_dragged_back() -> void:
 	HotbarLayout.hide(st, "fight", "Cast_fire_bolt")
 	var out := HotbarLayout.place(st, "fight", cells, 8)
 	assert_int(out.size()).is_equal(1)
-	HotbarLayout.move(st, "fight", "Cast_fire_bolt", 0, 3)
+	HotbarLayout.move(st, "fight", "Cast_fire_bolt", 0, HotbarLayout.at(1, 0))
 	out = HotbarLayout.place(st, "fight", cells, 8)
-	assert_str(str(out[0]["slots"][3])).is_equal("Cast_fire_bolt")
+	assert_str(str(out[0]["slots"][1])).is_equal("Cast_fire_bolt")
 
 
 func test_a_divider_moves_columns() -> void:
@@ -86,3 +86,71 @@ func test_a_sheet_key_is_a_cell_of_the_bar() -> void:
 	var out := HotbarLayout.place(st, "fight", cells, 10)
 	assert_str(str(out[0]["slots"][0])).is_equal("spell:shield")
 	assert_bool(str(out[0]["slots"]).contains("Do_dash") or str(out[1]["slots"]).contains("Do_dash")).is_true()
+
+
+## v0.8.4.43.49, the author: «группы как карты из колоды, как в BG3. Граница, сдвинутая вправо, задвигает следующую группу
+## под себя. Иконка, оказавшаяся под соседней группой, прячется на своём месте, а не переезжает в другую клетку».
+func _screen(out: Array) -> Dictionary:  # key → [the column of the bar, the row] of every icon in sight
+	var seen := {}
+	var start := 0
+	for sec: Dictionary in out:
+		var cols := int(sec["cols"])
+		for j in (sec["slots"] as Array).size():
+			var k := str(sec["slots"][j])
+			if k != "":
+				seen[k] = [start + j % cols, j / cols]
+		start += cols
+	return seen
+
+
+func test_a_divider_slides_the_next_group_under_and_no_icon_moves() -> void:
+	var st := {}
+	var cells := {"Do_a": "common", "Do_b": "common", "Do_c": "common", "spell:x": "class", "spell:y": "class", "spell:z": "class", "spell:w": "class"}
+	var before := _screen(HotbarLayout.place(st, "fight", cells, 8))
+	assert_int(before.size()).is_equal(7)
+	HotbarLayout.shift(st, "fight", 0, 1)  # the common group over the first column of the spells
+	var after := _screen(HotbarLayout.place(st, "fight", cells, 8))
+	for k: String in after:
+		assert_array(after[k]).is_equal(before[k])  # every icon in sight where it stood
+	assert_int(after.size()).is_less(7)  # the spells of the column under the common group are hidden
+	HotbarLayout.shift(st, "fight", 0, -1)
+	assert_dict(_screen(HotbarLayout.place(st, "fight", cells, 8))).is_equal(before)  # and back in their places
+	HotbarLayout.shift(st, "fight", 0, -1)  # the spells shown further left: an empty column before them, none moved
+	var wider := _screen(HotbarLayout.place(st, "fight", cells, 8))
+	for k: String in before:
+		if str(k).begins_with("spell:"):
+			assert_array(wider[k]).is_equal(before[k])
+
+
+## The author: «новые заклинания и умения встают в первую свободную видимую клетку своей группы, а не в конец».
+func test_a_new_spell_takes_the_first_free_slot_in_sight() -> void:
+	var st := {"rows": 2, "modes": {"fight": {"hidden": [], "sections": [{"kind": "class", "cols": 2, "width": 2, "fixed": true, "skip": 0,
+		"grid": [["spell:a", "spell:b", "", ""], ["spell:c", "", "", ""], ["spell:old", "", "", ""]]}]}}}
+	var out := HotbarLayout.place(st, "fight", {"spell:a": "class", "spell:b": "class", "spell:c": "class", "spell:d": "class", "Do_dash": "common"}, 4)
+	var cls: Dictionary = out.filter(func(sec: Dictionary) -> bool: return str(sec["kind"]) == "class")[0]
+	assert_int(int(cls["cols"])).is_equal(2)
+	assert_array(cls["slots"]).is_equal(["spell:a", "spell:c", "spell:b", "spell:d"])  # in the free slot of the second row
+
+
+## «−» takes a row off: its icons are hidden where they stand, the bar never scrolls, «+» shows them again.
+func test_a_row_taken_off_hides_its_icons_in_their_place() -> void:
+	var st := {}
+	var cells := {"Do_a": "common", "Do_b": "common", "Do_c": "common", "Do_d": "common"}
+	var before := _screen(HotbarLayout.place(st, "fight", cells, 2))
+	HotbarLayout.set_rows(st, 1)
+	var out := HotbarLayout.place(st, "fight", cells, 2)
+	assert_int((out[0]["slots"] as Array).size()).is_equal(2)  # one row of the bar, no more
+	var seen := _screen(out)
+	for k: String in seen:
+		assert_array(seen[k]).is_equal(before[k])
+	HotbarLayout.set_rows(st, 2)
+	assert_dict(_screen(HotbarLayout.place(st, "fight", cells, 2))).is_equal(before)
+
+
+## A bar laid in rows of its columns before v0.8.4.43.49 keeps each icon in its column and row.
+func test_a_bar_of_rows_becomes_a_card_of_columns() -> void:
+	var st := {"modes": {"fight": {"hidden": [], "sections": [{"kind": "class", "cols": 3, "slots": ["spell:x", "", "spell:y", "spell:z"]}]}}}
+	var cls: Dictionary = HotbarLayout.mode(st, "fight")["sections"][0]
+	assert_str(str(cls["grid"][0][0])).is_equal("spell:x")
+	assert_str(str(cls["grid"][2][0])).is_equal("spell:y")
+	assert_str(str(cls["grid"][0][1])).is_equal("spell:z")

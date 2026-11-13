@@ -20,7 +20,8 @@ const ICON := 34
 ## What the fight lays on one (CombatRules.marks) → [icon, title, what it does].
 const MARKS := {"hidden": ["acts/hide", "COMBAT_HIDDEN_MARK", "COMBAT_HIDDEN"], "surprised": ["conditions/surprised", "COMBAT_SURPRISED", "COMBAT_SURPRISED_TIP"],
 	"raging": ["features/rage", "COMBAT_RAGING", "COMBAT_RAGING_TIP"], "reckless": ["features/reckless_attack", "COMBAT_RECKLESS_MARK", "COMBAT_RECKLESS"],
-	"dodging": ["acts/dodge", "COMBAT_DODGING", "COMBAT_DODGING_TIP"], "shape": ["features/wild_shape", "COMBAT_SHAPE_MARK", ""]}
+	"dodging": ["acts/dodge", "COMBAT_DODGING", "COMBAT_DODGING_TIP"], "shape": ["features/wild_shape", "COMBAT_SHAPE_MARK", ""],
+	"sneaking": ["ui/sneak", "SNEAK_MARK", "SNEAK_MARK_TIP"]}
 
 var now := ""  ## the ref of the one whose turn it is: its portrait lit (a fight)
 

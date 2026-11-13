@@ -90,6 +90,12 @@ func _summary(s: GameSession, data: Dictionary, w: Dictionary, card: Dictionary)
 	else:
 		var npc := WorldView.new(data["world"]).npc(who)
 		_line(_page, " · ".join([str(npc.get("role", "")), str(npc.get("race", ""))].filter(func(x: String) -> bool: return not x.is_empty())), UiTheme.MUTED_LABEL)
+	if hero and NeedRules.on(s):  # v0.7.23: the needs with their stage, over the abilities (the author, 2026-11-13: «сдвинуть наверх»)
+		var parts: Array[String] = []
+		for need: String in NeedRules.KINDS:
+			var st := NeedRules.stage(s, data, need)
+			parts.append("%s %d/100%s" % [NeedRules.cfg(data)[need]["name"], roundi(NeedRules.value(s, data, need)), (" — " + str(st["chip"])) if not st.is_empty() else ""])
+		_line(_page, tr("SHEET_NEEDS") + ": " + " · ".join(parts), UiTheme.MUTED_LABEL).name = "SheetNeeds"
 	_abilities(s, data, w, card)
 	_page.add_child(UiParts.hp_line(int(card.get("hp", 0)), int(card.get("max_hp", 1)), int(card.get("temp_hp", 0)), 10.0))
 	var chips := EffectChips.new()  # the statuses as icons, the time and the cause at the cursor
@@ -112,12 +118,6 @@ func _summary(s: GameSession, data: Dictionary, w: Dictionary, card: Dictionary)
 		var boons := CharacterRules.item_boons(c, data, s.items)  # what the worn things give (v0.7.49.4)
 		if not boons.is_empty():
 			_line(_page, tr("SHEET_ITEM_BOONS") + "\n" + "\n".join(boons.map(func(b: String) -> String: return "    " + b))).name = "SheetItemBoons"
-		if NeedRules.on(s):  # v0.7.23: the needs with their stage
-			var parts: Array[String] = []
-			for need: String in NeedRules.KINDS:
-				var st := NeedRules.stage(s, data, need)
-				parts.append("%s %d/100%s" % [NeedRules.cfg(data)[need]["name"], roundi(NeedRules.value(s, data, need)), (" — " + str(st["chip"])) if not st.is_empty() else ""])
-			_line(_page, tr("SHEET_NEEDS") + ": " + " · ".join(parts), UiTheme.MUTED_LABEL).name = "SheetNeeds"
 
 
 ## The six abilities in a row (BG3): the short name, the score big; a star over the class's main one, a dot under a save it

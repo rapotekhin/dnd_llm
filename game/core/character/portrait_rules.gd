@@ -36,7 +36,7 @@ static func of(s: GameSession, data: Dictionary, who: Dictionary) -> String:
 		return own
 	if Sheet.is_hero(who):
 		var c := s.character
-		return person(data, CharacterRules.race_id(data, c), str(c.get("gender", "")), str((c.get("body", {}) as Dictionary).get("age", "")),
+		return person(data, folk(data, c), str(c.get("gender", "")), str((c.get("body", {}) as Dictionary).get("age", "")),
 			hero_variant(data, c))
 	var npc_id := person_id(data, who)
 	if not npc_id.is_empty():
@@ -45,7 +45,7 @@ static func of(s: GameSession, data: Dictionary, who: Dictionary) -> String:
 		if has_file(mine):
 			return mine
 		var age := str(BodyRules.npc(data, npc_id, n).get("age", ""))
-		var face := person(data, CharacterRules.race_id(data, n), str(n.get("gender", "")), age, variant_of(data, age, EntityRef.npc(npc_id)))
+		var face := person(data, folk(data, n), str(n.get("gender", "")), age, variant_of(data, age, EntityRef.npc(npc_id)))
 		if not face.is_empty():
 			return face
 	return monster(data, Sheet.template_id(data, who), str(who.get("id", "")))
@@ -54,6 +54,32 @@ static func of(s: GameSession, data: Dictionary, who: Dictionary) -> String:
 ## The face of an id (the hero, a fighter, a record, a person): of(Sheet.who).
 static func of_id(s: GameSession, data: Dictionary, id: String) -> String:
 	return of(s, data, Sheet.who(s, data, id))
+
+
+## The folder of a person's faces (v0.8.4.43.49): its subrace's when it is drawn on its own — a drow is no pale elf (the
+## author, 2026-11-13) — else its race's. The subrace is the record's own `subrace`, else a word of its race
+## (`rules.subrace_words`).
+static func folk(data: Dictionary, rec: Dictionary) -> String:
+	var subs: Dictionary = data["races"].get("subraces", {})
+	var sub := str(rec.get("subrace", ""))
+	if not subs.has(sub):
+		sub = ""
+		var text := str(rec.get("race", "")).to_lower().replace("ё", "е")
+		var words: Dictionary = data["rules"].get("subrace_words", {})
+		for id: String in words:
+			if subs.has(id) and (words[id] as Array).any(func(w: Variant) -> bool: return text.contains(str(w))):
+				sub = id
+	if not sub.is_empty() and drawn(data, sub):
+		return sub
+	return CharacterRules.race_id(data, rec)
+
+
+## Faces are drawn for this folk (a race or a subrace): any adult of either sex.
+static func drawn(data: Dictionary, folk_id: String) -> bool:
+	for g: String in ["male", "female"]:
+		if has_file("%speople/%s/%s/adult__1.webp" % [root(data), folk_id, g]):
+			return true
+	return false
 
 
 ## The person a `who` is: its `npc_id`, or its id when the world knows such a person; "" — not a person.

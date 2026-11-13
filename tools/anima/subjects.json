@@ -97,7 +97,11 @@
  "acts/parry": {
   "dark": false,
   "sentence": "A single steel sword held diagonally, with a bright white curved arc along its blade.",
-  "tags": "sword, steel blade, white arc, diagonal"
+  "tags": "sword, steel blade, white arc, diagonal",
+  "lines": {
+   "tags": "sword, two swords, blocking, clash, sparks, burst",
+   "sentence": "A sword held upright on the left blocking a second sword that strikes down onto it from the upper right, the two blades meeting in a big star-shaped burst of sparks where they cross."
+  }
  },
  "acts/pick_up": {
   "dark": false,
@@ -118,6 +122,12 @@
   "dark": false,
   "sentence": "A single green glowing paw print inside a swirling ring of small leaves.",
   "tags": "paw print, leaves, swirl, green, glowing"
+ },
+ "acts/shoot": {
+  "name": "Стрельба",
+  "dark": false,
+  "sentence": "A single longbow drawn back to its full curve with an arrow nocked on the taut string, pointing diagonally up to the right, with short motion lines behind the arrow.",
+  "tags": "bow, longbow, drawn bow, arrow, nocked arrow, diagonal, motion lines"
  },
  "acts/shove": {
   "dark": false,
@@ -278,6 +288,18 @@
   "sentence": "A single thick yellow arrow pointing straight down, small enough to sit well inside the ring.",
   "tags": "arrow, down, yellow, thick, simple"
  },
+ "conditions/immune": {
+  "name": "Иммунитет",
+  "dark": false,
+  "sentence": "A single bright silver kite shield seen from the front, whole and gleaming, with a few short white rays of light shining out from its edges onto the dark field, drawn as a bold flat emblem.",
+  "tags": "shield, kite shield, silver, shining, light rays, front view, flat emblem"
+ },
+ "conditions/resistant": {
+  "name": "Устойчивость",
+  "dark": false,
+  "sentence": "A single silver knight's shield with a pointed bottom seen from the front, its left half bright and shining and its right half in deep dark shadow, drawn as a bold flat emblem.",
+  "tags": "shield, heater shield, knight shield, silver, half in shadow, front view, flat emblem"
+ },
  "conditions/restrained": {
   "dark": false,
   "sentence": "A single pair of wrists tied together with thick brown rope and a tight knot, drawn as a bold flat emblem, seen from the front.",
@@ -297,6 +319,12 @@
   "dark": false,
   "sentence": "A single closed eye with long dark eyelashes, seen from the front.",
   "tags": "closed eye, eyelashes, pale, front view"
+ },
+ "conditions/vulnerable": {
+  "name": "Уязвимость",
+  "dark": false,
+  "sentence": "A single silver kite shield seen from the front, split by one big jagged black crack running from top to bottom, two small shards falling away from it, drawn as a bold flat emblem.",
+  "tags": "shield, kite shield, silver, cracked, broken, shards, front view, flat emblem"
  },
  "conditions/wet": {
   "dark": false,
@@ -4574,6 +4602,57 @@
   "sentence": "A shambling zombie with grey-green rotting skin, clouded white eyes and torn rags hanging from its shoulders.",
   "tags": "no humans, zombie, grey skin, green skin, clouded eyes, tattered clothes, rags"
  },
+ "races/dragonborn": {
+  "dark": false,
+  "sentence": "A single proud dragon head in profile facing right on a strong scaly neck, its mouth closed, two horns swept back and a frill of spikes on its cheek, the collar of a breastplate around the base of its neck.",
+  "tags": "dragon head, profile, horns, scales, closed mouth, armor collar"
+ },
+ "races/dwarf": {
+  "dark": false,
+  "sentence": "A single thick long beard braided into two plaits with metal rings on them, under a big nose and bushy eyebrows, and a double-bladed battle axe standing upright behind it.",
+  "tags": "beard, braided beard, bushy eyebrows, big nose, battle axe, front view",
+  "people": true
+ },
+ "races/elf": {
+  "dark": false,
+  "sentence": "A single head of an elf in profile facing right, a slender young face, long straight hair flowing down the back of the neck and a long pointed ear rising high and sharp out of the hair, drawn as a simple outline like the head on an old coin.",
+  "tags": "elf, pointy ears, long pointy ears, profile, head, long hair, coin portrait",
+  "people": true
+ },
+ "races/gnome": {
+  "dark": false,
+  "sentence": "A single tall pointed cone hat with its tip bent to one side, and a big cogwheel pinned on its band.",
+  "tags": "pointed hat, cone hat, gear, cogwheel, front view"
+ },
+ "races/half_elf": {
+  "dark": false,
+  "sentence": "Two ears seen from the side, back to back and joined in the middle as one emblem: on the left a rounded human ear, on the right a long pointed elf ear.",
+  "tags": "ear, pointy ears, human ear, elf ear, symmetry, from side",
+  "people": true
+ },
+ "races/half_orc": {
+  "dark": false,
+  "sentence": "A single heavy jaw of an orc seen from the front, two big tusks jutting up from the lower lip, a flat broad nose and a scowling brow above.",
+  "tags": "orc, tusks, jaw, underbite, flat nose, front view",
+  "people": true
+ },
+ "races/halfling": {
+  "dark": false,
+  "sentence": "A single small bare foot seen from the side, with short round toes and a tuft of curly hair on its top.",
+  "tags": "bare foot, foot, toes, hairy feet, from side",
+  "people": true
+ },
+ "races/human": {
+  "dark": false,
+  "sentence": "A single human head in profile facing right, with short hair, a straight nose and a calm look, drawn as a simple outline like the head on an old coin.",
+  "tags": "profile, head, face, short hair, coin portrait, from side",
+  "people": true
+ },
+ "races/tiefling": {
+  "dark": false,
+  "sentence": "A single pair of thick ridged horns curling back like a ram's, and below them a long thin tail ending in a spade-shaped tip curling in an S.",
+  "tags": "demon horns, curved horns, demon tail, spade tail, front view"
+ },
  "spells/acid_arrow": {
   "green": true,
   "sentence": "A single glowing green arrow of acid with a bright yellow-green tip and dripping droplets, flying diagonally to the right.",
@@ -4813,8 +4892,9 @@
   "sentence": "A single violet glowing bolt of crackling energy, angled diagonally upward to the right.",
   "tags": "energy bolt, violet, glowing, crackling, diagonal",
   "lines": {
-   "tags": "orb, spiral, tentacles, eldritch, energy",
-   "sentence": "A small round orb with a swirling spiral inside it and six curling tentacles of energy reaching out from it in all directions."
+   "tags": "hand, open palm, energy bolt, beam, orb, crackling, sparks",
+   "sentence": "A hand at the lower left corner thrust forward with its palm open, and a long crackling bolt of energy flying from the palm across the whole picture to the upper right, ending in a big orb ringed with small jagged sparks.",
+   "people": true
   }
  },
  "spells/enhance_ability": {
@@ -5409,6 +5489,35 @@
   "sentence": "A single pink glowing ring with a small white eye in its center and a thin white outline.",
   "tags": "ring, eye, pink, glowing, front view"
  },
+ "subraces/drow": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single head of an elf in profile facing right, a slender face, long straight hair and a long pointed ear rising high out of the hair, and a big spider with eight long legs hanging on a thread just above the head.",
+  "tags": "elf, pointy ears, long pointy ears, profile, head, spider, hanging spider"
+ },
+ "subraces/high_elf": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single head of an elf in profile facing right, a slender face, long straight hair and a long pointed ear rising high out of the hair, a thin circlet on the brow with a bright four-pointed magic star shining at its front.",
+  "tags": "elf, pointy ears, long pointy ears, profile, head, circlet, four-pointed star"
+ },
+ "subraces/hill_dwarf": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single rounded grassy hill at the bottom with a few tufts of grass on its slope, and a dwarf's head rising from behind its top: a big nose, bushy eyebrows and a long braided beard falling over the hill.",
+  "tags": "dwarf, beard, braided beard, bushy eyebrows, big nose, hill, front view"
+ },
+ "subraces/lightfoot_halfling": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single small bare foot seen from the side, stepping lightly on its toes, with a long feather floating under its heel.",
+  "tags": "bare foot, tiptoe, feather, from side"
+ },
+ "subraces/rock_gnome": {
+  "dark": false,
+  "sentence": "A single big cogwheel set into a rough boulder, half of the gear sticking out of the cracked stone.",
+  "tags": "gear, cogwheel, rock, boulder, stone"
+ },
  "traits/artificers_lore": {
   "dark": false,
   "sentence": "A single brass gear seen from the front, with six teeth and a small glowing blue gem in its center.",
@@ -5685,8 +5794,8 @@
  },
  "ui/end_turn": {
   "dark": false,
-  "sentence": "A single hourglass with one bold curved arrow sweeping in a wide arc around it clockwise, its arrowhead large and clear, seen from the front.",
-  "tags": "hourglass, curved arrow, circular arrow, arrowhead, clockwise"
+  "sentence": "A single hourglass standing upright on the left, and beside it on the right two big bold chevrons pointing to the right one after the other, like a fast forward sign, seen from the front.",
+  "tags": "hourglass, chevron, right arrow, fast forward, skip, front view"
  },
  "ui/exit": {
   "dark": false,

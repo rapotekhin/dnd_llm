@@ -141,7 +141,9 @@ func test_more_features_than_the_column_holds_scroll_in_it() -> void:
 	_on_screen(sheet)
 
 
-func test_more_cells_than_the_bar_has_room_for_keep_every_one_a_wheel_away() -> void:
+## v0.8.4.43.49 (the author: «панель без прокрутки, группы как карты из колоды»): what the bar has no room for stays in
+## its section's deck in its own column and row — shown by a wider section, more rows or the section's tab, never scrolled.
+func test_more_cells_than_the_bar_has_room_for_stay_in_the_deck() -> void:
 	var st := {}
 	var cells := {}
 	for i in 30:
@@ -149,6 +151,9 @@ func test_more_cells_than_the_bar_has_room_for_keep_every_one_a_wheel_away() -> 
 	var out := HotbarLayout.place(st, HotbarLayout.BAR, cells, 4, "peace")
 	assert_int(int(out[0]["cols"])).is_equal(4)
 	var slots: Array = out[0]["slots"]
+	assert_int(slots.size()).is_equal(8)  # 2 rows of 4 in sight, nothing a wheel away
+	var sec: Dictionary = HotbarLayout.mode(st, HotbarLayout.BAR)["sections"].filter(
+		func(x: Dictionary) -> bool: return str(x["kind"]) == "class")[0]
+	var deck := HotbarLayout.view(st, sec, 0, (sec["grid"] as Array).size(), cells)
 	for k: String in cells:
-		assert_bool(slots.has(k)).override_failure_message(k).is_true()
-	assert_int(slots.size()).is_equal(32)  # 8 rows of 4: the bar shows its 2, the rest a wheel away
+		assert_bool((deck["slots"] as Array).has(k)).override_failure_message(k).is_true()

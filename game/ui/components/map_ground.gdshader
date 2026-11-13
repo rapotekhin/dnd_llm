@@ -32,6 +32,7 @@ uniform float prop_size[128];
 uniform float prop_shimmer[128];  // v0.8.4.43.36 `grounds.shimmer`: a picture that moves along its own top to bottom
 uniform vec2 prop_dims[128];  // a prop's squares [long, short]; none — one square
 uniform float prop_jitter[128];  // v0.8.4.43.37 `grounds.natural`: 1 — a natural thing, sized and shifted by its square
+uniform float prop_thin[128];  // v0.8.4.43.49 `grounds.thin`: the share of its short side a thing's picture takes (a bench); 0 — whole
 uniform float jitter_scale = 0.0;
 uniform float jitter_shift = 0.0;
 uniform float natural_shade = 0.0;  // the soft shade round a natural thing, merged with its neighbours'
@@ -89,6 +90,7 @@ vec2 prop_uv(ivec2 n, vec2 p, int prop, int turn, out float size) {
 	}
 	vec2 at = (p - mid) / size;
 	for (int r = 0; r < turn; r++) at = vec2(-at.y, at.x);
+	if (prop_thin[prop] > 0.0) at.y /= prop_thin[prop];
 	return at + 0.5;
 }
 

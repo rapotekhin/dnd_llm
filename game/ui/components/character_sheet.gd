@@ -18,6 +18,7 @@ const SECTIONS: Array[String] = ["gear", "book", "dev"]
 const PORTRAIT := 52
 const BOOK_TABS: Array[String] = ["class", "common", "react"]
 const SPELL_CELL := 64
+const CAPTION := 92  ## the width of a book's icon with its name under it (the author, 2026-11-13: «писать название, как у умений»)
 
 var who := Being.HERO  ## whose things and sheet are shown
 var section := "gear"
@@ -535,12 +536,24 @@ func _spell_cell(parent: Control, c: Dictionary, id: String, ready: bool) -> Ico
 		cell.text += "\n" + tr("BOOK_NOT_PREPARED")
 		cell.disabled = true  # drawn faded by the cell itself; its card still comes on the hover
 	cell.tooltip_text = cell.text
-	parent.add_child(cell)
+	_named(parent, cell, str(sp.get("name", id)), not ready)
 	_details.hook(cell, str(sp.get("name", id)), "", CardInfo.spell(d, id, 0, c))
 	if ready:
 		cell.drag_key = "spell:" + id
 		cell.pressed.connect(_cast_menu.bind(cell, c, id))
 	return cell
+
+
+## An icon of the book with its name under it, broken only between words.
+func _named(parent: Control, cell: IconSlot, text: String, dim: bool) -> void:
+	var box := VBoxContainer.new()
+	box.name = "Named_" + str(cell.name)
+	box.custom_minimum_size = Vector2(CAPTION, 0)
+	box.add_theme_constant_override("separation", 2)
+	parent.add_child(box)
+	cell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	box.add_child(cell)
+	UiParts.caption(box, text, CAPTION, UiTheme.SIZE_SMALL, UiTheme.MUTED_LABEL if dim else "").name = "Name"
 
 
 ## The circles to cast a spell with (the lowest fitting one first) and what each gives: [[circle, label]].
@@ -611,7 +624,7 @@ func _class_acts(flow: HFlowContainer, c: Dictionary, can_act: bool) -> void:
 		cell.text = tr("SHEET_RESOURCE").format({"name": r["name"], "left": r["left"], "max": r["max"], "rest": tr("REST_KIND_" + str(r["recharge"]).to_upper())})
 		cell.tooltip_text = cell.text
 		cell.drag_key = "feature:" + rid
-		flow.add_child(cell)
+		_named(flow, cell, str(r["name"]), false)
 		_details.hook(cell, str(r["name"]), "", CardInfo.feature(d, rid, c))
 		if Stock.table(d, c)[rid].has("spell"):  # spent by casting its spell (v0.8.4.26.1)
 			continue

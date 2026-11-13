@@ -769,6 +769,36 @@ static func _blows_text(row_of: Dictionary) -> Array[String]:
 	return out
 
 
+## The icon of a status, a ref for IconRules (v0.8.4.43.49, the author: «Наследие фей не имеет иконки?», «иммунитет к кислоте —
+## странная иконка»): its condition's own; one a spell, a feature, a trait or a worn thing lays — the icon of that spell,
+## feature, trait or thing; else what it does — an immunity, a resistance or a weakness to a damage type, the type as its mark
+## (`conditions/immune@acid`); else its condition's ref (the blank of the kind).
+static func icon_of(data: Dictionary, e: Dictionary) -> String:
+	var id := str(e.get("condition", ""))
+	if not id.is_empty() and not IconRules.own(data, IconRules.ref("conditions", id)).is_empty():
+		return IconRules.ref("conditions", id)
+	var src: Dictionary = e.get("source", {}) if e.get("source") is Dictionary else {}
+	var sid := str(src.get("id", ""))
+	if id.is_empty() and not sid.is_empty():
+		var kind := str(src.get("kind", ""))
+		var refs: Array[String] = []
+		if kind == "spell":
+			refs = [IconRules.ref("spells", sid)]
+		elif kind in [ItemRules.BORN, "feature", "trait"]:
+			refs = [IconRules.ref("features", sid), IconRules.ref("traits", sid)]
+		elif kind in [ItemRules.WORN, "item"]:
+			refs = [IconRules.ref("items", sid)]
+		for r: String in refs:
+			if not IconRules.own(data, r).is_empty() or r.begins_with("spells/"):
+				return r
+	var dtypes: Dictionary = data["misc"]["damage_types"]
+	for key: String in ["immune", "resist", "vulnerable"]:
+		for t: Variant in e.get(key, []):
+			if dtypes.has(str(t)):
+				return "conditions/%s@%s" % [{"immune": "immune", "resist": "resistant", "vulnerable": "vulnerable"}[key], str(t)]
+	return IconRules.ref("conditions", id)
+
+
 ## The statuses of anybody for the chips, the master and the card (v0.8.4.41: any creature, `who` of Sheet):
 ## [{name, left, source, kind, text, does, condition, icon}] — `does` is what its numbers do (boon_text), `kind` where it comes
 ## from (a spell, a worn thing, a trait…), `icon` its ref for IconRules (v0.8.4.43.4), `count` the level of exhaustion. A trait's status counts even when nothing laid it yet (ItemRules.born_effects).
@@ -791,7 +821,7 @@ static func shown(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO
 			text = SpellEffects.text(data, SpellEffects.spec(data, str(e["source"].get("id", ""))))
 		if text.is_empty():
 			text = ", ".join(does)
-		var icon := IconRules.ref("spells", str(e["source"].get("id", ""))) if id.is_empty() and kind == "spell" else IconRules.ref("conditions", id)
+		var icon := icon_of(data, e)
 		out.append({"condition": id, "name": title, "left": left_text(s, e), "source": str(e.get("source", {}).get("name", "")), "kind": kind,
 			"text": text, "does": ", ".join(does), "icon": icon})
 	if exhaustion(c) > 0:

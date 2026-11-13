@@ -53,7 +53,7 @@ func test_a_single_pick_switches_and_a_picked_one_is_taken_back() -> void:
 
 
 func test_blocked_and_named() -> void:
-	var g: PickGrid = auto_free(PickGrid.make("", _spells(["fire_bolt", "light"]), 2, [], [], ["light"], "Check_", true))
+	var g: PickGrid = auto_free(PickGrid.make("", _spells(["fire_bolt", "light"]), 2, [], [], ["light"], "Check_"))
 	var blocked := g.find_child("Check_light", true, false) as IconSlot
 	assert_bool(blocked.disabled).is_true()
 	assert_str(blocked.tip_body).contains("Уже выбран")

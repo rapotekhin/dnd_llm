@@ -208,15 +208,17 @@ func _radio(parent: Control, key: String, options: Array, columns: int = 3) -> v
 
 
 ## A list of icons to pick from (spells, features): `options` [{id, ref, label, card?, tip?, group?}].
-func _icons(parent: Control, title_text: String, picked: Array, options: Array, limit: int, on_change: Callable, blocked: Array = [], named := false) -> void:
-	var g := PickGrid.make(title_text, options, limit, picked, [], blocked, "Check_", named)
+func _icons(parent: Control, title_text: String, picked: Array, options: Array, limit: int, on_change: Callable, blocked: Array = []) -> void:
+	var g := PickGrid.make(title_text, options, limit, picked, [], blocked, "Check_")
 	g.changed.connect(func(next: Array) -> void: on_change.call(next))
 	parent.add_child(g)
 
 
-## The face of a race on its row: the chosen sex, an adult, its first drawn variant; "" — none drawn.
-func _race_face(race: String) -> String:
-	return PortraitRules.person(data(), race, str(choices.get("gender", "male")), "adult", 1)
+## The picture of a race or a subrace on its row: its own icon (`races/<id>`, `subraces/<id>`; the author, 2026-11-13: «иконки
+## для рас и подрас вместо случайных портретов — портрет только при выборе портрета»), else a face of the race as before.
+func _race_face(ref: String, race: String) -> String:
+	var own := IconRules.own(data(), ref)
+	return own if not own.is_empty() else PortraitRules.person(data(), race, str(choices.get("gender", "male")), "adult", 1)
 
 
 ## The hero's face as the game will give it: the picked variant, else the one by its name.
@@ -226,7 +228,7 @@ func _face_path() -> String:
 	var seed_text := "hero:" + str(choices.get("name", ""))
 	var age := str(BodyRules.make(d, gender, BodyRules.fit(d, _body_picks(), gender), seed_text, true).get("age", ""))
 	var mine := int(choices.get("portrait", 0))
-	return PortraitRules.person(d, str(choices.get("race", "")), gender, age, mine if mine > 0 else PortraitRules.variant_of(d, age, seed_text))
+	return PortraitRules.person(d, PortraitRules.folk(d, choices), gender, age, mine if mine > 0 else PortraitRules.variant_of(d, age, seed_text))
 
 
 ## Several choices (up to `limit`) from `options` [{id, label, tooltip?}]; `fixed` are shown checked and locked.
@@ -353,7 +355,7 @@ func _draw_race() -> void:
 	var races: Dictionary = data()["races"]["races"]
 	var opts: Array = []
 	for id: String in races:
-		opts.append({"id": id, "label": races[id]["name"], "tip": InfoBox.race_text(data(), id), "picture": _race_face(id)})
+		opts.append({"id": id, "label": races[id]["name"], "tip": InfoBox.race_text(data(), id), "ref": "races/" + id, "picture": _race_face("races/" + id, id)})
 	_radio(_body, "race", opts)
 	var r := CharacterBuilder.race(choices, data())
 	if r.is_empty():
@@ -369,7 +371,8 @@ func _draw_subrace() -> void:
 	var subs: Dictionary = data()["races"]["subraces"]
 	var opts: Array = []
 	for id: Variant in CharacterBuilder.race(choices, data()).get("subraces", []):
-		opts.append({"id": id, "label": subs[str(id)]["name"], "tip": InfoBox.race_text(data(), str(id)), "picture": _race_face(str(choices.get("race", "")))})
+		opts.append({"id": id, "label": subs[str(id)]["name"], "tip": InfoBox.race_text(data(), str(id)), "ref": "subraces/" + str(id),
+			"picture": _race_face("subraces/" + str(id), str(choices.get("race", "")))})
 	_radio(_body, "subrace", opts)
 	var s := CharacterBuilder.subrace(choices, data())
 	if s.is_empty():
@@ -524,7 +527,7 @@ func _draw_features() -> void:
 		var picked: Array = choices["options"].get(fc["id"], [])
 		_icons(_body, str(fc["name"]), picked, opts, int(fc["choose"]), func(next: Array) -> void:
 			choices["options"][fc["id"]] = next
-			_redraw(), [], true)
+			_redraw())
 	var n := CharacterBuilder.expertise_count(choices, data())
 	if n > 0:
 		_text(_body, tr("CC_EXPERTISE").format({"n": n}))
@@ -736,12 +739,24 @@ func _draw_faces() -> void:
 	var gender := str(choices.get("gender", "male"))
 	var seed_text := "hero:" + str(choices.get("name", ""))
 	var age := str(BodyRules.make(d, gender, BodyRules.fit(d, _body_picks(), gender), seed_text, true).get("age", ""))
-	var paths := PortraitRules.variants(d, race, gender, age)
-	_text(_body, tr("CC_PORTRAIT"), true)
+	var paths := PortraitRules.variants(d, PortraitRules.folk(d, choices), gender, age)  # a drow's own faces (v0.8.4.43.49)
+	var ready := choices.has("gender") and _body_picks().has("age")  # the author, 2026-11-13: faces only by the sex and the age picked
+	_text(_body, tr("CC_PORTRAIT" if ready else "CC_PORTRAIT_WAIT"), true)
 	var row := HBoxContainer.new()
 	row.name = "PortraitPicks"
 	row.add_theme_constant_override("separation", 10)
 	_body.add_child(row)
+	if not ready:  # blanks until then: no faces of another sex or age to pick from
+		for i in paths.size():
+			var blank := Portrait.of("?", 76)
+			blank.name = "Portrait_%d" % (i + 1)
+			blank.letter = "?"
+			blank.disabled = true
+			blank.modulate = Color(1, 1, 1, 0.45)
+			blank.tip_title = tr("CC_PORTRAIT").get_slice(" —", 0)
+			blank.tip_body = tr("CC_PORTRAIT_WAIT")
+			row.add_child(blank)
+		return
 	var mine := int(choices.get("portrait", 0))
 	var lit := mine if mine > 0 else PortraitRules.variant_of(d, age, seed_text)
 	for i in paths.size():

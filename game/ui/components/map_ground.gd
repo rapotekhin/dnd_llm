@@ -79,11 +79,14 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	dims.resize(MAX_PROPS)
 	var jitter := PackedFloat32Array()  # v0.8.4.43.37: a natural thing, sized and shifted by its square
 	jitter.resize(MAX_PROPS)
+	var thin := PackedFloat32Array()  # v0.8.4.43.49: a thing narrower than its squares (a bench by a table)
+	thin.resize(MAX_PROPS)
 	var natural: Dictionary = g.get("natural", {})
 	for i: int in mini(props.size(), MAX_PROPS):
 		sizes[i] = float(g.get("size", {}).get(LayoutGen.prop_base(lib, props[i]), 1.0))
 		dims[i] = dims_of(lib, props[i])
 		jitter[i] = 1.0 if (natural.get("of", []) as Array).has(LayoutGen.prop_base(lib, props[i])) else 0.0
+		thin[i] = float(g.get("thin", {}).get(LayoutGen.prop_base(lib, props[i]), 0.0))
 	_lib = lib
 	var m := material as ShaderMaterial
 	m.set_shader_parameter("cells", _cells)
@@ -104,6 +107,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	m.set_shader_parameter("kin", kin)
 	m.set_shader_parameter("ground_move", ground_motion(lib))
 	m.set_shader_parameter("prop_size", sizes)
+	m.set_shader_parameter("prop_thin", thin)
 	var shimmer := PackedFloat32Array()  # v0.8.4.43.36: a thing whose picture moves (falling water)
 	shimmer.resize(MAX_PROPS)
 	for i: int in mini(props.size(), MAX_PROPS):

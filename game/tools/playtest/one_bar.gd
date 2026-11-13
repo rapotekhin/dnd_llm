@@ -75,15 +75,13 @@ func run() -> void:
 		var at := [empty.section, empty.index]
 		empty._drop_data(Vector2.ZERO, {"hotbar": cell.drag_key})  # what the cell's drag carries
 		await frames(4)
-		var j := _slots(at[0]).find(key)
-		var last := _last_other(_slots(at[0]), key)
-		step("dropped past the cells of the tab it goes right after the last", j >= 0 and j == last + 1, "%s в %s: место %d, последняя %d" % [key, str(at), j, last])
 		step("the tab is still «Дела»", str(bar.call("current")) == "deeds")
 		await shot("deeds_dragged")
 		bar.call("set_filter", "")
 		await frames(4)
-		var moved := find(bar, key) as Control
-		step("on the whole bar it stands in its section, in the slot the tab gave it", moved != null and _where(moved) == [at[0], j], str(_where(moved)))
+		var moved := find(bar, key) as Control  # v0.8.4.43.49: a slot past the bar's sight gives the first free one in it
+		step("dropped past the bar's sight on the tab, it stands in sight of the whole bar in its section", moved != null and moved.is_visible_in_tree()
+			and int(_where(moved)[0]) == int(at[0]), "%s: %s, с вкладки %s" % [key, str(_where(moved)), str(at)])
 		await shot("whole_bar_after_drop")
 
 	# A divider: follows the mouse, snaps when let go.
@@ -99,16 +97,16 @@ func run() -> void:
 		var cols0 := _cols(di)
 		var can := HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.BAR, di, 2)
 		var x0 := line.get_global_rect().get_center().x
-		_mouse(line, x0, true)
+		_mouse(pad, x0, true)  # v0.8.4.43.49: the whole strip takes the mouse
 		for k in 8:
-			_motion(line, x0 + stepw * 1.6 * (k + 1) / 8.0)
+			_motion(pad, x0 + stepw * 1.6 * (k + 1) / 8.0)
 			await frames(1)
 		var held := find(pad, "Held") as Control
 		step("held: the line follows the mouse, the grid not laid again under it", is_instance_valid(pad) and not pad.is_queued_for_deletion()
 			and held.visible and absf(held.global_position.x - line.global_position.x - minf(stepw * 1.6, can * stepw)) < 2.0,
 			"%.0f → %.0f" % [line.global_position.x, held.global_position.x])
 		await shot("divider_held")
-		_mouse(line, x0 + stepw * 1.6, false)
+		_mouse(pad, x0 + stepw * 1.6, false)
 		await frames(5)
 		step("let go mid-cell it snaps to the nearest column", _cols(di) == cols0 + can, "%d → %d (можно %d)" % [cols0, _cols(di), can])
 		pad = find(bar, "Divider_%d" % di) as Control
@@ -116,9 +114,9 @@ func run() -> void:
 		var cols1 := _cols(di)
 		if line != null:
 			var x1 := line.get_global_rect().get_center().x
-			_mouse(line, x1, true)
-			_motion(line, x1 + stepw * 0.4)
-			_mouse(line, x1 + stepw * 0.4, false)
+			_mouse(pad, x1, true)
+			_motion(pad, x1 + stepw * 0.4)
+			_mouse(pad, x1 + stepw * 0.4, false)
 			await frames(5)
 		step("a little nudge stays where it was", _cols(di) == cols1, "%d → %d" % [cols1, _cols(di)])
 		var sec: Dictionary = _drawn()[di]
@@ -154,8 +152,11 @@ func run() -> void:
 		var to := [spot.section, spot.index]
 		spot._drop_data(Vector2.ZERO, {"hotbar": (real_dash as IconSlot).drag_key})
 		await frames(4)
-		step("«Рывок» moved on the fight's tab, right after the last cell", _slots(to[0]).find("Do_dash") == _last_other(_slots(to[0]), "Do_dash") + 1, str(_slots(to[0])))
 		await shot("fight_tab_dragged")
+		bar.call("set_filter", "")
+		await frames(4)
+		var dash_cell := find(bar, "Do_dash") as Control
+		step("«Рывок» moved on the fight's tab stands in sight of the whole bar", dash_cell != null and dash_cell.is_visible_in_tree() and int(_where(dash_cell)[0]) == int(to[0]), str(_where(dash_cell)))
 
 	# The fight over: the dividers where they stood in it.
 	var data: Dictionary = node("Catalog").data
@@ -204,10 +205,6 @@ func _drawn() -> Array:
 	return (HotbarLayout.mode(_hb(), HotbarLayout.BAR)["sections"] as Array).filter(func(sec: Dictionary) -> bool: return int(sec["cols"]) > 0)
 
 
-func _slots(sec: int) -> Array:
-	return _drawn()[sec]["slots"]
-
-
 func _layout_section(kind: String) -> int:
 	var secs: Array = _drawn()
 	for i in secs.size():
@@ -219,14 +216,6 @@ func _layout_section(kind: String) -> int:
 func _cols(i: int) -> int:
 	var g := find(screen(), "Kind_" + str(_drawn()[i]["kind"])) as GridContainer
 	return g.columns if g != null else -1
-
-
-func _last_other(slots: Array, key: String) -> int:
-	var last := -1
-	for j in slots.size():
-		if str(slots[j]) not in ["", key]:
-			last = j
-	return last
 
 
 func _first_spell() -> String:
@@ -254,5 +243,6 @@ func _mouse(on: Control, x: float, down: bool) -> void:
 
 func _motion(on: Control, x: float) -> void:
 	var e := InputEventMouseMotion.new()
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT  # the button held, as a real drag
 	e.global_position = Vector2(x, on.get_global_rect().get_center().y)
 	on.gui_input.emit(e)

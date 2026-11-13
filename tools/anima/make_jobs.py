@@ -1,5 +1,6 @@
-"""The jobs of anima_gen.py from the game's data: one icon per item, spell, class feature, race trait, condition,
-combat act and group of the inventory. Runs in the repo; the jobs file is what is copied to the machine with Forge.
+"""The jobs of anima_gen.py from the game's data: one icon per item, spell, class feature, race trait, race and
+subrace, condition, combat act and group of the inventory, and one per subject with its own `name` the data has not
+yet (`ahead`). Runs in the repo; the jobs file is what is copied to the machine with Forge.
 
     python tools/anima/make_jobs.py                  # → tools/anima/jobs/icons.json from subjects.json
     python tools/anima/make_jobs.py --describe       # first ask the model for the subjects not written yet (cents)
@@ -164,9 +165,14 @@ def entries() -> list[dict]:
     for fid, f in load("game/data/srd/classes.json")["features"].items():
         out.append({"kind": "features", "id": fid, "name": f.get("name", fid), "en": f.get("name_en", ""),
                     "hint": "class feature; " + short(f.get("desc", ""))})
-    for tid, t in load("game/data/srd/races.json")["traits"].items():
+    races = load("game/data/srd/races.json")
+    for tid, t in races["traits"].items():
         out.append({"kind": "traits", "id": tid, "name": t.get("name", tid), "en": t.get("name_en", ""),
                     "hint": "race trait; " + short(t.get("desc", ""))})
+    for kind in ("races", "subraces"):  # a race's sign at creation and on the sheet (2026-11-13)
+        for rid, r in races[kind].items():
+            out.append({"kind": kind, "id": rid, "name": r.get("name", rid), "en": r.get("name_en", ""),
+                        "hint": "a people of the world; " + (f"a kind of {r['race']}" if r.get("race") else "a race")})
     told = load("game/data/rules.json")["conditions"]  # «Ослеплён: …» — the 5e conditions have their name only there
     for cid, c in load("game/data/rules.json")["condition_effects"].items():
         if cid.startswith("_"):
@@ -199,6 +205,18 @@ def entries() -> list[dict]:
                 out.append({"kind": f"marks/{what}", "id": mid, "name": mid, "en": mid,
                             "hint": f"a tiny mark of {hint} drawn over the corner of another icon: one bold simple "
                                     f"emblem readable at 16 px, colored {icons[what][mid]}"})
+    return out
+
+
+def ahead(subjects: dict, known: set[str]) -> list[dict]:
+    """Icons asked before the game's data has them (the author's list for the next version: «Стрельба», the statuses of
+    a damage's defenses): a subject with its own Russian `name` whose kind/id no entry of the data gives yet. Once the
+    data has it, its entry wins and this one is dropped."""
+    out = []
+    for k, s in subjects.items():
+        kind, _, iid = k.rpartition("/")
+        if s.get("name") and k not in known and not k.startswith("portraits/"):
+            out.append({"kind": kind, "id": iid, "name": s["name"], "en": iid.replace("_", " "), "hint": ""})
     return out
 
 
@@ -273,9 +291,11 @@ def person_look(t: dict, rid: str, sex: str, age_id: str, i: int) -> dict:
 
 
 def people_jobs() -> list[dict]:
-    """One job per race, sex and age of the engine (rules.body.age), its looks one per variant."""
+    """One job per race, sex and age of the engine (rules.body.age), its looks one per variant; a subrace with a look
+    of its own in portraits.json (a drow: grey skin, white hair) gets its own portraits beside its race's."""
     t = json.loads(LOOKS.read_text(encoding="utf-8"))
-    races, ages = load("game/data/srd/races.json")["races"], load("game/data/rules.json")["body"]["age"]
+    srd, ages = load("game/data/srd/races.json"), load("game/data/rules.json")["body"]["age"]
+    races = {**srd["races"], **{k: v for k, v in srd["subraces"].items() if k in t["races"]}}
     jobs = []
     for rid in races:
         for sex in ("male", "female"):
@@ -371,8 +391,10 @@ def main() -> None:
     p.add_argument("--portraits", action="store_true", help="the portraits of people and monsters → jobs/portraits.json")
     a = p.parse_args()
 
-    all_entries = monster_entries() if a.portraits else entries()
     subjects: dict = json.loads(SUBJECTS.read_text(encoding="utf-8")) if SUBJECTS.exists() else {}
+    all_entries = monster_entries() if a.portraits else entries()
+    if not a.portraits:
+        all_entries += ahead(subjects, {f"{e['kind']}/{e['id']}" for e in all_entries})
     for k in filter(None, a.redo.split(",")):
         subjects.pop(k.strip(), None)
     if a.describe:
@@ -419,6 +441,8 @@ def main() -> None:
             job["tint"] = tint
         if s.get("lines"):  # the lines style's own subject: `tags`, `sentence`, `people`
             job["lines"] = s["lines"]
+        if s.get("people"):  # a sign with people (a beard, an ear, a foot) in every style: no «no humans»
+            job["people"] = True
         jobs.append(job)
     JOBS.parent.mkdir(parents=True, exist_ok=True)
     JOBS.write_text(json.dumps({"jobs": jobs}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

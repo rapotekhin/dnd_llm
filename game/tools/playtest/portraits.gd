@@ -17,6 +17,13 @@ func run() -> void:
 	await tap("NextButton")
 	await tap("Preset_fighter_aira")
 	await frames(3)
+	var blanks: Control = find(screen(), "PortraitPicks")  # v0.8.4.43.49: faces only by the sex and the age picked
+	step("blanks until the age is picked", blanks != null and blanks.get_child_count() == 5 and (find(blanks, "Portrait_1") as BaseButton).disabled)
+	var age_pick: OptionButton = find(screen(), "Body_age")
+	if age_pick != null and age_pick.selected == 0:
+		age_pick.select(1)
+		age_pick.item_selected.emit(1)
+		await frames(3)
 	var picks: Control = find(screen(), "PortraitPicks")
 	if not step("five faces to pick at creation", picks != null and picks.get_child_count() == 5, str(picks.get_child_count() if picks != null else -1)):
 		return

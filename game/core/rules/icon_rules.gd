@@ -30,6 +30,11 @@ static func of(data: Dictionary, session_items: Dictionary, r: String) -> Dictio
 	var kind := r.get_slice("/", 0)
 	var id := r.get_slice("/", 1) if r.contains("/") else ""
 	var out := {"ref": r, "path": "", "real": false, "tint": "", "frame": "", "marks": []}
+	if id.contains("@"):  # «conditions/immune@acid»: the picture of its id, the damage type's mark over it (v0.8.4.43.49)
+		var mark := id.get_slice("@", 1)
+		id = id.get_slice("@", 0)
+		if (cfg(data).get("elements", {}) as Dictionary).has(mark):
+			out["marks"].append(_mark(data, "elements", mark))
 	if kind == "items":
 		id = ItemRules.real_id(id)
 		_item(data, session_items, id, out)

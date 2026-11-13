@@ -163,7 +163,7 @@ func _init() -> void:
 	_grid_scroll = ScrollContainer.new()
 	_grid_scroll.name = "Cells"
 	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER  # the rows a wheel away: no bar beside the grid
+	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED  # the rows it has and no more (the author, 2026-11-13: «весь хотбар виден сразу»)
 	_grid_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN  # as wide as its cells: the bar hugs them (v0.8.4.43.33)
 	_grid_scroll.size_flags_vertical = Control.SIZE_SHRINK_CENTER  # as tall as its rows, never a part of one more
 	grid_row.add_child(_grid_scroll)
@@ -494,11 +494,9 @@ func _lay_grid() -> void:
 	for key: String in cells:
 		kinds[key] = cells[key][0]
 	var side := "fight" if _fight else "peace"
+	var probe := HotbarLayout.place(SaveManager.hotbar.duplicate(true), HotbarLayout.BAR, kinds, total, side)  # how many sections: a copy,
+	total = _columns(probe.size() if _filter.is_empty() else 1)  # the new cells laid once, into the room the dividers leave (v0.8.4.43.49)
 	var sections := HotbarLayout.place(SaveManager.hotbar, HotbarLayout.BAR, kinds, total, side)
-	var fit := _columns(sections.size() if _filter.is_empty() else 1)  # the dividers between the sections take their room
-	if fit != total:
-		total = fit
-		sections = HotbarLayout.place(SaveManager.hotbar, HotbarLayout.BAR, kinds, total, side)
 	_drawn_kinds = {}
 	var shown := []  # [the section's index in the layout, the section] to draw
 	for i in sections.size():
@@ -513,12 +511,14 @@ func _lay_grid() -> void:
 	for n in shown.size():
 		var at := int(shown[n][0])  # a drop goes into the layout's own section and slot, whichever tab shows it
 		var sec: Dictionary = shown[n][1]
-		var slots: Array = (sec["slots"] as Array).duplicate()
+		var slots: Array = sec["slots"]
+		var index: Array = sec["index"]
 		var cols := int(sec["cols"])
-		if not _filter.is_empty():  # one kind alone: its own slots in their order, the bar's whole width
+		if not _filter.is_empty():  # one kind alone: its card from its first column, the bar's whole width
 			cols = total
-			while slots.size() < rows * total or slots.size() % total != 0:
-				slots.append("")
+			var whole := HotbarLayout.view(SaveManager.hotbar, HotbarLayout.drawn(SaveManager.hotbar, HotbarLayout.BAR, at), 0, total, cells)
+			slots = whole["slots"]
+			index = whole["index"]
 		if n > 0:
 			_grid.add_child(_divider(at - 1))
 		var g := GridContainer.new()
@@ -531,7 +531,7 @@ func _lay_grid() -> void:
 			var slot := HotSlot.new()
 			slot.custom_minimum_size = Vector2(CELL, CELL)
 			slot.section = at
-			slot.index = j
+			slot.index = int(index[j])
 			slot.dropped.connect(_on_drop)
 			g.add_child(slot)
 			var key := str(slots[j])
@@ -566,18 +566,22 @@ func _whole() -> float:
 
 ## The divider after the layout's section `i` (v0.8.4.43.14, the author: «плавными как в BG3, лёгкими на движение»): the
 ## line follows the mouse while it is held — the grid is not laid again under it — and when let go it goes to the
-## nearest boundary of a column, as far as each side keeps one.
+## nearest boundary of a column, as far as each side keeps one. v0.8.4.43.49 (the author: «граница групп иногда не
+## двигается»): the whole strip between the sections takes the mouse, not the thin line in it, and a button let go out of
+## sight of the bar (the window left, a dialog over it) still ends the drag at the next move.
 func _divider(i: int) -> Control:
 	var pad := MarginContainer.new()
 	pad.name = "Divider_%d" % i
 	pad.add_theme_constant_override("margin_left", 3)
 	pad.add_theme_constant_override("margin_right", 3)
+	pad.mouse_filter = Control.MOUSE_FILTER_STOP
+	pad.mouse_default_cursor_shape = Control.CURSOR_HSIZE
+	pad.tooltip_text = tr("BAR_DIVIDER_TIP")
 	var d := ColorRect.new()
 	d.name = "Line"
 	d.color = UiTheme.BAD.darkened(0.3)
 	d.custom_minimum_size = Vector2(DIVIDER - 6, 0)
-	d.mouse_default_cursor_shape = Control.CURSOR_HSIZE
-	d.tooltip_text = tr("BAR_DIVIDER_TIP")
+	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pad.add_child(d)
 	var held := ColorRect.new()  # the line in the hand, over the grid
 	held.name = "Held"
@@ -587,10 +591,11 @@ func _divider(i: int) -> Control:
 	held.color = UiTheme.ACCENT_BRIGHT
 	pad.add_child(held)
 	var start := [0.0]
-	d.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-			var x := (e as InputEventMouseButton).global_position.x
-			if (e as InputEventMouseButton).pressed:
+	pad.gui_input.connect(func(e: InputEvent) -> void:
+		var lost := e is InputEventMouseMotion and _dragging_divider and ((e as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_LEFT) == 0
+		if lost or e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			var x := (e as InputEventMouse).global_position.x
+			if not lost and (e as InputEventMouseButton).pressed:
 				start[0] = x
 				_dragging_divider = true
 				var seen := _grid_scroll.get_global_rect()  # the line as tall as the grid in sight, not the rows under it
@@ -733,6 +738,17 @@ func _lay_hands() -> void:
 			shown.name = spec[2]
 			if not id.is_empty():
 				shown.set_card(CardInfo.item(c, Catalog.data, s.items, id))
+			if Sheet.is_hero(who) and (spec[0] == "main_hand" or CharacterRules.off_weapon(held, Catalog.data, s.items) != ""):
+				var hand := "main" if spec[0] == "main_hand" else "off"  # out of a fight a press readies the blow (v0.8.4.43.49)
+				shown.toggle_mode = true
+				shown.button_pressed = str(GameState.poised.get("hand", "")) == hand
+				shown.tooltip_text = shown.text + "\n" + tr("STRIKE_POISE_TIP")
+				shown.pressed.connect(func() -> void:
+					var err := GameState.poise_strike(hand)
+					if not err.is_empty():
+						EventBus.message.emit(tr(err))
+					elif not GameState.poised.is_empty():
+						EventBus.message.emit(tr("STRIKE_POISED")))
 			cell = shown
 		cell.custom_minimum_size = Vector2(CELL + 8, CELL + 8)
 		_hands.add_child(cell)

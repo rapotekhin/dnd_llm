@@ -8,8 +8,10 @@ game shows its blank until the subject is fixed and drawn again. A portrait keep
 per person); a bad one is listed under `redo` as «portraits/<sub>/<id>__<n>» and the game shows the letter for it. An
 icon under `overlay` gets a mark drawn by code over it (overlays.py: a symbol the model would spoil); an icon under
 `same` («features/domain_spells_2»: «features/domain_spells_1») is laid from the other's picked variant, one under
-`drawn` («ui/skills»: «d20») is a whole icon drawn by code (overlays.ICONS) where the model fills a geometry. A file already in
-the game is replaced only when it differs. Run `"$GODOT" --headless --path game --import` afterwards.
+`drawn` («ui/skills»: «d20») is a whole icon drawn by code (overlays.ICONS) where the model fills a geometry, one under
+`from` («spells/eldritch_blast»: «out_lines_flux») is taken from that folder beside --out (FLUX's beside Anima's, where
+the other model drew it far better). A file already in the game is replaced only when it differs. Run
+`"$GODOT" --headless --path game --import` afterwards.
 
     python tools/anima/install.py                 # every kind of the icon jobs
     python tools/anima/install.py --only spells   # one kind
@@ -30,16 +32,19 @@ HERE = Path(__file__).resolve().parent
 ASSETS = HERE.parent.parent / "game" / "assets"
 
 
-def files(j: dict, variant: dict, redo: set, out: Path, like: dict | None = None) -> list[tuple[Path, Path] | None]:
+def files(j: dict, variant: dict, redo: set, out: Path, like: dict | None = None,
+          where: dict | None = None) -> list[tuple[Path, Path] | None]:
     """(drawn, in the game) of each file of a job; None for one left out by `redo`. An icon under `same` is the picked
-    variant of the icon it names (the same feature at another level, one style of two classes)."""
+    variant of the icon it names (the same feature at another level, one style of two classes); one under `from` is
+    drawn in that folder of tools/anima instead of `out`."""
     key = f"{j['kind']}/{j['id']}"
     if j.get("style") != "portrait":
         if key in redo:
             return [None]
         src = (like or {}).get(key, key)
         kind, _, iid = src.partition("/")
-        return [(out / kind / "variants" / f"{iid}__{variant.get(src, 1)}.png", ASSETS / "icons" / j["kind"] / f"{j['id']}.png")]
+        base = HERE / where[src] if src in (where or {}) else out
+        return [(base / kind / "variants" / f"{iid}__{variant.get(src, 1)}.png", ASSETS / "icons" / j["kind"] / f"{j['id']}.png")]
     sub = j["kind"].removeprefix("portraits/")
     return [None if f"{key}__{n}" in redo else
             (out / j["kind"] / "variants" / f"{j['id']}__{n}.webp", ASSETS / "portraits" / sub / f"{j['id']}__{n}.webp")
@@ -58,13 +63,13 @@ def main() -> None:
     jobs = jobs["jobs"] if isinstance(jobs, dict) else jobs
     picks = json.loads(a.picks.read_text(encoding="utf-8")) if a.picks.exists() else {}
     variant, redo, overlay = picks.get("variant", {}), set(picks.get("redo", [])), picks.get("overlay", {})
-    like, drawn = picks.get("same", {}), picks.get("drawn", {})
+    like, drawn, where = picks.get("same", {}), picks.get("drawn", {}), picks.get("from", {})
     only = set(filter(None, a.only.split(",")))
     new = same = skipped = missing = 0
     for j in jobs:
         if only and j["kind"] not in only:
             continue
-        for pair in files(j, variant, redo, a.out, like):
+        for pair in files(j, variant, redo, a.out, like, where):
             if pair is None:
                 skipped += 1
                 continue
@@ -74,7 +79,7 @@ def main() -> None:
                 body = overlays.icon(drawn[key])
             elif not src.exists():
                 missing += 1
-                print("not drawn:", src.relative_to(a.out))
+                print("not drawn:", src.relative_to(a.out) if src.is_relative_to(a.out) else src)
                 continue
             else:
                 mark = overlay.get(key)

@@ -128,10 +128,29 @@ func _draw() -> void:
 	if not saves.is_empty():
 		_saves(centre, rad)
 	if up:
-		var at := Vector2(size.x - rad * 0.3, rad * 0.32)
+		var at: Vector2 = _arrow()[0]
 		var a := rad * 0.22
 		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -a), at + Vector2(a, 0), at + Vector2(a * 0.4, 0), at + Vector2(a * 0.4, a),
 			at + Vector2(-a * 0.4, a), at + Vector2(-a * 0.4, 0), at + Vector2(-a, 0)]), UiTheme.ACCENT_BRIGHT)
+
+
+## Where the arrow of a waiting level stands, its centre and reach.
+func _arrow() -> Array:
+	var rad := minf(size.x, size.y) / 2 - 4
+	return [Vector2(size.x - rad * 0.3, rad * 0.32), rad * 0.42]
+
+
+## A click on the arrow of a waiting level opens the level-up (the author, 2026-11-13: «щелчок на стрелочку "повышения
+## уровня" так же должен вести на панель повышения уровня»); anywhere else the portrait's own act.
+func _gui_input(ev: InputEvent) -> void:
+	var mb := ev as InputEventMouseButton
+	if up and mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+		var arrow := _arrow()
+		if mb.position.distance_to(arrow[0]) <= float(arrow[1]):
+			accept_event()
+			(Engine.get_main_loop() as SceneTree).root.get_node("EventBus").level_up_requested.emit()
+			return
+	super(ev)
 
 
 ## A face of `path` cut to a circle of `rad` at `centre` on any canvas item (a portrait, a token of the map, a body of a

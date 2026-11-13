@@ -100,6 +100,12 @@ func set_icon(ref: String) -> void:
 	queue_redraw()
 
 
+## No card at the cursor while another card is pinned (the author, 2026-11-13: «если я закрепил одну панель осмотра —
+## вторая не должна появляться при наведении»).
+func _get_tooltip(_at: Vector2) -> String:
+	return "" if DetailsPanel.holding() else tooltip_text
+
+
 ## The card at the cursor: the name, the act's line when it says more, the description.
 func _make_custom_tooltip(for_text: String) -> Object:
 	return DetailsPanel.tip_card(card_title(for_text), card_line(for_text), tip_body, card, spec)

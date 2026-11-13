@@ -35,6 +35,10 @@ var _retry_spend: Dictionary = {}  # an attachment given back by a failed turn: 
 ## A combat spell pinned to words aimed at an NPC (v0.7.7, as in BG3): if that turn starts the fight, the hero
 ## strikes first with it, the NPC caught off guard. {spell, slot, npc_id} or {}.
 var _opening: Dictionary = {}
+## A blow readied out of a fight by the weapon of a hand on the hotbar (v0.8.4.43.49, the author: «огненный шар, выстрел или
+## удар можно навести на цель и вне боя; кого задело — начинается бой»): {"hand": "main" | "off"} or {}. A click on a
+## person or a foe of the map strikes it first (`strike_at`). Not saved.
+var poised: Dictionary = {}
 ## The second line (v0.8.4.25): turn_id → the job the master readies ahead beside the player's turns; the day the
 ## server kept the rest of the daily limit for the player's turns — nothing more is readied that day.
 var _ahead: Dictionary = {}
@@ -688,6 +692,7 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 	session.fight_on_load = {"foes": foes.duplicate(true), "source": source.duplicate(true)}
 	SaveManager.save_slot(COMBAT_SAVE, session)  # loading it starts this fight again (a lost fight is not skipped)
 	session.fight_on_load = {}
+	poised = {}
 	var lines := CombatRules.start(session, Catalog.data, foes, source)
 	session.combat["drive"] = true  # the party's turns are the player's (v0.8.4.43.11, CombatRules.driven)
 	lines.append_array(_opening_strike(source.get("opening", {})))
@@ -699,17 +704,26 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 
 
 ## The pinned spell that started the fight lands first (v0.7.7): its slot was spent with the words, so it is given
-## back and spent again by the combat cast — on that NPC, now caught off guard. Lines.
+## back and spent again by the combat cast — on that NPC, now caught off guard. A blow readied on the hotbar
+## (v0.8.4.43.49, `attack` — its `how`) lands first the same way. Lines.
 func _opening_strike(opening: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
-	if opening.is_empty() or not opening.has("spell"):  # the button or a weapon: the hero strikes by the combat buttons
+	if opening.is_empty() or not (opening.has("spell") or opening.has("attack")):  # «Напасть»: the hero strikes by the combat buttons
 		return lines
 	var data: Dictionary = Catalog.data
 	var target := CombatRules.fighter_of_npc(session, str(opening["npc_id"]))
-	var spell := str(opening["spell"])
-	var slot := int(opening.get("slot", 0))
 	if target.is_empty():
 		return lines
+	if opening.has("attack"):
+		var how: Dictionary = opening["attack"]
+		var no := Acts.one("attack").can(session, data, CombatRules.player(session), target, how)
+		if not no.is_empty():
+			lines.append(tr("STRIKE_OPENING_FAILS").format({"why": tr(no)}))
+			return lines
+		lines.append_array(Acts.one("attack").go(session, data, CombatRules.player(session), target, how))
+		return lines
+	var spell := str(opening["spell"])
+	var slot := int(opening.get("slot", 0))
 	if slot > 0:
 		Stock.give(session.character, "slot_%d" % slot)
 	var how := {"spell": spell, "slot": slot}
@@ -2783,6 +2797,57 @@ func cast_at(spell_id: String, target: String) -> String:
 			attached = {"kind": "spell", "id": spell_id, "slot": int(ch["slots"][0]) if not (ch["slots"] as Array).is_empty() else 0, "target": target}
 			return "" if submit("") else "WAIT_BUSY"
 	return "SPELL_NOT_READY"
+
+
+## The weapon of `hand` readied out of a fight (v0.8.4.43.49), or let go when it was readied: the next click on a person
+## or a foe of the map strikes it first. "" or why not.
+func poise_strike(hand: String) -> String:
+	if not _out_of_fight():
+		return "WAIT_BUSY"
+	if str(poised.get("hand", "")) == hand:
+		poised = {}
+	else:
+		poised = {"hand": hand}
+		attached = {}
+	EventBus.state_changed.emit()
+	return ""
+
+
+## The readied blow is a blow at arm's length (the hero walks up first), not a shot.
+func poised_melee() -> bool:
+	if poised.is_empty():
+		return false
+	var c := session.character
+	var id := str(c.get("equipped", {}).get("off_hand" if str(poised["hand"]) == "off" else "main_hand", ""))
+	return bool(CombatRules.weapon_profile(c, Catalog.data, session.items, id, str(poised["hand"]) == "off").get("melee", true))
+
+
+## The readied blow at a person or a foe here: the fight begins with it, the hero first, the target caught off guard when it
+## did not see it coming — the road of «Напасть» (`attack_npc`, `encounter_attack`). "" or why not.
+func strike_at(target: String) -> String:
+	if poised.is_empty():
+		return "STRIKE_NONE"
+	var opening := {"attack": {"hand": "off"} if str(poised["hand"]) == "off" else {}}
+	if session.npcs_here(world().world, session.room_id).has(target):
+		var err := attack_npc(target, opening)
+		if err.is_empty():
+			poised = {}
+		return err
+	if foes_here().any(func(e: Dictionary) -> bool: return EncounterRules.foe_id(e) == target):
+		poised = {}
+		return encounter_attack(true, opening.merged({"npc_id": target}))
+	return "CREATURE_NONE"
+
+
+## A hostile spell pinned on the hotbar aimed at a person or a foe of the map by a click (v0.8.4.43.49, as in BG3): cast at
+## it as its menu's «✦» does (`cast_at`) — a person struck by it fights. ATTACH_AIM_NONE — no such spell is pinned.
+func aim_hostile(target: String) -> String:
+	if str(attached.get("kind", "")) != "spell":
+		return "ATTACH_AIM_NONE"
+	var id := str(attached["id"])
+	if not spells_at(target).any(func(ch: Dictionary) -> bool: return str(ch["id"]) == id):
+		return "ATTACH_AIM_NONE" if not CombatRules.hostile_spell(Catalog.data, id) else "STRIKE_SPELL_NOT_AT"
+	return cast_at(id, target)
 
 
 ## The spells the hero may aim at `target` out of a fight now: a hostile one at anybody, a charm at a person.

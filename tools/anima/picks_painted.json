@@ -1,5 +1,5 @@
 {
- "_doc": "The picks of the painted icons (out_painted/, anima_gen.py --style painted), as picks.json is for the flat ones: `variant` — the variant put into the game (absent — 1), `redo` — drawn badly in both, left as they are in the game, `overlay` — a mark drawn by code over the icon on install (overlays.py), `same` — an icon laid from another's picked variant, `drawn` — a whole icon drawn by code (overlays.ICONS), `redraw` — the author's marks «перерисовать» of pick.py with what is wrong (pick.py --marked). Read by install.py --picks.",
+ "_doc": "The picks of the painted icons (out_painted/, anima_gen.py --style painted), as picks.json is for the flat ones: `variant` — the variant put into the game (absent — 1), `redo` — drawn badly in both, left as they are in the game, `overlay` — a mark drawn by code over the icon on install (overlays.py), `same` — an icon laid from another's picked variant, `drawn` — a whole icon drawn by code (overlays.ICONS), `from` — an icon taken from another folder of tools/anima, where FLUX drew it far better than Anima («Конец хода», «Мистический заряд»); `redraw` — the author's marks «перерисовать» of pick.py with what is wrong (pick.py --marked). Read by install.py --picks.",
  "variant": {
   "acts/grapple": 2,
   "acts/throw": 3,
@@ -10,10 +10,12 @@
   "conditions/glowing": 4,
   "conditions/grappled": 2,
   "conditions/guided": 2,
+  "conditions/immune": 2,
   "conditions/outlined": 2,
   "conditions/paralyzed": 2,
   "conditions/restrained": 2,
   "conditions/unconscious": 2,
+  "conditions/vulnerable": 2,
   "features/arcane_tradition": 2,
   "features/barbarian_extra_attack": 2,
   "features/bard_college": 3,
@@ -119,7 +121,6 @@
   "traits/skill_versatility": 2,
   "ui/common": 2,
   "ui/empty_hand": 2,
-  "ui/end_turn": 2,
   "ui/faith": 2,
   "ui/food": 2,
   "ui/gather": 2,
@@ -156,5 +157,8 @@
  "drawn": {
   "ui/details": "sheet_lines",
   "ui/skills": "d20"
+ },
+ "from": {
+  "ui/end_turn": "out_painted_flux"
  }
 }

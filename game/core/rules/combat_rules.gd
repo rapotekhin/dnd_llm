@@ -881,7 +881,7 @@ static func foe_conditions(s: GameSession, data: Dictionary, f: Dictionary) -> A
 
 
 ## What the fight lays on `f` beside its statuses, for its portrait (v0.8.4.43.10): «hidden», «surprised», «raging»,
-## «reckless», «dodging», «shape» (a beast's form). A status of its record is `ConditionRules.shown`'s, not one of these.
+## «reckless», «dodging», «shape» (a beast's form), «sneaking» (out of a fight). A status of its record is `ConditionRules.shown`'s, not one of these.
 static func marks(s: GameSession, f: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	for k: String in ["hidden", "surprised", "raging", "reckless", "dodging"]:
@@ -889,6 +889,8 @@ static func marks(s: GameSession, f: Dictionary) -> Array[String]:
 			out.append(k)
 	if Guise.has_body(Sheet.holder(s, f)):
 		out.append("shape")
+	if not active(s) and Sheet.is_hero(f) and s.sneaking:  # out of a fight the hero who sneaks says so (the author, 2026-11-13)
+		out.append("sneaking")
 	return out
 
 

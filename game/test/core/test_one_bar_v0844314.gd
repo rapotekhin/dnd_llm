@@ -32,7 +32,8 @@ func test_the_bar_of_two_layouts_keeps_its_world_s_arrangement() -> void:
 		"hidden": ["Pin_item_rope_hempen_50_feet"]}}}
 	var md := HotbarLayout.mode(st, HotbarLayout.BAR)
 	var cls: Dictionary = (md["sections"] as Array).filter(func(sec: Dictionary) -> bool: return str(sec["kind"]) == "class")[0]
-	assert_array(cls["slots"]).is_equal(["spell:fire_bolt", "", "feature:second_wind"])
+	assert_str(str(cls["grid"][0][0])).is_equal("spell:fire_bolt")  # each in its column and row (v0.8.4.43.49)
+	assert_str(str(cls["grid"][2][0])).is_equal("feature:second_wind")
 	assert_array(md["hidden"]).is_equal(["item:rope_hempen_50_feet"])
 	assert_int((md["sections"] as Array).size()).is_equal((HotbarLayout.KINDS[HotbarLayout.BAR] as Array).size())
 	assert_int(HotbarLayout.rows(st)).is_equal(3)
@@ -93,14 +94,12 @@ func test_a_drop_on_a_tab_of_one_kind_goes_right_after_its_last_cell() -> void:
 	var at := _kinds(out).find("deeds")
 	var slots: Array = out[at]["slots"]
 	var first := str(slots[0])
-	HotbarLayout.move(st, HotbarLayout.BAR, first, at, 19, true)  # far past the cells, on the tab's whole width
-	out = HotbarLayout.place(st, HotbarLayout.BAR, cells, 12)
-	slots = out[at]["slots"]
-	assert_int(slots.find(first)).is_equal(3)  # after the other two, in sight of the whole bar
-	HotbarLayout.move(st, HotbarLayout.BAR, "Gather_herbs", at, 19)  # the whole bar's drop keeps its slot
+	HotbarLayout.move(st, HotbarLayout.BAR, first, at, HotbarLayout.at(11, 1), true)  # far past the cells, on the tab's whole width
 	var md := HotbarLayout.mode(st, HotbarLayout.BAR)
 	var deeds: Dictionary = (md["sections"] as Array).filter(func(sec: Dictionary) -> bool: return str(sec["kind"]) == "deeds")[0]
-	assert_str(str(deeds["slots"][19])).is_equal("Gather_herbs")
+	assert_str(str(deeds["grid"][1][1])).is_equal(first)  # after the other two column by column (v0.8.4.43.49), in sight
+	HotbarLayout.move(st, HotbarLayout.BAR, "Gather_herbs", at, HotbarLayout.at(4, 1))  # the whole bar's drop keeps its slot
+	assert_str(str(deeds["grid"][4][1])).is_equal("Gather_herbs")
 
 
 func test_a_section_is_as_wide_in_a_fight_as_out_of_it() -> void:

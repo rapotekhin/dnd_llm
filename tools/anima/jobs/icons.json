@@ -3465,6 +3465,38 @@
    "key": ""
   },
   {
+   "id": "clockwork_parts",
+   "kind": "items",
+   "name": "Шестерёнки и пружинки",
+   "tags": "clockwork parts",
+   "sentence": "A single clockwork parts, a simple emblem.",
+   "key": ""
+  },
+  {
+   "id": "clockwork_toy",
+   "kind": "items",
+   "name": "Заводная игрушка",
+   "tags": "clockwork toy",
+   "sentence": "A single clockwork toy, a simple emblem.",
+   "key": ""
+  },
+  {
+   "id": "clockwork_fire_starter",
+   "kind": "items",
+   "name": "Заводное огниво",
+   "tags": "clockwork fire starter",
+   "sentence": "A single clockwork fire starter, a simple emblem.",
+   "key": ""
+  },
+  {
+   "id": "clockwork_music_box",
+   "kind": "items",
+   "name": "Музыкальная шкатулка",
+   "tags": "clockwork music box",
+   "sentence": "A single clockwork music box, a simple emblem.",
+   "key": ""
+  },
+  {
    "id": "book_of_shadows",
    "kind": "items",
    "name": "Книга теней",
@@ -3936,8 +3968,9 @@
    "school": "evocation",
    "tint": "#d0704f",
    "lines": {
-    "tags": "orb, spiral, tentacles, eldritch, energy",
-    "sentence": "A small round orb with a swirling spiral inside it and six curling tentacles of energy reaching out from it in all directions."
+    "tags": "hand, open palm, energy bolt, beam, orb, crackling, sparks",
+    "sentence": "A hand at the lower left corner thrust forward with its palm open, and a long crackling bolt of energy flying from the palm across the whole picture to the upper right, ending in a big orb ringed with small jagged sparks.",
+    "people": true
    }
   },
   {
@@ -7281,6 +7314,128 @@
    "key": ""
   },
   {
+   "id": "dragonborn",
+   "kind": "races",
+   "name": "Драконорождённый",
+   "tags": "dragon head, profile, horns, scales, closed mouth, armor collar",
+   "sentence": "A single proud dragon head in profile facing right on a strong scaly neck, its mouth closed, two horns swept back and a frill of spikes on its cheek, the collar of a breastplate around the base of its neck.",
+   "key": ""
+  },
+  {
+   "id": "dwarf",
+   "kind": "races",
+   "name": "Дварф",
+   "tags": "beard, braided beard, bushy eyebrows, big nose, battle axe, front view",
+   "sentence": "A single thick long beard braided into two plaits with metal rings on them, under a big nose and bushy eyebrows, and a double-bladed battle axe standing upright behind it.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "elf",
+   "kind": "races",
+   "name": "Эльф",
+   "tags": "elf, pointy ears, long pointy ears, profile, head, long hair, coin portrait",
+   "sentence": "A single head of an elf in profile facing right, a slender young face, long straight hair flowing down the back of the neck and a long pointed ear rising high and sharp out of the hair, drawn as a simple outline like the head on an old coin.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "gnome",
+   "kind": "races",
+   "name": "Гном",
+   "tags": "pointed hat, cone hat, gear, cogwheel, front view",
+   "sentence": "A single tall pointed cone hat with its tip bent to one side, and a big cogwheel pinned on its band.",
+   "key": ""
+  },
+  {
+   "id": "half_elf",
+   "kind": "races",
+   "name": "Полуэльф",
+   "tags": "ear, pointy ears, human ear, elf ear, symmetry, from side",
+   "sentence": "Two ears seen from the side, back to back and joined in the middle as one emblem: on the left a rounded human ear, on the right a long pointed elf ear.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "half_orc",
+   "kind": "races",
+   "name": "Полуорк",
+   "tags": "orc, tusks, jaw, underbite, flat nose, front view",
+   "sentence": "A single heavy jaw of an orc seen from the front, two big tusks jutting up from the lower lip, a flat broad nose and a scowling brow above.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "halfling",
+   "kind": "races",
+   "name": "Полурослик",
+   "tags": "bare foot, foot, toes, hairy feet, from side",
+   "sentence": "A single small bare foot seen from the side, with short round toes and a tuft of curly hair on its top.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "human",
+   "kind": "races",
+   "name": "Человек",
+   "tags": "profile, head, face, short hair, coin portrait, from side",
+   "sentence": "A single human head in profile facing right, with short hair, a straight nose and a calm look, drawn as a simple outline like the head on an old coin.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "tiefling",
+   "kind": "races",
+   "name": "Тифлинг",
+   "tags": "demon horns, curved horns, demon tail, spade tail, front view",
+   "sentence": "A single pair of thick ridged horns curling back like a ram's, and below them a long thin tail ending in a spade-shaped tip curling in an S.",
+   "key": ""
+  },
+  {
+   "id": "drow",
+   "kind": "subraces",
+   "name": "Тёмный эльф (дроу)",
+   "tags": "elf, pointy ears, long pointy ears, profile, head, spider, hanging spider",
+   "sentence": "A single head of an elf in profile facing right, a slender face, long straight hair and a long pointed ear rising high out of the hair, and a big spider with eight long legs hanging on a thread just above the head.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "high_elf",
+   "kind": "subraces",
+   "name": "Высший эльф",
+   "tags": "elf, pointy ears, long pointy ears, profile, head, circlet, four-pointed star",
+   "sentence": "A single head of an elf in profile facing right, a slender face, long straight hair and a long pointed ear rising high out of the hair, a thin circlet on the brow with a bright four-pointed magic star shining at its front.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "hill_dwarf",
+   "kind": "subraces",
+   "name": "Холмовой дварф",
+   "tags": "dwarf, beard, braided beard, bushy eyebrows, big nose, hill, front view",
+   "sentence": "A single rounded grassy hill at the bottom with a few tufts of grass on its slope, and a dwarf's head rising from behind its top: a big nose, bushy eyebrows and a long braided beard falling over the hill.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "lightfoot_halfling",
+   "kind": "subraces",
+   "name": "Легконогий полурослик",
+   "tags": "bare foot, tiptoe, feather, from side",
+   "sentence": "A single small bare foot seen from the side, stepping lightly on its toes, with a long feather floating under its heel.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "rock_gnome",
+   "kind": "subraces",
+   "name": "Скальный гном",
+   "tags": "gear, cogwheel, rock, boulder, stone",
+   "sentence": "A single big cogwheel set into a rough boulder, half of the gear sticking out of the cracked stone.",
+   "key": ""
+  },
+  {
    "id": "burning",
    "kind": "conditions",
    "name": "горит",
@@ -7766,7 +7921,11 @@
    "name": "Парирование",
    "tags": "sword, steel blade, white arc, diagonal",
    "sentence": "A single steel sword held diagonally, with a bright white curved arc along its blade.",
-   "key": ""
+   "key": "",
+   "lines": {
+    "tags": "sword, two swords, blocking, clash, sparks, burst",
+    "sentence": "A sword held upright on the left blocking a second sword that strikes down onto it from the upper right, the two blades meeting in a big star-shaped burst of sparks where they cross."
+   }
   },
   {
    "id": "pick_up",
@@ -8020,8 +8179,8 @@
    "id": "end_turn",
    "kind": "ui",
    "name": "an hourglass with an arrow",
-   "tags": "hourglass, curved arrow, circular arrow, arrowhead, clockwise",
-   "sentence": "A single hourglass with one bold curved arrow sweeping in a wide arc around it clockwise, its arrowhead large and clear, seen from the front.",
+   "tags": "hourglass, chevron, right arrow, fast forward, skip, front view",
+   "sentence": "A single hourglass standing upright on the left, and beside it on the right two big bold chevrons pointing to the right one after the other, like a fast forward sign, seen from the front.",
    "key": ""
   },
   {
@@ -8503,6 +8662,38 @@
    "tags": "line, grey, straight line, horizontal",
    "sentence": "A single thick pale grey straight line lying horizontally, with rounded ends.",
    "key": ""
+  },
+  {
+   "id": "shoot",
+   "kind": "acts",
+   "name": "Стрельба",
+   "tags": "bow, longbow, drawn bow, arrow, nocked arrow, diagonal, motion lines",
+   "sentence": "A single longbow drawn back to its full curve with an arrow nocked on the taut string, pointing diagonally up to the right, with short motion lines behind the arrow.",
+   "key": ""
+  },
+  {
+   "id": "immune",
+   "kind": "conditions",
+   "name": "Иммунитет",
+   "tags": "shield, kite shield, silver, shining, light rays, front view, flat emblem",
+   "sentence": "A single bright silver kite shield seen from the front, whole and gleaming, with a few short white rays of light shining out from its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "resistant",
+   "kind": "conditions",
+   "name": "Устойчивость",
+   "tags": "shield, heater shield, knight shield, silver, half in shadow, front view, flat emblem",
+   "sentence": "A single silver knight's shield with a pointed bottom seen from the front, its left half bright and shining and its right half in deep dark shadow, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "vulnerable",
+   "kind": "conditions",
+   "name": "Уязвимость",
+   "tags": "shield, kite shield, silver, cracked, broken, shards, front view, flat emblem",
+   "sentence": "A single silver kite shield seen from the front, split by one big jagged black crack running from top to bottom, two small shards falling away from it, drawn as a bold flat emblem.",
+   "key": "grey"
   }
  ]
 }

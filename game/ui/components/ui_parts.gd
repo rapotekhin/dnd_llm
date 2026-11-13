@@ -27,6 +27,25 @@ static func heading(parent: Control, text: String) -> Label:
 	return label(parent, text, UiTheme.ACCENT_LABEL)
 
 
+## A caption of `width` that breaks only between words (the author, 2026-11-13: «перенос только полными словами, не по
+## буквам»): its font is made smaller, down to `least`, until its longest word fits the width.
+static func caption(parent: Control, text: String, width: float, size: int, variation := "", least := 10) -> Label:
+	var l := label(parent, text, variation)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.custom_minimum_size = Vector2(width, 0)
+	var font := l.get_theme_font("font")
+	var longest := ""
+	for word: String in text.split(" ", false):
+		if word.length() > longest.length():
+			longest = word
+	var at := size
+	while font != null and at > least and font.get_string_size(longest, HORIZONTAL_ALIGNMENT_LEFT, -1, at).x > width:
+		at -= 1
+	l.add_theme_font_size_override("font_size", at)
+	return l
+
+
 ## The line under a partner's name: role, race, build and height, attitude and the bond (v0.8.4.29.6: the talk and the trade).
 static func partner_line(s: GameSession, data: Dictionary, npc_id: String) -> String:
 	var npc := WorldView.new(data["world"]).npc(npc_id)

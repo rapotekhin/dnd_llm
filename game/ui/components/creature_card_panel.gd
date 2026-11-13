@@ -7,6 +7,8 @@ extends ModalFrame
 ## source and time and what it wears.
 
 const SCENE := "res://ui/components/creature_card_panel.tscn"
+const ICON := 44  ## a feature's, a spell's, a defense's and a status's icon (v0.8.4.43.49)
+const NAMED := 88  ## the width of its name under it
 
 var who := ""
 var _box: VBoxContainer
@@ -95,10 +97,8 @@ static func _acts(box: VBoxContainer, c: Dictionary) -> void:
 			UiParts.label(box, _t("CARD_REACTION").format({"what": r}))
 	if not (c["features"] as Array).is_empty() or not (c["resources"] as Array).is_empty():
 		UiParts.heading(box, _t("CARD_FEATURES"))
-		for f: Dictionary in c["features"]:
-			var l := UiParts.label(box, "%s — %s" % [f["name"], str(f["text"]).left(220)] if not str(f["text"]).is_empty() else str(f["name"]))
-			l.tooltip_text = str(f["text"])
-			l.mouse_filter = Control.MOUSE_FILTER_PASS
+		_icons(box, "CardFeatures", (c["features"] as Array).map(func(f: Dictionary) -> Array:
+			return [str(f.get("icon", "")), str(f["name"]), str(f["text"]), CardInfo.feature(Catalog.data, str(f["id"])) if f.has("id") else {}]))
 		if not (c["resources"] as Array).is_empty():
 			UiParts.label(box, _t("CARD_RESOURCES").format({"list": ", ".join((c["resources"] as Array).map(func(r: Dictionary) -> String:
 				return "%s %d/%d" % [r["name"], int(r["left"]), int(r["max"])]))}))
@@ -107,15 +107,24 @@ static func _acts(box: VBoxContainer, c: Dictionary) -> void:
 		UiParts.heading(box, _t("CARD_SPELLS"))
 		if int(sp["dc"]) > 0:
 			UiParts.label(box, _t("CARD_SPELL_DC").format({"dc": int(sp["dc"])}), UiTheme.MUTED_LABEL)
-		if not (sp["list"] as Array).is_empty():
-			UiParts.label(box, ", ".join(sp["list"]))
+		var ids: Array = sp.get("ids", [])
+		if not ids.is_empty():
+			var rows: Array = []
+			for i in ids.size():
+				rows.append([IconRules.ref("spells", str(ids[i])), str(sp["list"][i]), "", CardInfo.spell(Catalog.data, str(ids[i]))])
+			_icons(box, "CardSpells", rows)
 		if not (sp["slots"] as Array).is_empty():
 			UiParts.label(box, _t("CARD_SLOTS").format({"list": " · ".join((sp["slots"] as Array).map(func(x: Dictionary) -> String:
 				return _t("CARD_SLOT").format({"n": int(x["circle"]), "left": int(x["left"]), "max": int(x["max"])})))}))
 	if not (c["defenses"] as Array).is_empty():
 		UiParts.heading(box, _t("CARD_DEFENSES"))
-		for d: Dictionary in c["defenses"]:
-			UiParts.label(box, "%s: %s (%s)" % [d["word"], d["what"], d["source"]])
+		var rows: Array = []
+		for d: Dictionary in c["defenses"]:  # each type or condition its own icon, its word and source on the card
+			var names: Array = d.get("names", [])
+			var icons: Array = d.get("icons", [])
+			for i in mini(names.size(), icons.size()):
+				rows.append([str(icons[i]), "%s: %s" % [d["word"], names[i]], _t("CARD_SOURCE").format({"source": d["source"]})])
+		_icons(box, "CardDefenses", rows)
 
 
 static func _statuses(box: VBoxContainer, c: Dictionary) -> void:
@@ -123,15 +132,42 @@ static func _statuses(box: VBoxContainer, c: Dictionary) -> void:
 	var list: Array = c["statuses"]
 	if list.is_empty():
 		UiParts.label(box, _t("CARD_NO_STATUSES"), UiTheme.MUTED_LABEL)
-	for e: Dictionary in list:
+	var rows: Array = []
+	for e: Dictionary in list:  # an icon each, as on the party's portraits: its time under it, its source and words on the card
 		var src := str(e["source"])
-		var l := UiParts.label(box, "%s — %s%s" % [e["name"], e["left"], (" · " + _t("CARD_SOURCE").format({"source": src})) if not src.is_empty() else ""])
-		l.name = "CardStatus_" + str(e["name"]).validate_node_name()
-		var does := str(e.get("does", ""))
-		if not does.is_empty():
-			UiParts.label(box, does, UiTheme.MUTED_LABEL)
-		l.tooltip_text = str(e["text"])
-		l.mouse_filter = Control.MOUSE_FILTER_PASS
+		var body: Array[String] = []
+		for line: String in [_t("CARD_SOURCE").format({"source": src}) if not src.is_empty() else "", str(e.get("does", "")), str(e["text"])]:
+			if not line.is_empty():
+				body.append(line)
+		rows.append([str(e.get("icon", IconRules.ref("conditions", str(e["condition"])))), "%s · %s" % [e["name"], e["left"]], "\n".join(body)])
+	var flow := _icons(box, "CardStatuses", rows)
+	for i in list.size():
+		flow.get_child(i).name = "CardStatus_" + str(list[i]["name"]).validate_node_name()
+
+
+## A row of icons with their names under them (the author, 2026-11-13: «в описании мобов и NPC указывать заклинания,
+## способности, устойчивости нашими иконками»): [[ref, name, body, card]] — the card of `CardInfo` when there is one, else
+## the name and `body` at the cursor; the right button pins it.
+static func _icons(box: VBoxContainer, node_name: String, rows: Array) -> HFlowContainer:
+	var flow := HFlowContainer.new()
+	flow.name = node_name
+	flow.add_theme_constant_override("h_separation", 4)
+	flow.add_theme_constant_override("v_separation", 6)
+	box.add_child(flow)
+	for r: Array in rows:
+		var cell := IconSlot.make(str(r[0]), str(r[1]), ICON)
+		cell.tip_title = str(r[1])
+		cell.tip_body = str(r[2])
+		if r.size() > 3 and not (r[3] as Dictionary).is_empty():
+			cell.set_card(r[3])
+		cell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var named := VBoxContainer.new()
+		named.custom_minimum_size = Vector2(NAMED, 0)
+		named.add_theme_constant_override("separation", 2)
+		flow.add_child(named)
+		named.add_child(cell)
+		UiParts.caption(named, str(r[1]), NAMED, UiTheme.SIZE_SMALL, UiTheme.MUTED_LABEL)
+	return flow
 
 
 static func _worn(box: VBoxContainer, c: Dictionary) -> void:

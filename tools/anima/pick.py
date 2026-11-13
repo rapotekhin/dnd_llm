@@ -59,6 +59,9 @@ SETS = {
     "lines_features": ("Умения · линии", "out_lines", "picks_lines_icons.json", "features"),
     "lines_acts": ("Действия · линии", "out_lines_flux", "picks_lines_icons.json", "acts"),
     "lines_traits": ("Черты рас · линии", "out_lines", "picks_lines_icons.json", "traits"),
+    # a race and a subrace by FLUX, as the acts (2026-11-13): a face in profile, a beard, an ear read at once
+    "lines_races": ("Расы · линии", "out_lines_flux", "picks_lines_icons.json", "races"),
+    "lines_subraces": ("Подрасы · линии", "out_lines_flux", "picks_lines_icons.json", "subraces"),
     # the hues style (the author, 2026-11-13): the same signs in their own colours, a trial beside the lines
     "hues_spells": ("Заклинания · цвет", "out_hues", "picks_hues_icons.json", "spells"),
     "hues_features": ("Умения · цвет", "out_hues", "picks_hues_icons.json", "features"),

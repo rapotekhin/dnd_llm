@@ -36,6 +36,7 @@ var _pending_preview: Callable
 var _pending_aim := ""  # the spell whose target is a square: its area follows the mouse
 var _pending_feet := 0  # how far the picked act gets, 0 — no rim on the map
 var _acts: Array[Dictionary] = []  # the acts with a target of this redraw: the tabs below and a foe's menu
+var _throws: Array[Dictionary] = []  # what may be thrown this redraw: the «Бросить» cell's list (v0.8.4.43.49)
 var _act_tab := ""  # the tab being drawn, and the list inside it for a foe's menu
 var _act_sub := ""
 var _pop: ActsMenu  # a foe's menu, the one menu's builder (v0.8.4.43.4)
@@ -361,13 +362,24 @@ func _in_range(s: GameSession, data: Dictionary) -> Dictionary:
 	return out
 
 
-## What the fight changed on the map, by colour: {square: Color}.
+## What the fight changed on the map, by colour: {square: Color}. A thing of the field is a colour only where no picture
+## of it lies: a square of a thing of the room is its picture's, a barrel of the map's rows the ground's (the author,
+## 2026-11-13: the priest's chest, a stone table and a boulder's square were brown squares in a fight).
 func _over(s: GameSession) -> Dictionary:
 	var out := {}
 	for key: String in s.combat.get("cleared", {}):
 		out[FightGrid.y_x(key)] = UiTheme.TILES["."]
+	var drawn := {}
+	for th: Dictionary in _field.things:
+		for c: Variant in th.get("cells", []):
+			drawn[c] = true
+	var rows: Array = _field.map.get("rows", [])
+	var cell := str(FightField.cfg(Catalog.data)["blocks"]["cell"])
 	for key: String in s.combat.get("blocks", {}):
-		out[FightGrid.y_x(key)] = UiTheme.TILES["B"]
+		var at := FightGrid.y_x(key)
+		if drawn.has(at) or (at.y < rows.size() and at.x < str(rows[at.y]).length() and str(rows[at.y])[at.x] == cell):
+			continue
+		out[at] = UiTheme.TILES["B"]
 	for key: String in s.combat.get("doors", {}):
 		var d: Dictionary = s.combat["doors"][key]
 		var open := bool(d.get("open", false)) or bool(d.get("gone", false))
@@ -419,6 +431,10 @@ func _bodies(s: GameSession, now: Dictionary, open: bool) -> Array[Dictionary]:
 			"most": int(s.character["max_hp"]) if hero else int(f.get("max_hp", 1)), "out": status != "active" or (hero and int(s.character["hp"]) <= 0),
 			"now": id == cur, "dim": bool(f.get("hidden", false)) or heard, "gear": AnimRules.gear(s, Catalog.data, f), "states": AnimRules.states(s, Catalog.data, f),
 			"shares": FightGrid.shares(s, Catalog.data, f)})  # a swarm in another's square: drawn small in its corner (v0.8.4.27.1)
+	# In the order of drawing: those who lie first, the living over them, the hero last (the author, 2026-11-13: the hero
+	# standing on a body was drawn under it).
+	var rank := func(b: Dictionary) -> int: return 2 if str(b["id"]) == CombatRules.PLAYER else 0 if bool(b["out"]) else 1
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return rank.call(a) < rank.call(b))
 	return out
 
 
@@ -990,6 +1006,7 @@ func _line(parent: Control, text: String) -> Label:
 
 func _draw_actions(s: GameSession, data: Dictionary, me: bool) -> void:
 	_acts.clear()
+	_throws.clear()
 	_redrawing = true  # removing the pages switches the tab: the player's pick is kept by its title
 	if ArenaRules.watching(s):  # v0.8.4.5: from the fence nothing is in the hero's hands
 		_bar.clear_fight()
@@ -1034,21 +1051,13 @@ func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", _blow_far(main))
 	if not main_id.is_empty():
 		_details.hook(main_b, str(main["name"]), "", CardInfo.item(c, data, s.items, main_id))
-	if Attack.throwable(Attack.of_weapon(main)):  # v0.8.4.31: a dagger or a spear thrown by its own button, it leaves the hand
-		var throw_b := _action(w, "Throw_main", tr("COMBAT_THROW").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), me,
+	if Attack.throwable(Attack.of_weapon(main)):  # v0.8.4.31: a dagger or a spear thrown, it leaves the hand
+		_throw("Throw_main", main_id, tr("COMBAT_THROW").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), me,
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"throw": true}),
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"throw": true}),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false, false, true), "", _far(main))
-		throw_b.tooltip_text = tr("COMBAT_THROW_TIP")
-	var spare_id := str(CharacterRules.stowed(c).get("main_hand", ""))
-	if not spare_id.is_empty():  # the weapon put away: one click, the set changes for nothing (v0.8.4.1, as in BG3)
-		var spare: Dictionary = CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.weapon_profile(c, data, s.items, spare_id))
-		var spare_b := _action(w, "Attack_stowed", tr("COMBAT_ATTACK").format({"name": spare["name"], "hit": "%+d" % int(spare["to_hit"]), "dmg": _dmg_text(spare)}), me,
-			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "stowed"}),
-			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "stowed"}),
-			func(t: String) -> Dictionary: return CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.attack_preview(s, data, t, false)), "", _far(spare))
-		_details.hook(spare_b, str(spare["name"]), "", CardInfo.item(c, data, s.items, spare_id))
-	if not main_id.is_empty():  # fists with a weapon in hand (v0.7.22.11, big test #45)
+	var fists := _strikes(s, data, c, w, me, main, main_id)
+	if not main_id.is_empty() and not fists:  # fists with a weapon in hand (v0.7.22.11, big test #45), unless «Атака» is them
 		var fist := CombatRules.weapon_profile(c, data, s.items, "")
 		_action(w, "Attack_unarmed", tr("COMBAT_ATTACK").format({"name": fist["name"], "hit": "%+d" % int(fist["to_hit"]), "dmg": _dmg_text(fist)}), me,
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "fists"}),
@@ -1062,15 +1071,15 @@ func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "off"}),
 			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true), "", _blow_far(ow))
 		if Attack.throwable(Attack.of_weapon(ow)):
-			_action(w, "Throw_off", tr("COMBAT_THROW_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), me,
+			_throw("Throw_off", off, tr("COMBAT_THROW_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), me,
 				func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "off", "throw": true}),
 				func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "off", "throw": true}),
-				func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true, false, true), "", _far(ow)).tooltip_text = tr("COMBAT_THROW_TIP")
+				func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true, false, true), "", _far(ow))
 	if bool(CombatRules.player(s).get("frenzy", false)):
 		_action(w, "Attack_frenzy", tr("COMBAT_ATTACK_FRENZY").format({"name": main["name"], "dmg": _dmg_text(main)}), me,
 			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "frenzy"}),
 			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "frenzy"}),
-			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false))
+			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", 0, "acts/frenzy")
 	# Spells.
 	if not SpellRules.ready(c).is_empty() and not Guise.has_body(c):
 		var sp := _tab_box("COMBAT_TAB_SPELLS")
@@ -1134,10 +1143,16 @@ func _draw_companion(s: GameSession, data: Dictionary, who: Dictionary, me: bool
 			var thrown := bool(how.get("throw", false))
 			if thrown and not (kind == "melee" and Attack.throwable(b)):
 				continue
-			var cell := _action(w, ("BlowThrow_" if thrown else "Blow_") + en, text if not thrown else tr("COMBAT_THROW").format({"name": nm, "hit": "%+d" % int(b["to_hit"]), "dmg": dmg}), me,
+			if thrown:  # into the «Бросить» list (v0.8.4.43.49)
+				_throw("BlowThrow_" + en, str(a.get("item", "")), tr("COMBAT_THROW").format({"name": nm, "hit": "%+d" % int(b["to_hit"]), "dmg": dmg}), me,
+					func(t: String) -> String: return GameState.combat_act("attack", t, how),
+					func(t: String) -> String: return Acts.one("attack").can(s, data, who, t, how),
+					func(t: String) -> Dictionary: return CombatRules.blow_preview(s, data, who, t, how), "", int((a.get("range", [0, 0]) as Array)[1]))
+				continue
+			var cell := _action(w, "Blow_" + en, text, me,
 				func(t: String) -> String: return GameState.combat_act("attack", t, how),
 				func(t: String) -> String: return Acts.one("attack").can(s, data, who, t, how),
-				func(t: String) -> Dictionary: return CombatRules.blow_preview(s, data, who, t, how), "", far if not thrown else int((a.get("range", [0, 0]) as Array)[1]), icon)
+				func(t: String) -> Dictionary: return CombatRules.blow_preview(s, data, who, t, how), "", far, icon)
 			_details.hook(cell, nm, text + ("\n" + rider if not rider.is_empty() else ""))
 	var casts := MonsterRules.castable(data, who)
 	if casts.is_empty() or Guise.has_body(who):
@@ -1206,9 +1221,11 @@ func _draw_shared(s: GameSession, data: Dictionary, who: Dictionary, c: Dictiona
 			var item_btn: Button
 			if fx.has("throw"):  # v0.7.12: flasks and the net at a foe
 				var spills := ItemRules.spills(fx["throw"])  # v0.8.4: a flask goes on a square too
+				var far := 60 if bool(fx["throw"].get("improvised", false)) else int(fx["throw"].get("range", 15))
 				item_btn = _action(ib, "Item_" + id, label, me, func(t: String) -> String: return GameState.combat_act("throw", t, {"item": id}),
-					func(t: String) -> String: return Acts.one("throw").can(s, data, who, t, {"item": id}), func(_t: String) -> Dictionary: return {}, id if spills else "",
-					60 if bool(fx["throw"].get("improvised", false)) else int(fx["throw"].get("range", 15)))
+					func(t: String) -> String: return Acts.one("throw").can(s, data, who, t, {"item": id}), func(_t: String) -> Dictionary: return {}, id if spills else "", far)
+				_throw("Item_" + id, id, label, me, func(t: String) -> String: return GameState.combat_act("throw", t, {"item": id}),
+					func(t: String) -> String: return Acts.one("throw").can(s, data, who, t, {"item": id}), func(_t: String) -> Dictionary: return {}, id if spills else "", far, false)
 			elif not sp_id.is_empty() and CombatRules.is_engine_spell(data, sp_id):  # v0.8.4.29.6: aimed as the spell is — a square, a friend, the chance
 				var by := ItemRules.spell_numbers(c, data, s.items, id)
 				item_btn = _spell_action(s, data, ib, "Item_" + id, label, me, sp_id,
@@ -1225,6 +1242,7 @@ func _draw_shared(s: GameSession, data: Dictionary, who: Dictionary, c: Dictiona
 				item_btn = _button(ib, "Item_" + id, label, me)
 				item_btn.pressed.connect(func() -> void: _do(GameState.combat_act("use_item", "", {"item": id})))
 			_details.hook(item_btn, str(d.get("name", id)), "", CardInfo.item(c, data, s.items, id))
+	_throw_cell(_tab_box("COMBAT_TAB_WEAPONS"), me)
 	# Common.
 	var g := _tab_box("COMBAT_TAB_COMMON")
 	for act: Act in Acts.on_tab(s, data, who, "common"):
@@ -1386,19 +1404,93 @@ func _action(parent: Control, node_name: String, text: String, enabled: bool, ac
 	_acts.append({"tab": _act_tab, "sub": _act_sub, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims})
 	b.toggle_mode = true
 	b.button_pressed = _pending.is_valid() and _pending_name == node_name
-	b.pressed.connect(func() -> void:
-		if _pending.is_valid() and _pending_name == node_name:
-			_pending = Callable()
-		else:
-			_pending = act
-			_pending_check = check
-			_pending_preview = preview
-			_pending_name = node_name
-			_pending_text = text
-			_pending_aim = aims
-			_pending_feet = feet
-		refresh())
+	b.pressed.connect(_arm.bind(node_name, text, act, check, preview, aims, feet))
 	return b
+
+
+## Picks an act to aim — a cell's press and a pick of the «Бросить» list alike; picked again, it is let go.
+func _arm(node_name: String, text: String, act: Callable, check: Callable, preview: Callable, aims: String, feet: int) -> void:
+	if _pending.is_valid() and _pending_name == node_name:
+		_pending = Callable()
+	else:
+		_pending = act
+		_pending_check = check
+		_pending_preview = preview
+		_pending_name = node_name
+		_pending_text = text
+		_pending_aim = aims
+		_pending_feet = feet
+	refresh()
+
+
+## «Атака» and «Стрельба» as in BG3 (the author, 2026-11-13: «вместо иконок надетого оружия в бою — общие «Атака» и
+## «Стрельба»»): a blow with the melee weapon of either set and a shot with the ranged one, the set changed for nothing as
+## the stowed weapon's blow always was (v0.8.4.1); with no blade in either set «Атака» strikes with the fists. The weapons
+## themselves stand in the hands at the bar's left. True when «Атака» is the fists.
+func _strikes(s: GameSession, data: Dictionary, c: Dictionary, w: Control, me: bool, main: Dictionary, main_id: String) -> bool:
+	var held: Dictionary = c.get("equipped", {})
+	var spare_id := str(CharacterRules.stowed(c).get("main_hand", ""))
+	var kinds := {"held": CharacterRules.hands_kind(held, data, s.items), "stowed": CharacterRules.hands_kind(CharacterRules.stowed(c), data, s.items)}
+	var fists := false
+	for kind: String in ["melee", "ranged"]:
+		var hand := "held" if kinds["held"] == kind and not main_id.is_empty() else "stowed" if kinds["stowed"] == kind and not spare_id.is_empty() else ""
+		if hand.is_empty() and kind == "ranged":
+			continue
+		var how := {} if hand == "held" else {"hand": "stowed"} if hand == "stowed" else {"hand": "fists"}
+		fists = fists or hand.is_empty()
+		var id := main_id if hand == "held" else spare_id if hand == "stowed" else ""
+		var prof: Dictionary = main if hand == "held" else CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.weapon_profile(c, data, s.items, spare_id)) \
+			if hand == "stowed" else CombatRules.weapon_profile(c, data, s.items, "")
+		var key := "COMBAT_ATTACK" if kind == "melee" else "COMBAT_SHOOT"
+		var b := _action(w, "Attack_" + kind, tr(key).format({"name": prof["name"], "hit": "%+d" % int(prof["to_hit"]), "dmg": _dmg_text(prof)}), me,
+			func(t: String) -> String: return GameState.combat_act("attack", t, how),
+			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, how),
+			func(t: String) -> Dictionary: return CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.attack_preview(s, data, t, false)) if hand == "stowed" \
+				else CombatRules.attack_preview(s, data, t, false, hand.is_empty()), "", _blow_far(prof) if kind == "melee" else _far(prof),
+			"acts/attack" if kind == "melee" else "acts/shoot")
+		if not id.is_empty():
+			_details.hook(b, str(prof["name"]), "", CardInfo.item(c, data, s.items, id))
+	return fists
+
+
+## A thing to throw for the «Бросить» list (v0.8.4.43.49): the weapon of a hand, a flask or a net of the belt — what
+## `_action` takes, with the thing's own picture for the list; `row` — also a row of a foe's menu (a flask's own cell
+## makes its row itself).
+func _throw(node_name: String, item: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "", feet := 0, row := true) -> void:
+	if row:
+		_acts.append({"tab": _act_tab, "sub": _act_sub, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims})
+	_throws.append({"name": node_name, "item": item, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims, "feet": feet})
+
+
+## «Бросить» as one cell (the author, 2026-11-13: «выбор открывает меню, как инвентарь, — что бросить из рук и с пояса»):
+## a press lists what may be thrown with its picture, a pick aims it as its own cell would.
+func _throw_cell(parent: Control, me: bool) -> void:
+	if _throws.is_empty():
+		return
+	var b := _button(parent, "ThrowMenu", tr("COMBAT_THROW_MENU"), me and _throws.any(func(o: Dictionary) -> bool: return bool(o["on"])), "acts/throw")
+	b.tooltip_text = tr("COMBAT_THROW_MENU") + "\n" + tr("COMBAT_THROW_MENU_TIP")
+	b.toggle_mode = true
+	b.button_pressed = _pending.is_valid() and _throws.any(func(o: Dictionary) -> bool: return _pending_name == str(o["name"]))
+	b.pressed.connect(_throw_menu.bind(b))
+
+
+func _throw_menu(b: Control) -> void:
+	if _pop != null:
+		remove_child(_pop)
+		_pop.queue_free()
+	_pop = ActsMenu.new()
+	_pop.name = "ThrowList"
+	add_child(_pop)
+	_pop.add_separator(tr("COMBAT_THROW_MENU"))
+	var s := GameState.session
+	for o: Dictionary in _throws:
+		var at := _pop.add_act(_pop, str(o["text"]), "", not bool(o["on"]), _arm.bind(str(o["name"]), str(o["text"]), o["act"], o["check"], o["preview"], str(o["aims"]), int(o["feet"])))
+		var tex := IconSlot.texture(str(IconRules.of(Catalog.data, s.items if s != null else {}, "items/" + str(o["item"]))["path"]))
+		if tex != null:
+			_pop.set_item_icon(_pop.get_item_index(at), tex)
+			_pop.set_item_icon_max_width(_pop.get_item_index(at), 40)
+	refresh()  # the cell's own toggle undone: it stays lit only while a throw is picked
+	_pop.popup(Rect2i(Vector2i(b.get_screen_position() + Vector2(0, -8)), Vector2i.ZERO))
 
 
 ## How far a weapon shoots or is thrown, feet; 0 — a blade.

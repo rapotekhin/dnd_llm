@@ -4159,6 +4159,468 @@
    ]
   },
   {
+   "id": "drow/male/child",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), ребёнок",
+   "seeds": [
+    11
+   ],
+   "looks": [
+    {
+     "tags": "1boy, solo, male child, child, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, pale silver hair, medium hair, light purple eyes, charcoal grey skin, ochre knitted sweater",
+     "sentence": "A dark elf boy of about ten, with pale silver hair falling to the shoulders, light purple eyes and charcoal grey skin, wearing an ochre knitted sweater. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ],
+   "neg_drop": [
+    "child"
+   ],
+   "neg_add": "cleavage, revealing clothes, bare shoulders, makeup, lipstick, mature female, mature male"
+  },
+  {
+   "id": "drow/male/teen",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), подросток",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, pale silver hair, braid, light purple eyes, slate grey skin, ochre vest over a linen shirt",
+     "sentence": "A dark elf teenage boy of about sixteen, with pale silver hair in a braid, light purple eyes and slate grey skin, wearing an ochre vest over a linen shirt. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, short hair, curly hair, crimson eyes, ash grey skin, dark red embroidered tunic",
+     "sentence": "A dark elf teenage boy of about sixteen, with white hair short and curly, crimson eyes and ash grey skin, wearing a dark red embroidered tunic. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, silver hair, undercut, lilac eyes, obsidian black skin, dark blue travel cloak with a scarf",
+     "sentence": "A dark elf teenage boy of about sixteen, with silver hair shaved at the sides, lilac eyes and obsidian black skin, wearing a dark blue travel cloak with a scarf. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, snow-white hair, messy hair, red eyes, charcoal grey skin, beige fur-trimmed coat",
+     "sentence": "A dark elf teenage boy of about sixteen, with snow-white hair messy and tousled, red eyes and charcoal grey skin, wearing a beige fur-trimmed coat. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, platinum hair, long hair, ponytail, glowing red eyes, dark grey skin, brown wool tunic",
+     "sentence": "A dark elf teenage boy of about sixteen, with platinum hair long and tied in a ponytail, glowing red eyes and dark grey skin, wearing a brown wool tunic. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ],
+   "neg_drop": [],
+   "neg_add": "cleavage, revealing clothes, bare shoulders, makeup, lipstick, mature female, mature male"
+  },
+  {
+   "id": "drow/male/young",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), молодой",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1boy, solo, young man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, medium hair, light purple eyes, charcoal grey skin, grey travel cloak with a scarf",
+     "sentence": "A dark elf young man in his early twenties, with white hair falling to the shoulders, light purple eyes and charcoal grey skin, wearing a grey travel cloak with a scarf. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, young man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, platinum hair, short hair, curly hair, crimson eyes, ash grey skin, dark blue embroidered tunic",
+     "sentence": "A dark elf young man in his early twenties, with platinum hair short and curly, crimson eyes and ash grey skin, wearing a dark blue embroidered tunic. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, young man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, snow-white hair, short hair, lilac eyes, obsidian black skin, dark green fur-trimmed coat",
+     "sentence": "A dark elf young man in his early twenties, with snow-white hair cut short, lilac eyes and obsidian black skin, wearing a dark green fur-trimmed coat. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, young man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, pale silver hair, undercut, glowing red eyes, dark grey skin, beige vest over a linen shirt",
+     "sentence": "A dark elf young man in his early twenties, with pale silver hair shaved at the sides, glowing red eyes and dark grey skin, wearing a beige vest over a linen shirt. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, young man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, silver hair, braid, red eyes, slate grey skin, ochre hooded cloak",
+     "sentence": "A dark elf young man in his early twenties, with silver hair in a braid, red eyes and slate grey skin, wearing an ochre hooded cloak. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
+   "id": "drow/male/adult",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), зрелый",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1boy, solo, adult, man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, medium hair, lilac eyes, obsidian black skin, grey wool tunic",
+     "sentence": "A dark elf grown man in his thirties, with white hair falling to the shoulders, lilac eyes and obsidian black skin, wearing a grey wool tunic. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, adult, man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, pale silver hair, undercut, red eyes, slate grey skin, brown padded gambeson",
+     "sentence": "A dark elf grown man in his thirties, with pale silver hair shaved at the sides, red eyes and slate grey skin, wearing a brown padded gambeson. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, adult, man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, platinum hair, messy hair, light purple eyes, charcoal grey skin, ochre leather armor",
+     "sentence": "A dark elf grown man in his thirties, with platinum hair messy and tousled, light purple eyes and charcoal grey skin, wearing ochre leather armor. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, adult, man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, snow-white hair, long hair, ponytail, glowing red eyes, dark grey skin, dark blue fur-trimmed coat",
+     "sentence": "A dark elf grown man in his thirties, with snow-white hair long and tied in a ponytail, glowing red eyes and dark grey skin, wearing a dark blue fur-trimmed coat. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, adult, man, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, silver hair, short hair, crimson eyes, ash grey skin, dark red high-collared coat",
+     "sentence": "A dark elf grown man in his thirties, with silver hair cut short, crimson eyes and ash grey skin, wearing a dark red high-collared coat. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
+   "id": "drow/male/middle",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), средних лет",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1boy, solo, mature male, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, undercut, light purple eyes, dark grey skin, dark blue wool tunic",
+     "sentence": "A dark elf middle-aged man in his late forties, the first lines on his face, with white hair shaved at the sides, light purple eyes and dark grey skin, wearing a dark blue wool tunic. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, mature male, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, silver hair, messy hair, red eyes, slate grey skin, dark red leather jerkin",
+     "sentence": "A dark elf middle-aged man in his late forties, the first lines on his face, with silver hair messy and tousled, red eyes and slate grey skin, wearing a dark red leather jerkin. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, mature male, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, platinum hair, short hair, crimson eyes, obsidian black skin, grey leather armor",
+     "sentence": "A dark elf middle-aged man in his late forties, the first lines on his face, with platinum hair cut short, crimson eyes and obsidian black skin, wearing grey leather armor. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, mature male, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, pale silver hair, braid, lilac eyes, ash grey skin, beige travel cloak with a scarf",
+     "sentence": "A dark elf middle-aged man in his late forties, the first lines on his face, with pale silver hair in a braid, lilac eyes and ash grey skin, wearing a beige travel cloak with a scarf. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, mature male, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, snow-white hair, short hair, curly hair, glowing red eyes, charcoal grey skin, brown fur-trimmed coat",
+     "sentence": "A dark elf middle-aged man in his late forties, the first lines on his face, with snow-white hair short and curly, glowing red eyes and charcoal grey skin, wearing a brown fur-trimmed coat. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
+   "id": "drow/male/elderly",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), пожилой",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1boy, solo, old man, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, short hair, curly hair, crimson eyes, obsidian black skin, dark red fur-trimmed coat",
+     "sentence": "A dark elf elderly man in his sixties, his face lined, with grey hair short and curly, crimson eyes and obsidian black skin, wearing a dark red fur-trimmed coat. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, old man, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, messy hair, light purple eyes, slate grey skin, black embroidered tunic",
+     "sentence": "A dark elf elderly man in his sixties, his face lined, with grey hair messy and tousled, light purple eyes and slate grey skin, wearing a black embroidered tunic. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, old man, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, medium hair, glowing red eyes, ash grey skin, beige hooded cloak",
+     "sentence": "A dark elf elderly man in his sixties, his face lined, with grey hair falling to the shoulders, glowing red eyes and ash grey skin, wearing a beige hooded cloak. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, old man, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, undercut, lilac eyes, charcoal grey skin, dark blue wool tunic",
+     "sentence": "A dark elf elderly man in his sixties, his face lined, with grey hair shaved at the sides, lilac eyes and charcoal grey skin, wearing a dark blue wool tunic. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, old man, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, braid, red eyes, dark grey skin, brown travel cloak with a scarf",
+     "sentence": "A dark elf elderly man in his sixties, his face lined, with grey hair in a braid, red eyes and dark grey skin, wearing a brown travel cloak with a scarf. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
+   "id": "drow/male/old",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), старик",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1boy, solo, old man, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, short hair, curly hair, crimson eyes, obsidian black skin, dark blue hooded cloak",
+     "sentence": "A dark elf very old man in his eighties, his face deeply wrinkled, with white hair short and curly, crimson eyes and obsidian black skin, wearing a dark blue hooded cloak. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, old man, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, long hair, ponytail, red eyes, slate grey skin, brown leather jerkin",
+     "sentence": "A dark elf very old man in his eighties, his face deeply wrinkled, with white hair long and tied in a ponytail, red eyes and slate grey skin, wearing a brown leather jerkin. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, old man, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, messy hair, lilac eyes, charcoal grey skin, grey high-collared coat",
+     "sentence": "A dark elf very old man in his eighties, his face deeply wrinkled, with white hair messy and tousled, lilac eyes and charcoal grey skin, wearing a grey high-collared coat. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, old man, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, bald, light purple eyes, dark grey skin, black padded gambeson",
+     "sentence": "A dark elf very old man in his eighties, his face deeply wrinkled, with a bald head, light purple eyes and dark grey skin, wearing a black padded gambeson. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1boy, solo, old man, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, braid, glowing red eyes, ash grey skin, ochre travel cloak with a scarf",
+     "sentence": "A dark elf very old man in his eighties, his face deeply wrinkled, with white hair in a braid, glowing red eyes and ash grey skin, wearing an ochre travel cloak with a scarf. He has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
+   "id": "drow/female/child",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), ребёнок",
+   "seeds": [
+    11
+   ],
+   "looks": [
+    {
+     "tags": "1girl, solo, female child, child, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, snow-white hair, ponytail, glowing red eyes, slate grey skin, beige simple linen tunic",
+     "sentence": "A dark elf girl of about ten, with snow-white hair tied in a ponytail, glowing red eyes and slate grey skin, wearing a beige simple linen tunic. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ],
+   "neg_drop": [
+    "child"
+   ],
+   "neg_add": "cleavage, revealing clothes, bare shoulders, makeup, lipstick, mature female, mature male"
+  },
+  {
+   "id": "drow/female/teen",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), подросток",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, platinum hair, wavy hair, glowing red eyes, dark grey skin, dark green leather jerkin",
+     "sentence": "A dark elf teenage girl of about sixteen, with platinum hair long and wavy, glowing red eyes and dark grey skin, wearing a dark green leather jerkin. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, pale silver hair, ponytail, light purple eyes, slate grey skin, beige vest over a linen shirt",
+     "sentence": "A dark elf teenage girl of about sixteen, with pale silver hair tied in a ponytail, light purple eyes and slate grey skin, wearing a beige vest over a linen shirt. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, snow-white hair, long hair, crimson eyes, obsidian black skin, black padded gambeson",
+     "sentence": "A dark elf teenage girl of about sixteen, with snow-white hair long and loose, crimson eyes and obsidian black skin, wearing a black padded gambeson. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, twin braids, red eyes, ash grey skin, brown embroidered tunic",
+     "sentence": "A dark elf teenage girl of about sixteen, with white hair in twin braids, red eyes and ash grey skin, wearing a brown embroidered tunic. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, teenage, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, silver hair, short hair, lilac eyes, charcoal grey skin, dark red leather armor",
+     "sentence": "A dark elf teenage girl of about sixteen, with silver hair cut short, lilac eyes and charcoal grey skin, wearing dark red leather armor. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ],
+   "neg_drop": [],
+   "neg_add": "cleavage, revealing clothes, bare shoulders, makeup, lipstick, mature female, mature male"
+  },
+  {
+   "id": "drow/female/young",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), молодая",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, single braid, light purple eyes, charcoal grey skin, dark blue embroidered tunic",
+     "sentence": "A dark elf young woman in her early twenties, with white hair in a single braid, light purple eyes and charcoal grey skin, wearing a dark blue embroidered tunic. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, pale silver hair, twin braids, glowing red eyes, dark grey skin, grey padded gambeson",
+     "sentence": "A dark elf young woman in her early twenties, with pale silver hair in twin braids, glowing red eyes and dark grey skin, wearing a grey padded gambeson. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, platinum hair, braid, hair over shoulder, red eyes, obsidian black skin, black high-collared coat",
+     "sentence": "A dark elf young woman in her early twenties, with platinum hair in a long braid over the shoulder, red eyes and obsidian black skin, wearing a black high-collared coat. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, snow-white hair, short hair, lilac eyes, ash grey skin, ochre leather jerkin",
+     "sentence": "A dark elf young woman in her early twenties, with snow-white hair cut short, lilac eyes and ash grey skin, wearing an ochre leather jerkin. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, young woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, silver hair, ponytail, crimson eyes, slate grey skin, beige simple dress with a shawl",
+     "sentence": "A dark elf young woman in her early twenties, with silver hair tied in a ponytail, crimson eyes and slate grey skin, wearing a beige simple dress with a shawl. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
+   "id": "drow/female/adult",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), зрелая",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, snow-white hair, short hair, light purple eyes, slate grey skin, dark blue padded gambeson",
+     "sentence": "A dark elf grown woman in her thirties, with snow-white hair cut short, light purple eyes and slate grey skin, wearing a dark blue padded gambeson. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, pale silver hair, hair bun, red eyes, charcoal grey skin, dark green fur-trimmed coat",
+     "sentence": "A dark elf grown woman in her thirties, with pale silver hair gathered in a bun, red eyes and charcoal grey skin, wearing a dark green fur-trimmed coat. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, silver hair, single braid, lilac eyes, dark grey skin, beige embroidered tunic",
+     "sentence": "A dark elf grown woman in her thirties, with silver hair in a single braid, lilac eyes and dark grey skin, wearing a beige embroidered tunic. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, platinum hair, twin braids, crimson eyes, ash grey skin, brown travel cloak with a scarf",
+     "sentence": "A dark elf grown woman in her thirties, with platinum hair in twin braids, crimson eyes and ash grey skin, wearing a brown travel cloak with a scarf. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, adult, woman, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, long hair, glowing red eyes, obsidian black skin, dark red leather jerkin",
+     "sentence": "A dark elf grown woman in her thirties, with white hair long and loose, glowing red eyes and obsidian black skin, wearing a dark red leather jerkin. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
+   "id": "drow/female/middle",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), средних лет",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, platinum hair, braid, hair over shoulder, lilac eyes, charcoal grey skin, brown leather jerkin",
+     "sentence": "A dark elf middle-aged woman in her late forties, the first lines on her face, with platinum hair in a long braid over the shoulder, lilac eyes and charcoal grey skin, wearing a brown leather jerkin. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, snow-white hair, single braid, glowing red eyes, dark grey skin, dark green high-collared coat",
+     "sentence": "A dark elf middle-aged woman in her late forties, the first lines on her face, with snow-white hair in a single braid, glowing red eyes and dark grey skin, wearing a dark green high-collared coat. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, silver hair, short hair, crimson eyes, obsidian black skin, dark red hooded cloak",
+     "sentence": "A dark elf middle-aged woman in her late forties, the first lines on her face, with silver hair cut short, crimson eyes and obsidian black skin, wearing a dark red hooded cloak. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, pale silver hair, long hair, red eyes, ash grey skin, ochre leather armor",
+     "sentence": "A dark elf middle-aged woman in her late forties, the first lines on her face, with pale silver hair long and loose, red eyes and ash grey skin, wearing ochre leather armor. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, mature female, middle-aged, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, hair bun, light purple eyes, slate grey skin, dark blue laced bodice over a linen blouse",
+     "sentence": "A dark elf middle-aged woman in her late forties, the first lines on her face, with white hair gathered in a bun, light purple eyes and slate grey skin, wearing a dark blue laced bodice over a linen blouse. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
+   "id": "drow/female/elderly",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), пожилая",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, wavy hair, lilac eyes, charcoal grey skin, dark green travel cloak with a scarf",
+     "sentence": "A dark elf elderly woman in her sixties, her face lined, with grey hair long and wavy, lilac eyes and charcoal grey skin, wearing a dark green travel cloak with a scarf. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, hair bun, light purple eyes, slate grey skin, ochre leather armor",
+     "sentence": "A dark elf elderly woman in her sixties, her face lined, with grey hair gathered in a bun, light purple eyes and slate grey skin, wearing ochre leather armor. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, short hair, red eyes, dark grey skin, grey wool tunic",
+     "sentence": "A dark elf elderly woman in her sixties, her face lined, with grey hair cut short, red eyes and dark grey skin, wearing a grey wool tunic. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, ponytail, glowing red eyes, obsidian black skin, black laced bodice over a linen blouse",
+     "sentence": "A dark elf elderly woman in her sixties, her face lined, with grey hair tied in a ponytail, glowing red eyes and obsidian black skin, wearing a black laced bodice over a linen blouse. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, old woman, wrinkles, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, grey hair, single braid, crimson eyes, ash grey skin, dark blue embroidered tunic",
+     "sentence": "A dark elf elderly woman in her sixties, her face lined, with grey hair in a single braid, crimson eyes and ash grey skin, wearing a dark blue embroidered tunic. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
+   "id": "drow/female/old",
+   "kind": "portraits/people",
+   "style": "portrait",
+   "name": "Тёмный эльф (дроу), старуха",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "looks": [
+    {
+     "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, long hair, red eyes, charcoal grey skin, dark red wool tunic",
+     "sentence": "A dark elf very old woman in her eighties, her face deeply wrinkled, with white hair long and loose, red eyes and charcoal grey skin, wearing a dark red wool tunic. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, single braid, glowing red eyes, slate grey skin, black vest over a linen shirt",
+     "sentence": "A dark elf very old woman in her eighties, her face deeply wrinkled, with white hair in a single braid, glowing red eyes and slate grey skin, wearing a black vest over a linen shirt. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, ponytail, light purple eyes, dark grey skin, ochre leather armor",
+     "sentence": "A dark elf very old woman in her eighties, her face deeply wrinkled, with white hair tied in a ponytail, light purple eyes and dark grey skin, wearing ochre leather armor. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, wavy hair, lilac eyes, obsidian black skin, grey laced bodice over a linen blouse",
+     "sentence": "A dark elf very old woman in her eighties, her face deeply wrinkled, with white hair long and wavy, lilac eyes and obsidian black skin, wearing a grey laced bodice over a linen blouse. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    },
+    {
+     "tags": "1girl, solo, old woman, very old, wrinkled skin, portrait, upper body, looking at viewer, dark elf, elf, pointy ears, long pointy ears, colored skin, grey skin, white hair, twin braids, crimson eyes, ash grey skin, dark blue hooded cloak",
+     "sentence": "A dark elf very old woman in her eighties, her face deeply wrinkled, with white hair in twin braids, crimson eyes and ash grey skin, wearing a dark blue hooded cloak. She has a slender face with high cheekbones, long pointed ears and smooth dark grey skin like polished obsidian."
+    }
+   ]
+  },
+  {
    "id": "acolyte",
    "kind": "portraits/monsters",
    "name": "Послушник",

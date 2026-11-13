@@ -43,8 +43,12 @@ var _left := false  # beside its thing on the left (a thing whose menu opens at 
 var _more: Label  # «the right button pins it» under a text longer than the card
 var _icons := false  # the screen's card for icons: shown pinned only, gone with its screen
 var _screen: WeakRef  # the screen of the pinned icon
+var _moved := false  # a pinned card the player dragged stands where it was put
+var _drag := Vector2(-1, -1)  # the grip of a drag (the cursor on the card), (-1, -1) — none
 
 static var _pins: DetailsPanel  # the one card an icon is pinned in (`pin_card`)
+static var _held: WeakRef  # the one floating card pinned now, of any screen (the author, 2026-11-13: «если я закрепил одну
+# панель осмотра — вторая не должна появляться при наведении»)
 
 const CARD_WIDTH := 460.0
 const CARD_MAX_BODY := 340.0  # a longer text is cut at this height and scrolls inside a pinned card
@@ -142,11 +146,15 @@ func _cap(pinned_now: bool) -> void:
 		_place()
 
 
-## Where the card stands: by the cursor (down and right, turned back at the screen's edge), or beside the focused button.
+## Where the card stands: by the cursor (down and right, turned back at the screen's edge), or beside the focused button;
+## one the player dragged — where it was put, kept on the screen.
 func _place() -> void:
 	var screen := get_viewport_rect().size
 	var sz := get_combined_minimum_size()
 	size = sz
+	if _moved:
+		position = Vector2(clampf(position.x, 0.0, maxf(0.0, screen.x - sz.x)), clampf(position.y, 0.0, maxf(0.0, screen.y - sz.y)))
+		return
 	var at := _anchor + Vector2(20, 20)
 	if _beside and _shown != null and is_instance_valid(_shown):
 		var r := _shown.get_global_rect()
@@ -169,6 +177,37 @@ func _process(_delta: float) -> void:
 		return
 	if _pinned.is_empty() or not size.is_equal_approx(get_combined_minimum_size()):  # a pinned one too, once its lines settle
 		_place()
+
+
+## While a card is pinned the right button anywhere lets it go — on the card, on its thing, past it (the author, 2026-11-13:
+## «щелчок правой кнопкой вне закреплённой зоны так же должен откреплять», «второй щелчок правой кнопкой … должен»).
+func _input(ev: InputEvent) -> void:
+	var mb := ev as InputEventMouseButton
+	if floating and visible and not _pinned.is_empty() and mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
+		unpin()
+		get_viewport().set_input_as_handled()
+
+
+## A pinned card is dragged by the left button (the author, 2026-11-13: «двигать окно описания, если зажмём левую кнопку»);
+## its text is still selected on the text itself.
+func _gui_input(ev: InputEvent) -> void:
+	if not floating or _pinned.is_empty():
+		return
+	var mb := ev as InputEventMouseButton
+	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
+		_drag = get_global_mouse_position() - position if mb.pressed else Vector2(-1, -1)
+		accept_event()
+	elif ev is InputEventMouseMotion and _drag.x >= 0.0 and (Input.get_mouse_button_mask() & MOUSE_BUTTON_MASK_LEFT) != 0:
+		position = get_global_mouse_position() - _drag
+		_moved = true
+		_place()
+		accept_event()
+
+
+## A floating card is pinned now: no other card comes up at the cursor until it is let go.
+static func holding() -> bool:
+	var held: DetailsPanel = _held.get_ref() if _held != null else null
+	return held != null and is_instance_valid(held) and held.is_inside_tree() and held.visible and not held._pinned.is_empty()
 
 
 ## The card stays while its thing is hovered, or focused when it came by the focus.
@@ -206,7 +245,7 @@ func column(lower: Control, width: int = 440) -> VBoxContainer:
 ## Shows a text unless another one is pinned; a floating card at what is hovered now, or beside the focused button.
 ## `card` — a card of `CardInfo` drawn instead of the bare text, `look` — the icon (IconRules.of), by the card's own when {}.
 func show_text(title: String, body: String, card: Dictionary = {}, look: Dictionary = {}) -> void:
-	if not _pinned.is_empty():
+	if not _pinned.is_empty() or (floating and holding()):
 		return
 	_put(title, body, card, look)
 	if floating:
@@ -279,6 +318,12 @@ func pinned() -> String:
 ## Pins this text (the right button): it stays until unpinned, `control` is lit.
 func pin(control: Control, title_text: String, body_text: String, card: Dictionary = {}, look: Dictionary = {}) -> void:
 	_unlight()
+	if floating:  # one card pinned on the screen: another one pinned lets it go
+		var held: DetailsPanel = _held.get_ref() if _held != null else null
+		if held != null and held != self and is_instance_valid(held) and not held._pinned.is_empty():
+			held.unpin()
+		_held = weakref(self)
+		_moved = false
 	_pinned = title_text
 	_pinned_body = body_text
 	_put(title_text, body_text, card, look)
@@ -299,6 +344,8 @@ func unpin() -> void:
 	_unlight()
 	_pinned = ""
 	_pinned_body = ""
+	_moved = false
+	_drag = Vector2(-1, -1)
 	_lock.text = "DETAILS_PIN"
 	_lock.tooltip_text = "DETAILS_PIN_TIP"
 	if floating:
@@ -414,7 +461,26 @@ static func tip_card(title_text: String, line: String, body_text: String, card: 
 	var band := _foot_band(card)
 	if band != null:
 		col.add_child(band)
+	# The tooltip's window takes the size of the card's first layout, when the text had no width yet and stood a word a
+	# line, and does not shrink by itself: it is made the card's size each time the card's own changes (the author,
+	# 2026-11-13: «окно информации сильно больше написанного в нём текста»).
+	panel.minimum_size_changed.connect(func() -> void: _fit_window(panel))
+	panel.tree_entered.connect(func() -> void: (func() -> void: _fit_window(panel)).call_deferred())
 	return panel
+
+
+## The window a tooltip card stands in, the card's own size and its frame.
+static func _fit_window(panel: Control) -> void:
+	if not is_instance_valid(panel) or not panel.is_inside_tree():
+		return
+	var w := panel.get_window()
+	if w == null or w == panel.get_tree().root:
+		return
+	var frame := (Vector2(w.size) - panel.size).max(Vector2.ZERO)
+	var want := Vector2i((panel.get_combined_minimum_size() + frame).ceil())
+	if want != w.size:
+		w.size = want
+		panel.size = panel.get_combined_minimum_size()
 
 
 ## The body of a card in BBCode: the headline number, its dice by damage type, what it lays with the condition's icon,

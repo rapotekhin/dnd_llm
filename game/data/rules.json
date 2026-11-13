@@ -3093,6 +3093,10 @@
 		"human": ["человек"],
 		"tiefling": ["тифлинг"]
 	},
+	"subrace_words": {
+		"_doc": "v0.8.4.43.49: the stems of a person's subrace in words by its id of races.json `subraces` — read by PortraitRules.folk: a subrace drawn on its own (people/<subrace>/) gives its face, else the race's (the author, 2026-11-13: «нету иконок для Дроу» — a drow had a pale elf's face). The hero's own `subrace` counts first.",
+		"drow": ["дроу", "темный эльф", "темная эльф", "темные эльф"]
+	},
 	"body": {
 		"_doc": "Age, build and height of the hero and the NPCs (v0.7.22.5, BodyRules, the author's choice: words, not numbers): the engine picks each by `weight` (the hero — by `hero_weight`), its own word for men and women; an id without a female or male word is not offered to that gender. A child and a teenager (weight 0) come only when a pack or the master sets them. v0.7.22.15: the player may choose each word at the creation of the hero — any of its gender's list but those with `hero: false`; what is not chosen the engine picks.",
 		"age": {

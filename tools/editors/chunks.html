@@ -333,12 +333,20 @@ function seeded(a) {
 	return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
-// What the generator may lay in this chunk (MapSpots._furnished): every thing of every furnishing in an order of the seed,
-// each standing where its squares are free floor and the floor stays one piece; a station's mark is taken first.
+// What the generator may lay in this chunk (MapSpots._furnished): the groups of every furnishing — the things of one
+// furnishing side by side (a table and its benches, MapSpots._clusters) — in an order of the seed, each group standing
+// whole where its squares are free floor and the floor stays one piece; a station's mark is taken first.
 function mixOf(e, seed) {
 	const rnd = seeded(seed);
-	const all = (e.furnish || []).flatMap((set, i) => (set.things || []).map((t) => ({ ...t, set: i })));
-	for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+	const things = (e.furnish || []).flatMap((set, i) => (set.things || []).map((t) => ({ ...t, set: i })));
+	const sq = things.map((t) => new Set(cellsOf(t).map(([x, y]) => x + ',' + y)));
+	const touch = (a, b) => [...a].some((k) => { const [x, y] = k.split(',').map(Number); return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => b.has(`${x + dx},${y + dy}`)); });
+	const root = things.map((_, i) => i);
+	const top = (i) => { while (root[i] !== i) i = root[i]; return i; };
+	for (let i = 0; i < things.length; i++) for (let j = i + 1; j < things.length; j++)
+		if (things[i].set === things[j].set && touch(sq[i], sq[j])) { const a = top(i), b = top(j); root[Math.max(a, b)] = Math.min(a, b); }
+	const groups = Object.values(things.reduce((by, t, i) => { (by[top(i)] ||= []).push(t); return by; }, {}));
+	for (let i = groups.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
 	const rows = e.rows, marks = e.marks || {};
 	const stations = new Set([...(RULES_MAP().stations || []), ...Object.keys(RULES_MAP().station_bodies || {})]);
 	const taken = new Set();
@@ -360,14 +368,15 @@ function mixOf(e, seed) {
 		return seen.size === set.size;
 	};
 	const out = [];
-	for (const t of all) {
-		const b = bodies()[t.body];
-		if (!b) continue;
-		const mine = cellsOf(t).map(([x, y]) => x + ',' + y);
-		if (!mine.every((k) => floor.has(k) && !taken.has(k))) continue;
-		if ((b.blocks || []).includes('path') && !whole(new Set(mine))) continue;
-		mine.forEach((k) => { taken.add(k); if ((b.blocks || []).includes('path')) walls.add(k); });
-		out.push(t);
+	for (const group of groups) {  // whole or none: never a table of one furnishing with the benches of another
+		if (group.some((t) => !bodies()[t.body])) continue;
+		const mine = group.flatMap((t) => cellsOf(t).map(([x, y]) => x + ',' + y));
+		if (new Set(mine).size !== mine.length || !mine.every((k) => floor.has(k) && !taken.has(k))) continue;
+		const barring = group.filter((t) => (bodies()[t.body].blocks || []).includes('path')).flatMap((t) => cellsOf(t).map(([x, y]) => x + ',' + y));
+		if (barring.length && !whole(new Set(barring))) continue;
+		mine.forEach((k) => taken.add(k));
+		barring.forEach((k) => walls.add(k));
+		out.push(...group);
 	}
 	return out;
 }

@@ -215,7 +215,8 @@ SILVER = (200, 208, 218)
 # `tint` of its own (a spell's is its school's, a dragon's ancestry its dragon's); any other kind is drawn as the
 # interface's gold buttons, with no frame.
 LINES = {"spells": ("ring", GOLD, GOLD), "features": ("square", GOLD, GOLD), "acts": ("square", GOLD, GOLD),
-         "traits": ("square", SILVER, SILVER)}
+         "traits": ("square", SILVER, SILVER), "races": ("square", SILVER, SILVER),
+         "subraces": ("square", SILVER, SILVER)}  # a race and a subrace in silver as their traits (2026-11-13)
 LIT = 0.55  # the brightest lines of a sign toward white by this share
 # the frame at the icon's side 1.0: its margin, the outer and the inner line, the gap between, the sign's pad inside
 EDGE, OUTER, INNER, GAP, PAD = 0.035, 0.026, 0.013, 0.022, 0.05

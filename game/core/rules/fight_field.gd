@@ -730,11 +730,13 @@ static func ways_out(s: GameSession, data: Dictionary) -> Array[Vector2i]:
 	return out
 
 
+## On a way out: the square before it (`ax`, `ay`) or the way's own square, where one may stand too (the author, 2026-11-13:
+## «стою прямо на выходе из пещеры — кнопка "Покинуть" не активна»).
 static func at_way_out(s: GameSession, data: Dictionary, at: Vector2i) -> bool:
 	if s.combat.has("field"):
 		var g := FightGrid.grid(s, data)
 		return at.x <= 0 or at.y <= 0 or at.x >= int(g["w"]) - 1 or at.y >= int(g["h"]) - 1
-	return ways_out(s, data).has(at)
+	return not _exit_at(s, data, at).is_empty()
 
 
 ## "" when a way out stands open at the square; the rim of an open field always does. A key otherwise.
@@ -747,7 +749,7 @@ static func way_out_shut(s: GameSession, data: Dictionary, at: Vector2i) -> Stri
 
 static func _exit_at(s: GameSession, data: Dictionary, at: Vector2i) -> Dictionary:
 	for e: Dictionary in FightGrid.map(s, data).get("exits", []):
-		if Vector2i(int(e["ax"]), int(e["ay"])) == at:
+		if Vector2i(int(e["ax"]), int(e["ay"])) == at or Vector2i(int(e.get("x", -1)), int(e.get("y", -1))) == at:
 			return e
 	return {}
 

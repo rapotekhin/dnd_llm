@@ -1,5 +1,5 @@
 {
- "_doc": "The picks of the icons in the lines style (out_lines/, anima_gen.py --style lines), apart from the painted ones of picks_painted.json: `variant` — «<kind>/<id>»: n (absent — 1), written by pick.py on its tabs «· линии»; `same` — an icon laid from another's pick, as in picks_painted.json; `redraw` — the author's marks. Into the game only by choice: install.py --out tools/anima/out_lines --picks tools/anima/picks_lines_icons.json.",
+ "_doc": "The picks of the icons in the lines style (out_lines/, anima_gen.py --style lines), apart from the painted ones of picks_painted.json: `variant` — «<kind>/<id>»: n (absent — 1), written by pick.py on its tabs «· линии»; `same` — an icon laid from another's pick, as in picks_painted.json; `from` — an icon taken from another folder of tools/anima, where FLUX drew it far better than Anima («Конец хода», «Мистический заряд»); `redraw` — the author's marks. Into the game only by choice: install.py --out tools/anima/out_lines --picks tools/anima/picks_lines_icons.json; the acts, races and subraces are FLUX's, from --out tools/anima/out_lines_flux.",
  "variant": {
   "acts/avert": 2,
   "acts/dash": 2,
@@ -10,6 +10,7 @@
   "acts/grapple": 3,
   "acts/help": 2,
   "acts/item_spell": 3,
+  "acts/parry": 3,
   "acts/shape": 2,
   "acts/shove": 3,
   "acts/slow_fall": 2,
@@ -113,6 +114,11 @@
   "features/spellcasting_ranger": 3,
   "features/spellcasting_wizard": 3,
   "features/thieves_cant": 3,
+  "races/dragonborn": 2,
+  "races/dwarf": 2,
+  "races/elf": 2,
+  "races/half_elf": 3,
+  "races/half_orc": 3,
   "spells/acid_arrow": 2,
   "spells/animal_friendship": 3,
   "spells/animal_messenger": 3,
@@ -134,7 +140,6 @@
   "spells/detect_poison_and_disease": 2,
   "spells/disguise_self": 2,
   "spells/dispel_magic": 3,
-  "spells/eldritch_blast": 3,
   "spells/enlarge_reduce": 3,
   "spells/entangle": 3,
   "spells/enthrall": 2,
@@ -199,6 +204,8 @@
   "spells/vicious_mockery": 3,
   "spells/web": 3,
   "spells/zone_of_truth": 2,
+  "subraces/high_elf": 2,
+  "subraces/lightfoot_halfling": 2,
   "traits/brave": 2,
   "traits/breath_weapon": 3,
   "traits/damage_resistance": 3,
@@ -229,5 +236,8 @@
   "features/fighter_fighting_style_two_weapon_fighting": "features/ranger_fighting_style_two_weapon_fighting",
   "features/fighting_style_protection": "features/fighter_fighting_style_protection",
   "features/ranger_fighting_style_dueling": "features/fighter_fighting_style_dueling"
+ },
+ "from": {
+  "spells/eldritch_blast": "out_lines_flux"
  }
 }
