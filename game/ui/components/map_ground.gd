@@ -10,7 +10,7 @@ const PROP_PX := 256
 const HI := 2  ## the sharp set's side, times the plain one
 const HI_FROM := 0.5  ## a ground's texel over this many screen pixels — its plain picture blurred by the mipmaps
 const HI_BACK := 0.4  ## and back under this, so a view on the line does not flicker
-const MAX_PROPS := 64  ## the shader's arrays of props
+const MAX_PROPS := 128  ## the shader's arrays of props
 const EDGE_PX := 1024  ## a sheet of the sixteen tiles of a drawn edge
 const MAX_SURFACES := 16  ## the shader's arrays of surfaces (v0.8.4.43.29)
 const MAX_GROUNDS := 32  ## the grounds of the order: a bit each in the shader's sharp mask, a row of the edge table
@@ -23,6 +23,7 @@ var _size := Vector2i.ZERO
 var _light_bytes := PackedByteArray()
 var _base := PackedByteArray()  ## the cells as the map's rows draw them, before the things of the room
 var _lib: Dictionary = {}
+var _seed := 0  ## the map's seed: the variants of its things (v0.8.4.43.37)
 var _hi := false  ## the sharp set is laid
 
 
@@ -45,6 +46,8 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	var keys := LayoutGen.ground_keys(lib, map)
 	var grounds := LayoutGen.grounds(lib, map)
 	var rows: Array = map["rows"]
+	_seed = int(map.get("seed", 0))
+	var laid := LayoutGen.props_laid(lib, keys, rows, _seed)
 	var bytes := PackedByteArray()
 	bytes.resize(w * h * 4)
 	for y: int in h:
@@ -53,7 +56,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 			var i := (y * w + x) * 4
 			bytes[i] = grounds[y * w + x]
 			var c := line[x] if x < line.length() else LayoutGen.BLANK
-			var thing := LayoutGen.prop_at(lib, keys, rows, x, y)
+			var thing: Dictionary = laid[y * w + x] if laid.size() == w * h else {"id": "", "turn": 0}
 			var prop := props.find(str(thing["id"]))
 			bytes[i + 1] = prop + 1
 			bytes[i + 2] = int(thing["turn"]) if prop >= 0 else 0
@@ -74,11 +77,13 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	sizes.fill(1.0)
 	var dims := PackedVector2Array()
 	dims.resize(MAX_PROPS)
-	var bodies := bodies_of()
+	var jitter := PackedFloat32Array()  # v0.8.4.43.37: a natural thing, sized and shifted by its square
+	jitter.resize(MAX_PROPS)
+	var natural: Dictionary = g.get("natural", {})
 	for i: int in mini(props.size(), MAX_PROPS):
 		sizes[i] = float(g.get("size", {}).get(LayoutGen.prop_base(lib, props[i]), 1.0))
-		var sz: Array = (bodies.get(props[i], {}) as Dictionary).get("size", [1, 1])
-		dims[i] = Vector2(float(sz[0]), float(sz[1]))
+		dims[i] = dims_of(lib, props[i])
+		jitter[i] = 1.0 if (natural.get("of", []) as Array).has(LayoutGen.prop_base(lib, props[i])) else 0.0
 	_lib = lib
 	var m := material as ShaderMaterial
 	m.set_shader_parameter("cells", _cells)
@@ -100,6 +105,10 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 		shimmer[i] = float(g.get("shimmer", {}).get(LayoutGen.prop_base(lib, props[i]), 0.0))
 	m.set_shader_parameter("prop_shimmer", shimmer)
 	m.set_shader_parameter("prop_dims", dims)
+	m.set_shader_parameter("prop_jitter", jitter)
+	m.set_shader_parameter("jitter_scale", float(natural.get("scale", 0.0)))
+	m.set_shader_parameter("jitter_shift", float(natural.get("shift", 0.0)))
+	m.set_shader_parameter("natural_shade", float(natural.get("shade", 0.0)))
 	m.set_shader_parameter("watch_tint", UiTheme.BAD)
 	var edges := _edges(lib)
 	m.set_shader_parameter("edges", edges["sheets"])
@@ -190,10 +199,15 @@ func place(tokens: Array[Dictionary]) -> void:
 	var bytes := _base.duplicate()
 	var props := prop_ids(_lib)
 	for t: Dictionary in tokens:
-		var at := props.find(str(t.get("body", "")))
-		if at < 0 or not t.has("corner"):
+		if not t.has("corner"):
 			continue
 		var c: Vector2i = t["corner"]
+		var body := str(t.get("body", ""))
+		var at := props.find(LayoutGen.variant(_lib, body, c, _seed))  # its picture for its square (v0.8.4.43.37)
+		if at < 0:
+			at = props.find(body)
+		if at < 0:
+			continue
 		if c.x < 0 or c.y < 0 or c.x >= _size.x or c.y >= _size.y:
 			continue
 		var i := (c.y * _size.x + c.x) * 4
@@ -225,7 +239,20 @@ static func ground_motion(lib: Dictionary) -> PackedVector4Array:
 	return out
 
 
-## The things of `grounds.props` and the bodies of the map in one order: a thing's place in the texture of the things.
+## A thing's squares [long, short]: a body's of rules.things, a group's of `grounds.groups` (v0.8.4.43.37); none — one.
+static func dims_of(lib: Dictionary, id: String) -> Vector2:
+	var base := LayoutGen.prop_base(lib, id)
+	for row: Variant in lib["grounds"].get("groups", {}).values():
+		if row is Array:
+			for g: Dictionary in row:
+				if str(g["id"]) == base:
+					return Vector2(float(g["size"][0]), float(g["size"][1]))
+	var sz: Array = (bodies_of().get(base, {}) as Dictionary).get("size", [1, 1])
+	return Vector2(float(sz[0]), float(sz[1]))
+
+
+## The things of `grounds.props` and the bodies of the map in one order: a thing's place in the texture of the things;
+## then the groups' pictures and every variant (v0.8.4.43.37).
 static func prop_ids(lib: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var strips: Dictionary = lib["grounds"].get("strips", {})
@@ -238,8 +265,18 @@ static func prop_ids(lib: Dictionary) -> Array[String]:
 				if not out.has(str(one)):
 					out.append(str(one))
 	for id: Variant in bodies_of():
-		if not out.has(str(id)) and out.size() < MAX_PROPS:
+		if not out.has(str(id)):
 			out.append(str(id))
+	for row: Variant in lib["grounds"].get("groups", {}).values():
+		if row is Array:
+			for g: Dictionary in row:
+				if not out.has(str(g["id"])):
+					out.append(str(g["id"]))
+	var variants: Dictionary = lib["grounds"].get("variants", {})
+	for id: String in out.duplicate():
+		for k: int in range(1, int(variants.get(id, 1))):
+			out.append("%s_v%d" % [id, k])
+	out.resize(mini(out.size(), MAX_PROPS))
 	return out
 
 

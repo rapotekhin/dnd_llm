@@ -7,7 +7,7 @@
 const MapView = (() => {
 	const SHADER = 'game/ui/components/map_ground.gdshader';
 	const TILES = 'game/assets/tiles/';
-	const GROUND_PX = 512, PROP_PX = 256, EDGE_PX = 1024, MAX_PROPS = 64, MAX_GROUNDS = 32;
+	const GROUND_PX = 512, PROP_PX = 256, EDGE_PX = 1024, MAX_PROPS = 128, MAX_GROUNDS = 32;
 	const BLANK = ' ', FLOOR = '.', SOCKET = 'D';
 
 	// LayoutGen.turned: a quarter turn clockwise `rot` times after a mirror.
@@ -59,8 +59,10 @@ const MapView = (() => {
 			const drawn = (strips.of || []).includes(id) ? strips.parts.map((p) => `${id}_${p}`) : [String(id)];
 			for (const one of drawn) if (!out.includes(one)) out.push(one);
 		}
-		for (const id of Object.keys(bodies)) if (!out.includes(id) && out.length < MAX_PROPS) out.push(id);
-		return out;
+		for (const id of Object.keys(bodies)) if (!out.includes(id)) out.push(id);
+		for (const row of Object.values(lib.grounds.groups || {})) if (Array.isArray(row)) for (const g of row) if (!out.includes(g.id)) out.push(g.id);
+		for (const id of [...out]) for (let k = 1; k < Number(lib.grounds.variants?.[id] || 1); k++) out.push(`${id}_v${k}`);
+		return out.slice(0, MAX_PROPS);
 	}
 
 	// LayoutGen.turn_cell / turn_offset / turn_of (v0.8.4.43.31): a square, an offset and a thing's turn on a chunk
@@ -127,13 +129,62 @@ const MapView = (() => {
 		}
 		return { id, turn };
 	}
-	const propBase = (lib, id) => (lib.grounds.strips?.of || []).find((b) => id.startsWith(b + '_')) || id;
+	const propBase = (lib, id) => {
+		id = id.replace(/_v\d+$/, '');
+		return (lib.grounds.strips?.of || []).find((b) => id.startsWith(b + '_')) || id;
+	};
+	// LayoutGen.cell_hash / variant / props_laid (v0.8.4.43.37): a square's number, a thing's picture among its variants, the
+	// things of a map with like ones side by side drawn as one picture of their group.
+	const posmod = (a, m) => ((a % m) + m) % m;
+	function cellHash(x, y, seed) {
+		let h = (Math.imul(posmod(x, 65536), 374761393) >>> 0) + (Math.imul(posmod(y, 65536), 668265263) >>> 0) + (Math.imul(seed >>> 0, 1442695041) >>> 0);
+		h = h >>> 0;
+		h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+		return (h ^ (h >>> 16)) >>> 0;
+	}
+	function variant(lib, id, x, y, seed) {
+		const n = Number(lib.grounds.variants?.[id] || 1);
+		if (n <= 1) return id;
+		const k = cellHash(x, y, seed) % n;
+		return k === 0 ? id : `${id}_v${k}`;
+	}
+	function propsLaid(lib, keys, rows, seed = 0) {
+		const h = rows.length, w = Math.max(0, ...rows.map((r) => r.length));
+		const out = [];
+		for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) out.push(propAt(lib, keys, rows, x, y));
+		const groups = lib.grounds.groups || {}, taken = new Set();
+		for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+			const i = y * w + x, base = out[i].id;
+			if (taken.has(i) || !Array.isArray(groups[base])) continue;
+			const c = rows[y][x];
+			let laid = false;
+			for (const g of groups[base]) {
+				for (const upright of g.size[0] !== g.size[1] ? [false, true] : [false]) {
+					const sx = upright ? g.size[1] : g.size[0], sy = upright ? g.size[0] : g.size[1];
+					if (x + sx > w || y + sy > h) continue;
+					const cells = [];
+					for (let dy = 0; dy < sy; dy++) for (let dx = 0; dx < sx; dx++) {
+						const j = (y + dy) * w + x + dx;
+						if (!taken.has(j) && out[j].id === base && rows[y + dy][x + dx] === c) cells.push(j);
+					}
+					if (cells.length < sx * sy) continue;
+					for (const j of cells) { taken.add(j); out[j] = { id: '', turn: 0 }; }
+					out[i] = { id: g.id, turn: upright ? 1 : 0 };
+					laid = true;
+					break;
+				}
+				if (laid) break;
+			}
+		}
+		out.forEach((t, i) => { if (t.id) t.id = variant(lib, t.id, i % Math.max(1, w), Math.floor(i / Math.max(1, w)), seed); });
+		return out;
+	}
 
 	// The cells texture of MapGround.lay: r — the ground's place in the order (255 none), g — a prop + 1, b — a turn.
-	function cellBytes(lib, rows, keys) {
+	function cellBytes(lib, rows, keys, props = propIds(lib)) {  // props: the view's own list, its bodies, groups and variants in it
 		const order = lib.grounds.order;
-		const props = propIds(lib);
 		const h = rows.length, w = Math.max(...rows.map((r) => r.length));
+		const laid = propsLaid(lib, keys, rows);
 		const out = new Uint8Array(w * h * 4);
 		const floor = order.indexOf(groundOf(lib, keys, FLOOR));
 		for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -141,7 +192,7 @@ const MapView = (() => {
 			const i = (y * w + x) * 4;
 			if (c === BLANK) { const g = byKeys(lib.grounds.cells[BLANK], keys); const at = g ? order.indexOf(g) : -1; out[i] = at >= 0 ? at : 255; } // rock in tunnels
 			else { const at = order.indexOf(groundOf(lib, keys, c)); out[i] = at >= 0 ? at : floor; }
-			const thing = propAt(lib, keys, rows, x, y);
+			const thing = laid[y * w + x];
 			const prop = props.indexOf(thing.id);
 			out[i + 1] = prop + 1;
 			out[i + 2] = prop >= 0 ? thing.turn : 0;
@@ -262,7 +313,9 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			props.forEach((id, i) => {
 				if (i >= MAX_PROPS) return;
 				sizes[i] = Number(g.size?.[propBase(this.lib, id)] ?? 1);
-				const sz = this.bodies[id]?.size || [1, 1];
+				const base = propBase(this.lib, id);
+				const group = Object.values(g.groups || {}).flatMap((r) => (Array.isArray(r) ? r : [])).find((r) => r.id === base);
+				const sz = group?.size || this.bodies[base]?.size || [1, 1];
 				dims[i * 2] = Number(sz[0]); dims[i * 2 + 1] = Number(sz[1]);
 			});
 			const kin = new Int32Array(MAX_GROUNDS).map((_, i) => (i < order.length ? Math.max(0, order.indexOf(g.same?.[order[i]] || order[i])) : i));
@@ -275,6 +328,11 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			gl.uniform1f(u('repeat_cells'), Number(g.repeat ?? 3));
 			gl.uniform1i(u('sharp_mask'), sharp);
 			gl.uniform1fv(u('prop_size'), sizes);
+			const natural = g.natural || {};
+			gl.uniform1fv(u('prop_jitter'), new Float32Array(MAX_PROPS).map((_, i) => ((natural.of || []).includes(propBase(this.lib, props[i] || '')) ? 1 : 0)));
+			gl.uniform1f(u('jitter_scale'), Number(natural.scale || 0));
+			gl.uniform1f(u('jitter_shift'), Number(natural.shift || 0));
+			gl.uniform1f(u('natural_shade'), Number(natural.shade || 0));
 			gl.uniform1fv(u('prop_shimmer'), new Float32Array(MAX_PROPS).map((_, i) => Number(g.shimmer?.[propBase(this.lib, props[i] || '')] ?? 0)));
 			gl.uniform1f(u('rough'), 0.22);
 			gl.uniform1f(u('soft'), 0.05);
@@ -324,10 +382,11 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			await this.ready;
 			if (this.failed || !rows.length) return;
 			const gl = this.gl;
-			const m = cellBytes(this.lib, rows, keys);
+			const m = cellBytes(this.lib, rows, keys, this.props);
 			if (grounds) grounds.forEach((g, i) => { m.bytes[i * 4] = g; });
 			for (const t of things) {
-				const at = this.props.indexOf(t.body);
+				let at = this.props.indexOf(variant(this.lib, t.body, t.x, t.y, 0));
+				if (at < 0) at = this.props.indexOf(t.body);
 				if (at < 0 || t.x < 0 || t.y < 0 || t.x >= m.w || t.y >= m.h) continue;
 				const i = (t.y * m.w + t.x) * 4;
 				m.bytes[i + 1] = at + 1;
@@ -348,6 +407,6 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 		}
 	}
 
-	return { View, turned, shapeOf, chunkShape, groundKeys, groundOf, propOf, propIds, edgeCells, stamped, cellBytes, glsl, turnCell, turnOf, footprint,
+	return { View, turned, shapeOf, chunkShape, groundKeys, groundOf, propOf, propIds, propsLaid, cellHash, variant, edgeCells, stamped, cellBytes, glsl, turnCell, turnOf, footprint,
 		thingPic, groundPic, BLANK, FLOOR, SOCKET };
 })();

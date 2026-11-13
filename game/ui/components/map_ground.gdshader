@@ -21,9 +21,13 @@ uniform float repeat_cells = 3.0;
 uniform int sharp_mask = 0;  // a bit per ground of the order
 uniform vec4 ground_move[32];  // v0.8.4.43.32 `grounds.motion`: xy — drift, z — ripple, w — glow (lava)
 uniform int kin[32];  // a ground's kin: the ground whose texture it has (`grounds.same`), else itself
-uniform float prop_size[64];
-uniform float prop_shimmer[64];  // v0.8.4.43.36 `grounds.shimmer`: a picture that moves along its own top to bottom
-uniform vec2 prop_dims[64];  // a prop's squares [long, short]; none — one square
+uniform float prop_size[128];
+uniform float prop_shimmer[128];  // v0.8.4.43.36 `grounds.shimmer`: a picture that moves along its own top to bottom
+uniform vec2 prop_dims[128];  // a prop's squares [long, short]; none — one square
+uniform float prop_jitter[128];  // v0.8.4.43.37 `grounds.natural`: 1 — a natural thing, sized and shifted by its square
+uniform float jitter_scale = 0.0;
+uniform float jitter_shift = 0.0;
+uniform float natural_shade = 0.0;  // the soft shade round a natural thing, merged with its neighbours'
 uniform float rough = 0.22;
 uniform float soft = 0.05;
 uniform vec4 watch_tint : source_color = vec4(0.75, 0.25, 0.2, 1.0);
@@ -62,6 +66,23 @@ float noise(vec2 p) {
 	vec2 f = fract(p);
 	vec2 u = f * f * (3.0 - 2.0 * f);
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+// Where the picture of the thing of square `n` is at point `p`: its uv (outside 0…1 — not here) and its side in squares.
+// A natural thing is sized and shifted a little by its square's number (v0.8.4.43.37).
+vec2 prop_uv(ivec2 n, vec2 p, int prop, int turn, out float size) {
+	vec2 dims = max(prop_dims[prop], vec2(1.0));
+	vec2 span = turn % 2 == 1 ? dims.yx : dims;
+	size = prop_size[prop] * max(dims.x, dims.y);
+	vec2 mid = vec2(n) + span * 0.5;
+	if (prop_jitter[prop] > 0.0) {
+		vec2 c = vec2(n);
+		size *= 1.0 + jitter_scale * (2.0 * hash(c + vec2(3.1, 7.7)) - 1.0);
+		mid += jitter_shift * (vec2(hash(c + vec2(11.3, 2.9)), hash(c + vec2(5.3, 13.1))) * 2.0 - 1.0);
+	}
+	vec2 at = (p - mid) / size;
+	for (int r = 0; r < turn; r++) at = vec2(-at.y, at.x);
+	return at + 0.5;
 }
 
 vec4 ground(int g, vec2 p) {
@@ -175,6 +196,28 @@ void fragment() {
 		col = vec4(mix(col.rgb, rgb, a * t.a), max(col.a, a));
 	}
 
+	// the shades first, the darkest of them where they meet (v0.8.4.43.37): a cast shadow down and right of each thing, a soft
+	// one round a natural thing; then the things over them, the lower rows over the upper
+	float shade = 0.0;
+	for (int dy = -3; dy <= 1; dy++) {
+		for (int dx = -3; dx <= 1; dx++) {
+			ivec2 n = here + ivec2(dx, dy);
+			if (n.x < 0 || n.y < 0 || n.x >= int(map_size.x) || n.y >= int(map_size.y)) continue;
+			vec4 cell = texelFetch(cells, n, 0);
+			int prop = int(cell.g * 255.0 + 0.5) - 1;
+			if (prop < 0) continue;
+			float size;
+			vec2 uv = prop_uv(n, p, prop, int(cell.b * 255.0 + 0.5), size);
+			vec2 shade_uv = uv - vec2(0.06, 0.08) / size;
+			if (shade_uv.x >= 0.0 && shade_uv.y >= 0.0 && shade_uv.x <= 1.0 && shade_uv.y <= 1.0) {
+				shade = max(shade, 0.38 * texture(props, vec3(shade_uv, float(prop))).a);
+			}
+			if (prop_jitter[prop] > 0.0) {
+				shade = max(shade, natural_shade * (1.0 - smoothstep(0.2, 0.55, length(uv - 0.5))));
+			}
+		}
+	}
+	col.rgb *= 1.0 - shade;
 	for (int dy = -3; dy <= 1; dy++) {  // the things of this square and of those around whose squares or overflow reach it
 		for (int dx = -3; dx <= 1; dx++) {
 			ivec2 n = here + ivec2(dx, dy);
@@ -182,17 +225,8 @@ void fragment() {
 			vec4 cell = texelFetch(cells, n, 0);
 			int prop = int(cell.g * 255.0 + 0.5) - 1;
 			if (prop < 0) continue;
-			int turn = int(cell.b * 255.0 + 0.5);
-			vec2 dims = max(prop_dims[prop], vec2(1.0));
-			vec2 span = turn % 2 == 1 ? dims.yx : dims;
-			float size = prop_size[prop] * max(dims.x, dims.y);
-			vec2 at = (p - (vec2(n) + span * 0.5)) / size;
-			for (int r = 0; r < turn; r++) at = vec2(-at.y, at.x);
-			vec2 uv = at + 0.5;
-			vec2 shade_uv = uv - vec2(0.06, 0.08) / size;
-			if (shade_uv.x >= 0.0 && shade_uv.y >= 0.0 && shade_uv.x <= 1.0 && shade_uv.y <= 1.0) {
-				col.rgb *= 1.0 - 0.38 * texture(props, vec3(shade_uv, float(prop))).a;
-			}
+			float size;
+			vec2 uv = prop_uv(n, p, prop, int(cell.b * 255.0 + 0.5), size);
 			if (uv.x >= 0.0 && uv.y >= 0.0 && uv.x <= 1.0 && uv.y <= 1.0) {
 				vec4 t = texture(props, vec3(uv, float(prop)));
 				float sh = prop_shimmer[prop];

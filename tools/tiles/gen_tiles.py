@@ -62,6 +62,11 @@ def bodies() -> dict:
 
 
 def size_of(tid: str) -> tuple[int, int]:
+    """The squares of a thing: a body's of rules.things, a group's of `grounds.groups` (two boulders as one, v0.8.4.43.37)."""
+    for row in grounds_lib().get("groups", {}).values():
+        for g in row if isinstance(row, list) else []:
+            if g["id"] == tid:
+                return int(g["size"][0]), int(g["size"][1])
     w, h = bodies().get(tid, {}).get("size", [1, 1])
     return int(w), int(h)
 
@@ -109,9 +114,11 @@ def jobs(only: str) -> list[tuple[str, str, str]]:
     want = {s for s in only.split(",") if s}
     out = []
     for group, style in (("ground", "ground"), ("props", "prop")):
-        for tid, subject in spec[group].items():
+        for tid, subject in spec[group].items():  # a list: a subject of its own for each variant (v0.8.4.43.37)
             if not want or tid in want:
-                out.append((group, tid, spec["style"][style].replace("{subject}", subject)))
+                subjects = subject if isinstance(subject, list) else [subject]
+                prompts = [spec["style"][style].replace("{subject}", s) for s in subjects]
+                out.append((group, tid, prompts if isinstance(subject, list) else prompts[0]))
     for pair in grounds_lib().get("edges", []):
         low, high = str(pair["low"]), str(pair["high"])
         tid = f"{low}__{high}"
@@ -252,7 +259,7 @@ def draw(a: argparse.Namespace) -> None:
     field = edge_field() if any(g == "edges" for g, *_ in todo) else None
     refs = [edge_mask(field)] if field else None
     with ThreadPoolExecutor(4) as pool:
-        futures = {pool.submit(anima_gen.openrouter_frame, p, SEEDS[n % len(SEEDS)] + n, key, a.model,
+        futures = {pool.submit(anima_gen.openrouter_frame, p[n % len(p)] if isinstance(p, list) else p, SEEDS[n % len(SEEDS)] + n, key, a.model,
                                aspect(t) if g == "props" else "1:1",
                                refs if g == "edges" else [strip_mask(t)] if g == "strips" else None): (g, t, n) for g, t, p, n in todo}
         for f in as_completed(futures):
@@ -356,17 +363,20 @@ def install(a: argparse.Namespace) -> None:
                     Image.open(src).save(dst)
                     print(dst.relative_to(ROOT))
             continue
-        src = OUT / f"{t}__{int(picks[t])}.png"
-        dst = GAME / g / f"{t}.png"
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        Image.open(src).save(dst)
-        print(dst.relative_to(ROOT))
-        sharp = sharp_of(g, f"{t}__{int(picks[t])}.png")
-        if sharp is not None:
-            hi = GAME / f"{g}_hi" / f"{t}.png"
-            hi.parent.mkdir(parents=True, exist_ok=True)
-            sharp.save(hi)
-            print(hi.relative_to(ROOT))
+        chosen = picks[t] if isinstance(picks[t], list) else [picks[t]]  # several: `<id>`, `<id>_v1`… (grounds.variants)
+        for k, pick in enumerate(chosen):
+            name = t if k == 0 else f"{t}_v{k}"
+            src = OUT / f"{t}__{int(pick)}.png"
+            dst = GAME / g / f"{name}.png"
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            Image.open(src).save(dst)
+            print(dst.relative_to(ROOT))
+            sharp = sharp_of(g, f"{t}__{int(pick)}.png")
+            if sharp is not None:
+                hi = GAME / f"{g}_hi" / f"{name}.png"
+                hi.parent.mkdir(parents=True, exist_ok=True)
+                sharp.save(hi)
+                print(hi.relative_to(ROOT))
 
 
 def sharp_of(group: str, name: str) -> Image.Image | None:

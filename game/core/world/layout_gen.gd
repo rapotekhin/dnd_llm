@@ -1542,8 +1542,81 @@ static func prop_at(lib: Dictionary, keys: Array[String], rows: Array, x: int, y
 	return {"id": id, "turn": turn}
 
 
-## The thing a part of a strip is drawn for (`waterfall_left` → `waterfall`): its size, its shimmer.
+## The things of a map's squares with their turns as they are drawn (v0.8.4.43.37), [{id, turn}] by y * w + x: each square's
+## `prop_at`; like things side by side drawn as one picture of their group (`grounds.groups`: a ridge of boulders, a grove —
+## the largest that fits first, row by row; a group of two stands either way; the other squares of a group draw nothing);
+## each picture by its variant for its square (`variant`).
+static func props_laid(lib: Dictionary, keys: Array[String], rows: Array, seed_value: int) -> Array[Dictionary]:
+	var h := rows.size()
+	var w := 0
+	for r: Variant in rows:
+		w = maxi(w, str(r).length())
+	var out: Array[Dictionary] = []
+	for y: int in h:
+		for x: int in w:
+			out.append(prop_at(lib, keys, rows, x, y))
+	var groups: Dictionary = lib["grounds"].get("groups", {})
+	var taken := {}
+	for y: int in h:
+		for x: int in w:
+			var i := y * w + x
+			var base := str(out[i]["id"])
+			if taken.has(i) or not groups.has(base):
+				continue
+			var c := str(rows[y]).substr(x, 1)
+			for g: Dictionary in groups[base]:
+				var size: Array = g["size"]
+				var laid := false
+				for upright: bool in ([false, true] if int(size[0]) != int(size[1]) else [false]):
+					var span := Vector2i(int(size[1]), int(size[0])) if upright else Vector2i(int(size[0]), int(size[1]))
+					if x + span.x > w or y + span.y > h:
+						continue
+					var cells: Array[int] = []
+					for dy: int in span.y:
+						for dx: int in span.x:
+							var j := (y + dy) * w + x + dx
+							if not taken.has(j) and str(out[j]["id"]) == base and str(rows[y + dy]).substr(x + dx, 1) == c:
+								cells.append(j)
+					if cells.size() < span.x * span.y:
+						continue
+					for j: int in cells:
+						taken[j] = true
+						out[j] = {"id": "", "turn": 0}
+					out[i] = {"id": str(g["id"]), "turn": 1 if upright else 0}
+					laid = true
+					break
+				if laid:
+					break
+	for i: int in out.size():
+		if not str(out[i]["id"]).is_empty():
+			out[i]["id"] = variant(lib, str(out[i]["id"]), Vector2i(i % maxi(1, w), i / maxi(1, w)), seed_value)
+	return out
+
+
+## A square's number for the picks of its look: the same square of the same map — the same number (v0.8.4.43.37); the
+## editor counts it alike (map-view.js `cellHash`): 32 bits mixed, so squares side by side differ.
+static func cell_hash(x: int, y: int, seed_value: int) -> int:
+	const MASK := 0xffffffff
+	var h := (posmod(x, 65536) * 374761393 + posmod(y, 65536) * 668265263 + (seed_value & MASK) * 1442695041) & MASK
+	h = ((h ^ (h >> 13)) * 1274126177) & MASK
+	return h ^ (h >> 16)
+
+
+## The picture of a thing on a square among its variants (`grounds.variants`): `<id>` or `<id>_v<k>` by the square's number.
+static func variant(lib: Dictionary, id: String, at: Vector2i, seed_value: int) -> String:
+	var n := int(lib["grounds"].get("variants", {}).get(id, 1))
+	if n <= 1:
+		return id
+	var k := cell_hash(at.x, at.y, seed_value) % n
+	return id if k == 0 else "%s_v%d" % [id, k]
+
+
+## The thing a picture is drawn for: a variant's (`tree_v2` → `tree`), a part of a strip's (`waterfall_left` →
+## `waterfall`) — its size, its shimmer, whether it is natural.
 static func prop_base(lib: Dictionary, id: String) -> String:
+	var v := id.rfind("_v")
+	if v > 0 and id.substr(v + 2).is_valid_int():
+		id = id.substr(0, v)
 	for base: Variant in lib["grounds"].get("strips", {}).get("of", []):
 		if id.begins_with(str(base) + "_"):
 			return str(base)
