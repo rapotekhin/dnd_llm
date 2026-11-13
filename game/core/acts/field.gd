@@ -1,10 +1,10 @@
 extends Act
-## What is done with a door or a thing beside it (`how.how`, FightField.acts): shut, bar, unbar, lock, force a door; push or smash
-## a thing. A foe at a barred door forces it by the same road.
+## What is done with a door or a thing beside it (`how.how`, FightField.acts): shut, bar, unbar, lock, pick, force a door; push or
+## smash a thing. A foe at a barred door forces it by the same road. Its cost by the way (`rules.combat.act_bonus` field.<how>).
 
 const WORDS := {
 	"door_close": "Закрыть дверь", "door_bar": "Подпереть дверь", "door_unbar": "Убрать подпорку", "door_lock": "Запереть ключом",
-	"door_force": "Выломать дверь", "block_push": "Толкнуть вещь", "block_smash": "Разбить вещь",
+	"door_pick": "Вскрыть замок", "door_force": "Выломать дверь", "block_push": "Толкнуть вещь", "block_smash": "Разбить вещь",
 }
 
 

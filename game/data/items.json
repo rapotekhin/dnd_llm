@@ -5362,6 +5362,58 @@
 			"material": true,
 			"description": "Глыба тёсаного камня из шахты. Каменщик режет из неё точила, ступки и статуэтки."
 		},
+		"clockwork_parts": {
+			"name": "Шестерёнки и пружинки",
+			"item_type": "gear",
+			"value_cp": 1000,
+			"weight": 0.5,
+			"properties": [],
+			"stack": true,
+			"material": true,
+			"description": "Латунные шестерёнки, пружинки и оси — материал на одно крошечное заводное устройство гнома-умельца. Остановившееся устройство снова разбирается на них."
+		},
+		"clockwork_toy": {
+			"name": "Заводная игрушка",
+			"item_type": "gear",
+			"value_cp": 500,
+			"weight": 0.5,
+			"properties": [],
+			"spoils_days": 1,
+			"spoils_to": "clockwork_parts",
+			"spoils_line": "Кончился завод",
+			"tags": [
+				"clockwork"
+			],
+			"description": "Заводной зверёк гнома-умельца: щёлкает, посвистывает и ковыляет по полу то вперёд, то вбок. Завода хватает на сутки, потом устройство разбирается на детали."
+		},
+		"clockwork_fire_starter": {
+			"name": "Заводное огниво",
+			"item_type": "gear",
+			"value_cp": 500,
+			"weight": 0.5,
+			"properties": [],
+			"spoils_days": 1,
+			"spoils_to": "clockwork_parts",
+			"spoils_line": "Кончился завод",
+			"tags": [
+				"clockwork"
+			],
+			"description": "Крошечный механизм гнома-умельца: щёлк — и язычок пламени, чтобы зажечь свечу, факел или костёр. Завода хватает на сутки, потом устройство разбирается на детали."
+		},
+		"clockwork_music_box": {
+			"name": "Музыкальная шкатулка",
+			"item_type": "gear",
+			"value_cp": 500,
+			"weight": 0.5,
+			"properties": [],
+			"spoils_days": 1,
+			"spoils_to": "clockwork_parts",
+			"spoils_line": "Кончился завод",
+			"tags": [
+				"clockwork"
+			],
+			"description": "Откроешь — играет одну песенку, пока не закроешь. Работа гнома-умельца: завода хватает на сутки, потом устройство разбирается на детали."
+		},
 		"book_of_shadows": {
 			"name": "Книга теней",
 			"item_type": "gear",

@@ -95,8 +95,7 @@ func _rebuild() -> void:
 				chosen[fid] = sel
 				picks["options"] = chosen, true)
 	if int(p["expertise"]) > 0:
-		var pool := (c.get("skill_profs", []) as Array).filter(func(s: Variant) -> bool: return not (c.get("expertise", []) as Array).has(s))
-		_checks(tr("LVL_EXPERTISE").format({"n": p["expertise"]}), "exp", pool, func(id: String) -> String: return tr("SKILL_" + id.to_upper()),
+		_checks(tr("LVL_EXPERTISE").format({"n": p["expertise"]}), "exp", p["expertise_pool"], func(id: String) -> String: return CharacterRules.expertise_word(data, id),
 			int(p["expertise"]), picks.get("expertise", []), func(sel: Array) -> void: picks["expertise"] = sel)
 	if bool(p["asi"]):
 		_asi(c)

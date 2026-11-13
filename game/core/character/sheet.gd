@@ -127,6 +127,18 @@ static func holder(s: GameSession, who: Dictionary) -> Dictionary:
 	return s.character if is_hero(who) else who
 
 
+## The holder of its features, charges and slots: its own when it has a class laid (the hero, a fighter), else a copy
+## with what its class and race would give it in a fight (FeatureRules.give_class) — nothing is written. A person out of
+## a fight reads its class by it (the creature's card, a ranger companion's Natural Explorer, v0.8.4.43.46).
+static func classed(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
+	var me := holder(s, who)
+	if is_hero(who) or who.has("side") or me.has("features") or me.has("traits") or not who.has("monster"):
+		return me
+	var probe := who.duplicate(true)
+	FeatureRules.give_class(data, probe, {"npc_id": str(who.get("npc_id", who.get("id", "")))})
+	return probe
+
+
 ## What it has on it in the hero's form (v0.8.4.15): the hero's sheet, a fighter's own things, a record's, else its
 ## template's gear. Nothing is filled: a look does not roll a person's pockets.
 static func things(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:

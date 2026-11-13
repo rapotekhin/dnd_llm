@@ -1728,13 +1728,24 @@ static func better(s: GameSession, data: Dictionary, who: Dictionary, skills: Ar
 
 
 ## A contest of two (5e), each on its own road (Roll.check: statuses, Lucky, the dark): `f` rolls `skill`, `t` the better
-## of `against`; one who cannot act does not resist (0). {mine, theirs, won}: a tie goes to `f`, a failed one loses.
-static func contest(s: GameSession, data: Dictionary, f: Dictionary, skill: String, t: Dictionary, against: Array) -> Dictionary:
+## of `against`; one who cannot act does not resist (0). {mine, theirs, won}: a tie goes to `f`, a failed one loses. A bard
+## of either side may cut the other's check with Cutting Words (v0.8.4.43.46), lines in `lines`.
+static func contest(s: GameSession, data: Dictionary, f: Dictionary, skill: String, t: Dictionary, against: Array, lines: Array[String] = []) -> Dictionary:
 	var r := Roll.check(s, data, f, {"skill": skill, "quiet": true})
+	var mine := int(r["total"])
 	var theirs := 0
-	if not t.is_empty() and Attack.up(s, t) and not ConditionRules.incapacitated(Sheet.holder(s, t)):
+	var resists := not t.is_empty() and Attack.up(s, t) and not ConditionRules.incapacitated(Sheet.holder(s, t))
+	if resists:
 		theirs = int(Roll.check(s, data, t, {"skill": better(s, data, t, against), "quiet": true})["total"])
-	return {"mine": int(r["total"]), "theirs": theirs, "won": (r["fail"] as Array).is_empty() and int(r["total"]) >= theirs}
+	if (r["fail"] as Array).is_empty():
+		var cut := {"total": mine, "ac": theirs, "nat20": false, "hit": mine >= theirs, "what": "проверка"}
+		if FeatureRules.cutting_words(s, data, f, cut, "roll", lines):
+			mine = int(cut["total"])
+		elif resists:
+			cut = {"total": theirs, "ac": mine + 1, "nat20": false, "hit": theirs > mine, "what": "проверка"}
+			if FeatureRules.cutting_words(s, data, t, cut, "roll", lines):
+				theirs = int(cut["total"])
+	return {"mine": mine, "theirs": theirs, "won": (r["fail"] as Array).is_empty() and mine >= theirs}
 
 
 ## The contest of a grapple or a shove: Athletics of `f` against the better of `t`, who does not resist when it cannot act (5e:
@@ -1745,8 +1756,10 @@ static func tussle(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 	points(s, data, f)["attacked"] = true
 	f["rage_kept"] = true
 	lines.append_array(ConditionRules.end_invisibility_on_attack(me, data))
-	var c := contest(s, data, f, "athletics", t, ["athletics", "acrobatics"])
+	var words: Array[String] = []
+	var c := contest(s, data, f, "athletics", t, ["athletics", "acrobatics"], words)
 	var won := bool(c["won"])
+	lines.append_array(words)
 	lines.append("%s %s %s: Атлетика %d против %d — %s" % [me.get("name", ""), what, it.get("name", ""), int(c["mine"]), int(c["theirs"]), "успех" if won else "не выходит"])
 	Harm.retort(s, data, f, t, true, lines)  # a hand on a hot body (Heated Body, v0.8.4.27.6)
 	if won and not cond.is_empty() and immune_to(data, t, cond):
@@ -2218,7 +2231,7 @@ static func answer_reaction(s: GameSession, data: Dictionary, choice: String) ->
 	Attack.land(s, data, f, p, ctx["blow"], ctx, lines)
 	var plan: Array = s.combat.get("resume_plan", [])
 	s.combat.erase("resume_plan")
-	while not plan.is_empty() and str(s.combat.get("outcome", "")).is_empty() and int(s.character.get("hp", 0)) > 0:
+	while not plan.is_empty() and str(s.combat.get("outcome", "")).is_empty() and int(s.character.get("hp", 0)) > 0 and Attack.up(s, f):
 		var name := str(plan.pop_front())
 		for x: Dictionary in Sheet.template(data, f)["actions"]:
 			if str(x["name_en"]) == name:

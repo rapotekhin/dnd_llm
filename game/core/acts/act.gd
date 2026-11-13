@@ -56,8 +56,8 @@ func buttons(_s: GameSession, _data: Dictionary, _f: Dictionary) -> Array[Dictio
 
 ## What it costs now: "action", "attack" (one attack of the Attack action), "bonus", "move" or "free". An action unless
 ## `rules.combat.act_bonus` gives it as a bonus.
-func cost(s: GameSession, data: Dictionary, f: Dictionary, _how: Dictionary) -> String:
-	return "bonus" if _by_bonus(s, data, f) else "action"
+func cost(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary) -> String:
+	return "bonus" if _by_bonus(s, data, f, how) else "action"
 
 
 ## How many of the cost: squares of the move.
@@ -138,11 +138,16 @@ func go(s: GameSession, data: Dictionary, f: Dictionary, to: String = "", how: D
 	return run(s, data, f, to, how)
 
 
-func _by_bonus(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
+## `rules.combat.act_bonus` gives it as a bonus now: a row of the act, or of its way `<act>.<how.how>`.
+func _by_bonus(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary = {}) -> bool:
 	var e := CombatRules.points(s, data, f)
 	if int(e.get("bonus", 0)) <= 0:
 		return false
-	for row: Dictionary in CombatRules.cfg(data)["act_bonus"].get(id, []):
+	var table: Dictionary = CombatRules.cfg(data)["act_bonus"]
+	var rows: Array = (table.get(id, []) as Array).duplicate()
+	if how.has("how"):
+		rows.append_array(table.get("%s.%s" % [id, str(how["how"])], []))
+	for row: Dictionary in rows:
 		if bool(row.get("last", false)) and int(e.get("action", 0)) > 0:
 			continue
 		if Sheet.has_trait(s, data, f, str(row.get("has", ""))) or SpellEffects.has(Sheet.holder(s, f), str(row.get("status", ""))):

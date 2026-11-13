@@ -156,8 +156,8 @@ static func odds(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 static func full(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, act: Dictionary, lines: Array[String]) -> void:
 	var plan := _plan(s, data, f, t, act)
 	for i in plan.size():
-		if not up(s, t) or str(s.combat.get("outcome", "")) == "dead":
-			return  # nobody finishes the downed hero (v0.7.9)
+		if not up(s, t) or not up(s, f) or str(s.combat.get("outcome", "")) == "dead":
+			return  # nobody finishes the downed hero (v0.7.9); a striker felled by a missile thrown back stops
 		one(s, data, f, t, plan[i], lines)
 		if bool(s.combat.get("halt", false)):
 			var rest: Array = []
@@ -355,7 +355,8 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 		lines.append(line + " — отбито")
 		CombatRules.fx(s, str(t["id"]), "dodge")
 		return none
-	if not crit and _words_for(s, data, f, t, total, ac, lines):
+	var said := {"total": total, "ac": ac, "nat20": crit, "hit": true}
+	if FeatureRules.cutting_words(s, data, f, said, "roll", lines, str(t["id"])) and not bool(said["hit"]):  # a bard of its side (v0.8.4.43.46)
 		lines.append(line + " — мимо")
 		CombatRules.fx(s, str(t["id"]), "dodge")
 		return none
@@ -363,6 +364,7 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	CombatRules.line_tip(s, line, tip + "\n\nУрон: %s" % hurt["tip"])
 	var ctx := {"foe": str(f["id"]), "blow": b, "line": line, "crit": crit, "dmg": int(hurt["dmg"]), "types": hurt["types"], "notes": hurt["notes"], "prone": hurt["prone"],
 		"hit": true, "total": total, "ac": ac, "nat20": nat == 20}
+	FeatureRules.cutting_words(s, data, f, ctx, "damage", lines, str(t["id"]))  # the hit stands: a bard of its side cuts its damage
 	if Sheet.is_hero(t):
 		f["last_total"] = total  # for the labels of the reaction spells (v0.7.13.7)
 		var rx := FeatureRules.reactions(s, data, t, f, b.get("act", {}), shot(f, t, b), int(hurt["dmg"]), ctx)  # v0.7.10
@@ -381,20 +383,6 @@ static func _roll(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 		Acts.react(s, data, t, "hurt", ctx, lines)
 	land(s, data, f, t, b, ctx, lines)
 	return {"hit": bool(ctx["hit"]), "crit": crit, "damage": int(ctx["dmg"])}
-
-
-## Cutting Words (5e) for one of the target's side: a bard within 60 ft who sees the striker spends its reaction and a die of
-## Bardic Inspiration on the roll at `t` (the hero's own is in its hit's reactions). Whether the blow misses now.
-static func _words_for(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, total: int, ac: int, lines: Array[String]) -> bool:
-	for id: String in CombatRules.friends_of(s, t):
-		var o := CombatRules.fighter(s, id)
-		var c := Sheet.holder(s, o)
-		if id == str(t["id"]) or not FeatureRules.has(c, "cutting_words") or bool(o.get("reacted", false)) or not up(s, o) 				or ConditionRules.incapacitated(c) or Stock.left(c, data, "bardic_inspiration") < 1 or ConditionRules.has(c, "blinded") 				or ConditionRules.invisible(Sheet.holder(s, f), data) or FightGrid.dist(o, f) > FightGrid.squares_of(data, 60) 				or FeatureRules.policy(s, o, "cutting_words") == "never":
-			continue
-		var ctx := {"total": total, "ac": ac, "nat20": false, "hit": true}
-		FeatureRules.apply_reaction(s, data, o, f, "cutting_words", ctx, lines)
-		return not bool(ctx["hit"])
-	return false
 
 
 ## The damage of a hit by its pieces, each through what the target resists: {dmg, types, notes, prone, tip}.

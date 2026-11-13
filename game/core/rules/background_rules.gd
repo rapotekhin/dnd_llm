@@ -155,8 +155,13 @@ static func tool_check(c: Dictionary, data: Dictionary, tool: String, skill: Str
 	if proficient(c, tool):
 		out["note"] = "владение: " + tool_name(data, tool)
 		var skilled := (c.get("skill_profs", []) as Array).has(skill) or CharacterRules.has_feature(c, "skill_prof_" + skill)
+		var twice := (c.get("expertise", []) as Array).has(tool)  # a rogue's Expertise with thieves' tools (v0.8.4.43.46)
 		if skilled and (t.get("skills", []) as Array).has(skill):
 			out["advantage"] = "навык и %s" % tool_name(data, tool)  # both proficiencies: advantage, not twice the bonus (XGtE)
-		elif not skilled:
-			out["bonus"] = CharacterRules.prof_bonus(c, data)
+		if not skilled:
+			out["bonus"] = CharacterRules.prof_bonus(c, data) * (2 if twice else 1)
+		elif twice and not (c.get("expertise", []) as Array).has(skill):
+			out["bonus"] = CharacterRules.prof_bonus(c, data)  # the skill's proficiency once, the tool's doubles it
+		if twice:
+			out["note"] = "экспертиза: " + tool_name(data, tool)
 	return out

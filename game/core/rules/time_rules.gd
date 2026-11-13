@@ -242,6 +242,12 @@ static func on_move(s: GameSession, data: Dictionary, from: String, to: String) 
 	var lines: Array[String] = []
 	if wm > 1.0:  # mud and snow (v0.7.46)
 		lines.append("Дорога тяжела — %s: путь ×%s" % [WeatherRules.way_why(s, data, from, to), str(wm).trim_suffix(".0")])
+	elif not same and WeatherRules.travel_mult(s, data, from, to, true) > 1.0:  # Natural Explorer leads the way (v0.8.4.43.46)
+		var w := WorldView.new(data["world"])
+		var guide := FeatureRules.party_explorer(s, data, w.location_id(to))
+		if guide.is_empty():
+			guide = FeatureRules.party_explorer(s, data, w.location_id(from))
+		lines.append("%s знает эти места — %s не держит в пути" % [guide, WeatherRules.way_why(s, data, from, to)])
 	lines.append_array(advance(s, data, minutes))
 	lines.append_array(march(s, data, minutes))
 	if not same:
@@ -302,9 +308,10 @@ static func dark(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO)
 	return unlit(s, data) and not can_see(s, data, who) and not SightRules.lit(s, data)
 
 
-## Passive Perception lost now: the hero's sneaking (−5), and for anybody darkness (disadvantage = −5) or the weather.
+## Passive Perception lost now: the hero's sneaking (−5; none in its favored terrain — Natural Explorer stays alert to danger,
+## v0.8.4.43.46), and for anybody darkness (disadvantage = −5) or the weather.
 static func passive_penalty(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
-	var sneak := ExplorationRules.SNEAK_PASSIVE_PENALTY if Sheet.is_hero(who) and s.sneaking else 0
+	var sneak := ExplorationRules.SNEAK_PASSIVE_PENALTY if Sheet.is_hero(who) and s.sneaking and not FeatureRules.explorer(s, data, who) else 0
 	return sneak + (5 if dark(s, data, who) else WeatherRules.passive(s, data))  # fog, a downpour (v0.7.46)
 
 

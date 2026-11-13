@@ -480,9 +480,7 @@ static func throw_out(s: GameSession, data: Dictionary, f: Dictionary, b: Dictio
 	var item := str(b.get("id", a.get("item", "")))
 	if item.is_empty() or returns(data, s.items, item):
 		return
-	var holder := Sheet.holder(s, f)
-	if not holder.has("inventory"):  # a foe of its template's gear: what it has from now on is its own
-		holder["inventory"] = (Gear.start(data, Sheet.template_id(data, f))["inventory"] as Dictionary).duplicate()
+	var holder := owned(s, data, f)
 	var slot := ""
 	for sl: String in ["main_hand", "off_hand"]:
 		if str(holder.get("equipped", {}).get(sl, "")) == item and slot.is_empty():
@@ -493,6 +491,44 @@ static func throw_out(s: GameSession, data: Dictionary, f: Dictionary, b: Dictio
 	dropped.append({"item": item, "x": at.x, "y": at.y, "slot": slot, "by": str(f.get("id", ""))})
 	s.combat["dropped"] = dropped
 	FightGrid.changed(s)
+
+
+## The holder of a fighter's things for writing: a foe of its template's gear gets them as its own first.
+static func owned(s: GameSession, data: Dictionary, f: Dictionary) -> Dictionary:
+	var holder := Sheet.holder(s, f)
+	if not holder.has("inventory"):  # a foe of its template's gear: what it has from now on is its own
+		holder["inventory"] = (Gear.start(data, Sheet.template_id(data, f))["inventory"] as Dictionary).duplicate()
+	return holder
+
+
+## The missile of a blow that hit — a shot's arrow or bolt, a thrown weapon — caught out of the air by `t` (Deflect Missiles,
+## Gloves of Missile Snaring, v0.8.4.43.46): no longer on the field nor among what `f` may gather after the fight, now in the
+## catcher's things. Only one small enough for one hand (no heavy, two-handed thing) and only with a hand free. Its id, "" —
+## nothing caught.
+static func catch(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, b: Dictionary) -> String:
+	var ammo := str(b.get("ammo", ""))
+	var item := ammo if not ammo.is_empty() else str(b.get("id", b.get("act", {}).get("item", "")))
+	var def := ItemRules.def_of(data["items"], s.items, item) if not item.is_empty() else {}
+	if def.is_empty():
+		return ""  # a giant's rock, a spine of no thing
+	var props: Array = def.get("properties", [])
+	if props.has("heavy") or props.has("two_handed") or not CharacterRules.free_hand(Sheet.things(s, data, t), data, s.items):
+		return ""
+	if not ammo.is_empty():
+		var spent: Dictionary = f.get("ammo_spent", {})
+		if int(spent.get(ammo, 0)) > 0:
+			spent[ammo] = int(spent[ammo]) - 1
+	else:
+		var list: Array = s.combat.get("dropped", [])
+		var i := list.size() - 1
+		while i >= 0 and not (str(list[i]["item"]) == item and str(list[i].get("by", "")) == str(f.get("id", ""))):
+			i -= 1
+		if i < 0:
+			return ""  # a returning weapon is back in its hand already
+		list.remove_at(i)
+		FightGrid.changed(s)
+	ItemRules.add(owned(s, data, t), item, 1)
+	return item
 
 
 static func returns(data: Dictionary, session_items: Dictionary, item: String) -> bool:

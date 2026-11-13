@@ -123,7 +123,9 @@ func test_cutting_words_turn_a_blow_at_an_ally() -> void:
 	var left := Stock.left(s.character, data, "bardic_inspiration")
 	var lines: Array[String] = []
 	TestUtils.beside(s, foe)
-	assert_bool(Attack._words_for(s, data, foe, ally, 12, 12, lines)).is_true()  # any die takes a bare hit off
+	var said := {"total": 12, "ac": 12, "nat20": false, "hit": true}
+	assert_bool(FeatureRules.cutting_words(s, data, foe, said, "roll", lines, str(ally["id"]))).is_true()
+	assert_bool(bool(said["hit"])).is_false()  # any die takes a bare hit off
 	assert_int(Stock.left(s.character, data, "bardic_inspiration")).is_equal(left - 1)
 	assert_bool(bool(CombatRules.player(s)["reacted"])).is_true()
 

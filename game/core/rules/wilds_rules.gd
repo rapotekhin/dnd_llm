@@ -164,6 +164,8 @@ static func _predator(s: GameSession, data: Dictionary) -> String:
 static func _give(s: GameSession, data: Dictionary, got: Dictionary, item: String, qty: int) -> void:
 	if qty <= 0 or not data["items"]["catalog"].has(item):
 		return
+	if FoodRules.spoils_days(data, s.items, item) > 0:  # food: twice in the favored terrain (Natural Explorer, v0.8.4.43.46)
+		qty *= FeatureRules.forage_mult(s, data)
 	ItemRules.add(s.character, item, qty)
 	got[item] = int(got.get(item, 0)) + qty
 
@@ -232,6 +234,8 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 			got_parts.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, item), int(got[item])])
 		if not got_parts.is_empty():
 			lines.append("Добыто: %s" % ", ".join(got_parts))
+			if FeatureRules.forage_mult(s, data) > 1:
+				lines.append("Исследователь природы: еды вдвое больше")
 		CharacterRules.refresh(s.character, data, s.items)
 		if k == "hunt" and FactionRules.friendly(s, data, str(FactionRules.cfg(data)["by_type"]["beast"])):  # v0.7.50: a friend of the beasts hunts them
 			lines.append_array(WorldEvent.standing(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "hunt", "охота"))

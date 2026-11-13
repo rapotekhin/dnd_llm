@@ -527,13 +527,13 @@
 			"books": {"name": "книги", "ids": ["book", "elvish_primer", "field_medic_manual", "herbalist_notes", "spellbook", "paper_one_sheet", "ink_1_ounce_bottle"]},
 			"jewelry": {"name": "украшения", "ids": ["amulet", "silver_ring", "signet_ring", "crystal", "mirror_steel"], "types": ["treasure"]},
 			"finery": {"name": "наряды и духи", "ids": ["clothes_fine", "clothes_costume", "perfume_vial", "soap"]},
-			"music": {"name": "музыка", "ids": ["lute", "lyre", "flute", "pan_flute", "drum", "dulcimer", "bagpipes", "shawm", "horn"]},
+			"music": {"name": "музыка", "ids": ["lute", "lyre", "flute", "pan_flute", "drum", "dulcimer", "bagpipes", "shawm", "horn", "clockwork_music_box"]},
 			"weapons": {"name": "оружие", "types": ["weapon"]},
 			"tools": {"name": "инструменты", "has": "tool"},
 			"herbs": {"name": "травы", "ids": ["herbs", "herbal_remedy", "herbalism_kit", "sprig_of_mistletoe", "goodberry"]},
 			"holy": {"name": "святыни", "ids": ["holy_water", "block_of_incense", "censer", "reliquary", "emblem"]},
 			"magic": {"name": "магия", "types": ["wondrous"]},
-			"games": {"name": "игры", "ids": ["dice_set", "playing_card_set"]}
+			"games": {"name": "игры", "ids": ["dice_set", "playing_card_set", "clockwork_toy"]}
 		},
 		"make": {"kinds": ["friend", "mentor"], "genders": ["male", "female", "other", "any"]}
 	},
@@ -1562,7 +1562,7 @@
 	},
 	"spellcasting": {
 		"_by_master": "Заклинания только через диалог с мастером (v0.8.4.28.4, SpellRules.by_master): у движка для них нет дороги, в бою не творятся, в описании сказано об этом.",
-		"by_master": ["augury", "druidcraft", "illusory_script", "magic_mouth", "major_image", "message", "minor_illusion", "prestidigitation", "silent_image", "speak_with_dead", "speak_with_plants", "thaumaturgy"],
+		"by_master": ["augury", "druidcraft", "illusory_script", "magic_mouth", "major_image", "message", "minor_illusion", "prestidigitation", "speak_with_dead", "speak_with_plants", "thaumaturgy"],
 		"spellbook_start": 6,
 		"spellbook_per_level": 2,
 		"prepared_level_divisor": {
@@ -1599,6 +1599,8 @@
 		}
 	},
 	"feature_grants": {
+		"_expertise_tools": "v0.8.4.43.46: expertise_tools — the tools a feature's Expertise may double beside the skills, when the character knows them (CharacterRules.expertise_pool; the bonus — BackgroundRules.tool_check).",
+		"rogue_expertise_1": {"expertise_tools": ["thieves_tools"]},
 		"bonus_proficiency": {
 			"armor": [
 				"heavy"
@@ -2047,6 +2049,7 @@
 				"stock": {
 					"carpenters_tools": 1,
 					"potters_tools": 1,
+					"clockwork_parts": 3,
 					"hammer": 3,
 					"ladder_10_foot": 2,
 					"pole_10_foot": 3,
@@ -3138,7 +3141,7 @@
 		"blind": 1,
 		"darkvision": 12,
 		"devils_sight": 24,
-		"pierce": {"dark": ["devils_sight", "blindsight", "truesight"], "fog": ["blindsight"]},
+		"pierce": {"dark": ["devils_sight", "blindsight", "truesight"], "fog": ["blindsight"], "image": ["blindsight", "truesight"]},
 		"lights": {"light": 8, "torch": 8, "lamp": 9, "lantern": 12, "lantern_of_revealing": 12, "gem_of_brightness": 12, "lantern_bullseye": 12, "candle_tallow": 2, "candle": 2},
 		"watch": 12,
 		"cone": 120,
@@ -3782,10 +3785,12 @@
 			"water_walk": {"status": "water_walk", "word": "по воде", "on": ["wet"]}
 		},
 		"act_bonus": {
-			"_doc": "Who does an act as a bonus action (v0.8.4.7, Act): `has` — a feature or a trait, `status` — a spell's effect, `last` — only with the action spent.",
+			"_doc": "Who does an act as a bonus action (v0.8.4.7, Act): `has` — a feature or a trait, `status` — a spell's effect, `last` — only with the action spent. A key `<act>.<how>` is one way of an act (v0.8.4.43.46: field.door_pick — a lock picked by Fast Hands).",
 			"dash": [{"has": "cunning_action", "last": true}, {"status": "bonus_dash", "last": true}, {"has": "aggressive"}],
 			"disengage": [{"has": "cunning_action"}, {"has": "nimble_escape"}],
-			"hide": [{"has": "cunning_action"}, {"has": "nimble_escape"}]
+			"hide": [{"has": "cunning_action"}, {"has": "nimble_escape"}],
+			"use_item": [{"has": "fast_hands"}],
+			"field.door_pick": [{"has": "fast_hands"}]
 		},
 		"grid": {
 			"_doc": "The field of a fight (v0.8.4, FightGrid): a square of `ft`; `spans` — the squares of a body by its SRD size; `start` — how far foes with no square of their own stand from the hero; `cover` — the bonus to AC and Dexterity saves; `charge` — the squares of a run before a charge; `pit` — a fall; `pursuit` — how near a way out a foe must stand to follow the hero through it, `pursuit_rounds` — when it comes; `doors` — a bar on a door; `blocks` — the map's cell that is a thing in a fight, its body and HP, how much a point of Strength shifts; `fire` — a burning square, the SRD's oil; `hazard` — the map's cell that hurts; `noise` — who hears the fight: squares, minus `wall` for each wall on the way, `beyond` left to carry through a way out.",
@@ -4126,6 +4131,9 @@
 			"oil_lamp_clay": {"tool": "potters_tools", "station": "hearth", "hours": 1, "dc": 8, "materials": {"clay": 1}, "output": "oil_lamp_clay", "qty": 2},
 			"lamp": {"tool": "tinkers_tools", "station": "", "hours": 2, "dc": 10, "materials": {"iron_bar": 1}, "output": "lamp", "qty": 1},
 			"tinderbox": {"tool": "tinkers_tools", "station": "", "hours": 2, "dc": 10, "materials": {"iron_bar": 1}, "output": "tinderbox", "qty": 1},
+			"clockwork_toy": {"tool": "tinkers_tools", "station": "", "hours": 1, "dc": 5, "materials": {"clockwork_parts": 1}, "output": "clockwork_toy", "qty": 1, "trait": "tinker", "limit": {"tag": "clockwork", "n": 3}},
+			"clockwork_fire_starter": {"tool": "tinkers_tools", "station": "", "hours": 1, "dc": 5, "materials": {"clockwork_parts": 1}, "output": "clockwork_fire_starter", "qty": 1, "trait": "tinker", "limit": {"tag": "clockwork", "n": 3}},
+			"clockwork_music_box": {"tool": "tinkers_tools", "station": "", "hours": 1, "dc": 5, "materials": {"clockwork_parts": 1}, "output": "clockwork_music_box", "qty": 1, "trait": "tinker", "limit": {"tag": "clockwork", "n": 3}},
 			"lantern": {"tool": "tinkers_tools", "station": "", "hours": 8, "dc": 13, "materials": {"iron_bar": 1, "bottle_glass": 1}, "output": "lantern", "qty": 1},
 			"cloth_bolt": {"tool": "weavers_tools", "station": "", "hours": 2, "dc": 8, "materials": {"yarn": 4}, "output": "cloth_bolt", "qty": 1, "name": "Соткать холст"},
 			"blanket": {"tool": "weavers_tools", "station": "", "hours": 2, "dc": 8, "materials": {"cloth_bolt": 1}, "output": "blanket", "qty": 1},
@@ -4233,7 +4241,10 @@
 		}
 	},
 	"class_features": {
-		"_doc": "Class features in the engine (v0.7.10, FeatureRules): Font of Magic — sorcery points for a slot by circle; metamagic — the cost in points and what it does (quickened: a bonus action; empowered: the damage dice twice, the better; heightened: the first save of the target with disadvantage; distant: double range; extended: double rounds); careful, twinned and subtle stay with the master (no allies, social). Sacred Weapon lasts 10 rounds; Song of Rest — a die on a short rest when hit dice are spent.",
+		"_doc": "Class features in the engine (v0.7.10, FeatureRules): Font of Magic — sorcery points for a slot by circle; metamagic — the cost in points and what it does (quickened: a bonus action; empowered: the damage dice twice, the better; heightened: the first save of the target with disadvantage; distant: double range; extended: double rounds); careful, twinned and subtle stay with the master (no allies, social). Sacred Weapon lasts 10 rounds; Song of Rest — a die on a short rest when hit dice are spent. deflect_range — the normal and the long range in feet of a missile caught by Deflect Missiles and thrown back (FeatureRules.thrown_back).",
+		"deflect_range": [20, 60],
+		"_explorer": "Natural Explorer (5e, FeatureRules.explorer): the favored terrain is the location's `terrain` by the feature's word (`feature_terrain`: the pack's and the master's «mountains» is the SRD's «mountain»). There a proficient Intelligence or Wisdom skill gets the proficiency twice (CheckEngine), the party is not slowed by mud or snow on the way (WeatherRules.travel_mult), the hero's sneaking costs no passive Perception (TimeRules.passive_penalty: alert to danger), and food found by gathering, hunting or fishing is `forage_mult` times (CraftRules.gather, WildsRules.go). Nobody gets lost in the game, sneaking keeps the pace; tracking is the master's by the feature's text.",
+		"explorer": {"feature_terrain": {"mountains": "mountain"}, "forage_mult": 2},
 		"prerequisites": {
 			"eldritch_invocation_agonizing_blast": "spell:eldritch_blast",
 			"eldritch_invocation_repelling_blast": "spell:eldritch_blast",
@@ -4568,18 +4579,19 @@
 		}
 	},
 	"toggles": {
-		"_doc": "Passives as in BG3 (v0.8.4.43.7, ToggleRules): what a character keeps on or off, a cell of the hotbar's «Пассивные». name, tip; who has it: all (anybody), features (any of them); default — on when never set; yield_bout — on and fixed in a bout to surrender (ArenaRules.yield_bout), why its key. What it does on a weapon blow of the one it belongs to, when the blow matches `blow` ({melee, str_based} of Attack.way): act — the feature action run first for nothing when it can (FeatureRules.why), opts — merged into the blow's opts (Attack.land → FeatureRules.after_hit), spare — a melee blow at 0 HP only knocks out (Harm.take).",
+		"_doc": "Passives as in BG3 (v0.8.4.43.7, ToggleRules): what a character keeps on or off, a cell of the hotbar's «Пассивные». name, tip; who has it: all (anybody), features (any of them); default — on when never set; yield_bout — on and fixed in a bout to surrender (ArenaRules.yield_bout), why its key. What it does on a weapon blow of the one it belongs to, when the blow matches `blow` ({melee, str_based} of Attack.way): act — the feature action run first for nothing when it can (FeatureRules.why), opts — merged into the blow's opts (Attack.land → FeatureRules.after_hit), spare — a melee blow at 0 HP only knocks out (Harm.take). A row without `blow` is read where its feature acts (v0.8.4.43.46: deflect_throw — FeatureRules.catch_missile throws a caught missile back).",
 		"nonlethal": {"name": "Не убивать", "tip": "Удар вплотную, доводящий до 0 хитов, только оглушает: враг падает без сознания, его можно связать и допросить", "all": true, "blow": {"melee": true}, "spare": true, "yield_bout": "COMBAT_NONLETHAL_ARENA"},
 		"reckless": {"name": "Безрассудная атака", "tip": "Первая атака Силой вплотную в каждом ходу — безрассудная сама: с преимуществом до конца хода, но и по вам — с преимуществом до вашего следующего хода", "features": ["reckless_attack"], "blow": {"melee": true, "str_based": true}, "act": "reckless"},
-		"stunning": {"name": "Оглушающий удар", "tip": "Каждое попадание вплотную тратит 1 ки на оглушающий удар, пока ки есть: спасбросок Телосложения, иначе цель ошеломлена до конца вашего следующего хода", "features": ["stunning_strike"], "blow": {"melee": true}, "opts": {"stunning": true}}
+		"stunning": {"name": "Оглушающий удар", "tip": "Каждое попадание вплотную тратит 1 ки на оглушающий удар, пока ки есть: спасбросок Телосложения, иначе цель ошеломлена до конца вашего следующего хода", "features": ["stunning_strike"], "blow": {"melee": true}, "opts": {"stunning": true}},
+		"deflect_throw": {"name": "Метнуть пойманный снаряд", "tip": "Снаряд, пойманный Отражением снарядов, тут же летит обратно в стрелка за 1 ки: атака с владением, кость боевых искусств + Ловкость, 20/60 фт", "features": ["deflect_missiles"], "default": true, "catch": true}
 	},
 	"reactions": {
 		"_doc": "The reactions a character chooses for itself as in BG3 (v0.8.4.43.7, FeatureRules.policy): «Спрашивать / Всегда / Никогда» of each, kept on its record (`reacts`); the hero's not chosen yet — the settings' common choice; a companion is never asked. A row: name, tip; who has it: all, features (any of them), style (a fighting style), prop (a property of what it wears), template (its SRD template's reaction of this id). A spell with a reaction of rules.spell_effects is a row by itself, under its own id.",
 		"opportunity": {"name": "Атака при отходе", "tip": "Удар по врагу, который уходит из вашей досягаемости без отхода", "all": true},
 		"uncanny_dodge": {"name": "Невероятное уклонение", "tip": "Урон от попавшего удара, который вы видите, вдвое меньше", "features": ["uncanny_dodge"]},
-		"deflect_missiles": {"name": "Отражение снарядов", "tip": "Урон от попавшего снаряда меньше на 1к10 + Ловкость + уровень", "features": ["deflect_missiles"]},
-		"missile_snaring": {"name": "Ловля снарядов", "tip": "Перчатки ловят снаряд: урон меньше на 1к10 + Ловкость", "prop": "missile_snaring"},
-		"cutting_words": {"name": "Язвительные слова", "tip": "Кость вдохновения вычитается из броска атаки по вам или союзнику в 60 футах", "features": ["cutting_words"]},
+		"deflect_missiles": {"name": "Отражение снарядов", "tip": "Урон от попавшего снаряда меньше на 1к10 + Ловкость + уровень; урон 0 — снаряд пойман, если рука свободна (и летит обратно за 1 ки, когда включено «Метнуть пойманный снаряд»)", "features": ["deflect_missiles"]},
+		"missile_snaring": {"name": "Ловля снарядов", "tip": "Перчатки ловят снаряд: урон меньше на 1к10 + Ловкость; урон 0 — снаряд в свободной руке", "prop": "missile_snaring"},
+		"cutting_words": {"name": "Язвительные слова", "tip": "Кость вдохновения вычитается из броска врага в 60 футах, который вас слышит: из атаки по вам или союзнику (из урона, если атаку не сбить), из проверки в схватке", "features": ["cutting_words"]},
 		"giant_killer": {"name": "Убийца великанов", "tip": "Удар в ответ большому врагу рядом, который атаковал вас", "features": ["hunters_prey_giant_killer"]},
 		"divine_smite": {"name": "Божественная кара", "tip": "После попадания вплотную — ячейка на кару: урон излучением", "features": ["divine_smite"]},
 		"protect": {"name": "Защита союзника", "tip": "Со щитом — помеха атаке по союзнику рядом с вами", "style": "protection"},
@@ -5041,6 +5053,7 @@
 		"fog_cloud": {"sustained": {"kind": "zone", "obscure": true, "veil": "fog", "on": [], "grow": 20}},
 		"darkness": {"sustained": {"kind": "zone", "obscure": true, "veil": "dark", "on": [], "douses": 2}},
 		"silence": {"sustained": {"kind": "zone", "silence": true, "on": []}},
+		"silent_image": {"sustained": {"kind": "zone", "obscure": true, "veil": "image", "reveal": true, "on": ["now", "enter"], "cost": "action", "move": 60, "label": "сдвинуть образ"}},
 		"stinking_cloud": {"sustained": {"kind": "zone", "on": ["start", "enter"], "save": "con", "retch": true, "obscure": true, "veil": "fog"}},
 		"wind_wall": {"sustained": {"kind": "zone", "shape": {"type": "wall", "size": 50}, "on": ["now"], "save": "str", "dice": {"3": "3d8"}, "type": "bludgeoning", "block_ranged": true}},
 		"gust_of_wind": {"sustained": {"kind": "push", "cost": "bonus", "now": true, "save": "str", "reach": 60, "label": "порыв"}},
@@ -5203,7 +5216,7 @@
 		"stay_pct": 40,
 		"shelter_items": ["tent_two_person"],
 		"warm_items": ["blanket"],
-		"fire_items": ["tinderbox"],
+		"fire_items": ["tinderbox", "clockwork_fire_starter"],
 		"sun_fire_items": ["magnifying_glass"],
 		"_sun_fire": "v0.8.4.27: a thing that lights a fire only by the sun — under a sky of a kind with `sun` (a magnifying glass, before the dark).",
 		"magic": {"max_hours": 24},

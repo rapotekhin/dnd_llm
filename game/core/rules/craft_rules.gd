@@ -290,6 +290,8 @@ static func known(s: GameSession, data: Dictionary) -> Array[String]:
 		var r: Dictionary = recipes[id]
 		if needs_tool(r) and not BackgroundRules.proficient(s.character, tool_of(r)):
 			continue
+		if r.has("trait") and not CharacterRules.has_trait(s.character, str(r["trait"])):
+			continue  # a race trait's own work: a tinker gnome's clockwork (v0.8.4.43.46)
 		if bool(r.get("learn", false)) and not learned(s.character).has(id) and not books.has(id):
 			continue
 		out.append(id)
@@ -353,7 +355,19 @@ static func why_not(s: GameSession, data: Dictionary, id: String) -> String:
 		return "CRAFT_NO_STATION"
 	if not missing(s, r).is_empty():
 		return "CRAFT_NO_MATERIALS"
+	if r.get("limit") is Dictionary and held_of(s, data, str(r["limit"]["tag"])) >= int(r["limit"]["n"]):
+		return "CRAFT_LIMIT"  # no more than three clockworks at once (Tinker, 5e)
 	return ""
+
+
+## How many things of the item tag `tag` the hero has now, in its pack and bags.
+static func held_of(s: GameSession, data: Dictionary, tag: String) -> int:
+	var n := 0
+	for h: Dictionary in Thing.holders(s.character):
+		for id: String in Thing.store(h):
+			if (ItemRules.def_of(data["items"], s.items, ItemRules.real_id(id)).get("tags", []) as Array).has(tag):
+				n += Thing.count(h, id)
+	return n
 
 
 ## Too worn to work at a craft: exhaustion of rules.craft.max_exhaustion or more (v0.8.4.30).
@@ -681,6 +695,9 @@ static func gather(s: GameSession, data: Dictionary, tag: String) -> Array[Strin
 	var qty := s.rng.randi_range(int(g["qty"][0]), int(g["qty"][1]))
 	var pool: Array = g.get("items", [g.get("item", "")])
 	var item := str(pool[s.rng.randi_range(0, pool.size() - 1)])
+	if FoodRules.spoils_days(data, s.items, item) > 0 and FeatureRules.forage_mult(s, data) > 1:  # food twice in the favored terrain (5e)
+		qty *= FeatureRules.forage_mult(s, data)
+		lines.append("Исследователь природы: еды вдвое больше")
 	ItemRules.add(s.character, item, qty)
 	CharacterRules.refresh(s.character, data, s.items)
 	lines.append("Добыто: %s ×%d" % [ItemRules.display_name(data["items"], s.items, item), qty])

@@ -76,7 +76,7 @@ static func before_blow(s: GameSession, data: Dictionary, f: Dictionary, b: Dict
 	var all := rows(data)
 	for id: String in all:
 		var row: Dictionary = all[id]
-		if not _fits(row.get("blow", {}), b) or not on(s, data, f, id):
+		if not row.has("blow") or not _fits(row["blow"], b) or not on(s, data, f, id):
 			continue
 		var act := str(row.get("act", ""))
 		if not act.is_empty() and FeatureRules.why(s, data, f, act, "").is_empty():

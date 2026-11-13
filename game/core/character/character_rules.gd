@@ -667,6 +667,34 @@ static func two_hand_grip(c: Dictionary, data: Dictionary, session_items: Dictio
 		and str(eq.get("off_hand", "")).is_empty() and not style(c, "dueling"))
 
 
+## What a character may take expertise in by `features` (v0.8.4.43.46): its skills, and a tool of `expertise_tools` of
+## rules.feature_grants of those features that it knows (the rogue's thieves' tools, 5e); less what it has expertise in already.
+static func expertise_pool(data: Dictionary, skills: Array, tools: Array, features: Array, have: Array) -> Array:
+	var out: Array = []
+	for sk: Variant in skills:
+		if not out.has(str(sk)) and not have.has(str(sk)):
+			out.append(str(sk))
+	var grants: Dictionary = data["rules"].get("feature_grants", {})
+	for f: Variant in features:
+		for tool: Variant in grants.get(str(f), {}).get("expertise_tools", []):
+			if tools.has(str(tool)) and not out.has(str(tool)) and not have.has(str(tool)):
+				out.append(str(tool))
+	return out
+
+
+## The word of a pick of expertise: a skill's, or a tool's.
+static func expertise_word(data: Dictionary, id: String) -> String:
+	return TranslationServer.translate("SKILL_" + id.to_upper()) if data["rules"]["skills"].has(id) else BackgroundRules.tool_name(data, id)
+
+
+## A hand is free to catch or hold a thing: the main hand empty, or the off hand empty beside a weapon that is not
+## two-handed (a versatile one lets go of its second hand at once). `c` — anybody's things (Sheet.things).
+static func free_hand(c: Dictionary, data: Dictionary, session_items: Dictionary) -> bool:
+	var eq: Dictionary = c.get("equipped", {})
+	var main := str(eq.get("main_hand", ""))
+	return main.is_empty() or (str(eq.get("off_hand", "")).is_empty() and not _two_handed(data, session_items, main))
+
+
 ## Pounds the hero carries: everything in the pack, worn things too (v0.7.7).
 static func carried_weight(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> float:
 	var total := 0.0

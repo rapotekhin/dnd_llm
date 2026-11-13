@@ -156,7 +156,28 @@ static func feature_choices(ch: Dictionary, data: Dictionary) -> Array[Dictionar
 		var d: Dictionary = traits.get(t, {})
 		if d.has("options"):
 			out.append({"id": t, "name": d["name"], "choose": int(d["options"]["choose"]), "from": d["options"]["from"], "kind": "trait"})
+		if d.get("tool_choice") is Dictionary:  # a tool of choice (a dwarf's, v0.8.4.43.46): picked like an option, a tool of the hero
+			out.append({"id": t, "name": d["name"], "choose": int(d["tool_choice"]["choose"]), "from": d["tool_choice"]["from"], "kind": "tool"})
 	return out
+
+
+## The tools the hero knows at creation: its class's, its race traits' with the tool picked of a choice, its background's.
+static func tools_of(ch: Dictionary, data: Dictionary) -> Array:
+	var tools: Array = (klass(ch, data).get("tools", []) as Array).duplicate()
+	var traits_data: Dictionary = data["races"]["traits"]
+	var options: Dictionary = ch.get("options", {})
+	for t: String in race_traits(ch, data):
+		var td: Dictionary = traits_data.get(t, {})
+		_merge(tools, td.get("tools", []))
+		if td.get("tool_choice") is Dictionary:
+			_merge(tools, options.get(t, []))
+	_merge(tools, background(ch, data).get("tools", []))
+	return tools
+
+
+## What the hero may take expertise in at creation (CharacterRules.expertise_pool): its skills, the rogue's thieves' tools.
+static func expertise_pool(ch: Dictionary, data: Dictionary) -> Array:
+	return CharacterRules.expertise_pool(data, fixed_skills(ch, data) + all_skills(ch), tools_of(ch, data), level1_features(ch, data), [])
 
 
 static func expertise_count(ch: Dictionary, data: Dictionary) -> int:
@@ -313,8 +334,7 @@ static func errors(ch: Dictionary, data: Dictionary, step: String) -> Array[Stri
 					break
 			var n := expertise_count(ch, data)
 			if n > 0:
-				var pool := fixed_skills(ch, data) + all_skills(ch)
-				if not _picked_ok(ch.get("expertise", []), {"choose": n, "from": pool}):
+				if not _picked_ok(ch.get("expertise", []), {"choose": n, "from": expertise_pool(ch, data)}):
 					out.append("CC_ERR_EXPERTISE")
 		STEP_SPELLS:
 			var sp := spell_choices(ch, data)
@@ -431,20 +451,18 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 
 	var armor: Array = (k.get("armor", []) as Array).duplicate()
 	var weapons: Array = (k.get("weapons", []) as Array).duplicate()
-	var tools: Array = (k.get("tools", []) as Array).duplicate()
+	var tools := tools_of(ch, data)
 	var traits := race_traits(ch, data)
 	var options: Dictionary = ch.get("options", {})
 	for t: String in race_traits(ch, data):
+		if traits_data.get(t, {}).get("tool_choice") is Dictionary:
+			continue  # its options are tools (tools_of), not traits
 		for o: Variant in options.get(t, []):
 			traits.append(str(o))
 	for t: String in traits:
 		var td: Dictionary = traits_data.get(t, {})
 		_merge(armor, td.get("armor", []))
 		_merge(weapons, td.get("weapons", []))
-		_merge(tools, td.get("tools", []))
-		var tc: Variant = td.get("tool_choice")
-		if tc is Dictionary:  # a tool of choice (Dwarf): the first one, tools do not affect checks yet
-			_merge(tools, (tc["from"] as Array).slice(0, int(tc["choose"])))
 	var features := level1_features(ch, data)
 	for f: String in level1_features(ch, data):
 		for o: Variant in options.get(f, []):
@@ -453,7 +471,6 @@ static func build(ch: Dictionary, data: Dictionary) -> Dictionary:
 	for f: String in features:
 		_merge(armor, grants.get(f, {}).get("armor", []))
 		_merge(weapons, grants.get(f, {}).get("weapons", []))
-	_merge(tools, background(ch, data).get("tools", []))
 	c["armor_profs"] = armor
 	c["weapon_profs"] = weapons
 	c["tools"] = tools
@@ -594,7 +611,7 @@ static func random_choices(data: Dictionary, rng: RandomNumberGenerator, fixed: 
 	ch["options"] = opts
 	var n := expertise_count(ch, data)
 	if n > 0:
-		ch["expertise"] = _sample(rng, fixed_skills(ch, data) + all_skills(ch), n)
+		ch["expertise"] = _sample(rng, expertise_pool(ch, data), n)
 	var sp := spell_choices(ch, data)
 	ch["cantrips"] = _sample(rng, sp["cantrip_list"], int(sp["cantrips"]))
 	ch["spells"] = _sample(rng, sp["spell_list"], int(sp["spells"]))

@@ -517,6 +517,7 @@ ITEM_USE_WATER,вода +{n}
 ITEM_USE_TEMP_HP,временные хиты {n}
 ITEM_USE_ADV,преимущество на спасброски: {tag}
 ITEM_SPOILS,Портится через {n} дн. после того как добыто или куплено
+ITEM_WINDS_DOWN,"Завода хватает на {n} дн., потом — {to}"
 ITEM_USE_SPELL,Заклинание «{spell}» ({n} круг) без ячейки
 ITEM_USE_THROW,Бросить во врага (вкладка «Предметы» в бою)
 ITEM_VERSATILE,двумя руками {dice}
@@ -1254,6 +1255,7 @@ CRAFT_NEEDS_SKILLS,Навык: {list}
 CRAFT_CHECK_SKILL,проверка: {skill}
 CRAFT_NO_STATION,Здесь нет нужного места для работы
 CRAFT_NO_MATERIALS,Не хватает сырья
+CRAFT_LIMIT,Больше таких устройств разом не удержать — пусть одно остановится
 CRAFT_NO_PROJECT,Нет начатой работы
 CRAFT_NO_RENT,Нечем заплатить за место
 CRAFT_TOO_TIRED,"Слишком измотан для работы: сначала отдых и еда"

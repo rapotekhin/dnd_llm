@@ -48,7 +48,7 @@
 			"choices": {
 				"name": "Бранко", "god": "chauntea", "gender": "male", "race": "dwarf", "subrace": "hill_dwarf", "class": "cleric", "subclass": "life", "background": "acolyte",
 				"base_abilities": {"str": 13, "dex": 12, "con": 14, "int": 8, "wis": 15, "cha": 10},
-				"ability_choice": [], "skills": ["medicine", "history"], "extra_skills": [], "expertise": [], "options": {},
+				"ability_choice": [], "skills": ["medicine", "history"], "extra_skills": [], "expertise": [], "options": {"tool_proficiency": ["smiths_tools"]},
 				"cantrips": ["sacred_flame", "guidance", "spare_the_dying"], "spells": ["shield_of_faith", "guiding_bolt", "sanctuary", "command"], "race_cantrips": [],
 				"equipment": [{"alt": 0, "picks": []}, {"alt": 2, "picks": []}, {"alt": 1, "picks": ["light_hammer"]}, {"alt": 0, "picks": []}, {"alt": 0, "picks": ["amulet"]}],
 				"languages": ["elvish", "giant"]

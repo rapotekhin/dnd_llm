@@ -9,12 +9,12 @@ static func spoils_days(data: Dictionary, session_items: Dictionary, id: String)
 	return int(ItemRules.def_of(data["items"], session_items, ItemRules.real_id(id)).get("spoils_days", 0))
 
 
-## Copies not dated yet were got now.
-static func sync(s: GameSession, data: Dictionary) -> void:
+## Copies not dated yet were got now; `own_only` — only the things that wind down by their own `spoils_to` (the needs off).
+static func sync(s: GameSession, data: Dictionary, own_only := false) -> void:
 	var now := TimeRules.abs_minute(s)
 	for h: Dictionary in Thing.holders(s.character):
 		for id: String in Thing.store(h):
-			if spoils_days(data, s.items, id) > 0:
+			if spoils_days(data, s.items, id) > 0 and (not own_only or ItemRules.def_of(data["items"], s.items, ItemRules.real_id(id)).has("spoils_to")):
 				Thing.stamp(h, id, Thing.count(h, id), "got", now)
 
 
@@ -29,19 +29,20 @@ static func days_left(s: GameSession, data: Dictionary, id: String) -> int:
 	return maxi(0, ceili((int(list[0]["got"]) + days * 1440 - TimeRules.abs_minute(s)) / 1440.0))
 
 
-## Copies past their days spoil (with the needs on). Lines.
+## Copies past their days spoil (with the needs on) into rules.needs.spoil_to; a thing with its own `spoils_to` (a tinker's
+## clockwork winds down into its parts, v0.8.4.43.46) goes by its own days whatever the needs. Lines.
 static func tick(s: GameSession, data: Dictionary) -> Array[String]:
-	var to := str(data["rules"].get("needs", {}).get("spoil_to", ""))
-	if not NeedRules.on(s) or to.is_empty():
-		return []
-	sync(s, data)
+	var food_to := str(data["rules"].get("needs", {}).get("spoil_to", "")) if NeedRules.on(s) else ""
+	sync(s, data, food_to.is_empty())
 	var c := s.character
 	var now := TimeRules.abs_minute(s)
-	var names: Array[String] = []
+	var said: Dictionary = {}  # line → names
 	for h: Dictionary in Thing.holders(c):
 		for id: String in h.get("copies", {}).keys():
 			var days := spoils_days(data, s.items, id)
-			if days <= 0:
+			var def := ItemRules.def_of(data["items"], s.items, ItemRules.real_id(id))
+			var to := str(def.get("spoils_to", food_to))
+			if days <= 0 or to.is_empty():
 				continue
 			var limit := roundi(days * 1440 * PetRules.spoil_mult(s, data))  # v0.7.43: a cat beside
 			var gone := 0
@@ -51,12 +52,18 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 					Thing.drop_at(h, id, i)
 					gone += 1
 			if gone > 0:
-				names.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), gone])
+				var line := str(def.get("spoils_line", "Испортилось"))
+				if not said.has(line):
+					said[line] = []
+				(said[line] as Array).append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, id), gone])
 				Thing.add(h, to, gone)
-	if names.is_empty():
+	if said.is_empty():
 		return []
 	CharacterRules.refresh(c, data, s.items)
-	return ["Испортилось: " + ", ".join(names)]
+	var out: Array[String] = []
+	for line: String in said:
+		out.append("%s: %s" % [line, ", ".join(said[line])])
+	return out
 
 
 ## The hero's perishables fresh again, as just got (Purify Food and Drink, v0.8.4.26.2). Lines.

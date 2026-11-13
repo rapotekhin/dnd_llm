@@ -53,11 +53,11 @@ SPELL_ASSIGN = {
     "sustained": "shillelagh flame_blade flaming_sphere spiritual_weapon moonbeam branding_smite call_lightning spirit_guardians heat_metal "
                  "vampiric_touch hellish_rebuke spike_growth",
     "control": "bane faerie_fire ray_of_enfeeblement bestow_curse slow hypnotic_pattern web grease sleet_storm stinking_cloud fog_cloud "
-               "darkness silence gust_of_wind wind_wall calm_emotions enthrall suggestion animal_friendship counterspell dispel_magic",
+               "darkness silence silent_image gust_of_wind wind_wall calm_emotions enthrall suggestion animal_friendship counterspell dispel_magic",
     "restore": "spare_the_dying lesser_restoration remove_curse revivify goodberry create_food_and_water purify_food_and_drink",
     "summon": "find_familiar find_steed conjure_animals animate_dead unseen_servant phantom_steed floating_disk animal_messenger",
     "world": "light dancing_lights daylight continual_flame mage_hand mending message minor_illusion prestidigitation thaumaturgy "
-             "druidcraft silent_image major_image disguise_self illusory_script magic_mouth arcane_lock knock arcanists_magic_aura alarm "
+             "druidcraft major_image disguise_self illusory_script magic_mouth arcane_lock knock arcanists_magic_aura alarm "
              "glyph_of_warding tiny_hut rope_trick magic_circle nondetection meld_into_stone plant_growth levitate feather_fall misty_step "
              "identify detect_magic detect_evil_and_good detect_poison_and_disease detect_thoughts find_traps locate_object "
              "locate_animals_or_plants comprehend_languages tongues speak_with_animals speak_with_dead speak_with_plants augury "
@@ -209,7 +209,7 @@ FEATURES = {
     "action_surge_1_use": ("engine", "лишнее действие в бою"),
     "improved_critical": ("engine", "крит на 19–20 (v0.7.10)"),
     "uncanny_dodge": ("engine", "реакция: урон вдвое меньше — окно «Использовать?» или само (v0.7.10)"),
-    "fast_hands": ("engine", "предмет бонусным действием в бою (v0.7.10)"),
+    "fast_hands": ("engine", "бонусом «Использовать» и «Вскрыть замок» двери в бою воровскими инструментами (v0.8.4.43.46)"),
     "second_story_work": ("master", "лазание — сцена мастера, поле боя линейное"),
     "thieves_cant": ("master", "тайный язык — v0.7.11"), "druidic": ("master", "тайный язык — v0.7.11"),
     "martial_arts": ("engine", "кость безоружного удара, Ловкость, удар бонусом (v0.7.10)"),
@@ -218,7 +218,7 @@ FEATURES = {
     "flurry_of_blows": ("engine", _B), "patient_defense": ("engine", _B), "step_of_the_wind": ("engine", _B),
     "stunning_strike": ("engine", "атака: при попадании — спасбросок Тел, ошеломлён (v0.7.10)"),
     "open_hand_technique": ("engine", "Шквал: сбить с ног, оттолкнуть, без реакций (v0.7.10)"),
-    "deflect_missiles": ("engine", "реакция: урон −1к10 + Лов + уровень (v0.7.10)"),
+    "deflect_missiles": ("engine", "реакция: урон −1к10 + Лов + уровень; при 0 снаряд пойман, за 1 ки — обратно (v0.8.4.43.46)"),
     "slow_fall": ("master", "падения — сцена мастера"),
     "divine_smite": ("engine", "окно после попадания: ячейка — 2к8 и выше, +1к8 нежити и исчадиям, крит удваивает (v0.7.10)"),
     "divine_health": ("engine", "болезни не берут (тег спасброска disease, v0.7.10)"),
@@ -234,7 +234,7 @@ FEATURES = {
     "divine_domain_improvement_1": ("master", "особенность домена: Жизни — пока ничего на 1–5 уровне, подробности — мастер"),
     "bardic_inspiration_d6": ("engine", "к6 к следующему проваленному броску героя — домашнее правило соло-игры (v0.7.10)"),
     "bardic_inspiration_d8": ("engine", "к8 к следующему проваленному броску героя (v0.7.10)"),
-    "cutting_words": ("engine", "реакция: −кость вдохновения к атаке врага (v0.7.10)"),
+    "cutting_words": ("engine", "реакция: −кость вдохновения к атаке, урону или проверке врага в 60 фт (v0.8.4.43.46)"),
     "song_of_rest_d6": ("engine", "+к6 на коротком отдыхе (v0.7.10)"),
     "bonus_proficiencies": ("creation", "три навыка на выбор (v0.7.10)"),
     "font_of_magic": ("engine", "ячейка ↔ очки: окно в бою, кнопки в листе (v0.7.10)"),
@@ -250,7 +250,7 @@ FEATURES = {
     "wild_shape_cr_1_4_or_below_no_flying_or_swim_speed": ("engine", "облик зверя в бою: хиты, КД, атаки, урон сверх облика (v0.7.10)"),
     "wild_shape_cr_1_2_or_below_no_flying_speed": ("engine", "то же, класс опасности до 1/2 (v0.7.10)"),
     "favored_enemy_1_type": ("engine", "выбор; преимущество на осмотр в бою, мастеру — Выживание и знания (v0.7.10)"),
-    "natural_explorer_1_terrain_type": ("engine", "выбор; двойной бонус мастерства на Инт и Мдр в родной местности (`terrain` пакета)"),
+    "natural_explorer_1_terrain_type": ("engine", "выбор; в родной местности двойное владение Инт и Мдр, отряд не замедляют грязь и снег, крадучись настороже, еды вдвое (v0.8.4.43.46)"),
     "primeval_awareness": ("master", "чуять врагов на мили — мастер"),
     "hunters_prey": ("creation", "выбор"), "hunters_prey_colossus_slayer": ("engine", _B), "hunters_prey_horde_breaker": ("engine", _B),
     "hunters_prey_giant_killer": ("engine", "реакция (v0.7.10)"),
@@ -262,14 +262,14 @@ TRAITS = {
     "darkvision": ("engine", "ночью вне освещённых мест и в тёмных комнатах пакета, в бою тоже (v0.7.10)"), "dwarven_toughness": ("engine", "хиты"),
     "infernal_legacy": ("engine", "заговор; заклинания 3–5 уровня — проверить"), "menacing": ("creation", "навык"), "keen_senses": ("creation", "навык"),
     "skill_versatility": ("creation", "навыки"), "dwarven_combat_training": ("creation", "владение оружием"), "elf_weapon_training": ("creation", "владение оружием"),
-    "tool_proficiency": ("creation", "инструмент"), "tinker": ("partial", "инструмент; устройства — у мастера"), "high_elf_cantrip": ("creation", "заговор"),
+    "tool_proficiency": ("creation", "инструмент на выбор (v0.8.4.43.46)"), "tinker": ("engine", "инструмент; заводные устройства — рецепты черты, три разом, на сутки (v0.8.4.43.46)"), "high_elf_cantrip": ("creation", "заговор"),
     "extra_language": ("engine", "язык: кто его понимает, того можно уговорить (v0.7.11)"),
     "draconic_ancestry": ("engine", "сопротивление по предку (v0.7.8), оружие дыхания (v0.7.10)"),
     "breath_weapon": ("engine", "кнопка в бою: линия или конус, спасбросок, раз за отдых (v0.7.10)"),
     "lucky": ("engine", "единица на d20 перебрасывается (v0.7.10)"),
     "savage_attacks": ("engine", "лишняя кость на крите вплотную (v0.7.10)"),
     "trance": ("engine", "долгий отдых на 3 часа короче (v0.7.10)"),
-    "naturally_stealthy": ("engine", "«Спрятаться» за врагом крупнее (v0.7.10)"),
+    "naturally_stealthy": ("engine", "«Спрятаться» за существом крупнее рядом, врагом или своим (v0.8.4.43.46)"),
     "halfling_nimbleness": ("master", "сквозь крупных — на линейном поле некуда"),
     "stonecunning": ("master", "история камня — мастер, инструменты — v0.7.11"),
     "artificers_lore": ("master", "знания о механизмах — мастер, инструменты — v0.7.11"),
@@ -307,9 +307,17 @@ ITEM_PROPS = {
     "perception_advantage": ("engine", "преимущество к Внимательности"), "investigation_advantage": ("engine", "преимущество к Анализу"),
     "darkvision": ("engine", "тёмное зрение"), "wound_closure": ("engine", "стабилизация при смерти, кости хитов вдвое"),
     "immune_disease": ("engine", "иммунитет к болезням"), "understand_all": ("engine", "понимание языков"),
-    "missile_snaring": ("engine", "реакция на выстрел: урон −1к10 + Лов"), "carry_plus_500": ("engine", "+500 фунтов"),
+    "missile_snaring": ("engine", "реакция на выстрел: урон −1к10 + Лов, при 0 снаряд пойман (v0.8.4.43.46)"), "carry_plus_500": ("engine", "+500 фунтов"),
     "str_19": ("engine", "Сила 19"), "int_19": ("engine", "Интеллект 19"), "mithral": ("engine", "без требования Силы и помехи"),
     "no_crit": ("engine", "крит по герою — обычное попадание"),
+    **{f"{t}_damage": ("engine", "+1к6 этого типа при попадании оружием (вещи мастера, v0.8.4.36)") for t in ["acid", "thunder", "force", "psychic"]},
+    **{f"resist_{t}": ("engine", "сопротивление (вещи мастера, v0.8.4.36)") for t in ["thunder", "radiant", "psychic"]},
+    "water_source": ("engine", "графин: вода в сосуды (v0.8.4.26)"),
+    **{f"initiative_plus{n}": ("engine", f"инициатива +{n} (v0.8.4.36)") for n in [1, 2, 3]},
+    "initiative_advantage": ("engine", "преимущество к инициативе (v0.8.4.36)"),
+    "life_drain": ("engine", "удар оружием возвращает хиты (v0.8.4.36)"), "regeneration": ("engine", "хиты возвращаются со временем, в бою и вне его (v0.8.4.36)"),
+    **{f"immune_{c}": ("engine", "иммунитет к состоянию (ConditionRules.impose, v0.8.4.36)")
+       for c in ["frightened", "charmed", "poisoned", "paralyzed", "blinded", "stunned", "restrained", "prone", "grappled", "deafened", "petrified"]},
 }
 
 # Languages, backgrounds, tools (v0.7.11).

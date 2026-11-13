@@ -60,7 +60,8 @@
 		"slots/belt": "items/belt",
 		"toggles/nonlethal": "ui/nonlethal",
 		"toggles/reckless": "features/reckless_attack",
-		"toggles/stunning": "features/stunning_strike"
+		"toggles/stunning": "features/stunning_strike",
+		"toggles/deflect_throw": "features/deflect_missiles"
 	},
 	"source": {
 		"_doc": "\"<kind>/<id>\": where its file came from — forge (tools/anima), hand, or a licence line (CC BY …)."

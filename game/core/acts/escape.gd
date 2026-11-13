@@ -42,15 +42,20 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dic
 	var mine := 0
 	var against := "Сл %d" % dc
 	var ok := false
+	var words: Array[String] = []
 	if dc > 0:
 		var r := Roll.check(s, data, f, {"skill": skill, "dc": dc, "quiet": true})
 		mine = int(r["total"])
 		ok = bool(r["ok"])
+		var cut := {"total": mine, "ac": dc, "nat20": false, "hit": ok, "what": "проверка"}
+		if ok and FeatureRules.cutting_words(s, data, f, cut, "roll", words):  # a bard of the foes (v0.8.4.43.46)
+			mine = int(cut["total"])
+			ok = bool(cut["hit"])
 	else:  # the grappler's Athletics: the same contest as the grapple (CombatRules.contest)
 		var g := CombatRules.fighter(s, str(hold.get("by", "")))
 		if g.is_empty():
 			g = CombatRules.fighter(s, CombatRules.fighter_of_npc(s, str(hold.get("by", ""))))
-		var c := CombatRules.contest(s, data, f, skill, g, ["athletics"])
+		var c := CombatRules.contest(s, data, f, skill, g, ["athletics"], words)
 		mine = int(c["mine"])
 		ok = bool(c["won"])
 		against = "%d (%s)" % [int(c["theirs"]), Sheet.holder(s, g).get("name", "хватка") if not g.is_empty() else "хватка"]
@@ -60,8 +65,9 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dic
 		if Sheet.is_hero(f):
 			CharacterRules.refresh(me, data, s.items)
 		CombatRules.points(s, data, f)["move"] = Move.steps(s, data, f)
-	return ["%s вырывается: %s %d против %s — %s" % [_name(s, f), "Атлетика" if skill == "athletics" else "Акробатика", mine, against,
-		("больше не " + what) if ok else "не выходит"]]
+	words.append("%s вырывается: %s %d против %s — %s" % [_name(s, f), "Атлетика" if skill == "athletics" else "Акробатика", mine, against,
+		("больше не " + what) if ok else "не выходит"])
+	return words
 
 
 func worth(s: GameSession, data: Dictionary, f: Dictionary) -> float:

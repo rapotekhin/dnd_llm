@@ -507,6 +507,13 @@ func _draw_features() -> void:
 	var feats: Dictionary = data()["classes"]["features"]
 	var traits: Dictionary = data()["races"]["traits"]
 	for fc: Dictionary in CharacterBuilder.feature_choices(choices, data()):
+		if fc["kind"] == "tool":  # a dwarf's tool of choice (v0.8.4.43.46)
+			_text(_body, str(fc["name"]))
+			var tools: Array = (fc["from"] as Array).map(func(o: Variant) -> Dictionary: return {"id": o, "label": BackgroundRules.tool_name(data(), str(o))})
+			_checks(_body, choices["options"].get(fc["id"], []), tools, int(fc["choose"]), func(next: Array) -> void:
+				choices["options"][fc["id"]] = next
+				_redraw())
+			continue
 		var kind := "features" if fc["kind"] == "feature" else "traits"
 		var pool: Dictionary = feats if fc["kind"] == "feature" else traits
 		var opts: Array = []
@@ -521,8 +528,8 @@ func _draw_features() -> void:
 	var n := CharacterBuilder.expertise_count(choices, data())
 	if n > 0:
 		_text(_body, tr("CC_EXPERTISE").format({"n": n}))
-		var pool := CharacterBuilder.fixed_skills(choices, data()) + CharacterBuilder.all_skills(choices)
-		var opts: Array = pool.map(func(s: Variant) -> Dictionary: return {"id": s, "label": _skill_label(str(s))})
+		var opts: Array = CharacterBuilder.expertise_pool(choices, data()).map(func(s: Variant) -> Dictionary:
+			return {"id": s, "label": CharacterRules.expertise_word(data(), str(s))})
 		_checks(_body, choices["expertise"], opts, n, _setter("expertise"))
 
 

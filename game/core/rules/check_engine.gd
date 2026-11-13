@@ -85,13 +85,12 @@ static func listener(s: GameSession, data: Dictionary, spec: Dictionary) -> Stri
 	return tid if (data["world"].get("npcs", {}) as Dictionary).has(tid) and not Being.dead(s, tid) else ""
 
 
-## Natural Explorer (v0.7.10): in the ranger's favored terrain (`terrain` of the location) a proficient INT or WIS skill
-## gets the proficiency bonus twice.
+## Natural Explorer (v0.7.10): in the ranger's favored terrain (FeatureRules.terrain_of) a proficient INT or WIS skill gets
+## the proficiency bonus twice.
 static func _terrain(s: GameSession, data: Dictionary, me: Dictionary, skill: String) -> int:
 	if skill.is_empty() or not str(data["rules"]["skills"].get(skill, "")) in ["int", "wis"]:
 		return 0
-	var w := WorldView.new(data["world"])
-	var terrain := str(w.location(w.location_id(s.room_id)).get("terrain", ""))
+	var terrain := FeatureRules.terrain_of(s, data)
 	if terrain.is_empty() or not CharacterRules.has_feature(me, "natural_explorer_" + terrain):
 		return 0
 	var proficient := (me.get("skill_profs", []) as Array).has(skill) or CharacterRules.has_feature(me, "skill_prof_" + skill)

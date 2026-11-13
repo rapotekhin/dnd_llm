@@ -2122,7 +2122,7 @@ func start(s: GameSession) -> void:
 	Catalog.data["world"] = WorldGen.merged(pack, s.generated)
 	MakeRules.install(Catalog.data, s.generated)  # v0.7.63: and the rules with its own statuses and skills
 	CharacterRules.refresh(s.character, Catalog.data, s.items)
-	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id)
+	ExplorationRules.enter_room(s, Catalog.data["world"], s.room_id, TimeRules.passive_penalty(s, Catalog.data))
 	TimeRules.settle(s, Catalog.data)  # the festivals' flags and the weather by the date of a save (v0.7.44, v0.7.46)
 	session = s
 	busy_turn = ""

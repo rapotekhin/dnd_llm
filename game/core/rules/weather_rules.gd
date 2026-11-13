@@ -151,13 +151,17 @@ static func passive(s: GameSession, data: Dictionary) -> int:
 	return int(kind(data, here(s, data)).get("passive", 0))
 
 
-## The time multiplier of a step between two locations: the worse of both.
-static func travel_mult(s: GameSession, data: Dictionary, from: String, to: String) -> float:
+## The time multiplier of a step between two locations: the worse of both. A location whose terrain one of the party knows
+## (Natural Explorer, v0.8.4.43.46: difficult terrain does not slow the group) counts as dry; `raw` — as the weather is.
+static func travel_mult(s: GameSession, data: Dictionary, from: String, to: String, raw := false) -> float:
 	if not live(s, data):
 		return 1.0
 	var w := WorldView.new(data["world"])
-	return maxf(float(kind(data, at(s, data, w.location_id(from))).get("travel_mult", 1.0)),
-		float(kind(data, at(s, data, w.location_id(to))).get("travel_mult", 1.0)))
+	var worst := 1.0
+	for loc: String in [w.location_id(from), w.location_id(to)]:
+		if raw or FeatureRules.party_explorer(s, data, loc).is_empty():
+			worst = maxf(worst, float(kind(data, at(s, data, loc)).get("travel_mult", 1.0)))
+	return worst
 
 
 ## What makes a way between two locations longer: «ливень».

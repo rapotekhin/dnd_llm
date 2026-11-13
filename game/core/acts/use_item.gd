@@ -1,6 +1,7 @@
 extends Act
 ## A thing used on oneself (`how.item`), by anybody who carries it (v0.8.4.10). A potion is a bonus action, as in BG3, when the
-## rules say so; Fast Hands makes any a bonus. The AI drinks a healing potion when hurt (`rules.combat.ai.items`).
+## rules say so; Fast Hands makes any a bonus (`rules.combat.act_bonus.use_item`). The AI drinks a healing potion when hurt
+## (`rules.combat.ai.items`).
 
 
 func title() -> String:
@@ -12,9 +13,8 @@ func tab() -> String:
 
 
 func cost(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary) -> String:
-	var quick := FeatureRules.has(Sheet.holder(s, f), "fast_hands") or (ItemRules.is_potion(data, s.items, str(how.get("item", "")))
-		and str(CombatRules.cfg(data).get("potion_cost", "action")) == "bonus")
-	return "bonus" if quick and int(CombatRules.points(s, data, f).get("bonus", 0)) > 0 else "action"
+	var potion := ItemRules.is_potion(data, s.items, str(how.get("item", ""))) and str(CombatRules.cfg(data).get("potion_cost", "action")) == "bonus"
+	return "bonus" if _by_bonus(s, data, f, how) or (potion and int(CombatRules.points(s, data, f).get("bonus", 0)) > 0) else "action"
 
 
 func why(s: GameSession, data: Dictionary, f: Dictionary, _to: String, how: Dictionary) -> String:

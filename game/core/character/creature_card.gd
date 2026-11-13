@@ -26,7 +26,7 @@ static func of(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
 	if not known:
 		out["lore"] = {"skill": CombatRules.lore_skill(data, who), "dc": CombatRules.lore_dc(data, who)}
 		return out
-	var me := _holder(s, data, who)
+	var me := Sheet.classed(s, data, who)
 	out.merge({"hp": hp, "max_hp": top, "temp_hp": int(Sheet.holder(s, who).get("temp_hp", 0)), "ac": Sheet.ac(s, who, data),
 		"speed": Sheet.speed(s, data, who), "ways": ways(s, data, who), "passive": Sheet.passive(s, data, who), "prof": Sheet.prof(s, data, who),
 		"cr": m.get("cr", null), "abilities": abilities(s, data, who), "saves": saves(s, data, who), "skills": skills(s, data, who),
@@ -83,17 +83,6 @@ static func _state(who: Dictionary) -> String:
 		return str(who["status"])
 	var st := str((who.get("creature", {}) as Dictionary).get("state", ""))
 	return st if st in [CreatureRules.DEAD, "surrendered", "truce", "unconscious"] else "active"
-
-
-## The holder of its features, charges and slots: its own when it has a class laid (the hero, a fighter), else a copy
-## with what its class and race would give it in a fight (FeatureRules.give_class) — nothing is written.
-static func _holder(s: GameSession, data: Dictionary, who: Dictionary) -> Dictionary:
-	var me := Sheet.holder(s, who)
-	if Sheet.is_hero(who) or who.has("side") or me.has("features") or me.has("traits") or not who.has("monster"):
-		return me
-	var probe := who.duplicate(true)
-	FeatureRules.give_class(data, probe, {"npc_id": str(who.get("npc_id", who.get("id", "")))})
-	return probe
 
 
 # --- the numbers ----------------------------------------------------------------------------------------------------

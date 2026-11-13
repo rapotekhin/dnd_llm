@@ -107,7 +107,7 @@ static func _ends(m: Dictionary, d: Dictionary) -> Array[String]:
 
 ## The keys of a row a zone takes as they are: what a failed save does, what it hides, who it spares, whom it touches.
 const ZONE_KEYS: Array[String] = ["cond", "fail", "tag", "obscure", "veil", "silence", "retch", "block_ranged", "spares_friends", "for",
-	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel", "douses", "tile", "worn"]
+	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel", "douses", "tile", "worn", "reveal"]
 
 
 ## A zone of the field by its row: one record for the ground, strewn things, the fire, a spell's zone and a trait's aura
@@ -328,6 +328,8 @@ static func acts(s: GameSession, data: Dictionary, f: Dictionary) -> Array[Strin
 			out.append("door_force")
 			if bool(FightGrid.door_state(s, at).get("barred", false)):
 				out.append("door_unbar")
+			elif Thing.count(Sheet.things(s, data, f), "thieves_tools") > 0:
+				out.append("door_pick")  # a lock, not a bar: thieves' tools (a bonus action by Fast Hands, rules.combat.act_bonus)
 		else:
 			out.append("door_bar")
 			if _has_key(s, data, f, d):
@@ -398,6 +400,18 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, how: String, li
 			doors[key] = {"locked": true}
 			WayRules.lock(s, ends[0], ends[1])
 			lines.append("%s запирает дверь на ключ" % c["name"])
+		"door_pick":  # the lock of a door with thieves' tools (Sleight of Hand), as out of a fight (v0.8.4.43.46)
+			var dc := int(WayRules.dcs(s, data, ends[0], ends[1])["pick"])
+			var r := Roll.check(s, data, f, {"what": "Вскрыть замок", "skill": "sleight_of_hand", "dc": dc, "tool": "thieves_tools"})
+			if bool(r["ok"]):
+				doors.erase(key)
+				WayRules.unlock(s, data, ends[0], ends[1])
+				lines.append("%s вскрывает замок двери: %d против Сл %d" % [c["name"], int(r["total"]), dc])
+				var doer := Being.HERO if Sheet.is_hero(f) else str(f.get("npc_id", ""))
+				if not doer.is_empty():
+					lines.append_array(WayRules.forced(s, data, ends[0], ends[1], doer))
+			else:
+				lines.append("Замок не поддался: %d против Сл %d" % [int(r["total"]), dc])
 		"door_force":
 			var r := Roll.check(s, data, f, {"what": "Выломать дверь", "skill": "athletics", "dc": _door_dc(s, data, at, d), "about": "force"})
 			if bool(r["ok"]):

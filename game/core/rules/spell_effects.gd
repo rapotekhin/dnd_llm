@@ -962,6 +962,12 @@ static func _save_hit(s: GameSession, data: Dictionary, name: String, dtype: Str
 
 
 static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary) -> Array[String]:
+	if bool(z.get("reveal", false)):  # an illusion (Silent Image, v0.8.4.43.46): one who walks into it sees it for what it is
+		if (z.get("seen", []) as Array).has(str(f.get("id", ""))) or str(f.get("status")) != "active":
+			return []
+		z["seen"] = (z.get("seen", []) as Array) + [str(f.get("id", ""))]
+		FightGrid.changed(s)
+		return ["%s проходит сквозь %s — это иллюзия" % [f["name"], z["name"]]]
 	if not str(z["dice"]).is_empty():
 		return _save_hit(s, data, str(z["name"]), str(z["type"]), str(z["save"]), str(z["dice"]), int(z["dc"]), f, true, str(z.get("by", CombatRules.PLAYER)) == CombatRules.PLAYER)
 	var lines: Array[String] = []

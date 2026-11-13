@@ -339,8 +339,11 @@ static func blind(s: GameSession, f: Dictionary) -> bool:
 	return ConditionRules.has(s.character, "blinded") if str(f.get("id")) == "p" else CombatRules._has(f, "blinded")
 
 
-## `a` senses through this zone from `far` squares: Devil's Sight and truesight through Darkness, blindsight through any (`rules.sight.pierce`).
+## `a` senses through this zone from `far` squares: Devil's Sight and truesight through Darkness, blindsight through any (`rules.sight.pierce`);
+## one who walked into an illusion knows it for one (`seen`, Silent Image, v0.8.4.43.46).
 static func pierces(s: GameSession, data: Dictionary, a: Dictionary, z: Dictionary, far: int) -> bool:
+	if (z.get("seen", []) as Array).has(str(a.get("id", ""))):
+		return true
 	var sense := senses(s, data, a)
 	return (SightRules.cfg(data)["pierce"].get(str(z.get("veil", "fog")), []) as Array).any(func(k: Variant) -> bool: return int(sense.get(str(k), -1)) >= far)
 

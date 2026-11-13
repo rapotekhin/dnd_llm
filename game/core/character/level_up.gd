@@ -89,7 +89,7 @@ static func abilities_after(c: Dictionary, picks: Dictionary) -> Dictionary:
 
 
 ## What the next level brings: {"level", "hp_gain", "features" [ids], "subclass" (choose now), "subclasses" [ids],
-## "options" [{id, name, choose, from}], "expertise" n, "asi" bool, "cantrips" n, "spells" n, "spell_mode",
+## "options" [{id, name, choose, from}], "expertise" n, "expertise_pool" [skills and tools], "asi" bool, "cantrips" n, "spells" n, "spell_mode",
 ## "prepared" n (new prepared picks), "max_spell_level", "cantrip_list", "spell_list", "prepared_list"}.
 static func plan(c: Dictionary, data: Dictionary, picks: Dictionary = {}) -> Dictionary:
 	var k := CharacterRules.class_def(c, data)
@@ -122,6 +122,7 @@ static func plan(c: Dictionary, data: Dictionary, picks: Dictionary = {}) -> Dic
 			(out["options"] as Array).append({"id": f, "name": d["name"], "choose": int(d["options"]["choose"]), "from": pool})
 		out["expertise"] = int(out["expertise"]) + int(d.get("expertise", 0))
 		bonus_cantrips += int(grants.get(f, {}).get("cantrips", 0))
+	out["expertise_pool"] = CharacterRules.expertise_pool(data, c.get("skill_profs", []), c.get("tools", []), out["features"], c.get("expertise", []))
 
 	var abilities := abilities_after(c, picks)
 	var con_gain := CharacterRules.mod(int(abilities.get("con", 10))) - CharacterRules.mod(int(c["abilities"].get("con", 10)))
@@ -195,8 +196,7 @@ static func errors(c: Dictionary, data: Dictionary, picks: Dictionary) -> Array[
 			e.append("LVL_ERR_OPTIONS")
 			break
 	var exp: Array = picks.get("expertise", [])
-	if exp.size() != int(p["expertise"]) or _dupes(exp) or exp.any(func(s: Variant) -> bool:
-			return not (c.get("skill_profs", []) as Array).has(s) or (c.get("expertise", []) as Array).has(s)):
+	if exp.size() != int(p["expertise"]) or _dupes(exp) or exp.any(func(s: Variant) -> bool: return not (p["expertise_pool"] as Array).has(s)):
 		e.append("LVL_ERR_EXPERTISE")
 	if bool(p["asi"]):
 		var asi: Dictionary = picks.get("asi", {})
@@ -315,8 +315,7 @@ static func default_picks(c: Dictionary, data: Dictionary) -> Dictionary:
 	if not options.is_empty():
 		picks["options"] = options
 	if int(p["expertise"]) > 0:
-		var pool := (c.get("skill_profs", []) as Array).filter(func(s: Variant) -> bool: return not (c.get("expertise", []) as Array).has(s))
-		picks["expertise"] = pool.slice(0, int(p["expertise"]))
+		picks["expertise"] = (p["expertise_pool"] as Array).slice(0, int(p["expertise"]))
 	if bool(p["asi"]):
 		var main := str(data["rules"]["creation"]["main_ability"].get(str(c.get("class", "")), "str"))
 		var ab: Dictionary = c["abilities"]

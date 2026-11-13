@@ -142,6 +142,36 @@ static func give_class(data: Dictionary, f: Dictionary, spec: Dictionary) -> voi
 		f["abilities"] = (m["abilities"] as Dictionary).duplicate()
 
 
+# --- Natural Explorer ------------------------------------------------------------------------------
+
+
+## Natural Explorer (5e, v0.8.4.43.46): `who` knows the terrain of the location `loc_id` (the hero's by default) — its feature
+## `natural_explorer_<terrain>`. Anybody's: a ranger companion knows its own.
+static func explorer(s: GameSession, data: Dictionary, who: Dictionary, loc_id: String = "") -> bool:
+	var t := terrain_of(s, data, loc_id)
+	return not t.is_empty() and has(Sheet.classed(s, data, who), "natural_explorer_" + t)
+
+
+## The terrain of a location by the word of Natural Explorer's ids (`explorer.feature_terrain`); "" — none.
+static func terrain_of(s: GameSession, data: Dictionary, loc_id: String = "") -> String:
+	var w := WorldView.new(data["world"])
+	var t := str(w.location(loc_id if not loc_id.is_empty() else w.location_id(s.room_id)).get("terrain", ""))
+	return str(cfg(data)["explorer"]["feature_terrain"].get(t, t))
+
+
+## The one of the hero's party who knows the terrain of `loc_id` (5e: «your group» on the way): its name, "" — none.
+static func party_explorer(s: GameSession, data: Dictionary, loc_id: String) -> String:
+	for p: Dictionary in AllyRules.party(s, data):
+		if explorer(s, data, p["who"], loc_id):
+			return str(p["name"])
+	return ""
+
+
+## How many times the food it finds is (5e: twice in the favored terrain): `forage_mult` or 1. The hero's own gathering.
+static func forage_mult(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> int:
+	return int(cfg(data)["explorer"]["forage_mult"]) if explorer(s, data, who) else 1
+
+
 # --- rolls ---------------------------------------------------------------------------------------
 
 
@@ -477,11 +507,14 @@ static func reactions(s: GameSession, data: Dictionary, t: Dictionary, f: Dictio
 	if has(c, "uncanny_dodge") and see and dmg > 0:
 		out.append({"id": "uncanny_dodge", "label": "Невероятное уклонение: урон вдвое меньше"})
 	if has(c, "deflect_missiles") and shot:
-		out.append({"id": "deflect_missiles", "label": "Отражение снарядов: урон −1к10 + %d" % (ab_mod(c, "dex") + level(c))})
+		var back := " (и бросок за 1 ки)" if ToggleRules.on(s, data, t, "deflect_throw") and Stock.left(c, data, "ki") > 0 else ""
+		out.append({"id": "deflect_missiles", "label": "Отражение снарядов: урон −1к10 + %d, при 0 — поймать%s" % [ab_mod(c, "dex") + level(c), back]})
 	if Sheet.prop(s, data, t, "missile_snaring") and not has(c, "deflect_missiles") and shot:
 		out.append({"id": "missile_snaring", "label": "Перчатки ловли снарядов: урон −1к10 + %d" % ab_mod(c, "dex")})  # v0.7.12
-	if has(c, "cutting_words") and Stock.left(c, data, "bardic_inspiration") > 0 and see:
-		out.append({"id": "cutting_words", "label": "Язвительные слова: −1к%d к броску атаки" % bardic_die(c, data)})
+	var words := words_mode({"total": int(hit.get("total", 0)), "ac": int(hit.get("ac", 0)), "nat20": bool(hit.get("nat20", false)), "hit": true, "dmg": dmg},
+		bardic_die(c, data))
+	if has(c, "cutting_words") and Stock.left(c, data, "bardic_inspiration") > 0 and see and not words.is_empty() and hears_words(s, data, f):
+		out.append({"id": "cutting_words", "label": "Язвительные слова: −1к%d %s" % [bardic_die(c, data), "к броску атаки" if words == "roll" else "к урону"]})
 	if Sheet.is_hero(t):
 		out.append_array(SpellEffects.hit_reactions(s, data, {"total": int(hit.get("total", int(f.get("last_total", 0)))), "ac": int(hit.get("ac", c.get("ac", 10))),
 			"nat20": bool(hit.get("nat20", false)), "dmg": dmg}))  # v0.7.13.7
@@ -490,10 +523,81 @@ static func reactions(s: GameSession, data: Dictionary, t: Dictionary, f: Dictio
 	return out
 
 
+## A missile stopped dead by Deflect Missiles or the Gloves of Missile Snaring (its damage cut to 0, 5e): `t` catches it when it
+## is small and a hand is free (Gear.catch). With Deflect Missiles and its passive on (`deflect_throw` of rules.toggles) it flies
+## back at the shooter as part of the same reaction for 1 ki: proficient, a monk weapon — the better of the Martial Arts die
+## and its own, + Dexterity — 20/60 ft, and lies on the shooter's square after (v0.8.4.43.46). Anybody's, the hero's too.
+static func catch_missile(s: GameSession, data: Dictionary, t: Dictionary, f: Dictionary, ctx: Dictionary, lines: Array[String]) -> void:
+	if int(ctx.get("dmg", 0)) > 0 or not ctx.has("blow"):
+		return
+	var item := Gear.catch(s, data, f, t, ctx["blow"])
+	if item.is_empty():
+		return
+	var c := Sheet.holder(s, t)
+	var name := ItemRules.display_name(data["items"], s.items, item)
+	lines.append("%s ловит на лету: %s" % [c.get("name", ""), name])
+	if not has(c, "deflect_missiles") or not ToggleRules.on(s, data, t, "deflect_throw") or Stock.left(c, data, "ki") < 1 			or not Attack.up(s, f) or FightGrid.feet(data, t, f) > int(cfg(data)["deflect_range"][1]):
+		return
+	Stock.spend(c, "ki")
+	lines.append("%s мечет %s обратно в %s (1 ки)" % [c.get("name", ""), name, Sheet.holder(s, f).get("name", "")])
+	var back := thrown_back(s, data, t, item, ctx["blow"])
+	Attack.swing(s, data, t, f, back, lines)
+	Gear.throw_out(s, data, t, back, FightGrid.cell(f))
+
+
+## The blow of a caught missile thrown back by `t` (Deflect Missiles): a monk weapon with proficiency whatever its kind.
+static func thrown_back(s: GameSession, data: Dictionary, t: Dictionary, item: String, shot: Dictionary) -> Dictionary:
+	var c := Sheet.holder(s, t)
+	var w: Dictionary = ItemRules.def_of(data["items"], s.items, item).get("weapon", {})
+	var dice := martial_die(c, data)
+	if dice.is_empty() or (w.has("damage") and CombatRules.dice_avg(str(w["damage"])) > CombatRules.dice_avg(dice)):
+		dice = str(w.get("damage", "1d4"))
+	var pieces: Array = shot.get("pieces", [])
+	var dtype := str(w.get("damage_type", pieces[0].get("type", "piercing") if not pieces.is_empty() else "piercing"))
+	var dex := ab_mod(c, "dex")
+	return {"name": ItemRules.display_name(data["items"], s.items, item), "to_hit": CharacterRules.prof_bonus(c, data) + dex,
+		"pieces": [{"dice": dice, "type": dtype}], "bonus": dex, "melee": false, "reach": 1, "range": cfg(data)["deflect_range"],
+		"weapon": true, "id": item, "str_based": false, "opts": {"no_horde": true}}
+
+
 ## Giant Killer (5e): a Large or larger foe beside `t` hit or missed it — `t` may strike back with its reaction.
 static func giant_killer(s: GameSession, data: Dictionary, t: Dictionary, f: Dictionary) -> bool:
 	var c := Sheet.holder(s, t)
 	return has(c, "hunters_prey_giant_killer") and not bool(t.get("reacted", false)) and not ConditionRules.incapacitated(c) 		and int(c.get("hp", 0)) > 0 and CombatRules.SIZES.find(Sheet.size(s, data, f)) >= 3 and FightGrid.touching(f, t)
+
+
+## What Cutting Words of a die `die` is spent on (5e: an attack roll, a check or a damage roll): the roll when the die could
+## still turn it, else the damage of a hit; "" — nothing worth it (the roll fails already, no damage to cut).
+static func words_mode(ctx: Dictionary, die: int) -> String:
+	if not bool(ctx.get("hit", false)):
+		return ""
+	if not bool(ctx.get("nat20", false)) and int(ctx["total"]) - die < int(ctx["ac"]):
+		return "roll"
+	return "damage" if int(ctx.get("dmg", 0)) > 0 else ""
+
+
+## Cutting Words of anybody (5e, v0.8.4.43.46): a bard among the foes of `roller` (but `skip`, who answers by its own reaction)
+## who sees it within 60 ft, that hears it and may be charmed, spends its reaction and a die of Bardic Inspiration on its
+## roll. `ctx` {total, ac — what the roll must reach, nat20, hit — it succeeds now, dmg?, what — the roll's word}; `mode`
+## "roll" — only the roll (an attack before its damage, a check), "damage" — only the damage of a hit. True when one spoke.
+static func cutting_words(s: GameSession, data: Dictionary, roller: Dictionary, ctx: Dictionary, mode: String, lines: Array[String], skip: String = "") -> bool:
+	if not CombatRules.active(s) or not hears_words(s, data, roller):
+		return false
+	for id: String in CombatRules.foes_of(s, roller):
+		var o := CombatRules.fighter(s, id)
+		var c := Sheet.holder(s, o)
+		if id == skip or o.is_empty() or not has(c, "cutting_words") or bool(o.get("reacted", false)) or not Attack.up(s, o) 				or ConditionRules.incapacitated(c) or Stock.left(c, data, "bardic_inspiration") < 1 or ConditionRules.has(c, "blinded") 				or ConditionRules.invisible(Sheet.holder(s, roller), data) or FightGrid.feet(data, o, roller) > 60 or policy(s, o, "cutting_words") == "never" 				or words_mode(ctx, bardic_die(c, data)) != mode:
+			continue
+		ctx["words"] = mode
+		apply_reaction(s, data, o, roller, "cutting_words", ctx, lines)
+		ctx.erase("words")
+		return true
+	return false
+
+
+## Cutting Words reach `who` (5e): it hears (not deafened, not in a Silence) and can be charmed.
+static func hears_words(s: GameSession, data: Dictionary, who: Dictionary) -> bool:
+	return not ConditionRules.has(Sheet.holder(s, who), "deafened") and not SpellEffects.silenced(s, data, who) 		and not CombatRules.immune_to(data, who, "charmed") and HeroDefense.immune(s, data, who, "charmed", "").is_empty()
 
 
 static func bardic_die(c: Dictionary, data: Dictionary) -> int:
@@ -515,17 +619,26 @@ static func apply_reaction(s: GameSession, data: Dictionary, t: Dictionary, f: D
 			var cut := s.rng.randi_range(1, 10) + ab_mod(c, "dex") + level(c)
 			ctx["dmg"] = maxi(0, int(ctx["dmg"]) - cut)
 			lines.append("%s: Отражение снарядов — урон −%d" % [c.get("name", ""), cut])
+			catch_missile(s, data, t, f, ctx, lines)
 		"missile_snaring":
 			var snag := s.rng.randi_range(1, 10) + ab_mod(c, "dex")
 			ctx["dmg"] = maxi(0, int(ctx["dmg"]) - snag)
 			lines.append("%s ловит снаряд перчатками — урон −%d" % [c.get("name", ""), snag])
+			catch_missile(s, data, t, f, ctx, lines)
 		"cutting_words":
 			Stock.use(c, data, "bardic_inspiration", 1, s.rng)
-			var cut := s.rng.randi_range(1, bardic_die(c, data))
+			var die := bardic_die(c, data)
+			var cut := s.rng.randi_range(1, die)
+			if str(ctx.get("words", words_mode(ctx, die))) == "damage":
+				ctx["dmg"] = maxi(0, int(ctx["dmg"]) - cut)
+				lines.append("%s: Язвительные слова — урон −%d" % [c.get("name", ""), cut])
+				return
 			ctx["total"] = int(ctx["total"]) - cut
 			var still := int(ctx["total"]) >= int(ctx["ac"]) and not bool(ctx.get("nat20", false))
 			ctx["hit"] = still
-			lines.append("%s: Язвительные слова — −%d, атака %s" % [c.get("name", ""), cut, "всё же попадает" if still else "мимо"])
+			var what := str(ctx.get("what", "атака"))
+			lines.append("%s: Язвительные слова — −%d, %s %s" % [c.get("name", ""), cut, what, ("всё же удаётся" if what != "атака" else "всё же попадает") if still
+				else ("не удаётся" if what != "атака" else "мимо")])
 		"giant_killer":
 			ctx["counter"] = true
 

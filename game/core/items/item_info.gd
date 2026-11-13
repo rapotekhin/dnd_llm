@@ -81,7 +81,9 @@ static func notes(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	elif str(def.get("item_type", "")) == "wondrous" and (not (def.get("properties", []) as Array).is_empty() or def.has("wear")) and not id.begins_with(ItemRules.UNKNOWN):
 		# big test #23: a worn kind works only worn (v0.7.22.9), a stone or a pearl — in the pack
 		out.append(_t("ITEM_WORN_TO_WORK" if not CharacterRules.wear_slot(def, data).is_empty() else "ITEM_WORKS_CARRIED"))
-	if int(def.get("spoils_days", 0)) > 0:
+	if int(def.get("spoils_days", 0)) > 0 and def.has("spoils_to"):  # a clockwork of a tinker gnome winds down (v0.8.4.43.46)
+		out.append(_t("ITEM_WINDS_DOWN").format({"n": int(def["spoils_days"]), "to": ItemRules.display_name(data["items"], {}, str(def["spoils_to"]))}))
+	elif int(def.get("spoils_days", 0)) > 0:
 		out.append(_t("ITEM_SPOILS").format({"n": int(def["spoils_days"])}))
 	if ItemRules.cursed(def):
 		out.append(_t("ITEM_CURSED_LINE"))

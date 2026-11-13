@@ -134,7 +134,8 @@ static func without(actions: Array, lost: Array[String]) -> Array:
 		var best := 0
 		for a: Dictionary in actions:
 			best = maxi(best, int(a.get("to_hit", 0)))
-		kept.append({"name": "Безоружный удар", "kind": "melee", "to_hit": best, "damage": [{"dice": "1", "type": "bludgeoning"}]})
+		# `name_en` — how the act «Атака» finds it again (v0.8.4.43.46: a foe without its blade froze in its turn)
+		kept.append({"name": "Безоружный удар", "name_en": "Unarmed Strike", "kind": "melee", "to_hit": best, "damage": [{"dice": "1", "type": "bludgeoning"}]})
 	return kept
 
 
