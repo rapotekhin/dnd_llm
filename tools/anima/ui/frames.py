@@ -13,9 +13,9 @@ import argparse
 import json
 from pathlib import Path
 
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance
 
-from mock import BG, GAME, OUT, lit, outline, states, unground
+from mock import GAME, OUT, lit, outline, states, unground
 from preview import PICKS, seeds_of
 
 LOOKS = {"hover": "наведение", "pressed": "нажата", "disabled": "недоступна"}  # mock.states by its names
@@ -38,24 +38,13 @@ def look_of(img: Image.Image, look: str) -> Image.Image:
 
 
 def ornament(img: Image.Image, look: str) -> Image.Image:
-    """An ornament painted on black (crest, divider, ring): its brightness is its alpha (mock.lit). `lit` keeps the
-    whole square (the ring: its circles stand where the portrait's are counted), `crest` crops it to what is drawn;
-    a divider is split into its stretched `line` — the left half up to the middle mark mirrored, so the mark is not
+    """An ornament painted on black (divider, ring): its brightness is its alpha (mock.lit). `lit` keeps the
+    whole square (the ring: its circles stand where the portrait's are counted); a divider is split into its stretched `line` — the left half up to the middle mark mirrored, so the mark is not
     stretched with it — and its `mark`, the diamond with its dots laid once in the middle."""
     orn = lit(img)
     if look == "lit":
         return orn
     box = orn.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox() or (0, 0, *orn.size)
-    if look == "crest":  # a cartouche: the window's top line broken under a dark ground round its strokes
-        pad = 26
-        orn = orn.crop((box[0] - pad, box[1] - pad, box[2] + pad, box[3] + pad))
-        orn = Image.merge("RGBA", [*ImageEnhance.Brightness(orn.convert("RGB")).enhance(1.45).split(), orn.getchannel("A")])
-        ground = orn.getchannel("A").filter(ImageFilter.MaxFilter(45)).filter(ImageFilter.MinFilter(19))  # closed: the loops filled
-        ground = ground.filter(ImageFilter.GaussianBlur(4))
-        out = Image.new("RGBA", orn.size, (*BG, 0))
-        out.putalpha(ground)
-        out.alpha_composite(orn)
-        return out
     orn = orn.crop(box)
     w, h = orn.size
     alpha = orn.getchannel("A")
@@ -76,7 +65,7 @@ def make(raw: Path, seed: int, part: str, look: str, scale: float) -> Image.Imag
     """One file: the drawn part in its look, cut out of its ground by the part's own line (an ornament by its
     brightness), at the game's px."""
     plain = Image.open(raw / f"{part}_lines_{seed}.png").convert("RGB")
-    if look in ("lit", "crest", "line", "mark"):
+    if look in ("lit", "line", "mark"):
         cut = ornament(plain, look)
     else:
         shape = outline("button" if part == "accent" else part, "thin", plain.size)

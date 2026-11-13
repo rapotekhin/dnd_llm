@@ -127,19 +127,6 @@ static func cell_box() -> StyleBox:
 	return _cell
 
 
-## The crest over a window's top edge, in its middle, half above it (the author's pick of the lines style), on the
-## panel's own drawing; a window narrower than the crest takes it smaller.
-static func crest(panel: Control) -> void:
-	var tex := ornament("crest")
-	if tex == null:
-		return
-	panel.draw.connect(func() -> void:
-		var w := minf(tex.get_width(), panel.size.x * 0.5)
-		var h := tex.get_height() * w / tex.get_width()
-		panel.draw_texture_rect(tex, Rect2(Vector2((panel.size.x - w) / 2, -h / 2), Vector2(w, h)), false))
-	panel.queue_redraw()
-
-
 ## A node as it enters the tree: an HSeparator gets the divider's mark in its middle over the stretched line the theme
 ## draws (StyleBoxTexture cannot keep a mark unstretched). Connected to SceneTree.node_added by main.gd.
 static func adorn(node: Node) -> void:
