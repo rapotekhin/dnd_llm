@@ -13,6 +13,9 @@ uniform sampler2D cells : filter_nearest;  // r — the ground's place in the or
 uniform sampler2D light : filter_linear;   // r — darkness, g — under watch
 uniform sampler2DArray grounds : filter_linear_mipmap, repeat_enable;
 uniform sampler2DArray props : filter_linear_mipmap;
+uniform sampler2DArray surfaces : filter_linear_mipmap, repeat_enable;  // v0.8.4.43.29: fire, puddles, oil, ice, acid
+uniform vec2 surface_flow[16];  // how a surface's picture drifts, squares a second
+uniform vec2 surface_move[16];  // x — how it ripples, y — how it flickers (fire)
 uniform vec2 map_size = vec2(1.0);
 uniform float repeat_cells = 3.0;
 uniform int sharp_mask = 0;  // a bit per ground of the order
@@ -36,6 +39,12 @@ int ground_at(ivec2 c) {
 	if (c.x < 0 || c.y < 0 || c.x >= int(map_size.x) || c.y >= int(map_size.y)) return -1;
 	int g = int(texelFetch(cells, c, 0).r * 255.0 + 0.5);
 	return g == 255 ? -1 : g;
+}
+
+// the surface lying on a square (the light texture's blue, read exact): its place in `surfaces`, -1 — none
+int surface_at(ivec2 c) {
+	if (c.x < 0 || c.y < 0 || c.x >= int(map_size.x) || c.y >= int(map_size.y)) return -1;
+	return int(texelFetch(light, c, 0).b * 255.0 + 0.5) - 1;
 }
 
 bool sharp(int g) {
@@ -131,6 +140,28 @@ void fragment() {
 		if (sharp(ground_at(here + ivec2(0, -1)))) s = max(s, 1.0 - smoothstep(0.0, 0.32, l.y));
 		if (sharp(ground_at(here + ivec2(-1, 0)))) s = max(s, 1.0 - smoothstep(0.0, 0.22, l.x));
 		col.rgb *= 1.0 - 0.4 * s;
+	}
+
+	// the second layer (v0.8.4.43.29): a surface lying on the squares, its edge soft between their centres as a ground's
+	for (int k = 0; k < 4; k++) {
+		ivec2 c = i + ivec2(k % 2, k / 2);
+		int s = surface_at(c);
+		if (s < 0) continue;
+		bool first = true;  // each surface once, at the first corner that has it
+		for (int j = 0; j < k; j++) {
+			if (surface_at(i + ivec2(j % 2, j / 2)) == s) first = false;
+		}
+		if (!first) continue;
+		vec4 has = vec4(float(surface_at(i) == s), float(surface_at(i + ivec2(1, 0)) == s), float(surface_at(i + ivec2(0, 1)) == s), float(surface_at(i + ivec2(1, 1)) == s));
+		float cov = mix(mix(has.x, has.y, f.x), mix(has.z, has.w, f.x), f.y);
+		float a = smoothstep(0.5 - soft, 0.5 + soft, cov + wobble * 4.0 * cov * (1.0 - cov));
+		if (a <= 0.0) continue;
+		vec2 m = surface_move[s];
+		vec2 sp = p + surface_flow[s] * TIME + m.x * vec2(sin(TIME * 1.7 + p.y * 3.1), cos(TIME * 1.3 + p.x * 2.7));
+		vec4 t = texture(surfaces, vec3(sp / repeat_cells, float(s)));
+		if (t.a <= 0.0) continue;  // not drawn yet
+		vec3 rgb = t.rgb * (1.0 + m.y * (noise(p * 3.0 + vec2(0.0, TIME * 4.0)) - 0.35));
+		col = vec4(mix(col.rgb, rgb, a * t.a), max(col.a, a));
 	}
 
 	for (int dy = -3; dy <= 1; dy++) {  // the things of this square and of those around whose squares or overflow reach it

@@ -117,14 +117,20 @@ func _fire(s: GameSession, data: Dictionary) -> void:
 	step("oil on the square", SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return str(z["spell"]) == "puddle:oil" and (z["cells"] as Array).has(FightGrid.tag(at))))
 	node("EventBus").state_changed.emit()
 	await frames(4)
+	step("the oil lies as the ground's surface", SpellEffects.zone_view(s, data).any(func(z: Dictionary) -> bool: return str(z["look"].get("ground", "")) == "oil"))  # v0.8.4.43.29
+	var field: Control = find(screen(), "Field")
+	field.zoom(12, field.cell_point(at))
+	await frames(3)
 	await shot("oil")
 	var lines: Array[String] = []
 	FightField.kindle(s, data, [at] as Array[Vector2i], lines)
 	node("EventBus").state_changed.emit()
 	await frames(4)
 	step("the oil burns as a zone", SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return str(z["spell"]) == "fire"))
-	step("the fire is drawn as flames", SpellEffects.zone_view(s, data).any(func(z: Dictionary) -> bool: return str(z["look"].get("kind", "")) == "flames"))  # v0.8.4.30
+	step("the fire is drawn as flames", SpellEffects.zone_view(s, data).any(func(z: Dictionary) -> bool: return str(z["look"].get("ground", "")) == "fire"))  # v0.8.4.30, the surface v0.8.4.43.29
 	await shot("fire")
+	field.zoom(-12, field.cell_point(at))
+	await frames(2)
 
 
 func _crate(s: GameSession, data: Dictionary) -> void:

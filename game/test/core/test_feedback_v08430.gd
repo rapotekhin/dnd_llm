@@ -107,6 +107,23 @@ func test_fire_and_the_other_surfaces_have_a_look_of_their_own() -> void:
 	assert_dict(AnimRules.surface(data, {"spell": "bless"})).is_empty()
 
 
+func test_what_lies_on_the_ground_is_a_surface_of_the_maps_second_layer() -> void:  # v0.8.4.43.29
+	assert_str(str(AnimRules.surface(data, {"spell": "fire", "type": "fire"})["ground"])).is_equal("fire")
+	assert_str(str(AnimRules.surface(data, {"spell": "puddle:oil", "tile": "o"})["ground"])).is_equal("oil")
+	assert_str(str(AnimRules.surface(data, {"spell": "puddle:water", "tile": "~"})["ground"])).is_equal("puddle")
+	assert_str(str(AnimRules.surface(data, {"spell": "puddle:foul_water", "tile": "~"})["ground"])).is_equal("foul_puddle")
+	assert_str(str(AnimRules.surface(data, {"spell": "gen_sp_x", "type": "cold"})["ground"])).is_equal("ice")
+	assert_str(str(AnimRules.surface(data, {"spell": "fog_cloud"})["ground"])).is_empty()  # a cloud stays a sprite
+	var ids := AnimRules.surface_grounds(data)
+	for id: String in ["fire", "oil", "puddle", "foul_puddle", "ice", "acid"]:
+		assert_bool(ids.has(id)).override_failure_message(id).is_true()
+	assert_int(ids.size()).is_less_equal(MapGround.MAX_SURFACES)
+	var rows: Dictionary = data["anims"]["surfaces"]["kinds"]
+	for kind: String in rows:  # every kind's surface has its row of motion
+		var g := str(rows[kind].get("ground", ""))
+		assert_bool(g.is_empty() or ids.has(g)).override_failure_message(kind).is_true()
+
+
 func test_a_stack_of_buckets_weighs_by_each_one_filled() -> void:
 	var c := s.character
 	c["poured"] = true  # no starting vessel filled by its catalog row

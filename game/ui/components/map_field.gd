@@ -50,7 +50,14 @@ var over: Dictionary = {}  ## what a fight changed on the map: {square: Color}
 var zones: Array[Dictionary] = []:  ## SpellEffects.zone_view
 	set(v):
 		zones = v
-		_flicker = v.any(func(z: Dictionary) -> bool: return bool(z.get("look", {}).get("moves", false)))
+		var cover := {}  # what lies on the ground is the map's second layer (v0.8.4.43.29), not a sprite over it
+		for z: Dictionary in v:
+			var ground := str(z.get("look", {}).get("ground", ""))
+			if not ground.is_empty():
+				for at: Vector2i in z["cells"]:
+					cover[at] = ground
+		_ground.cover(cover)
+		_flicker = v.any(func(z: Dictionary) -> bool: return bool(z.get("look", {}).get("moves", false)) and str(z.get("look", {}).get("ground", "")).is_empty())
 		if _flicker:
 			set_process(true)
 var _flicker := false  ## a zone whose look moves: the map is drawn each frame (v0.8.4.30)
@@ -439,6 +446,8 @@ func _draw_fight_squares(t: float) -> void:
 	for at: Variant in over:
 		_tint(at, over[at], t)
 	for z: Dictionary in zones:
+		if not str(z.get("look", {}).get("ground", "")).is_empty():
+			continue  # drawn by the ground's second layer
 		var tint := Color(UiTheme.BAD if bool(z["hurts"]) else UiTheme.WARN, 0.26)
 		var tile := str(z.get("tile", ""))
 		if UiTheme.TILES.has(tile):  # a puddle in its liquid's colour (v0.8.4.28.2), as the oil was before
@@ -450,7 +459,7 @@ func _draw_fight_squares(t: float) -> void:
 			_tint(at, tint, t)
 	for z: Dictionary in zones:  # the sprite of a surface over its tint (v0.8.4.30)
 		var look: Dictionary = z.get("look", {})
-		if not look.is_empty():
+		if not look.is_empty() and str(look.get("ground", "")).is_empty():
 			for at: Vector2i in z["cells"]:
 				SurfaceArt.draw(self, Rect2(_corner + Vector2(at) * t, Vector2(t, t)), look, _clock, at)
 	for at: Variant in routes:

@@ -62,8 +62,18 @@ static func surface(data: Dictionary, z: Dictionary) -> Dictionary:
 		return {}
 	var row: Dictionary = c["kinds"][kind]
 	var colour := str(row["colour"])
+	var spell := str(z.get("spell", ""))  # a puddle lies as its liquid's surface (v0.8.4.43.29)
+	var ground := str(c.get("layer", {}).get("liquids", {}).get(spell.get_slice(":", 1), "")) if spell.begins_with("puddle:") else ""
 	return {"kind": kind, "colour": colour if colour.begins_with("#") else str(cfg(data)["palette"].get(colour, "#ffffff")),
-		"moves": bool(row.get("moves", false)), "texture": str(row.get("texture", ""))}
+		"moves": bool(row.get("moves", false)), "texture": str(row.get("texture", "")), "ground": ground if not ground.is_empty() else str(row.get("ground", ""))}
+
+
+## The surfaces of the map's second layer in one order (v0.8.4.43.29): a surface's place in the texture of surfaces.
+static func surface_grounds(data: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for id: Variant in cfg(data).get("surfaces", {}).get("layer", {}).get("grounds", {}):
+		out.append(str(id))
+	return out
 
 
 ## The colour key of a spell: its damage, a heal, else magic.

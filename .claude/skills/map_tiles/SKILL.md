@@ -18,7 +18,7 @@ description: Use this skill when making or changing the map's tileset — ground
 
 **НЕ срабатывает на:**
 - иконки, портреты, элементы интерфейса — это `anima_art`
-- поверхности боя (масло, огонь, паутина) — `surfaces` в `data/anims.json`
+- облака, свет и паутина боя — спрайты `surfaces` в `data/anims.json`; а текстура поверхности, лежащей на земле (огонь, масло, лужа, лёд, кислота), — это земля в `tiles.json` и строка `surfaces.layer` (v0.8.4.43.29)
 - картинки событий мастера — `llm_server/images.py`
 
 ## Как устроено (коротко)

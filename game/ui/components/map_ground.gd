@@ -12,6 +12,7 @@ const HI_FROM := 0.5  ## a ground's texel over this many screen pixels — its p
 const HI_BACK := 0.4  ## and back under this, so a view on the line does not flicker
 const MAX_PROPS := 64  ## the shader's arrays of props
 const EDGE_PX := 1024  ## a sheet of the sixteen tiles of a drawn edge
+const MAX_SURFACES := 16  ## the shader's arrays of surfaces (v0.8.4.43.29)
 const MAX_GROUNDS := 32  ## the grounds of the order: a bit each in the shader's sharp mask, a row of the edge table
 
 static var _arrays: Dictionary = {}  ## the textures of the grounds and of the things, built once: {"ground": …, "props": …}
@@ -80,6 +81,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	_lib = lib
 	var m := material as ShaderMaterial
 	m.set_shader_parameter("cells", _cells)
+	_surface_params(m)
 	m.set_shader_parameter("light", _light)
 	_lay_set()
 	m.set_shader_parameter("map_size", Vector2(w, h))
@@ -127,6 +129,7 @@ static func has_hi(lib: Dictionary) -> bool:
 func _lay_set() -> void:
 	var m := material as ShaderMaterial
 	m.set_shader_parameter("grounds", _array(_lib, "ground", _hi))
+	m.set_shader_parameter("surfaces", _array(_lib, "surface", _hi))
 	m.set_shader_parameter("props", _array(_lib, "props", _hi))
 
 
@@ -142,6 +145,34 @@ func light(dim: bool, now: Dictionary, cones: Dictionary, dark: float) -> void:
 			_light_bytes[i] = 0 if not dim or now.has(cell) else shade
 			_light_bytes[i + 1] = 255 if cones.has(cell) else 0
 	_light.update(Image.create_from_data(_size.x, _size.y, false, Image.FORMAT_RGBA8, _light_bytes))
+
+
+## The surfaces lying on the squares now (v0.8.4.43.29): {square: surface id of AnimRules.surface_grounds} — fire, a
+## puddle, oil, ice, acid — drawn as the second layer of the dual grid; kept in the light texture's blue (read exact).
+func cover(by_square: Dictionary) -> void:
+	if _size == Vector2i.ZERO:
+		return
+	var ids := AnimRules.surface_grounds(Catalog.data)
+	for y: int in _size.y:
+		for x: int in _size.x:
+			_light_bytes[(y * _size.x + x) * 4 + 2] = ids.find(str(by_square.get(Vector2i(x, y), ""))) + 1
+	_light.update(Image.create_from_data(_size.x, _size.y, false, Image.FORMAT_RGBA8, _light_bytes))
+
+
+## How each surface moves: its `flow`, `waver` and `glow` of anims.json `surfaces.layer.grounds`.
+func _surface_params(m: ShaderMaterial) -> void:
+	var rows: Dictionary = AnimRules.cfg(Catalog.data).get("surfaces", {}).get("layer", {}).get("grounds", {})
+	var flow := PackedVector2Array()
+	var move := PackedVector2Array()  # x — waver, y — glow
+	for id: String in AnimRules.surface_grounds(Catalog.data):
+		var row: Dictionary = rows[id]
+		var f: Array = row.get("flow", [0, 0])
+		flow.append(Vector2(float(f[0]), float(f[1])))
+		move.append(Vector2(float(row.get("waver", 0.0)), float(row.get("glow", 0.0))))
+	flow.resize(MAX_SURFACES)
+	move.resize(MAX_SURFACES)
+	m.set_shader_parameter("surface_flow", flow)
+	m.set_shader_parameter("surface_move", move)
 
 
 ## The things on the squares of a room (v0.8.4.43.23): each token with a body drawn from above on its squares, kept on its
@@ -248,15 +279,17 @@ static func _array(lib: Dictionary, group: String, hi := false) -> Texture2DArra
 	if _arrays.has(key):
 		return _arrays[key]
 	var g: Dictionary = lib["grounds"]
-	var ids: Array = g["order"] if group == "ground" else prop_ids(lib)
-	var side := (GROUND_PX if group == "ground" else PROP_PX) * (HI if hi else 1)
+	var ids: Array = g["order"] if group == "ground" else AnimRules.surface_grounds(Catalog.data) if group == "surface" else prop_ids(lib)
+	var flat := group != "props"  # a ground or a surface: a seamless texture of a ground's size
+	var side := (GROUND_PX if flat else PROP_PX) * (HI if hi else 1)
+	var folder := "ground" if group == "surface" else group  # a surface's texture lies with the grounds'
 	var images: Array[Image] = []
 	var same: Dictionary = g.get("same", {}) if group == "ground" else {}
 	for raw: Variant in ids:
 		var id: String = str(same.get(raw, raw))  # a ground with the texture of another (`grounds.same`, v0.8.4.43.28)
-		var path := "res://assets/tiles/%s_hi/%s.png" % [group, id]
+		var path := "res://assets/tiles/%s_hi/%s.png" % [folder, id]
 		if not hi or not ResourceLoader.exists(path):
-			path = "res://assets/tiles/%s/%s.png" % [group, id]
+			path = "res://assets/tiles/%s/%s.png" % [folder, id]
 		var img: Image
 		if ResourceLoader.exists(path):
 			img = (load(path) as Texture2D).get_image()
@@ -266,7 +299,7 @@ static func _array(lib: Dictionary, group: String, hi := false) -> Texture2DArra
 			img.resize(side, side, Image.INTERPOLATE_LANCZOS)
 		else:
 			img = Image.create(side, side, false, Image.FORMAT_RGBA8)
-			img.fill(Color(str(g.get("colour", {}).get(id, "#00000000"))) if group == "ground" else Color(0, 0, 0, 0))
+			img.fill(Color(str(g.get("colour", {}).get(id, "#00000000"))) if group == "ground" else Color(0, 0, 0, 0))  # a surface not drawn yet: none
 		img.generate_mipmaps()
 		images.append(img)
 	if images.is_empty():

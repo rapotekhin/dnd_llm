@@ -1004,6 +1004,9 @@
 		"stunning": ""
 	},
 	"surfaces": {
+		"layer": {"_doc": "v0.8.4.43.29: a surface lying on the ground (fire, a puddle, oil, ice, acid) is a second layer of the map's dual grid: a kind's `ground` (above) or a puddle's by its liquid (`liquids`) names a seamless texture assets/tiles/ground/<id>.png drawn over the ground with a soft edge; `grounds` — each one's `flow` (how its picture drifts, squares a second), `waver` (how it ripples), `glow` (how it flickers, fire). A zone with no `ground` (a cloud, a glow, a web) keeps its sprite.",
+			"liquids": {"water": "puddle", "foul_water": "foul_puddle", "oil": "oil"},
+			"grounds": {"fire": {"flow": [0.0, -0.18], "waver": 0.06, "glow": 0.35}, "puddle": {"flow": [0.03, 0.02], "waver": 0.02, "glow": 0.0}, "foul_puddle": {"flow": [0.01, 0.01], "waver": 0.015, "glow": 0.0}, "oil": {"flow": [0.0, 0.0], "waver": 0.0, "glow": 0.0}, "ice": {"flow": [0.0, 0.0], "waver": 0.0, "glow": 0.0}, "acid": {"flow": [0.02, -0.02], "waver": 0.03, "glow": 0.1}}},
 		"_doc": "How a zone of the field looks on its squares (v0.8.4.30, the author's feedback: fire and the other surfaces drawn plainer than they matter). A zone's look is the row of its `spell` id (before «:», so every puddle and aura of a kind shares one), else of its damage `type`, else `tile` for a puddle of a liquid; `kinds` — the drawing of a look: `colour` a key of `palette` or #hex, `moves` — drawn anew each frame, `texture` — a picture of the square that replaces the stub (ui/anims/surface_art.gd).",
 		"spells": {"fire": "flames", "web": "web", "caltrops": "spikes", "ball_bearings": "beads", "grease": "gloss", "puddle": "gloss", "entangle": "vines", "spike_growth": "spikes",
 			"fog_cloud": "haze", "darkness": "dark", "stinking_cloud": "haze", "sleet_storm": "frost", "moonbeam": "glow", "spirit_guardians": "glow", "silence": "ripple",
@@ -1011,18 +1014,18 @@
 		"types": {"fire": "flames", "cold": "frost", "acid": "bubbles", "poison": "haze", "radiant": "glow", "necrotic": "dark", "lightning": "glow", "thunder": "ripple", "force": "glow", "psychic": "ripple"},
 		"tile": "gloss",
 		"kinds": {
-			"flames": {"colour": "fire", "moves": true, "texture": ""},
+			"flames": {"colour": "fire", "moves": true, "texture": "", "ground": "fire"},
 			"web": {"colour": "#e8e4dc", "moves": false, "texture": ""},
 			"spikes": {"colour": "steel", "moves": false, "texture": ""},
 			"beads": {"colour": "steel", "moves": false, "texture": ""},
-			"gloss": {"colour": "#ffffff", "moves": false, "texture": ""},
+			"gloss": {"colour": "#ffffff", "moves": false, "texture": "", "ground": "oil"},
 			"vines": {"colour": "#5f9a3c", "moves": false, "texture": ""},
 			"haze": {"colour": "#c9c9c0", "moves": true, "texture": ""},
 			"dark": {"colour": "#0b0a10", "moves": false, "texture": ""},
-			"frost": {"colour": "cold", "moves": false, "texture": ""},
+			"frost": {"colour": "cold", "moves": false, "texture": "", "ground": "ice"},
 			"glow": {"colour": "radiant", "moves": true, "texture": ""},
 			"ripple": {"colour": "thunder", "moves": true, "texture": ""},
-			"bubbles": {"colour": "acid", "moves": true, "texture": ""}
+			"bubbles": {"colour": "acid", "moves": true, "texture": "", "ground": "acid"}
 		}
 	},
 	"palette": {
