@@ -88,10 +88,15 @@ func run() -> void:
 		await shot("shore")
 		field.zoom(30, field.cell_point(shore))  # the closest view: 8 squares across, the sharp pictures (v0.8.4.43.21)
 		await frames(3)
+		# The map's scripts read at run time, never named: MapGround reads the autoload Catalog, which a --script scenario
+		# does not have while it compiles — naming it broke the whole scenario after this step (v0.8.4.43.42).
+		var at_field: Dictionary = (field.get_script() as Script).get_script_constant_map()
+		var ground: Script = load("res://ui/components/map_ground.gd")
+		var at_ground: Dictionary = ground.get_script_constant_map()
 		var across: float = minf(field.size.x, field.size.y) / field.tile()
-		step("the closest view is 8 squares across", absf(across - MapField.CLOSE_CELLS) < 0.5 or field.tile() == MapField.MAX_TILE, "%.1f squares" % across)
-		var texel: float = field.tile() * float(field.lib["grounds"].get("repeat", 3)) / float(MapGround.GROUND_PX)
-		step("close up the sharp pictures where a texel is over half a pixel", field.sharp() == (texel > MapGround.HI_FROM and MapGround.has_hi(field.lib)),
+		step("the closest view is 8 squares across", absf(across - float(at_field["CLOSE_CELLS"])) < 0.5 or field.tile() == float(at_field["MAX_TILE"]), "%.1f squares" % across)
+		var texel: float = field.tile() * float(field.lib["grounds"].get("repeat", 3)) / float(at_ground["GROUND_PX"])
+		step("close up the sharp pictures where a texel is over half a pixel", field.sharp() == (texel > float(at_ground["HI_FROM"]) and bool(ground.call("has_hi", field.lib))),
 			"tile %.0f, texel %.2f, sharp %s" % [field.tile(), texel, field.sharp()])
 		await shot("closest")
 		field.zoom(-30, field.cell_point(shore))

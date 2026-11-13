@@ -137,7 +137,8 @@ func shot(shot_name: String) -> void:
 		_report.append("     OVERFLOW " + o)
 
 
-## Visible controls that run past the window outside any scroll: text there cannot be scrolled to.
+## Visible controls that run past the window outside any scroll: text there cannot be scrolled to. What a control that
+## clips its children holds (the map's ground under a zoom) is cut at its edge, as a scroll's is.
 func overflows() -> Array[String]:
 	var out: Array[String] = []
 	var view := root.get_visible_rect().grow(2.0)
@@ -146,7 +147,7 @@ func overflows() -> Array[String]:
 		var n: Node = stack.pop_back()
 		if n is CanvasItem and not (n as CanvasItem).visible:
 			continue
-		if n is ScrollContainer or n is Window:
+		if n is ScrollContainer or n is Window or (n is Control and (n as Control).clip_contents):
 			if n is Control and not view.encloses((n as Control).get_global_rect()):
 				out.append("%s %s" % [current_scene.get_path_to(n), (n as Control).get_global_rect()])
 			continue
