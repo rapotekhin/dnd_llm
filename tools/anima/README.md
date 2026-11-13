@@ -179,7 +179,7 @@ tail -f lines.log                              # [12/1260] spells/fireball #1 19
 # дома: действия через FLUX — 34 × 3 = 102 кадра, ~7 мин, ~$0.9 → out_lines_flux/
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only acts --backend openrouter
 # out_lines/ с сервера в tools/anima/out_lines/; выбор на той же странице — вкладки «· линии»
-python tools/anima/pick.py                     # http://127.0.0.1:8791/#lines_spells
+python tools/anima/pick.py                     # http://127.0.0.1:8791/#lines_spells; «Превью · линии» (#preview_lines) — экраны игры с выбранными иконками «линий»
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only spells,features,traits --recut   # другая рамка или цвет
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only acts --backend openrouter --recut
 # в игру — только если автор возьмёт стиль: поверх живописных
