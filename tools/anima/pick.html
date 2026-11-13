@@ -73,7 +73,8 @@
 <main id="grid"></main>
 <script>
 // one set per kind: {kind, title, items, picks, seen}; the active one is in the address after «#»
-let sets = {}, order = [], active = null, screens = [];
+let sets = {}, order = [], active = null, screens = [], styles = [];
+const PREVIEWS = { preview: ["Превью", ""], preview_lines: ["Превью · линии", "lines"] };  // a tab → its title, its style
 const grid = document.getElementById("grid");
 const status = document.getElementById("status");
 const want = new URLSearchParams(location.search).get("ids");
@@ -94,18 +95,21 @@ function tabs() {
     b.onclick = () => { location.hash = k; };
     nav.append(b);
   }
-  if (screens.length) {
+  for (const [k, [title, style]] of Object.entries(PREVIEWS)) {
+    if (!screens.length || (style && !styles.includes(style))) continue;
     const b = document.createElement("button");
-    b.className = active === "preview" ? "on" : "";
-    b.textContent = "Превью";
-    b.onclick = () => { location.hash = "preview"; };
+    b.className = active === k ? "on" : "";
+    b.textContent = title;
+    b.onclick = () => { location.hash = k; };
     nav.append(b);
   }
 }
 
-// the game's screens laid out of every pick at this moment (ui/preview.py), drawn again on each opening
-function previews() {
-  document.getElementById("title").textContent = "Превью: экраны из ваших выборов";
+// the game's screens laid out of every pick at this moment (ui/preview.py), drawn again on each opening; in a style
+// (lines) its icons where they are drawn, the rest as picked
+function previews(style) {
+  document.getElementById("title").textContent = style ? "Превью: иконки «линии» из ваших выборов" :
+                                                         "Превью: экраны из ваших выборов";
   document.getElementById("count").textContent = "рамки, иконки и их варианты — как выбрано сейчас";
   grid.className = "screens";
   grid.textContent = "";
@@ -113,7 +117,7 @@ function previews() {
   for (const s of screens) {
     const f = document.createElement("figure");
     const cap = document.createElement("figcaption"); cap.textContent = s.title;
-    const img = new Image(); img.src = `/preview/${s.id}.png?t=${t}`; img.alt = s.title;
+    const img = new Image(); img.src = `/preview/${style ? style + "/" : ""}${s.id}.png?t=${t}`; img.alt = s.title;
     f.append(cap, img);
     grid.append(f);
   }
@@ -162,7 +166,7 @@ function mark(s, it, card) {
 }
 
 function render() {
-  if (active === "preview") return previews();
+  if (active in PREVIEWS) return previews(PREVIEWS[active][1]);
   const s = sets[active];
   grid.className = s.big ? "big" : "";
   const only = document.getElementById("unseen").checked;
@@ -217,7 +221,7 @@ function render() {
 
 function open() {
   const k = location.hash.slice(1);
-  active = sets[k] || (k === "preview" && screens.length) ? k : order[0];
+  active = sets[k] || (k in PREVIEWS && screens.length) ? k : order[0];
   render();
   window.scrollTo(0, 0);
 }
@@ -232,6 +236,7 @@ fetch("/data").then(r => r.json()).then(d => {
     order.push(s.kind);
   }
   screens = d.screens || [];
+  styles = d.styles || [];
   if (!order.length) { status.textContent = "нет нарисованных вариантов"; return; }
   open();
 }).catch(() => { status.textContent = "сервер не отвечает"; });

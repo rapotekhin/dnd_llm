@@ -9,7 +9,7 @@ reads it); which icons were looked at is kept beside the drawings, in <out>/<kin
 variants at least are shown; up to six (the seeds 11 … 66 of `anima_gen.py --seeds`). The interface's frames in the
 lines style are a kind of their own (`frames`: a part's seeds of ui/paint.py, picked into ui/picks_lines.json); the
 icons of the lines style are sets of their own (`lines_spells`…: out_lines/, the acts out_lines_flux/, picked into
-picks_lines_icons.json), and
+picks_lines_icons.json) with a preview of their own («Превью · линии»: the same screens with their picks), and
 «Превью» lays the game's screens out of every pick at the moment it is opened (ui/preview.py). A card's box
 «перерисовать» puts the icon under `redraw` of its picks file with what the author wrote is wrong with it — not `redo`:
 install.py still lays the picked variant until the icon is drawn again. Local only (127.0.0.1).
@@ -141,17 +141,20 @@ def main() -> None:
                 "picks": {key: whole.get("variant", {}).get(key, 1) for key in mine},
                 "redraw": {key: whole["redraw"][key] for key in mine if key in whole.get("redraw", {})}}
 
-    def icon_of(ref: str) -> Path | None:
-        """An icon as picked: the chosen variant of a kind on the page, else what the game has now."""
+    def icon_of(ref: str, style: str = "") -> Path | None:
+        """An icon as picked: the chosen variant of a kind on the page — of its set in the `style` (lines_spells…)
+        where that set is drawn — else what the game has now."""
         kind, _, iid = ref.partition("/")
-        s = sets.get(kind)
+        name = f"{style}_{kind}" if style and f"{style}_{kind}" in sets else kind
+        s = sets.get(name)
         n = picks_of(s["picks"])["variant"].get(ref, 1) if s else 0
-        f = files.get(f"/img/{kind}/{iid}/{n}.png")
+        f = files.get(f"/img/{name}/{iid}/{n}.png")
         return f if isinstance(f, Path) else pv.game_icon(ref)
 
-    def screen(name: str) -> bytes:
+    def screen(name: str, style: str = "") -> bytes:
         frame_picks = sets["frames"]["picks"] if "frames" in sets else pv.PICKS
-        return png(pv.render(name, pv.Kit(HERE / "out_ui" / "raw", pv.seeds_of(frame_picks), icon_of)))
+        return png(pv.render(name, pv.Kit(HERE / "out_ui" / "raw", pv.seeds_of(frame_picks),
+                                          lambda ref: icon_of(ref, style))))
 
     class Handler(BaseHTTPRequestHandler):
         def _send(self, code: int, body: bytes, kind: str) -> None:
@@ -167,13 +170,18 @@ def main() -> None:
                 self._send(200, page.read_bytes(), "text/html; charset=utf-8")
             elif path == "/data":
                 body = {"kinds": [kind_of(k, s) for k, s in sets.items()],
-                        "screens": [{"id": k, "title": v} for k, v in pv.SCREENS.items()] if "frames" in sets else []}
+                        "screens": [{"id": k, "title": v} for k, v in pv.SCREENS.items()] if "frames" in sets else [],
+                        "styles": sorted({k.split("_")[0] for k in sets if k.startswith("lines_")})}
                 self._send(200, json.dumps(body, ensure_ascii=False).encode("utf-8"), "application/json")
             elif path in files:
                 f = files[path]
                 self._send(200, f.read_bytes() if isinstance(f, Path) else f, "image/png")
-            elif path.startswith("/preview/") and path.endswith(".png") and path[9:-4] in pv.SCREENS:
-                self._send(200, screen(path[9:-4]), "image/png")
+            elif path.startswith("/preview/") and path.endswith(".png"):  # /preview/<screen>.png, /preview/lines/…
+                style, _, name = path[9:-4].rpartition("/")
+                if name in pv.SCREENS and style in ("", "lines"):
+                    self._send(200, screen(name, style), "image/png")
+                else:
+                    self._send(404, b"no", "text/plain")
             else:
                 self._send(404, b"no", "text/plain")
 
