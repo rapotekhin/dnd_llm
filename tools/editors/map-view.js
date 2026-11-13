@@ -104,6 +104,7 @@ const MapView = (() => {
 		const open = lib.open || {};
 		switch (lib.grounds.turn?.[prop]) {
 			case 'walls': return ['#', 'w', SOCKET].includes(at(-1, 0)) && ['#', 'w', SOCKET].includes(at(1, 0)) ? 1 : 0;
+			case 'line': { const c = at(0, 0); return (at(0, -1) === c || at(0, 1) === c) && at(-1, 0) !== c && at(1, 0) !== c ? 1 : 0; }  // a fence along its like squares
 			case 'fall': {
 				const falls = open.falls || {};
 				const liquid = (c) => c in falls || Object.values(falls).includes(c) || Object.values(open.bridges || {}).includes(c);

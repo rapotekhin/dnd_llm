@@ -576,8 +576,13 @@ static func traps(s: GameSession, data: Dictionary, map: Dictionary) -> Array[Di
 	for ft: Dictionary in ExplorationRules.found_traps(s, data["world"], s.room_id):
 		var sec: Dictionary = ft["secret"]
 		var at := secret_cell(s, data, map, s.room_id, sec)
-		if at.x >= 0:
-			out.append(_token("trap:" + str(sec["id"]), "trap", str(sec["id"]), str(sec["text"]), at))
+		if at.x >= 0:  # drawn as a trap on its square (v0.8.4.43.44), its picture among its variants by the square
+			var t := _token("trap:" + str(sec["id"]), "trap", str(sec["id"]), str(sec["text"]), at)
+			t["body"] = "trap"
+			t["cells"] = [at] as Array[Vector2i]
+			t["corner"] = at
+			t["turn"] = 0
+			out.append(t)
 	return out
 
 

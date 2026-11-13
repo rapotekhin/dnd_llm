@@ -773,8 +773,60 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 	for tag: String in _ponds(cfg, tags, tiled):
 		ponded.append(str(cfg["ponds"][tag]))
 	_tidy(out, scattered, ponded)
+	_deep(out, lib)
 	out["picks"] = picks
 	return out
+
+
+## The deep middle of a pond (`open.deep`, v0.8.4.43.44): a square of the liquid with the liquid or its deep cell on every
+## side and corner becomes the deep cell; a deep square with fewer than two deep sides goes back, so the dual grid draws
+## no speck. The shore stays wadeable all round.
+static func _deep(out: Dictionary, lib: Dictionary) -> void:
+	var deep: Dictionary = lib["open"].get("deep", {})
+	var grid: Array[PackedStringArray] = []
+	for r: String in out["rows"]:
+		grid.append(r.split(""))
+	var h := grid.size()
+	for liquid: Variant in deep:
+		var l := str(liquid)
+		if l.begins_with("_"):
+			continue
+		var d := str(deep[liquid])
+		var turn: Array[Vector2i] = []
+		for y: int in range(1, h - 1):
+			for x: int in range(1, grid[y].size() - 1):
+				if grid[y][x] != l:
+					continue
+				var all := true
+				for dy: int in [-1, 0, 1]:
+					for dx: int in [-1, 0, 1]:
+						if x + dx >= grid[y + dy].size() or not grid[y + dy][x + dx] in [l, d]:
+							all = false
+				if all:
+					turn.append(Vector2i(x, y))
+		for at: Vector2i in turn:
+			grid[at.y][at.x] = d
+		for _pass: int in 16:
+			var back: Array[Vector2i] = []
+			for y: int in h:
+				for x: int in grid[y].size():
+					if grid[y][x] != d:
+						continue
+					var same := 0
+					for side: String in SIDES:
+						var n: Vector2i = Vector2i(x, y) + STEP[side]
+						if n.y >= 0 and n.y < h and n.x >= 0 and n.x < grid[n.y].size() and grid[n.y][n.x] == d:
+							same += 1
+					if same < 2:
+						back.append(Vector2i(x, y))
+			if back.is_empty():
+				break
+			for at: Vector2i in back:
+				grid[at.y][at.x] = l
+	var rows: Array[String] = []
+	for line: PackedStringArray in grid:
+		rows.append("".join(line))
+	out["rows"] = rows
 
 
 ## The patches of an open map once its roads, buildings and ways have cut them: no lone square of them is left.
@@ -1513,6 +1565,9 @@ static func prop_turn(lib: Dictionary, rows: Array, x: int, y: int, prop: String
 	match str(lib["grounds"].get("turn", {}).get(prop, "")):
 		"walls":
 			return 1 if at.call(-1, 0) in [WALL, "w", SOCKET] and at.call(1, 0) in [WALL, "w", SOCKET] else 0
+		"line":  # a fence along its like squares: upright where they go up and down, not left and right (v0.8.4.43.44)
+			var c: String = at.call(0, 0)
+			return 1 if (at.call(0, -1) == c or at.call(0, 1) == c) and at.call(-1, 0) != c and at.call(1, 0) != c else 0
 		"fall":
 			var high := func(dx: int, dy: int) -> bool: return at.call(dx, dy) == HIGH
 			var falls: Dictionary = open.get("falls", {})

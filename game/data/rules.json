@@ -3287,7 +3287,12 @@
 			"vein": {"name": "рудная жила", "size": [1, 1], "blocks": ["path"], "cover": "half", "made_of": "stone", "weight": 3000},
 			"desk": {"name": "письменный стол", "size": [2, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 60},
 			"millstone": {"name": "жернов", "size": [2, 2], "blocks": ["path"], "cover": "half", "made_of": "stone", "weight": 2500},
-			"standing_stone": {"name": "менгир", "size": [1, 1], "blocks": ["path", "shots"], "cover": "three_quarters", "made_of": "stone", "weight": 8000}
+			"standing_stone": {"name": "менгир", "size": [1, 1], "blocks": ["path", "shots"], "cover": "three_quarters", "made_of": "stone", "weight": 8000},
+			"trap": {"name": "ловушка", "size": [1, 1], "blocks": [], "made_of": "iron", "weight": 15},
+			"grave": {"name": "могила", "size": [2, 1], "blocks": ["path"], "cover": "half", "made_of": "stone", "weight": 500},
+			"timber": {"name": "крепь", "size": [1, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 200},
+			"rug": {"name": "ковёр", "size": [2, 1], "blocks": [], "made_of": "cloth", "weight": 20},
+			"straw": {"name": "солома", "size": [1, 1], "blocks": [], "made_of": "cloth", "weight": 10}
 		}
 	},
 	"ways": {

@@ -8,7 +8,7 @@
 		",": {"name": "path"},
 		"+": {"name": "door", "opaque": true, "keep_free": true},
 		"%": {"name": "difficult", "cost": 2},
-		"^": {"name": "hazard", "hazard": true},
+		"^": {"name": "hazard", "hazard": true}, "f": {"name": "fence", "solid": true, "thin": true, "burns": true, "_doc": "v0.8.4.43.44: a wattle fence round a yard or a garden: not walked, seen over; its picture joins its neighbours (grounds.turn `line`)"}, "$": {"name": "deep water", "cost": 4, "deep": true, "_doc": "v0.8.4.43.44: the deep middle of a pond, every square round it of the pond (LayoutGen._deep): swum, not waded"},
 		"~": {"name": "water", "cost": 2},
 		"_": {"name": "bridge", "_doc": "v0.8.4.43.36: a bridge over water: walked, its deck a ground (planks) whose edge with the water is drawn; laid where a road crosses water (open.bridges)"},
 		";": {"name": "bridge", "_doc": "a bridge over lava"},
@@ -25,7 +25,7 @@
 	},
 	"grounds": {
 		"_doc": "What a map is drawn of (LayoutGen.grounds, MapField's dual grid): the ground of a square by its character of `cells` — a string for any place, a dictionary by the place's kind, the kinds of its family, its shape (`open`, `building`, `tunnels`) — the most exact key first — with `*` for the rest (LayoutGen.ground_keys), a character not here takes the one of `.`; `order` — the grounds from the lowest layer to the highest: at a meeting of grounds the higher one lies over; `sharp` — a ground whose edge stays on the square's border (walls), the others meet by a rough line between the squares' centres; `patches` — by the same keys (the first that has rows; an empty list — none), patches of another ground over the floor's own ground: `share` of the floor in blobs of about `cell` squares by the map's seed, or `near` — a rim of `width` squares round the squares of that character (a beach); `props` — a thing drawn on the square by the character and the same keys; `repeat` — squares one texture spans; `colour` — a ground with no texture yet; `edges` — pairs of grounds whose meeting is drawn (a sheet of the 16 dual-grid tiles, assets/tiles/edges/<low>__<high>.png, its alpha the line between them), the rest meet by the mask; `edge_layout` — the 5×5 corners the sheet is laid on (1 — the higher ground), its sixteen 2×2 windows each case once; `edge_band` — how wide the drawn edge lies on both sides of the line. Textures: assets/tiles/ground/<id>.png, things: assets/tiles/props/<id>.png (tools/tiles/gen_tiles.py).",
-		"order": ["pit", "magma", "still_water", "water", "mud", "reeds", "farmland", "dirt", "sand", "thorns", "ice", "snow", "stony", "scree", "grass", "tall_grass", "high_grass", "cliff_top", "cliff", "cobble", "cave", "flagstone", "planks", "rock", "wall", "roof"],
+		"order": ["pit", "magma", "still_water", "deep_water", "water", "mud", "reeds", "farmland", "dirt", "sand", "thorns", "ice", "snow", "stony", "scree", "grass", "tall_grass", "high_grass", "cliff_top", "cliff", "cobble", "cave", "flagstone", "planks", "rock", "wall", "roof"],
 		"sharp": ["wall", "roof"],
 		"patches": {
 			"open": [{"ground": "dirt", "share": 0.08, "cell": 7}],
@@ -38,29 +38,30 @@
 				"open": "grass", "tunnels": "cave", "*": "planks"},
 			"#": {"tunnels": "rock", "*": "wall"}, "D": {"tunnels": "rock", "*": "wall"}, "w": "wall", "r": "roof",
 			"~": {"swamp": "still_water", "tunnels": "still_water", "*": "water"},
+			"$": {"swamp": "still_water", "tunnels": "still_water", "*": "deep_water"},
 			"&": "magma",
 			"_": "planks",
 			";": "planks",
 			"|": "water",
 			"!": "magma",
-			"%": {"dunes": "thorns", "snowfield": "ice", "rocks": "scree", "hills": "tall_grass", "field": "farmland", "camp": "tall_grass", "swamp": "reeds", "*": "mud"},
+			"%": {"dunes": "thorns", "snowfield": "ice", "rocks": "scree", "hills": "tall_grass", "field": "farmland", "camp": "tall_grass", "swamp": "reeds", "square": "farmland", "gate": "farmland", "*": "mud"},
 			"=": "cobble", ",": "dirt", "o": "pit", ":": {"snowfield": "snow", "dunes": "sand", "rocks": "stony", "*": "high_grass"}, "/": {"snowfield": "cliff", "dunes": "cliff", "rocks": "cliff", "*": "cliff_top"}, " ": {"tunnels": "rock"}
 		},
 		"props": {
-			"T": {"*": "tree"}, "|": {"*": "waterfall"}, "!": {"*": "lavafall"},
+			"T": {"*": "tree"}, "f": {"*": "fence"}, "|": {"*": "waterfall"}, "!": {"*": "lavafall"},
 			"B": {"ruin": "rubble", "building": "table", "*": "boulder"},
 			"+": {"*": "door"}
 		},
-		"size": {"signpost": 0.9, "stairs_up": 1.0, "stairs_down": 1.0, "boulder_pair": 1.05, "boulder_ridge": 1.05, "tree_pair": 1.3, "grove": 1.25, "waterfall": 1.2, "lavafall": 1.2, "tree": 1.7, "boulder": 1.0, "table": 0.95, "door": 1.0, "rubble": 1.1},
+		"size": {"fence": 1.0, "signpost": 0.9, "stairs_up": 1.0, "stairs_down": 1.0, "boulder_pair": 1.05, "boulder_ridge": 1.05, "tree_pair": 1.3, "grove": 1.25, "waterfall": 1.2, "lavafall": 1.2, "tree": 1.7, "boulder": 1.0, "table": 0.95, "door": 1.0, "rubble": 1.1},
 		"repeat": 3,
-		"colour": {"pit": "#0d0b09", "magma": "#b8430f", "water": "#2c4a5c", "mud": "#33301c", "dirt": "#6b5838", "grass": "#3f5a2e", "cobble": "#7f7a6c", "cave": "#4a463f", "planks": "#5a4330", "wall": "#5e4d3a", "roof": "#4a3428",
+		"colour": {"deep_water": "#1f4f63", "pit": "#0d0b09", "magma": "#b8430f", "water": "#2c4a5c", "mud": "#33301c", "dirt": "#6b5838", "grass": "#3f5a2e", "cobble": "#7f7a6c", "cave": "#4a463f", "planks": "#5a4330", "wall": "#5e4d3a", "roof": "#4a3428",
 			"rock": "#45403a", "still_water": "#1f2b24", "sand": "#b49a68", "thorns": "#8c7a52", "snow": "#dfe4e8", "ice": "#a9bfcc",
 			"stony": "#6f6a60", "scree": "#77736a", "tall_grass": "#5b6e34", "high_grass": "#7d8a3c", "cliff_top": "#7d8a3c", "cliff": "#5a4a38", "farmland": "#5a4630", "reeds": "#4c5a34", "flagstone": "#6e6c66"},
 		"same": {"_doc": "v0.8.4.43.28: a ground drawn with the texture of another — the rim of high ground over a cliff is its top's grass, its own id gives the cliff's drawn edge with the lowland", "cliff_top": "high_grass"},
-		"turn": {"_doc": "v0.8.4.43.36: how a thing of a square turns (LayoutGen.prop_turn): `walls` — across a wall with walls on both sides (a door), `fall` — down from the high ground (a waterfall, its picture falls top to bottom)", "door": "walls", "waterfall": "fall", "lavafall": "fall"},
+		"turn": {"_doc": "v0.8.4.43.36: how a thing of a square turns (LayoutGen.prop_turn): `walls` — across a wall with walls on both sides (a door), `fall` — down from the high ground (a waterfall, its picture falls top to bottom)", "door": "walls", "waterfall": "fall", "lavafall": "fall", "fence": "line"},
 		"blend": {"_doc": "v0.8.4.43.41: no repeat of a ground every few squares — its texture read twice, as it is and mirrored and shifted, mixed by a noise of `scale` per square with a border `edge` wide; its tone lighter or darker by `macro` in patches of `macro_scale` (map_ground.gdshader `ground`)", "scale": 0.18, "edge": 0.14, "macro": 0.09, "macro_scale": 0.07},
 		"exits": {"_doc": "v0.8.4.43.40: the thing drawn on the square of a way out by its kind — `edge` the rim of an open map, `stairs` a way down to another floor, `stairs_up` a way up; a door is its own `+`. Turned so its top looks out of the map or to the wall the stairs stand by (LayoutGen.props_laid with the map's exits)", "edge": "signpost", "stairs": "stairs_down", "stairs_up": "stairs_up"},
-		"variants": {"_doc": "v0.8.4.43.37: a thing drawn in more pictures than one: `<id>`, `<id>_v1`, `<id>_v2`… — each square takes one by its number (LayoutGen.variant, by the map's seed), so a grove is not one tree copied", "tree": 3, "boulder": 3, "rubble": 3, "bush": 3, "stump": 3, "mushrooms": 2, "bones": 3, "boulder_pair": 2, "boulder_ridge": 2, "tree_pair": 2, "grove": 2},
+		"variants": {"_doc": "v0.8.4.43.37: a thing drawn in more pictures than one: `<id>`, `<id>_v1`, `<id>_v2`… — each square takes one by its number (LayoutGen.variant, by the map's seed), so a grove is not one tree copied", "trap": 2, "grave": 2, "timber": 2, "rug": 2, "straw": 2, "tree": 3, "boulder": 3, "rubble": 3, "bush": 3, "stump": 3, "mushrooms": 2, "bones": 3, "boulder_pair": 2, "boulder_ridge": 2, "tree_pair": 2, "grove": 2},
 		"natural": {"_doc": "v0.8.4.43.37: things that grow or lie as nature put them: each square sizes and shifts its picture a little by its number (`scale`, `shift` of a square), and a soft shade lies on the ground round them, merged with the shade of those beside", "scale": 0.12, "shift": 0.1, "shade": 0.2, "of": ["tree", "boulder", "rubble", "bush", "stump", "mushrooms", "bones", "boulder_pair", "boulder_ridge", "tree_pair", "grove"]},
 		"groups": {"_doc": "v0.8.4.43.37: like things side by side drawn as one picture (LayoutGen.props_laid): the largest that fits first, row by row; a group of two stands either way. The squares keep their own rules: only the look is one", "boulder": [{"id": "boulder_ridge", "size": [2, 2]}, {"id": "boulder_pair", "size": [2, 1]}], "tree": [{"id": "grove", "size": [2, 2]}, {"id": "tree_pair", "size": [2, 1]}]},
 		"strips": {"_doc": "v0.8.4.43.36: a thing drawn as a strip of one FLUX frame (gen_tiles.py `strips`): a square takes its part by its like neighbours across its fall (LayoutGen.prop_at) — alone, the left end, the middle, the right end; the picture of each is `<thing>_<part>`", "parts": ["one", "left", "mid", "right"], "of": ["waterfall", "lavafall"]},
@@ -85,8 +86,8 @@
 		"road_wander": 4,
 		"clear": 2,
 		"pond": 0.09,
-		"bridges": {"_doc": "v0.8.4.43.36: a road laid over a liquid square lays a bridge there: the liquid → the bridge cell", "~": "_", "&": ";"},
-		"falls": {"_doc": "v0.8.4.43.36: a cliff square with the same liquid on two opposite sides becomes its fall: the liquid → the fall cell", "~": "|", "&": "!"},
+		"bridges": {"_doc": "v0.8.4.43.36: a road laid over a liquid square lays a bridge there: the liquid → the bridge cell", "~": "_", "$": "_", "&": ";"},
+		"deep": {"_doc": "v0.8.4.43.44: the middle of a pond whose every square round is of the pond becomes its deep water: the liquid → the deep cell (LayoutGen._deep, after the roads and the bridges); a lone deep square goes back", "~": "$"}, "falls": {"_doc": "v0.8.4.43.36: a cliff square with the same liquid on two opposite sides becomes its fall: the liquid → the fall cell", "~": "|", "&": "!"},
 		"ponds": {"_doc": "v0.8.4.43.32: a tag of a place → the cell of a pond of its open map (not a map of open chunks: a pond of water comes with its pieces)", "water": "~", "lava": "&"},
 		"noise_cell": 6, "tile": 12, "tile_scatter": 0.5
 	},
@@ -198,12 +199,18 @@
 						"statue": 2,
 						"plant_pot": 1
 					},
+					"prison": {
+						"straw": 3,
+						"barrel": 1
+					},
 					"*": {
 						"plant_pot": 3,
-						"statue": 1
+						"statue": 1,
+						"rug": 2
 					}
 				}
 			},
+			"grave": {"name": "место для могилы", "fill": 0.85, "bodies": {"*": {"grave": 1}}},
 			"pillar": {
 				"name": "колонна",
 				"fill": 1.0,
@@ -221,7 +228,8 @@
 						"crate": 2,
 						"barrel": 1,
 						"bones": 1,
-						"boulder": 1
+						"boulder": 1,
+						"timber": 3
 					},
 					"*": {
 						"bones": 2,
@@ -820,6 +828,25 @@
 				"...........",
 				".C...C...C.",
 				"s.s.....s.s"
+			]},
+		{"id": "garden", "landmarks": ["town", "gate"],
+			"rows": [
+				"fffff.ffff",
+				"f%%%%.%%%f",
+				"f%%%%.%%%f",
+				"f.........",
+				"f%%%%.%%%f",
+				"f%%%%.%%%f",
+				"ffffffffff"
+			]},
+		{"id": "graves", "landmarks": ["ruin"], "marks": {"g": "spot:grave"},
+			"rows": [
+				".........",
+				".g..g..g.",
+				".........",
+				".g..g..g.",
+				".........",
+				"..g...g.."
 			]},
 		{"id": "fighting_ring", "landmarks": ["ring"], "marks": {"R": "ring"},
 			"rows": [
