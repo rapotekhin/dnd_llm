@@ -3480,7 +3480,11 @@
    "sentence": "A single glowing green arrow of acid with a bright yellow-green tip and dripping droplets, flying diagonally to the right.",
    "key": "",
    "school": "evocation",
-   "tint": "#d0704f"
+   "tint": "#d0704f",
+   "lines": {
+    "tags": "arrow, breastplate, armor, melting, acid, drops",
+    "sentence": "A single arrow stuck in a breastplate, the metal around the arrowhead melting away with holes eaten through it and drops running down."
+   }
   },
   {
    "id": "acid_splash",
@@ -3930,7 +3934,11 @@
    "sentence": "A single violet glowing bolt of crackling energy, angled diagonally upward to the right.",
    "key": "",
    "school": "evocation",
-   "tint": "#d0704f"
+   "tint": "#d0704f",
+   "lines": {
+    "tags": "orb, spiral, tentacles, eldritch, energy",
+    "sentence": "A small round orb with a swirling spiral inside it and six curling tentacles of energy reaching out from it in all directions."
+   }
   },
   {
    "id": "enhance_ability",
@@ -3940,7 +3948,12 @@
    "sentence": "A single glowing green paw print with a brown outline and a small upward arrow in its center, seen from above.",
    "key": "",
    "school": "transmutation",
-   "tint": "#c8b45a"
+   "tint": "#c8b45a",
+   "lines": {
+    "tags": "arm, flexed arm, biceps, muscles, up arrows",
+    "sentence": "A single flexed muscular arm with three small arrows pointing up rising around it.",
+    "people": true
+   }
   },
   {
    "id": "enlarge_reduce",
@@ -3950,7 +3963,12 @@
    "sentence": "A single green double-headed arrow with brown edges, one head large and one small, pointing diagonally upward.",
    "key": "",
    "school": "transmutation",
-   "tint": "#c8b45a"
+   "tint": "#c8b45a",
+   "lines": {
+    "tags": "big figure, small figure, double-headed arrow, size",
+    "sentence": "A big human figure standing beside a small human figure, with a double-headed arrow between them.",
+    "people": true
+   }
   },
   {
    "id": "entangle",
@@ -4190,7 +4208,11 @@
    "sentence": "A single streaking bolt of gold and white light with a bright glowing core, angled diagonally upward.",
    "key": "",
    "school": "evocation",
-   "tint": "#d0704f"
+   "tint": "#d0704f",
+   "lines": {
+    "tags": "falling star, four-pointed star, rays, sparkles, trail",
+    "sentence": "A large shining four-pointed star with straight rays falling from above, a short trail of sparkles behind it."
+   }
   },
   {
    "id": "gust_of_wind",
@@ -4360,7 +4382,11 @@
    "sentence": "A single broken iron shackle with its chain snapped, glowing blue, with a small white plus sign above it, as a flat symbol.",
    "key": "",
    "school": "abjuration",
-   "tint": "#6f9fc0"
+   "tint": "#6f9fc0",
+   "lines": {
+    "tags": "ankh, symbol of life, drops, falling away",
+    "sentence": "A single ankh, the symbol of life, with three dark drops of sickness falling away from it below."
+   }
   },
   {
    "id": "light",
@@ -4430,7 +4456,11 @@
    "sentence": "A single violet glowing dart pointing diagonally upward, with two faint violet copies trailing behind it.",
    "key": "",
    "school": "evocation",
-   "tint": "#d0704f"
+   "tint": "#d0704f",
+   "lines": {
+    "tags": "three darts, arrows, arcs, converging, spiral trails",
+    "sentence": "Three small darts flying in curved arcs from below and meeting at one point above, each leaving a curling spiral trail."
+   }
   },
   {
    "id": "magic_mouth",
@@ -4650,7 +4680,11 @@
    "sentence": "A single jagged black beam of dark purple energy, tapering to a point, angled diagonally.",
    "key": "grey",
    "school": "necromancy",
-   "tint": "#7fa07a"
+   "tint": "#7fa07a",
+   "lines": {
+    "tags": "wilted sword, drooping blade, limp, smoke",
+    "sentence": "A single sword whose blade bends and droops limp like a wilted flower stem, a thin wisp of smoke rising from it."
+   }
   },
   {
    "id": "ray_of_frost",
@@ -4660,7 +4694,11 @@
    "sentence": "A single light blue beam of frost with a white snowflake at its tip, angled diagonally.",
    "key": "",
    "school": "evocation",
-   "tint": "#d0704f"
+   "tint": "#d0704f",
+   "lines": {
+    "tags": "boot, block of ice, frozen, icicles",
+    "sentence": "A single boot frozen inside a jagged block of ice, with icicles hanging from the ice."
+   }
   },
   {
    "id": "remove_curse",
@@ -4690,7 +4728,11 @@
    "sentence": "A single column of golden-white flame falling downward, with a bright white core.",
    "key": "",
    "school": "evocation",
-   "tint": "#d0704f"
+   "tint": "#d0704f",
+   "lines": {
+    "tags": "flame, altar, sunburst, rays, holy",
+    "sentence": "A single flame burning on a small stone altar, a radiant sunburst with straight rays behind it."
+   }
   },
   {
    "id": "sanctuary",
@@ -5404,7 +5446,11 @@
    "name": "Божественная кара",
    "tags": "longsword, sword, steel blade, glowing, gold, diagonal",
    "sentence": "A single straight steel longsword lying diagonally, blade down and to the right, wrapped in a bright golden glow.",
-   "key": ""
+   "key": "",
+   "lines": {
+    "tags": "longsword, holy symbol, sun, rays, sigil",
+    "sentence": "A single longsword pointing straight down through the middle of a radiant holy sigil: a circle with a cross inside it and straight rays all around it."
+   }
   },
   {
    "id": "domain_spells_1",
@@ -5444,7 +5490,12 @@
    "name": "Наследие дракона: чёрный (урон кислотой)",
    "tags": "dragon head, black, acid, green glow, front view",
    "sentence": "A single black dragon head seen from the front, with a bright green acid glow around its open mouth.",
-   "key": "grey"
+   "key": "grey",
+   "tint": "#8c86a0",
+   "lines": {
+    "tags": "dragon head, profile, long neck, open mouth, breath",
+    "sentence": "A single dragon head in profile facing right, its long neck curving down under it, mouth wide open, horns curving forward over a skull-like face, dripping drops of acid falling from its jaw."
+   }
   },
   {
    "id": "dragon_ancestor_blue___lightning_damage",
@@ -5452,7 +5503,12 @@
    "name": "Наследие дракона: синий (урон молнией)",
    "tags": "dragon head, blue, lightning, yellow glow, front view",
    "sentence": "A single blue dragon head seen from the front, with bright yellow lightning crackling around its open mouth.",
-   "key": ""
+   "key": "",
+   "tint": "#5f95d8",
+   "lines": {
+    "tags": "dragon head, profile, long neck, open mouth, breath",
+    "sentence": "A single dragon head in profile facing right, its long neck curving down under it, mouth wide open, one big horn on its nose and a frill of spikes on its cheeks, a jagged lightning bolt from its mouth."
+   }
   },
   {
    "id": "dragon_ancestor_brass___fire_damage",
@@ -5460,7 +5516,12 @@
    "name": "Наследие дракона: латунный (урон огнём)",
    "tags": "dragon head, brass, fire, orange glow, front view",
    "sentence": "A single brass-colored dragon head seen from the front, with orange fire glowing around its open mouth.",
-   "key": ""
+   "key": "",
+   "tint": "#d2a85a",
+   "lines": {
+    "tags": "dragon head, profile, long neck, open mouth, breath",
+    "sentence": "A single dragon head in profile facing right, its long neck curving down under it, mouth wide open, a broad blade-shaped crest on the back of its head, a plume of flames from its mouth."
+   }
   },
   {
    "id": "dragon_ancestor_bronze___lightning_damage",
@@ -5468,7 +5529,8 @@
    "name": "Наследие дракона: бронзовый (урон молнией)",
    "tags": "dragon head, bronze, lightning, yellow glow, front view",
    "sentence": "A single bronze-colored dragon head seen from the front, with bright yellow lightning crackling around its open mouth.",
-   "key": ""
+   "key": "",
+   "tint": "#b98a52"
   },
   {
    "id": "dragon_ancestor_copper___acid_damage",
@@ -5476,7 +5538,8 @@
    "name": "Предок-дракон: медный (урон кислотой)",
    "tags": "dragon head, copper, acid, green glow, front view",
    "sentence": "A single copper-colored dragon head seen from the front, with a bright green acid glow around its open mouth.",
-   "key": ""
+   "key": "",
+   "tint": "#d07a4a"
   },
   {
    "id": "dragon_ancestor_gold___fire_damage",
@@ -5484,7 +5547,12 @@
    "name": "Предок-дракон: золотой (урон огнём)",
    "tags": "dragon head, gold, fire, orange glow, front view",
    "sentence": "A single gold dragon head seen from the front, with orange fire glowing around its open mouth.",
-   "key": ""
+   "key": "",
+   "tint": "#e6c24a",
+   "lines": {
+    "tags": "dragon head, profile, long neck, open mouth, breath",
+    "sentence": "A single dragon head in profile facing right, its long neck curving down under it, mouth wide open, long whiskers hanging from its jaw and a frill of fins behind its head, a plume of flames from its mouth."
+   }
   },
   {
    "id": "dragon_ancestor_green___poison_damage",
@@ -5492,7 +5560,8 @@
    "name": "Предок-дракон: зелёный (урон ядом)",
    "tags": "dragon head, profile, green, long neck, poison breath",
    "sentence": "A single green dragon head in profile facing right, its long neck curving down under it, mouth open breathing a purple poison mist.",
-   "key": ""
+   "key": "",
+   "tint": "#64b06a"
   },
   {
    "id": "dragon_ancestor_red___fire_damage",
@@ -5500,7 +5569,12 @@
    "name": "Предок-дракон: красный (урон огнём)",
    "tags": "dragon head, red, fire, orange glow, front view",
    "sentence": "A single red dragon head seen from the front, with orange fire glowing around its open mouth.",
-   "key": ""
+   "key": "",
+   "tint": "#d8503c",
+   "lines": {
+    "tags": "dragon head, profile, long neck, open mouth, breath",
+    "sentence": "A single dragon head in profile facing right, its long neck curving down under it, mouth wide open, two big horns swept back and a row of spikes down its neck, a plume of flames from its mouth."
+   }
   },
   {
    "id": "dragon_ancestor_silver___cold_damage",
@@ -5508,7 +5582,12 @@
    "name": "Предок-дракон: серебряный (урон холодом)",
    "tags": "dragon head, silver, cold, light blue glow, front view",
    "sentence": "A single silver dragon head seen from the front, with a pale blue cold glow around its open mouth.",
-   "key": ""
+   "key": "",
+   "tint": "#c9d3de",
+   "lines": {
+    "tags": "dragon head, profile, long neck, open mouth, breath",
+    "sentence": "A single dragon head in profile facing right, its long neck curving down under it, mouth wide open, a smooth frill along its jaw and a sleek crest, a cloud of frost crystals from its mouth."
+   }
   },
   {
    "id": "dragon_ancestor_white___cold_damage",
@@ -5516,7 +5595,12 @@
    "name": "Предок-дракон: белый (урон холодом)",
    "tags": "dragon head, white, cold, light blue glow, front view",
    "sentence": "A single white dragon head seen from the front, with a pale blue cold glow around its open mouth.",
-   "key": ""
+   "key": "",
+   "tint": "#eef4fa",
+   "lines": {
+    "tags": "dragon head, profile, long neck, open mouth, breath",
+    "sentence": "A single dragon head in profile facing right, its long neck curving down under it, mouth wide open, a smooth domed head and a spiky beard of icicles on its chin, a cloud of frost crystals from its mouth."
+   }
   },
   {
    "id": "dragon_ancestor",
@@ -5564,7 +5648,11 @@
    "name": "Доспех теней",
    "tags": "shield, shadow, dark purple, glowing, front view",
    "sentence": "A single dark violet shield made of swirling shadow, with a faint purple glow around its edge, seen from the front.",
-   "key": "grey"
+   "key": "grey",
+   "lines": {
+    "tags": "hooded cloak, empty hood, shadow, smoke, wisps",
+    "sentence": "A single empty hooded cloak standing upright with nothing inside its hood, its hem dissolving into curling wisps of smoke and shadow."
+   }
   },
   {
    "id": "eldritch_invocation_beast_speech",
@@ -5700,7 +5788,11 @@
    "name": "Жуткое воззвание: Жаждущий клинок",
    "tags": "sword, black blade, violet glow, diagonal",
    "sentence": "A single black sword with a bright violet edge, pointing diagonally up to the right, with a faint double outline.",
-   "key": "grey"
+   "key": "grey",
+   "lines": {
+    "tags": "sword, serrated blade, barbs, skull, blood drops, sinister",
+    "sentence": "A single long sinister sword pointing down, its edge serrated with hooked barbs, a small grinning skull on its crossguard and three drops falling from its tip."
+   }
   },
   {
    "id": "eldritch_invocation_voice_of_the_chain_master",
@@ -5908,7 +6000,12 @@
    "name": "Добыча охотника: Убийца исполинов",
    "tags": "spear, steel, red glow, leaf-shaped head, brown shaft, diagonal",
    "sentence": "A single long steel spear lying diagonally, its leaf-shaped head glowing red, with a brown shaft.",
-   "key": ""
+   "key": "",
+   "lines": {
+    "tags": "giant, colossus, towering, arrow, from below",
+    "sentence": "A huge towering giant seen from below so that it looms over everything, with a small arrow stuck in its chest.",
+    "people": true
+   }
   },
   {
    "id": "hunters_prey_giant_killer",
@@ -5916,7 +6013,12 @@
    "name": "Добыча охотника: Истребитель великанов",
    "tags": "shortsword, sword, steel blade, red glow, crossguard, brown grip, diagonal",
    "sentence": "A single short steel sword pointing up diagonally, its blade glowing red, with a simple crossguard and brown grip.",
-   "key": ""
+   "key": "",
+   "lines": {
+    "tags": "giant, giant head, beard, heavy brow, sword",
+    "sentence": "A huge giant's head with a heavy brow, a thick beard and a crooked nose, and a straight sword held upright in front of it.",
+    "people": true
+   }
   },
   {
    "id": "hunters_prey_horde_breaker",
@@ -5924,7 +6026,12 @@
    "name": "Добыча охотника: Разрушитель орд",
    "tags": "scimitar, sword, steel blade, red glow, speed lines, diagonal",
    "sentence": "A single curved steel scimitar lying diagonally, its edge glowing red, with two white speed lines behind it.",
-   "key": ""
+   "key": "",
+   "lines": {
+    "tags": "sword, slash, row of soldiers, crowd, silhouettes",
+    "sentence": "A sword sweeping across a row of five small soldiers standing side by side, a long curved slash line along its blade cutting through them all.",
+    "people": true
+   }
   },
   {
    "id": "hunters_prey",
@@ -6108,7 +6215,11 @@
    "name": "Клятвенные заклинания",
    "tags": "book, blue cover, gold clasp, glowing, front view",
    "sentence": "A single closed blue book with a gold clasp and a soft golden glow around its edges, seen from the front.",
-   "key": ""
+   "key": "",
+   "lines": {
+    "tags": "open book, sword, wax seal, ribbon, oath",
+    "sentence": "A single open book with a straight sword laid across its pages and a round wax seal hanging from a ribbon below it, as a sworn oath."
+   }
   },
   {
    "id": "open_hand_technique",
@@ -6428,7 +6539,11 @@
    "name": "Использование заклинаний: следопыт",
    "tags": "arrow, green, brown, leaf, diagonal",
    "sentence": "A single brown wooden arrow with green fletching and a small green leaf near its head, pointing diagonally.",
-   "key": ""
+   "key": "",
+   "lines": {
+    "tags": "longbow, bow, arrow, nocked arrow, sparkles",
+    "sentence": "A single curved longbow with its string drawn back and an arrow nocked, pointing up to the right, three small sparkles at the arrowhead."
+   }
   },
   {
    "id": "spellcasting_sorcerer",
@@ -6974,7 +7089,11 @@
    "tags": "dragon head, horns, jet black scales, green eyes, acid",
    "sentence": "A single jet black dragon head with glossy coal-black scales seen from the front, two curved black horns, bright acid-green eyes and green drops at its jaw.",
    "key": "grey",
-   "tint": "#8c86a0"
+   "tint": "#8c86a0",
+   "lines": {
+    "tags": "dragon head, front view, symmetrical, horns, acid drops",
+    "sentence": "A single dragon head seen straight from the front, symmetrical, two horns curving forward over a skull-like face with deep eye sockets, drops of acid falling from its jaw."
+   }
   },
   {
    "id": "relentless_endurance",

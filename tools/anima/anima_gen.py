@@ -287,11 +287,17 @@ def prompt_of(job: dict, key: str, style: str = "flat") -> str:
     head, tail, _ = FAMILIES[fam]
     tags, sentence = (uncolour(job["tags"]), uncolour(job["sentence"])) if fam in UNCOLOURED else (job["tags"],
                                                                                                    job["sentence"])
-    return head.format(tag=tag) + tags + ".\n" + sentence + " " + tail.format(word=word)
+    head = head.format(tag=tag)
+    if job.get("people"):  # a sign of people (a horde, a giant, an arm) is drawn with them
+        head = head.replace("no humans, ", "")
+    return head + tags + ".\n" + sentence + " " + tail.format(word=word)
 
 
 def full_prompt(job: dict, n: int, a: argparse.Namespace) -> str:
-    look = job["looks"][n - 1] if job.get("looks") else job
+    style = getattr(a, "style", "flat")
+    # a subject of its own in the lines style (the author's redraw marks), the painted one left as it was drawn
+    look = job["looks"][n - 1] if job.get("looks") else {**job, **job["lines"]} if style == "lines" and job.get(
+        "lines") else job
     if portrait(job):
         return P_HEAD + look["tags"] + ".\n" + look["sentence"] + " " + P_TAIL
     return prompt_of({**look, "kind": job["kind"]}, job.get("key") if job.get("key") in KEYS else a.bg,

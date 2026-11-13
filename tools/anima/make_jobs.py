@@ -417,6 +417,8 @@ def main() -> None:
         tint = s.get("tint") or schools.get(e.get("school", ""))
         if tint:
             job["tint"] = tint
+        if s.get("lines"):  # the lines style's own subject: `tags`, `sentence`, `people`
+            job["lines"] = s["lines"]
         jobs.append(job)
     JOBS.parent.mkdir(parents=True, exist_ok=True)
     JOBS.write_text(json.dumps({"jobs": jobs}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
