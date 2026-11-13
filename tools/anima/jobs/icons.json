@@ -3482,8 +3482,8 @@
    "school": "evocation",
    "tint": "#d0704f",
    "lines": {
-    "tags": "arrow, breastplate, armor, melting, acid, drops",
-    "sentence": "A single arrow stuck in a breastplate, the metal around the arrowhead melting away with holes eaten through it and drops running down."
+    "tags": "arrow, liquid, acid, bubbles, drops, magic",
+    "sentence": "A single magic arrow made entirely of bubbling liquid acid, its head a sharp drop, bubbles inside its shaft, drops falling from it as it flies up to the right."
    }
   },
   {
@@ -4682,8 +4682,9 @@
    "school": "necromancy",
    "tint": "#7fa07a",
    "lines": {
-    "tags": "wilted sword, drooping blade, limp, smoke",
-    "sentence": "A single sword whose blade bends and droops limp like a wilted flower stem, a thin wisp of smoke rising from it."
+    "tags": "withered arm, thin arm, bones, dark tendril, draining",
+    "sentence": "A thin withered arm hanging limp, shrunk to skin and bone, a curling tendril of dark energy wrapped around it draining its strength.",
+    "people": true
    }
   },
   {
@@ -4696,8 +4697,8 @@
    "school": "evocation",
    "tint": "#d0704f",
    "lines": {
-    "tags": "boot, block of ice, frozen, icicles",
-    "sentence": "A single boot frozen inside a jagged block of ice, with icicles hanging from the ice."
+    "tags": "ice shards, burst, frozen explosion, snowflakes, frost",
+    "sentence": "A cluster of sharp ice shards bursting outward from one point like a frozen explosion, small snowflakes between them."
    }
   },
   {
@@ -4730,8 +4731,8 @@
    "school": "evocation",
    "tint": "#d0704f",
    "lines": {
-    "tags": "flame, altar, sunburst, rays, holy",
-    "sentence": "A single flame burning on a small stone altar, a radiant sunburst with straight rays behind it."
+    "tags": "pillar of flame, sun, holy fire, sparks, strike from above",
+    "sentence": "A pillar of holy flame crashing straight down from a small radiant sun above, bursting into flames and sparks where it hits the ground."
    }
   },
   {
