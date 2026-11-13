@@ -91,6 +91,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	for i: int in 32:
 		kin.append(order.find(str(g.get("same", {}).get(order[i], order[i]))) if i < order.size() else i)
 	m.set_shader_parameter("kin", kin)
+	m.set_shader_parameter("ground_move", ground_motion(lib))
 	m.set_shader_parameter("prop_size", sizes)
 	m.set_shader_parameter("prop_dims", dims)
 	m.set_shader_parameter("watch_tint", UiTheme.BAD)
@@ -203,6 +204,19 @@ static func drawn(body_id: String) -> bool:
 ## The things of the map: the bodies of rules.things (v0.8.4.43.23).
 static func bodies_of() -> Dictionary:
 	return Catalog.data.get("rules", {}).get("things", {}).get("bodies", {}) if Catalog.data is Dictionary else {}
+
+
+## How each ground of the order moves (`grounds.motion`, v0.8.4.43.32): xy — drift, z — ripple, w — glow.
+static func ground_motion(lib: Dictionary) -> PackedVector4Array:
+	var g: Dictionary = lib["grounds"]
+	var rows: Dictionary = g.get("motion", {})
+	var out := PackedVector4Array()
+	for i: int in MAX_GROUNDS:
+		var id := str(g["order"][i]) if i < (g["order"] as Array).size() else ""
+		var row: Variant = rows.get(id, {})
+		var f: Array = (row as Dictionary).get("flow", [0, 0]) if row is Dictionary else [0, 0]
+		out.append(Vector4(float(f[0]), float(f[1]), float(row.get("waver", 0.0)) if row is Dictionary else 0.0, float(row.get("glow", 0.0)) if row is Dictionary else 0.0))
+	return out
 
 
 ## The things of `grounds.props` and the bodies of the map in one order: a thing's place in the texture of the things.

@@ -19,6 +19,7 @@ uniform vec2 surface_move[16];  // x — how it ripples, y — how it flickers (
 uniform vec2 map_size = vec2(1.0);
 uniform float repeat_cells = 3.0;
 uniform int sharp_mask = 0;  // a bit per ground of the order
+uniform vec4 ground_move[32];  // v0.8.4.43.32 `grounds.motion`: xy — drift, z — ripple, w — glow (lava)
 uniform int kin[32];  // a ground's kin: the ground whose texture it has (`grounds.same`), else itself
 uniform float prop_size[64];
 uniform vec2 prop_dims[64];  // a prop's squares [long, short]; none — one square
@@ -63,7 +64,16 @@ float noise(vec2 p) {
 }
 
 vec4 ground(int g, vec2 p) {
-	return texture(grounds, vec3(p / repeat_cells, float(g)));
+	vec4 m = ground_move[g];
+	vec2 sp = p + m.xy * TIME + m.z * vec2(sin(TIME * 1.1 + p.y * 2.3), cos(TIME * 0.9 + p.x * 2.1));
+	vec4 t = texture(grounds, vec3(sp / repeat_cells, float(g)));
+	t.rgb *= 1.0 + m.w * (noise(p * 1.7 + vec2(TIME * 0.6, -TIME * 0.4)) - 0.4);
+	return t;
+}
+
+// How much of the point is a ground that shines through the dark (its `glow`), between the four squares' centres.
+float glow_of(int g) {
+	return g >= 0 && ground_move[g].w > 0.0 ? 1.0 : 0.0;
 }
 
 void fragment() {
@@ -191,6 +201,7 @@ void fragment() {
 
 	vec4 lit = texture(light, UV);
 	col.rgb = mix(col.rgb, watch_tint.rgb, lit.g * 0.32);
-	col.rgb *= 1.0 - lit.r;
+	float shine = mix(mix(glow_of(g0), glow_of(g1), f.x), mix(glow_of(g2), glow_of(g3), f.x), f.y);
+	col.rgb *= 1.0 - lit.r * (1.0 - 0.7 * shine);  // lava shines through the dark
 	COLOR = col;
 }

@@ -1076,10 +1076,10 @@ static func _fall(s: GameSession, data: Dictionary, f: Dictionary, spell_id: Str
 
 ## Anybody falls (into a pit, from a height): `dice` of bludgeoning less what a reaction at the moment `fall` takes off
 ## (Slow Fall, v0.8.4.26.1), then prone if still up. `what` — the line's words, `source` — of the prone.
-static func fall(s: GameSession, data: Dictionary, f: Dictionary, dice: String, what: String, source: Dictionary, lines: Array[String]) -> void:
+static func fall(s: GameSession, data: Dictionary, f: Dictionary, dice: String, what: String, source: Dictionary, lines: Array[String], type: String = "bludgeoning") -> void:
 	var ctx := {"dmg": roll_dice(s.rng, dice), "cut": 0}
 	Acts.react(s, data, f, "fall", ctx, lines)
-	Harm.typed(s, data, f, maxi(0, int(ctx["dmg"]) - int(ctx["cut"])), "bludgeoning", lines, str(f["name"]) + " " + what + ": {hp} ({words})")
+	Harm.typed(s, data, f, maxi(0, int(ctx["dmg"]) - int(ctx["cut"])), type, lines, str(f["name"]) + " " + what + ": {hp} ({words})")
 	if Attack.up(s, f):
 		lines.append_array(ConditionRules.impose(s, data, {"condition": "prone", "ends": {"rest": "short"}, "source": source}, f))
 

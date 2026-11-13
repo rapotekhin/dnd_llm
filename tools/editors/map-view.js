@@ -232,6 +232,9 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			const u = (n) => gl.getUniformLocation(prog, n);
 			gl.uniform2fv(u('prop_dims'), dims);
 			gl.uniform1iv(u('kin'), kin);
+			const move = new Float32Array(MAX_GROUNDS * 4);  // MapGround.ground_motion: drift, ripple, glow
+			order.forEach((id, i) => { const r = g.motion?.[id]; if (i < MAX_GROUNDS && r) move.set([Number(r.flow?.[0] || 0), Number(r.flow?.[1] || 0), Number(r.waver || 0), Number(r.glow || 0)], i * 4); });
+			gl.uniform4fv(u('ground_move'), move);
 			gl.uniform1f(u('repeat_cells'), Number(g.repeat ?? 3));
 			gl.uniform1i(u('sharp_mask'), sharp);
 			gl.uniform1fv(u('prop_size'), sizes);

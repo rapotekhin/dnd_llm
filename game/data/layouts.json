@@ -10,6 +10,7 @@
 		"%": {"name": "difficult", "cost": 2},
 		"^": {"name": "hazard", "hazard": true},
 		"~": {"name": "water", "cost": 2},
+		"&": {"name": "lava", "solid": true, "_doc": "v0.8.4.43.32: molten rock: not walked, seen over; in a fight a square with no floor as a pit (FightGrid.PIT), one who falls or is shoved in burns by rules.combat.grid.lava"},
 		"o": {"name": "pit", "solid": true},
 		"T": {"name": "tree", "solid": true, "opaque": true, "thin": true, "burns": true},
 		"B": {"name": "block", "solid": true},
@@ -20,7 +21,7 @@
 	},
 	"grounds": {
 		"_doc": "What a map is drawn of (LayoutGen.grounds, MapField's dual grid): the ground of a square by its character of `cells` — a string for any place, a dictionary by the place's kind, the kinds of its family, its shape (`open`, `building`, `tunnels`) — the most exact key first — with `*` for the rest (LayoutGen.ground_keys), a character not here takes the one of `.`; `order` — the grounds from the lowest layer to the highest: at a meeting of grounds the higher one lies over; `sharp` — a ground whose edge stays on the square's border (walls), the others meet by a rough line between the squares' centres; `patches` — by the same keys (the first that has rows; an empty list — none), patches of another ground over the floor's own ground: `share` of the floor in blobs of about `cell` squares by the map's seed, or `near` — a rim of `width` squares round the squares of that character (a beach); `props` — a thing drawn on the square by the character and the same keys; `repeat` — squares one texture spans; `colour` — a ground with no texture yet; `edges` — pairs of grounds whose meeting is drawn (a sheet of the 16 dual-grid tiles, assets/tiles/edges/<low>__<high>.png, its alpha the line between them), the rest meet by the mask; `edge_layout` — the 5×5 corners the sheet is laid on (1 — the higher ground), its sixteen 2×2 windows each case once; `edge_band` — how wide the drawn edge lies on both sides of the line. Textures: assets/tiles/ground/<id>.png, things: assets/tiles/props/<id>.png (tools/tiles/gen_tiles.py).",
-		"order": ["pit", "still_water", "water", "mud", "reeds", "farmland", "dirt", "sand", "thorns", "ice", "snow", "stony", "scree", "grass", "tall_grass", "high_grass", "cliff_top", "cliff", "cobble", "cave", "flagstone", "planks", "rock", "wall", "roof"],
+		"order": ["pit", "magma", "still_water", "water", "mud", "reeds", "farmland", "dirt", "sand", "thorns", "ice", "snow", "stony", "scree", "grass", "tall_grass", "high_grass", "cliff_top", "cliff", "cobble", "cave", "flagstone", "planks", "rock", "wall", "roof"],
 		"sharp": ["wall", "roof"],
 		"patches": {
 			"open": [{"ground": "dirt", "share": 0.08, "cell": 7}],
@@ -33,6 +34,7 @@
 				"open": "grass", "tunnels": "cave", "*": "planks"},
 			"#": {"tunnels": "rock", "*": "wall"}, "D": {"tunnels": "rock", "*": "wall"}, "w": "wall", "r": "roof",
 			"~": {"swamp": "still_water", "tunnels": "still_water", "*": "water"},
+			"&": "magma",
 			"%": {"dunes": "thorns", "snowfield": "ice", "rocks": "scree", "hills": "tall_grass", "field": "farmland", "camp": "tall_grass", "swamp": "reeds", "*": "mud"},
 			"=": "cobble", ",": "dirt", "o": "pit", ":": {"snowfield": "snow", "dunes": "sand", "rocks": "stony", "*": "high_grass"}, "/": {"snowfield": "cliff", "dunes": "cliff", "rocks": "cliff", "*": "cliff_top"}, " ": {"tunnels": "rock"}
 		},
@@ -43,11 +45,12 @@
 		},
 		"size": {"tree": 1.7, "boulder": 1.0, "table": 0.95, "door": 1.0, "rubble": 1.1},
 		"repeat": 3,
-		"colour": {"pit": "#0d0b09", "water": "#2c4a5c", "mud": "#33301c", "dirt": "#6b5838", "grass": "#3f5a2e", "cobble": "#7f7a6c", "cave": "#4a463f", "planks": "#5a4330", "wall": "#5e4d3a", "roof": "#4a3428",
+		"colour": {"pit": "#0d0b09", "magma": "#b8430f", "water": "#2c4a5c", "mud": "#33301c", "dirt": "#6b5838", "grass": "#3f5a2e", "cobble": "#7f7a6c", "cave": "#4a463f", "planks": "#5a4330", "wall": "#5e4d3a", "roof": "#4a3428",
 			"rock": "#45403a", "still_water": "#1f2b24", "sand": "#b49a68", "thorns": "#8c7a52", "snow": "#dfe4e8", "ice": "#a9bfcc",
 			"stony": "#6f6a60", "scree": "#77736a", "tall_grass": "#5b6e34", "high_grass": "#7d8a3c", "cliff_top": "#7d8a3c", "cliff": "#5a4a38", "farmland": "#5a4630", "reeds": "#4c5a34", "flagstone": "#6e6c66"},
 		"same": {"_doc": "v0.8.4.43.28: a ground drawn with the texture of another — the rim of high ground over a cliff is its top's grass, its own id gives the cliff's drawn edge with the lowland", "cliff_top": "high_grass"},
-		"edges": [{"low": "grass", "high": "cliff_top", "gain": 1.0, "band": 0.42}, {"low": "tall_grass", "high": "cliff_top", "gain": 1.0, "band": 0.42}, {"low": "water", "high": "grass"}, {"low": "water", "high": "dirt"}, {"low": "water", "high": "mud"}],
+		"motion": {"_doc": "v0.8.4.43.32: a ground that moves in the shader: `flow` — how its picture drifts, squares a second; `waver` — how it ripples; `glow` — how it flickers and shines through the dark (lava). A ground not here stands still.", "magma": {"flow": [0.012, 0.008], "waver": 0.035, "glow": 0.35}},
+		"edges": [{"low": "magma", "high": "cave"}, {"low": "magma", "high": "stony"}, {"low": "magma", "high": "grass"}, {"low": "grass", "high": "cliff_top", "gain": 1.0, "band": 0.42}, {"low": "tall_grass", "high": "cliff_top", "gain": 1.0, "band": 0.42}, {"low": "water", "high": "grass"}, {"low": "water", "high": "dirt"}, {"low": "water", "high": "mud"}],
 		"edge_layout": ["11100", "01010", "00011", "01100", "11100"],
 		"edge_band": 0.22
 	},
@@ -62,10 +65,11 @@
 		"box_small": [5, 4],
 		"ways": 9,
 		"ways_outer": 2,
-		"road_cost": {"=": 1, ",": 1, ".": 4, ":": 5, "%": 6, "T": 12, "B": 12, "~": 24},
+		"road_cost": {"=": 1, ",": 1, ".": 4, ":": 5, "%": 6, "T": 12, "B": 12, "~": 24, "&": 60},
 		"road_wander": 4,
 		"clear": 2,
 		"pond": 0.09,
+		"ponds": {"_doc": "v0.8.4.43.32: a tag of a place → the cell of a pond of its open map (not a map of open chunks: a pond of water comes with its pieces)", "water": "~", "lava": "&"},
 		"noise_cell": 6, "tile": 12, "tile_scatter": 0.5
 	},
 	"sound": {"tries": 12, "retry_from": 10, "way": 100, "left": 100, "stairs": 10, "side": 1, "min_reach": 0.2},
@@ -600,6 +604,30 @@
 				"##c.B...B..##",
 				" ##.......## ",
 				"  ####D####  "
+			]},
+{"id": "cave_lava_lake", "kinds": ["cave"], "roles": ["hall"], "tags": ["lava"], "size": "large", "marks": {"E": "entry", "c": "spot:cave"},
+			"rows": [
+				"   ####D###  ",
+				"  ##c....c## ",
+				" ##..&&&...##",
+				"##c.&&&&&...#",
+				"D...&&&&&...D",
+				"##...&&&..%.#",
+				" #.........##",
+				" ##...E...## ",
+				"  ###...###  ",
+				"    ##D##    "
+			]},
+{"id": "cave_lava_flow", "kinds": ["cave"], "roles": ["hall"], "tags": ["lava"], "size": "medium", "marks": {"E": "entry", "c": "spot:cave"},
+			"rows": [
+				"  ##D####  ",
+				" ##..&c.## ",
+				"##c..&&..##",
+				"D...&&...%D",
+				"##.....E.##",
+				" ##..&...# ",
+				"  ##.&&### ",
+				"   #D##    "
 			]},
 		{"id": "cave_lake", "kinds": ["cave"], "roles": ["hall"], "tags": ["water"], "size": "large", "marks": {"E": "entry", "W": "water", "c": "spot:cave"},
 			"rows": [

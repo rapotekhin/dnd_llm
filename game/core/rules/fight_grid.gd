@@ -209,7 +209,7 @@ static func _kind(lib: Dictionary, c: String) -> Array:
 	match str(d.get("name", "")):
 		"block":
 			bits |= LOW
-		"pit":
+		"pit", "lava":  # no floor: lava burns the one who falls in (FightField._fall, v0.8.4.43.32)
 			bits = (bits | PIT) & ~SOLID
 		"water":
 			bits |= WET

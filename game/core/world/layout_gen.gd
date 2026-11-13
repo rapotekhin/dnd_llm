@@ -719,8 +719,8 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 	if own.is_empty():
 		tiled = _tiles(lib, kind, tags, grid, rng, furnished)  # a kind with `tiles`: the map laid of open chunks, the noise only for the small things
 		_scatter(grid, kind.get("scatter", []), int(cfg["noise_cell"]), rng, float(cfg.get("tile_scatter", 1.0)) if tiled else 1.0, tiled)
-		if tags.has("water") and not tiled:
-			_pond(grid, float(cfg["pond"]), rng)
+		for tag: String in _ponds(cfg, tags, tiled):
+			_pond(grid, float(cfg["pond"]), rng, str(cfg["ponds"][tag]))
 	# rows of its own grown west or north (BuildRules, v0.8.4.42.7): the grid of a save stays, the map's first square moves
 	var origin := Vector2i.ZERO
 	if ask.get("origin") is Array:
@@ -766,19 +766,30 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 	picks["ways"] = _ways_of(out, str(ask["id"]))
 	var paved := ROAD if tags.has("road") or tags.has("market") or bool(kind.get("paved", false)) else PATH
 	picks["roads"] = _roads(out, lib, center, paved, kept, seed_value)
-	_tidy(out, scattered, tags.has("water") and not tiled)
+	var ponded: Array[String] = []
+	for tag: String in _ponds(cfg, tags, tiled):
+		ponded.append(str(cfg["ponds"][tag]))
+	_tidy(out, scattered, ponded)
 	out["picks"] = picks
 	return out
 
 
 ## The patches of an open map once its roads, buildings and ways have cut them: no lone square of them is left.
-static func _tidy(out: Dictionary, scattered: Array, pond: bool) -> void:
+## The tags of a place that lay a pond on its open map (`open.ponds`, v0.8.4.43.32): water, lava. A map of open chunks
+## has its water in its pieces.
+static func _ponds(cfg: Dictionary, tags: Array, tiled: bool) -> Array[String]:
+	var out: Array[String] = []
+	for tag: Variant in cfg.get("ponds", {}):
+		if not str(tag).begins_with("_") and tags.has(tag) and not (tiled and str(cfg["ponds"][tag]) == WATER):
+			out.append(str(tag))
+	return out
+
+
+static func _tidy(out: Dictionary, scattered: Array, ponded: Array[String]) -> void:
 	var grid: Array[PackedStringArray] = []
 	for r: String in out["rows"]:
 		grid.append(r.split(""))
-	var cut: Array[String] = []
-	if pond:
-		cut.append("~")
+	var cut: Array[String] = ponded.duplicate()
 	for row: Dictionary in scattered:
 		if bool(row.get("blob", false)) and not cut.has(str(row["cell"])):
 			cut.append(str(row["cell"]))
@@ -976,7 +987,7 @@ static func _weighted(list: Array, rng: RandomNumberGenerator) -> Dictionary:
 	return list.back()
 
 
-static func _pond(grid: Array[PackedStringArray], share: float, rng: RandomNumberGenerator) -> void:
+static func _pond(grid: Array[PackedStringArray], share: float, rng: RandomNumberGenerator, cell: String = WATER) -> void:
 	var h := grid.size()
 	var w := grid[0].size()
 	var rx := maxf(3.0, sqrt(share * w * h / PI) * rng.randf_range(0.8, 1.3))
@@ -986,8 +997,8 @@ static func _pond(grid: Array[PackedStringArray], share: float, rng: RandomNumbe
 	for y: int in h:
 		for x: int in w:
 			if pow((x - center.x) / rx, 2.0) + pow((y - center.y) / ry, 2.0) <= 0.75 + 0.5 * shore[y * w + x]:
-				grid[y][x] = "~"
-	_despeckle(grid, "~")
+				grid[y][x] = cell
+	_despeckle(grid, cell)
 
 
 static func _landmark(lib: Dictionary, kind: Dictionary, kept_one: Dictionary, w: int, h: int, rng: RandomNumberGenerator) -> Dictionary:

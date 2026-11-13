@@ -223,8 +223,15 @@ static func stepped(s: GameSession, data: Dictionary, f: Dictionary, lines: Arra
 	return str(f.get("status")) != "active" or (lines.size() > before and CombatRules._has(f, "prone"))
 
 
+## A body over a square with no floor: a pit, or what the cell's name finds in rules.combat.grid (lava, v0.8.4.43.32).
 static func _fall(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	CombatRules.fall(s, data, f, str(cfg(data)["pit"]["dice"]), "падает в яму", {"kind": "engine", "name": "яма"}, lines)
+	var at := FightGrid.cell(f)
+	var rows: Array = FightGrid.grid(s, data)["map"].get("rows", [])
+	var c := str(rows[at.y])[at.x] if at.y >= 0 and at.y < rows.size() and at.x >= 0 and at.x < str(rows[at.y]).length() else ""
+	var name := str(data["layouts"]["cells"].get(c, {}).get("name", "pit"))
+	var row: Dictionary = cfg(data).get(name, cfg(data)["pit"]) if name != "pit" else cfg(data)["pit"]
+	CombatRules.fall(s, data, f, str(row["dice"]), str(row.get("what", "падает в яму")), {"kind": "engine", "name": str(row.get("name", "яма"))}, lines,
+		str(row.get("type", "bludgeoning")))
 
 
 ## Standing on this square hurts: the AI's fear of it.
