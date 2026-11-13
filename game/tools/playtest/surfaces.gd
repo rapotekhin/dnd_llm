@@ -1,7 +1,7 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Surfaces a damage leaves (python tools/godot_playtest.py --scenario surfaces), v0.8.4.43.45: puddles beside the hero,
 ## lightning over one — water under current, radiance over another — blessed water, an imp's fire on the dry floor —
-## hellfire; each drawn as the map's second layer, whole and close up; a round later the current is gone.
+## hellfire, cold over two of the current — ice that ends it there (v0.8.4.43.47); each drawn as the map's second layer, whole and close up; a round later the current is gone.
 
 
 func run() -> void:
@@ -37,12 +37,15 @@ func run() -> void:
 	FightField.react(s, data, "lightning", free.slice(0, 3) as Array[Vector2i], hero, lines)
 	FightField.react(s, data, "radiant", free.slice(3, 6) as Array[Vector2i], hero, lines)
 	FightField.react(s, data, "fire", free.slice(6, 9) as Array[Vector2i], {"id": "imp_x", "monster": "imp"}, lines)
+	FightField.react(s, data, "cold", free.slice(1, 3) as Array[Vector2i], hero, lines)  # ice ends the current there (v0.8.4.43.47)
 	var looks := {}
 	for v: Dictionary in SpellEffects.zone_view(s, data):
 		looks[str(v["name"])] = str((v.get("look", {}) as Dictionary).get("ground", ""))
 	step("water under current", looks.get("Вода под током", "") == "electric_water", str(looks))
 	step("blessed water", looks.get("Освящённая вода", "") == "blessed_water")
 	step("hellfire", looks.get("Адский огонь", "") == "hellfire")
+	step("ice", looks.get("Лёд", "") == "ice")
+	step("ice ends the current", SpellEffects.zones(s).filter(func(z: Dictionary) -> bool: return str(z["spell"]) == "electric_water").all(func(z: Dictionary) -> bool: return (z["cells"] as Array).size() == 1))
 	step("the lines tell it", " · ".join(lines).contains("Вода под током"), " · ".join(lines))
 	FightGrid.changed(s)
 	node("EventBus").state_changed.emit()
@@ -54,6 +57,11 @@ func run() -> void:
 	field.call("zoom", 12.0, field.call("cell_point", free[4]))
 	await frames(6)
 	await shot("surfaces_close")
+	field.call("zoom", -12.0, field.size / 2.0)
+	await frames(3)
+	field.call("zoom", 12.0, field.call("cell_point", free[1]))
+	await frames(6)
+	await shot("ice_close")
 	s.combat["round"] = int(s.combat.get("round", 1)) + 1
 	SpellEffects.zones_expire(s)
 	step("the current goes after its round", not SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return str(z["spell"]) == "electric_water"))

@@ -1010,7 +1010,7 @@
 		"_doc": "How a zone of the field looks on its squares (v0.8.4.30, the author's feedback: fire and the other surfaces drawn plainer than they matter). A zone's look is the row of its `spell` id (before «:», so every puddle and aura of a kind shares one), else of its damage `type`, else `tile` for a puddle of a liquid; `kinds` — the drawing of a look: `colour` a key of `palette` or #hex, `moves` — drawn anew each frame, `texture` — a picture of the square that replaces the stub (ui/anims/surface_art.gd).",
 		"spells": {"fire": "flames", "web": "web", "caltrops": "spikes", "ball_bearings": "beads", "grease": "gloss", "puddle": "gloss", "entangle": "vines", "spike_growth": "spikes",
 			"fog_cloud": "haze", "darkness": "dark", "stinking_cloud": "haze", "sleet_storm": "frost", "moonbeam": "glow", "spirit_guardians": "glow", "silence": "ripple",
-			"wind_wall": "ripple", "faerie_fire": "glow", "magic_circle": "glow", "call_lightning": "glow", "hazard": "bubbles", "daylight": "glow", "flaming_sphere": "flames", "electric_water": "sparks", "blessed_water": "holy", "hellfire": "hellflames"},
+			"wind_wall": "ripple", "faerie_fire": "glow", "magic_circle": "glow", "call_lightning": "glow", "hazard": "bubbles", "daylight": "glow", "flaming_sphere": "flames", "electric_water": "sparks", "ice": "frost", "blessed_water": "holy", "hellfire": "hellflames"},
 		"types": {"fire": "flames", "cold": "frost", "acid": "bubbles", "poison": "haze", "radiant": "glow", "necrotic": "dark", "lightning": "glow", "thunder": "ripple", "force": "glow", "psychic": "ripple"},
 		"tile": "gloss",
 		"kinds": {

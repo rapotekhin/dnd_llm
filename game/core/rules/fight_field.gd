@@ -196,8 +196,9 @@ static func react(s: GameSession, data: Dictionary, dtype: String, cells: Array[
 		if hit.is_empty():
 			continue
 		var packed := FightGrid.pack_cells(hit)
-		for z: Dictionary in SpellEffects.zones(s).duplicate():  # one of its kind on a square: the new one replaces the old there
-			if str(z["spell"]) == id:
+		var gone: Array = [id] + (row.get("clears", []) as Array)  # one of its kind on a square, and what it ends there (ice — the current)
+		for z: Dictionary in SpellEffects.zones(s).duplicate():
+			if gone.has(str(z["spell"])):
 				for key: Variant in packed:
 					(z["cells"] as Array).erase(key)
 				if (z["cells"] as Array).is_empty():
