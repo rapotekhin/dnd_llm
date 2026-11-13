@@ -104,8 +104,14 @@ def jobs(only: str) -> list[tuple[str, str, str]]:
         low, high = str(pair["low"]), str(pair["high"])
         tid = f"{low}__{high}"
         if not want or tid in want:
-            text = spec["style"]["edge"].replace("{low}", spec["ground"][low]).replace("{high}", spec["ground"][high])
-            out.append(("edges", tid, text.replace("{meet}", spec["edges"].get(tid, spec["edges"]["*"]))))
+            same = grounds_lib().get("same", {})  # a ground with the texture of another: its words too
+            words = lambda g: spec["ground"][same.get(g, g)]
+            meet = spec["edges"].get(tid, spec["edges"]["*"])
+            style = "edge"
+            if isinstance(meet, dict):  # a pair of its own style: land and land, the mask's colours not kept (a cliff)
+                style, meet = meet.get("style", style), meet["meet"]
+            text = spec["style"][style].replace("{low}", words(low)).replace("{high}", words(high))
+            out.append(("edges", tid, text.replace("{meet}", meet)))
     return out
 
 
@@ -122,7 +128,16 @@ def _noise(x: float, y: float) -> float:
     return (a + (b - a) * ux) * (1 - uy) + (c + (d - c) * ux) * uy
 
 
-def edge_field() -> Image.Image:
+def gain_of(tid: str) -> float:
+    """How steeply an edge sheet's alpha leaves its line (`gain` of its `grounds.edges` row): 2 — saturated a quarter of a
+    tile off the line (a shore), 1 — half a tile (a cliff's face and shadow, painted wider)."""
+    for pair in grounds_lib().get("edges", []):
+        if f"{pair['low']}__{pair['high']}" == tid:
+            return float(pair.get("gain", 2.0))
+    return 2.0
+
+
+def edge_field(gain: float = 2.0) -> Image.Image:
     """The line of an edge sheet as a grey picture, EDGE_PX: 128 on the line, the higher ground above it. Each tile's
     corners of `edge_layout` mixed over the tile, a rough line on top that dies out on the tile's sides, so the line
     crosses every side at its middle and any two tiles meet."""
@@ -139,7 +154,7 @@ def edge_field() -> Image.Image:
             cov = (c[0] * (1 - fx) + c[1] * fx) * (1 - fy) + (c[2] * (1 - fx) + c[3] * fx) * fy
             damp = math.sin(math.pi * fx) * math.sin(math.pi * fy)
             v = cov + (_noise(sx * 1.6, sy * 1.6) - 0.5) * 0.35 * damp
-            px[x, y] = max(0, min(255, round((0.5 + (v - 0.5) * 2.0) * 255)))
+            px[x, y] = max(0, min(255, round((0.5 + (v - 0.5) * gain) * 255)))
     return img.resize((EDGE_PX, EDGE_PX), Image.BICUBIC)
 
 
@@ -186,7 +201,7 @@ def draw(a: argparse.Namespace) -> None:
                 seamless(img).resize((GROUND_PX, GROUND_PX), Image.LANCZOS).save(OUT / f"{t}__{n}.png")
             elif g == "edges":  # the painting, the line in its alpha
                 sheet_rgba = img.resize((EDGE_PX, EDGE_PX), Image.LANCZOS).convert("RGBA")
-                sheet_rgba.putalpha(field)
+                sheet_rgba.putalpha(field if gain_of(t) == 2.0 else edge_field(gain_of(t)))  # a wide edge: a gentler line
                 sheet_rgba.save(OUT / f"{t}__{n}.png")
             print(f"{t}__{n}  ${cost:.4f}", flush=True)
     print(f"{len(todo)} frames, ${spent:.3f}")

@@ -16,6 +16,7 @@ uniform sampler2DArray props : filter_linear_mipmap;
 uniform vec2 map_size = vec2(1.0);
 uniform float repeat_cells = 3.0;
 uniform int sharp_mask = 0;  // a bit per ground of the order
+uniform int kin[32];  // a ground's kin: the ground whose texture it has (`grounds.same`), else itself
 uniform float prop_size[64];
 uniform vec2 prop_dims[64];  // a prop's squares [long, short]; none — one square
 uniform float rough = 0.22;
@@ -72,12 +73,15 @@ void fragment() {
 
 	int now = min(min(g0, g1), min(g2, g3));
 	int top_g = max(max(g0, g1), max(g2, g3));
-	bool two = now >= 0 && now != top_g && (g0 == now || g0 == top_g) && (g1 == now || g1 == top_g)
-		&& (g2 == now || g2 == top_g) && (g3 == now || g3 == top_g) && !sharp(top_g);
-	int layer = two ? int(texelFetch(edge_pairs, ivec2(now, top_g), 0).r * 255.0 + 0.5) - 1 : -1;
+	// two grounds meet: a ground drawn as another (the high ground beside the rim of its cliff) counts as that one
+	int kt = top_g >= 0 ? kin[top_g] : -1;
+	bool two = now >= 0 && now != top_g && kin[now] != kt && (g0 == now || kin[g0] == kt) && (g1 == now || kin[g1] == kt)
+		&& (g2 == now || kin[g2] == kt) && (g3 == now || kin[g3] == kt) && !sharp(top_g);
+	vec4 pair = two ? texelFetch(edge_pairs, ivec2(now, top_g), 0) : vec4(0.0);
+	int layer = int(pair.r * 255.0 + 0.5) - 1;
 	vec4 col = now < 0 ? vec4(0.0) : ground(now, p);
 	if (layer >= 0) {  // a drawn edge: the line of the sheet, its painting in a band round it
-		int key = int(g0 == top_g) * 8 + int(g1 == top_g) * 4 + int(g2 == top_g) * 2 + int(g3 == top_g);
+		int key = int(g0 != now) * 8 + int(g1 != now) * 4 + int(g2 != now) * 2 + int(g3 != now);
 		int cell = edge_cell[key];
 		// the mip by the screen, no deeper than 3, and the point kept inside its own tile by that mip's texel, so
 		// filtering never reaches the next tile of the sheet (a different case)
@@ -86,9 +90,11 @@ void fragment() {
 		float inset = exp2(lod) * 1.5 / (float(edge_px) / 4.0);
 		vec2 uv = (vec2(float(cell % 4), float(cell / 4)) + clamp(f, vec2(inset), vec2(1.0 - inset))) / 4.0;
 		vec4 e = textureLod(edges, vec3(uv, float(layer)), lod);
-		float d = (e.a - 0.5) * 0.5;  // how far above the line, as the sheet's own measure
+		float gain = max(pair.g * 255.0 / 64.0, 0.5);  // how steeply the sheet's alpha leaves the line (the pair's `gain`)
+		float band = pair.b;
+		float d = (e.a - 0.5) / gain;  // how far above the line, as the sheet's own measure
 		col = d >= 0.0 ? ground(top_g, p) : col;
-		col.rgb = mix(col.rgb, e.rgb, 1.0 - smoothstep(edge_band * 0.6, edge_band, abs(d)));
+		col.rgb = mix(col.rgb, e.rgb, 1.0 - smoothstep(band * 0.6, band, abs(d)));
 		col.a = 1.0;
 		now = top_g;
 	}

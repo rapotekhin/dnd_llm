@@ -85,6 +85,10 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	m.set_shader_parameter("map_size", Vector2(w, h))
 	m.set_shader_parameter("repeat_cells", float(g.get("repeat", 3)))
 	m.set_shader_parameter("sharp_mask", sharp)
+	var kin := PackedInt32Array()  # a ground drawn as another counts as that one where two grounds meet (v0.8.4.43.28)
+	for i: int in 32:
+		kin.append(order.find(str(g.get("same", {}).get(order[i], order[i]))) if i < order.size() else i)
+	m.set_shader_parameter("kin", kin)
 	m.set_shader_parameter("prop_size", sizes)
 	m.set_shader_parameter("prop_dims", dims)
 	m.set_shader_parameter("watch_tint", UiTheme.BAD)
@@ -219,7 +223,8 @@ static func _edges(lib: Dictionary) -> Dictionary:
 		img.resize(EDGE_PX, EDGE_PX, Image.INTERPOLATE_LANCZOS)
 		img.generate_mipmaps()
 		images.append(img)
-		table.set_pixel(low, high, Color8(images.size(), 0, 0, 255))
+		# g — the gain of its alpha × 64, b — its band × 255 (v0.8.4.43.28: a cliff painted wider than a shore)
+		table.set_pixel(low, high, Color8(images.size(), int(float(pair.get("gain", 2.0)) * 64.0), int(float(pair.get("band", lib["grounds"].get("edge_band", 0.16))) * 255.0), 255))
 	if images.is_empty():
 		var none := Image.create(4, 4, false, Image.FORMAT_RGBA8)
 		none.generate_mipmaps()
@@ -246,7 +251,9 @@ static func _array(lib: Dictionary, group: String, hi := false) -> Texture2DArra
 	var ids: Array = g["order"] if group == "ground" else prop_ids(lib)
 	var side := (GROUND_PX if group == "ground" else PROP_PX) * (HI if hi else 1)
 	var images: Array[Image] = []
-	for id: Variant in ids:
+	var same: Dictionary = g.get("same", {}) if group == "ground" else {}
+	for raw: Variant in ids:
+		var id: String = str(same.get(raw, raw))  # a ground with the texture of another (`grounds.same`, v0.8.4.43.28)
 		var path := "res://assets/tiles/%s_hi/%s.png" % [group, id]
 		if not hi or not ResourceLoader.exists(path):
 			path = "res://assets/tiles/%s/%s.png" % [group, id]
