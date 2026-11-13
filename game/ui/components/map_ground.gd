@@ -47,7 +47,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	var grounds := LayoutGen.grounds(lib, map)
 	var rows: Array = map["rows"]
 	_seed = int(map.get("seed", 0))
-	var laid := LayoutGen.props_laid(lib, keys, rows, _seed)
+	var laid := LayoutGen.props_laid(lib, keys, rows, _seed, map.get("exits", []))
 	var bytes := PackedByteArray()
 	bytes.resize(w * h * 4)
 	for y: int in h:
@@ -267,6 +267,9 @@ static func prop_ids(lib: Dictionary) -> Array[String]:
 	for id: Variant in bodies_of():
 		if not out.has(str(id)):
 			out.append(str(id))
+	for k: String in lib["grounds"].get("exits", {}):  # the things of the ways out (v0.8.4.43.40)
+		if k != "_doc" and not out.has(str(lib["grounds"]["exits"][k])):
+			out.append(str(lib["grounds"]["exits"][k]))
 	for row: Variant in lib["grounds"].get("groups", {}).values():
 		if row is Array:
 			for g: Dictionary in row:

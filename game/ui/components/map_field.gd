@@ -425,8 +425,8 @@ func _draw() -> void:
 	_draw_fight_squares(t)
 	if clicks and _hover.x >= 0 and _hover.y >= 0 and _hover.x < int(map["w"]) and _hover.y < int(map["h"]):
 		draw_rect(Rect2(_corner + Vector2(_hover) * t, Vector2(t, t)), UiTheme.ACCENT_BRIGHT, false, 1.5)
-	for e: Dictionary in map["exits"]:
-		draw_rect(Rect2(_corner + Vector2(int(e["x"]), int(e["y"])) * t, Vector2(t, t)), UiTheme.ACCENT)
+	for e: Dictionary in map["exits"]:  # a frame: the square's own picture shows what the way is (v0.8.4.43.40)
+		draw_rect(Rect2(_corner + Vector2(int(e["x"]), int(e["y"])) * t, Vector2(t, t)).grow(-1.0), UiTheme.ACCENT, false, maxf(1.5, t * 0.05))
 	_draw_path(t)
 	for e: Dictionary in map["exits"]:
 		_exit_label(e, t)

@@ -377,7 +377,7 @@ function thingGroups() {
 	const ids = Object.keys(bodies());
 	const out = [];
 	const used = new Set();
-	const st = new Set(Object.values(RULES_MAP().station_bodies || {}));
+	const st = new Set(Object.values(RULES_MAP().station_bodies || {}).flatMap((v) => (v && typeof v === 'object' ? Object.values(v) : [v])).filter(Boolean));
 	const take = (name, list) => { const l = list.filter((id) => ids.includes(id) && !used.has(id)); l.forEach((id) => used.add(id)); if (l.length) out.push([name, l]); };
 	take('Станции', ids.filter((id) => st.has(id)));
 	for (const g of Object.values(lib.spots?.groups || {})) take(g.name, [...new Set(Object.values(g.bodies || {}).flatMap((w) => Object.keys(w)))]);
@@ -392,7 +392,7 @@ function painter(app, c, e) {
 	const hist = paint.history.get(e.id) || { back: [], fwd: [] };
 	paint.history.set(e.id, hist);
 	const shape = () => paint.shape || MapView.chunkShape(lib, e);
-	const placeKeys = () => MapView.groundKeys(lib, e.landmarks ? e.landmarks[0] : e.tile ? 'wild' : e.kinds?.[0], shape());
+	const placeKeys = () => [...(e.roles?.length === 1 ? ['role:' + e.roles[0]] : []), ...MapView.groundKeys(lib, e.landmarks ? e.landmarks[0] : e.tile ? 'wild' : e.kinds?.[0], shape())];  // a room's role first: its floor (v0.8.4.43.40)
 	const over = h('canvas', { class: 'overlay' });
 	const stage = h('div', { class: 'stage' }, view.canvas, over);
 	const status = h('div', { class: 'muted small' });

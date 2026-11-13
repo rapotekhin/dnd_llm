@@ -33,7 +33,7 @@
 			"dunes": [], "snowfield": [], "arena": [], "rocks": [{"ground": "scree", "share": 0.06, "cell": 6}]
 		},
 		"cells": {
-			".": {"dunes": "sand", "arena": "sand", "snowfield": "snow", "rocks": "stony",
+			".": {"role:cellar": "flagstone", "role:kitchen": "flagstone", "dunes": "sand", "arena": "sand", "snowfield": "snow", "rocks": "stony",
 				"temple": "flagstone", "registry": "flagstone", "prison": "flagstone", "smithy": "dirt",
 				"open": "grass", "tunnels": "cave", "*": "planks"},
 			"#": {"tunnels": "rock", "*": "wall"}, "D": {"tunnels": "rock", "*": "wall"}, "w": "wall", "r": "roof",
@@ -51,13 +51,14 @@
 			"B": {"ruin": "rubble", "building": "table", "*": "boulder"},
 			"+": {"*": "door"}
 		},
-		"size": {"boulder_pair": 1.05, "boulder_ridge": 1.05, "tree_pair": 1.3, "grove": 1.25, "waterfall": 1.2, "lavafall": 1.2, "tree": 1.7, "boulder": 1.0, "table": 0.95, "door": 1.0, "rubble": 1.1},
+		"size": {"signpost": 0.9, "stairs_up": 1.0, "stairs_down": 1.0, "boulder_pair": 1.05, "boulder_ridge": 1.05, "tree_pair": 1.3, "grove": 1.25, "waterfall": 1.2, "lavafall": 1.2, "tree": 1.7, "boulder": 1.0, "table": 0.95, "door": 1.0, "rubble": 1.1},
 		"repeat": 3,
 		"colour": {"pit": "#0d0b09", "magma": "#b8430f", "water": "#2c4a5c", "mud": "#33301c", "dirt": "#6b5838", "grass": "#3f5a2e", "cobble": "#7f7a6c", "cave": "#4a463f", "planks": "#5a4330", "wall": "#5e4d3a", "roof": "#4a3428",
 			"rock": "#45403a", "still_water": "#1f2b24", "sand": "#b49a68", "thorns": "#8c7a52", "snow": "#dfe4e8", "ice": "#a9bfcc",
 			"stony": "#6f6a60", "scree": "#77736a", "tall_grass": "#5b6e34", "high_grass": "#7d8a3c", "cliff_top": "#7d8a3c", "cliff": "#5a4a38", "farmland": "#5a4630", "reeds": "#4c5a34", "flagstone": "#6e6c66"},
 		"same": {"_doc": "v0.8.4.43.28: a ground drawn with the texture of another — the rim of high ground over a cliff is its top's grass, its own id gives the cliff's drawn edge with the lowland", "cliff_top": "high_grass"},
 		"turn": {"_doc": "v0.8.4.43.36: how a thing of a square turns (LayoutGen.prop_turn): `walls` — across a wall with walls on both sides (a door), `fall` — down from the high ground (a waterfall, its picture falls top to bottom)", "door": "walls", "waterfall": "fall", "lavafall": "fall"},
+		"exits": {"_doc": "v0.8.4.43.40: the thing drawn on the square of a way out by its kind — `edge` the rim of an open map, `stairs` a way down to another floor, `stairs_up` a way up; a door is its own `+`. Turned so its top looks out of the map or to the wall the stairs stand by (LayoutGen.props_laid with the map's exits)", "edge": "signpost", "stairs": "stairs_down", "stairs_up": "stairs_up"},
 		"variants": {"_doc": "v0.8.4.43.37: a thing drawn in more pictures than one: `<id>`, `<id>_v1`, `<id>_v2`… — each square takes one by its number (LayoutGen.variant, by the map's seed), so a grove is not one tree copied", "tree": 3, "boulder": 3, "rubble": 3, "bush": 3, "stump": 3, "mushrooms": 2, "bones": 3, "boulder_pair": 2, "boulder_ridge": 2, "tree_pair": 2, "grove": 2},
 		"natural": {"_doc": "v0.8.4.43.37: things that grow or lie as nature put them: each square sizes and shifts its picture a little by its number (`scale`, `shift` of a square), and a soft shade lies on the ground round them, merged with the shade of those beside", "scale": 0.12, "shift": 0.1, "shade": 0.2, "of": ["tree", "boulder", "rubble", "bush", "stump", "mushrooms", "bones", "boulder_pair", "boulder_ridge", "tree_pair", "grove"]},
 		"groups": {"_doc": "v0.8.4.43.37: like things side by side drawn as one picture (LayoutGen.props_laid): the largest that fits first, row by row; a group of two stands either way. The squares keep their own rules: only the look is one", "boulder": [{"id": "boulder_ridge", "size": [2, 2]}, {"id": "boulder_pair", "size": [2, 1]}], "tree": [{"id": "grove", "size": [2, 2]}, {"id": "tree_pair", "size": [2, 1]}]},

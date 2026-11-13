@@ -60,6 +60,7 @@ const MapView = (() => {
 			for (const one of drawn) if (!out.includes(one)) out.push(one);
 		}
 		for (const id of Object.keys(bodies)) if (!out.includes(id)) out.push(id);
+		for (const [k, id] of Object.entries(lib.grounds.exits || {})) if (k !== '_doc' && !out.includes(id)) out.push(id);
 		for (const row of Object.values(lib.grounds.groups || {})) if (Array.isArray(row)) for (const g of row) if (!out.includes(g.id)) out.push(g.id);
 		for (const id of [...out]) for (let k = 1; k < Number(lib.grounds.variants?.[id] || 1); k++) out.push(`${id}_v${k}`);
 		return out.slice(0, MAX_PROPS);

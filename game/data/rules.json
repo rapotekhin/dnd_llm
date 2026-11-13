@@ -3152,7 +3152,7 @@
 		"_doc": "v0.8.2, MapSpots: squares of the people and things of a room. `reach` — squares from which an act is done, a spell goes by the SRD; `stations` — marks the map shows as a place to use; `station_bodies` — the thing a station stands as, drawn and taking its squares round the mark (v0.8.4.43.23); `trader_marks` — where a trader stands, the first the room has; `by_mark` — squares within which the hero counts as at a mark; `distance` — squares to words for the master; `mark_words` — a mark in the master's words.",
 		"reach": {"talk": 4, "touch": 1},
 		"stations": ["forge", "anvil", "bench", "hearth", "altar", "stage", "vein", "water", "bed", "camp"],
-		"station_bodies": {"forge": "forge", "anvil": "anvil", "bench": "workbench", "hearth": "hearth", "altar": "altar", "bed": "bed", "camp": "campfire", "counter": "counter"},
+		"station_bodies": {"forge": "forge", "anvil": "anvil", "bench": "workbench", "hearth": "hearth", "altar": "altar", "bed": "bed", "camp": "campfire", "counter": "counter", "stage": "stage", "stall": "stall", "vein": "vein", "desk": "desk", "millstone": "millstone", "stone": "standing_stone", "water": {"tunnels": "", "*": "well"}},
 		"trader_marks": ["counter", "stall", "anvil", "desk", "altar"],
 		"by_mark": 2,
 		"distance": [{"at": 0, "word": "рядом"}, {"at": 3, "word": "в нескольких шагах"}, {"at": 9, "word": "в другом конце"}],
@@ -3281,7 +3281,13 @@
 			"boulder": {"name": "валун", "size": [2, 2], "blocks": ["path", "shots"], "cover": "full", "made_of": "stone", "weight": 1500},
 			"mushrooms": {"name": "грибы", "size": [1, 1], "blocks": [], "made_of": "wood", "weight": 2},
 			"bones": {"name": "кости", "size": [1, 1], "blocks": [], "made_of": "bone", "weight": 10},
-			"curtain": {"name": "занавесь", "size": [1, 1], "blocks": ["sight"], "made_of": "cloth", "weight": 5}
+			"curtain": {"name": "занавесь", "size": [1, 1], "blocks": ["sight"], "made_of": "cloth", "weight": 5},
+			"stage": {"name": "помост", "size": [3, 2], "blocks": [], "made_of": "wood", "weight": 400},
+			"stall": {"name": "прилавок под навесом", "size": [2, 2], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 150},
+			"vein": {"name": "рудная жила", "size": [1, 1], "blocks": ["path"], "cover": "half", "made_of": "stone", "weight": 3000},
+			"desk": {"name": "письменный стол", "size": [2, 1], "blocks": ["path"], "cover": "half", "made_of": "wood", "weight": 60},
+			"millstone": {"name": "жернов", "size": [2, 2], "blocks": ["path"], "cover": "half", "made_of": "stone", "weight": 2500},
+			"standing_stone": {"name": "менгир", "size": [1, 1], "blocks": ["path", "shots"], "cover": "three_quarters", "made_of": "stone", "weight": 8000}
 		}
 	},
 	"ways": {

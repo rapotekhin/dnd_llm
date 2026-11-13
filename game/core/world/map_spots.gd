@@ -52,13 +52,14 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 	var ways := _ways_in(map, s.room_id)
 	var bodies: Dictionary = cfg(data).get("station_bodies", {})
 	var room_key := "%d|%s" % [s.game_seed, s.room_id]
+	var keys := LayoutGen.ground_keys(lib, map)
 	for m: Dictionary in map["marks"]:
 		var mark := str(m["name"])
 		var at := Vector2i(int(m["x"]), int(m["y"]))
 		if int(m["room"]) != index or taken.has(at):
 			continue
 		var station := stations.has(mark) and not seen.has(mark)
-		var body_id := str(bodies.get(mark, ""))
+		var body_id := LayoutGen.by_keys(bodies.get(mark, ""), keys)  # by the place: water in a cave is no well (v0.8.4.43.40)
 		if not station and body_id.is_empty():
 			continue
 		var t := _token("station:" + mark, "station", mark, _word(data, mark), at) if station \
@@ -81,13 +82,14 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 		if not body_id.is_empty():
 			_companions(data, t, room_key, spots, cells, ways, walls, taken, out)
 	_furnished(data, map, index, room_key, spots, cells, ways, walls, taken, out)
-	var keys := LayoutGen.ground_keys(lib, map)
 	for sp: Dictionary in spot_marks(map, index):  # the room's own things on its spots, by the seed
 		var at: Vector2i = sp["at"]
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash("%s|spot|%d,%d" % [room_key, at.x, at.y])
 		var group: Dictionary = (lib.get("spots", {}).get("groups", {}) as Dictionary).get(str(sp["group"]), {})
-		if taken.has(at) or rng.randf() >= float(group.get("fill", 0.5)):
+		if taken.has(at):  # a thing of a station or a furnishing stands over it: no spot (v0.8.4.43.40, the stage of 3×2)
+			continue
+		if rng.randf() >= float(group.get("fill", 0.5)):
 			free.append(sp)
 			continue
 		var body_id := _pick(_weights(group.get("bodies", {}), keys), rng)

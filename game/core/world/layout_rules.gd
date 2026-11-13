@@ -108,7 +108,7 @@ static func ask(v: WorldView, data: Dictionary, room_id: String, on_map: Array[S
 			links.append(to)
 			link_sides[to] = side(boxes, room_id, to)
 		elif not v.room(to).is_empty():
-			ways.append({"to": to, "side": side(boxes, room_id, to), "kind": _way(v, data, room_id, to, shape)})
+			ways.append({"to": to, "side": side(boxes, room_id, to), "kind": _way(v, data, room_id, to, shape), "up": _floor(v, to) > _floor(v, room_id)})
 	out["links"] = links
 	out["link_sides"] = link_sides
 	out["exits"] = ways
@@ -173,6 +173,11 @@ static func _build(s: GameSession, data: Dictionary, id: String, on_map: Array[S
 	map["shape"] = OPEN if map.get("open", false) else shape_of(WorldView.new(data["world"]), data, id)  # what its ground is drawn of
 	map["seed"] = seed_of(s, id)  # the patches of its ground
 	map["kind"] = kind_of(WorldView.new(data["world"]), data, id)  # its ground and things by the kind of the place
+	var roles: Array = []  # each room's role by `ids`: its floor (`role:<role>` of grounds.cells, v0.8.4.43.40)
+	for r: Variant in map["ids"]:
+		var asked := asks.filter(func(a: Dictionary) -> bool: return str(a["id"]) == str(r))
+		roles.append(str(asked[0].get("role", "")) if not asked.is_empty() else "")
+	map["roles"] = roles
 	if int(map["faults"]) >= int(lib(data)["sound"]["retry_from"]):
 		push_warning("LayoutRules: %s stays faulty after the tries: %d" % [id, int(map["faults"])])
 	if not s.layouts.has("picks"):

@@ -610,13 +610,14 @@ static func _exits_of(out: Dictionary, ask: Dictionary, index: int, ways: Array,
 		var spot := {} if str(e.get("kind", "door")) == "stairs" else _socket_for(out, rests, index, side, gap, str(ask["id"]))
 		if spot.is_empty():
 			spot = _by_wall(out, index, rng)
-			out["exits"].append({"to": e["to"], "room": str(ask["id"]), "x": spot["x"], "y": spot["y"], "ax": spot["x"], "ay": spot["y"], "side": side, "kind": "stairs"})
+			out["exits"].append({"to": e["to"], "room": str(ask["id"]), "x": spot["x"], "y": spot["y"], "ax": spot["x"], "ay": spot["y"], "side": side, "kind": "stairs",
+				"up": bool(e.get("up", false))})
 			continue
 		_set_cell(out, int(spot["x"]), int(spot["y"]), DOOR)
 		var inward: Vector2i = STEP[OPPOSITE[str(spot["side"])]]
 		var kind := str(e.get("kind", "door"))
 		out["exits"].append({"to": e["to"], "room": str(ask["id"]), "x": spot["x"], "y": spot["y"], "ax": int(spot["x"]) + inward.x,
-			"ay": int(spot["y"]) + inward.y, "side": spot["side"], "kind": kind})
+			"ay": int(spot["y"]) + inward.y, "side": spot["side"], "kind": kind, "up": bool(e.get("up", false))})
 
 
 ## A socket for a way: away from the room's other ways first (the author's feedback, v0.8.4.36), on the wanted side first.
@@ -1481,7 +1482,7 @@ static func ground_keys(lib: Dictionary, map: Dictionary) -> Array[String]:
 
 
 ## The first value of `row` by `keys`; a row that is not a dictionary is the same for every place.
-static func _by_keys(row: Variant, keys: Array[String]) -> String:
+static func by_keys(row: Variant, keys: Array[String]) -> String:
 	if not row is Dictionary:
 		return str(row)
 	for k: String in keys:
@@ -1493,12 +1494,12 @@ static func _by_keys(row: Variant, keys: Array[String]) -> String:
 ## The ground of a character on a map read by `keys` (ground_keys), by `grounds.cells`.
 static func ground_of(lib: Dictionary, keys: Array[String], c: String) -> String:
 	var cells: Dictionary = lib["grounds"]["cells"]
-	return _by_keys(cells.get(c, cells["."]), keys)
+	return by_keys(cells.get(c, cells["."]), keys)
 
 
 ## The thing drawn on a square of `c`, by `grounds.props`; "" — none.
 static func prop_of(lib: Dictionary, keys: Array[String], c: String) -> String:
-	return _by_keys(lib["grounds"]["props"].get(c, {}), keys)
+	return by_keys(lib["grounds"]["props"].get(c, {}), keys)
 
 
 ## The quarter turns of the thing of a square (`grounds.turn` by its id, v0.8.4.43.36): a door across a wall with walls
@@ -1545,8 +1546,9 @@ static func prop_at(lib: Dictionary, keys: Array[String], rows: Array, x: int, y
 ## The things of a map's squares with their turns as they are drawn (v0.8.4.43.37), [{id, turn}] by y * w + x: each square's
 ## `prop_at`; like things side by side drawn as one picture of their group (`grounds.groups`: a ridge of boulders, a grove —
 ## the largest that fits first, row by row; a group of two stands either way; the other squares of a group draw nothing);
-## each picture by its variant for its square (`variant`).
-static func props_laid(lib: Dictionary, keys: Array[String], rows: Array, seed_value: int) -> Array[Dictionary]:
+## each picture by its variant for its square (`variant`); then the things of the map's ways out (`exits` of the map,
+## `grounds.exits` by their kind, v0.8.4.43.40): a signpost at the rim, stairs up or down turned to their wall.
+static func props_laid(lib: Dictionary, keys: Array[String], rows: Array, seed_value: int, exits: Array = []) -> Array[Dictionary]:
 	var h := rows.size()
 	var w := 0
 	for r: Variant in rows:
@@ -1590,7 +1592,34 @@ static func props_laid(lib: Dictionary, keys: Array[String], rows: Array, seed_v
 	for i: int in out.size():
 		if not str(out[i]["id"]).is_empty():
 			out[i]["id"] = variant(lib, str(out[i]["id"]), Vector2i(i % maxi(1, w), i / maxi(1, w)), seed_value)
+	var kinds: Dictionary = lib["grounds"].get("exits", {})
+	for e: Variant in exits:
+		var x := int(e["x"])
+		var y := int(e["y"])
+		var kind := str(e.get("kind", ""))
+		var id := str(kinds.get(kind + "_up", "")) if bool(e.get("up", false)) else ""
+		if id.is_empty():
+			id = str(kinds.get(kind, "")) if kind != "_doc" else ""
+		if id.is_empty() or x < 0 or y < 0 or x >= w or y >= h:
+			continue
+		out[y * w + x] = {"id": id, "turn": exit_turn(rows, x, y, str(e.get("side", "")), kind)}
 	return out
+
+
+## The quarter turns of a way out's thing: its picture's top looks out of the map at the rim, to the wall beside the stairs
+## (0 north, 1 west, 2 south, 3 east, as `prop_turn` turns a picture).
+static func exit_turn(rows: Array, x: int, y: int, side: String, kind: String) -> int:
+	const TOPS: Array[String] = ["n", "w", "s", "e"]
+	if kind != "stairs" and TOPS.has(side):
+		return TOPS.find(side)
+	for k: int in TOPS.size():
+		var d: Vector2i = STEP[TOPS[k]]
+		var yy := y + d.y
+		var xx := x + d.x
+		var c := str(rows[yy]).substr(xx, 1) if yy >= 0 and yy < rows.size() and xx >= 0 and xx < str(rows[yy]).length() else BLANK
+		if c in [WALL, "w", BLANK, ""]:
+			return k
+	return 0
 
 
 ## A square's number for the picks of its look: the same square of the same map — the same number (v0.8.4.43.37); the
@@ -1648,20 +1677,31 @@ static func grounds(lib: Dictionary, map: Dictionary) -> PackedByteArray:
 	var out := PackedByteArray()
 	out.resize(w * int(map["h"]))
 	out.fill(NO_GROUND)
+	var rooms: PackedInt32Array = map.get("rooms", PackedInt32Array())
+	var roles: Array = map.get("roles", [])
+	var room_keys: Array = []  # a room's keys: its role first (v0.8.4.43.40) — a cellar of flagstones in a house of planks
+	for r: Variant in roles:
+		var own: Array[String] = keys.duplicate()
+		if not str(r).is_empty():
+			own.push_front("role:" + str(r))
+		room_keys.append(own)
 	var by_char: Dictionary = {}
 	for y: int in rows.size():
 		var line: String = rows[y]
 		for x: int in mini(w, line.length()):
 			var c := line[x]
-			if c == BLANK and not by_char.has(c):  # the blank between the rooms: what `cells` has for it here, else none
-				var under := _by_keys(lib["grounds"]["cells"].get(BLANK, {}), keys)
-				by_char[c] = order.find(under) if not under.is_empty() else -1
-			if c == BLANK and int(by_char[c]) < 0:
+			var room := rooms[y * w + x] if rooms.size() == out.size() else -1
+			var mine: Array[String] = room_keys[room] if room >= 0 and room < room_keys.size() else keys
+			var key := "%s|%d" % [c, room if room < room_keys.size() else -1]
+			if c == BLANK and not by_char.has(key):  # the blank between the rooms: what `cells` has for it here, else none
+				var under := by_keys(lib["grounds"]["cells"].get(BLANK, {}), mine)
+				by_char[key] = order.find(under) if not under.is_empty() else -1
+			if c == BLANK and int(by_char[key]) < 0:
 				continue
-			if not by_char.has(c):
-				var at := order.find(ground_of(lib, keys, c))
-				by_char[c] = at if at >= 0 else order.find(ground_of(lib, keys, FLOOR))
-			out[y * w + x] = int(by_char[c])
+			if not by_char.has(key):
+				var at := order.find(ground_of(lib, mine, c))
+				by_char[key] = at if at >= 0 else order.find(ground_of(lib, mine, FLOOR))
+			out[y * w + x] = int(by_char[key])
 	_patch(lib, map, out)
 	return out
 
