@@ -113,6 +113,7 @@
   "features/spellcasting_ranger": 3,
   "features/spellcasting_wizard": 3,
   "features/thieves_cant": 3,
+  "spells/acid_arrow": 2,
   "spells/animal_friendship": 3,
   "spells/animal_messenger": 3,
   "spells/augury": 2,
@@ -174,6 +175,7 @@
   "spells/prestidigitation": 2,
   "spells/produce_flame": 3,
   "spells/protection_from_poison": 3,
+  "spells/ray_of_enfeeblement": 2,
   "spells/ray_of_frost": 2,
   "spells/sacred_flame": 3,
   "spells/sanctuary": 2,
@@ -226,12 +228,5 @@
   "features/fighter_fighting_style_two_weapon_fighting": "features/ranger_fighting_style_two_weapon_fighting",
   "features/fighting_style_protection": "features/fighter_fighting_style_protection",
   "features/ranger_fighting_style_dueling": "features/fighter_fighting_style_dueling"
- },
- "redraw": {
-  "features/dragon_ancestor_brass___fire_damage": "в профиль как у dragon_ancestor_bronze___lightning_damage",
-  "spells/acid_arrow": "не нравится, давай более магическую стрелу из кислоты",
-  "spells/ray_of_enfeeblement": "перерисовать",
-  "spells/ray_of_frost": "какой нахер башмак, перерисовать",
-  "spells/sacred_flame": "это атакующее заклинание"
  }
 }
