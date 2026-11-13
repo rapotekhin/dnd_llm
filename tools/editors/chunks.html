@@ -18,7 +18,9 @@ const L = 'game/data/layouts.json';
 const CELL_RU = {
 	wall: 'стена', window: 'окно', floor: 'пол', road: 'дорога', path: 'тропа', door: 'дверь', difficult: 'труднопроходимо',
 	hazard: 'опасность', water: 'вода', pit: 'яма', tree: 'дерево', block: 'препятствие (стол, валун)', socket: 'гнездо двери', roof: 'крыша',
+	high: 'возвышенность', cliff: 'склон (обрыв)',
 };
+const TILE_RU = { glade: 'поляна', grove: 'роща', rocks: 'скалы', pond: 'пруд', hill: 'возвышенность', stream: 'ручей', road: 'тропа' };
 const SHAPES = { building: 'здание', tunnels: 'пещера, шахта', open: 'открытое место' };
 const TOOLS = [['brush', 'Кисть'], ['rect', 'Прямоугольник'], ['frame', 'Рамка'], ['fill', 'Заливка'], ['pick', 'Пипетка']];
 // The ids of layouts.json in the author's words; the lists themselves come from the data, a new id shows itself.
@@ -45,6 +47,7 @@ const opts = {
 		return [...new Set([...want, ...all])];
 	},
 	sizes: () => [...new Set([...(lib.sizes || []), ...lib.chunks.map((c) => c.size).filter(Boolean)])],
+	themes: () => [...new Set([...Object.values(lib.kinds).flatMap((k) => Object.keys(k.tiles || {})), ...lib.chunks.map((c) => c.tile).filter(Boolean)])],
 	landmarks: () => [...new Set([...Object.values(lib.kinds).flatMap((k) => k.landmarks || []), ...lib.chunks.flatMap((c) => c.landmarks || [])])],
 	tags: () => [...new Set([...lib.chunks.flatMap((c) => c.tags || []), ...Object.keys(lib.mark_tags || {})])],
 };
@@ -151,14 +154,21 @@ function propsPanel(app, c, e) {
 		app.changed(c, true);
 	};
 	const landmark = !!e.landmarks;
+	const tile = !!e.tile;  // a piece of an open map (v0.8.4.43.27)
 	const purpose = h('select', { onchange: (ev) => {
-		if (ev.target.value === 'landmark') { for (const k of ['kinds', 'roles', 'size', 'generic', 'tags']) delete e[k]; e.landmarks = ['wild']; }
-		else { delete e.landmarks; e.kinds = []; e.roles = []; e.size = 'medium'; }
+		for (const k of ['kinds', 'roles', 'size', 'generic', 'tags', 'landmarks', 'tile', 'weight']) delete e[k];
+		if (ev.target.value === 'landmark') e.landmarks = ['wild'];
+		else if (ev.target.value === 'tile') e.tile = 'glade';
+		else { e.kinds = []; e.roles = []; e.size = 'medium'; }
 		app.changed(c, true);
-	} }, h('option', { value: 'room', selected: !landmark }, 'комната здания или зал пещеры'), h('option', { value: 'landmark', selected: landmark }, 'примета открытого места'));
+	} }, h('option', { value: 'room', selected: !landmark && !tile }, 'комната здания или зал пещеры'), h('option', { value: 'landmark', selected: landmark }, 'примета открытого места'),
+		h('option', { value: 'tile', selected: tile }, 'кусок открытого места'));
 	const row = (label, el, hint) => h('div', { class: 'prop' }, h('span', { class: 'muted' }, label), el, hint ? h('span', { class: 'muted small' }, hint) : null);
 	const parts = [row('Что это:', purpose)];
-	if (landmark) parts.push(row('Ставится на:', chips(e.landmarks, opts.landmarks(), (x) => ru(KIND_RU, x), (v) => set('landmarks', v.length ? v : ['wild']))));
+	if (tile) parts.push(row('Тема:', h('select', { onchange: (ev) => set('tile', ev.target.value) }, opts.themes().map((s) => h('option', { value: s, selected: e.tile === s }, ru(TILE_RU, s))))),
+		row('Вес в теме:', h('input', { type: 'number', min: 1, value: e.weight || 1, onchange: (ev) => set('weight', Number(ev.target.value) > 1 ? Number(ev.target.value) : undefined) })),
+		row('', h('span', { class: 'muted small' }, `квадрат ${lib.open?.tile || 12}×${lib.open?.tile || 12}; ручей и тропа выходят на край только двумя средними клетками — так куски стыкуются`)));
+	else if (landmark) parts.push(row('Ставится на:', chips(e.landmarks, opts.landmarks(), (x) => ru(KIND_RU, x), (v) => set('landmarks', v.length ? v : ['wild']))));
 	else {
 		parts.push(row('Виды мест:', e.generic ? h('span', { class: 'muted' }, 'любой вид') : chips(e.kinds, opts.roomKinds(), (x) => ru(KIND_RU, x), (v) => set('kinds', v))),
 			row('', h('label', { class: 'small' }, h('input', { type: 'checkbox', checked: !!e.generic, onchange: (ev) => set('generic', ev.target.checked) }), ' общий — годится любому виду места своего размера')),
@@ -188,7 +198,7 @@ const app = new EditorApp({
 		app.addColl({
 			id: 'chunks', title: 'Чанки', group: 'Карты', file: L, at: ['chunks'], type: 'array', idKey: 'id',
 			name: (e) => e.id,
-			sub: (e) => [e.landmarks ? 'примета: ' + e.landmarks.map((x) => KIND_RU[x] || x).join(', ') : e.generic && !e.kinds?.length ? 'общий' : (e.kinds || []).map((x) => KIND_RU[x] || x).join(', '), (e.roles || []).map((x) => ROLE_RU[x] || x).join(', '), SIZE_RU[e.size] || e.size, size(e)].filter(Boolean).join(' · '),
+			sub: (e) => [e.tile ? 'кусок открытого места: ' + ru(TILE_RU, e.tile) : e.landmarks ? 'примета: ' + e.landmarks.map((x) => KIND_RU[x] || x).join(', ') : e.generic && !e.kinds?.length ? 'общий' : (e.kinds || []).map((x) => KIND_RU[x] || x).join(', '), (e.roles || []).map((x) => ROLE_RU[x] || x).join(', '), SIZE_RU[e.size] || e.size, size(e)].filter(Boolean).join(' · '),
 			labels: { kinds: 'виды мест', roles: 'роли комнат', size: 'размер', marks: 'метки', rows: 'клетки', landmarks: 'примета открытой карты', generic: 'общий для любого вида', tags: 'теги комнаты' },
 			refs: [{ p: 'kinds.[]', to: 'kinds' }],
 			filterOrder: ['kinds', 'roles', 'size', 'landmarks', 'generic', 'tags'],
@@ -235,7 +245,16 @@ function problems(ch) {
 	for (const r of rows) for (const c of r) if (!(c in marks) && !(c in lib.cells) && c !== MapView.BLANK) odd.add(c);
 	if (odd.size) out.push(`неизвестные клетки: ${[...odd].map((c) => `«${c}»`).join(' ')}`);
 	for (const k of Object.keys(marks)) if (k.length !== 1) out.push(`метка «${k}»: одна буква`);
-	if (ch.landmarks || out.length) return out;
+	if (ch.tile) {  // a piece of an open map: its size and what crosses its sides (LayoutGen._tile_codes)
+		const n = lib.open?.tile || 12;
+		if (rows.length !== n || w !== n) out.push(`кусок открытого места — ${n}×${n} клеток`);
+		else {
+			const sides = { 'сверху': [...rows[0]], 'снизу': [...rows[n - 1]], 'слева': rows.map((r) => r[0]), 'справа': rows.map((r) => r[n - 1]) };
+			for (const [side, cells] of Object.entries(sides))
+				cells.forEach((c, i) => { if (i !== n / 2 - 1 && i !== n / 2 && '~,='.includes(c)) out.push(`${side}: вода или тропа в клетке ${i + 1} — только в двух средних`); });
+		}
+	}
+	if (ch.landmarks || ch.tile || out.length) return out;
 	const grid = MapView.stamped(rows, marks);
 	const solid = (c) => !!lib.cells[c]?.solid || c === MapView.BLANK;
 	const floors = [];
@@ -279,7 +298,7 @@ function painter(app, c, e) {
 	const hist = paint.history.get(e.id) || { back: [], fwd: [] };
 	paint.history.set(e.id, hist);
 	const shape = () => paint.shape || MapView.chunkShape(lib, e);
-	const placeKeys = () => MapView.groundKeys(lib, e.landmarks ? e.landmarks[0] : e.kinds?.[0], shape());
+	const placeKeys = () => MapView.groundKeys(lib, e.landmarks ? e.landmarks[0] : e.tile ? 'wild' : e.kinds?.[0], shape());
 	const over = h('canvas', { class: 'overlay' });
 	const stage = h('div', { class: 'stage' }, view.canvas, over);
 	const status = h('div', { class: 'muted small' });

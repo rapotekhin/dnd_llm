@@ -29,7 +29,7 @@ const MapView = (() => {
 
 	// The shape a chunk is laid on: a landmark lies on an open map, a room on its kind's.
 	function chunkShape(lib, chunk) {
-		if (chunk.landmarks) return 'open';
+		if (chunk.landmarks || chunk.tile) return 'open';
 		return shapeOf(lib, chunk.kinds?.[0] || '', true);
 	}
 

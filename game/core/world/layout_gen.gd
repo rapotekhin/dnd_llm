@@ -17,6 +17,9 @@ const DOOR := "+"
 const ROAD := "="
 const PATH := ","
 const ROOF := "r"  ## the roof of a building on an open map, inside its walls
+const HIGH := ":"  ## high ground: a floor raised over the lowland (v0.8.4.43.27)
+const CLIFF := "/"  ## the steep slope round high ground: not walked, seen over
+const WATER := "~"
 const BLANK := " "
 const SIDES: Array[String] = ["n", "e", "s", "w"]
 const STEP: Dictionary = {"n": Vector2i(0, -1), "e": Vector2i(1, 0), "s": Vector2i(0, 1), "w": Vector2i(-1, 0)}
@@ -98,7 +101,7 @@ static func candidates(lib: Dictionary, ask: Dictionary, rng: RandomNumberGenera
 	var role := str(ask.get("role", ""))
 	var tags: Array = ask.get("tags", [])
 	var size := str(ask.get("size", "medium"))
-	var rooms_only: Array = (lib["chunks"] as Array).filter(func(c: Dictionary) -> bool: return not c.has("landmarks"))
+	var rooms_only: Array = (lib["chunks"] as Array).filter(func(c: Dictionary) -> bool: return not c.has("landmarks") and not c.has("tile"))
 	var out: Array[Dictionary] = []
 	var shared := func(c: Dictionary) -> int:  # the room's tags a chunk carries
 		return tags.filter(func(t: Variant) -> bool: return (c.get("tags", []) as Array).has(t)).size()
@@ -665,9 +668,11 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 			line.resize(w)
 		grid.append(line)
 	var tags: Array = ask.get("tags", [])
+	var tiled := false
 	if own.is_empty():
-		_scatter(grid, kind.get("scatter", []), int(cfg["noise_cell"]), rng)
-		if tags.has("water"):
+		tiled = _tiles(lib, kind, tags, grid, rng)  # a kind with `tiles`: the map laid of open chunks, the noise only for the small things
+		_scatter(grid, kind.get("scatter", []), int(cfg["noise_cell"]), rng, float(cfg.get("tile_scatter", 1.0)) if tiled else 1.0, tiled)
+		if tags.has("water") and not tiled:
 			_pond(grid, float(cfg["pond"]), rng)
 	# rows of its own grown west or north (BuildRules, v0.8.4.42.7): the grid of a save stays, the map's first square moves
 	var origin := Vector2i.ZERO
@@ -713,7 +718,7 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 	picks["ways"] = _ways_of(out, str(ask["id"]))
 	var paved := ROAD if tags.has("road") or tags.has("market") or bool(kind.get("paved", false)) else PATH
 	picks["roads"] = _roads(out, lib, center, paved, kept, seed_value)
-	_tidy(out, scattered, tags.has("water"))
+	_tidy(out, scattered, tags.has("water") and not tiled)
 	out["picks"] = picks
 	return out
 
@@ -741,23 +746,24 @@ static func _tidy(out: Dictionary, scattered: Array, pond: bool) -> void:
 
 ## What a kind scatters over its open map: things (trees, rocks) one by one where the noise is thick; a ground (`blob`:
 ## water, brambles) as patches of the noise above its share, with no lone squares, so the dual grid draws them whole.
-static func _scatter(grid: Array[PackedStringArray], rows: Array, cell: int, rng: RandomNumberGenerator) -> void:
+## `scale` — of each share; `on_floor` — only over the floor (a map of open chunks keeps what its chunks drew).
+static func _scatter(grid: Array[PackedStringArray], rows: Array, cell: int, rng: RandomNumberGenerator, scale := 1.0, on_floor := false) -> void:
 	for row: Dictionary in rows:
-		var share := float(row["share"])
+		var share := float(row["share"]) * scale
 		var c := str(row["cell"])
 		if bool(row.get("blob", false)):
 			var field := blobs(grid[0].size(), grid.size(), cell, rng)
 			var cut := _share_cut(field, share)
 			for y: int in grid.size():
 				for x: int in grid[y].size():
-					if field[y * grid[y].size() + x] >= cut:
+					if field[y * grid[y].size() + x] >= cut and (not on_floor or grid[y][x] == FLOOR):
 						grid[y][x] = c
 			_despeckle(grid, c)
 			continue
 		var coarse := _coarse(grid[0].size(), grid.size(), cell, rng)
 		for y: int in grid.size():
 			for x: int in grid[y].size():
-				if rng.randf() < share * 2.0 * _noise(coarse, cell, x, y):
+				if rng.randf() < share * 2.0 * _noise(coarse, cell, x, y) and (not on_floor or grid[y][x] == FLOOR):
 					grid[y][x] = c
 
 
@@ -821,6 +827,104 @@ static func _noise(coarse: Array[PackedFloat32Array], cell: int, x: int, y: int)
 	var top := lerpf(coarse[cy][cx], coarse[cy][cx + 1], fx)
 	var bottom := lerpf(coarse[cy + 1][cx], coarse[cy + 1][cx + 1], fx)
 	return lerpf(top, bottom, fy)
+
+
+## v0.8.4.43.27: an open map of a kind with `tiles` laid of open chunks (`tile` of layouts.json: a glade, a grove, rocks,
+## a pond, high ground with its cliffs, a stream, a path) — `open.tile` squares each, centred on the map, picked by the
+## kind's weights of their themes and turned by the seed, row by row so that a chunk's west and north sides meet its
+## neighbours': a stream or a path crosses a side only at its middle (`_tile_codes`), water to water, path to path. A
+## side no chunk meets (none fits) takes the chunk with the fewest sides wrong. The kind's tag `water` makes ponds and
+## streams thrice likelier. false — the kind has no `tiles`.
+static func _tiles(lib: Dictionary, kind: Dictionary, tags: Array, grid: Array[PackedStringArray], rng: RandomNumberGenerator) -> bool:
+	var weights: Dictionary = kind.get("tiles", {})
+	if weights.is_empty():
+		return false
+	var n := int(lib["open"].get("tile", 12))
+	var count := {}
+	for c: Dictionary in lib["chunks"]:
+		if c.has("tile"):
+			count[c["tile"]] = int(count.get(c["tile"], 0)) + 1
+	var pool: Array[Dictionary] = []
+	for c: Dictionary in lib["chunks"]:
+		var theme := str(c.get("tile", ""))
+		if theme.is_empty() or (c["rows"] as Array).size() != n:
+			continue
+		var w := float(weights.get(theme, 0.0))
+		if tags.has("water") and theme in ["pond", "stream"]:
+			w = maxf(w, 1.0) * 3.0
+		var base := float(c.get("weight", 1)) / float(count[theme])
+		for rot: int in ROTATIONS:
+			for flip: bool in [false, true]:
+				var rows := turned(c["rows"], rot, flip)
+				pool.append({"rows": rows, "codes": _tile_codes(rows), "weight": base * w, "base": base})
+	if pool.is_empty():
+		return false
+	var h := grid.size()
+	var wide := grid[0].size()
+	var cols := ceili(float(wide) / n)
+	var lines := ceili(float(h) / n)
+	var off := Vector2i((cols * n - wide) / 2, (lines * n - h) / 2)
+	var placed := {}
+	for ty: int in lines:
+		for tx: int in cols:
+			var west := str(placed[Vector2i(tx - 1, ty)]["codes"]["e"]) if tx > 0 else ""
+			var north := str(placed[Vector2i(tx, ty - 1)]["codes"]["s"]) if ty > 0 else ""
+			var fits := pool.filter(func(p: Dictionary) -> bool:
+				return (west.is_empty() or p["codes"]["w"] == west) and (north.is_empty() or p["codes"]["n"] == north))
+			var pick := _weighted(fits, rng)
+			if pick.is_empty():  # nothing meets both: the fewest sides wrong
+				var best := 3
+				for p: Dictionary in pool:
+					var wrong := (0 if west.is_empty() or p["codes"]["w"] == west else 1) + (0 if north.is_empty() or p["codes"]["n"] == north else 1)
+					if wrong < best:
+						best = wrong
+						pick = p
+			placed[Vector2i(tx, ty)] = pick
+			var rows: Array[String] = pick["rows"]
+			for y: int in n:
+				var gy := ty * n + y - off.y
+				if gy < 0 or gy >= h:
+					continue
+				for x: int in n:
+					var gx := tx * n + x - off.x
+					if gx >= 0 and gx < wide:
+						grid[gy][gx] = rows[y][x]
+	return true
+
+
+## A chunk's sides by what crosses their middle two squares: "w" water, "r" a path or a road, "n" nothing.
+static func _tile_codes(rows: Array[String]) -> Dictionary:
+	var n := rows.size()
+	var a := n / 2 - 1
+	var b := n / 2
+	var ends := {"n": rows[0][a] + rows[0][b], "s": rows[n - 1][a] + rows[n - 1][b],
+		"w": rows[a][0] + rows[b][0], "e": rows[a][n - 1] + rows[b][n - 1]}
+	var out := {}
+	for side: String in ends:
+		var two: String = ends[side]
+		out[side] = "w" if two == WATER + WATER else "r" if (two[0] == PATH or two[0] == ROAD) and (two[1] == PATH or two[1] == ROAD) else "n"
+	return out
+
+
+## One by `weight` (by `base` when every weight is 0: a side that must go on needs its chunk); {} — none.
+static func _weighted(list: Array, rng: RandomNumberGenerator) -> Dictionary:
+	if list.is_empty():
+		return {}
+	var key := "weight"
+	var total := 0.0
+	for p: Dictionary in list:
+		total += float(p["weight"])
+	if total <= 0.0:
+		key = "base"
+		total = 0.0
+		for p: Dictionary in list:
+			total += float(p["base"])
+	var roll := rng.randf() * total
+	for p: Dictionary in list:
+		roll -= float(p[key])
+		if roll < 0.0:
+			return p
+	return list.back()
 
 
 static func _pond(grid: Array[PackedStringArray], share: float, rng: RandomNumberGenerator) -> void:
@@ -1189,7 +1293,7 @@ static func _cheapest(w: int, h: int, weights: PackedInt32Array, net: Array[int]
 static func _clear(grid: Array[PackedStringArray], center: Vector2i, r: int) -> void:
 	for y: int in range(center.y - r, center.y + r + 1):
 		for x: int in range(center.x - r, center.x + r + 1):
-			if not _built(grid[y][x]) and grid[y][x] != DOOR:
+			if not _built(grid[y][x]) and grid[y][x] != DOOR and grid[y][x] != HIGH:  # high ground is walked: it stays
 				grid[y][x] = FLOOR
 
 

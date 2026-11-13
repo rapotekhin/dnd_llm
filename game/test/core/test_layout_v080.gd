@@ -20,7 +20,7 @@ func _session(game_seed: int = 42) -> GameSession:
 
 
 func _room_chunks() -> Array:
-	return (layouts["chunks"] as Array).filter(func(c: Dictionary) -> bool: return not c.has("landmarks"))
+	return (layouts["chunks"] as Array).filter(func(c: Dictionary) -> bool: return not c.has("landmarks") and not c.has("tile"))
 
 
 func _cell_ok(c: String, legend: Dictionary) -> bool:
@@ -702,3 +702,56 @@ func test_an_edge_sheet_is_laid_on_corners_that_give_each_case_once() -> void:
 		var high := order.find(pair["high"])
 		assert_bool(low >= 0 and high > low).override_failure_message(str(pair)).is_true()
 		assert_bool((g["sharp"] as Array).has(pair["high"])).override_failure_message(str(pair)).is_false()
+
+
+## v0.8.4.43.27: open chunks. Each is `open.tile` squares on a side; a stream or a path crosses a side only at its
+## middle two squares, so chunks meet water to water and path to path.
+func test_an_open_chunk_crosses_its_sides_only_at_their_middle() -> void:
+	var n := int(layouts["open"]["tile"])
+	var tiles := (layouts["chunks"] as Array).filter(func(c: Dictionary) -> bool: return c.has("tile"))
+	assert_int(tiles.size()).is_greater(10)
+	for c: Dictionary in tiles:
+		var rows: Array = c["rows"]
+		assert_int(rows.size()).override_failure_message(str(c["id"])).is_equal(n)
+		for i: int in n:
+			if i == n / 2 - 1 or i == n / 2:
+				continue
+			for at: String in [rows[0][i], rows[n - 1][i], rows[i][0], rows[i][n - 1]]:
+				assert_bool(at in [LayoutGen.WATER, LayoutGen.PATH, LayoutGen.ROAD]).override_failure_message("%s: %d" % [c["id"], i]).is_false()
+
+
+func test_open_chunks_meet_their_neighbours_side_to_side() -> void:
+	var n := int(layouts["open"]["tile"])
+	var wrong := 0
+	for sd: int in 12:
+		var grid: Array[PackedStringArray] = []
+		for y: int in n * 4:
+			var line := PackedStringArray()
+			line.resize(n * 4)
+			line.fill(LayoutGen.FLOOR)
+			grid.append(line)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = sd
+		assert_bool(LayoutGen._tiles(layouts, layouts["kinds"]["wild"], ["water"], grid, rng)).is_true()
+		var part := func(tx: int, ty: int) -> Array[String]:
+			var rows: Array[String] = []
+			for y: int in n:
+				rows.append("".join(grid[ty * n + y].slice(tx * n, tx * n + n)))
+			return rows
+		for ty: int in 4:
+			for tx: int in 4:
+				var here := LayoutGen._tile_codes(part.call(tx, ty))
+				if tx < 3 and here["e"] != LayoutGen._tile_codes(part.call(tx + 1, ty))["w"]:
+					wrong += 1
+				if ty < 3 and here["s"] != LayoutGen._tile_codes(part.call(tx, ty + 1))["n"]:
+					wrong += 1
+	assert_int(wrong).is_less_equal(2)  # a side nothing meets takes the fewest wrong: rare
+
+
+func test_hills_have_high_ground_and_cliffs_not_walked_but_seen_over() -> void:
+	var ask := {"id": "x", "kind": "hills", "tags": [], "exits": []}
+	var text := "".join(LayoutGen.open_map(layouts, ask, 3)["rows"])
+	assert_bool(text.contains(LayoutGen.HIGH) and text.contains(LayoutGen.CLIFF)).is_true()
+	assert_bool(LayoutGen.solid(layouts, LayoutGen.CLIFF)).is_true()
+	assert_bool(LayoutGen.solid(layouts, LayoutGen.HIGH)).is_false()
+	assert_bool(bool(layouts["cells"][LayoutGen.CLIFF].get("opaque", false))).is_false()
