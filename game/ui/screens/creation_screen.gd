@@ -4,6 +4,9 @@ extends Control
 ## left, the current step in the middle, a live summary on the right. All rules live in CharacterBuilder; this
 ## screen only edits `choices` and redraws. «Случайный» fills every step (seeded by --seed when given),
 ## «Начать игру» builds the character and starts the game with the new game screen's `settings`.
+## v0.8.4.43.34 (the author, as in BG3): a race by its face and a class by its sign in rows (`PickGrid.rows`), spells and
+## features as icons with the row of the picked ones (`PickGrid`), what a choice is as a card at the cursor, the right column
+## the hero itself — its big face, name, six abilities and numbers — the steps marked done or still to pick, «Далее» lit.
 
 const SCENE := "res://ui/screens/creation_screen.tscn"
 const STEP_START := "start"
@@ -21,7 +24,7 @@ var _next: Button
 var _start: Button
 
 
-## The rules text of the hovered choice (v0.6.6); since v0.7.22.21 at the top of the right column, over the summary.
+## The rules text of the hovered choice (v0.6.6); since v0.8.4.43.34 a card at the cursor, as in BG3.
 var _info: DetailsPanel
 
 ## v0.7.32: the heir of a dead hero — its name, gender and race given, the start goes on the same game.
@@ -48,12 +51,8 @@ func _ready() -> void:
 	_body = UiScenes.need(self, "%StepBody")
 	_summary = UiScenes.need(self, "%Summary")
 	_errors = UiScenes.need(self, "%Errors")
-	_info = DetailsPanel.new(Vector2(0, 160))
-	_info.show_text(tr("INFO_HINT"), "")
-	_info.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var details: Control = UiScenes.need(self, "%DetailsColumn")
-	details.add_child(_info)
-	details.move_child(_info, 0)
+	_info = DetailsPanel.new(Vector2.ZERO, true)
+	add_child(_info)
 	_on_press("%BackToWorld", func() -> void: EventBus.navigate.emit("new_game", {}))
 	_on_press("%RandomButton", _randomize)
 	_back = _on_press("%StepBack", func() -> void: _move(-1))
@@ -152,7 +151,10 @@ func _redraw() -> void:
 	for s: String in list:
 		var ok := s == STEP_START or CharacterBuilder.errors(choices, data(), s).is_empty()
 		var b := Button.new()
-		b.text = ("✓ " if ok else "• ") + tr("CC_STEP_" + s.to_upper())
+		b.name = "Step_" + s
+		b.text = ("✓ " if ok else "● ") + tr("CC_STEP_" + s.to_upper())
+		if s != step:  # done in green, still to pick in amber
+			b.add_theme_color_override("font_color", UiTheme.OK if ok else UiTheme.WARN)
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.toggle_mode = true
@@ -200,25 +202,31 @@ func _text(parent: Control, text: String, muted: bool = false) -> Label:
 	return l
 
 
-## Single choice from `options` [{id, label}] into choices[key].
+## Single choice from `options` [{id, label, tip?, ref?, picture?}] into choices[key]: rows of a picture and a name.
 func _radio(parent: Control, key: String, options: Array, columns: int = 3) -> void:
-	var grid := GridContainer.new()
-	grid.columns = columns
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	parent.add_child(grid)
-	for o: Dictionary in options:
-		var b := Button.new()
-		b.text = str(o["label"])
-		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		b.toggle_mode = true
-		b.button_pressed = str(choices.get(key, "")) == str(o["id"])
-		b.custom_minimum_size = Vector2(220, 52)
-		b.name = "Pick_" + str(o["id"])
-		if o.has("tooltip"):  # the rules text only in the box below (big test #35, v0.7.22.5)
-			InfoBox.hook(b, _info, str(o["label"]), str(o["tooltip"]))
-		b.pressed.connect(_changed.bind(key, o["id"]))
-		grid.add_child(b)
+	parent.add_child(PickGrid.rows(options, str(choices.get(key, "")), "Pick_", func(id: String) -> void: _changed(key, id), _info, columns))
+
+
+## A list of icons to pick from (spells, features): `options` [{id, ref, label, card?, tip?, group?}].
+func _icons(parent: Control, title_text: String, picked: Array, options: Array, limit: int, on_change: Callable, blocked: Array = [], named := false) -> void:
+	var g := PickGrid.make(title_text, options, limit, picked, [], blocked, "Check_", named)
+	g.changed.connect(func(next: Array) -> void: on_change.call(next))
+	parent.add_child(g)
+
+
+## The face of a race on its row: the chosen sex, an adult, its first drawn variant; "" — none drawn.
+func _race_face(race: String) -> String:
+	return PortraitRules.person(data(), race, str(choices.get("gender", "male")), "adult", 1)
+
+
+## The hero's face as the game will give it: the picked variant, else the one by its name.
+func _face_path() -> String:
+	var d := data()
+	var gender := str(choices.get("gender", "male"))
+	var seed_text := "hero:" + str(choices.get("name", ""))
+	var age := str(BodyRules.make(d, gender, BodyRules.fit(d, _body_picks(), gender), seed_text, true).get("age", ""))
+	var mine := int(choices.get("portrait", 0))
+	return PortraitRules.person(d, str(choices.get("race", "")), gender, age, mine if mine > 0 else PortraitRules.variant_of(d, age, seed_text))
 
 
 ## Several choices (up to `limit`) from `options` [{id, label, tooltip?}]; `fixed` are shown checked and locked.
@@ -255,6 +263,15 @@ func _checks(parent: Control, picked: Array, options: Array, limit: int, on_chan
 					next.erase(id)
 				on_change.call(next))
 		grid.add_child(cb)
+
+
+## A line centred in its column (the summary, a card of an ability).
+func _centred(parent: Control, text: String, variation: String) -> Label:
+	var l := _text(parent, text, false)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if not variation.is_empty():
+		l.theme_type_variation = variation
+	return l
 
 
 func _skill_label(id: String) -> String:
@@ -322,7 +339,6 @@ func _draw_start() -> void:
 		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # a long name must not widen the grid past the window
-		b.tooltip_text = str(p.get("story", ""))
 		InfoBox.hook(b, _info, b.text, str(p.get("story", "")))
 		b.pressed.connect(func() -> void:
 			choices = ch.duplicate(true)
@@ -337,7 +353,7 @@ func _draw_race() -> void:
 	var races: Dictionary = data()["races"]["races"]
 	var opts: Array = []
 	for id: String in races:
-		opts.append({"id": id, "label": races[id]["name"], "tooltip": InfoBox.race_text(data(), id)})
+		opts.append({"id": id, "label": races[id]["name"], "tip": InfoBox.race_text(data(), id), "picture": _race_face(id)})
 	_radio(_body, "race", opts)
 	var r := CharacterBuilder.race(choices, data())
 	if r.is_empty():
@@ -353,7 +369,7 @@ func _draw_subrace() -> void:
 	var subs: Dictionary = data()["races"]["subraces"]
 	var opts: Array = []
 	for id: Variant in CharacterBuilder.race(choices, data()).get("subraces", []):
-		opts.append({"id": id, "label": subs[str(id)]["name"], "tooltip": InfoBox.race_text(data(), str(id))})
+		opts.append({"id": id, "label": subs[str(id)]["name"], "tip": InfoBox.race_text(data(), str(id)), "picture": _race_face(str(choices.get("race", "")))})
 	_radio(_body, "subrace", opts)
 	var s := CharacterBuilder.subrace(choices, data())
 	if s.is_empty():
@@ -368,7 +384,7 @@ func _draw_class() -> void:
 	var classes: Dictionary = data()["classes"]["classes"]
 	var opts: Array = []
 	for id: String in classes:
-		opts.append({"id": id, "label": classes[id]["name"], "tooltip": InfoBox.class_text(data(), id)})
+		opts.append({"id": id, "label": classes[id]["name"], "tip": InfoBox.class_text(data(), id), "ref": "classes/" + id})
 	_radio(_body, "class", opts, 4)
 	var k := CharacterBuilder.klass(choices, data())
 	if k.is_empty():
@@ -387,7 +403,7 @@ func _draw_subclass() -> void:
 	var subs: Dictionary = data()["classes"]["subclasses"]
 	var opts: Array = []
 	for id: Variant in k.get("subclasses", []):
-		opts.append({"id": id, "label": subs[str(id)]["name"], "tooltip": InfoBox.subclass_text(data(), str(id))})
+		opts.append({"id": id, "label": subs[str(id)]["name"], "tip": InfoBox.subclass_text(data(), str(id)), "ref": "subclasses/" + str(id)})
 	_radio(_body, "subclass", opts)
 	var s: Dictionary = subs.get(str(choices.get("subclass", "")), {})
 	if not s.is_empty():
@@ -399,7 +415,7 @@ func _draw_background() -> void:
 	var bgs: Dictionary = data()["backgrounds"]
 	var opts: Array = []
 	for id: String in bgs:
-		opts.append({"id": id, "label": bgs[id]["name"], "tooltip": InfoBox.background_text(data(), id)})
+		opts.append({"id": id, "label": bgs[id]["name"], "tip": InfoBox.background_text(data(), id)})
 	_radio(_body, "background", opts)
 	var b := CharacterBuilder.background(choices, data())
 	if b.is_empty():
@@ -416,30 +432,48 @@ func _draw_abilities() -> void:
 	var left := int(pb["budget"]) - CharacterBuilder.point_cost(choices, data())
 	_text(_body, tr("CC_POINTS_LEFT").format({"n": left}))
 	var final := CharacterBuilder.final_abilities(choices, data())
-	var grid := GridContainer.new()
-	grid.columns = 6
-	grid.add_theme_constant_override("h_separation", 18)
-	grid.add_theme_constant_override("v_separation", 8)
-	_body.add_child(grid)
+	var row := HBoxContainer.new()  # a card each, as in BG3: the score with the race's bonus, its modifier, − and + under it
+	row.add_theme_constant_override("separation", 10)
+	_body.add_child(row)
 	for a: String in CharacterRules.ABILITIES:
 		var base := int(choices["base_abilities"][a])
-		_text(grid, _ability_label(a))
+		var card := PanelContainer.new()
+		card.theme_type_variation = UiTheme.CARD
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(card)
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 2)
+		card.add_child(col)
+		var name_l := _centred(col, CombatRules.ab_name(a).to_upper(), UiTheme.MUTED_LABEL)
+		name_l.tooltip_text = _ability_label(a)
+		var score := _centred(col, str(int(final[a])), "")
+		score.name = "Final_" + a
+		score.add_theme_font_size_override("font_size", UiTheme.SIZE_HEADING)
+		_centred(col, "%+d" % CharacterRules.mod(int(final[a])), UiTheme.ACCENT_LABEL)
+		var bonus := int(final[a]) - base
+		_centred(col, tr("CC_RACE_BONUS").format({"n": "%+d" % bonus}) if bonus != 0 else " ", UiTheme.OK_LABEL).add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL - 2)
+		var pm := HBoxContainer.new()
+		pm.alignment = BoxContainer.ALIGNMENT_CENTER
+		pm.add_theme_constant_override("separation", 2)
+		col.add_child(pm)
 		var minus := Button.new()
 		minus.text = "−"
 		minus.name = "Minus_" + a
+		minus.custom_minimum_size = Vector2(34, 34)
 		minus.disabled = base <= int(pb["min"])
 		minus.pressed.connect(_set_ability.bind(a, base - 1))
-		grid.add_child(minus)
-		_text(grid, str(base))
+		pm.add_child(minus)
+		var base_l := _text(pm, str(base), true)
+		base_l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		base_l.autowrap_mode = TextServer.AUTOWRAP_OFF
 		var plus := Button.new()
 		plus.text = "+"
 		plus.name = "Plus_" + a
+		plus.custom_minimum_size = Vector2(34, 34)
 		var next_cost := int(pb["cost"].get(str(base + 1), 99)) - int(pb["cost"][str(base)])
 		plus.disabled = base >= int(pb["max"]) or next_cost > left
 		plus.pressed.connect(_set_ability.bind(a, base + 1))
-		grid.add_child(plus)
-		_text(grid, "→ %d" % int(final[a]))
-		_text(grid, "%+d" % CharacterRules.mod(int(final[a])), true)
+		pm.add_child(plus)
 	var choice: Variant = CharacterBuilder.race(choices, data()).get("ability_choice")
 	if choice is Dictionary:
 		_text(_body, tr("CC_RACE_ABILITY_CHOICE").format({"n": choice["choose"]}))
@@ -473,17 +507,17 @@ func _draw_features() -> void:
 	var feats: Dictionary = data()["classes"]["features"]
 	var traits: Dictionary = data()["races"]["traits"]
 	for fc: Dictionary in CharacterBuilder.feature_choices(choices, data()):
-		_text(_body, str(fc["name"]))
+		var kind := "features" if fc["kind"] == "feature" else "traits"
 		var pool: Dictionary = feats if fc["kind"] == "feature" else traits
 		var opts: Array = []
 		for o: Variant in fc["from"]:
 			var d: Dictionary = pool.get(str(o), {})
 			opts.append({"id": o, "label": str(d.get("name", o)).get_slice(": ", 1) if ": " in str(d.get("name", "")) else str(d.get("name", o)),
-				"tooltip": str(d.get("desc", ""))})
+				"ref": kind + "/" + str(o), "card": CardInfo.feature(data(), str(o))})
 		var picked: Array = choices["options"].get(fc["id"], [])
-		_checks(_body, picked, opts, int(fc["choose"]), func(next: Array) -> void:
+		_icons(_body, str(fc["name"]), picked, opts, int(fc["choose"]), func(next: Array) -> void:
 			choices["options"][fc["id"]] = next
-			_redraw(), [], 2)
+			_redraw(), [], true)
 	var n := CharacterBuilder.expertise_count(choices, data())
 	if n > 0:
 		_text(_body, tr("CC_EXPERTISE").format({"n": n}))
@@ -497,7 +531,7 @@ func _spell_options(ids: Array) -> Array:
 	var out: Array = []
 	for id: Variant in ids:
 		var s: Dictionary = spells[str(id)]
-		out.append({"id": id, "label": str(s["name"]), "tooltip": CardInfo.plain(CardInfo.spell(data(), str(id))), "school": str(s.get("school_id", ""))})
+		out.append({"id": id, "label": str(s["name"]), "ref": "spells/" + str(id), "card": CardInfo.spell(data(), str(id))})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return str(a["label"]) < str(b["label"]))
 	return out
 
@@ -506,14 +540,14 @@ func _draw_spells() -> void:
 	_heading(_body, "CC_STEP_SPELLS")
 	var sp := CharacterBuilder.spell_choices(choices, data())
 	if int(sp["cantrips"]) > 0:
-		_text(_body, tr("CC_CANTRIPS").format({"n": sp["cantrips"]}))
-		_checks(_body, choices["cantrips"], _spell_options(sp["cantrip_list"]), int(sp["cantrips"]), _setter("cantrips"), [], 3, choices["race_cantrips"])
+		_icons(_body, tr("CC_CANTRIPS").format({"n": sp["cantrips"]}), choices["cantrips"], _spell_options(sp["cantrip_list"]), int(sp["cantrips"]),
+			_setter("cantrips"), choices["race_cantrips"])
 	if int(sp["spells"]) > 0:
-		_text(_body, tr("CC_SPELLS_" + str(sp["mode"]).to_upper()).format({"n": sp["spells"]}))
-		_checks(_body, choices["spells"], _spell_options(sp["spell_list"]), int(sp["spells"]), _setter("spells"))
+		_icons(_body, tr("CC_SPELLS_" + str(sp["mode"]).to_upper()).format({"n": sp["spells"]}), choices["spells"], _spell_options(sp["spell_list"]),
+			int(sp["spells"]), _setter("spells"))
 	if int(sp["race_cantrips"]) > 0:
-		_text(_body, tr("CC_RACE_CANTRIP"))
-		_checks(_body, choices["race_cantrips"], _spell_options(sp["race_list"]), int(sp["race_cantrips"]), _setter("race_cantrips"), [], 3, choices["cantrips"])
+		_icons(_body, tr("CC_RACE_CANTRIP"), choices["race_cantrips"], _spell_options(sp["race_list"]), int(sp["race_cantrips"]),
+			_setter("race_cantrips"), choices["cantrips"])
 
 
 func _item_name(id: String) -> String:
@@ -724,17 +758,39 @@ func _draw_summary() -> void:
 	if r.is_empty() and k.is_empty():  # nothing chosen yet: no «Без имени» with eight «8 (−1)»
 		_text(_summary, tr("CC_SUMMARY_EMPTY"), true).name = "SummaryEmpty"
 		return
-	_text(_summary, str(choices.get("name", "")) if not str(choices.get("name", "")).is_empty() else tr("CC_UNNAMED"))
+	var hero_name := str(choices.get("name", "")) if not str(choices.get("name", "")).is_empty() else tr("CC_UNNAMED")
+	var face := Portrait.of(hero_name.left(1), 176)  # the hero itself on top, as in BG3: its face as the game will give it
+	face.name = "SummaryFace"
+	face.picture = _face_path()
+	face.tooltip_text = ""
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_summary.add_child(face)
+	_centred(_summary, hero_name, UiTheme.HEADING).name = "SummaryName"
 	var sub := CharacterBuilder.subrace(choices, d)
-	lines.append("%s, %s" % [sub.get("name", r.get("name", "—")), k.get("name", "—")])
+	lines.append("%s · %s" % [sub.get("name", r.get("name", "—")), k.get("name", "—")])
 	var bg := CharacterBuilder.background(choices, d)
 	if not bg.is_empty():
 		lines.append(str(bg["name"]))
 	for l: String in lines:
-		_text(_summary, l, true)
+		_centred(_summary, l, UiTheme.MUTED_LABEL)
 	var final := CharacterBuilder.final_abilities(choices, d)
+	var grid := GridContainer.new()
+	grid.name = "SummaryAbilities"
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	_summary.add_child(grid)
 	for a: String in CharacterRules.ABILITIES:
-		_text(_summary, "%s %d (%+d)" % [_ability_label(a), int(final[a]), CharacterRules.mod(int(final[a]))])
+		var box := PanelContainer.new()
+		box.theme_type_variation = UiTheme.CARD
+		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(box)
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 0)
+		box.add_child(col)
+		_centred(col, CombatRules.ab_name(a).to_upper(), UiTheme.MUTED_LABEL).add_theme_font_size_override("font_size", UiTheme.SIZE_SMALL - 2)
+		_centred(col, "%d  %+d" % [int(final[a]), CharacterRules.mod(int(final[a]))], "")
 	if not CharacterBuilder.complete(choices, d):
 		return
 	var c := CharacterBuilder.build(choices, d)

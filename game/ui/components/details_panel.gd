@@ -433,7 +433,12 @@ static func card_text(card: Dictionary) -> String:
 		var path := str(look_of({"icon": st["icon"]}).get("path", ""))
 		t.append(("[img=28x28]%s[/img] " % path if path != "" else "") + "[color=#%s]%s[/color]" % [text, _esc(str(st["text"]))])
 	if not (card.get("props", []) as Array).is_empty():  # before the text: a long one is cut, how it works stays in sight
-		t.append("[color=#%s]%s[/color]" % [UiTheme.ACCENT.to_html(false), _esc("     ".join(card["props"]))])
+		var props: Array[String] = []
+		for p: Variant in card["props"]:  # a glyph never left at a line's end without its words
+			var one := str(p)
+			var gap := one.find(" ")
+			props.append(one.substr(0, gap) + "\u00a0" + one.substr(gap + 1) if gap > 0 and gap <= 2 else one)
+		t.append("[color=#%s]%s[/color]" % [UiTheme.ACCENT.to_html(false), _esc("     ".join(props))])
 	if str(card.get("desc", "")) != "":
 		if not t.is_empty():
 			t.append("")

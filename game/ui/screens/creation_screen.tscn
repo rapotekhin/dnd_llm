@@ -68,6 +68,7 @@ toggle_mode = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 2.2
+theme_type_variation = &"SidePanel"
 
 [node name="BodyScroll" type="ScrollContainer" parent="Col/Row/BodyPanel"]
 layout_mode = 2
@@ -95,27 +96,14 @@ theme_type_variation = &"MutedLabel"
 [node name="DetailsColumn" type="VBoxContainer" parent="Col/Row"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(360, 0)
+custom_minimum_size = Vector2(400, 0)
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="SampleDetails" type="PanelContainer" parent="Col/Row/DetailsColumn" groups=["editor_sample"]]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 160)
-size_flags_vertical = 3
-theme_type_variation = &"SidePanel"
-
-[node name="SampleDetailsText" type="Label" parent="Col/Row/DetailsColumn/SampleDetails"]
-layout_mode = 2
-auto_translate_mode = 2
-text = "Здесь игра ставит панель описания"
-autowrap_mode = 3
-
 [node name="SummaryPanel" type="PanelContainer" parent="Col/Row/DetailsColumn"]
 layout_mode = 2
 size_flags_vertical = 3
-size_flags_stretch_ratio = 2.0
 theme_type_variation = &"SidePanel"
 
 [node name="SideScroll" type="ScrollContainer" parent="Col/Row/DetailsColumn/SummaryPanel"]
@@ -126,7 +114,7 @@ horizontal_scroll_mode = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 10
 
 [node name="SampleSummary" type="Label" parent="Col/Row/DetailsColumn/SummaryPanel/SideScroll/Summary" groups=["editor_sample"]]
 layout_mode = 2
@@ -169,8 +157,9 @@ text = "BTN_BACK"
 [node name="NextButton" type="Button" parent="Col/Bottom"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(160, 56)
 text = "CC_NEXT"
+theme_type_variation = &"AccentButton"
 
 [node name="StartButton" type="Button" parent="Col/Bottom"]
 unique_name_in_owner = true

@@ -59,7 +59,7 @@ func run() -> void:
 
 
 func _click(view: Control, node_name: String) -> void:
-	var cb: CheckBox = find(view, node_name)
+	var cb: BaseButton = find(view, node_name)
 	if not step("pick " + node_name, cb != null):
 		return
 	cb.button_pressed = true

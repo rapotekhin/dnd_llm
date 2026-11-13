@@ -89,12 +89,15 @@ func run() -> void:
 	# A divider: follows the mouse, snaps when let go.
 	bar.call("set_filter", "")
 	await frames(4)
-	var pad := find(bar, "Divider_0") as Control
+	var di := 0  # the first divider with a column to take from its right neighbour (cells of 72 leave fewer to share)
+	while di + 2 < _drawn().size() and HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.BAR, di, 2) <= 0:
+		di += 1
+	var pad := find(bar, "Divider_%d" % di) as Control
 	var line := find(pad, "Line") as Control if pad != null else null
-	if step("a divider after the first section", line != null):
+	if step("a divider with room to move", line != null and HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.BAR, di, 2) > 0, "Divider_%d" % di):
 		var stepw := float(_const(bar, "CELL") + _const(bar, "GAP"))
-		var cols0 := _cols(0)
-		var can := HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.BAR, 0, 2)
+		var cols0 := _cols(di)
+		var can := HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.BAR, di, 2)
 		var x0 := line.get_global_rect().get_center().x
 		_mouse(line, x0, true)
 		for k in 8:
@@ -107,18 +110,18 @@ func run() -> void:
 		await shot("divider_held")
 		_mouse(line, x0 + stepw * 1.6, false)
 		await frames(5)
-		step("let go mid-cell it snaps to the nearest column", _cols(0) == cols0 + can, "%d → %d (можно %d)" % [cols0, _cols(0), can])
-		pad = find(bar, "Divider_0") as Control
+		step("let go mid-cell it snaps to the nearest column", _cols(di) == cols0 + can, "%d → %d (можно %d)" % [cols0, _cols(di), can])
+		pad = find(bar, "Divider_%d" % di) as Control
 		line = find(pad, "Line") as Control if pad != null else null
-		var cols1 := _cols(0)
+		var cols1 := _cols(di)
 		if line != null:
 			var x1 := line.get_global_rect().get_center().x
 			_mouse(line, x1, true)
 			_motion(line, x1 + stepw * 0.4)
 			_mouse(line, x1 + stepw * 0.4, false)
 			await frames(5)
-		step("a little nudge stays where it was", _cols(0) == cols1, "%d → %d" % [cols1, _cols(0)])
-		var sec: Dictionary = _drawn()[0]
+		step("a little nudge stays where it was", _cols(di) == cols1, "%d → %d" % [cols1, _cols(di)])
+		var sec: Dictionary = _drawn()[di]
 		step("the width is the player's: kept", bool(sec.get("fixed", false)) and int(sec.get("width", 0)) == cols0 + can, str(sec))
 		await shot("divider_let_go")
 	dash_at = _where(find(bar, "Ghost_Do_dash") as Control)

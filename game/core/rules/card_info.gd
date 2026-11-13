@@ -199,6 +199,11 @@ static func feature(data: Dictionary, id: String, c: Dictionary = {}) -> Diction
 		var how := str(spec.get("combat_cost", ""))
 		if how in ["action", "bonus", "reaction"]:
 			card["cost"].append(cost(how))
+	for sid: Variant in data["rules"].get("feature_spells", {}).get(fid, []):  # the spells it gives (big test #18): with charges or at will
+		var once := Stock.table(data).values().any(func(r: Dictionary) -> bool:
+			return (r.get("features", []) as Array).has(fid) and str(r.get("spell", "")) == str(sid))
+		card["notes"].append(_t("CARD_FEATURE_SPELL").format({"spell": str(data["spells"].get(str(sid), {}).get("name", sid)),
+			"how": _t("CARD_FEATURE_SPELL_ONCE") if once else _t("CARD_FEATURE_SPELL_AT_WILL")}))
 	return card
 
 

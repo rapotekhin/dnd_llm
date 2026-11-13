@@ -3,15 +3,21 @@ extends ModalFrame
 ## The level-up screen over the game (roadmap v0.5.4): what the next level brings (HP by the average, new
 ## features) and the picks it needs — subclass, feature options, expertise, ability increase, spells.
 ## Rules and checks are LevelUp's; «Подтвердить» calls GameState.level_up.
+## v0.8.4.43.34 (the author, as in BG3): two columns — the picks on the left as icons with the row of the picked ones
+## (`PickGrid`: spells by circle, a feature's options, the subclass), what the level gives on the right («Уровень 2 → 3»,
+## the hit points, the new features as icons, the slots by circle with the new ones lit); what a choice is shows as a card
+## at the cursor, the right button pins it.
 
 const SCENE := "res://ui/components/level_up_view.tscn"
 const WIDE := 1300.0
 const COMPACT := 620.0
+const FEATURE_ICON := 52
 
 var picks := {}
 var _box: VBoxContainer
+var _gains: VBoxContainer
 var confirm: Button
-## The rules text of the hovered choice (v0.6.6); hidden when the level has nothing to choose (О3).
+## The rules text of a hovered choice that has no icon of its own (a skill), a card at the cursor.
 var _info: DetailsPanel
 
 
@@ -24,17 +30,16 @@ static func create() -> LevelUpView:
 
 func required() -> Dictionary:
 	var nodes := super()
-	nodes.merge({"%LevelBox": "VBoxContainer", "%LaterButton": "Button", "%LevelUpConfirm": "Button"})
+	nodes.merge({"%LevelBox": "VBoxContainer", "%LevelGains": "VBoxContainer", "%LaterButton": "Button", "%LevelUpConfirm": "Button"})
 	return nodes
 
 
 func bind() -> void:
 	close_requested.connect(func() -> void: visible = false)
-	_box = UiScenes.need(self, "%LevelBox")  # the choices on the left, what the picked one does on the right (big test #36)
-	_info = DetailsPanel.new(Vector2(480, 320))
-	_info.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	_info.show_text(tr("INFO_HINT"), "")
-	_box.get_parent().add_child(_info)
+	_box = UiScenes.need(self, "%LevelBox")  # the choices on the left, what the level gives on the right
+	_gains = UiScenes.need(self, "%LevelGains")
+	_info = DetailsPanel.new(Vector2.ZERO, true)
+	add_child(_info)
 	(UiScenes.need(self, "%LaterButton") as Button).pressed.connect(func() -> void: visible = false)
 	confirm = UiScenes.need(self, "%LevelUpConfirm")
 	confirm.pressed.connect(_on_confirm)
@@ -52,77 +57,133 @@ func open() -> void:
 func _rebuild() -> void:
 	if not visible or not GameState.has_session():
 		return
-	for ch in _box.get_children():
-		_box.remove_child(ch)
-		ch.queue_free()
+	for box: Control in [_box, _gains]:
+		for ch in box.get_children():
+			box.remove_child(ch)
+			ch.queue_free()
 	var c := GameState.session.character
 	var data := Catalog.data
 	if not LevelUp.can_level_up(c, data):
 		visible = false
 		return
 	var p := LevelUp.plan(c, data, picks)
-	var feats: Dictionary = data["classes"]["features"]
 	var choices := bool(p["subclass"]) or not (p["options"] as Array).is_empty() or int(p["expertise"]) > 0 or bool(p["asi"]) \
 		or int(p["cantrips"]) > 0 or int(p["spells"]) > 0 or int(p["prepared"]) > 0 or int(p["tome"]) > 0
 	set_width(WIDE if choices else COMPACT)  # a level with nothing to pick is a small window (О3)
-	_info.visible = choices
+	_box.visible = choices
 	title.text = tr("LVL_TITLE").format({"level": p["level"], "class": c.get("class_name", "")})
-	_text(tr("LVL_HP").format({"gain": p["hp_gain"]}), "")
-	var names: Array = (p["features"] as Array).map(func(f: String) -> String: return str(feats.get(f, {}).get("name", f)))
-	if not names.is_empty():
-		_text(tr("LVL_FEATURES").format({"list": ", ".join(names)}), "")
-	if int(p["max_spell_level"]) > 0:
-		var slots: Array = CharacterRules.class_def(c, data)["levels"][str(p["level"])].get("slots", [])
-		_text(tr("LVL_SLOTS").format({"list": ", ".join(range(slots.size()).filter(func(i: int) -> bool: return int(slots[i]) > 0)
-			.map(func(i: int) -> String: return "%d круг ×%d" % [i + 1, int(slots[i])]))}), UiTheme.MUTED_LABEL)
+	_gains_of(c, data, p)
 
 	if bool(p["subclass"]):
 		var subs: Dictionary = data["classes"]["subclasses"]
-		_choice("LVL_SUBCLASS", "subclass", p["subclasses"], func(id: String) -> String: return str(subs.get(id, {}).get("name", id)), 1,
-			[str(picks["subclass"])] if picks.has("subclass") else [], func(sel: Array) -> void:
-				if sel.is_empty():
-					picks.erase("subclass")
-				else:
-					picks["subclass"] = sel[0]
-				picks.erase("options"))
+		var opts: Array = (p["subclasses"] as Array).map(func(id: Variant) -> Dictionary:
+			return {"id": id, "label": str(subs.get(str(id), {}).get("name", id)), "ref": "subclasses/" + str(id), "tip": InfoBox.subclass_text(data, str(id))})
+		_grid(tr("LVL_SUBCLASS"), "subclass", opts, 1, [str(picks["subclass"])] if picks.has("subclass") else [], func(sel: Array) -> void:
+			if sel.is_empty():
+				picks.erase("subclass")
+			else:
+				picks["subclass"] = sel[0]
+			picks.erase("options"), true)
+	var feats: Dictionary = data["classes"]["features"]
 	for o: Dictionary in p["options"]:
 		var fid := str(o["id"])
-		var chosen: Array = picks.get("options", {}).get(fid, [])
-		_choice_text(tr("LVL_OPTION").format({"name": o["name"], "n": o["choose"]}), "opt_" + fid, o["from"],
-			func(id: String) -> String: return str(feats.get(id, {}).get("name", id)), int(o["choose"]), chosen,
-			func(sel: Array) -> void:
-				var opts: Dictionary = picks.get("options", {})
-				opts[fid] = sel
-				picks["options"] = opts)
+		var opts: Array = (o["from"] as Array).map(func(id: Variant) -> Dictionary:
+			return {"id": id, "label": str(feats.get(str(id), {}).get("name", id)), "ref": "features/" + str(id), "card": CardInfo.feature(data, str(id), c)})
+		_grid(tr("LVL_OPTION").format({"name": o["name"], "n": o["choose"]}), "opt_" + fid, opts, int(o["choose"]),
+			picks.get("options", {}).get(fid, []), func(sel: Array) -> void:
+				var chosen: Dictionary = picks.get("options", {})
+				chosen[fid] = sel
+				picks["options"] = chosen, true)
 	if int(p["expertise"]) > 0:
 		var pool := (c.get("skill_profs", []) as Array).filter(func(s: Variant) -> bool: return not (c.get("expertise", []) as Array).has(s))
-		_choice_text(tr("LVL_EXPERTISE").format({"n": p["expertise"]}), "exp", pool,
-			func(id: String) -> String: return tr("SKILL_" + id.to_upper()), int(p["expertise"]), picks.get("expertise", []),
-			func(sel: Array) -> void: picks["expertise"] = sel)
+		_checks(tr("LVL_EXPERTISE").format({"n": p["expertise"]}), "exp", pool, func(id: String) -> String: return tr("SKILL_" + id.to_upper()),
+			int(p["expertise"]), picks.get("expertise", []), func(sel: Array) -> void: picks["expertise"] = sel)
 	if bool(p["asi"]):
 		_asi(c)
-	var spells: Dictionary = data["spells"]
-	var spell_name := func(id: String) -> String:  # the circle is the group's heading (v0.7.22.21)
-		return str(spells.get(id, {}).get("name", id))
 	if int(p["cantrips"]) > 0:
-		_choice_text(tr("LVL_CANTRIPS").format({"n": p["cantrips"]}), "cantrip", p["cantrip_list"], spell_name, int(p["cantrips"]),
+		_grid(tr("LVL_CANTRIPS").format({"n": p["cantrips"]}), "cantrip", _spells(c, p["cantrip_list"]), int(p["cantrips"]),
 			picks.get("cantrips", []), func(sel: Array) -> void: picks["cantrips"] = sel)
 	if int(p["tome"]) > 0:  # Pact of the Tome: cantrips of any class (v0.8.4.33)
-		_choice_text(tr("LVL_TOME").format({"n": p["tome"]}), "tome", p["tome_list"], spell_name, int(p["tome"]),
+		_grid(tr("LVL_TOME").format({"n": p["tome"]}), "tome", _spells(c, p["tome_list"]), int(p["tome"]),
 			picks.get("tome", []), func(sel: Array) -> void: picks["tome"] = sel)
 	if int(p["spells"]) > 0:
-		_choice_text(tr("LVL_SPELLS_SPELLBOOK" if p["spell_mode"] == "spellbook" else "LVL_SPELLS").format({"n": p["spells"]}), "spell",
-			p["spell_list"], spell_name, int(p["spells"]), picks.get("spells", []), func(sel: Array) -> void:
+		_grid(tr("LVL_SPELLS_SPELLBOOK" if p["spell_mode"] == "spellbook" else "LVL_SPELLS").format({"n": p["spells"]}), "spell",
+			_spells(c, p["spell_list"]), int(p["spells"]), picks.get("spells", []), func(sel: Array) -> void:
 				picks["spells"] = sel
 				picks.erase("prepared"))
 	var prep := mini(int(p["prepared"]), (p["prepared_list"] as Array).size())
 	if prep > 0:
-		_choice_text(tr("LVL_PREPARED").format({"n": prep}), "prep", p["prepared_list"], spell_name, prep,
+		_grid(tr("LVL_PREPARED").format({"n": prep}), "prep", _spells(c, p["prepared_list"]), prep,
 			picks.get("prepared", []), func(sel: Array) -> void: picks["prepared"] = sel)
 
 	var errs := LevelUp.errors(c, data, _clean(p))
 	set_note(tr(errs[0]) if not errs.is_empty() else "")
 	confirm.disabled = not errs.is_empty() or GameState.is_busy()
+
+
+## What the level gives, on the right: «Уровень 2 → 3», the hit points, the new features as icons with their cards, the
+## spell slots by circle — the new ones lit.
+func _gains_of(c: Dictionary, data: Dictionary, p: Dictionary) -> void:
+	var lv := int(p["level"])
+	var head := UiParts.label(_gains, tr("LVL_FROM_TO").format({"from": lv - 1, "to": lv}), UiTheme.HEADING)
+	head.name = "LevelFromTo"
+	UiParts.heading(_gains, tr("LVL_GAINS"))
+	var hp := HBoxContainer.new()
+	hp.add_theme_constant_override("separation", 10)
+	_gains.add_child(hp)
+	var hp_l := UiParts.label(hp, tr("LVL_HP_GAIN").format({"gain": p["hp_gain"]}), UiTheme.OK_LABEL, true)
+	hp_l.add_theme_font_size_override("font_size", UiTheme.SIZE_HEADING - 6)
+	UiParts.label(hp, tr("LVL_HP_NOTE"), UiTheme.MUTED_LABEL).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var feats: Array = p["features"]
+	if not feats.is_empty():
+		_gains.add_child(HSeparator.new())
+		UiParts.label(_gains, tr("LVL_NEW_FEATURES"), UiTheme.ACCENT_LABEL)
+		for f: Variant in feats:
+			var card := CardInfo.feature(data, str(f), c)
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 10)
+			_gains.add_child(row)
+			var icon := IconSlot.make(str(card.get("icon", "features/" + str(f))), str(card.get("title", f)), FEATURE_ICON)
+			icon.name = "Gain_" + str(f)
+			icon.set_card(card)
+			row.add_child(icon)
+			var name_l := UiParts.label(row, str(card.get("title", f)))
+			name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if int(p["max_spell_level"]) > 0:
+		var levels: Dictionary = CharacterRules.class_def(c, data)["levels"]
+		var now: Array = levels[str(lv)].get("slots", [])
+		var was: Array = levels.get(str(lv - 1), {}).get("slots", [])
+		_gains.add_child(HSeparator.new())
+		UiParts.label(_gains, tr("LVL_SLOTS_HEAD"), UiTheme.ACCENT_LABEL)
+		for i in now.size():
+			if int(now[i]) <= 0:
+				continue
+			var old := int(was[i]) if i < was.size() else 0
+			var line := RichTextLabel.new()
+			line.name = "Slots_%d" % (i + 1)
+			line.bbcode_enabled = true
+			line.fit_content = true
+			line.scroll_active = false
+			line.autowrap_mode = TextServer.AUTOWRAP_OFF
+			line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			line.text = "[color=#%s]%s[/color]   [color=#%s]%s[/color][color=#%s]%s[/color]" % [UiTheme.MUTED.to_html(false),
+				tr("DETAILS_CIRCLE").format({"n": i + 1}), DetailsPanel.COST_COLORS["slot"], "■ ".repeat(mini(old, int(now[i]))),
+				UiTheme.ACCENT_BRIGHT.to_html(false), "■ ".repeat(maxi(0, int(now[i]) - old))]
+			_gains.add_child(line)
+
+
+## The spells of `ids` as icons, by circle, each with its card for the hero.
+func _spells(c: Dictionary, ids: Array) -> Array:
+	var spells: Dictionary = Catalog.data["spells"]
+	var out: Array = []
+	for id: Variant in ids:
+		var sp: Dictionary = spells.get(str(id), {})
+		var lv := int(sp.get("level", 0))
+		out.append({"id": id, "label": str(sp.get("name", id)), "ref": "spells/" + str(id), "card": CardInfo.spell(Catalog.data, str(id), 0, c), "lv": lv,
+			"group": tr("DETAILS_CANTRIP") if lv == 0 else tr("DETAILS_CIRCLE").format({"n": lv})})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a["lv"]) < int(b["lv"]) or (int(a["lv"]) == int(b["lv"]) and str(a["label"]) < str(b["label"])))
+	return out
 
 
 ## Picks without empty lists the plan does not ask for (errors() wants exact counts).
@@ -136,60 +197,33 @@ func _clean(p: Dictionary) -> Dictionary:
 	return out
 
 
-func _text(text: String, variation: String) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not variation.is_empty():
-		l.theme_type_variation = variation
-	_box.add_child(l)
-	return l
-
-
-func _choice(title_key: String, group: String, ids: Array, label: Callable, n: int, chosen: Array, on_change: Callable) -> void:
-	_choice_text(tr(title_key), group, ids, label, n, chosen, on_change)
-
-
-## A «pick n of these» list of checkboxes; a full list ignores more ticks (a single pick switches instead).
-func _choice_text(title_text: String, group: String, ids: Array, label: Callable, n: int, chosen: Array, on_change: Callable) -> void:
+## A «pick n of these» list of icons (`PickGrid`); a tile is `Pick_<group>_<id>`.
+func _grid(title_text: String, group: String, options: Array, n: int, chosen: Array, on_change: Callable, named := false) -> void:
 	_box.add_child(HSeparator.new())
-	_text(title_text, UiTheme.ACCENT_LABEL)
-	var spells: Dictionary = Catalog.data["spells"]
-	var all_spells := not ids.is_empty() and ids.all(func(x: Variant) -> bool: return spells.has(str(x)))
-	var order := ids.duplicate()
-	if all_spells:  # v0.7.22.21 (#20): spells by circle, framed by school
-		order.sort_custom(func(a: Variant, b: Variant) -> bool:
-			var la := int(spells[str(a)].get("level", 0))
-			var lb := int(spells[str(b)].get("level", 0))
-			return la < lb or (la == lb and str(spells[str(a)]["name"]) < str(spells[str(b)]["name"])))
-	var flow: HFlowContainer = null
-	var circle := -1
-	for id: Variant in order:
-		var lv := int(spells.get(str(id), {}).get("level", 0)) if all_spells else 0
-		if flow == null or (all_spells and lv != circle):
-			circle = lv
-			if all_spells:
-				_text(tr("DETAILS_CANTRIP") if lv == 0 else tr("DETAILS_CIRCLE").format({"n": lv}), UiTheme.MUTED_LABEL)
-			flow = HFlowContainer.new()
-			flow.add_theme_constant_override("h_separation", 16)
-			_box.add_child(flow)
+	var g := PickGrid.make(title_text, options, n, chosen, [], [], "Pick_%s_" % group, named)
+	g.changed.connect(func(sel: Array) -> void:
+		on_change.call(sel)
+		_rebuild.call_deferred())
+	_box.add_child(g)
+
+
+## A «pick n of these» list of what has no icon (skills): check boxes, a full list ignores more ticks.
+func _checks(title_text: String, group: String, ids: Array, label: Callable, n: int, chosen: Array, on_change: Callable) -> void:
+	_box.add_child(HSeparator.new())
+	UiParts.label(_box, title_text, UiTheme.ACCENT_LABEL)
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 16)
+	_box.add_child(flow)
+	for id: Variant in ids:
 		var cb := CheckBox.new()
 		cb.name = "Pick_%s_%s" % [group, id]
 		cb.text = label.call(str(id))
 		cb.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		cb.button_pressed = chosen.has(id)
-		InfoBox.hook(cb, _info, cb.text, _tip(str(id)))
-		if all_spells:
-			UiTheme.school_frame(cb, str(spells[str(id)].get("school_id", "")))
 		cb.toggled.connect(func(on: bool) -> void:
 			var sel := chosen.duplicate()
-			if on and not sel.has(id):
-				if n == 1:
-					sel = [id]
-				elif sel.size() < n:
-					sel.append(id)
+			if on and not sel.has(id) and sel.size() < n:
+				sel.append(id)
 			elif not on:
 				sel.erase(id)
 			on_change.call(sel)
@@ -197,29 +231,9 @@ func _choice_text(title_text: String, group: String, ids: Array, label: Callable
 		flow.add_child(cb)
 
 
-## The rules text of a spell, feature or subclass for the info column: a spell with its circle, time, range and
-## duration; a feature with the spells it gives (big test #18, v0.7.22.5).
-func _tip(id: String) -> String:
-	var data := Catalog.data
-	if data["classes"]["subclasses"].has(id):
-		return InfoBox.subclass_text(data, id)
-	if data["spells"].has(id):
-		return CardInfo.plain(CardInfo.spell(data, id))
-	var f: Dictionary = data["classes"]["features"].get(id, {})
-	if f.is_empty():
-		return ""
-	var out := str(f.get("desc", f.get("flavor", "")))
-	for sid: Variant in data["rules"].get("feature_spells", {}).get(id, []):
-		var once := Stock.table(data).values().any(func(r: Dictionary) -> bool:  # charges of its own (v0.8.4.26.1)
-			return (r.get("features", []) as Array).has(id) and str(r.get("spell", "")) == str(sid))
-		out += "\n\n%s (%s)\n%s" % [data["spells"].get(str(sid), {}).get("name", sid), "раз за долгий отдых, без ячейки" if once else "по желанию, без ячейки",
-			CardInfo.plain(CardInfo.spell(data, str(sid)))]
-	return out
-
-
 func _asi(c: Dictionary) -> void:
 	_box.add_child(HSeparator.new())
-	_text(tr("LVL_ASI"), UiTheme.ACCENT_LABEL)
+	UiParts.label(_box, tr("LVL_ASI"), UiTheme.ACCENT_LABEL)
 	var asi: Dictionary = picks.get("asi", {})
 	var used := 0
 	for a: String in asi:

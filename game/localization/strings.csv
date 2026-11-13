@@ -2235,3 +2235,14 @@ CARD_USES,Заряды {left}/{max}
 CARD_RECHARGE_SHORT,после короткого отдыха
 CARD_RECHARGE_LONG,после долгого отдыха
 ITEM_SHIELD,Щит
+PICK_COUNT,Выбрано {n} из {m}
+CC_RACE_BONUS,{n} от расы
+LVL_FROM_TO,Уровень {from} → {to}
+LVL_GAINS,Что вы получите
+LVL_HP_GAIN,Хиты +{gain}
+LVL_HP_NOTE,среднее по кости хитов
+LVL_SLOTS_HEAD,Ячейки заклинаний
+LVL_NEW_FEATURES,Новые умения
+CARD_FEATURE_SPELL,Даёт заклинание «{spell}» — {how}
+CARD_FEATURE_SPELL_ONCE,раз за долгий отдых без ячейки
+CARD_FEATURE_SPELL_AT_WILL,по желанию без ячейки

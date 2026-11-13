@@ -16,6 +16,7 @@ extends PanelContainer
 ## v0.8.4.43.33 (the author: «много пустого места», «иконки мелкие»): larger cells with an icon of its own frame laid edge
 ## to edge (IconSlot), the empty slots faint, no scroll bar beside the grid, the tabs of kinds in the drawn tab's frame,
 ## the end of the turn an hourglass as in BG3.
+## v0.8.4.43.34 (the author: «иконки всё ещё кажутся маленькими… сделать иконки больше по размеру»): cells of 72 (80 left too few columns beside the map).
 
 signal circle_picked(circle: int)
 
@@ -34,7 +35,7 @@ const PASSIVE := "BAR_PASSIVE"
 const KIND_TITLES := {"common": "BAR_KIND_COMMON", "combat": "BAR_KIND_COMBAT", "class": "BAR_KIND_CLASS", "items": "BAR_KIND_ITEMS",
 	"deeds": "BAR_DEEDS", "passive": "BAR_KIND_PASSIVE"}
 const TABS := ["", "common", "combat", "class", "items", "deeds", "passive"]
-const CELL := 64
+const CELL := 72
 const GAP := 4
 const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
 

@@ -20,6 +20,7 @@ theme_override_constants/separation = 16
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.8
 theme_override_constants/separation = 8
 
 [node name="SampleLine" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/LevelMid/LevelBox" groups=["editor_sample"]]
@@ -28,16 +29,22 @@ auto_translate_mode = 2
 text = "Что даёт уровень и что нужно выбрать"
 autowrap_mode = 3
 
-[node name="SampleDetails" type="PanelContainer" parent="ModalPanel/Col/ModalScroll/ModalBody/LevelMid" groups=["editor_sample"]]
+[node name="GainsPanel" type="PanelContainer" parent="ModalPanel/Col/ModalScroll/ModalBody/LevelMid"]
 layout_mode = 2
-custom_minimum_size = Vector2(480, 320)
+custom_minimum_size = Vector2(440, 0)
+size_flags_horizontal = 3
 size_flags_vertical = 0
 theme_type_variation = &"SidePanel"
 
-[node name="SampleDetailsText" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/LevelMid/SampleDetails"]
+[node name="LevelGains" type="VBoxContainer" parent="ModalPanel/Col/ModalScroll/ModalBody/LevelMid/GainsPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SampleGains" type="Label" parent="ModalPanel/Col/ModalScroll/ModalBody/LevelMid/GainsPanel/LevelGains" groups=["editor_sample"]]
 layout_mode = 2
 auto_translate_mode = 2
-text = "Здесь игра ставит панель описания"
+text = "Что даёт уровень: хиты, умения, ячейки"
 autowrap_mode = 3
 
 [node name="LaterButton" type="Button" parent="ModalPanel/Col/ModalFooter" index="1"]
