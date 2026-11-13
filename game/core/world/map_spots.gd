@@ -81,19 +81,34 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 		out.append(t)
 		if not body_id.is_empty():
 			_companions(data, t, room_key, spots, cells, ways, walls, taken, out)
+	var held: Array[Vector2i] = []  # the square of a thing put by hand: no furnishing or spot thing on it (v0.8.4.43.48)
+	for p: Dictionary in PropRules.room_props(s, s.room_id):
+		if p.get("at") is Array:
+			var own := LayoutGen.off_grid(map, Vector2i(int(p["at"][0]), int(p["at"][1])))
+			if not taken.has(own):
+				held.append(own)
+				taken[own] = true
 	_furnished(data, map, index, room_key, spots, cells, ways, walls, taken, out)
 	for sp: Dictionary in spot_marks(map, index):  # the room's own things on its spots, by the seed
 		var at: Vector2i = sp["at"]
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash("%s|spot|%d,%d" % [room_key, at.x, at.y])
 		var group: Dictionary = (lib.get("spots", {}).get("groups", {}) as Dictionary).get(str(sp["group"]), {})
-		if taken.has(at):  # a thing of a station or a furnishing stands over it: no spot (v0.8.4.43.40, the stage of 3×2)
+		if (sp["area"] as Array).all(func(c: Vector2i) -> bool: return taken.has(c)):  # a thing of a station or a furnishing stands over it: no spot (v0.8.4.43.40, the stage of 3×2)
 			continue
 		if rng.randf() >= float(group.get("fill", 0.5)):
 			free.append(sp)
 			continue
-		var body_id := _pick(_weights(group.get("bodies", {}), keys), rng)
-		var laid := _lay(data, body_id, "%s|%d,%d" % [room_key, at.x, at.y], at, spots, cells, ways, walls, taken, true) if not body_id.is_empty() else {"loose": true}
+		var key := "%s|%d,%d" % [room_key, at.x, at.y]
+		var weights: Variant = _weights(group.get("bodies", {}), keys)
+		if (sp["area"] as Array).size() > 1 and weights is Dictionary:  # an area takes only what fits in it (v0.8.4.43.48)
+			var fit := {}
+			for id: String in weights:
+				if not bool(_on_spot(data, id, key, sp, spots, cells, ways, walls, taken).get("loose", false)):
+					fit[id] = weights[id]
+			weights = fit
+		var body_id := _pick(weights, rng)
+		var laid := _on_spot(data, body_id, key, sp, spots, cells, ways, walls, taken) if not body_id.is_empty() else {"loose": true}
 		if bool(laid.get("loose", false)):
 			free.append(sp)
 			continue
@@ -105,6 +120,8 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 			taken[c] = true
 		out.append(t)
 		_companions(data, t, room_key, spots, cells, ways, walls, taken, out)
+	for c: Vector2i in held:  # its own again, for the thing itself below
+		taken.erase(c)
 	var world := WorldView.new(data["world"])
 	var followers := Being.followers(s)
 	var part := TimeRules.part_name(s, data)
@@ -146,7 +163,7 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 			if not p.get("at") is Array and str(p.get("near", "")).is_empty():  # the master's furniture on a free spot of its group
 				var sp := _free_spot_for(lib, keys, body_id, free, taken, key)
 				if not sp.is_empty():
-					laid = _lay(data, body_id, key, sp["at"], spots, cells, ways, walls, taken, true)
+					laid = _on_spot(data, body_id, key, sp, spots, cells, ways, walls, taken)
 					if bool(laid.get("loose", false)):
 						laid = {}
 					else:
@@ -219,14 +236,46 @@ static func set_laid(data: Dictionary, m: Dictionary) -> Dictionary:
 	return {"at": corner, "turn": LayoutGen.turn_of(turn, rot, flip), "cells": mine}
 
 
-## The marks `spot:<group>` of a room of the map: [{"group", "at"}] in the map's order.
+## The marks `spot:<group>` of a room of the map: [{"group", "at", "area"}] in the map's order. Squares of one group side by
+## side are one spot (v0.8.4.43.48): its `area` is all of them and `at` the first; a lone square is an area of one.
 static func spot_marks(map: Dictionary, index: int) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
+	var group_at := {}
+	var order: Array[Vector2i] = []
 	for m: Dictionary in map["marks"]:
 		var name := str(m["name"])
 		if int(m["room"]) == index and name.begins_with(SPOT):
-			out.append({"group": name.substr(SPOT.length()), "at": Vector2i(int(m["x"]), int(m["y"]))})
+			var at := Vector2i(int(m["x"]), int(m["y"]))
+			group_at[at] = name.substr(SPOT.length())
+			order.append(at)
+	var out: Array[Dictionary] = []
+	var seen := {}
+	for at: Vector2i in order:
+		if seen.has(at):
+			continue
+		var area: Array[Vector2i] = [at]
+		seen[at] = true
+		var i := 0
+		while i < area.size():
+			for side: Vector2i in [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]:
+				var n: Vector2i = area[i] + side
+				if not seen.has(n) and str(group_at.get(n, "")) == str(group_at[at]):
+					seen[n] = true
+					area.append(n)
+			i += 1
+		out.append({"group": group_at[at], "at": at, "area": area})
 	return out
+
+
+## A thing of `body_id` on a spot: wholly inside its area when the area has more than one square (v0.8.4.43.48), so the
+## chunk editor shows where it stands; round its one square otherwise, turned by the seed. Nothing fits — "loose".
+static func _on_spot(data: Dictionary, body_id: String, key: String, sp: Dictionary, spots: Array[Vector2i], cells: Array[Vector2i],
+		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary) -> Dictionary:
+	var area: Array[Vector2i] = []
+	area.assign(sp["area"])
+	if area.size() < 2:
+		return _lay(data, body_id, key, sp["at"], spots, cells, ways, walls, taken, true)
+	var inside: Array[Vector2i] = area.filter(func(c: Vector2i) -> bool: return spots.has(c))
+	return _lay(data, body_id, key, sp["at"], inside, cells, ways, walls, taken, false)
 
 
 ## A free spot whose group holds `body_id` for this place, the first by the seed of `key`; {} — none.

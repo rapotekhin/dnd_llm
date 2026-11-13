@@ -532,7 +532,7 @@ function painter(app, c, e) {
 		hover = p;
 		const ch = at(...p);
 		const thing = furnishing() ? active()?.things?.[thingAt(active(), ...p)] : null;
-		status.textContent = ch === undefined ? '' : `(${p[0] + 1}, ${p[1] + 1}) «${ch}» ${ch in (e.marks || {}) ? 'метка: ' + e.marks[ch] : cellName(ch) || (ch === ' ' ? 'пусто — карта как есть' : '?')}${thing ? ' · ' + bodyName(thing.body) : ''}`;
+		status.textContent = ch === undefined ? '' : `(${p[0] + 1}, ${p[1] + 1}) «${ch}» ${ch in (e.marks || {}) ? 'метка: ' + e.marks[ch] : cellName(ch) || (ch === ' ' ? 'пусто — карта как есть' : '?')}${thing ? ' · ' + bodyName(thing.body) : ''}${spotWords(...p)}`;
 		if (drag?.move != null) {
 			const set = active(), t = set.things[drag.move];
 			const next = { ...t, x: p[0] - drag.off[0], y: p[1] - drag.off[1] };
@@ -604,6 +604,79 @@ function painter(app, c, e) {
 		}
 	}
 
+	// The spots as the game reads them (MapSpots.spot_marks, v0.8.4.43.48): squares of one group side by side are one area,
+	// a thing stands wholly inside it; a lone square lets a bigger thing spread round it by the seed.
+	const spotGroup = (name) => (name || '').startsWith('spot:') ? name.slice(5) : '';
+	const spotAreas = () => {
+		const marks = e.marks || {}, seen = new Set(), out = [];
+		for (let y = 0; y < H(); y++) for (let x = 0; x < W(); x++) {
+			const name = marks[at(x, y)];
+			if (!spotGroup(name) || seen.has(x + ',' + y)) continue;
+			const area = [[x, y]];
+			seen.add(x + ',' + y);
+			for (let i = 0; i < area.length; i++) for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+				const nx = area[i][0] + dx, ny = area[i][1] + dy;
+				if (!seen.has(nx + ',' + ny) && spotGroup(marks[at(nx, ny)]) === spotGroup(name)) { seen.add(nx + ',' + ny); area.push([nx, ny]); }
+			}
+			out.push({ group: spotGroup(name), ch: at(x, y), area });
+		}
+		return out;
+	};
+	// What of a group may stand here, heaviest first: the bodies of the place's key, else of «*».
+	const groupBodies = (g) => {
+		const b = lib.spots?.groups?.[g]?.bodies || {};
+		const w = b[placeKeys().find((k) => b[k])] || b['*'] || {};
+		return Object.keys(w).sort((a, z) => w[z] - w[a]);
+	};
+	// The ways each body of the group fits wholly inside the area: [{body, x, y, turn}].
+	const spotFits = (sp) => {
+		const inArea = new Set(sp.area.map(([x, y]) => x + ',' + y)), out = [];
+		for (const body of groupBodies(sp.group)) for (const turn of [0, 1]) for (const [x, y] of sp.area) {
+			const cells = MapView.footprint(bodies()[body]?.size || [1, 1], x, y, turn);
+			if (cells.every(([a, b]) => inArea.has(a + ',' + b)) && !out.some((f) => f.body === body && f.x === x && f.y === y && f.turn % 2 === turn % 2)) out.push({ body, x, y, turn });
+		}
+		return out;
+	};
+	const bigger = (g) => groupBodies(g).some((b) => (bodies()[b]?.size || [1, 1]).some((n) => n > 1));
+	function drawSpots(g) {
+		const px = paint.px;
+		for (const sp of spotAreas()) {
+			const inArea = new Set(sp.area.map(([x, y]) => x + ',' + y));
+			g.save();
+			g.globalAlpha = furnishing() ? 0.45 : 1;
+			g.fillStyle = 'rgba(208,138,76,0.18)';
+			for (const [x, y] of sp.area) g.fillRect(x * px, y * px, px, px);
+			if (sp.area.length > 1) {
+				const fit = spotFits(sp)[0];
+				if (fit) drawThing(g, fit, 0.9, null);
+			}
+			g.strokeStyle = sp.area.length > 1 && !spotFits(sp).length ? '#ff5a4f' : 'rgba(208,138,76,0.95)';
+			g.lineWidth = 2;
+			if (sp.area.length === 1 && bigger(sp.group)) g.setLineDash([5, 4]);
+			for (const [x, y] of sp.area) for (const [dx, dy, x0, y0, x1, y1] of [[0, -1, 0, 0, 1, 0], [1, 0, 1, 0, 1, 1], [0, 1, 0, 1, 1, 1], [-1, 0, 0, 0, 0, 1]]) {
+				if (inArea.has(x + dx + ',' + (y + dy))) continue;
+				g.beginPath(); g.moveTo((x + x0) * px + 1, (y + y0) * px + 1); g.lineTo((x + x1) * px - 1, (y + y1) * px - 1); g.stroke();
+			}
+			g.setLineDash([]);
+			const [fx, fy] = sp.area[0];
+			g.fillStyle = 'rgba(208,138,76,0.95)';
+			g.beginPath(); g.arc(fx * px + px * 0.22, fy * px + px * 0.22, px * 0.18, 0, 7); g.fill();
+			g.fillStyle = '#17181a';
+			g.font = `700 ${Math.round(px * 0.26)}px ui-monospace, Consolas, monospace`;
+			g.fillText(sp.ch, fx * px + px * 0.22, fy * px + px * 0.23);
+			g.restore();
+		}
+	}
+	// A word for the status line on a spot's square: what stands there and how.
+	const spotWords = (x, y) => {
+		const sp = spotAreas().find((s) => s.area.some(([a, b]) => a === x && b === y));
+		if (!sp) return '';
+		const name = lib.spots?.groups?.[sp.group]?.name || sp.group;
+		if (sp.area.length === 1) return ` · ${name}: одна клетка${bigger(sp.group) ? ' — вещь больше встанет вокруг неё, повёрнутая по сиду; закрасьте всю площадь вещи этой меткой' : ''}`;
+		const fits = [...new Set(spotFits(sp).map((f) => bodyName(f.body)))];
+		return ` · ${name}: площадка ${sp.area.length} кл. — ${fits.length ? 'встанет одно из: ' + fits.join(', ') : 'ни одна вещь группы не помещается'}`;
+	};
+
 	// The symbols, the grid, the marks, the sockets and the furnishings over the game's picture.
 	function overlay() {
 		const px = paint.px, dpr = window.devicePixelRatio || 1;
@@ -633,6 +706,7 @@ function painter(app, c, e) {
 		for (let y = 0; y < H(); y++) for (let x = 0; x < W(); x++) {
 			const ch = at(x, y), cx = x * px + px / 2, cy = y * px + px / 2;
 			if (ch === ' ') { g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x * px, y * px, px, px); continue; }
+			if (spotGroup(marks[ch])) continue;  // drawn as areas by drawSpots
 			if (ch in marks) {
 				g.globalAlpha = furnishing() ? 0.45 : 1;
 				g.fillStyle = 'rgba(208,138,76,0.9)';
@@ -652,6 +726,7 @@ function painter(app, c, e) {
 				g.fillStyle = 'rgba(255,255,255,0.92)'; g.fillText(ch, cx, cy + 1);
 			}
 		}
+		drawSpots(g);
 		if (furnishing()) {
 			if (paint.preview != null) {  // which furnishing each thing of the mix came from
 				g.font = `700 ${Math.round(px * 0.32)}px system-ui, sans-serif`;

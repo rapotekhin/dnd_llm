@@ -49,7 +49,8 @@ func test_the_furnishings_of_a_room_mix_and_never_meet() -> void:
 			var plain := true
 			for dy: int in [-1, 0, 1]:
 				for dx: int in [-1, 0, 1]:
-					plain = plain and str(rows[y + dy])[x + dx] == "."
+					var c := str(rows[y + dy])[x + dx]
+					plain = plain and (c == "." or str(chunk.get("marks", {}).get(c, "")).begins_with(MapSpots.SPOT))  # a spot gives way to a furnishing
 			if plain:
 				free.append(Vector2i(x, y))
 	assert_int(free.size()).is_greater(1)
