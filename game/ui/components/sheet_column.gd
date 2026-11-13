@@ -202,7 +202,7 @@ func _feature_row(list: VBoxContainer, icon: String, cell_name: String, title: S
 	row.name = "Row" + cell_name
 	row.add_theme_constant_override("separation", 8)
 	list.add_child(row)
-	var cell := IconSlot.make(icon, title, 34)
+	var cell := IconSlot.make(icon, title, 44)
 	cell.name = cell_name
 	cell.tip_title = title
 	cell.tip_body = body

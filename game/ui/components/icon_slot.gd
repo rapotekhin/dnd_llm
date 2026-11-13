@@ -42,6 +42,7 @@ static func make(ref: String, name_text: String, side: int = SIZE) -> IconSlot:
 	b.text = name_text
 	b.tooltip_text = name_text
 	b.custom_minimum_size = Vector2(side, side)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER  # a square: beside a wrapped name it stands in the middle, not stretched (v0.8.4.43.35)
 	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	b.focus_mode = Control.FOCUS_NONE
 	return b

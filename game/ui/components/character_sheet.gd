@@ -17,7 +17,7 @@ const SCENE := "res://ui/components/character_sheet.tscn"
 const SECTIONS: Array[String] = ["gear", "book", "dev"]
 const PORTRAIT := 52
 const BOOK_TABS: Array[String] = ["class", "common", "react"]
-const SPELL_CELL := 48
+const SPELL_CELL := 64
 
 var who := Being.HERO  ## whose things and sheet are shown
 var section := "gear"
@@ -679,7 +679,7 @@ func _reactions(box: VBoxContainer) -> void:
 	box.add_child(grid)
 	for r: Dictionary in FeatureRules.reaction_list(s, Catalog.data, me):
 		var id := str(r["id"])
-		var icon := IconSlot.make(str(r["icon"]), str(r["name"]), 44)
+		var icon := IconSlot.make(str(r["icon"]), str(r["name"]), 56)
 		icon.name = "Reaction_" + id
 		grid.add_child(icon)
 		_details.hook(icon, str(r["name"]), str(r["tip"]))

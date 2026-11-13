@@ -11,7 +11,7 @@ signal menu(cell: ItemCell, rows: Array)  ## the right button's acts of a cell
 
 const LEFT: Array[String] = ["head", "cloak", "armor", "hands", "feet"]
 const RIGHT: Array[String] = ["eyes", "neck", "ring1", "ring2"]
-const SIDE := 60
+const SIDE := 64
 
 var who := Being.HERO
 var details: DetailsPanel  ## the window's card at the cursor: the numbers' breakdown
@@ -19,7 +19,7 @@ var details: DetailsPanel  ## the window's card at the cursor: the numbers' brea
 
 func _init() -> void:
 	name = "Doll"
-	add_theme_constant_override("separation", 10)
+	add_theme_constant_override("separation", 6)  # cells of 64 (v0.8.4.43.35): the window still ends over the hotbar
 
 
 ## Builds it again for `who` (Being.HERO or a companion's id).
@@ -46,7 +46,7 @@ func show_of(id: String) -> void:
 			continue
 		var col := VBoxContainer.new()
 		col.name = side[0]
-		col.add_theme_constant_override("separation", 6)
+		col.add_theme_constant_override("separation", 4)
 		body.add_child(col)
 		for slot: String in side[1]:
 			col.add_child(_slot(c, slot, false))
