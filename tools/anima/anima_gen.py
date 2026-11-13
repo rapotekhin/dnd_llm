@@ -89,7 +89,8 @@ PAINTED_NEGATIVE = ("worst quality, low quality, score_1, score_2, score_3, arti
                     "chromatic aberration, text, letters, watermark, signature, border, frame, multiple objects, "
                     "duplicate, human, person, face, hands, photo, 3d render, flat color, minimalism, vector art, "
                     "vignette, gradient background, small object")
-STYLES = ("flat", "painted", "lines")  # flat: every icon as before; painted: by its family (FAMILY); lines: LINES
+STYLES = ("flat", "painted", "lines", "hues")  # flat: every icon as before; painted: by its family (FAMILY); lines
+SIGNED = ("lines", "hues")  # the styles of a sign in a frame laid by code (LINES): white lines tinted, or own colours
 # The painted style follows the families of BG3's icons (docs/design/ux/bg3-icons.md, the author 2026-11-11): a thing is
 # a painted object cut out of its background; a spell, a feature or an act is a bright glowing emblem on a tile of
 # cracked stone, which the model draws as a rounded tile on black, so the same cut leaves the tile with clear corners;
@@ -174,6 +175,19 @@ SIGN_TAIL = ("It is an icon for a fantasy role-playing game. The subject is draw
              "engraving, large and centered, filling most of the frame, so that it reads at a small size. Nothing is "
              "drawn around it: no frame, no ring and no border.")
 SIGN_NEGATIVE = GOLD_NEGATIVE + ", ring frame, round frame, medallion, badge, coin"
+# The hues style (the author, 2026-11-13: a sign in one colour is dull): the same sign in a frame of code, but its
+# lines in the colours the model gives each part — the subject keeps its colours (a damage's, else its school's) —
+# cut by the brightest channel, so a blue line is as solid as a white one (`hue`); a trial beside the lines, into
+# out_hues/.
+HUE_HEAD = ("masterpiece, best quality, score_7, safe, no humans, lineart, glowing lines, colorful, simple, icon, "
+            "symbol, black background, ")
+HUE_TAIL = ("It is an icon for a fantasy role-playing game. The subject is drawn as one simple elegant line drawing "
+            "of thin glowing lines in bright saturated colours on a plain black background, each part in its own "
+            "colour: clean even lines of a medium thickness, only outlines with the inside of every shape left black, "
+            "no fill and no shading, only a few lines, like a neon sign, large and centered, filling most of the "
+            "frame, so that it reads at a small size. Nothing is drawn around it: no frame, no ring and no border.")
+HUE_NEGATIVE = (", ".join(w for w in GOLD_NEGATIVE.split(", ") if w not in ("colorful", "glow", "neon"))
+                + ", monochrome, dark lines, ring frame, round frame, medallion, badge, coin")
 FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the tail's {word} are the job's key
     "flat": (HEAD, TAIL, NEGATIVE),
     "object": (PAINTED_HEAD, PAINTED_TAIL, PAINTED_NEGATIVE),
@@ -184,6 +198,7 @@ FAMILIES = {  # a family → (head, tail, negative); the head's {tag} and the ta
     "medal": (MEDAL_HEAD, MEDAL_TAIL, MEDAL_NEGATIVE),
     "gold": (GOLD_HEAD, GOLD_TAIL, GOLD_NEGATIVE),
     "sign": (SIGN_HEAD, SIGN_TAIL, SIGN_NEGATIVE),
+    "hue": (HUE_HEAD, HUE_TAIL, HUE_NEGATIVE),
 }
 UNCOLOURED = ("gold", "sign")  # the families in one colour: the subject's colours are dropped from the prompt
 TILED = ("glyph", "plate", "bronze", "ink")  # the families cut as a tile by its shape
@@ -205,7 +220,10 @@ LIT = 0.55  # the brightest lines of a sign toward white by this share
 # the frame at the icon's side 1.0: its margin, the outer and the inner line, the gap between, the sign's pad inside
 EDGE, OUTER, INNER, GAP, PAD = 0.035, 0.026, 0.013, 0.022, 0.05
 SIGN_LINE = 0.018  # the sign's lines at least this wide: 2 px of a 128 icon, 1 px at 64
-SEEDS = {"flat": "11,22", "painted": "11,22", "lines": "11,22,33"}  # a variant per seed; three of the lines (the author)
+SEEDS = {"flat": "11,22", "painted": "11,22", "lines": "11,22,33", "hues": "11,22,33"}  # three of a sign (the author)
+HUE_LIFT = 110  # a line darker than this luminance is lifted toward white: deep blue and violet vanish on black
+HOLLOW = 0.03  # in colour the model fills a shape (a shield, a clover, a heart) in spite of «no fill»: what is wider
+# than this share of the side keeps only its edge, a line thinner stays whole
 ICON = 128  # px of the final icon
 NEAR, FAR = 38, 80  # colour distance from the background: cut below NEAR, kept above FAR, faded between
 ROWS_PER_SHEET = 40
@@ -269,8 +287,8 @@ def family(job: dict, style: str = "flat") -> str:
         return "portrait"
     if style == "flat":
         return "flat"
-    if style == "lines":
-        return "sign" if job["kind"] in LINES else "gold"
+    if style in SIGNED:
+        return ("sign" if style == "lines" else "hue") if job["kind"] in LINES else "gold"
     return FAMILY.get(job["kind"], FAMILY.get(job["kind"].split("/")[0], "object"))
 
 
@@ -296,7 +314,7 @@ def prompt_of(job: dict, key: str, style: str = "flat") -> str:
 def full_prompt(job: dict, n: int, a: argparse.Namespace) -> str:
     style = getattr(a, "style", "flat")
     # a subject of its own in the lines style (the author's redraw marks), the painted one left as it was drawn
-    look = job["looks"][n - 1] if job.get("looks") else {**job, **job["lines"]} if style == "lines" and job.get(
+    look = job["looks"][n - 1] if job.get("looks") else {**job, **job["lines"]} if style in SIGNED and job.get(
         "lines") else job
     if portrait(job):
         return P_HEAD + look["tags"] + ".\n" + look["sentence"] + " " + P_TAIL
@@ -695,6 +713,37 @@ def sign(raw: Image.Image, ink: tuple, side: int) -> Image.Image:
     return out.crop(box) if box else out
 
 
+def hue(raw: Image.Image, side: int) -> Image.Image:
+    """A line drawing in its own colours on black: its brightest channel over the ground the alpha (a blue line is as
+    solid as a white one), each line in the colour the model gave it at full strength — unmixed from the black — and a
+    dark one lifted toward white (HUE_LIFT), a filled shape left as its outline (HOLLOW); cropped to the drawing, at
+    a work side `side`."""
+    rgb = raw.convert("RGB").resize((side, side), Image.LANCZOS)
+    r, g, b = rgb.split()
+    val = ImageChops.lighter(ImageChops.lighter(r, g), b)
+    w, h = val.size
+    border = [val.getpixel((x, y)) for x in range(0, w, 2) for y in (0, h - 1)] + \
+             [val.getpixel((x, y)) for y in range(0, h, 2) for x in (0, w - 1)]
+    lo = int(median(border)) + 14
+    hi = lo + 80
+    vs, rs, gs, bs = val.tobytes(), r.tobytes(), g.tobytes(), b.tobytes()
+    out = bytearray(len(vs) * 4)
+    for i, v in enumerate(vs):
+        if v <= lo:
+            continue  # the ground: transparent black, nothing to spread when the lines grow
+        c = [rs[i] * 255 // v, gs[i] * 255 // v, bs[i] * 255 // v]
+        lum = (c[0] * 299 + c[1] * 587 + c[2] * 114) // 1000
+        if lum < HUE_LIFT:
+            k = (HUE_LIFT - lum) / 255
+            c = [round(x + (255 - x) * k) for x in c]
+        out[i * 4:i * 4 + 4] = bytes((c[0], c[1], c[2], 255 if v >= hi else (v - lo) * 255 // (hi - lo)))
+    im = Image.frombytes("RGBA", (w, h), bytes(out))
+    a = im.getchannel("A")  # a fill kept as its outline: the alpha less its erosion wider than a line (HOLLOW)
+    im.putalpha(ImageChops.subtract(a, a.filter(ImageFilter.MinFilter(int(side * HOLLOW) | 1))))
+    box = im.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox()
+    return im.crop(box) if box else im
+
+
 def stroke(alpha: Image.Image) -> float:
     """The mean width of a drawing's lines in px: twice its area over its edge (a line of width w and length L has
     the area wL and the edge 2L)."""
@@ -704,14 +753,18 @@ def stroke(alpha: Image.Image) -> float:
     return 2 * area / max(1, edge)
 
 
-def bolder(im: Image.Image, width: float) -> Image.Image:
+def bolder(im: Image.Image, width: float, paint: bool = False) -> Image.Image:
     """A sign's lines grown to `width` px where they are thinner (the model draws a hair line, scaled down it vanished
-    beside the frame at 64 px): its alpha spread by a square of the missing width, its colour as it was."""
+    beside the frame at 64 px): its alpha spread by a square of the missing width, its colour as it was — or spread
+    with it where the lines have colours of their own (`paint`: the ground around them is transparent black)."""
     grow = int(round(width - stroke(im.getchannel("A"))))
     if grow < 2:
         return im
-    out = im.copy()  # MaxFilter takes an odd size and adds size − 1 to a line
-    out.putalpha(im.getchannel("A").filter(ImageFilter.MaxFilter(grow + 1 if grow % 2 == 0 else grow + 2)))
+    size = grow + 1 if grow % 2 == 0 else grow + 2  # MaxFilter takes an odd size and adds size − 1 to a line
+    if paint:
+        return im.filter(ImageFilter.MaxFilter(size))
+    out = im.copy()
+    out.putalpha(im.getchannel("A").filter(ImageFilter.MaxFilter(size)))
     return out
 
 
@@ -750,19 +803,19 @@ def frame(shape: str, col: tuple, side: int) -> tuple[Image.Image, float]:
     return im, c - inner - w2 - s * PAD
 
 
-def lines(raw: Image.Image, job: dict) -> Image.Image:
+def lines(raw: Image.Image, job: dict, hued: bool = False) -> Image.Image:
     """An icon of the lines style: the sign the model drew in white lines, in its colour (the job's `tint`, else the
-    kind's), fitted into the frame code draws around it (LINES)."""
+    kind's) — or in its own colours (`hued`, the hues style) — fitted into the frame code draws around it (LINES)."""
     shape, col, ink = LINES[job["kind"]]
     work = ICON * 4  # drawn 4× larger and shrunk: smooth lines
     out, room = frame(shape, col, work)
     ink = colour(job.get("tint")) or ink
-    drawn = sign(raw, ink, work)
+    drawn = hue(raw, work) if hued else sign(raw, ink, work)
     k = room / _reach(drawn) if shape == "ring" else 2 * room / max(drawn.size)
     drawn = drawn.resize((max(1, round(drawn.width * k)), max(1, round(drawn.height * k))), Image.LANCZOS)
-    layer = Image.new("RGBA", (work, work), ink + (0,))  # its colour round it: no dark fringe as it grows
+    layer = Image.new("RGBA", (work, work), (0, 0, 0, 0) if hued else ink + (0,))  # no dark fringe as it grows
     layer.paste(drawn, ((work - drawn.width) // 2, (work - drawn.height) // 2))
-    out.alpha_composite(bolder(layer, work * SIGN_LINE))
+    out.alpha_composite(bolder(layer, work * SIGN_LINE, hued))
     return out.resize((ICON, ICON), Image.LANCZOS)
 
 
@@ -776,8 +829,8 @@ def save_variant(raw: Image.Image, job: dict, path: Path, style: str = "flat") -
         medal(raw).save(path)
     elif how == "gold":
         gold(raw).save(path)
-    elif how == "sign":
-        lines(raw, job).save(path)
+    elif how in ("sign", "hue"):
+        lines(raw, job, how == "hue").save(path)
     else:
         cut(raw).save(path)
 

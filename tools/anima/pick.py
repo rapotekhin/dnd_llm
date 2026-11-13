@@ -59,7 +59,13 @@ SETS = {
     "lines_features": ("Умения · линии", "out_lines", "picks_lines_icons.json", "features"),
     "lines_acts": ("Действия · линии", "out_lines_flux", "picks_lines_icons.json", "acts"),
     "lines_traits": ("Черты рас · линии", "out_lines", "picks_lines_icons.json", "traits"),
+    # the hues style (the author, 2026-11-13): the same signs in their own colours, a trial beside the lines
+    "hues_spells": ("Заклинания · цвет", "out_hues", "picks_hues_icons.json", "spells"),
+    "hues_features": ("Умения · цвет", "out_hues", "picks_hues_icons.json", "features"),
+    "hues_acts": ("Действия · цвет", "out_hues_flux", "picks_hues_icons.json", "acts"),
+    "hues_traits": ("Черты рас · цвет", "out_hues", "picks_hues_icons.json", "traits"),
 }
+STYLED = ("lines", "hues")  # the styles whose sets are named «<style>_<kind>», each with a preview of its own
 
 
 def kind_of_set(name: str) -> str:
@@ -171,14 +177,14 @@ def main() -> None:
             elif path == "/data":
                 body = {"kinds": [kind_of(k, s) for k, s in sets.items()],
                         "screens": [{"id": k, "title": v} for k, v in pv.SCREENS.items()] if "frames" in sets else [],
-                        "styles": sorted({k.split("_")[0] for k in sets if k.startswith("lines_")})}
+                        "styles": sorted({k.split("_")[0] for k in sets if k.split("_")[0] in STYLED})}
                 self._send(200, json.dumps(body, ensure_ascii=False).encode("utf-8"), "application/json")
             elif path in files:
                 f = files[path]
                 self._send(200, f.read_bytes() if isinstance(f, Path) else f, "image/png")
             elif path.startswith("/preview/") and path.endswith(".png"):  # /preview/<screen>.png, /preview/lines/…
                 style, _, name = path[9:-4].rpartition("/")
-                if name in pv.SCREENS and style in ("", "lines"):
+                if name in pv.SCREENS and style in ("",) + STYLED:
                     self._send(200, screen(name, style), "image/png")
                 else:
                     self._send(404, b"no", "text/plain")

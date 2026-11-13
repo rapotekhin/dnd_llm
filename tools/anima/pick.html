@@ -74,7 +74,8 @@
 <script>
 // one set per kind: {kind, title, items, picks, seen}; the active one is in the address after «#»
 let sets = {}, order = [], active = null, screens = [], styles = [];
-const PREVIEWS = { preview: ["Превью", ""], preview_lines: ["Превью · линии", "lines"] };  // a tab → its title, its style
+const PREVIEWS = { preview: ["Превью", ""], preview_lines: ["Превью · линии", "lines"],
+                   preview_hues: ["Превью · цвет", "hues"] };  // a tab → its title, its style
 const grid = document.getElementById("grid");
 const status = document.getElementById("status");
 const want = new URLSearchParams(location.search).get("ids");
