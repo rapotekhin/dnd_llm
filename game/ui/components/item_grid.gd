@@ -6,6 +6,8 @@ extends VBoxContainer
 ## companion's things; the owner says what is in it (`show_items`), what its cells do (`setup`) and what a drop on it
 ## does (`accepts`, `dropped`). The groups, the sort and the search are ItemGroups'. A `bare` grid has no row over it:
 ## the two columns of a deal in the trade (v0.8.4.43.12). How many of a stack a drop moves — `with_qty`, a slider.
+## A grid too narrow for the filters beside the search puts them on a line of their own over it (`_fit_bar`, v0.8.4.43.42,
+## the author: «значки фильтров переносятся в три ряда, а поле поиска обрезано»).
 
 signal view_changed  ## a filter, the sort or its order changed: the owner keeps it when it is the hero's
 
@@ -27,8 +29,10 @@ var setup := Callable()  ## (cell: ItemCell) — the owner's double click, menu 
 var accepts := Callable()  ## (drag: Dictionary) -> bool
 var dropped := Callable()  ## (drag: Dictionary) -> void
 var _find := ""
-var _bar: HBoxContainer
+var _bar: VBoxContainer  # the filters' line, and under it the search's when they do not fit in one
+var _top: HBoxContainer
 var _filters: HFlowContainer
+var _controls: HBoxContainer  # the search, the sort and its order: beside the filters or under them
 var _search: LineEdit
 var _sort: OptionButton
 var _reverse: Button
@@ -45,18 +49,25 @@ func _init(grid_tag: String = "Inv", cell_prefix: String = "Item_", cols: int = 
 	name = tag + "Grid"
 	add_theme_constant_override("separation", 6)
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var bar := HBoxContainer.new()
-	bar.name = tag + "Bar"
-	bar.add_theme_constant_override("separation", 4)
-	add_child(bar)
-	_bar = bar
+	_bar = VBoxContainer.new()
+	_bar.name = tag + "Bar"
+	_bar.add_theme_constant_override("separation", 4)
+	add_child(_bar)
+	_top = HBoxContainer.new()
+	_top.add_theme_constant_override("separation", 4)
+	_bar.add_child(_top)
 	_filters = HFlowContainer.new()  # the icons wrap onto a second line rather than widen the window
 	_filters.name = tag + "Filters"
 	_filters.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_filters.size_flags_stretch_ratio = 1.6
 	_filters.add_theme_constant_override("h_separation", 2)
 	_filters.add_theme_constant_override("v_separation", 2)
-	bar.add_child(_filters)
+	_top.add_child(_filters)
+	_controls = HBoxContainer.new()
+	_controls.name = tag + "Controls"
+	_controls.add_theme_constant_override("separation", 4)
+	_controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_bar.add_child(_controls)
+	var bar := _controls
 	_search = LineEdit.new()
 	_search.name = tag + "Search"
 	_search.placeholder_text = "INV_SEARCH"
@@ -91,6 +102,7 @@ func _init(grid_tag: String = "Inv", cell_prefix: String = "Item_", cols: int = 
 		view["reverse"] = not bool(view.get("reverse", false))
 		view_changed.emit())
 	bar.add_child(_reverse)
+	_fit_bar()
 	_scroll = ScrollContainer.new()
 	_scroll.name = tag + "List"
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -120,6 +132,7 @@ func show_items(inv: Dictionary) -> void:
 	var data := Catalog.data
 	var items: Dictionary = GameState.session.items
 	var group := _group(inv)
+	_fit_bar()
 	var sort := str(view.get("sort", ItemGroups.TYPE))
 	if not ItemGroups.sorts(data).has(sort):
 		sort = ItemGroups.TYPE
@@ -183,6 +196,7 @@ func _fill_down() -> void:
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_RESIZED or _cells == null:
 		return
+	_fit_bar()
 	var fit := maxi(min_columns, int((size.x - 16.0 + 4.0) / (cell_side + 4.0)))
 	if fit != columns:
 		columns = fit
@@ -201,6 +215,24 @@ static func line(id: String, n: int) -> String:
 		parts.append(TranslationServer.translate("INV_WEIGHT").format({"n": str(int(w)) if is_equal_approx(w, roundf(w)) else String.num(w, 2)}))
 	parts.append("?" if v < 0 else Money.format(v) if v > 0 else "—")
 	return " · ".join(parts)
+
+
+## The filters beside the search when the width holds both, else on a line of their own with the search, the sort and
+## its order under them; a field being typed in stays where it is.
+func _fit_bar() -> void:
+	if _controls == null or _search.has_focus():
+		return
+	var icons := 0.0
+	for ch: Node in _filters.get_children():
+		icons += (ch as Control).get_combined_minimum_size().x + 2.0
+	var room := size.x - 4.0  # past the gap between the filters and the search
+	var one := icons > 0.0 and room - icons >= _controls.get_combined_minimum_size().x
+	# In one line the filters' share of the width is all their icons, never wrapped, the rest the search's; by the
+	# share, not a minimum, so the grid may still narrow.
+	_filters.size_flags_stretch_ratio = icons / (room - icons) if one else 1.0
+	var home: Node = _top if one else _bar
+	if _controls.get_parent() != home:
+		_controls.reparent(home, false)
 
 
 ## The group icons with how many kinds each holds; the group shown ("" — all; a group emptied shows all).
