@@ -54,7 +54,11 @@ const MapView = (() => {
 	// MapGround.prop_ids: the things of `grounds.props`, then the bodies of rules.things (v0.8.4.43.24) — a thing's place.
 	function propIds(lib, bodies = {}) {
 		const out = [];
-		for (const row of Object.values(lib.grounds.props)) for (const id of Object.values(row)) if (!out.includes(String(id))) out.push(String(id));
+		const strips = lib.grounds.strips || {};
+		for (const row of Object.values(lib.grounds.props)) for (const id of Object.values(row)) {
+			const drawn = (strips.of || []).includes(id) ? strips.parts.map((p) => `${id}_${p}`) : [String(id)];
+			for (const one of drawn) if (!out.includes(one)) out.push(one);
+		}
 		for (const id of Object.keys(bodies)) if (!out.includes(id) && out.length < MAX_PROPS) out.push(id);
 		return out;
 	}
@@ -91,7 +95,39 @@ const MapView = (() => {
 		return rows.map((r) => [...r].map((c) => (c in marks ? FLOOR : c)).join(''));
 	}
 
-	const walled = (rows, x, y) => y >= 0 && y < rows.length && x >= 0 && x < rows[y].length && ['#', 'w', SOCKET].includes(rows[y][x]);
+	// LayoutGen.prop_turn (v0.8.4.43.36): a door across its wall, a waterfall down from the high ground.
+	function propTurn(lib, rows, x, y, prop) {
+		const at = (dx, dy) => rows[y + dy]?.[x + dx] ?? BLANK;
+		const open = lib.open || {};
+		switch (lib.grounds.turn?.[prop]) {
+			case 'walls': return ['#', 'w', SOCKET].includes(at(-1, 0)) && ['#', 'w', SOCKET].includes(at(1, 0)) ? 1 : 0;
+			case 'fall': {
+				const falls = open.falls || {};
+				const liquid = (c) => c in falls || Object.values(falls).includes(c) || Object.values(open.bridges || {}).includes(c);
+				const high = (dx, dy) => at(dx, dy) === ':';
+				if (liquid(at(0, -1)) && liquid(at(0, 1))) return high(-1, -1) || high(1, -1) || high(0, -2) ? 0 : 2;
+				return high(-1, -1) || high(-1, 1) || high(-2, 0) ? 1 : 3;
+			}
+		}
+		return 0;
+	}
+
+	// LayoutGen.prop_at / prop_base (v0.8.4.43.36): the thing of a square and its turn; a strip's part by its like neighbours.
+	function propAt(lib, keys, rows, x, y) {
+		const at = (xx, yy) => rows[yy]?.[xx] ?? BLANK;
+		const c = at(x, y);
+		let id = propOf(lib, keys, c);
+		if (!id) return { id: '', turn: 0 };
+		const turn = propTurn(lib, rows, x, y, id);
+		const strips = lib.grounds.strips || {};
+		if ((strips.of || []).includes(id)) {
+			const [lx, ly] = [[-1, 0], [0, 1], [1, 0], [0, -1]][turn];
+			const l = at(x + lx, y + ly) === c, r = at(x - lx, y - ly) === c;
+			id += '_' + strips.parts[l && r ? 2 : l ? 3 : r ? 1 : 0];
+		}
+		return { id, turn };
+	}
+	const propBase = (lib, id) => (lib.grounds.strips?.of || []).find((b) => id.startsWith(b + '_')) || id;
 
 	// The cells texture of MapGround.lay: r — the ground's place in the order (255 none), g — a prop + 1, b — a turn.
 	function cellBytes(lib, rows, keys) {
@@ -105,9 +141,10 @@ const MapView = (() => {
 			const i = (y * w + x) * 4;
 			if (c === BLANK) { const g = byKeys(lib.grounds.cells[BLANK], keys); const at = g ? order.indexOf(g) : -1; out[i] = at >= 0 ? at : 255; } // rock in tunnels
 			else { const at = order.indexOf(groundOf(lib, keys, c)); out[i] = at >= 0 ? at : floor; }
-			const prop = props.indexOf(propOf(lib, keys, c));
+			const thing = propAt(lib, keys, rows, x, y);
+			const prop = props.indexOf(thing.id);
 			out[i + 1] = prop + 1;
-			out[i + 2] = prop >= 0 && walled(rows, x - 1, y) && walled(rows, x + 1, y) ? 1 : 0;
+			out[i + 2] = prop >= 0 ? thing.turn : 0;
 			out[i + 3] = 255;
 		}
 		return { w, h, bytes: out };
@@ -224,7 +261,7 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			const dims = new Float32Array(MAX_PROPS * 2).fill(1);
 			props.forEach((id, i) => {
 				if (i >= MAX_PROPS) return;
-				sizes[i] = Number(g.size?.[id] ?? 1);
+				sizes[i] = Number(g.size?.[propBase(this.lib, id)] ?? 1);
 				const sz = this.bodies[id]?.size || [1, 1];
 				dims[i * 2] = Number(sz[0]); dims[i * 2 + 1] = Number(sz[1]);
 			});
@@ -238,6 +275,7 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			gl.uniform1f(u('repeat_cells'), Number(g.repeat ?? 3));
 			gl.uniform1i(u('sharp_mask'), sharp);
 			gl.uniform1fv(u('prop_size'), sizes);
+			gl.uniform1fv(u('prop_shimmer'), new Float32Array(MAX_PROPS).map((_, i) => Number(g.shimmer?.[propBase(this.lib, props[i] || '')] ?? 0)));
 			gl.uniform1f(u('rough'), 0.22);
 			gl.uniform1f(u('soft'), 0.05);
 			gl.uniform4f(u('watch_tint'), 0.75, 0.25, 0.2, 1);

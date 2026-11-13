@@ -22,6 +22,7 @@ uniform int sharp_mask = 0;  // a bit per ground of the order
 uniform vec4 ground_move[32];  // v0.8.4.43.32 `grounds.motion`: xy — drift, z — ripple, w — glow (lava)
 uniform int kin[32];  // a ground's kin: the ground whose texture it has (`grounds.same`), else itself
 uniform float prop_size[64];
+uniform float prop_shimmer[64];  // v0.8.4.43.36 `grounds.shimmer`: a picture that moves along its own top to bottom
 uniform vec2 prop_dims[64];  // a prop's squares [long, short]; none — one square
 uniform float rough = 0.22;
 uniform float soft = 0.05;
@@ -194,6 +195,8 @@ void fragment() {
 			}
 			if (uv.x >= 0.0 && uv.y >= 0.0 && uv.x <= 1.0 && uv.y <= 1.0) {
 				vec4 t = texture(props, vec3(uv, float(prop)));
+				float sh = prop_shimmer[prop];
+				if (sh > 0.0) t.rgb *= 1.0 + sh * (noise(vec2(uv.x * 7.0, uv.y * 3.0 - TIME * 2.6)) - 0.5);
 				col = vec4(mix(col.rgb, t.rgb, t.a), max(col.a, t.a));
 			}
 		}

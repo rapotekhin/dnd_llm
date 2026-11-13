@@ -721,6 +721,7 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 		_scatter(grid, kind.get("scatter", []), int(cfg["noise_cell"]), rng, float(cfg.get("tile_scatter", 1.0)) if tiled else 1.0, tiled)
 		for tag: String in _ponds(cfg, tags, tiled):
 			_pond(grid, float(cfg["pond"]), rng, str(cfg["ponds"][tag]))
+		_falls(lib, grid)
 	# rows of its own grown west or north (BuildRules, v0.8.4.42.7): the grid of a save stays, the map's first square moves
 	var origin := Vector2i.ZERO
 	if ask.get("origin") is Array:
@@ -766,6 +767,7 @@ static func _open(lib: Dictionary, ask: Dictionary, kept: Dictionary, seed_value
 	picks["ways"] = _ways_of(out, str(ask["id"]))
 	var paved := ROAD if tags.has("road") or tags.has("market") or bool(kind.get("paved", false)) else PATH
 	picks["roads"] = _roads(out, lib, center, paved, kept, seed_value)
+	_abutments(out, lib)
 	var ponded: Array[String] = []
 	for tag: String in _ponds(cfg, tags, tiled):
 		ponded.append(str(cfg["ponds"][tag]))
@@ -1269,16 +1271,42 @@ static func _roads(out: Dictionary, lib: Dictionary, center: Vector2i, paved: St
 			continue
 		while dist[at] > 0:
 			net.append(at)
-			_pave(out, at % w, at / w, paved)
+			_pave(out, at % w, at / w, paved, lib)
 			at = prev[at]
 	if not order.is_empty():
 		_pave(out, center.x, center.y, paved)
 	return order
 
 
-static func _pave(out: Dictionary, x: int, y: int, paved: String) -> void:
-	if str(out["rows"][y][x]) != DOOR:
-		_set_cell(out, x, y, paved)
+## A square of a road; over a liquid it is a bridge (`open.bridges`, v0.8.4.43.36).
+static func _pave(out: Dictionary, x: int, y: int, paved: String, lib: Dictionary = {}) -> void:
+	var c := str(out["rows"][y][x])
+	if c == DOOR:
+		return
+	var bridges: Dictionary = lib.get("open", {}).get("bridges", {}) if not lib.is_empty() else {}
+	_set_cell(out, x, y, str(bridges[c]) if bridges.has(c) else paved if not bridges.values().has(c) else c)
+
+
+## A bridge goes on one square onto each bank where its way leaves the liquid — the abutment of its deck, so the deck is
+## drawn as a span over the water, not a speck in it (v0.8.4.43.36).
+static func _abutments(out: Dictionary, lib: Dictionary) -> void:
+	var bridges: Dictionary = lib["open"].get("bridges", {})
+	var rows: Array = (out["rows"] as Array).duplicate()
+	for y: int in rows.size():
+		for x: int in str(rows[y]).length():
+			var deck := str(rows[y])[x]
+			if not bridges.values().has(deck):
+				continue
+			for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var n := Vector2i(x, y) + d
+				var back := Vector2i(x, y) - d
+				if n.y < 0 or n.y >= rows.size() or n.x < 0 or n.x >= str(rows[n.y]).length():
+					continue
+				if back.y < 0 or back.y >= rows.size() or back.x < 0 or back.x >= str(rows[back.y]).length():
+					continue
+				var b := str(rows[back.y])[back.x]
+				if str(rows[n.y])[n.x] in [ROAD, PATH] and (b == deck or bridges.has(b)):
+					_set_cell(out, n.x, n.y, deck)
 
 
 ## The way out the net reaches most cheaply; ties go by name, so the same map comes out every time.
@@ -1471,6 +1499,71 @@ static func ground_of(lib: Dictionary, keys: Array[String], c: String) -> String
 ## The thing drawn on a square of `c`, by `grounds.props`; "" — none.
 static func prop_of(lib: Dictionary, keys: Array[String], c: String) -> String:
 	return _by_keys(lib["grounds"]["props"].get(c, {}), keys)
+
+
+## The quarter turns of the thing of a square (`grounds.turn` by its id, v0.8.4.43.36): a door across a wall with walls
+## both sides — 1; a waterfall down from the high ground, its picture falls top to bottom — 0 south, 1 east, 2 north, 3 west. 0 — none.
+static func prop_turn(lib: Dictionary, rows: Array, x: int, y: int, prop: String) -> int:
+	var at := func(dx: int, dy: int) -> String:
+		var yy := y + dy
+		var xx := x + dx
+		return str(rows[yy])[xx] if yy >= 0 and yy < rows.size() and xx >= 0 and xx < str(rows[yy]).length() else BLANK
+	var open: Dictionary = lib["open"]
+	match str(lib["grounds"].get("turn", {}).get(prop, "")):
+		"walls":
+			return 1 if at.call(-1, 0) in [WALL, "w", SOCKET] and at.call(1, 0) in [WALL, "w", SOCKET] else 0
+		"fall":
+			var high := func(dx: int, dy: int) -> bool: return at.call(dx, dy) == HIGH
+			var falls: Dictionary = open.get("falls", {})
+			var bridged: Dictionary = open.get("bridges", {})  # a bridge over the stream is still the stream
+			var liquid := func(c: String) -> bool: return falls.has(c) or falls.values().has(c) or bridged.values().has(c)
+			if liquid.call(at.call(0, -1)) and liquid.call(at.call(0, 1)):  # it falls along the column
+				return 0 if high.call(-1, -1) or high.call(1, -1) or high.call(0, -2) else 2
+			return 1 if high.call(-1, -1) or high.call(-1, 1) or high.call(-2, 0) else 3
+	return 0
+
+
+## The thing drawn on a square and its quarter turns: `prop_of` turned by `prop_turn`; a thing of `grounds.strips` (a
+## waterfall, v0.8.4.43.36) takes its part by the like squares beside it across its fall — `<thing>_<part>`.
+static func prop_at(lib: Dictionary, keys: Array[String], rows: Array, x: int, y: int) -> Dictionary:
+	var at := func(xx: int, yy: int) -> String:
+		return str(rows[yy])[xx] if yy >= 0 and yy < rows.size() and xx >= 0 and xx < str(rows[yy]).length() else BLANK
+	var c: String = at.call(x, y)
+	var id := prop_of(lib, keys, c)
+	if id.is_empty():
+		return {"id": "", "turn": 0}
+	var turn := prop_turn(lib, rows, x, y, id)
+	var strips: Dictionary = lib["grounds"].get("strips", {})
+	if (strips.get("of", []) as Array).has(id):
+		var left: Vector2i = [Vector2i(-1, 0), Vector2i(0, 1), Vector2i(1, 0), Vector2i(0, -1)][turn]  # the picture's left
+		var l: bool = at.call(x + left.x, y + left.y) == c
+		var r: bool = at.call(x - left.x, y - left.y) == c
+		id += "_" + str(strips["parts"][2 if l and r else 3 if l else 1 if r else 0])
+	return {"id": id, "turn": turn}
+
+
+## The thing a part of a strip is drawn for (`waterfall_left` → `waterfall`): its size, its shimmer.
+static func prop_base(lib: Dictionary, id: String) -> String:
+	for base: Variant in lib["grounds"].get("strips", {}).get("of", []):
+		if id.begins_with(str(base) + "_"):
+			return str(base)
+	return id
+
+
+## A cliff square with the same liquid on two opposite sides falls (`open.falls`: a waterfall, a fall of lava).
+static func _falls(lib: Dictionary, grid: Array[PackedStringArray]) -> void:
+	var falls: Dictionary = lib["open"].get("falls", {})
+	var h := grid.size()
+	for y: int in range(1, h - 1):
+		for x: int in range(1, grid[y].size() - 1):
+			if grid[y][x] != CLIFF:
+				continue
+			for liquid: Variant in falls:
+				var l := str(liquid)
+				if l.begins_with("_"):
+					continue
+				if (grid[y - 1][x] == l and grid[y + 1][x] == l) or (grid[y][x - 1] == l and grid[y][x + 1] == l):
+					grid[y][x] = str(falls[liquid])
 
 
 ## Every square's ground as its place in `grounds.order` (w * h, row by row); NO_GROUND off the map.

@@ -53,9 +53,10 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 			var i := (y * w + x) * 4
 			bytes[i] = grounds[y * w + x]
 			var c := line[x] if x < line.length() else LayoutGen.BLANK
-			var prop := props.find(LayoutGen.prop_of(lib, keys, c))
+			var thing := LayoutGen.prop_at(lib, keys, rows, x, y)
+			var prop := props.find(str(thing["id"]))
 			bytes[i + 1] = prop + 1
-			bytes[i + 2] = 1 if prop >= 0 and _walled(rows, x - 1, y) and _walled(rows, x + 1, y) else 0
+			bytes[i + 2] = int(thing["turn"]) if prop >= 0 else 0
 			bytes[i + 3] = 255
 	_base = bytes
 	_cells.set_image(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, bytes))
@@ -75,7 +76,7 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	dims.resize(MAX_PROPS)
 	var bodies := bodies_of()
 	for i: int in mini(props.size(), MAX_PROPS):
-		sizes[i] = float(g.get("size", {}).get(props[i], 1.0))
+		sizes[i] = float(g.get("size", {}).get(LayoutGen.prop_base(lib, props[i]), 1.0))
 		var sz: Array = (bodies.get(props[i], {}) as Dictionary).get("size", [1, 1])
 		dims[i] = Vector2(float(sz[0]), float(sz[1]))
 	_lib = lib
@@ -93,6 +94,11 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 	m.set_shader_parameter("kin", kin)
 	m.set_shader_parameter("ground_move", ground_motion(lib))
 	m.set_shader_parameter("prop_size", sizes)
+	var shimmer := PackedFloat32Array()  # v0.8.4.43.36: a thing whose picture moves (falling water)
+	shimmer.resize(MAX_PROPS)
+	for i: int in mini(props.size(), MAX_PROPS):
+		shimmer[i] = float(g.get("shimmer", {}).get(LayoutGen.prop_base(lib, props[i]), 0.0))
+	m.set_shader_parameter("prop_shimmer", shimmer)
 	m.set_shader_parameter("prop_dims", dims)
 	m.set_shader_parameter("watch_tint", UiTheme.BAD)
 	var edges := _edges(lib)
@@ -222,10 +228,15 @@ static func ground_motion(lib: Dictionary) -> PackedVector4Array:
 ## The things of `grounds.props` and the bodies of the map in one order: a thing's place in the texture of the things.
 static func prop_ids(lib: Dictionary) -> Array[String]:
 	var out: Array[String] = []
+	var strips: Dictionary = lib["grounds"].get("strips", {})
 	for row: Variant in lib["grounds"]["props"].values():
 		for id: Variant in (row as Dictionary).values():
-			if not out.has(str(id)):
-				out.append(str(id))
+			var drawn: Array = [str(id)]
+			if (strips.get("of", []) as Array).has(id):  # a strip: its parts are drawn, not itself (v0.8.4.43.36)
+				drawn = (strips["parts"] as Array).map(func(p: Variant) -> String: return "%s_%s" % [id, p])
+			for one: Variant in drawn:
+				if not out.has(str(one)):
+					out.append(str(one))
 	for id: Variant in bodies_of():
 		if not out.has(str(id)) and out.size() < MAX_PROPS:
 			out.append(str(id))
@@ -278,12 +289,6 @@ static func _edges(lib: Dictionary) -> Dictionary:
 	sheets.create_from_images(images)
 	_arrays["edges"] = {"sheets": sheets, "pairs": ImageTexture.create_from_image(table)}
 	return _arrays["edges"]
-
-
-static func _walled(rows: Array, x: int, y: int) -> bool:
-	if y < 0 or y >= rows.size() or x < 0 or x >= (rows[y] as String).length():
-		return false
-	return (rows[y] as String)[x] in [LayoutGen.WALL, "w", LayoutGen.SOCKET]
 
 
 ## The textures of a group, a colour where none is drawn yet; `hi` — the sharp set of `<group>_hi/`, the plain picture

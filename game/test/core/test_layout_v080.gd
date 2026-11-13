@@ -191,11 +191,12 @@ func _on_roads(map: Dictionary) -> Dictionary:
 	var from := Vector2i(int(map["w"]) / 2, int(map["h"]) / 2)
 	var seen := {from: true}
 	var queue: Array[Vector2i] = [from]
+	var way: Array = [LayoutGen.ROAD, LayoutGen.PATH] + (layouts["open"]["bridges"] as Dictionary).values()  # a bridge carries the road
 	while not queue.is_empty():
 		var at: Vector2i = queue.pop_back()
 		for side: String in LayoutGen.SIDES:
 			var n: Vector2i = at + LayoutGen.STEP[side]
-			if n.x >= 0 and n.y >= 0 and n.x < int(map["w"]) and n.y < int(map["h"]) and not seen.has(n) and rows[n.y][n.x] in [LayoutGen.ROAD, LayoutGen.PATH]:
+			if n.x >= 0 and n.y >= 0 and n.x < int(map["w"]) and n.y < int(map["h"]) and not seen.has(n) and rows[n.y][n.x] in way:
 				seen[n] = true
 				queue.append(n)
 	return seen

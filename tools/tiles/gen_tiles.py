@@ -13,7 +13,11 @@ A ground comes out of FLUX nearly even but not seamless: it is made so by blendi
 is drawn) is ONE frame of the sixteen dual-grid tiles: FLUX repaints a mask of the pair laid on `grounds.edge_layout`
 (5×5 corners, each 2×2 window a case once, so the sheet is a small continuous map), the line crossing every tile's side
 at its middle; the sheet keeps the line in its alpha (0.5 on the line), and the shader takes only a band of it round
-the line over the grounds' own textures. The key is OPENROUTER_API_KEY of the environment
+the line over the grounds' own textures. A strip (`strips`: a waterfall) is drawn by a mask too: a band of foam where water
+goes over a cliff, on flat grey, one, two or three squares wide (`<id>@<n>`, a frame each: FLUX keeps one fall in the middle, not two in
+their places), with no rock or grass of its own — the map's own cliff lies under it; the grey is cut away and its squares
+are cut out as the parts of the thing (`grounds.strips.parts`: alone of @1, the left and the right end of @2, the middle
+of @3), so a fall of any width is pieces of one ribbon. The key is OPENROUTER_API_KEY of the environment
 or of the repo's .env, never printed (anima_gen.openrouter_key).
 """
 from __future__ import annotations
@@ -41,6 +45,11 @@ EDGE_PX = 1024  # a sheet of 4 × 4 tiles
 FIELD_PX = 256  # the line is worked out at this size and smoothed up
 LOW, HIGH = (40, 105, 200), (70, 150, 60)  # the mask's colours: the lower ground blue, the higher green
 SEEDS = (11, 22, 33, 44)
+STRIP_PX = 1024  # a strip's frame: (n + 2) squares a side, the cliff in its second row, a fall n squares wide from the second
+STRIP_PARTS = {1: {1: "one"}, 2: {1: "left", 2: "right"}, 3: {2: "mid"}}  # the fall's width → the columns cut, as parts
+STRIP_GREY = (128, 128, 128)  # the frame round the band, cut away
+STRIP_LIQUID = {"water": (235, 240, 245), "lava": (255, 150, 40)}  # the band's colour
+STRIP_CUT = 1.2  # a part is cut this many squares wide, round its square (grounds.size of the thing), its rim faded out
 
 
 def grounds_lib() -> dict:
@@ -115,7 +124,57 @@ def jobs(only: str) -> list[tuple[str, str, str]]:
                 style, meet = meet.get("style", style), meet["meet"]
             text = spec["style"][style].replace("{low}", words(low)).replace("{high}", words(high))
             out.append(("edges", tid, text.replace("{meet}", meet)))
+    for tid, row in spec.get("strips", {}).items():
+        for n in STRIP_PARTS:
+            if not want or tid in want or f"{tid}@{n}" in want:
+                out.append(("strips", f"{tid}@{n}", spec["style"]["strip"].replace("{fall}", row["fall"])))
     return out
+
+
+def strip_mask(job: str) -> Image.Image:
+    """The map a strip is painted over: flat grey, a band of the fall `n` squares wide (`<id>@<n>`) from the second
+    column, low in the second row of squares — where the map draws the cliff's rim (its line between that row and the
+    next): seen from above a fall over a low cliff is a strip of foam across the stream, not a curtain."""
+    tid, n = job.split("@")
+    n = int(n)
+    spec = json.loads((HERE / "tiles.json").read_text(encoding="utf-8"))["strips"][tid]
+    c = STRIP_PX / (n + 2)
+    img = Image.new("RGB", (STRIP_PX, STRIP_PX), STRIP_GREY)
+    ImageDraw.Draw(img).rectangle([c + c * 0.04, c * 1.5, (n + 1) * c - c * 0.04, c * 2.08], fill=STRIP_LIQUID[spec["mask"]])
+    return img
+
+
+def strip_parts(frame: Image.Image, job: str, side: int) -> dict[str, Image.Image]:
+    """The squares of the fall cut out of its frame by part, `side` px each: the band of its mask kept whole and the grey
+    round it cut away, what plainly differs from the grey kept too (the spray past its edge), the top and the bottom faded so
+    the ribbon runs into the water above and below."""
+    n = int(job.split("@")[1])
+    c = frame.width / (n + 2)
+    half = STRIP_CUT * c / 2
+    from PIL import ImageFilter
+    band = strip_mask(job).convert("L").point(lambda v: 0 if abs(v - 128) < 4 else 255)
+    alpha = band.resize(frame.size, Image.BILINEAR).filter(ImageFilter.GaussianBlur(frame.width * 0.012))
+    alpha = ImageChops.lighter(alpha, keyed(frame, Image.new("L", frame.size, 0)))  # the spray past the band's edge too
+    fade = Image.new("L", (side, side))
+    px = fade.load()
+    for y in range(side):
+        v = int(255 * min(1.0, min(y, side - 1 - y) / (side * 0.14)) ** 1.5)
+        for x in range(side):
+            px[x, y] = v
+    out = {}
+    for col, part in STRIP_PARTS[n].items():
+        cx, cy = (col + 0.5) * c, 1.5 * c
+        box = (round(cx - half), round(cy - half), round(cx + half), round(cy + half))
+        cut = frame.crop(box).resize((side, side), Image.LANCZOS).convert("RGBA")
+        cut.putalpha(ImageChops.multiply(alpha.crop(box).resize((side, side), Image.LANCZOS), fade))
+        out[part] = cut
+    return out
+
+
+def strip_names(job: str) -> dict[str, str]:
+    """part → the thing's picture of it, of a strip's job `<id>@<n>`."""
+    tid, n = job.split("@")
+    return {part: f"{tid}_{part}" for part in STRIP_PARTS[int(n)].values()}
 
 
 def _hash(x: float, y: float) -> float:
@@ -194,7 +253,8 @@ def draw(a: argparse.Namespace) -> None:
     refs = [edge_mask(field)] if field else None
     with ThreadPoolExecutor(4) as pool:
         futures = {pool.submit(anima_gen.openrouter_frame, p, SEEDS[n % len(SEEDS)] + n, key, a.model,
-                               aspect(t) if g == "props" else "1:1", refs if g == "edges" else None): (g, t, n) for g, t, p, n in todo}
+                               aspect(t) if g == "props" else "1:1",
+                               refs if g == "edges" else [strip_mask(t)] if g == "strips" else None): (g, t, n) for g, t, p, n in todo}
         for f in as_completed(futures):
             g, t, n = futures[f]
             img, cost = f.result()
@@ -206,6 +266,12 @@ def draw(a: argparse.Namespace) -> None:
                 sheet_rgba = img.resize((EDGE_PX, EDGE_PX), Image.LANCZOS).convert("RGBA")
                 sheet_rgba.putalpha(field if gain_of(t) == 2.0 else edge_field(gain_of(t)))  # a wide edge: a gentler line
                 sheet_rgba.save(OUT / f"{t}__{n}.png")
+            elif g == "strips":  # the parts, and twice the size for close up
+                (OUT / "hi").mkdir(exist_ok=True)
+                names = strip_names(t)
+                for (part, cut), sharp in zip(strip_parts(img, t, PROP_PX).items(), strip_parts(img, t, PROP_PX * HI).values()):
+                    cut.save(OUT / f"{names[part]}__{n}.png")
+                    sharp.save(OUT / "hi" / f"{names[part]}__{n}.png")
             print(f"{t}__{n}  ${cost:.4f}", flush=True)
     print(f"{len(todo)} frames, ${spent:.3f}")
 
@@ -230,8 +296,9 @@ def matte(a: argparse.Namespace) -> None:
 
 def sheet(a: argparse.Namespace) -> None:
     """A sheet per group: each ground as 2×2 of itself (a seam shows), each prop on a checker."""
-    for group in ("ground", "props", "edges"):
-        rows = [(t, sorted(OUT.glob(f"{t}__*.png"))) for g, t, _ in jobs(a.only) if g == group]
+    for group in ("ground", "props", "edges", "strips"):
+        rows = [(t, sorted(OUT.glob(f"{t}__*.png") if group != "strips" else (OUT / "raw").glob(f"{t}__*.png")))
+                for g, t, _ in jobs(a.only) if g == group]
         rows = [r for r in rows if r[1]]
         if not rows:
             continue
@@ -244,7 +311,18 @@ def sheet(a: argparse.Namespace) -> None:
             for j, f in enumerate(files):
                 img = Image.open(f).convert("RGBA")
                 at = (label + j * (cell + 8), i * (cell + 8))
-                if group == "edges":  # the painting with its tile grid
+                if group == "strips":  # the frame with its squares, the parts cut from it framed red
+                    rgb = img.convert("RGB").resize((cell, cell), Image.LANCZOS)
+                    dd = ImageDraw.Draw(rgb)
+                    k = int(t.split("@")[1]) + 2
+                    q = cell / k
+                    for m in range(1, k):
+                        dd.line([m * q, 0, m * q, cell], fill=(255, 210, 60))
+                        dd.line([0, m * q, cell, m * q], fill=(255, 210, 60))
+                    for col in STRIP_PARTS[k - 2]:
+                        dd.rectangle([col * q, q, (col + 1) * q, 2 * q], outline=(255, 60, 60), width=2)
+                    out.paste(rgb, at)
+                elif group == "edges":  # the painting with its tile grid
                     rgb = img.convert("RGB").resize((cell, cell), Image.LANCZOS)
                     dd = ImageDraw.Draw(rgb)
                     for k in range(1, 4):
@@ -269,6 +347,14 @@ def install(a: argparse.Namespace) -> None:
     picks = json.loads((HERE / "picks.json").read_text(encoding="utf-8"))
     for g, t, _ in jobs(a.only):
         if t not in picks:
+            continue
+        if g == "strips":  # each part a thing's picture of its own
+            for name in strip_names(t).values():
+                for folder, src in (("props", OUT / f"{name}__{int(picks[t])}.png"), ("props_hi", OUT / "hi" / f"{name}__{int(picks[t])}.png")):
+                    dst = GAME / folder / f"{name}.png"
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    Image.open(src).save(dst)
+                    print(dst.relative_to(ROOT))
             continue
         src = OUT / f"{t}__{int(picks[t])}.png"
         dst = GAME / g / f"{t}.png"
