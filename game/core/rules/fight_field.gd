@@ -174,6 +174,41 @@ static func round_starts(s: GameSession, data: Dictionary, lines: Array[String])
 	hear(s, data, lines)
 
 
+# --- surfaces a damage leaves ------------------------------------------------------------------------------
+
+
+## A damage of `dtype` touches `cells` (v0.8.4.43.45): each row of `rules.combat.grid.surfaces` by that type lays its
+## zone on the squares it is for — water under lightning, water blessed by radiance, hellfire where a fiend's fire falls.
+## `source` — who dealt it (a fighter, {} — none). Lines.
+static func react(s: GameSession, data: Dictionary, dtype: String, cells: Array[Vector2i], source: Dictionary, lines: Array[String]) -> void:
+	var g := FightGrid.grid(s, data)
+	for id: String in cfg(data).get("surfaces", {}):
+		var row: Variant = cfg(data)["surfaces"][id]
+		if not row is Dictionary or str(row.get("damage", "")) != dtype:
+			continue
+		if row.has("from") and not (row["from"] as Array).has(str(Sheet.template(data, source).get("type", "")) if not source.is_empty() else ""):
+			continue
+		var hit: Array[Vector2i] = []
+		for at: Vector2i in cells:
+			var fits := douses_at(s, data, at) if str(row["where"]) == "wet" else FightGrid.walkable(g, at)
+			if fits:
+				hit.append(at)
+		if hit.is_empty():
+			continue
+		var packed := FightGrid.pack_cells(hit)
+		for z: Dictionary in SpellEffects.zones(s).duplicate():  # one of its kind on a square: the new one replaces the old there
+			if str(z["spell"]) == id:
+				for key: Variant in packed:
+					(z["cells"] as Array).erase(key)
+				if (z["cells"] as Array).is_empty():
+					SpellEffects.zones(s).erase(z)
+		var z := zone_of(id, (row as Dictionary).merged({"on": row.get("when", ["enter", "start"])}, true), packed)
+		z["until_round"] = int(s.combat.get("round", 1)) + int(row.get("rounds", 1)) - 1  # gone by SpellEffects.zones_expire
+		SpellEffects.add_zone(s, z)
+		lines.append("%s (клеток: %d)" % [row["name"], hit.size()])
+
+
+
 ## The squares a body walked this turn, for the map to play. Taken by the screen as `CombatRules.take_fx`.
 static func note_walk(s: GameSession, who: String, trail: Array) -> void:
 	if trail.is_empty():

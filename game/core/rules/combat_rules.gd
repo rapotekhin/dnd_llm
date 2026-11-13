@@ -1238,8 +1238,11 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 	lines.append_array(SpellEffects.end_on_attack(Sheet.holder(s, me)))  # a spell at a foe ends Sanctuary (v0.7.13.2)
 	var dice := spell_dice(sp, slot, level)
 	var t := aimed(s, target_id)
-	if str(sp.get("damage_type", "")) == "fire" and not t.is_empty():
-		FightField.kindle(s, data, area_cells(s, data, sp, t) if sp.has("area") else FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
+	if not t.is_empty():  # fire catches what burns, and any damage leaves its surface (v0.8.4.43.45)
+		var touched: Array[Vector2i] = area_cells(s, data, sp, t) if sp.has("area") else FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1)))
+		if str(sp.get("damage_type", "")) == "fire":
+			FightField.kindle(s, data, touched, lines)
+		FightField.react(s, data, str(sp.get("damage_type", "")), touched, me, lines)
 	if not sp.has("area") and _missed_unseen(s, t):
 		lines.append("%s: в пустоту — %s уже не там" % [sp["name"], t["name"]])
 		return
