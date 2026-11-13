@@ -151,9 +151,9 @@ python tools/anima/pick.py --marked
 python tools/anima/install.py --out tools/anima/out_painted --picks tools/anima/picks_painted.json
 ```
 
-## 7. Иконки в стиле «линии» (проба)
+## 7. Иконки в стиле «линии»
 
-Автор, 2026-11-12: заклинания, умения, действия и черты рас — как кнопки интерфейса (`ui`, семейство `gold`): тонкие линии на чёрном без заливки, вырезанные по яркости, но каждый вид в своей рамке и своём цвете. Это проба стиля: `--style lines` рисует в `out_lines/`, выбор — в `picks_lines_icons.json`; живописные иконки в `out_painted/` и в игре не трогаются.
+Автор, 2026-11-12: заклинания, умения, действия и черты рас — как кнопки интерфейса (`ui`, семейство `gold`): тонкие линии на чёрном без заливки, вырезанные по яркости, но каждый вид в своей рамке и своём цвете. Это была проба стиля, автор взял его (в игре с v0.8.4.43.30): `--style lines` рисует в `out_lines/`, выбор — в `picks_lines_icons.json`; живописные иконки остаются в `out_painted/` и возвращаются в игру `install.py` с `picks_painted.json`.
 
 | Вид | Рамка | Знак |
 |---|---|---|
@@ -182,7 +182,7 @@ python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only
 python tools/anima/pick.py                     # http://127.0.0.1:8791/#lines_spells; «Превью · линии» (#preview_lines) — экраны игры с выбранными иконками «линий»
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only spells,features,traits --recut   # другая рамка или цвет
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only acts --backend openrouter --recut
-# в игру — только если автор возьмёт стиль: поверх живописных
+# в игру (v0.8.4.43.30) — поверх живописных; назад — те же команды с --out tools/anima/out_painted[_flux] и picks_painted.json / picks_flux.json
 python tools/anima/install.py --out tools/anima/out_lines --picks tools/anima/picks_lines_icons.json --only spells,features,traits
 python tools/anima/install.py --out tools/anima/out_lines_flux --picks tools/anima/picks_lines_icons.json --only acts
 ```
