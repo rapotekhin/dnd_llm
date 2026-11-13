@@ -107,9 +107,10 @@ function tabs() {
 }
 
 // the game's screens laid out of every pick at this moment (ui/preview.py), drawn again on each opening; in a style
-// (lines) its icons where they are drawn, the rest as picked
+// (lines, hues) its icons where they are drawn, the rest as picked
 function previews(style) {
-  document.getElementById("title").textContent = style ? "Превью: иконки «линии» из ваших выборов" :
+  const [title] = Object.values(PREVIEWS).find(([, s]) => s === style) || ["Превью"];
+  document.getElementById("title").textContent = style ? `${title}: иконки стиля из ваших выборов` :
                                                          "Превью: экраны из ваших выборов";
   document.getElementById("count").textContent = "рамки, иконки и их варианты — как выбрано сейчас";
   grid.className = "screens";
