@@ -1018,24 +1018,39 @@ func _parley_check(params: Dictionary) -> Dictionary:
 ## «Осмотреться» (Perception) and «Обыскать» (Investigation, 10 minutes) buttons (v0.6.6, playtest-1): the engine
 ## rolls for the room (with the lock of a repeat), the master narrates the result and asks for no new check.
 ## "" or a localization key.
-func search_room(skill: String) -> String:
+## «Осмотреться» (v0.8.4.44, the author: a look by Perception only described the room and confused the player): the master
+## tells what is in sight, with no check — what is hidden is found by «Обыскать». "" or a localization key.
+func look_around() -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session) or not ExplorationRules.SEARCH_SKILLS.has(skill):
+	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
-	var params := {"skill": skill, "dc_tier": "medium"}
-	var result := _engine_check(params)
+	var text := tr("LOOK_SAY")
+	_add(GameSession.player_entry(text))
+	_log("Игрок: " + text)
+	EventBus.state_changed.emit()
+	_request("action", text + " [движок: только описание того, что на виду, без проверки — спрятанное ищут кнопкой «Обыскать»]")
+	return ""
+
+
+## «Обыскать»: the one search check — Perception (ExplorationRules.SEARCH_SKILL) — finds what can be noticed and what is
+## hidden (caches, traps, mechanisms) with DC ≤ total, and takes rules.time.search_minutes. "" or a localization key.
+func search_room() -> String:
+	if not _master_ready():
+		return "WAIT_BUSY"
+	if session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var skill := ExplorationRules.SEARCH_SKILL
+	var result := _engine_check({"skill": skill, "dc_tier": "medium"})
 	if result.has("error"):
 		return "MSG_MASTER_FAILED"
-	if skill == "investigation":
-		var passed := TimeRules.advance(session, Catalog.data, int(TimeRules.cfg(Catalog.data)["search_minutes"]))
-		if not passed.is_empty():
-			_add(GameSession.effect_entry(passed))
+	var passed := TimeRules.advance(session, Catalog.data, int(TimeRules.cfg(Catalog.data)["search_minutes"]))
+	if not passed.is_empty():
+		_add(GameSession.effect_entry(passed))
 	var found: Array = result.get("revealed", [])
-	var what := tr("SKILL_" + skill.to_upper())
-	var note := "[движок уже бросил: %s %d%s — %s]" % [what, int(result["total"]), " (повтор без изменений)" if bool(result.get("blocked", false)) else "",
+	var note := "[движок уже бросил: %s %d%s — %s]" % [tr("SKILL_" + skill.to_upper()), int(result["total"]), " (повтор без изменений)" if bool(result.get("blocked", false)) else "",
 		("найдено: " + "; ".join(found)) if not found.is_empty() else "ничего нового"]
-	var text := tr("SEARCH_SAY_" + skill.to_upper())
+	var text := tr("SEARCH_SAY")
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
 	EventBus.state_changed.emit()

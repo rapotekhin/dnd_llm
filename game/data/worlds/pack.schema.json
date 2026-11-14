@@ -295,7 +295,7 @@
 										"id": {"$ref": "#/$defs/nonempty"},
 										"dc": {"type": "integer", "minimum": 1},
 										"text": {"$ref": "#/$defs/nonempty"},
-										"skill": {"enum": ["perception", "investigation"]},
+										"skill": {"enum": ["perception", "survival", "nature", "arcana", "religion", "history"]}, "passive": {"type": "boolean"},
 										"loot": {
 											"type": "object",
 											"properties": {

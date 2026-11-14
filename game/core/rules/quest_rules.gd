@@ -234,7 +234,7 @@ static func missed(s: GameSession, data: Dictionary, skill: String) -> Array[Str
 			continue
 		for sec: Dictionary in ExplorationRules.secrets(data["world"], s.room_id):
 			if str(sec.get("id", "")) == key.get_slice(":", 1) and not ExplorationRules.is_found(s, s.room_id, sec) \
-					and (str(sec.get("skill", "perception")) == skill or skill == "investigation"):
+					and ExplorationRules.found_by(sec, skill):
 				lines.append_array(setback(s, data, qid, "find"))
 	return lines
 
@@ -342,7 +342,7 @@ static func _todo(s: GameSession, data: Dictionary, when: Dictionary, out: Array
 		r = {"do": "find", "room": room}
 		for sec: Dictionary in ExplorationRules.secrets(data["world"], room):
 			if str(sec.get("id", "")) == str(when["secret"]).get_slice(":", 1):
-				r["skill"] = str(sec.get("skill", "perception"))
+				r["skill"] = ExplorationRules.hidden_for(sec) if not ExplorationRules.hidden_for(sec).is_empty() else ExplorationRules.SEARCH_SKILL
 				r["dc"] = int(sec["dc"])
 		if when.has("has"):
 			r["item"] = str(when["has"])

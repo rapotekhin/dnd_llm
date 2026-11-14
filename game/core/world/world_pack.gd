@@ -224,8 +224,8 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 				e.append("комната %s: ловушка %s стережёт не выход комнаты" % [id, sec.get("id")])
 			if not (sec is Dictionary) or str(sec.get("id", "")).is_empty() or str(sec.get("text", "")).is_empty() \
 					or not (sec.get("dc") is float or sec.get("dc") is int) or ids.has(sec.get("id")) \
-					or not str(sec.get("skill", "perception")) in ExplorationRules.SEARCH_SKILLS:
-				e.append("комната %s: секрет — уникальный id, dc (число), text, skill perception | investigation" % id)
+					or not str(sec.get("skill", ExplorationRules.SEARCH_SKILL)) in data["rules"]["quest_gen"]["hide_skills"] 					or not (sec.get("passive", true) is bool):
+				e.append("комната %s: секрет — уникальный id, dc (число), text, passive (да или нет), skill из %s" % [id, ", ".join(data["rules"]["quest_gen"]["hide_skills"])])
 			else:
 				ids[sec["id"]] = true
 		for v: Variant in r.get("variants", []):  # v0.7.14.1: the room by the world's flags

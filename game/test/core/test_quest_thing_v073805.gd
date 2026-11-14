@@ -39,16 +39,16 @@ func _root_quest(skill: Variant) -> String:
 	return "%s_root" % str(a["quest_id"])
 
 
-func test_a_thing_hidden_for_survival_is_found_by_survival_and_investigation() -> void:
+func test_a_thing_hidden_for_survival_is_found_by_survival_and_the_search() -> void:
 	var qid := _root_quest("survival")
 	s.room_id = "brod-tavern-cellar"
 	var found := func(skill: String) -> bool:
 		s.knows.erase(Knows.SECRET)
 		ExplorationRules.active_reveal(s, data["world"], skill, 30)
 		return Knows.has(s, Knows.SECRET, "brod-tavern-cellar", "q_" + qid)
-	assert_bool(found.call("perception")).is_false()
+	assert_bool(found.call("perception")).is_true()  # the one search (v0.8.4.44)
 	assert_bool(found.call("survival")).is_true()
-	assert_bool(found.call("investigation")).is_true()
+	assert_bool(found.call("investigation")).is_false()
 	assert_bool(found.call("athletics")).is_false()
 
 

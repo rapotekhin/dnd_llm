@@ -49,7 +49,7 @@ func test_successes_and_saves_are_not_locked() -> void:
 
 
 func test_passive_perception_notices_on_entering() -> void:
-	# Айра: passive Perception 13. The cellar: tracks DC 12 (perception), tunnel DC 15 (investigation).
+	# Айра: passive Perception 13. The cellar: tracks DC 12 (noticed in passing), tunnel DC 15 (`passive: false`: only a search).
 	var noticed := ExplorationRules.enter_room(s, world, "brod-tavern-cellar")
 	assert_array(noticed).has_size(1)
 	assert_str(noticed[0]).contains("следы")
@@ -57,17 +57,18 @@ func test_passive_perception_notices_on_entering() -> void:
 	assert_array(ExplorationRules.enter_room(s, world, "brod-tavern-cellar")).is_empty()  # once
 
 
-func test_investigation_finds_what_perception_would_notice() -> void:
-	ExplorationRules.enter_room(s, world, "brod-tavern-kitchen")  # the new bolt: DC 13, perception; passive 13 notices it
+func test_the_search_finds_what_perception_would_notice() -> void:
+	ExplorationRules.enter_room(s, world, "brod-tavern-kitchen")  # the new bolt: DC 13; passive 13 notices it
 	s.knows.erase(Knows.SECRET)
-	assert_array(ExplorationRules.active_reveal(s, world, "investigation", 13)).has_size(1)
+	assert_array(ExplorationRules.active_reveal(s, world, "perception", 13)).has_size(1)
 
 
-func test_active_search_finds_only_its_skill_and_dc() -> void:
+## v0.8.4.44, the author: the search is one check — Perception finds what Investigation found; Investigation finds nothing.
+func test_the_search_by_perception_finds_the_hidden_by_its_dc() -> void:
 	ExplorationRules.enter_room(s, world, "brod-tavern-cellar")
-	assert_array(ExplorationRules.active_reveal(s, world, "perception", 20)).is_empty()  # the tunnel needs Investigation
-	assert_array(ExplorationRules.active_reveal(s, world, "investigation", 14)).is_empty()
-	var found := ExplorationRules.active_reveal(s, world, "investigation", 15)
+	assert_array(ExplorationRules.active_reveal(s, world, "investigation", 20)).is_empty()  # no more a search
+	assert_array(ExplorationRules.active_reveal(s, world, "perception", 14)).is_empty()
+	var found := ExplorationRules.active_reveal(s, world, "perception", 15)
 	assert_str(found[0]).contains("лаз")
 	assert_array(ExplorationRules.found_texts(s, world, "brod-tavern-cellar")).has_size(2)
 	var snap := TurnSnapshot.build(s, data, 4000)

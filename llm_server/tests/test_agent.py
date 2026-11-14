@@ -341,7 +341,7 @@ def test_a_search_check_passes_what_the_engine_revealed(data_dir):
         if method == "engine.check":
             return {**CHECK_OK, "revealed": ["за бочками — старый лаз в стене"]}
         return default_engine(method, params)
-    fn = scripted(("request_check", {"skill": "investigation", "dc_tier": "medium", "reason": "обыск"}),
+    fn = scripted(("request_check", {"skill": "perception", "dc_tier": "medium", "reason": "обыск"}),
                   ("final", {"narration": "Ты находишь лаз."}))
     play(data_dir, fn, engine=engine)
     text = last_tool_text(fn.state["prompts"][1])
@@ -481,7 +481,7 @@ def test_the_router_sends_words_short_and_deeds_full(data_dir):
     fn = scripted(("final", {"full": False}), ("final", {"narration": "Борик кивает: тихий вечер."}))
     msg, _, _ = play(data_dir, fn, services=_routed(data_dir, fn), input="спрашиваю, как вечер")
     assert msg["result"]["narration"] == "Борик кивает: тихий вечер." and fn.state["n"] == 2
-    fn = scripted(("final", {"full": True}), ("request_check", {"skill": "investigation", "dc_tier": "medium", "reason": "обыск"}),
+    fn = scripted(("final", {"full": True}), ("request_check", {"skill": "perception", "dc_tier": "medium", "reason": "обыск"}),
                   ("final", {"narration": "Под стойкой — ничего."}))
     msg, calls, _ = play(data_dir, fn, services=_routed(data_dir, fn), input="обыскиваю стойку")
     assert [c["method"] for c in calls] == ["engine.check"] and "Подробные правила" in str(fn.state["prompts"][1][0].instructions)
@@ -769,7 +769,7 @@ def _engine_revealing(text):
 
 def test_a_found_thing_told_without_an_effect_is_sent_back_once(data_dir):
     fn = scripted(
-        ("request_check", {"skill": "investigation", "dc_tier": "medium", "reason": "обыск"}),
+        ("request_check", {"skill": "perception", "dc_tier": "medium", "reason": "обыск"}),
         ("final", {"narration": "На бархате лежит кольцо из чёрного железа."}),
         ("final", {"narration": "На бархате лежит кольцо из чёрного железа."}),
     )
@@ -782,7 +782,7 @@ def test_a_found_thing_told_without_an_effect_is_sent_back_once(data_dir):
 
 def test_a_pack_cache_given_by_the_engine_is_not_asked_again(data_dir):
     fn = scripted(
-        ("request_check", {"skill": "investigation", "dc_tier": "medium", "reason": "обыск"}),
+        ("request_check", {"skill": "perception", "dc_tier": "medium", "reason": "обыск"}),
         ("final", {"narration": "В дупле — мешочек монет."}),
     )
     msg, _, _ = play(data_dir, fn, _engine_revealing("в дупле мешочек (тайник: найденное движок уже выдал герою — не выдавай его снова)"))

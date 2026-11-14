@@ -109,7 +109,7 @@ func test_the_goal_quest_gives_that_very_thing() -> void:
 	var act := func(item_id: String) -> Dictionary:
 		return fx.validate(s, data, "t-act", {"kind": "quest_act", "quest_id": qid, "act": 1,
 			"items": [{"key": "amulet", "item_id": item_id, "room": "brod-tavern-cellar", "hint": "в шкатулке за бочками", "dc_tier": "easy",
-				"skill": "investigation"}],
+				"skill": "perception"}],
 			"steps": [{"text": "Найти амулет в погребе", "kind": "find", "target": "amulet"}]})
 	var wrong: Dictionary = act.call("lute")
 	assert_bool(bool(wrong["accepted"])).is_false()

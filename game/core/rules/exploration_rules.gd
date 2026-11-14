@@ -6,9 +6,11 @@ extends RefCounted
 ##   v0.7.22.2-3) the state the check was rolled in: the hero's conditions and spells, the darkness of a look, the
 ##   listener's attitude and the charms on it (paralysis gone — the look is rolled again); a social check — also a
 ##   new argument of the player (`argument`, the master names it), not the same words ten times;
-## - hidden things of a room (world.json `secrets`: id, dc, text, skill perception | investigation) are noticed
-##   by passive Perception on entering, or found by a successful search check with total ≥ DC (Investigation
-##   finds any secret, Perception only the perception ones);
+## - hidden things of a room (world.json `secrets`: id, dc, text, passive?, skill?) are noticed by passive Perception
+##   on entering (unless `passive: false` — only a search finds it), or found by a successful search with total ≥ DC.
+##   The search is one check, Perception (v0.8.4.44, the author: «Осмотреться» only describes, «Обыскать» finds both
+##   what can be noticed and what is hidden): it finds any secret; a thing hidden for another skill (`skill` of
+##   rules.quest_gen.hide_skills: a root in black water — Survival) is found by that skill too and never noticed in passing;
 ##   the master sees only what was noticed or found;
 ## - a long rest in a safe room (`safe.rest_cost_cp`) restores HP, spell slots, half the hit dice and feature
 ##   uses, ends conditions and concentration, clears the locks and starts a new day;
@@ -22,7 +24,7 @@ extends RefCounted
 ##   way out. A sprung or disarmed trap is spent (s.traps). Caches: a secret with `loot` {coins_cp, items} gives
 ##   it once when found (s.caches_taken).
 
-const SEARCH_SKILLS: Array[String] = ["perception", "investigation"]
+const SEARCH_SKILL := "perception"  ## the one search check (v0.8.4.44): «Обыскать» and the master's search
 const SOCIAL_SKILLS: Array[String] = ["persuasion", "deception", "intimidation", "performance"]
 
 
@@ -121,7 +123,7 @@ static func enter_room(s: GameSession, world: Dictionary, room_id: String, penal
 	var out: Array[String] = []
 	var passive := int(s.character.get("passive_perception", 10)) - (penalty if penalty >= 0 else (SNEAK_PASSIVE_PENALTY if s.sneaking else 0))
 	for sec: Dictionary in secrets(world, room_id):
-		if not on_square(sec) and str(sec.get("skill", "perception")) == "perception" and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
+		if not on_square(sec) and noticed_passively(sec) and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
 			out.append(str(sec["text"]))
 	return out
 
@@ -145,7 +147,7 @@ static func notice(s: GameSession, data: Dictionary, map: Dictionary, cell: Vect
 	var passive := Sheet.passive(s, data, Sheet.HERO)
 	var reach := int(SightRules.cfg(data)["notice"])
 	for sec: Dictionary in secrets(data["world"], s.room_id):
-		if not on_square(sec) or str(sec.get("skill", "perception")) != "perception" or passive < int(sec["dc"]) or is_found(s, s.room_id, sec) or s.traps.has(secret_key(s.room_id, sec)):
+		if not on_square(sec) or not noticed_passively(sec) or passive < int(sec["dc"]) or is_found(s, s.room_id, sec) or s.traps.has(secret_key(s.room_id, sec)):
 			continue
 		var at := MapSpots.secret_cell(s, data, map, s.room_id, sec)
 		if at.x >= 0 and WalkRules.distance(at, cell) <= reach and SightRules.line(map, data["layouts"], cell, at) and _reveal(s, s.room_id, sec):
@@ -166,14 +168,12 @@ static func trap_at(s: GameSession, data: Dictionary, map: Dictionary, cell: Vec
 ## The last look before a trap on the way out, for a move that was no walk: passive Perception finds it. Its text or "".
 static func approach(s: GameSession, data: Dictionary, room_id: String, sec: Dictionary) -> String:
 	var passive := Sheet.passive(s, data, Sheet.HERO)
-	if str(sec.get("skill", "perception")) == "perception" and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
+	if noticed_passively(sec) and passive >= int(sec["dc"]) and _reveal(s, room_id, sec):
 		return str(sec["text"])
 	return ""
 
 
-## A successful search check finds the room's secrets with DC ≤ total: Perception finds what can be noticed,
-## Investigation (a thorough search) finds that too and also mechanisms and caches; a quest's thing hidden for
-## another skill (v0.7.38.5: a root in black water — Survival) is found by that skill too. Returns their texts.
+## A successful search check finds the room's secrets with DC ≤ total (`found_by`). Returns their texts.
 ## A cache of the pack the engine gives itself (take_caches): the master is told so and gives nothing again — the server
 ## reads this mark (agents.CACHE_GIVEN, v0.8.4.41.1).
 const CACHE_GIVEN := " (тайник: найденное движок уже выдал герою — не выдавай его снова)"
@@ -182,10 +182,26 @@ const CACHE_GIVEN := " (тайник: найденное движок уже в�
 static func active_reveal(s: GameSession, world: Dictionary, skill: String, total: int) -> Array[String]:
 	var out: Array[String] = []
 	for sec: Dictionary in secrets(world, s.room_id):
-		var needs := str(sec.get("skill", "perception"))
-		if (needs == skill or skill == "investigation") and total >= int(sec["dc"]) and _reveal(s, s.room_id, sec):
+		if found_by(sec, skill) and total >= int(sec["dc"]) and _reveal(s, s.room_id, sec):
 			out.append(str(sec["text"]) + (CACHE_GIVEN if sec.has("loot") else ""))
 	return out
+
+
+## A secret passive Perception notices in passing: one not marked `passive: false` (only a search finds it) and hidden
+## for no other skill.
+static func noticed_passively(sec: Dictionary) -> bool:
+	return bool(sec.get("passive", true)) and hidden_for(sec).is_empty()
+
+
+## A check of `skill` finds `sec`: the search (Perception) finds any; a thing hidden for another skill — that skill too.
+static func found_by(sec: Dictionary, skill: String) -> bool:
+	return skill == SEARCH_SKILL or (not hidden_for(sec).is_empty() and hidden_for(sec) == skill)
+
+
+## The skill a thing is hidden for besides the search (rules.quest_gen.hide_skills), "" — the search alone.
+static func hidden_for(sec: Dictionary) -> String:
+	var skill := str(sec.get("skill", ""))
+	return "" if skill == SEARCH_SKILL else skill
 
 
 # --- traps and caches (v0.6.3) ---------------------------------------------------------------------

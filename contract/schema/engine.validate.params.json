@@ -4138,14 +4138,10 @@
           "title": "Dc Tier",
           "type": "string"
         },
-        "skill": {
-          "default": "perception",
-          "enum": [
-            "perception",
-            "investigation"
-          ],
-          "title": "Skill",
-          "type": "string"
+        "passive": {
+          "default": true,
+          "title": "Passive",
+          "type": "boolean"
         },
         "text": {
           "maxLength": 240,
@@ -5317,7 +5313,7 @@
     },
     "QuestItem": {
       "additionalProperties": false,
-      "description": "A thing of a quest's act (0.37.0; 0.81.0 — with `key`): a catalog `item_id` or a new `item`, hidden in `room`\n(an id or «new:<room key>»); `hint` — where it lies, found by a check of `dc_tier` with `skill` (0.75.0: a plant in\nthe wild — survival or nature; Investigation finds it too). `from_giver` (0.69.0) — the giver hands it over when\nthe quest is taken (only in the first act): no `room` or `hint`. Steps name it by `key`.",
+      "description": "A thing of a quest's act (0.37.0; 0.81.0 — with `key`): a catalog `item_id` or a new `item`, hidden in `room`\n(an id or «new:<room key>»); `hint` — where it lies, found by a check of `dc_tier` with `skill` (0.75.0: a plant in\nthe wild — survival or nature; 0.129.0: the search, Perception, finds it too). `from_giver` (0.69.0) — the giver hands it over when\nthe quest is taken (only in the first act): no `room` or `hint`. Steps name it by `key`.",
       "properties": {
         "dc_tier": {
           "default": "medium",
@@ -5380,7 +5376,6 @@
           "default": "perception",
           "enum": [
             "perception",
-            "investigation",
             "survival",
             "nature",
             "arcana",

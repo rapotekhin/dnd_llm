@@ -394,7 +394,7 @@ static func plan_place(s: GameSession, data: Dictionary, spec: Dictionary, searc
 			if not (data["rules"]["dc_tiers"] as Dictionary).has(tier) or str(sec.get("text", "")).length() < 5:
 				return {"reason": "тайна: text и dc_tier из %s" % ", ".join((data["rules"]["dc_tiers"] as Dictionary).keys())}
 			secrets.append({"id": "s%d" % (secrets.size() + 1), "dc": int(data["rules"]["dc_tiers"][tier]), "text": str(sec["text"]).left(240),
-				"skill": "investigation" if str(sec.get("skill", "")) == "investigation" else "perception"})
+				"passive": sec.get("passive", true) != false})
 		var enc := {}
 		if r.get("encounter") is Dictionary and not (r["encounter"].get("enemies", []) as Array).is_empty():
 			var enemies: Array = []

@@ -37,7 +37,7 @@ func _quest() -> String:
 	var id := str(s.generated["quests"].keys()[0])
 	QuestRules.accept(s, data, id)
 	var a := fx.validate(s, data, "t-2", {"kind": "quest_act", "quest_id": id, "act": 1,
-		"items": [{"key": "roster", "item": ROSTER, "room": ROOM, "hint": "за бочкой", "dc_tier": "medium", "skill": "investigation"}],
+		"items": [{"key": "roster", "item": ROSTER, "room": ROOM, "hint": "за бочкой", "dc_tier": "medium"}],
 		"steps": [{"text": "Добыть список нарядов", "kind": "find", "target": "roster"}, {"text": "Рассказать Бруно", "kind": "talk", "target": "npc_innkeeper"}]})
 	assert_bool(bool(a["accepted"])).override_failure_message(str(a)).is_true()
 	fx.apply(s, "t-2", [a["effect_id"]])
@@ -93,7 +93,7 @@ func test_a_furnishing_does_not_lay_the_hidden_quest_thing_in_the_open() -> void
 ## hiding place is missed and its act goes on from the failure, as on any failed roll.
 func test_a_search_on_a_natural_1_misses_the_quest_thing_whatever_the_total() -> void:
 	var qid := _quest()
-	s.character["skills"]["investigation"] = 40  # the total passes any DC: only the die fails it
+	s.character["skills"]["perception"] = 40  # the total passes any DC: only the die fails it
 	var seed_one := 0
 	for seed_try in range(1, 2000):
 		s.rng.seed = seed_try
@@ -101,7 +101,7 @@ func test_a_search_on_a_natural_1_misses_the_quest_thing_whatever_the_total() ->
 			seed_one = seed_try
 			break
 	s.rng.seed = seed_one
-	var r := GameState._engine_check({"skill": "investigation", "dc_tier": "medium"})
+	var r := GameState._engine_check({"skill": "perception", "dc_tier": "medium"})
 	assert_int(int(r["nat"])).is_equal(1)
 	assert_bool(bool(r["success"])).is_false()
 	assert_bool(Knows.has(s, Knows.SECRET, ROOM, "q_%s_roster" % qid)).is_false()

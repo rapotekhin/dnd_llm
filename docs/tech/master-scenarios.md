@@ -121,7 +121,7 @@
 ### Найти скрытое
 
 - **Когда:** игрок ищет, осматривает зацепку (`scene.hooks`).
-- **Пайплайн:** `request_check {skill: perception | investigation}` → описать **ровно** открытое движком (`revealed`).
+- **Пайплайн:** `request_check {skill: perception}` (одна проверка поиска с v0.8.4.44; вещь, спрятанная для другого навыка, — и им) → описать **ровно** открытое движком (`revealed`).
 - **Движок:** скрытое комнаты по итогу броска ([ExplorationRules.active_reveal](../../game/core/rules/exploration_rules.gd#L125)), тайники выдаются сразу, шаги заданий продвигаются; ловушка найдена — её обезвреживают кнопкой (`kind: trap`).
 - **Golden:** `search_room_fail`, `inspect_hook_needs_check`, `hidden_hook_no_leak`, `magic_find_in_a_cache`.
 

@@ -73,7 +73,7 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         return await _stub_prepare(session, params, usage)
     if params.kind in ("deal", "quest", "ability", "downed", "combat_start", "combat_round", "death", "law"):
         return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
-    if params.kind != "action":
+    if params.kind != "action" or "без проверки" in params.input:  # «Осмотреться» asks no check (v0.8.4.44)
         return TurnResult(turn_id=params.turn_id, narration="Вы осматриваетесь.", usage=usage)
 
     raw = await session.call_engine(

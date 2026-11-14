@@ -1047,8 +1047,8 @@ func _plan_hidden_give(s: GameSession, world: Dictionary, id: String) -> Diction
 	if hid.is_empty():
 		return {}
 	var rid := str(hid["room"])
-	var skill := str(hid["secret"].get("skill", "perception"))
-	var how := "request_check %s или investigation" % skill if skill != "investigation" else "request_check investigation"
+	var other := ExplorationRules.hidden_for(hid["secret"])
+	var how := "request_check perception" + ("" if other.is_empty() else " или " + other)
 	var where := str(world["rooms"][rid].get("name", rid))
 	if rid != s.room_id:
 		return {"reason": "эта вещь спрятана в «%s» — её находят там проверкой (%s), а не move_item:world>hero" % [where, how]}

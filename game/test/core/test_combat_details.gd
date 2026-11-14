@@ -333,7 +333,7 @@ func test_sneaking_lowers_passive_perception_for_hidden_things() -> void:
 	var world: Dictionary = data["world"]
 	for rid: String in world["rooms"]:
 		for sec: Dictionary in ExplorationRules.secrets(world, rid):
-			if str(sec.get("skill", "perception")) != "perception":
+			if not ExplorationRules.noticed_passively(sec) or ExplorationRules.on_square(sec):
 				continue
 			var s := _session()
 			s.character["passive_perception"] = int(sec["dc"])

@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.128.0"
+PROTOCOL_VERSION = "0.129.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -906,7 +906,7 @@ class NewNpc(_Out):
 class NewSecret(_Out):
     text: str = Field(min_length=5, max_length=240)
     dc_tier: Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"] = "medium"
-    skill: Literal["perception", "investigation"] = "perception"
+    passive: bool = True  # 0.129.0: false — found only by a search (was skill investigation)
 
 
 class NewEnemy(_Out):
@@ -1044,7 +1044,7 @@ CreatePlaceEffect.model_rebuild()  # its `npcs` are QuestNpc, defined after it
 class QuestItem(_Out):
     """A thing of a quest's act (0.37.0; 0.81.0 — with `key`): a catalog `item_id` or a new `item`, hidden in `room`
     (an id or «new:<room key>»); `hint` — where it lies, found by a check of `dc_tier` with `skill` (0.75.0: a plant in
-    the wild — survival or nature; Investigation finds it too). `from_giver` (0.69.0) — the giver hands it over when
+    the wild — survival or nature; 0.129.0: the search, Perception, finds it too). `from_giver` (0.69.0) — the giver hands it over when
     the quest is taken (only in the first act): no `room` or `hint`. Steps name it by `key`."""
 
     key: str = Field(min_length=1, max_length=20)
@@ -1054,7 +1054,7 @@ class QuestItem(_Out):
     room: str = ""
     hint: str = ""
     dc_tier: Literal["very_easy", "easy", "medium", "hard", "very_hard", "nearly_impossible"] = "medium"
-    skill: Literal["perception", "investigation", "survival", "nature", "arcana", "religion", "history"] = "perception"
+    skill: Literal["perception", "survival", "nature", "arcana", "religion", "history"] = "perception"
 
 
 class QuestAct(_Out):

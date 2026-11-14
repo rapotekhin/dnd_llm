@@ -64,7 +64,7 @@ scenarios:
         hooks:
           - {id: hook_loose_board, text: "одна половица у очага чуть выше других", dc: 15}
     expect:
-      check: {required: true, skill_in: [perception, investigation], dc_tier_in: [easy, medium]}
+      check: {required: true, skill_in: [perception], dc_tier_in: [easy, medium]}
       effects: {forbidden_kinds: [move_item:world>hero, coins]}
       narration:
         must_not_match: ["(находишь|нашл[аи]|обнаруживаешь|видишь) (тайник|монет)", "монет[аы]? под половицей"]
@@ -83,12 +83,29 @@ scenarios:
         hooks:
           - {id: hook_new_bolt, text: "люк в погреб заперт на новый засов, хотя старый был исправен", dc: 13}
     expect:
-      check: {required: true, skill_in: [perception, investigation]}
+      check: {required: true, skill_in: [perception]}
       effects: {forbidden_kinds: [move_item:world>hero, coins]}
       narration:
         must_not_match: ["царапин", "следы (когтей|взлома|инструмента)", "кровь"]
     rubric:
       - "Мастер просит проверку и описывает только то, что дала зацепка и итог проверки, без новых улик"
+
+  - id: look_around_no_check
+    title: "«Осмотреться» — описание без проверки (v0.8.4.44)"
+    category: checks
+    extends: tavern
+    input: "Осматриваюсь по сторонам [движок: только описание того, что на виду, без проверки — спрятанное ищут кнопкой «Обыскать»]"
+    snapshot:
+      scene:
+        hooks:
+          - {id: hook_loose_board, text: "одна половица у очага чуть выше других", dc: 15}
+    expect:
+      check: {required: false}
+      effects: {forbidden_kinds: [move_item:world>hero, coins]}
+      narration:
+        must_not_match: ["(находишь|нашл[аи]|обнаруживаешь) (тайник|монет)", "монет[аы]? под половицей"]
+    rubric:
+      - "Мастер описывает зал и то, что на виду, без проверки и без бросков; спрятанное не раскрывает"
 
   - id: hidden_hook_no_leak
     title: "Вход в комнату со скрытым люком"
@@ -984,7 +1001,7 @@ scenarios:
         - {id: goggles_of_night, name: "Очки ночного видения", base: null, rarity: uncommon}
         - {id: stone_of_good_luck, name: "Камень удачи", base: null, rarity: uncommon}
     expect:
-      check: {required: true, skill_in: [investigation, perception]}
+      check: {required: true, skill_in: [perception]}
       effects: {required_kinds_any: [move_item:world>hero]}
     rubric:
       - "После успешного обыска герой находит настоящую магическую вещь — из каталога (find_items) или новую со свойствами, а не безделушку «свойства неизвестны» без механики"
@@ -1005,7 +1022,7 @@ scenarios:
       find_items:
         - {id: cloak_of_protection, name: "Плащ защиты", base: null, rarity: uncommon}
     expect:
-      check: {required: true, skill_in: [investigation, perception]}
+      check: {required: true, skill_in: [perception]}
       effects: {required_kinds_any: [move_item:world>hero], required_fields: [item.wear.fly_speed]}
     rubric:
       - "Найденный плащ из перьев — новая вещь мастера с `wear.fly_speed`: полёт, пока надет; не плащ защиты каталога и не безделушка без механики"
@@ -1026,7 +1043,7 @@ scenarios:
       find_items:
         - {id: ring_of_protection, name: "Кольцо защиты", base: null, rarity: rare}
     expect:
-      check: {required: true, skill_in: [investigation, perception]}
+      check: {required: true, skill_in: [perception]}
       effects: {required_kinds_any: [move_item:world>hero], required_fields: [item.wear.status]}
     rubric:
       - "Найденное кольцо — новая вещь мастера с `wear.status: \"spell:bless\"` (или свой статус с костью к атаке и спасброску): благословение на носящем, пока надето; не кольцо защиты каталога и не заклинание по зарядам"
@@ -1045,7 +1062,7 @@ scenarios:
     engine:
       check: {d20: [15], bonus: 4, total: 19, dc: 12, success: true, nat: null, blocked: false, revealed: ["в шкатулке — кольцо из чёрного железа; на нём проклятие: надевший застывает, скованный параличом, и снять кольцо не может, пока проклятие не снимут"]}
     expect:
-      check: {required: true, skill_in: [investigation, perception]}
+      check: {required: true, skill_in: [perception]}
       effects: {required_kinds_any: [move_item:world>hero], required_fields: [item.wear.status]}
     rubric:
       - "Кольцо — новая вещь с `wear.status: \"paralyzed\"` и свойством `cursed` в `properties`: вредный статус держит только проклятая вещь"
@@ -1065,7 +1082,7 @@ scenarios:
     engine:
       check: {d20: [15], bonus: 4, total: 19, dc: 12, success: true, nat: null, blocked: false, revealed: ["в шкатулке — кольцо с розовым камнем; проклятие: кто его наденет, того легко уговорить — все проверки Убеждения против него с преимуществом, и снять кольцо он не может, пока проклятие не снимут"]}
     expect:
-      check: {required: true, skill_in: [investigation, perception]}
+      check: {required: true, skill_in: [perception]}
       effects: {required_kinds_all: [make, move_item:world>hero], required_fields: [item.wear.status]}
     rubric:
       - "Статус собран эффектом make (what status) с частью `against`, value `persuasion`, amount 1 — проверки других против носящего с преимуществом; не `check` и не придуманная часть"
@@ -1099,7 +1116,7 @@ scenarios:
       find_items:
         - {id: horn_of_blasting, name: "Рог взрыва", base: null, rarity: rare}
     expect:
-      check: {required: true, skill_in: [investigation, perception]}
+      check: {required: true, skill_in: [perception]}
       effects: {required_kinds_any: [move_item:world>hero], required_fields: [item.use.summon]}
     rubric:
       - "Найденный рог — новая вещь мастера с `use.summon` (волки, их число и время), с зарядами или на один раз; не рог из каталога и не безделушка"
@@ -1391,7 +1408,7 @@ scenarios:
         hooks: ["под корнями мёртвого дуба темнеет то ли нора, то ли лаз"]
         closed_exits: ["лаз под корнями мёртвого дуба ещё надо найти"]
     expect:
-      check: {skill_in: [perception, investigation]}
+      check: {skill_in: [perception]}
       effects: {forbidden_kinds: [move, start_combat, move_item:world>hero]}
       narration:
         must_not_match: ["туннел", "камер[аеу]", "колод[ец]", "подземел", "выработк"]
@@ -3543,12 +3560,12 @@ scenarios:
         - {id: gen_quest_1, title: "Кольцо хозяйки", description: "Жена Горма обронила обручальное кольцо где-то в погребе.", step: "Отыскать кольцо хозяйки в погребе"}
     engine:
       check: {d20: [14], bonus: 2, total: 16, dc: 12, success: true, nat: 14, blocked: false,
-              revealed: ["За нижней бочкой у стены, в щели между досками, блестит обручальное кольцо — кольцо хозяйки (вещь задания «Кольцо хозяйки»)"]}
+              revealed: ["За нижней бочкой у стены, в щели между досками, блестит обручальное кольцо — кольцо хозяйки (вещь задания «Кольцо хозяйки») (тайник: найденное движок уже выдал герою — не выдавай его снова)"]}
     expect:
-      check: {required: true, skill_in: [investigation, perception]}
+      check: {required: true, skill_in: [perception]}
       effects: {forbidden_kinds: [move_item:world>hero, quest_update, xp, coins]}
     rubric:
-      - "Мастер просит проверку поиска (Анализ или Внимательность), а не выдаёт кольцо словами; находку рассказывает по ответу движка: кольцо за нижней бочкой — без новых подробностей и без move_item:world>hero (вещь из тайника герою даёт движок)"
+      - "Мастер просит проверку поиска (Внимательность), а не выдаёт кольцо словами; находку рассказывает по ответу движка: кольцо за нижней бочкой — без новых подробностей и без move_item:world>hero (вещь из тайника герою даёт движок)"
 
   - id: quest_target_elsewhere
     title: "Цель шага в другом месте — мастер не приводит вожака в сцену, а говорит, где он (трейс автора, v0.8.4.42.11)"

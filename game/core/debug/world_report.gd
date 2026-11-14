@@ -37,7 +37,7 @@ static func room(s: GameSession, data: Dictionary, room_id: String) -> String:
 	var found := Knows.under(s, Knows.SECRET, room_id)
 	for sec: Dictionary in r.get("secrets", []):
 		var key := ExplorationRules.secret_key(room_id, sec)
-		var tags: PackedStringArray = ["найден" if found.has(str(sec["id"])) else "скрыт", "%s Сл %d" % [sec.get("skill", "perception"), int(sec.get("dc", 0))]]
+		var tags: PackedStringArray = ["найден" if found.has(str(sec["id"])) else "скрыт", "%s Сл %d" % [sec.get("skill", "поиск" if sec.get("passive", true) == false else "perception"), int(sec.get("dc", 0))]]
 		if sec.has("trap"):
 			tags.append("ловушка: %s (обезвредить Сл %d, охраняет %s)" % [s.traps.get(key, "взведена"), int(sec["trap"].get("disarm_dc", 0)), sec["trap"].get("guards", "")])
 		if sec.has("loot"):

@@ -849,8 +849,8 @@ static func _plan_item(s: GameSession, data: Dictionary, qi: Dictionary, content
 	var tier := _str(qi, "dc_tier") if not _str(qi, "dc_tier").is_empty() else "medium"
 	if not (data["rules"]["dc_tiers"] as Dictionary).has(tier) or _str(qi, "hint").length() < 5:
 		return {"reason": "вещь %s: hint (где она спрятана, по-русски) и dc_tier из %s" % [key, ", ".join((data["rules"]["dc_tiers"] as Dictionary).keys())]}
-	var skill := _str(qi, "skill") if not _str(qi, "skill").is_empty() else "perception"
-	var skills: Array = cfg(data).get("hide_skills", ["perception", "investigation"])
+	var skill := _str(qi, "skill") if not _str(qi, "skill").is_empty() else ExplorationRules.SEARCH_SKILL
+	var skills: Array = cfg(data)["hide_skills"]
 	if not skills.has(skill):
 		return {"reason": "вещь %s: skill — навык, которым её находят: %s" % [key, ", ".join(skills)]}
 	return {"key": key, "id": id, "def": def, "name": name, "room": room, "text": _str(qi, "hint").left(240),

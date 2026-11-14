@@ -798,8 +798,13 @@ func hook(control: Control, title_text: String, body_text: String, card: Diction
 			_shown = control
 		show_text(title_text, body_text, card, look)
 	if not (floating and control is IconSlot):  # an icon's own card is at the cursor already
-		# Godot tells the hover before the motion reaches `_input`: where the cursor is now is known at the frame's end
-		control.mouse_entered.connect(func() -> void: shown.call_deferred())
+		# Godot tells the hover before the motion reaches `_input`: where the cursor is now is known at the frame's end — a
+		# card at the cursor waits for it, a panel in its place shows at once
+		control.mouse_entered.connect(func() -> void:
+			if floating:
+				shown.call_deferred()
+			else:
+				shown.call())
 		if control is BaseButton:
 			(control as BaseButton).pressed.connect(shown)
 	if not floating:  # a card comes by the cursor, not by the keyboard's focus passing

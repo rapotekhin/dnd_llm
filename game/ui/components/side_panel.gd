@@ -957,9 +957,8 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		var wait := _row_button(place, tr("BTN_SNEAK_WAIT"), GameState.sneak_round, can_act)
 		wait.name = "SneakWait"
 		wait.tooltip_text = tr("BTN_SNEAK_WAIT_TIP")
-	for spec: Array in [["LookButton", "BTN_LOOK", "perception"], ["SearchButton", "BTN_SEARCH", "investigation"]]:
-		var skill: String = spec[2]
-		var lb := _row_button(place, tr(spec[1]), _try.bind(GameState.search_room.bind(skill)), can_act)
+	for spec: Array in [["LookButton", "BTN_LOOK", GameState.look_around], ["SearchButton", "BTN_SEARCH", GameState.search_room]]:
+		var lb := _row_button(place, tr(spec[1]), _try.bind(spec[2]), can_act)
 		lb.name = spec[0]
 		lb.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lb.tooltip_text = tr(spec[1] + "_TIP")
