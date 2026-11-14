@@ -23,6 +23,7 @@ const WATER := "~"
 const BLANK := " "
 const SIDES: Array[String] = ["n", "e", "s", "w"]
 const STEP: Dictionary = {"n": Vector2i(0, -1), "e": Vector2i(1, 0), "s": Vector2i(0, 1), "w": Vector2i(-1, 0)}
+const TOPS: Array[String] = ["n", "w", "s", "e"]  ## where a picture's top looks after 0…3 quarter turns against the clock
 const OPPOSITE: Dictionary = {"n": "s", "e": "w", "s": "n", "w": "e"}
 const ROTATIONS := 4
 const FILL := "B"  ## what fills a pocket of an open map nobody can reach, unless the kind scatters something
@@ -1707,7 +1708,6 @@ static func props_laid(lib: Dictionary, keys: Array[String], rows: Array, seed_v
 ## The quarter turns of a way out's thing: its picture's top looks out of the map at the rim, to the wall beside the stairs
 ## (0 north, 1 west, 2 south, 3 east, as `prop_turn` turns a picture).
 static func exit_turn(rows: Array, x: int, y: int, side: String, kind: String) -> int:
-	const TOPS: Array[String] = ["n", "w", "s", "e"]
 	if kind != "stairs" and TOPS.has(side):
 		return TOPS.find(side)
 	for k: int in TOPS.size():

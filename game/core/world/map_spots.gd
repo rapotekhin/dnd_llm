@@ -448,8 +448,20 @@ static func footprint(size: Array, at: Vector2i, turn: int) -> Array[Vector2i]:
 	return out
 
 
+## A thing's `back` (the side of its picture unturned that stands to a wall, `rules.things.bodies`) after `turn` quarter
+## turns against the clock touches no floor of `room`: a stage looks into the hall, a desk's seat is on the room's side,
+## a bed's head is at the wall (v0.8.4.44.2.2).
+static func back_to_wall(back: String, mine: Array[Vector2i], turn: int, room: Dictionary) -> bool:
+	var d: Vector2i = LayoutGen.STEP[LayoutGen.TOPS[(LayoutGen.TOPS.find(back) + turn) % 4]]
+	for c: Vector2i in mine:
+		if not mine.has(c + d) and room.has(c + d):
+			return false
+	return true
+
+
 ## A thing of a body laid near `at`: its squares all free among `spots` and not `taken`, turned as the seed of `key` says
-## first; one that bars the way keeps every way of the room joined. `must` — one of its squares is `at` itself (a station
+## first, but a thing with a `back` with it to a wall where it may (`back_to_wall`); one that bars the way keeps every way
+## of the room joined. `must` — one of its squares is `at` itself (a station
 ## of a mark, a thing put by hand); none holds `at` — whole on the nearest free floor beside it (v0.8.4.43.60).
 ## {"at": top left, "turn", "cells"}. `want` — of the fits the one with most squares in it (a counter along its marks).
 ## Nothing fits whole anywhere — "loose": one square at `at`, its body not drawn (`_with_body`).
@@ -464,6 +476,11 @@ static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, s
 			free[c] = true
 	var h := absi(key.hash())
 	var turns: Array[int] = [h % 4, (h + 1) % 4, (h + 2) % 4, (h + 3) % 4]
+	var back := str(body.get("back", ""))  # its picture has a front: of the fits at a square, the one with its back to a wall
+	var room := {}
+	if not back.is_empty():
+		for c: Vector2i in cells + ways:
+			room[c] = true
 	var best := {}
 	var best_score := -1
 	var starts: Array[Vector2i] = [at]
@@ -474,6 +491,7 @@ static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, s
 			var db := WalkRules.distance(b, at)
 			return da < db or (da == db and (a.y < b.y or (a.y == b.y and a.x < b.x))))
 	for start: Vector2i in starts:
+		var first := {}
 		for turn: int in turns:
 			var w := int(size[1]) if turn % 2 == 1 else int(size[0])
 			var hh := int(size[0]) if turn % 2 == 1 else int(size[1])
@@ -485,12 +503,19 @@ static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, s
 					if bars and not _joined_without(cells, ways, walls, mine):
 						continue
 					var laid := {"at": start - Vector2i(ox, oy), "turn": turn, "cells": mine}
+					var walled := not back.is_empty() and back_to_wall(back, mine, turn, room)
 					if want.is_empty():
-						return laid
-					var score := mine.filter(func(c: Vector2i) -> bool: return want.has(c)).size()
+						if back.is_empty() or walled:
+							return laid
+						if first.is_empty():
+							first = laid
+						continue
+					var score := 2 * mine.filter(func(c: Vector2i) -> bool: return want.has(c)).size() + (1 if walled else 0)
 					if score > best_score:
 						best = laid
 						best_score = score
+		if not first.is_empty():
+			return first
 	if not best.is_empty():
 		return best
 	if must:  # the author, 2026-11-14: a stage laid on one square was drawn whole over a cat and the board beside it

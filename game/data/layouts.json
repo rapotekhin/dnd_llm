@@ -259,7 +259,7 @@
 					{"body": "table", "x": 10, "y": 4, "turn": 0}, {"body": "bench", "x": 4, "y": 5, "turn": 2}, {"body": "bench", "x": 10, "y": 5, "turn": 0},
 					{"body": "bench", "x": 4, "y": 6, "turn": 2}, {"body": "bench", "x": 10, "y": 6, "turn": 2}, {"body": "stool", "x": 3, "y": 7, "turn": 3},
 					{"body": "table", "x": 4, "y": 7, "turn": 2}, {"body": "stool", "x": 9, "y": 7, "turn": 0}, {"body": "table", "x": 10, "y": 7, "turn": 2},
-					{"body": "bench", "x": 4, "y": 8, "turn": 2}, {"body": "bench", "x": 10, "y": 8, "turn": 2}, {"body": "stage", "x": 12, "y": 8, "turn": 1, "station": "stage"},
+					{"body": "bench", "x": 4, "y": 8, "turn": 2}, {"body": "bench", "x": 10, "y": 8, "turn": 2}, {"body": "stage", "x": 12, "y": 8, "turn": 3, "station": "stage"},
 					{"body": "chest", "x": 1, "y": 10, "turn": 0}
 				]},
 				{"name": "Вариант 2", "things": [
@@ -275,7 +275,7 @@
 					{"body": "bench", "x": 10, "y": 3, "turn": 0}, {"body": "table", "x": 4, "y": 4, "turn": 2}, {"body": "table", "x": 10, "y": 4, "turn": 0},
 					{"body": "bench", "x": 10, "y": 5, "turn": 0}, {"body": "stool", "x": 4, "y": 6, "turn": 2}, {"body": "bench", "x": 10, "y": 6, "turn": 2},
 					{"body": "table", "x": 4, "y": 7, "turn": 2}, {"body": "stool", "x": 9, "y": 7, "turn": 3}, {"body": "table", "x": 10, "y": 7, "turn": 2},
-					{"body": "bench", "x": 4, "y": 8, "turn": 2}, {"body": "stage", "x": 12, "y": 8, "turn": 1, "station": "stage"}
+					{"body": "bench", "x": 4, "y": 8, "turn": 2}, {"body": "stage", "x": 12, "y": 8, "turn": 3, "station": "stage"}
 				]}
 			]},
 		{"id": "tavern_hall_long", "kinds": ["tavern"], "roles": ["hall"], "size": "large", "marks": {"C": "counter", "H": "hearth", "E": "entry", "t": "spot:table", "s": "spot:storage", "d": "spot:decor"},
