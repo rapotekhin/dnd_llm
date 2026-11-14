@@ -50,10 +50,11 @@ static func succeeds(nat: int, total: int, dc: int) -> bool:
 
 ## A total against a DC as every check line says it (v0.8.4.43.53, the author: «строка проверки молчит о 1 и 20 на
 ## кубе»): «15 против Сл 12», and the die when it decided against the total — «41 против Сл 15, но на кубе 1», «8 против
-## Сл 15, но на кубе 20». `ok` — the roll's outcome when the caller has it (an automatic failure is no die's doing).
-static func versus(total: int, dc: int, nat: int, ok: Variant = null) -> String:
+## Сл 15, но на кубе 20». `ok` — the roll's outcome when the caller has it (an automatic failure is no die's doing);
+## `against` — what the total is set against: «Сл», or «КД» for a blow at a door or a thing.
+static func versus(total: int, dc: int, nat: int, ok: Variant = null, against := "Сл") -> String:
 	var won: bool = succeeds(nat, total, dc) if ok == null else bool(ok)
-	var out := "%d против Сл %d" % [total, dc]
+	var out := "%d против %s %d" % [total, against, dc]
 	if (nat == 1 or nat == 20) and won != (total >= dc):
 		out += ", но на кубе %d" % nat
 	return out

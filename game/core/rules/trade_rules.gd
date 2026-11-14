@@ -516,7 +516,7 @@ static func apply_haggle(s: GameSession, data: Dictionary, npc_id: String, resul
 
 ## The fact line about a haggle for the master (the visit's telling, engine.check note).
 static func haggle_note(skill_name: String, result: Dictionary, pct: int) -> String:
-	var roll := "%s %d против DC %d" % [skill_name, int(result["total"]), int(result["dc"])]
+	var roll := "%s %s" % [skill_name, Roll.versus(int(result["total"]), int(result["dc"]), int(result.get("nat", 0)), bool(result["success"]))]
 	if bool(result.get("blocked", false)):
 		if bool(result["success"]):
 			return "Торг уже состоялся (%s): скидка — на ближайшую сделку, до неё торговец больше не уступит." % roll

@@ -228,13 +228,13 @@ func use_item(item_id: String) -> String:
 	return _use_alone({"kind": "item", "id": item_id})
 
 
-func _use_alone(what: Dictionary) -> String:
+func _use_alone(what: Dictionary, note: String = "") -> String:
 	if not _master_ready():
 		return tr("ABILITY_BUSY")
 	var spent := _spend(what)
 	if spent.has("reason"):
 		return str(spent["reason"])
-	_ability(spent["lines"], str(spent["facts"]))
+	_ability(spent["lines"], str(spent["facts"]) + note)
 	return ""
 
 
@@ -703,15 +703,16 @@ func start_combat(foes: Array, source: Dictionary = {}) -> void:
 	_request("combat_start", "\n".join(lines))
 
 
-## The pinned spell that started the fight lands first (v0.7.7): its slot was spent with the words, so it is given
+## The pinned spell that started the fight lands first (v0.7.7): its slot was spent with the words (`spent`), so it is given
 ## back and spent again by the combat cast — on that NPC, now caught off guard. A blow readied on the hotbar
-## (v0.8.4.43.49, `attack` — its `how`) lands first the same way. Lines.
+## (v0.8.4.43.49, `attack` — its `how`) lands first the same way; an area laid on a square out of a fight (v0.8.4.43.55,
+## `at` "@x,y") lands there, on all it covers. Lines.
 func _opening_strike(opening: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
 	if opening.is_empty() or not (opening.has("spell") or opening.has("attack")):  # «Напасть»: the hero strikes by the combat buttons
 		return lines
 	var data: Dictionary = Catalog.data
-	var target := CombatRules.fighter_of_npc(session, str(opening["npc_id"]))
+	var target := str(opening["at"]) if opening.has("at") else CombatRules.fighter_of_npc(session, str(opening.get("npc_id", "")))
 	if target.is_empty():
 		return lines
 	if opening.has("attack"):
@@ -724,7 +725,7 @@ func _opening_strike(opening: Dictionary) -> Array[String]:
 		return lines
 	var spell := str(opening["spell"])
 	var slot := int(opening.get("slot", 0))
-	if slot > 0:
+	if slot > 0 and bool(opening.get("spent", true)):  # an area laid by a click is spent by the cast alone (`spent` false)
 		Stock.give(session.character, "slot_%d" % slot)
 	var how := {"spell": spell, "slot": slot}
 	var why := Acts.one("cast").can(session, data, CombatRules.player(session), target, how)
@@ -746,7 +747,9 @@ func _show_start_lines() -> void:
 	EventBus.combat_lines.emit(lines)
 
 
-func _start_pending_fight() -> void:
+## The fight of `session.pending_fight` begins: those of the room who stand up for an attacked NPC join, the hero's first blow
+## (`_opening`) goes with it when it is at one of them or at a square. `extra` — more of its source (an encounter's).
+func _start_pending_fight(extra: Dictionary = {}) -> void:
 	var foes := session.pending_fight.duplicate(true)
 	session.pending_fight = []
 	var help := CrimeRules.defenders(session, Catalog.data, foes)  # v0.7.22.18: the room stands up for the NPC
@@ -756,7 +759,8 @@ func _start_pending_fight() -> void:
 		_add(GameSession.effect_entry(lines))
 		_log("События: " + lines[0])
 	var source := {"room_from": session.room_id}
-	if not _opening.is_empty() and foes.any(func(f: Dictionary) -> bool: return str(f.get("npc_id", "")) == str(_opening["npc_id"])):
+	source.merge(extra, true)
+	if _opening.has("at") or not _opening.is_empty() and foes.any(func(f: Dictionary) -> bool: return str(f.get("npc_id", "")) == str(_opening.get("npc_id", ""))):
 		source["opening"] = _opening
 	_opening = {}
 	start_combat(foes, source)
@@ -2283,7 +2287,7 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 		_opening = {}
 		var data: Dictionary = Catalog.data
 		if str(attached.get("kind", "")) == "spell" and not str(attached.get("target", "")).is_empty() and CombatRules.is_engine_spell(data, str(attached["id"])):
-			_opening = {"spell": str(attached["id"]), "slot": int(attached.get("spent_slot", 0)), "npc_id": str(attached["target"])}
+			_opening = {"spell": str(attached["id"]), "slot": int(attached.get("spent_slot", 0)), "npc_id": str(attached["target"]), "spent": true}
 			spent["facts"] = str(spent["facts"]) + " Если этим игрок нападает на NPC — начни бой с ним (next_mode combat): исход заклинания движок разрешит первым ходом боя, урон и последствия не описывай."
 		var target := str(attached.get("target", ""))
 		attached = {}
@@ -2297,6 +2301,10 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 			if not text.is_empty():
 				_add(GameSession.player_entry(text))
 				_log("Игрок: " + text)
+			var area := op.has("spell") and area_spell(str(op["spell"]))  # an area at one of them: on all it covers (v0.8.4.43.55)
+			var on := _square_of(target) if area else FightGrid.NONE
+			if on != FightGrid.NONE and _area_fight(str(op["spell"]), int(op.get("slot", 0)), on, true).is_empty():
+				return true
 			if session.npcs_here(world().world, session.room_id).has(target):
 				return attack_npc(target, op).is_empty()
 			return encounter_attack(true, op).is_empty()  # v0.8.4.30: at a foe seen before the fight
@@ -2878,6 +2886,115 @@ func aim_hostile(target: String) -> String:
 	return cast_at(id, target)
 
 
+## The pinned spell that is laid on a square out of a fight (v0.8.4.43.55, the author: «огненный шар в клетку, а не в
+## человека»): a hostile one with an area and no attack roll. "" — none is pinned.
+func area_pinned() -> String:
+	if session == null or str(attached.get("kind", "")) != "spell":
+		return ""
+	var id := str(attached["id"])
+	return id if area_spell(id) else ""
+
+
+func area_spell(id: String) -> bool:
+	var sp: Dictionary = Catalog.data["spells"].get(id, {})
+	return not CombatRules.area_of(Catalog.data, id).is_empty() and not sp.has("attack") and CombatRules.hostile_spell(Catalog.data, id)
+
+
+## The pinned area spell laid on `cell` of the room's map: {"why" — "" when it may go there, else the cast act's own reason (a
+## slot, range, a line, a wild shape); "cells" — its squares from the hero's, as the fight lays them (CombatRules.area_cells);
+## "caught" — who stands on them (MapSpots.on_cells: the hero, its side, the people, the foes)}. {} — none is pinned.
+func area_aim(cell: Vector2i) -> Dictionary:
+	var spell := area_pinned()
+	if spell.is_empty() or session.mode == GameSession.MODE_COMBAT:
+		return {}
+	return _area_at(spell, int(attached.get("slot", 0)), cell)
+
+
+func _area_at(spell: String, slot: int, cell: Vector2i) -> Dictionary:
+	var data: Dictionary = Catalog.data
+	var me := CombatRules.on_map(session, data)
+	var aim := FightGrid.aim_id(cell)
+	var cells := CombatRules.area_cells(session, data, data["spells"][spell], CombatRules.aimed(session, aim), me)
+	return {"why": Acts.one("cast").why(session, data, me, aim, {"spell": spell, "slot": slot}), "cells": cells,
+		"caught": MapSpots.on_cells(session, data, cells, not CombatRules.from_self(data, spell))}
+
+
+## The pinned area spell cast at `cell` by a click on the map (v0.8.4.43.55): those it catches begin the fight, the spell its
+## first blow (`_area_fight`); nobody — it is cast as from the sheet, its slot spent, no fight. "" or why not.
+func cast_area(cell: Vector2i) -> String:
+	if not _master_ready() or session.mode == GameSession.MODE_COMBAT or session.in_conversation():
+		return "WAIT_BUSY"
+	var spell := area_pinned()
+	if spell.is_empty():
+		return "ATTACH_AIM_NONE"
+	return _area_fight(spell, int(attached.get("slot", 0)), cell, false)
+
+
+## An area laid on `cell` out of a fight: the people and the foes it catches fight, those who walk with the hero beside it —
+## each on the square it stood on — and the spell is the fight's first blow at the square, on its own road (`_opening_strike`
+## at "@x,y": the saves, the damage and the friendly fire of a fight). A person struck is assaulted (`by_hero`, CrimeRules at
+## the fight's end) and caught off guard when it did not expect it; the foes of the room bring their whole encounter. Nobody
+## caught — a cast as from the sheet; only the hero's own side — not out of a fight (AREA_ONLY_FRIENDS). `spent` — its slot
+## went with the words (`submit`): with nobody else caught AREA_NOBODY, the words' own road goes on. "" or why not.
+func _area_fight(spell: String, slot: int, cell: Vector2i, spent: bool) -> String:
+	var data: Dictionary = Catalog.data
+	var a := _area_at(spell, slot, cell)
+	if not str(a["why"]).is_empty() and not spent:
+		return str(a["why"])
+	var caught: Array = a["caught"]
+	var people: Array[Dictionary] = []
+	var foes: Array[String] = []
+	var friends: Array[String] = []  # followers caught: in the fight whoever the foes are (AllyRules.joining's `struck`)
+	for c: Dictionary in caught:
+		if str(c["side"]) == "other":
+			if str(c["kind"]) == "foe":
+				foes.append(str(c["id"]))
+			else:
+				people.append(c)
+		elif str(c["kind"]) == "npc":
+			friends.append(str(c["id"]))
+	if people.is_empty() and foes.is_empty():
+		if spent:
+			return "AREA_NOBODY"
+		if not caught.is_empty():
+			return "AREA_ONLY_FRIENDS"
+		var err := _use_alone({"kind": "spell", "id": spell, "slot": slot}, " Движок: в области никого нет — заклинание никого не задело, так и опиши.")
+		if err.is_empty():
+			attached = {}
+			EventBus.state_changed.emit()
+		return err
+	_end_conversation()
+	attached = {}
+	var marks := {}
+	var specs: Array = []
+	for c: Dictionary in people:  # each on the square the area caught it on
+		var id := str(c["id"])
+		specs.append(CombatRules.npc_foe(data, id).merged({"x": int(c["x"]), "y": int(c["y"])}))
+		marks[id] = CombatRules.npc_unaware(session, data, id)
+	var source := {"room_from": session.room_id}
+	if not foes.is_empty():  # the foes of the room come as their encounter, by the road of «Атаковать» (encounter_attack)
+		var lk := EncounterRules.lurking(session, session.room_id)
+		var enc := EncounterRules.lurking_encounter(session, data, session.room_id)
+		session.lurking.erase(session.room_id)
+		var hid := WatchRules.sneaky(session, data) or bool(lk.get("word", false)) or lk.has("foes")
+		source = EncounterRules.source(enc, str(lk.get("from", "")), {"sneak": hid, "stealth_total": 99, "from_hiding": true} if hid else {"sneak": false})
+		specs = (enc["enemies"] as Array) + specs
+		for id: String in foes:
+			marks[id] = hid
+	session.pending_fight = specs
+	_opening = {"spell": spell, "slot": slot, "at": FightGrid.aim_id(cell), "caught": marks, "friends": friends, "spent": spent}
+	_start_pending_fight(source)
+	return ""
+
+
+## The square `id` stands on in the room now (MapSpots.standing): a person, a foe before a fight, one with the hero, the hero.
+func _square_of(id: String) -> Vector2i:
+	for t: Dictionary in MapSpots.standing(session, Catalog.data):
+		if str(t["id"]) == id:
+			return Vector2i(int(t["x"]), int(t["y"]))
+	return FightGrid.NONE
+
+
 ## The spells the hero may aim at `target` out of a fight now: a hostile one at anybody, a charm at a person.
 func spells_at(target: String) -> Array[Dictionary]:
 	var foe := not session.npcs_here(world().world, session.room_id).has(target)
@@ -3066,9 +3183,7 @@ func attack_npc(npc_id: String, opening: Dictionary = {}) -> String:
 	if not session.npcs_here(world().world, session.room_id).has(npc_id):
 		return "CREATURE_NONE"
 	_end_conversation()
-	var npc := world().npc(npc_id)
-	session.pending_fight = [{"monster": str(npc.get("monster", CombatRules.cfg(Catalog.data)["default_npc_monster"])),
-		"name": str(npc.get("name", npc_id)), "desc": str(npc.get("description", "")), "npc_id": npc_id, "by_hero": true}]
+	session.pending_fight = [CombatRules.npc_foe(Catalog.data, npc_id)]
 	_opening = opening.duplicate()
 	_opening["npc_id"] = npc_id
 	_opening["unaware"] = CombatRules.npc_unaware(session, Catalog.data, npc_id)

@@ -42,16 +42,16 @@ func test_alchemists_fire_burns_until_water_puts_it_out() -> void:
 	var s := ChecklistProbe.session(data)
 	var ogre := ChecklistProbe.fight(s, data, "ogre")
 	_hit(s, "alchemists_fire_flask", ogre)
-	assert_str(LiquidRules.burning(s, ogre)).is_equal("1d4")
+	assert_str(LiquidRules.burning(s, data, ogre)).is_equal("1d4")
+	assert_bool(ConditionRules.has(ogre, "burning")).is_true()  # the fire is the status (v0.8.4.43.54)
 	var hp := int(ogre["hp"])
 	var lines: Array[String] = []
-	CombatRules._fire(s, data, ogre, lines)
+	Harm.each_turn(s, data, ogre, "start", lines)
 	assert_int(int(ogre["hp"])).is_less(hp)
-	if LiquidRules.burning(s, ogre).is_empty():  # it beat the flames itself
-		LiquidRules.coat(s, data, ogre, "alchemists_fire", "Алхимический огонь")
-	lines.assign(LiquidRules.coat(s, data, ogre, LiquidRules.WATER, "вода"))
-	assert_str(LiquidRules.burning(s, ogre)).is_empty()
-	assert_bool(LiquidRules.douses(s, ogre)).is_true()
+	lines.assign(LiquidRules.coat(s, data, ogre, LiquidRules.WATER, "вода", ogre))
+	assert_str(LiquidRules.burning(s, data, ogre)).is_empty()
+	assert_bool(ConditionRules.has(ogre, "burning")).is_false()
+	assert_bool(ConditionRules.has(ogre, LiquidRules.WET)).is_true()  # water on a creature is the status `wet` (v0.8.4.43.59)
 
 
 func test_spilt_oil_trips_and_burns_away() -> void:
@@ -87,7 +87,7 @@ func test_water_on_a_square_puts_the_fire_out_and_does_not_catch() -> void:
 	LiquidRules.coat(s, data, goblin, "alchemists_fire", "Огонь")
 	FightGrid.put(goblin, at)
 	FightField.stepped(s, data, goblin, lines)
-	assert_str(LiquidRules.burning(s, goblin)).is_empty()
+	assert_str(LiquidRules.burning(s, data, goblin)).is_empty()
 
 
 func test_a_thing_wet_or_oiled_by_the_master_is_the_same_coat() -> void:

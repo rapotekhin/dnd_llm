@@ -62,6 +62,9 @@ SETS = {
     # a race and a subrace by FLUX, as the acts (2026-11-13): a face in profile, a beard, an ear read at once
     "lines_races": ("Расы · линии", "out_lines_flux", "picks_lines_icons.json", "races"),
     "lines_subraces": ("Подрасы · линии", "out_lines_flux", "picks_lines_icons.json", "subraces"),
+    # a class and a background at creation in silver by FLUX, as the races (2026-11-14)
+    "lines_classes": ("Классы · линии", "out_lines_flux", "picks_lines_icons.json", "classes"),
+    "lines_backgrounds": ("Предыстории · линии", "out_lines_flux", "picks_lines_icons.json", "backgrounds"),
     # the hues style (the author, 2026-11-13): the same signs in their own colours, a trial beside the lines
     "hues_spells": ("Заклинания · цвет", "out_hues", "picks_hues_icons.json", "spells"),
     "hues_features": ("Умения · цвет", "out_hues", "picks_hues_icons.json", "features"),
@@ -80,13 +83,13 @@ def variants(jobs: list[dict], kind: str, out: Path, picks: dict,
              name: str = "") -> tuple[list[dict], dict[str, Path | bytes]]:
     """The icons of a kind with their drawn variants, and the file behind each picture's address (with the mark of
     `overlay` laid over, as the game gets it); an icon laid from another's (`same`) or drawn by code (`drawn`) is not
-    picked on its own. The addresses go under the set's `name` (a kind drawn in two styles is two sets)."""
+    picked on its own; one variant is shown too, to look at and mark for a redraw. The addresses go under the set's `name` (a kind drawn in two styles is two sets)."""
     items, files = [], {}
     for j in (j for j in jobs if j["kind"] == kind):
         key = f"{kind}/{j['id']}"
         cuts = {n: gen.paths(out, j, n, s)[1] for n, s in enumerate(gen.seeds_of(j, SEEDS), 1)}
         have = [n for n, c in cuts.items() if c.exists()]
-        if len(have) >= 2 and key not in picks.get("same", {}) and key not in picks.get("drawn", {}):
+        if have and key not in picks.get("same", {}) and key not in picks.get("drawn", {}):
             mark = picks.get("overlay", {}).get(key)
             items.append({"key": key, "name": j["name"], "variants": have})
             files.update({f"/img/{name or kind}/{j['id']}/{n}.png": overlays.apply(mark, cuts[n]) if mark else cuts[n]

@@ -19,6 +19,7 @@ func test_the_die_is_named_only_when_it_decided_against_the_total() -> void:
 	assert_str(Roll.versus(8, 15, 20, false)).is_equal("8 против Сл 15")  # an automatic failure is no die's doing
 	assert_str(Roll.sum_versus(1, 41, 15)).is_equal("1 + 40 = 41 против Сл 15, но на кубе 1")
 	assert_str(Roll.sum_versus(12, 9, 10)).is_equal("12 − 3 = 9 против Сл 10")
+	assert_str(Roll.versus(16, 12, 1, false, "КД")).is_equal("16 против КД 12, но на кубе 1")  # a blow at a door or a thing
 
 
 func test_a_check_failed_by_a_natural_1_says_so() -> void:

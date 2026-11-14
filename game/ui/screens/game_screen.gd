@@ -52,6 +52,7 @@ var _org: OrgPanel
 var _office: OfficePanel
 var _prepare: SmallDialog
 var _dim: ColorRect
+var _hint: Label
 var _talk_card: Control
 var _partner_mark: Label
 var _mode_label: Label
@@ -102,6 +103,7 @@ func _ready() -> void:
 	_field.cell_hovered.connect(_on_hover)
 	_field.cell_right.connect(_on_right)
 	_dim = UiScenes.need(self, "%Dim")
+	_hint = UiScenes.need(self, "%Hint")  # the fight's line under the map, out of a fight what a pinned area catches
 	_talk_card = UiScenes.need(self, "%TalkCard")
 	_partner_mark = UiScenes.need(self, "%PartnerMark")
 	_partner_mark.add_theme_font_size_override("font_size", 84)
@@ -414,14 +416,9 @@ func _refresh_field(s: GameSession) -> void:
 	_field.names = names
 	_field.clicks = not s.in_conversation()
 	_field.show_map(view, Catalog.data["layouts"])
-	var walkers: Array[Dictionary] = []
-	for id: String in Being.followers(s):
-		var who := str(GameState.world().npc(id).get("name", id))
-		walkers.append({"ref": "npc:" + id, "mark": who.left(1), "name": who.get_slice(" ", 0), "portrait": PortraitRules.of(s, Catalog.data, {"npc_id": id})})
-	for cr: Dictionary in CreatureRules.here(s, s.room_id):  # the hero's animals walk along
-		if CreatureRules.with_hero(cr):
-			walkers.append({"ref": "cr:" + str(cr["id"]), "mark": str(cr["name"]).left(1), "name": str(cr["name"]).get_slice(" ", 0),
-				"portrait": PortraitRules.of(s, Catalog.data, cr)})
+	var walkers: Array[Dictionary] = []  # the followers and the hero's animals walk along (MapSpots.walkers: where a fight starts them)
+	for t: Dictionary in MapSpots.walkers(s, Catalog.data):
+		walkers.append(t.merged({"name": str(t["name"]).get_slice(" ", 0)}, true))
 	_things = MapSpots.of(s, Catalog.data, view).filter(func(t: Dictionary) -> bool:
 		return str(t["kind"]) != "station" or _side.mark_has_acts(str(t["id"])) or MapGround.drawn(str(t.get("body", ""))))
 	for t: Dictionary in _things:  # a station with nothing to do here is only drawn: no click, no menu (v0.8.4.43.23)
@@ -442,6 +439,8 @@ func _refresh_field(s: GameSession) -> void:
 	_field.hero_face = PortraitRules.of(s, Catalog.data, Sheet.HERO)
 	_field.place_hero(at, str(s.character.get("name", "?")).left(1), walkers)
 	_look(s, at if not _field.walking() else _field.hero_cell())
+	var mouse := _field.get_local_mouse_position()  # a pinned area stays lit where the mouse is, on the map only
+	_area_hover(_field.cell_at(mouse) if Rect2(Vector2.ZERO, _field.size).has_point(mouse) else FightGrid.NONE)
 	if _acts_menu != null and _acts_menu.visible:
 		_show_menu(_menu_ref)
 	elif _menu_box.get_child_count() > 0:  # the staged buttons follow the world, as the open row did (v0.8.4.43.4)
@@ -475,6 +474,9 @@ func _on_cell(cell: Vector2i) -> void:
 	_menu.visible = false
 	if _fight.active():
 		_fight.on_cell(cell)
+		return
+	if not GameState.area_pinned().is_empty():  # an area pinned: the click lays it on the square, on whoever stands there
+		_cast_area(cell)
 		return
 	if _rounds and cell == _field.hero_cell():  # the hero stands the round out
 		GameState.sneak_round()
@@ -525,13 +527,46 @@ func _strike(ref: String) -> bool:
 	return true
 
 
+## The pinned area spell laid on `cell` (v0.8.4.43.55, the author: «огненный шар в клетку, а не в человека, — задетые
+## начинают бой»): those it catches fight, the spell the first blow; nobody — it is cast. A concentration held asks first.
+func _cast_area(cell: Vector2i) -> void:
+	_side.held_first(GameState.area_pinned(), func() -> void:
+		var err := GameState.cast_area(cell)
+		if not err.is_empty():
+			EventBus.message.emit(tr(err)))
+
+
+## The area of the pinned spell under the mouse out of a fight, as a fight shows it: its squares lit, who it catches — the
+## unseen foes not named — or why it cannot go there, under the map.
+func _area_hover(cell: Vector2i) -> void:
+	var a := GameState.area_aim(cell) if not _field.map.is_empty() else {}
+	if not _field.blast.is_empty():
+		_field.blast = {}
+		_field.queue_redraw()
+	_hint.visible = not a.is_empty()
+	if a.is_empty():
+		return
+	if cell == FightGrid.NONE:  # pinned, the mouse off the map: what to do with it, under the map where the area will be told
+		_hint.text = tr("AREA_POISED")
+		return
+	if not str(a["why"]).is_empty():
+		_hint.text = tr(str(a["why"]))
+		return
+	for at: Vector2i in a["cells"]:
+		_field.blast[at] = true
+	_field.queue_redraw()
+	var names: Array = (a["caught"] as Array).filter(func(t: Dictionary) -> bool: return bool(t["seen"])).map(func(t: Dictionary) -> String: return str(t["name"]))
+	_hint.text = tr("COMBAT_AREA_CAUGHT").format({"names": ", ".join(names) if not names.is_empty() else "—"})
+
+
 ## The mouse over a square: in a fight the fight's own hover; out of it, with a blow at arm's length readied (v0.8.4.43.51,
 ## the author: «при наведении курсора на врага мне показывался пунктиром путь куда мой персонаж пойдёт»), the way the hero
-## walks up to the person or the foe under the mouse, dashed as in a fight.
+## walks up to the person or the foe under the mouse, dashed as in a fight; with an area pinned its squares.
 func _on_hover(cell: Vector2i) -> void:
 	if _fight.active():
 		_fight.on_hover(cell)
 		return
+	_area_hover(cell)
 	var path := _strike_way(cell)
 	if path == _field.way:
 		return
@@ -594,6 +629,9 @@ func _on_right(cell: Vector2i) -> void:
 		return
 	var s := GameState.session if GameState.has_session() else null
 	if s == null or s.in_conversation():
+		return
+	if not GameState.area_pinned().is_empty():  # the area let go, as the fight lets its picked act go
+		GameState.detach()
 		return
 	var ref := _field.ref_at(cell)
 	if ref.is_empty() or ref.begins_with("far:"):
@@ -822,7 +860,7 @@ func _refresh() -> void:
 	else:
 		input.placeholder_text = tr("PLACEHOLDER_COMBAT" if _fight.active() else "PLACEHOLDER_ACTION")
 	_refresh_attach(s, busy, online)
-	input.fit()
+	input.refit()
 	for c in _options.get_children():
 		_options.remove_child(c)
 		c.queue_free()

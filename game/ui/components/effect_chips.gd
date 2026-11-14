@@ -54,19 +54,14 @@ func refresh() -> void:
 		add_child(chip)
 
 
-## A status as an icon (v0.8.4.43.4): «Отравлен · 1 ч» is its line, the cause and what it does the card's body.
+## A status as an icon (v0.8.4.43.4): «Отравлен · 1 ч» is its cell's text; at the cursor its card of `CardInfo.status`
+## (v0.8.4.43.56) — the time, what it does, what laid it as a link to that spell's, feature's or thing's card.
 func _icon(e: Dictionary) -> void:
 	var cond := str(e["condition"])
 	var cell := IconSlot.make(str(e.get("icon", IconRules.ref("conditions", cond))), "%s · %s" % [e["name"], e["left"]], icons)
 	cell.name = "Chip_" + (cond if not cond.is_empty() else "boon")
-	cell.tip_title = str(e["name"])
-	cell.tooltip_text = str(e["left"])
-	var body: Array[String] = []
-	if not str(e["source"]).is_empty():
-		body.append(tr("EFFECT_SOURCE").format({"source": e["source"]}))
-	if not str(e["text"]).is_empty():
-		body.append(str(e["text"]))
-	cell.tip_body = "\n".join(body)
+	cell.set_card(CardInfo.status(Catalog.data, e, GameState.session.items))
+	cell.tooltip_text = str(e["name"])  # the time is on the card
 	if e.has("count"):
 		cell.badge = str(e["count"])
 	cell.focus_mode = Control.FOCUS_NONE

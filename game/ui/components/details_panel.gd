@@ -22,8 +22,14 @@ extends PanelContainer
 ## with the icon of the condition, the description, how it works (duration, range, area, attack or save, concentration)
 ## and a band at the bottom with what it takes (● an action, ▲ a bonus action, ◆ a reaction, ■ a slot) and a thing's
 ## weight and price. A text without a card is drawn as before, with the icon of its cell when it has one.
+## v0.8.4.43.56 (as in BG3, the author: «в статусе „Концентрация: Зловонное облако“ наведение на название заклинания
+## показывает его карточку»): a name in a card that has a card of its own (the card's `refs`) is a link — in its title and
+## its text; while the cursor is on a link, that card (`CardInfo.of_ref`) stands beside this one as a second card,
+## `LinkedCard`, with links of its own; it goes when the cursor leaves both the link and it. The cursor reaches a card
+## that is pinned or stands in a column; a card at the cursor only follows the eye, so it says the right button pins it.
 
-var _title: Label
+var _title: RichTextLabel  # a link in a name too: «Концентрация: Зловонное облако»
+var _title_text := ""
 var _sub: Label  # what it is, under the name: «Заклинание 1 круга · Воплощение»
 var _icon: TextureRect
 var _foot: VBoxContainer  # the band of what it takes, rebuilt with each card
@@ -46,6 +52,13 @@ var _screen: WeakRef  # the screen of the pinned icon
 var _moved := false  # a pinned card the player dragged stands where it was put
 var _drag := Vector2(-1, -1)  # the grip of a drag (the cursor on the card), (-1, -1) — none
 
+var _child: DetailsPanel  # the card of the link hovered in this one (v0.8.4.43.56)
+var _parent_card: DetailsPanel  # a card of a link: the card whose link it shows
+var _ref := ""  # a card of a link: its ref
+var _link := ""  # the ref of the link the cursor is on now, "" — none
+var _left_at := -100000  # when the cursor left a link (msec): its card waits a moment for the cursor to reach it
+var _pointer := Vector2.ZERO  # where the cursor last moved over this card's text: a link's card stands at its height
+
 static var _pins: DetailsPanel  # the one card an icon is pinned in (`pin_card`)
 static var _held: WeakRef  # the one floating card pinned now, of any screen (the author, 2026-11-13: «если я закрепил одну
 # панель осмотра — вторая не должна появляться при наведении»)
@@ -54,6 +67,7 @@ const CARD_WIDTH := 460.0
 const CARD_MAX_BODY := 340.0  # a longer text is cut at this height and scrolls inside a pinned card
 const CARD_ICON := 72.0  # the icon in the corner of a card, as in BG3
 const BIG_SIZE := 30  # the headline number
+const LINK_GRACE_MS := 600  # a link's card stays this long after the cursor leaves the link: the way over to it
 ## The colours of a cost's glyph, as the counters over the hotbar.
 const COST_COLORS := {"action": "8fb36f", "bonus": "d1a14a", "reaction": "b98fd8", "slot": "6f9fc8", "free": "9a8f7e", "time": "c9a45c", "move": "e6c47e"}
 
@@ -73,12 +87,16 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	names.add_theme_constant_override("separation", 0)
 	head.add_child(names)
-	_title = Label.new()
+	_title = RichTextLabel.new()
 	_title.name = "DetailsTitle"
 	_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_title.bbcode_enabled = true
+	_title.fit_content = true
+	_title.scroll_active = false
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_title.add_theme_color_override("font_color", UiTheme.ACCENT)
+	_title.mouse_filter = Control.MOUSE_FILTER_PASS
+	_title.add_theme_color_override("default_color", UiTheme.ACCENT)
 	names.add_child(_title)
 	_sub = _sub_label("")
 	_sub.name = "DetailsSub"
@@ -102,6 +120,12 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 	_body.custom_minimum_size = Vector2(0, maxf(60.0, min_size.y - 60.0))
 	_body.add_theme_color_override("default_color", UiTheme.MUTED)
 	col.add_child(_body)
+	for rt: RichTextLabel in [_title, _body]:
+		rt.meta_hover_started.connect(_link_in)
+		rt.meta_hover_ended.connect(_link_out)
+		rt.gui_input.connect(func(ev: InputEvent) -> void:
+			if ev is InputEventMouseMotion:
+				_pointer = rt.get_global_transform() * (ev as InputEventMouseMotion).position)
 	_more = _more_label()
 	col.add_child(_more)
 	_foot = VBoxContainer.new()
@@ -126,7 +150,10 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 ## A card follows only the eye: it takes no click until pinned (the cursor reaches what is under it).
 func _hold(pinned_now: bool) -> void:
 	for n: Node in [self] + find_children("*", "Control", true, false):
-		(n as Control).mouse_filter = Control.MOUSE_FILTER_STOP if pinned_now and (n == _lock or n == _body or n == self) else Control.MOUSE_FILTER_IGNORE
+		if _child != null and is_instance_valid(_child) and (n == _child or _child.is_ancestor_of(n)):
+			continue  # the card of a link takes the cursor by its own
+		var keep := Control.MOUSE_FILTER_PASS if n == _title else Control.MOUSE_FILTER_STOP  # a link in the name; a drag by it still the card's
+		(n as Control).mouse_filter = keep if pinned_now and (n == _lock or n == _body or n == self or n == _title) else Control.MOUSE_FILTER_IGNORE
 	_body.selection_enabled = pinned_now
 	_cap(pinned_now)
 	_cap.call_deferred(pinned_now)  # the text's height is known once it is laid out
@@ -141,7 +168,9 @@ func _cap(pinned_now: bool) -> void:
 	_body.fit_content = not long
 	_body.scroll_active = pinned_now and long
 	_body.custom_minimum_size.y = CARD_MAX_BODY if long else 0.0
-	_more.visible = long and not pinned_now
+	var links := has_links(_body.text) or has_links(_title.text)
+	_more.text = more_text(long, links)
+	_more.visible = (long or links) and not pinned_now
 	if visible and is_inside_tree():
 		_place()
 
@@ -152,6 +181,13 @@ func _place() -> void:
 	var screen := get_viewport_rect().size
 	var sz := get_combined_minimum_size()
 	size = sz
+	if _parent_card != null and is_instance_valid(_parent_card):  # beside its card, at the link's height
+		var pr := _parent_card.get_global_rect()
+		var to := Vector2(pr.end.x + 6, _anchor.y - 28)
+		if to.x + sz.x > screen.x:
+			to.x = pr.position.x - sz.x - 6
+		position = Vector2(clampf(to.x, 0.0, maxf(0.0, screen.x - sz.x)), clampf(to.y, 0.0, maxf(0.0, screen.y - sz.y - 4)))
+		return
 	if _moved:
 		position = Vector2(clampf(position.x, 0.0, maxf(0.0, screen.x - sz.x)), clampf(position.y, 0.0, maxf(0.0, screen.y - sz.y)))
 		return
@@ -212,6 +248,8 @@ static func holding() -> bool:
 
 ## The card stays while its thing is hovered, or focused when it came by the focus.
 func _still_wanted() -> bool:
+	if _parent_card != null:
+		return is_instance_valid(_parent_card) and _parent_card.is_visible_in_tree() and _parent_card._wants_child()
 	if _shown == null or not is_instance_valid(_shown) or not _shown.is_visible_in_tree():
 		return false
 	if _beside:
@@ -273,7 +311,9 @@ func _float_up(body: String) -> void:
 
 
 func _put(title: String, body: String, card: Dictionary = {}, look: Dictionary = {}) -> void:
-	_title.text = title
+	drop_link()
+	_title_text = title
+	_title.text = _linked(title, card.get("refs", []))
 	_plain = body
 	_card = card
 	_look = look if not look.is_empty() else look_of(card)
@@ -282,7 +322,7 @@ func _put(title: String, body: String, card: Dictionary = {}, look: Dictionary =
 	_body.scroll_to_line(0)
 	_sub.text = str(card.get("sub", ""))
 	_sub.visible = not _sub.text.is_empty()
-	_title.add_theme_color_override("font_color", Color(str(card["title_color"])) if str(card.get("title_color", "")) != "" else UiTheme.ACCENT)
+	_title.add_theme_color_override("default_color", Color(str(card["title_color"])) if str(card.get("title_color", "")) != "" else UiTheme.ACCENT)
 	_set_icon(_icon, _look)
 	for n: Node in _foot.get_children():
 		_foot.remove_child(n)
@@ -299,11 +339,11 @@ func _on_lock() -> void:
 	if not _pinned.is_empty():
 		unpin()
 	else:
-		pin(_shown, _title.text, _plain, _card, _look)
+		pin(_shown, _title_text, _plain, _card, _look)
 
 
 func title() -> String:
-	return _title.text
+	return _title_text
 
 
 ## The plain text shown: a card's own words (`CardInfo.plain`) when a card is up.
@@ -341,6 +381,7 @@ func pin(control: Control, title_text: String, body_text: String, card: Dictiona
 
 
 func unpin() -> void:
+	drop_link()
 	_unlight()
 	_pinned = ""
 	_pinned_body = ""
@@ -445,9 +486,13 @@ static func tip_card(title_text: String, line: String, body_text: String, card: 
 		col.add_child(body)
 		var more := _more_label()
 		col.add_child(more)
+		var links := has_links(shown)  # a link is reached once the card is pinned (as in BG3: a tooltip is locked first)
+		more.text = more_text(false, links)
+		more.visible = links
 		var cut := func() -> void:
 			body.fit_content = false
 			body.custom_minimum_size.y = CARD_MAX_BODY
+			more.text = more_text(true, links)
 			more.visible = true
 		# A tooltip takes its size when it comes up: the text's height by its font, before it is laid out …
 		var font := body.get_theme_font("normal_font")
@@ -486,6 +531,7 @@ static func _fit_window(panel: Control) -> void:
 ## The body of a card in BBCode: the headline number, its dice by damage type, what it lays with the condition's icon,
 ## how it works, the description, the notes.
 static func card_text(card: Dictionary) -> String:
+	var refs: Array = card.get("refs", [])
 	var t: Array[String] = []
 	var text := UiTheme.TEXT.to_html(false)
 	var muted := UiTheme.MUTED.to_html(false)
@@ -497,7 +543,7 @@ static func card_text(card: Dictionary) -> String:
 		t.append("[color=#%s]%s[/color]  [color=#%s]%s%s[/color]" % [text, _esc(str(d["text"])), col, "◆ " if hue != "" else "", _esc(str(d.get("type", "")))])
 	for st: Dictionary in card.get("status", []):
 		var path := str(look_of({"icon": st["icon"]}).get("path", ""))
-		t.append(("[img=28x28]%s[/img] " % path if path != "" else "") + "[color=#%s]%s[/color]" % [text, _esc(str(st["text"]))])
+		t.append(("[img=28x28]%s[/img] " % path if path != "" else "") + "[color=#%s]%s[/color]" % [text, _linked(str(st["text"]), refs)])
 	if not (card.get("props", []) as Array).is_empty():  # before the text: a long one is cut, how it works stays in sight
 		var props: Array[String] = []
 		for p: Variant in card["props"]:  # a glyph never left at a line's end without its words
@@ -508,10 +554,121 @@ static func card_text(card: Dictionary) -> String:
 	if str(card.get("desc", "")) != "":
 		if not t.is_empty():
 			t.append("")
-		t.append("[color=#%s]%s[/color]" % [text, _esc(str(card["desc"]))])
+		t.append("[color=#%s]%s[/color]" % [text, _linked(str(card["desc"]), refs)])
 	for n: Variant in card.get("notes", []):
-		t.append("[color=#%s]%s[/color]" % [muted, _esc(str(n))])
+		t.append("[color=#%s]%s[/color]" % [muted, _linked(str(n), refs)])
 	return "\n".join(t)
+
+
+## `s` in BBCode with each name of `refs` ([{text, ref}]) a link to its card — a whole word, the longest at one place.
+static func _linked(s: String, refs: Array) -> String:
+	if refs.is_empty():
+		return _esc(s)
+	var out := ""
+	var i := 0
+	while i < s.length():
+		var at := -1
+		var best := {}
+		for r: Dictionary in refs:
+			var word := str(r.get("text", ""))
+			var k := s.find(word, i) if not word.is_empty() else -1
+			while k >= 0 and not _whole(s, k, word.length()):
+				k = s.find(word, k + 1)
+			if k >= 0 and (at < 0 or k < at or k == at and word.length() > str(best["text"]).length()):
+				at = k
+				best = r
+		if at < 0:
+			out += _esc(s.substr(i))
+			break
+		var found := str(best["text"])
+		out += _esc(s.substr(i, at - i)) + "[url=%s][color=#%s]%s[/color][/url]" % [str(best["ref"]), UiTheme.ACCENT_BRIGHT.to_html(false), _esc(found)]
+		i = at + found.length()
+	return out
+
+
+## A name found at `at` is a whole word: no letter right before or after it.
+static func _whole(s: String, at: int, n: int) -> bool:
+	for k: int in [at - 1, at + n]:
+		if k >= 0 and k < s.length() and s[k].to_lower() != s[k].to_upper():
+			return false
+	return true
+
+
+## The text of a card has a link in it.
+static func has_links(bbcode: String) -> bool:
+	return bbcode.contains("[url=")
+
+
+## What the line under a card says: a long text and links are reached by pinning it.
+static func more_text(long: bool, links: bool) -> String:
+	return TranslationServer.translate("DETAILS_MORE_LINKS" if long and links else "DETAILS_LINKS" if links else "DETAILS_MORE")
+
+
+## The card of a link (`CardInfo.of_ref`) by the game's data and the session's made things; {} — none.
+static func link_card(ref: String) -> Dictionary:
+	var root := (Engine.get_main_loop() as SceneTree).root
+	if ref.is_empty() or not root.has_node("Catalog"):
+		return {}
+	var session: GameSession = root.get_node("GameState").session if root.has_node("GameState") else null
+	return CardInfo.of_ref(root.get_node("Catalog").data, ref, session.items if session != null else {})
+
+
+## The cursor came onto a link: its card beside this one (the one of a link already up is told anew).
+func _link_in(meta: Variant) -> void:
+	var ref := str(meta)
+	var card := link_card(ref)
+	if card.is_empty():
+		return
+	_link = ref
+	if _child == null or not is_instance_valid(_child):
+		_child = DetailsPanel.new(Vector2.ZERO, true)
+		_child.name = "LinkedCard"
+		_child._parent_card = self
+		add_child(_child)
+	if _child.visible and _child._ref == ref:
+		return
+	_child._ref = ref
+	_child._anchor = _pointer
+	_child._put(str(card.get("title", "")), CardInfo.plain(card), card)
+	_child.visible = true
+	_child._hold(true)  # the cursor reaches it: its text scrolls, its links answer
+	_child._place()
+	_child._place.call_deferred()
+
+
+func _link_out(_meta: Variant) -> void:
+	_link = ""
+	_left_at = Time.get_ticks_msec()
+
+
+## The card of a link stays while its link is hovered, the cursor is on it or on a card of its own links, and a moment after
+## the cursor left the link — the way over to it.
+func _wants_child() -> bool:
+	if _child == null or not is_instance_valid(_child):
+		return false
+	if not _link.is_empty():
+		return true
+	var hovered := get_viewport().gui_get_hovered_control()
+	if hovered != null and (hovered == _child or _child.is_ancestor_of(hovered)):
+		return true
+	if _child._child != null and is_instance_valid(_child._child) and _child._child.visible:
+		return true
+	return Time.get_ticks_msec() - _left_at < LINK_GRACE_MS
+
+
+## The card of a link let go (this card shows another text, is unpinned or gone).
+func drop_link() -> void:
+	_link = ""
+	_left_at = -100000
+	if _child != null and is_instance_valid(_child):
+		_child.drop_link()
+		_child._ref = ""
+		_child.visible = false
+
+
+## The card of a link shown now beside this one (a test, a playtest), or null.
+func linked_card() -> DetailsPanel:
+	return _child if _child != null and is_instance_valid(_child) and _child.visible else null
 
 
 ## The band at the bottom of a card: what it takes, glyph by glyph, and a thing's weight and price on the right; null — none.

@@ -7,6 +7,9 @@ extends RefCounted
 ##  cost: [{kind, text}], foot: []}. `big` is the headline number (the damage, the healing, the AC); `dice` its dice by
 ## damage type; `status` what the spell lays, with the icon of its condition; `props` how it works (a glyph and words);
 ## `cost` what it takes (an action, a bonus action, a reaction, a slot); `foot` a thing's weight and price.
+## v0.8.4.43.56 (as in BG3, the author: «карточка в карточке»): `refs` [{text, ref}] — the names in the card that have a card
+## of their own (a spell, a status, a feature, a trait, a thing, a condition): the window draws each a link and shows its
+## card (`of_ref`) beside this one while the link is hovered.
 
 ## The glyph of a cost: the same shapes as the counters over the hotbar.
 const GLYPH := {"action": "●", "bonus": "▲", "reaction": "◆", "slot": "■", "free": "○", "time": "⧗", "move": "➜"}
@@ -32,7 +35,7 @@ static func spell(data: Dictionary, id: String, slot: int = 0, c: Dictionary = {
 	if bool(sp.get("ritual", false)):
 		sub += " · " + _t("CARD_RITUAL")
 	var card := {"title": str(sp.get("name", id)), "sub": sub, "icon": "spells/" + id, "desc": str(sp.get("desc", "")),
-		"dice": [], "status": [], "notes": [], "props": [], "cost": [], "foot": []}
+		"dice": [], "status": [], "notes": [], "props": [], "cost": [], "foot": [], "refs": []}
 	var level := int(c.get("level", 1))
 	var ab := str(sp.get("ability", c.get("spell_ability", "")))
 	var mod := CharacterRules.mod(CharacterRules.ability(c, ab)) if not c.is_empty() and not ab.is_empty() else 0
@@ -53,6 +56,7 @@ static func spell(data: Dictionary, id: String, slot: int = 0, c: Dictionary = {
 	var cspec: Dictionary = CombatRules.cfg(data)["condition_spells"].get(id, {})
 	for cond: Variant in cspec.get("conditions", []):
 		card["status"].append({"icon": "conditions/" + str(cond), "text": ConditionRules.name_of(data, str(cond))})
+		link(card, ConditionRules.name_of(data, str(cond)), "conditions/" + str(cond))
 	var conc := bool(sp.get("concentration", false))
 	var dur := str(sp.get("duration", ""))
 	if conc and dur.to_lower().begins_with("концентрация"):
@@ -90,7 +94,7 @@ static func item(c: Dictionary, data: Dictionary, session_items: Dictionary, id:
 	if def.is_empty():
 		return {}
 	var card := {"title": ItemRules.display_name(data["items"], session_items, id), "icon": "items/" + id, "desc": "",
-		"dice": [], "status": [], "notes": [], "props": [], "cost": [], "foot": ItemInfo.meta_parts(def, false)}
+		"dice": [], "status": [], "notes": [], "props": [], "cost": [], "foot": ItemInfo.meta_parts(def, false), "refs": []}
 	if def.has("unknown_of"):  # v0.7.12: an unidentified thing shows only what it looks like
 		var base := str(def.get("base", ""))
 		var look := ItemRules.def_of(data["items"], session_items, base) if (def.has("weapon") or def.has("armor")) and not base.is_empty() else def
@@ -128,6 +132,9 @@ static func item(c: Dictionary, data: Dictionary, session_items: Dictionary, id:
 	var cmp := ItemInfo.compare(c, data, session_items, id)
 	if not cmp.is_empty():
 		card["notes"].append(cmp)
+	var use := ItemRules.consumable(data, id, session_items)  # the spells it casts or keeps: links to their cards
+	for sid: Variant in ((def.get("spells", []) as Array).map(func(r: Dictionary) -> String: return str(r.get("spell", ""))) + [use.get("spell", "")]):
+		link(card, str(data["spells"].get(str(sid), {}).get("name", "")), "spells/" + str(sid))
 	return card
 
 
@@ -177,7 +184,7 @@ static func feature(data: Dictionary, id: String, c: Dictionary = {}) -> Diction
 	if row.is_empty():
 		return {}
 	var card := {"title": str(row.get("name", fid)), "icon": "features/" + fid if feats.has(fid) else "traits/" + fid, "desc": str(row.get("desc", "")),
-		"dice": [], "status": [], "notes": [], "props": [], "cost": [], "foot": []}
+		"dice": [], "status": [], "notes": [], "props": [], "cost": [], "foot": [], "refs": []}
 	if feats.has(fid):
 		var cls := str(data["classes"]["classes"].get(str(row.get("class", "")), {}).get("name", ""))
 		card["sub"] = _t("CARD_FEATURE_SUB").format({"class": cls, "n": int(row.get("level", 1))}) if not cls.is_empty() else _t("CARD_FEATURE")
@@ -204,7 +211,71 @@ static func feature(data: Dictionary, id: String, c: Dictionary = {}) -> Diction
 			return (r.get("features", []) as Array).has(fid) and str(r.get("spell", "")) == str(sid))
 		card["notes"].append(_t("CARD_FEATURE_SPELL").format({"spell": str(data["spells"].get(str(sid), {}).get("name", sid)),
 			"how": _t("CARD_FEATURE_SPELL_ONCE") if once else _t("CARD_FEATURE_SPELL_AT_WILL")}))
+		link(card, str(data["spells"].get(str(sid), {}).get("name", "")), "spells/" + str(sid))
 	return card
+
+
+## A status of `ConditionRules.shown` (v0.8.4.43.56, as in BG3): its name, how long it holds, what it does, what laid it — a
+## link to the card of that spell, feature, trait or thing (`e.of`), in its source line and in its name («Концентрация:
+## Зловонное облако»).
+static func status(data: Dictionary, e: Dictionary, session_items: Dictionary = {}) -> Dictionary:
+	var card := {"title": str(e.get("name", "")), "sub": _t("CARD_STATUS"), "icon": str(e.get("icon", "")), "desc": str(e.get("text", "")),
+		"dice": [], "status": [], "notes": [], "props": [], "cost": [], "foot": [], "refs": []}
+	if not str(e.get("left", "")).is_empty():
+		card["props"].append("%s %s" % [DURATION, e["left"]])
+	var does := str(e.get("does", ""))
+	if not does.is_empty() and does != str(card["desc"]):
+		card["notes"].append(does)
+	var of := str(e.get("of", ""))
+	var named := str(of_ref(data, of, session_items).get("title", "")) if not of.is_empty() else ""
+	var src := str(e.get("source", "")) if not str(e.get("source", "")).is_empty() else named
+	if not src.is_empty():
+		card["notes"].append(_t("CARD_STATUS_SOURCE").format({"source": src}))
+	if not named.is_empty():
+		link(card, src, of)
+		link(card, named, of)
+	return card
+
+
+## A condition of 5e by its rules text (the link of a spell's «what it lays»): «Отравлен» and what it does.
+static func condition(data: Dictionary, id: String) -> Dictionary:
+	var text := str(data["rules"]["conditions"].get(id, ""))
+	if text.is_empty():
+		return {}
+	var title := ConditionRules.name_of(data, id)
+	var desc := text.substr(text.find(":") + 1).strip_edges() if text.contains(":") else text
+	return {"title": title, "sub": _t("CARD_CONDITION"), "icon": "conditions/" + id, "desc": desc,
+		"dice": [], "status": [], "notes": [], "props": [], "cost": [], "foot": [], "refs": []}
+
+
+## The card a ref names (`spells/<id>`, `features/<id>`, `traits/<id>`, `items/<id>`, `conditions/<id>`) as it is, by no
+## one's numbers: the card a link shows. {} — none.
+static func of_ref(data: Dictionary, ref: String, session_items: Dictionary = {}) -> Dictionary:
+	var kind := ref.get_slice("/", 0)
+	var id := ref.substr(kind.length() + 1)
+	if id.is_empty():
+		return {}
+	match kind:
+		"spells":
+			return spell(data, id)
+		"features", "traits":
+			return feature(data, id)
+		"items":
+			return item({}, data, session_items, id)
+		"conditions":
+			return condition(data, id)
+	return {}
+
+
+## Marks `text` in the card a link to the card of `ref` (once a pair; an empty name links nothing).
+static func link(card: Dictionary, text: String, ref: String) -> void:
+	if text.is_empty() or ref.ends_with("/"):
+		return
+	var refs: Array = card.get_or_add("refs", [])
+	for r: Dictionary in refs:
+		if str(r["text"]) == text and str(r["ref"]) == ref:
+			return
+	refs.append({"text": text, "ref": ref})
 
 
 ## An act of a fight (Act): its name, what it does, what it costs `f` now.

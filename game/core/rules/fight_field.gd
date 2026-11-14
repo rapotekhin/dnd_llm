@@ -29,20 +29,34 @@ static func lay(s: GameSession, data: Dictionary) -> void:
 			doors[FightGrid.tag(at)] = {"gone": true}
 		elif SHUT_FAST.has(WayRules.blocked(s, data, ends[0], ends[1])):
 			doors[FightGrid.tag(at)] = {"locked": true}
-	var bl: Dictionary = cfg(data)["blocks"]
 	var hz: Dictionary = cfg(data)["hazard"]
 	var ground: Array = []
 	var rows: Array = m["rows"]
 	for y: int in rows.size():
 		var row: String = rows[y]
 		for x: int in row.length():
-			if row[x] == str(bl["cell"]):
-				s.combat["blocks"][FightGrid.tag(Vector2i(x, y))] = _block(data, str(bl["body"]), str(bl["name"]))
-			elif row[x] == str(hz["cell"]):
+			if row[x] == str(hz["cell"]):
 				ground.append(FightGrid.tag(Vector2i(x, y)))
 	if not ground.is_empty():
 		SpellEffects.add_zone(s, zone_of("hazard", hz, ground))
-	for t: Dictionary in MapSpots.of(s, data, m):  # each square of a thing of the room: what its body bars (v0.8.4.43.23)
+	(s.combat["blocks"] as Dictionary).merge(blocks_of(s, data, m), true)
+	SpellEffects.lay_glyphs(s, data)  # the hero's runes of this room (v0.8.4.26.3)
+	FightGrid.changed(s)
+
+
+## What bars the squares of map `m` before anybody moves it: its block cells and each square of a thing of the room by
+## what its body bars (v0.8.4.43.23). {tag: block}. A fight lays them as its own (`lay`); out of a fight the grid reads
+## them as they stand (v0.8.4.43.55: an area laid before the fight stops where the fight's would).
+static func blocks_of(s: GameSession, data: Dictionary, m: Dictionary) -> Dictionary:
+	var out := {}
+	var bl: Dictionary = cfg(data)["blocks"]
+	var rows: Array = m["rows"]
+	for y: int in rows.size():
+		var row: String = rows[y]
+		for x: int in row.length():
+			if row[x] == str(bl["cell"]):
+				out[FightGrid.tag(Vector2i(x, y))] = _block(data, str(bl["body"]), str(bl["name"]))
+	for t: Dictionary in MapSpots.of(s, data, m):
 		if str(t.get("body", "")).is_empty():
 			continue
 		var b := _block(data, str(t["body"]), str(t["name"]))
@@ -52,13 +66,13 @@ static func lay(s: GameSession, data: Dictionary) -> void:
 			b["prop"] = str(t["id"])
 		b["span"] = (t["cells"] as Array).size()
 		for c: Vector2i in t["cells"]:
-			s.combat["blocks"][FightGrid.tag(c)] = b.duplicate()
-	SpellEffects.lay_glyphs(s, data)  # the hero's runes of this room (v0.8.4.26.3)
-	FightGrid.changed(s)
+			out[FightGrid.tag(c)] = b.duplicate()
+	return out
 
 
 ## What a fighter's trait strews around it as the fight begins (`lays`: Web Sense — the lair's webs): a row of
-## `rules.combat.grid.strewn` on a `share` of the free squares within `around`, its own square among them.
+## `rules.combat.grid.strewn` on a `share` of the free squares within `around`, its own square among them; the zone is its
+## own (`by`), so what it holds is held by it, not by the hero (v0.8.4.43.52).
 static func _lays(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 	if f.is_empty() or Sheet.is_hero(f):
 		return
@@ -80,7 +94,7 @@ static func _lays(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 					and (own.has(at) or s.rng.randf() < float(lays.get("share", 0.3))):
 				cells.append(at)
 		var row: Dictionary = cfg(data)["strewn"][str(lays["ground"])]
-		SpellEffects.add_zone(s, zone_of(str(lays["ground"]), row.merged({"side": str(f.get("side", "enemy"))}), FightGrid.pack_cells(cells)))
+		SpellEffects.add_zone(s, zone_of(str(lays["ground"]), row.merged({"side": str(f.get("side", "enemy")), "by": str(f["id"])}), FightGrid.pack_cells(cells)))
 
 
 ## `a` knows where `b` is through a zone it feels (Web Sense, v0.8.4.27.3): both touch one zone whose `feel` is a flag of
@@ -179,7 +193,7 @@ static func round_starts(s: GameSession, data: Dictionary, lines: Array[String])
 
 ## A damage of `dtype` touches `cells` (v0.8.4.43.45): each row of `rules.combat.grid.surfaces` by that type lays its
 ## zone on the squares it is for — water under lightning, water blessed by radiance, hellfire where a fiend's fire falls.
-## `source` — who dealt it (a fighter, {} — none). Lines.
+## `source` — who dealt it (a fighter, {} — none), the zone's author. Lines.
 static func react(s: GameSession, data: Dictionary, dtype: String, cells: Array[Vector2i], source: Dictionary, lines: Array[String]) -> void:
 	var g := FightGrid.grid(s, data)
 	for id: String in cfg(data).get("surfaces", {}):
@@ -203,7 +217,7 @@ static func react(s: GameSession, data: Dictionary, dtype: String, cells: Array[
 					(z["cells"] as Array).erase(key)
 				if (z["cells"] as Array).is_empty():
 					SpellEffects.zones(s).erase(z)
-		var z := zone_of(id, (row as Dictionary).merged({"on": row.get("when", ["enter", "start"])}, true), packed)
+		var z := zone_of(id, (row as Dictionary).merged({"on": row.get("when", ["enter", "start"]), "by": str(source.get("id", ""))}, true), packed)
 		z["until_round"] = int(s.combat.get("round", 1)) + int(row.get("rounds", 1)) - 1  # gone by SpellEffects.zones_expire
 		SpellEffects.add_zone(s, z)
 		lines.append("%s (клеток: %d)" % [row["name"], hit.size()])
@@ -241,9 +255,7 @@ static func hero_stands(s: GameSession, data: Dictionary) -> void:
 static func stepped(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> bool:
 	var g := FightGrid.grid(s, data)
 	var bits := FightGrid.flags_at(g, FightGrid.cell(f))
-	if douses_at(s, data, FightGrid.cell(f)) and not LiquidRules.burning(s, Sheet.holder(s, f)).is_empty():
-		LiquidRules.uncoat(Sheet.holder(s, f))
-		lines.append("%s гасит пламя в воде" % f["name"])
+	soak(s, data, f, lines)
 	var hero := str(f.get("id")) == CombatRules.PLAYER
 	var flying := CombatRules.airborne(s, data, f)
 	if bits & FightGrid.PIT != 0 and not flying:
@@ -492,7 +504,7 @@ static func _smash_block(s: GameSession, data: Dictionary, f: Dictionary, lines:
 	var mat := {"material": b["made_of"]}
 	var r := ThingRules.blow(s, data, f, mat, "Удар по вещи")  # the door's road: its threshold too (v0.8.4.29.3)
 	if not bool(r["ok"]):
-		lines.append("%s: удар по вещи — %d против КД %d, без толку" % [r["name"], int(r["total"]), int(r["ac"])])
+		lines.append("%s: удар по вещи — %s, без толку" % [r["name"], Roll.versus(int(r["total"]), int(r["ac"]), int(r["nat"]), false, "КД")])
 		return
 	var dmg := ThingRules.takes(data, mat, int(r["damage"]))
 	b["hp"] = int(b["hp"]) - dmg
@@ -515,7 +527,18 @@ static func _ruin(s: GameSession, data: Dictionary, at: Vector2i, lines: Array[S
 # --- fire ----------------------------------------------------------------------------------------------------
 
 
-## Water on the square: the map's or a puddle (v0.8.4.28.2) — no fire there, and one walking in is put out.
+## Water on a body that does not fly, as in BG3 (v0.8.4.43.59): the water of its square (the map's or a puddle) or a sky that wets
+## (`wets` of the weather here) — it is `wet` and its fire out (LiquidRules.soak). On walking in and at the start of its turn.
+static func soak(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	if CombatRules.airborne(s, data, f):
+		return
+	if douses_at(s, data, FightGrid.cell(f)):
+		lines.append_array(LiquidRules.soak(s, data, f, "вода"))
+	elif not WeatherRules.wets(s, data).is_empty():  # everybody under the sky: only a fire put out is told
+		lines.append_array(LiquidRules.soak(s, data, f, WeatherRules.wets(s, data), false))
+
+
+## Water on the square: the map's or a puddle (v0.8.4.28.2) — no fire there, and one walking in is put out and wet.
 static func douses_at(s: GameSession, data: Dictionary, at: Vector2i) -> bool:
 	var key := FightGrid.tag(at)
 	return FightGrid.flags_at(FightGrid.grid(s, data), at) & FightGrid.WET != 0 		or SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return bool(z.get("douses", false)) and (z.get("cells", []) as Array).has(key))
@@ -559,10 +582,11 @@ static func _light(s: GameSession, at: Vector2i) -> void:
 
 
 ## A flask broken on a square: its liquid's `puddle` (v0.8.4.28.2) — a zone of the ground (oil to slip on and burn, water
-## that puts the fire out), or alchemist's fire that burns at once.
-static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionary, name: String, lines: Array[String], side := "player") -> void:
+## that puts the fire out), or alchemist's fire that burns at once. `side` and `by` — the thrower's.
+static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionary, name: String, lines: Array[String], side := "player",
+		by := "") -> void:
 	if fx.has("strew"):
-		strew(s, data, at, str(fx["strew"]), side, lines)
+		strew(s, data, at, str(fx["strew"]), side, lines, by)
 		return
 	var lid := str(fx.get("liquid", ""))
 	var p: Dictionary = LiquidRules.kind(data, lid).get("puddle", {})
@@ -581,22 +605,22 @@ static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionar
 		(s.combat["fires"] as Dictionary).erase(key)
 		_sync_fire(s, data)
 		lines.append("%s: огонь на клетке погас" % name)
-	SpellEffects.add_zone(s, zone_of("puddle:" + lid, p.merged({"side": side, "on": p.get("on", [])}), FightGrid.pack_cells([at] as Array[Vector2i])))
+	SpellEffects.add_zone(s, zone_of("puddle:" + lid, p.merged({"side": side, "by": by, "on": p.get("on", [])}), FightGrid.pack_cells([at] as Array[Vector2i])))
 	lines.append("%s: %s растекается по клетке" % [name, LiquidRules.name_of(data, lid)])
 	if (s.combat["fires"] as Dictionary).has(key):
 		kindle(s, data, [at] as Array[Vector2i], lines)
 
 
 ## Caltrops or ball bearings strewn from `at` (v0.8.4.27): a zone of the ground by the row of `rules.combat.grid.strewn`,
-## the thrower's side its own. Lines.
-static func strew(s: GameSession, data: Dictionary, at: Vector2i, row_id: String, side: String, lines: Array[String]) -> void:
+## the thrower's side and its author (`by`) its own. Lines.
+static func strew(s: GameSession, data: Dictionary, at: Vector2i, row_id: String, side: String, lines: Array[String], by := "") -> void:
 	var row: Dictionary = cfg(data)["strewn"][row_id]
 	var cells: Array[Vector2i] = []
 	var g := FightGrid.grid(s, data)
 	for c: Vector2i in FightGrid.body_at(at, int(row.get("span", 1))):
 		if FightGrid.walkable(g, c):
 			cells.append(c)
-	SpellEffects.add_zone(s, zone_of(row_id, row.merged({"side": side}), FightGrid.pack_cells(cells)))
+	SpellEffects.add_zone(s, zone_of(row_id, row.merged({"side": side, "by": by}), FightGrid.pack_cells(cells)))
 	lines.append("%s: рассыпаны по клетке — кто войдёт, спасбросок %s Сл %d" % [row["name"], CombatRules.ab_name(str(row["save"])), int(row["dc"])])
 
 

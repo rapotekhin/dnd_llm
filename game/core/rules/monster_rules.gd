@@ -215,6 +215,9 @@ static func _lay(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 		e["save"] = {"ability": str(a["save"]["ability"]), "dc": int(a["save"]["dc"]), "tag": tag_of(data, fx, a), "repeat": true}
 	if fx.has("escape_dc"):
 		e["escape_dc"] = int(fx["escape_dc"])
+	for k: String in ["harm", "ticks"]:  # its own damage each turn: a blow that sets aflame, a wound that bleeds (v0.8.4.43.54)
+		if fx.has(k):
+			e[k] = fx[k]
 	if bool(fx.get("wake", false)):
 		e["wake"] = true
 	if cond == "grappled":

@@ -387,7 +387,7 @@ static func hurt(s: GameSession, data: Dictionary, a: String, b: String, damage:
 static func hit(s: GameSession, data: Dictionary, a: String, b: String, who: Dictionary = Sheet.HERO) -> Array[String]:
 	var r := ThingRules.blow(s, data, who, def(data, a, b), "Удар по двери")
 	if not bool(r["ok"]):
-		return ["%s: удар по двери — %d против КД %d, без толку" % [r["name"], int(r["total"]), int(r["ac"])]]
+		return ["%s: удар по двери — %s, без толку" % [r["name"], Roll.versus(int(r["total"]), int(r["ac"]), int(r["nat"]), false, "КД")]]
 	var dmg := int(r["damage"])
 	if hurt(s, data, a, b, dmg):
 		return ["%s: %d урона — %s" % [r["name"], dmg, break_line(data, a, b).to_lower()]]

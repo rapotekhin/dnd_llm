@@ -35,15 +35,17 @@ static func free_spots(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	return _of(s, data, WalkRules.view(s, data))["free"]
 
 
-## {"tokens": the tokens of `of`, "free": the spots left free}.
+## {"tokens": the tokens of `of`, "free": the spots left free, "taken": the squares a thing or one of the room takes}.
+## `taken` is the one rule of where anybody stands (v0.8.4.43.60): a person, a creature, a body, a foe by `on_lair` —
+## never on a square a thing takes, and a thing takes the squares it is drawn on (`_with_body`).
 static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary:
 	var lib: Dictionary = data["layouts"]
 	var cells := _cells(map, lib, s.room_id)
 	var out: Array[Dictionary] = []
 	var free: Array[Dictionary] = []
-	if cells.is_empty():
-		return {"tokens": out, "free": free}
 	var taken := {}
+	if cells.is_empty():
+		return {"tokens": out, "free": free, "taken": taken}
 	for e: Dictionary in map["exits"]:
 		taken[Vector2i(int(e["ax"]), int(e["ay"]))] = true
 	var index := (map["ids"] as Array).find(s.room_id)
@@ -163,7 +165,7 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 		for c: Vector2i in t.get("cells", [at]):
 			taken[c] = true
 		out.append(t)
-	return {"tokens": out, "free": free}
+	return {"tokens": out, "free": free, "taken": taken}
 
 
 ## The furnishing each piece of the room stands, whole (v0.8.4.43.51): of the furnishings of a chunk laid on the map
@@ -390,8 +392,9 @@ static func footprint(size: Array, at: Vector2i, turn: int) -> Array[Vector2i]:
 
 ## A thing of a body laid near `at`: its squares all free among `spots` and not `taken`, turned as the seed of `key` says
 ## first; one that bars the way keeps every way of the room joined. `must` — one of its squares is `at` itself (a station
-## of a mark, a thing put by hand). {"at": top left, "turn", "cells"}; nothing fits — one square at `at`.
-## `want` — of the fits the one with most squares in it (a counter along its marks). Nothing fits — "loose".
+## of a mark, a thing put by hand); none holds `at` — whole on the nearest free floor beside it (v0.8.4.43.60).
+## {"at": top left, "turn", "cells"}. `want` — of the fits the one with most squares in it (a counter along its marks).
+## Nothing fits whole anywhere — "loose": one square at `at`, its body not drawn (`_with_body`).
 static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, spots: Array[Vector2i], cells: Array[Vector2i],
 		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary, must: bool, want: Dictionary = {}) -> Dictionary:
 	var body: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
@@ -432,16 +435,22 @@ static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, s
 						best_score = score
 	if not best.is_empty():
 		return best
+	if must:  # the author, 2026-11-14: a stage laid on one square was drawn whole over a cat and the board beside it
+		return _lay(data, body_id, key, at, spots, cells, ways, walls, taken, false)
 	return {"at": at, "turn": turns[0], "cells": [at] as Array[Vector2i], "loose": true}
 
 
 ## A token takes its thing's body: its squares, its turn, what it bars; its own square is one of them. The squares that
-## bar the way join `walls`.
+## bar the way join `walls`. A thing takes on the map the very squares it is drawn on (v0.8.4.43.60): one with no whole
+## place ("loose") stays a token of its one square, its picture never drawn over the squares of others — a person, a
+## creature, a foe and another thing stand only where no thing is (`taken` of `_of`, `on_lair`).
 static func _with_body(data: Dictionary, t: Dictionary, body_id: String, laid: Dictionary, walls: Dictionary) -> void:
+	if bool(laid.get("loose", false)):
+		return
 	var body: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
 	var mine: Array[Vector2i] = laid["cells"]
 	var blocks: Array = body.get("blocks", [])
-	var bars := (PATH if blocks.has("path") and not bool(laid.get("loose", false)) else 0) | (SIGHT if blocks.has("sight") else 0)
+	var bars := (PATH if blocks.has("path") else 0) | (SIGHT if blocks.has("sight") else 0)
 	t["body"] = body_id
 	t["turn"] = int(laid["turn"])
 	t["cells"] = mine
@@ -518,10 +527,67 @@ static func of_fighter(s: GameSession, data: Dictionary, spec: Dictionary) -> Ve
 	var creature := str(spec.get("creature_id", ""))
 	if not npc.is_empty() or not creature.is_empty():
 		var ref := "npc:" + npc if not npc.is_empty() else "cr:" + creature
-		for t: Dictionary in of(s, data, FightGrid.map(s, data)):
+		for t: Dictionary in of(s, data, FightGrid.map(s, data)) + walkers(s, data):
 			if str(t["ref"]) == ref:
 				return Vector2i(int(t["x"]), int(t["y"]))
 	return Vector2i(-1, -1)
+
+
+## Those who walk with the hero (v0.8.4.43.55): its followers, then its creatures — tokens on the squares round the hero by
+## `WalkRules.around` in the hero's view of the room, where the field seats them and a fight starts them.
+static func walkers(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var world := WorldView.new(data["world"])
+	for id: String in Being.followers(s):
+		var t := _token("npc:" + id, "npc", id, str(world.npc(id).get("name", id)), Vector2i.ZERO)
+		t["portrait"] = PortraitRules.of(s, data, {"npc_id": id})
+		out.append(t)
+	for cr: Dictionary in CreatureRules.here(s, s.room_id):
+		if CreatureRules.with_hero(cr):
+			var t := _token("cr:" + str(cr["id"]), "creature", str(cr["id"]), str(cr["name"]), Vector2i.ZERO)
+			t["portrait"] = PortraitRules.of(s, data, cr)
+			out.append(t)
+	if out.is_empty():
+		return out
+	var map := WalkRules.view(s, data)
+	var hero := WalkRules.settle(s, data, map)
+	var squares := WalkRules.around(map, data["layouts"], hero, out.size())
+	for i: int in out.size():
+		var at: Vector2i = squares[i] if i < squares.size() else hero
+		out[i]["x"] = at.x
+		out[i]["y"] = at.y
+	return out
+
+
+## Who of the room stands where now (v0.8.4.43.55, an area laid out of a fight): the hero, those who walk with it, the
+## people, the foes before a fight — the hidden too, a foe's body by its size. [{"ref", "kind" (hero, npc, creature, foe),
+## "id", "name", "side" (hero — the hero's own, else other), "seen", "x", "y", "span"}].
+static func standing(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	var map := WalkRules.view(s, data)
+	var hidden: Array = EncounterRules.lurking(s, s.room_id).get("hidden", [])
+	var hero := WalkRules.settle(s, data, map)
+	var out: Array[Dictionary] = [{"ref": "", "kind": "hero", "id": Being.HERO, "name": str(s.character.get("name", "")), "side": "hero",
+		"seen": true, "x": hero.x, "y": hero.y, "span": FightGrid.span_of(data, CombatRules.hero_size(s, data))}]
+	var stand := func(t: Dictionary, span: int, side: String) -> void:
+		out.append({"ref": str(t["ref"]), "kind": str(t["kind"]), "id": str(t["id"]), "name": str(t["name"]), "side": side,
+			"seen": not (str(t["kind"]) == "foe" and hidden.has(str(t["id"]))), "x": int(t["x"]), "y": int(t["y"]), "span": span})
+	for t: Dictionary in walkers(s, data):
+		stand.call(t, 1, "hero")
+	for t: Dictionary in of(s, data, map):
+		if str(t["kind"]) == "npc":
+			stand.call(t, 1, "other")
+	for t: Dictionary in foes(s, data, map):
+		var mon: Dictionary = data["monsters"].get(str(t["record"].get("monster", "")), {})
+		stand.call(t, FightGrid.span_of(data, str(mon.get("size", "medium"))), "other")
+	return out
+
+
+## Those of `standing` whose body is on `cells`; `with_hero` false — not the hero itself (an area that starts at it).
+static func on_cells(s: GameSession, data: Dictionary, cells: Array[Vector2i], with_hero: bool = true) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	out.assign(standing(s, data).filter(func(t: Dictionary) -> bool:
+		return (with_hero or str(t["kind"]) != "hero") and FightGrid.in_cells(t, cells)))
+	return out
 
 
 ## The foes of the room before a fight, each with its "record", on their squares by `on_lair`. `_map` is the hero's
@@ -554,12 +620,7 @@ static func on_lair(s: GameSession, data: Dictionary, key: String, heads: Array)
 	var map := LayoutRules.map_of(s, data, s.room_id)
 	var cells := _clear(map, data["layouts"], _cells(map, data["layouts"], s.room_id))
 	var lair := _lair(s, data, map, cells, key) if not cells.is_empty() else FightGrid.NONE
-	var taken := {}
-	for t: Dictionary in _of(s, data, map)["tokens"]:  # nobody stands in a thing or on a person (the author, 2026-11-13: a priest in the stone table)
-		if str(t["kind"]) == "body":
-			continue
-		for c: Variant in t.get("cells", [Vector2i(int(t["x"]), int(t["y"]))]):
-			taken[c] = true
+	var taken: Dictionary = _of(s, data, map)["taken"]  # nobody in a thing or on a person: the one rule of `_of` (2026-11-13: a priest in the stone table)
 	var out: Array = []
 	for e: Dictionary in heads:
 		var spec := e.duplicate()

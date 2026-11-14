@@ -131,8 +131,12 @@ static func map(s: GameSession, data: Dictionary) -> Dictionary:
 	return grid(s, data)["map"]
 
 
+## Out of a fight (v0.8.4.43.55: an area laid on the room's map before it) the grid of the hero's room with its things as they
+## stand, kept while the room and its things are the same.
 static func grid(s: GameSession, data: Dictionary) -> Dictionary:
 	var key := "%d|%s|%s|%d|%s" % [s.get_instance_id(), str(s.combat.get("map", "")), str(s.combat.get("field", "")), int(s.combat.get("rev", 0)), str(s.layouts.get("rev", ""))]
+	if s.combat.is_empty():
+		key = "%d|out|%s|%s|%d" % [s.get_instance_id(), s.room_id, str(s.layouts.get("rev", "")), PropRules.room_props(s, s.room_id).hash()]
 	if key != _key or _grid.is_empty():
 		_grid = _build(s, data)
 		_key = key
@@ -187,10 +191,11 @@ static func _build(s: GameSession, data: Dictionary) -> Dictionary:
 		if at.x >= 0 and at.y >= 0 and at.x < w and at.y < h:
 			flags[at.y * w + at.x] = flags[at.y * w + at.x] & ~(SOLID | LOW | OPAQUE)
 			cost[at.y * w + at.x] = 1
-	for key: String in s.combat.get("blocks", {}):  # things of the field: pushed about, of the room by their bodies
+	var blocks: Dictionary = s.combat.get("blocks", {}) if not s.combat.is_empty() else FightField.blocks_of(s, data, m)
+	for key: String in blocks:  # things of the field: pushed about, of the room by their bodies
 		var at := y_x(key)
 		if at.x >= 0 and at.y >= 0 and at.x < w and at.y < h:
-			flags[at.y * w + at.x] = flags[at.y * w + at.x] | int(s.combat["blocks"][key].get("flags", SOLID | LOW))
+			flags[at.y * w + at.x] = flags[at.y * w + at.x] | int(blocks[key].get("flags", SOLID | LOW))
 	return {"map": m, "w": w, "h": h, "flags": flags, "cost": cost}
 
 
@@ -789,10 +794,10 @@ static func in_cells(f: Dictionary, cells: Array[Vector2i]) -> bool:
 # --- zones on squares ------------------------------------------------------------------------------------------
 
 
-## The squares of a zone now. A zone that follows the hero is drawn around the hero; the rest are kept as "x,y".
+## The squares of a zone now. A zone that follows its author (`by`) is drawn around it; the rest are kept as "x,y".
 static func zone_cells(s: GameSession, data: Dictionary, z: Dictionary) -> Array[Vector2i]:
 	if bool(z.get("follow", false)):
-		var p: Dictionary = s.beings.get(str(z.get("by", "p")), {}).get("fight", {})
+		var p: Dictionary = s.beings.get(str(z.get("by", "")), {}).get("fight", {})
 		return area(s, data, z["shape"], cell(p), cell(p), true)
 	var out: Array[Vector2i] = []
 	for key: Variant in z.get("cells", []):

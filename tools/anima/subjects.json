@@ -178,6 +178,110 @@
   "sentence": "A single brown leather boot seen from the side, upright with one short white motion line behind it.",
   "tags": "boot, brown, from side, motion line"
  },
+ "backgrounds/acolyte": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single young temple acolyte with a shaved head in a plain hooded robe, hands pressed together in prayer before the chest, a string of prayer beads with a sun pendant around the neck, eyes calmly closed. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, monk, priest, portrait, front view, hood, robe, prayer beads, holy symbol, closed eyes, praying, symmetrical"
+ },
+ "backgrounds/criminal": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single thief with a deep hood pulled low and a cloth mask over the nose and mouth, only the sharp narrowed eyes showing, a dagger held up beside the face. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, thief, portrait, front view, hood, mask, mouth mask, dagger, symmetrical"
+ },
+ "backgrounds/entertainer": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single cheerful performer woman in a jester's cap with three bells, a wide playful smile and a ruffled collar. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1girl, solo, jester, bard, portrait, front view, jester cap, bells, smile, symmetrical"
+ },
+ "backgrounds/folk_hero": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single young farmer with tousled short hair and a simple linen shirt, a determined look, a pitchfork resting on one shoulder like a spear. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, peasant, farmer, portrait, front view, short hair, pitchfork, determined, symmetrical"
+ },
+ "backgrounds/outlander": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single wilderness wanderer woman in a hood of thick fur, a long braid over one shoulder, stripes of face paint across the cheeks and a feather tied in the hair. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1girl, solo, ranger, portrait, front view, fur hood, braid, face paint, feather, symmetrical"
+ },
+ "backgrounds/sage": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single old scholar with a long white beard and round spectacles, a soft cap, an open book held up before the chest and a quill pen behind one ear. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, old man, scholar, portrait, front view, long beard, glasses, book, quill, symmetrical"
+ },
+ "backgrounds/soldier": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single veteran soldier in an open helmet with a nose guard and a chainmail coif, a scar across the cheek, a stern look, the shaft of a spear standing upright beside the head. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, soldier, portrait, front view, helmet, nasal helm, chainmail, spear, scar, symmetrical"
+ },
+ "classes/barbarian": {
+  "dark": false,
+  "sentence": "A single snarling wolf head seen from the front, fangs bared, ears flat back, a fierce mane of fur. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "wolf head, snarling, fangs, front view, symmetrical"
+ },
+ "classes/bard": {
+  "dark": false,
+  "sentence": "A single lute seen from the front, tilted diagonally, its round body with a rose sound hole, a long neck with frets and the pegbox bent back at the top. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "lute, musical instrument, strings, front view"
+ },
+ "classes/cleric": {
+  "dark": false,
+  "sentence": "A single round shield seen from the front with a bright sunburst holy symbol in its center. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "shield, sunburst, holy symbol, front view, symmetrical"
+ },
+ "classes/druid": {
+  "dark": false,
+  "sentence": "A single oak branch with three leaves and an acorn, a small spiral in the middle leaf. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "oak leaf, acorn, branch, spiral, front view"
+ },
+ "classes/fighter": {
+  "dark": false,
+  "sentence": "Two longswords crossed behind a small round shield, their blades pointing up. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "crossed swords, shield, front view, symmetrical"
+ },
+ "classes/monk": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single clenched fist wrapped in cloth bandages, raised and seen from the front, a knotted belt hanging below it. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "fist, wrapped hands, martial arts, front view"
+ },
+ "classes/paladin": {
+  "dark": false,
+  "sentence": "A single longsword standing upright with its point down, a radiant sun holy symbol with rays set in the crossguard where the blade meets the hilt, a few rays of light around it. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "longsword, holy symbol, sun, front view, symmetrical"
+ },
+ "classes/ranger": {
+  "dark": false,
+  "sentence": "A single longbow drawn with an arrow nocked and pointing up diagonally, a few leaves of a branch wound around the bow's grip. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "longbow, arrow, leaf, front view"
+ },
+ "classes/rogue": {
+  "dark": false,
+  "sentence": "A single dagger pointing down diagonally, behind it the dark opening of an empty hood. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "dagger, hood, front view"
+ },
+ "classes/sorcerer": {
+  "dark": false,
+  "people": true,
+  "sentence": "A single flame rising out of an open hand's palm, a sharp crystal shard glowing in the middle of the flame. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "flame, crystal, magic, front view, symmetrical"
+ },
+ "classes/warlock": {
+  "dark": false,
+  "sentence": "A single open eye with a slit pupil inside a circle of runes, two small horns above the circle. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "eye, pact, magic circle, front view, symmetrical"
+ },
+ "classes/wizard": {
+  "dark": false,
+  "sentence": "A single open spellbook seen from the front, a wizard's staff standing behind it and a four-pointed star shining above the pages. Seen straight from the front, symmetrical, large and filling the square.",
+  "tags": "open book, spellbook, staff, star, front view"
+ },
  "conditions/arcane_lock": {
   "dark": false,
   "sentence": "A single grey padlock with a glowing blue keyhole and a faint blue outline, seen from the front.",
@@ -248,6 +352,12 @@
   "sentence": "A single wide open eye with a blue iris looking sharply to the side, a small white sparkle at its corner.",
   "tags": "eye, looking to the side, blue, white, front view"
  },
+ "conditions/immune": {
+  "name": "Иммунитет",
+  "dark": false,
+  "sentence": "A single bright silver kite shield seen from the front, whole and gleaming, with a few short white rays of light shining out from its edges onto the dark field, drawn as a bold flat emblem.",
+  "tags": "shield, kite shield, silver, shining, light rays, front view, flat emblem"
+ },
  "conditions/knocked": {
   "dark": false,
   "sentence": "A single flat golden padlock emblem with its shackle swung open, simple and bold, seen from the front.",
@@ -287,12 +397,6 @@
   "dark": false,
   "sentence": "A single thick yellow arrow pointing straight down, small enough to sit well inside the ring.",
   "tags": "arrow, down, yellow, thick, simple"
- },
- "conditions/immune": {
-  "name": "Иммунитет",
-  "dark": false,
-  "sentence": "A single bright silver kite shield seen from the front, whole and gleaming, with a few short white rays of light shining out from its edges onto the dark field, drawn as a bold flat emblem.",
-  "tags": "shield, kite shield, silver, shining, light rays, front view, flat emblem"
  },
  "conditions/resistant": {
   "name": "Устойчивость",

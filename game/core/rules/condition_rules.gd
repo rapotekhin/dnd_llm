@@ -231,7 +231,19 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Diction
 		return lines
 	if cond == "exhaustion" and (hero or who.has("id")):  # a level of the one scale, whoever takes it (v0.8.4.11)
 		return add_exhaustion(s, data, 1, str(e.get("source", {}).get("name", "")), str(who.get("id", Being.HERO)))
-	add_effect(c, e.merged(MakeRules.fx(s, cond)))
+	var own: Dictionary = data["rules"].get("condition_effects", {}).get(cond, {})
+	var laid := e.merged(own.get("lays", {})).merged(MakeRules.fx(s, cond))  # the numbers of its row, a made one's parts
+	if own.has("ticks") and not laid.has("ticks") and not laid.get("ends", {}).has("at"):
+		laid["ticks"] = int(own["ticks"])
+	if own.has("rounds") and (laid.get("ends", {}) as Dictionary).is_empty() and not laid.has("ticks"):  # its row's length: wet 2 rounds
+		laid["ends"] = {"at": now(s) + int(own["rounds"])}
+	for x: Variant in laid.get("immune", []):  # what it is immune to now ends: wet puts the fire out (v0.8.4.43.59)
+		if has(c, str(x)):
+			remove(c, str(x))
+	if own.has("same") and has(c, cond):  # one of it from a second source: the stronger or the renewed (v0.8.4.43.54)
+		_same(s, data, effects_of(c, cond)[0], laid, str(own["same"]))
+		return lines
+	add_effect(c, laid)
 	if cond == "invisible" and not hero:
 		FightGrid.keep_seen(c)
 	if cond == "unconscious" and not has(c, "prone"):
@@ -244,6 +256,54 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Diction
 	elif INCAPACITATING.has(cond) and not hero and c.has("id"):  # its holds and its concentration go
 		MonsterRules.release(s, data, c, lines)
 	return lines
+
+
+## One status from a second source (v0.8.4.43.54, the row's `same`): `max` keeps the stronger harm and the longer end, `renew`
+## takes the new one's end; the turns it hurts and the save that ends it go with the end they belong to.
+static func _same(s: GameSession, data: Dictionary, old: Dictionary, e: Dictionary, rule: String) -> void:
+	if rule == "max" and CombatRules.dice_avg(str(harm_of(data, e).get("dice", "0"))) > CombatRules.dice_avg(str(harm_of(data, old).get("dice", "0"))):
+		old["harm"] = harm_of(data, e)
+		for k: String in ["source", "by"]:
+			if e.has(k):
+				old[k] = e[k]
+	if rule == "renew" or _lasts(s, e) > _lasts(s, old):
+		old["ends"] = e.get("ends", {})
+		for k: String in ["ticks", "save"]:
+			if e.has(k):
+				old[k] = e[k]
+			else:
+				old.erase(k)
+
+
+## The round an effect lasts to, to weigh two: its round, its turns of harm from now, a rest, and no end at all the longest.
+static func _lasts(s: GameSession, e: Dictionary) -> int:
+	var ends: Dictionary = e.get("ends", {})
+	if ends.has("at"):
+		return int(ends["at"])
+	if e.has("ticks"):
+		return now(s) + int(e["ticks"])
+	return (1 << 50) if ends.has("rest") else (1 << 60)
+
+
+## The harm a status of a record does each turn: its own (a source's numbers) or its row's; {} — none (v0.8.4.43.54).
+static func harm_of(data: Dictionary, e: Dictionary) -> Dictionary:
+	var own := harm_in(e)
+	if not own.is_empty():
+		return (data["rules"].get("condition_effects", {}).get(str(e.get("condition", "")), {}).get("harm", {}) as Dictionary).merged(own, true)
+	return data["rules"].get("condition_effects", {}).get(str(e.get("condition", "")), {}).get("harm", {})
+
+
+static func harm_in(e: Dictionary) -> Dictionary:
+	return e["harm"] if e.get("harm") is Dictionary else {}
+
+
+## «урон 1к4 (огонь) в начале хода» — what a status's harm does, "" — none.
+static func harm_text(data: Dictionary, e: Dictionary) -> String:
+	var hm := harm_of(data, e)
+	if hm.is_empty():
+		return ""
+	return "урон %s (%s) %s хода%s" % [str(hm["dice"]).replace("d", "к"), str(data["misc"]["damage_types"].get(str(hm["type"]), hm["type"])),
+		"в конце" if str(hm.get("when", "start")) == "end" else "в начале", (", ходов: %d" % int(e["ticks"])) if e.has("ticks") else ""]
 
 
 ## What its statuses add to its maximum of hit points (Aid +, a life drain −; v0.8.4.29.2: the hero and a fighter alike).
@@ -703,6 +763,8 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 static func boon_text(data: Dictionary, e: Dictionary) -> String:
 	var parts: Array[String] = []
 	var dtypes: Dictionary = data["misc"]["damage_types"]
+	if not harm_text(data, e).is_empty():  # a status of damage each turn (v0.8.4.43.54)
+		parts.append(harm_text(data, e))
 	if e.has("adv_tag"):
 		parts.append("преимущество на спасброски: %s" % HeroDefense.tag_name(e["adv_tag"]))
 	if e.has("dis_tag"):
@@ -777,18 +839,8 @@ static func icon_of(data: Dictionary, e: Dictionary) -> String:
 	var id := str(e.get("condition", ""))
 	if not id.is_empty() and not IconRules.own(data, IconRules.ref("conditions", id)).is_empty():
 		return IconRules.ref("conditions", id)
-	var src: Dictionary = e.get("source", {}) if e.get("source") is Dictionary else {}
-	var sid := str(src.get("id", ""))
-	if id.is_empty() and not sid.is_empty():
-		var kind := str(src.get("kind", ""))
-		var refs: Array[String] = []
-		if kind == "spell":
-			refs = [IconRules.ref("spells", sid)]
-		elif kind in [ItemRules.BORN, "feature", "trait"]:
-			refs = [IconRules.ref("features", sid), IconRules.ref("traits", sid)]
-		elif kind in [ItemRules.WORN, "item"]:
-			refs = [IconRules.ref("items", sid)]
-		for r: String in refs:
+	if id.is_empty():
+		for r: String in source_refs(e):
 			if not IconRules.own(data, r).is_empty() or r.begins_with("spells/"):
 				return r
 	var dtypes: Dictionary = data["misc"]["damage_types"]
@@ -799,9 +851,38 @@ static func icon_of(data: Dictionary, e: Dictionary) -> String:
 	return IconRules.ref("conditions", id)
 
 
+## What laid a status, as the refs it may be known by: the spell, the class feature or the race trait, the thing; [] — the
+## engine, the master, a temple, a contest. Its icon (`icon_of`) and its card (`source_ref`) read them.
+static func source_refs(e: Dictionary) -> Array[String]:
+	var src: Dictionary = e.get("source", {}) if e.get("source") is Dictionary else {}
+	var sid := str(src.get("id", ""))
+	var kind := str(src.get("kind", ""))
+	if sid.is_empty():
+		return []
+	if kind == "spell":
+		return [IconRules.ref("spells", sid)]
+	if kind in [ItemRules.BORN, "feature", "trait"]:
+		return [IconRules.ref("features", sid), IconRules.ref("traits", sid)]
+	if kind in [ItemRules.WORN, "item"]:
+		return [IconRules.ref("items", sid)]
+	return []
+
+
+## What laid a status, as the ref of a card of its own (v0.8.4.43.56: a link in the status's card, `CardInfo.status`);
+## "" — none: the engine, the master, a monster's trait.
+static func source_ref(data: Dictionary, e: Dictionary) -> String:
+	var tables := {"spells": data["spells"], "features": data["classes"]["features"], "traits": data["races"]["traits"]}
+	for r: String in source_refs(e):
+		if r.begins_with("items/") or (tables.get(r.get_slice("/", 0), {}) as Dictionary).has(r.get_slice("/", 1)):
+			return r
+	return ""
+
+
 ## The statuses of anybody for the chips, the master and the card (v0.8.4.41: any creature, `who` of Sheet):
-## [{name, left, source, kind, text, does, condition, icon}] — `does` is what its numbers do (boon_text), `kind` where it comes
-## from (a spell, a worn thing, a trait…), `icon` its ref for IconRules (v0.8.4.43.4), `count` the level of exhaustion. A trait's status counts even when nothing laid it yet (ItemRules.born_effects).
+## [{name, left, source, kind, text, does, condition, icon, of}] — `does` is what its numbers do (boon_text), `kind` where it
+## comes from (a spell, a worn thing, a trait…), `icon` its ref for IconRules (v0.8.4.43.4), `of` the ref of the card of what
+## laid it (`source_ref`, v0.8.4.43.56: the concentration's spell), `count` the level of exhaustion. A trait's status counts
+## even when nothing laid it yet (ItemRules.born_effects).
 static func shown(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> Array[Dictionary]:
 	var c := Sheet.holder(s, who)
 	var out: Array[Dictionary] = []
@@ -823,15 +904,15 @@ static func shown(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO
 			text = ", ".join(does)
 		var icon := icon_of(data, e)
 		out.append({"condition": id, "name": title, "left": left_text(s, e), "source": str(e.get("source", {}).get("name", "")), "kind": kind,
-			"text": text, "does": ", ".join(does), "icon": icon})
+			"text": text, "does": ", ".join(does), "icon": icon, "of": source_ref(data, e)})
 	if exhaustion(c) > 0:
 		out.append({"condition": "exhaustion", "name": "Истощение %d" % exhaustion(c), "left": "до долгого отдыха", "source": "", "kind": "engine",
-			"text": exhaustion_text(exhaustion(c)), "does": "", "icon": IconRules.ref("conditions", "exhaustion"), "count": exhaustion(c)})
+			"text": exhaustion_text(exhaustion(c)), "does": "", "icon": IconRules.ref("conditions", "exhaustion"), "count": exhaustion(c), "of": ""})
 	if not str(c.get("concentration", "")).is_empty():
 		var sp := str(c["concentration"])
 		var ends := int(c.get("concentration_ends", -1))
 		out.append({"condition": "concentration", "name": "Концентрация: %s" % data["spells"].get(sp, {}).get("name", sp),
 			"left": left_text(s, {"ends": {"at": ends}} if ends >= 0 else {"ends": {}}).replace("пока не снимут", "пока держится"),
 			"source": "", "kind": "spell", "does": "", "text": "Урон — спасбросок Телосложения (Сл 10 или половина урона), иначе заклинание прервётся.",
-			"icon": IconRules.ref("spells", sp)})
+			"icon": IconRules.ref("spells", sp), "of": IconRules.ref("spells", sp) if (data["spells"] as Dictionary).has(sp) else ""})
 	return out

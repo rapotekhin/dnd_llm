@@ -14,9 +14,17 @@ func _ready() -> void:
 	_min_height = custom_minimum_size.y
 	wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	scroll_smooth = false
-	text_changed.connect(fit.call_deferred)
-	text_set.connect(fit.call_deferred)
-	resized.connect(fit.call_deferred)
+	text_changed.connect(refit)
+	text_set.connect(refit)
+	resized.connect(refit)
+
+
+## Fits on the next frame, never inside the frame that lays the screen out anew (v0.8.4.43.53): the input shrunk from
+## the fight's long hint to the short one in the frame a fight ends — while the screen hid the fight's parts and showed
+## the world's — crashed Godot 4.7.2 natively (signal 11, no script on the stack) at the end of the «consequences» fight.
+func refit() -> void:
+	if is_inside_tree() and not get_tree().process_frame.is_connected(fit):
+		get_tree().process_frame.connect(fit, CONNECT_ONE_SHOT)
 
 
 func _gui_input(event: InputEvent) -> void:

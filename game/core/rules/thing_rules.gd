@@ -69,14 +69,14 @@ static func takes(data: Dictionary, d: Dictionary, amount: int, dtype: String = 
 
 
 ## A blow of `who` at a thing of `d` (v0.8.4.29.3, one road for a door and a thing of a fight): the weapon at arm's length against
-## the material's AC, all its dice (doubled on a 20) and its bonus. {ok, total, ac, damage, name}.
+## the material's AC, all its dice (doubled on a 20) and its bonus. {ok, total, nat, ac, damage, name}.
 static func blow(s: GameSession, data: Dictionary, who: Dictionary, d: Dictionary, what: String) -> Dictionary:
 	var w := Attack.blade(s, data, who)
 	var ac := ac_of(material(data, d))
 	var parts: Array[Dictionary] = []
 	parts.assign(w.get("hit_parts", []))
 	var r := Roll.check(s, data, who, {"what": what, "parts": parts, "bonus": int(w.get("to_hit", 0)), "dc": ac})
-	var out := {"ok": bool(r["ok"]), "total": int(r["total"]), "ac": ac, "damage": 0, "name": str(w.get("name", ""))}
+	var out := {"ok": bool(r["ok"]), "total": int(r["total"]), "nat": int(r["nat"]), "ac": ac, "damage": 0, "name": str(w.get("name", ""))}
 	if bool(r["ok"]):
 		var dmg := int(w.get("bonus", 0))
 		for piece: Dictionary in w.get("pieces", []):
@@ -107,6 +107,11 @@ static func lift(st: Dictionary, id: String) -> void:
 static func lies_on_things(data: Dictionary, id: String) -> bool:
 	var row: Variant = data["rules"]["condition_effects"].get(id)
 	return row is Dictionary and (row.get("on", []) as Array).has("thing")
+
+
+## A status of things alone, not of a creature (`on` without "creature"): burning is both since v0.8.4.43.54.
+static func only_things(data: Dictionary, id: String) -> bool:
+	return lies_on_things(data, id) and not (data["rules"]["condition_effects"][id].get("on", []) as Array).has("creature")
 
 
 static func burns(s: GameSession, data: Dictionary, st: Dictionary, d: Dictionary) -> bool:
