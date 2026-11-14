@@ -258,7 +258,8 @@ static func start(s: GameSession, data: Dictionary, foes: Array, source: Diction
 	if ArenaRules.watching(s):
 		_add_foes(s, data, _on_square(source.get("allies", []), ring.get("ally", FightGrid.NONE)), FightGrid.NONE, "ally")
 	elif not s.combat.has("arena"):
-		_add_foes(s, data, own + AllyRules.joining(s, data, foes) + (source.get("allies", []) as Array) + AllyRules.summon_specs(s), FightGrid.NONE, "ally")
+		var struck: Array = source.get("opening", {}).get("friends", [])  # the hero's own its area caught (v0.8.4.43.55)
+		_add_foes(s, data, own + AllyRules.joining(s, data, foes, struck) + (source.get("allies", []) as Array) + AllyRules.summon_specs(s), FightGrid.NONE, "ally")
 		AllyRules.buffs_into_fight(s, data)
 	for w: Dictionary in source.get("waves", []):
 		add_incoming(s, data, w.get("enemies", []), int(w.get("round", 2)), str(w.get("side", "right")))
@@ -295,21 +296,34 @@ static func _on_square(specs: Array, at: Vector2i) -> Array:
 ## The fight began with the hero's own attack on an NPC (v0.7.7, as in BG3): the hero acts first and that NPC is
 ## caught off guard. `source.opening` {npc_id, unaware}; the strike itself is resolved by the caller. v0.7.22.16:
 ## `unaware` false — the NPC expected it (hostile, wary): the hero still acts first, but nobody is caught off guard.
+## v0.8.4.43.55: an area laid out of a fight catches several — `caught` {npc or foe id: unaware}, each caught off guard by
+## its own.
 static func _opening(s: GameSession, source: Dictionary) -> Array[String]:
-	var npc := str(source.get("opening", {}).get("npc_id", ""))
-	if npc.is_empty():
-		return []
+	var op: Dictionary = source.get("opening", {})
+	var caught: Dictionary = op.get("caught", {})
+	if caught.is_empty() and not str(op.get("npc_id", "")).is_empty():
+		caught = {str(op["npc_id"]): bool(op.get("unaware", true))}
+	var off_guard: Array[String] = []
+	var ready: Array[String] = []
 	for id: String in enemies(s):
 		var f := fighter(s, id)
-		if str(f.get("npc_id", "")) == npc or id == npc:  # a person, or a foe's own record (v0.8.4.30)
-			var order: Array = s.combat["order"]
-			order.erase(PLAYER)
-			order.push_front(PLAYER)
-			if not bool(source.get("opening", {}).get("unaware", true)):
-				return ["%s нападает первой очередью — %s ждал(а) этого" % [s.character.get("name", ""), f["name"]]]
+		var key := str(f.get("npc_id", "")) if caught.has(str(f.get("npc_id", ""))) else id  # a person, or a foe's own record (v0.8.4.30)
+		if not caught.has(key):
+			continue
+		if bool(caught[key]):
 			f["surprised"] = true
-			return ["Удар без предупреждения: %s ходит первой очередью, %s не ждёт нападения" % [s.character.get("name", ""), f["name"]]]
-	return []
+			off_guard.append(str(f["name"]))
+		else:
+			ready.append(str(f["name"]))
+	if off_guard.is_empty() and ready.is_empty():
+		return []
+	var order: Array = s.combat["order"]
+	order.erase(PLAYER)
+	order.push_front(PLAYER)
+	var hero := str(s.character.get("name", ""))
+	if off_guard.is_empty():
+		return ["%s нападает первой очередью — %s ждал(а) этого" % [hero, ", ".join(ready)]]
+	return ["Удар без предупреждения: %s ходит первой очередью, %s %s нападения" % [hero, ", ".join(off_guard), "не ждёт" if off_guard.size() == 1 else "не ждут"]]
 
 
 ## The fighter of an NPC of the scene or of a foe's record (v0.8.4.30), "" if not in the fight.
@@ -331,7 +345,8 @@ static func _hero_square(s: GameSession, data: Dictionary) -> Vector2i:
 	return FightGrid.free_near(s, data, WalkRules.settle(s, data, FightGrid.map(s, data)))
 
 
-## Where a fighter of `spec` appears: its own square, its person's square on the map, by the hero for an ally, else at
+## Where a fighter of `spec` appears: its own square, its person's square on the map — one who walks with the hero where it
+## stood by the hero (v0.8.4.43.55: an area laid before the fight caught it there), else by the hero for an ally, else at
 ## the starting distance on a free square around the hero.
 static func _square_of(s: GameSession, data: Dictionary, spec: Dictionary, f: Dictionary, ranged: bool, turn: int, ally: bool) -> Vector2i:
 	var span := int(f["span"])
@@ -339,7 +354,8 @@ static func _square_of(s: GameSession, data: Dictionary, spec: Dictionary, f: Di
 		return FightGrid.free_near(s, data, Vector2i(int(spec["x"]), int(spec["y"])), span)
 	var hero := FightGrid.cell(player(s))
 	if ally:
-		return FightGrid.free_near(s, data, hero, span)
+		var stood := MapSpots.of_fighter(s, data, spec) if not s.combat.has("field") else FightGrid.NONE
+		return FightGrid.free_near(s, data, stood if stood != FightGrid.NONE else hero, span)
 	var spot := MapSpots.of_fighter(s, data, spec)
 	if spot != FightGrid.NONE:
 		return FightGrid.free_near(s, data, spot, span)
@@ -837,6 +853,14 @@ static func hostile_spell(data: Dictionary, spell_id: String) -> bool:
 		return true  # a zone that holds: Web, Entangle, Grease
 	var cs: Dictionary = cfg(data)["condition_spells"].get(spell_id, {}) if cfg(data)["condition_spells"].get(spell_id) is Dictionary else {}
 	return not cs.is_empty() and (cs.get("conditions", []) as Array).any(func(x: Variant) -> bool: return str(x) != "charmed")
+
+
+## A person of the scene the hero attacks, as a foe of the fight: its template, name and words; `by_hero` — the fight's end
+## tells the assault or the murder (CrimeRules). One spec for «Напасть», a first blow and an area (v0.8.4.43.55).
+static func npc_foe(data: Dictionary, npc_id: String) -> Dictionary:
+	var npc := WorldView.new(data["world"]).npc(npc_id)
+	return {"monster": str(npc.get("monster", cfg(data)["default_npc_monster"])), "name": str(npc.get("name", npc_id)),
+		"desc": str(npc.get("description", "")), "npc_id": npc_id, "by_hero": true}
 
 
 ## An NPC who does not expect an attack (v0.7.22.16): not hostile and its attitude at least unaware_attitude.
@@ -1483,15 +1507,25 @@ static func aimed(s: GameSession, target_id: String) -> Dictionary:
 	return {"x": at.x, "y": at.y, "aim": true, "id": target_id, "status": "active", "name": ""}
 
 
-## The squares of a spell's area laid at a target or a square.
-static func area_cells(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary) -> Array[Vector2i]:
+## The squares of a spell's area laid at a target or a square. `me` — who lays it, the caster of the fight by default; out of
+## a fight the hero on its square of the map (`on_map`, v0.8.4.43.55).
+static func area_cells(s: GameSession, data: Dictionary, sp: Dictionary, t: Dictionary, me: Dictionary = {}) -> Array[Vector2i]:
 	var from_me := int(sp.get("range_ft", 0)) == 0
-	return FightGrid.area(s, data, sp.get("area", {}), FightGrid.cell(caster(s)), _aim_square(s, t), from_me)
+	var by := me if not me.is_empty() else caster(s)
+	return FightGrid.area(s, data, sp.get("area", {}), FightGrid.cell(by), _aim_square(s, t, by), from_me)
 
 
 ## The square of the body of `t` that the caster aims at.
-static func _aim_square(s: GameSession, t: Dictionary) -> Vector2i:
-	return FightGrid.cell(t) if bool(t.get("aim", false)) else FightGrid._facing(caster(s), t)[1]
+static func _aim_square(s: GameSession, t: Dictionary, me: Dictionary = {}) -> Vector2i:
+	return FightGrid.cell(t) if bool(t.get("aim", false)) else FightGrid._facing(me if not me.is_empty() else caster(s), t)[1]
+
+
+## The hero as a fighter on its square of the room's map out of a fight (v0.8.4.43.55): what the act of a fight reads of
+## where it stands and how big it is, to lay an area from there before the fight. The fight puts it on the same square.
+static func on_map(s: GameSession, data: Dictionary) -> Dictionary:
+	var at := WalkRules.settle(s, data, WalkRules.view(s, data))
+	return {"id": PLAYER, "side": "player", "name": str(s.character.get("name", "")), "status": "active", "x": at.x, "y": at.y,
+		"span": FightGrid.span_of(data, hero_size(s, data))}
 
 
 ## The point an area spreads from: its cover goes by it.

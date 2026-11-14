@@ -29,20 +29,34 @@ static func lay(s: GameSession, data: Dictionary) -> void:
 			doors[FightGrid.tag(at)] = {"gone": true}
 		elif SHUT_FAST.has(WayRules.blocked(s, data, ends[0], ends[1])):
 			doors[FightGrid.tag(at)] = {"locked": true}
-	var bl: Dictionary = cfg(data)["blocks"]
 	var hz: Dictionary = cfg(data)["hazard"]
 	var ground: Array = []
 	var rows: Array = m["rows"]
 	for y: int in rows.size():
 		var row: String = rows[y]
 		for x: int in row.length():
-			if row[x] == str(bl["cell"]):
-				s.combat["blocks"][FightGrid.tag(Vector2i(x, y))] = _block(data, str(bl["body"]), str(bl["name"]))
-			elif row[x] == str(hz["cell"]):
+			if row[x] == str(hz["cell"]):
 				ground.append(FightGrid.tag(Vector2i(x, y)))
 	if not ground.is_empty():
 		SpellEffects.add_zone(s, zone_of("hazard", hz, ground))
-	for t: Dictionary in MapSpots.of(s, data, m):  # each square of a thing of the room: what its body bars (v0.8.4.43.23)
+	(s.combat["blocks"] as Dictionary).merge(blocks_of(s, data, m), true)
+	SpellEffects.lay_glyphs(s, data)  # the hero's runes of this room (v0.8.4.26.3)
+	FightGrid.changed(s)
+
+
+## What bars the squares of map `m` before anybody moves it: its block cells and each square of a thing of the room by
+## what its body bars (v0.8.4.43.23). {tag: block}. A fight lays them as its own (`lay`); out of a fight the grid reads
+## them as they stand (v0.8.4.43.55: an area laid before the fight stops where the fight's would).
+static func blocks_of(s: GameSession, data: Dictionary, m: Dictionary) -> Dictionary:
+	var out := {}
+	var bl: Dictionary = cfg(data)["blocks"]
+	var rows: Array = m["rows"]
+	for y: int in rows.size():
+		var row: String = rows[y]
+		for x: int in row.length():
+			if row[x] == str(bl["cell"]):
+				out[FightGrid.tag(Vector2i(x, y))] = _block(data, str(bl["body"]), str(bl["name"]))
+	for t: Dictionary in MapSpots.of(s, data, m):
 		if str(t.get("body", "")).is_empty():
 			continue
 		var b := _block(data, str(t["body"]), str(t["name"]))
@@ -52,9 +66,8 @@ static func lay(s: GameSession, data: Dictionary) -> void:
 			b["prop"] = str(t["id"])
 		b["span"] = (t["cells"] as Array).size()
 		for c: Vector2i in t["cells"]:
-			s.combat["blocks"][FightGrid.tag(c)] = b.duplicate()
-	SpellEffects.lay_glyphs(s, data)  # the hero's runes of this room (v0.8.4.26.3)
-	FightGrid.changed(s)
+			out[FightGrid.tag(c)] = b.duplicate()
+	return out
 
 
 ## What a fighter's trait strews around it as the fight begins (`lays`: Web Sense — the lair's webs): a row of

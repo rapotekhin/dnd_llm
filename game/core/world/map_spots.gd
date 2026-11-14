@@ -527,10 +527,67 @@ static func of_fighter(s: GameSession, data: Dictionary, spec: Dictionary) -> Ve
 	var creature := str(spec.get("creature_id", ""))
 	if not npc.is_empty() or not creature.is_empty():
 		var ref := "npc:" + npc if not npc.is_empty() else "cr:" + creature
-		for t: Dictionary in of(s, data, FightGrid.map(s, data)):
+		for t: Dictionary in of(s, data, FightGrid.map(s, data)) + walkers(s, data):
 			if str(t["ref"]) == ref:
 				return Vector2i(int(t["x"]), int(t["y"]))
 	return Vector2i(-1, -1)
+
+
+## Those who walk with the hero (v0.8.4.43.55): its followers, then its creatures — tokens on the squares round the hero by
+## `WalkRules.around` in the hero's view of the room, where the field seats them and a fight starts them.
+static func walkers(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var world := WorldView.new(data["world"])
+	for id: String in Being.followers(s):
+		var t := _token("npc:" + id, "npc", id, str(world.npc(id).get("name", id)), Vector2i.ZERO)
+		t["portrait"] = PortraitRules.of(s, data, {"npc_id": id})
+		out.append(t)
+	for cr: Dictionary in CreatureRules.here(s, s.room_id):
+		if CreatureRules.with_hero(cr):
+			var t := _token("cr:" + str(cr["id"]), "creature", str(cr["id"]), str(cr["name"]), Vector2i.ZERO)
+			t["portrait"] = PortraitRules.of(s, data, cr)
+			out.append(t)
+	if out.is_empty():
+		return out
+	var map := WalkRules.view(s, data)
+	var hero := WalkRules.settle(s, data, map)
+	var squares := WalkRules.around(map, data["layouts"], hero, out.size())
+	for i: int in out.size():
+		var at: Vector2i = squares[i] if i < squares.size() else hero
+		out[i]["x"] = at.x
+		out[i]["y"] = at.y
+	return out
+
+
+## Who of the room stands where now (v0.8.4.43.55, an area laid out of a fight): the hero, those who walk with it, the
+## people, the foes before a fight — the hidden too, a foe's body by its size. [{"ref", "kind" (hero, npc, creature, foe),
+## "id", "name", "side" (hero — the hero's own, else other), "seen", "x", "y", "span"}].
+static func standing(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	var map := WalkRules.view(s, data)
+	var hidden: Array = EncounterRules.lurking(s, s.room_id).get("hidden", [])
+	var hero := WalkRules.settle(s, data, map)
+	var out: Array[Dictionary] = [{"ref": "", "kind": "hero", "id": Being.HERO, "name": str(s.character.get("name", "")), "side": "hero",
+		"seen": true, "x": hero.x, "y": hero.y, "span": FightGrid.span_of(data, CombatRules.hero_size(s, data))}]
+	var stand := func(t: Dictionary, span: int, side: String) -> void:
+		out.append({"ref": str(t["ref"]), "kind": str(t["kind"]), "id": str(t["id"]), "name": str(t["name"]), "side": side,
+			"seen": not (str(t["kind"]) == "foe" and hidden.has(str(t["id"]))), "x": int(t["x"]), "y": int(t["y"]), "span": span})
+	for t: Dictionary in walkers(s, data):
+		stand.call(t, 1, "hero")
+	for t: Dictionary in of(s, data, map):
+		if str(t["kind"]) == "npc":
+			stand.call(t, 1, "other")
+	for t: Dictionary in foes(s, data, map):
+		var mon: Dictionary = data["monsters"].get(str(t["record"].get("monster", "")), {})
+		stand.call(t, FightGrid.span_of(data, str(mon.get("size", "medium"))), "other")
+	return out
+
+
+## Those of `standing` whose body is on `cells`; `with_hero` false — not the hero itself (an area that starts at it).
+static func on_cells(s: GameSession, data: Dictionary, cells: Array[Vector2i], with_hero: bool = true) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	out.assign(standing(s, data).filter(func(t: Dictionary) -> bool:
+		return (with_hero or str(t["kind"]) != "hero") and FightGrid.in_cells(t, cells)))
+	return out
 
 
 ## The foes of the room before a fight, each with its "record", on their squares by `on_lair`. `_map` is the hero's

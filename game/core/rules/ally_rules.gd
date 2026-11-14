@@ -82,34 +82,30 @@ static func summon_by(s: GameSession, data: Dictionary, who: Dictionary, key: St
 	return summon(s, data, key) if Sheet.is_hero(who) else CombatRules.summon_for(s, data, who, key)
 
 
-## The fighters' specs of the followers who join this fight against `foes` (CombatRules.start's specs).
-static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
+## The fighters' specs of the followers who join this fight against `foes` (CombatRules.start's specs). `struck` — the
+## followers the hero's area caught before the fight (v0.8.4.43.55): in it whoever the foes are, the area lands on them.
+static func joining(s: GameSession, data: Dictionary, foes: Array, struck: Array = []) -> Array:
 	var out: Array = []
-	if not bool(cfg(data).get("followers_join", true)) or foes.any(func(f: Variant) -> bool: return f is Dictionary and bool(f.get("law", false))):
-		return out
-	var world := WorldView.new(data["world"])
 	var foe_homes: Array[String] = []
 	var foe_npcs: Array[String] = []
 	for f: Variant in foes:
 		if f is Dictionary and not str(f.get("npc_id", "")).is_empty():
 			foe_npcs.append(str(f["npc_id"]))
 			foe_homes.append(ReputationRules.home_of(data, str(f["npc_id"])))
+	var shy := not bool(cfg(data).get("followers_join", true)) or foes.any(func(f: Variant) -> bool: return f is Dictionary and bool(f.get("law", false)))
 	for id: String in Being.followers(s):
-		if Being.dead(s, id) or s.held_as_creature(id):
-			continue  # the dead do not fight, nor one lying knocked out
+		if Being.dead(s, id) or s.held_as_creature(id) or foe_npcs.has(id):
+			continue  # the dead do not fight, nor one lying knocked out, nor the hero's own victim
 		var home := ReputationRules.home_of(data, id)
-		if foe_npcs.has(id) or (foe_homes.has(home) and not home.is_empty()):
-			continue  # not against the hero's own victim, nor against its own people
 		var own := FactionRules.of_npc(s, data, id)
-		if foes.any(func(f: Variant) -> bool: return f is Dictionary and not own.is_empty() and FactionRules.of_foe(data, {}, f) == own):
-			continue  # nor against its own faction (v0.7.50)
-		var n := world.npc(id)
-		var mon := str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
-		if data["monsters"].has(mon):
-			var spec := {"monster": mon, "name": str(n.get("name", id)), "npc_id": id, "ally": "follower"}
-			if Being.view(s, id).has("hp"):  # v0.7.50.1: the wounds of the last fight
-				spec["hp"] = int(Being.of(s, id)["hp"])
+		if not struck.has(id) and (shy or (foe_homes.has(home) and not home.is_empty())
+				or foes.any(func(f: Variant) -> bool: return f is Dictionary and not own.is_empty() and FactionRules.of_foe(data, {}, f) == own)):
+			continue  # not against its own people, nor against its own faction (v0.7.50)
+		var spec := follower_spec(s, data, id)
+		if not spec.is_empty():
 			out.append(spec)
+	if shy:
+		return out
 	for c: Dictionary in CreatureRules.here(s, s.room_id):
 		if bool(c.get("ally", false)) and not foes.any(func(f: Variant) -> bool: return f is Dictionary and FactionRules.of_foe(data, {}, f) == str(c.get("faction", ""))):
 			var spec := {"monster": str(c["monster"]), "name": str(c["name"]), "ally": "follower", "id": str(c["id"]), "creature_id": str(c["id"])}  # v0.7.50.1
@@ -119,6 +115,19 @@ static func joining(s: GameSession, data: Dictionary, foes: Array) -> Array:
 	if data["rules"].has("property"):
 		out.append_array(PropertyRules.fighting(s, data))  # v0.7.27: an own dog
 	return out
+
+
+## A follower as a fighter of the hero's side: its template, name and the wounds of the last fight (v0.7.50.1). {} — no
+## template for it.
+static func follower_spec(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+	var n := WorldView.new(data["world"]).npc(id)
+	var mon := str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"]))
+	if not data["monsters"].has(mon):
+		return {}
+	var spec := {"monster": mon, "name": str(n.get("name", id)), "npc_id": id, "ally": "follower"}
+	if Being.view(s, id).has("hp"):
+		spec["hp"] = int(Being.of(s, id)["hp"])
+	return spec
 
 
 ## The location of the room an NPC of the pack lives in ("" for one the master made without a room).
