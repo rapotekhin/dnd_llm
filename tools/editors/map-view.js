@@ -310,11 +310,11 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			this.tex2d('edge_pairs', 3, MAX_GROUNDS, MAX_GROUNDS, table, gl.NEAREST);
 			this.tex2d('light', 4, 1, 1, new Uint8Array(4), gl.LINEAR);
 			const sharp = (g.sharp || []).reduce((m, id) => (order.includes(id) ? m | (1 << order.indexOf(id)) : m), 0);
-			const sizes = new Float32Array(MAX_PROPS).fill(1);
+			// MapGround.per_prop (v0.8.4.43.58): a number of each thing by a row `grounds.<key>`, its base's for a variant
+			const perProp = (key, fallback) => new Float32Array(MAX_PROPS).map((_, i) => Number(g[key]?.[propBase(this.lib, props[i] || '')] ?? fallback));
 			const dims = new Float32Array(MAX_PROPS * 2).fill(1);
 			props.forEach((id, i) => {
 				if (i >= MAX_PROPS) return;
-				sizes[i] = Number(g.size?.[propBase(this.lib, id)] ?? 1);
 				const base = propBase(this.lib, id);
 				const group = Object.values(g.groups || {}).flatMap((r) => (Array.isArray(r) ? r : [])).find((r) => r.id === base);
 				const sz = group?.size || this.bodies[base]?.size || [1, 1];
@@ -334,14 +334,14 @@ void main() { v_uv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5); gl_Position = v
 			gl.uniform1f(u('macro_amp'), Number(blend.macro || 0));
 			gl.uniform1f(u('macro_scale'), Number(blend.macro_scale ?? 0.07));
 			gl.uniform1i(u('sharp_mask'), sharp);
-			gl.uniform1fv(u('prop_size'), sizes);
-			gl.uniform1fv(u('prop_thin'), new Float32Array(MAX_PROPS).map((_, i) => Number(g.thin?.[propBase(this.lib, props[i] || '')] ?? 0)));  // a bench narrower than its squares
+			gl.uniform1fv(u('prop_size'), perProp('size', 1));  // a stool half a barrel
+			gl.uniform1fv(u('prop_thin'), perProp('thin', 0));  // a bench narrower than its squares
 			const natural = g.natural || {};
 			gl.uniform1fv(u('prop_jitter'), new Float32Array(MAX_PROPS).map((_, i) => ((natural.of || []).includes(propBase(this.lib, props[i] || '')) ? 1 : 0)));
 			gl.uniform1f(u('jitter_scale'), Number(natural.scale || 0));
 			gl.uniform1f(u('jitter_shift'), Number(natural.shift || 0));
 			gl.uniform1f(u('natural_shade'), Number(natural.shade || 0));
-			gl.uniform1fv(u('prop_shimmer'), new Float32Array(MAX_PROPS).map((_, i) => Number(g.shimmer?.[propBase(this.lib, props[i] || '')] ?? 0)));
+			gl.uniform1fv(u('prop_shimmer'), perProp('shimmer', 0));
 			gl.uniform1f(u('rough'), 0.22);
 			gl.uniform1f(u('soft'), 0.05);
 			gl.uniform4f(u('watch_tint'), 0.75, 0.25, 0.2, 1);

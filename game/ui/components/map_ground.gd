@@ -72,21 +72,14 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 		var at := order.find(id)
 		if at >= 0:
 			sharp |= 1 << at
-	var sizes := PackedFloat32Array()
-	sizes.resize(MAX_PROPS)
-	sizes.fill(1.0)
 	var dims := PackedVector2Array()
 	dims.resize(MAX_PROPS)
 	var jitter := PackedFloat32Array()  # v0.8.4.43.37: a natural thing, sized and shifted by its square
 	jitter.resize(MAX_PROPS)
-	var thin := PackedFloat32Array()  # v0.8.4.43.49: a thing narrower than its squares (a bench by a table)
-	thin.resize(MAX_PROPS)
 	var natural: Dictionary = g.get("natural", {})
 	for i: int in mini(props.size(), MAX_PROPS):
-		sizes[i] = float(g.get("size", {}).get(LayoutGen.prop_base(lib, props[i]), 1.0))
 		dims[i] = dims_of(lib, props[i])
 		jitter[i] = 1.0 if (natural.get("of", []) as Array).has(LayoutGen.prop_base(lib, props[i])) else 0.0
-		thin[i] = float(g.get("thin", {}).get(LayoutGen.prop_base(lib, props[i]), 0.0))
 	_lib = lib
 	var m := material as ShaderMaterial
 	m.set_shader_parameter("cells", _cells)
@@ -106,13 +99,9 @@ func lay(lib: Dictionary, map: Dictionary) -> void:
 		kin.append(order.find(str(g.get("same", {}).get(order[i], order[i]))) if i < order.size() else i)
 	m.set_shader_parameter("kin", kin)
 	m.set_shader_parameter("ground_move", ground_motion(lib))
-	m.set_shader_parameter("prop_size", sizes)
-	m.set_shader_parameter("prop_thin", thin)
-	var shimmer := PackedFloat32Array()  # v0.8.4.43.36: a thing whose picture moves (falling water)
-	shimmer.resize(MAX_PROPS)
-	for i: int in mini(props.size(), MAX_PROPS):
-		shimmer[i] = float(g.get("shimmer", {}).get(LayoutGen.prop_base(lib, props[i]), 0.0))
-	m.set_shader_parameter("prop_shimmer", shimmer)
+	m.set_shader_parameter("prop_size", per_prop(lib, "size", 1.0))  # a stool half a barrel (v0.8.4.43.58)
+	m.set_shader_parameter("prop_thin", per_prop(lib, "thin", 0.0))  # v0.8.4.43.49: a bench narrower than its squares
+	m.set_shader_parameter("prop_shimmer", per_prop(lib, "shimmer", 0.0))  # v0.8.4.43.36: falling water
 	m.set_shader_parameter("prop_dims", dims)
 	m.set_shader_parameter("prop_jitter", jitter)
 	m.set_shader_parameter("jitter_scale", float(natural.get("scale", 0.0)))
@@ -245,6 +234,20 @@ static func ground_motion(lib: Dictionary) -> PackedVector4Array:
 		var row: Variant = rows.get(id, {})
 		var f: Array = (row as Dictionary).get("flow", [0, 0]) if row is Dictionary else [0, 0]
 		out.append(Vector4(float(f[0]), float(f[1]), float(row.get("waver", 0.0)) if row is Dictionary else 0.0, float(row.get("glow", 0.0)) if row is Dictionary else 0.0))
+	return out
+
+
+## A number of each drawn thing in the order of `prop_ids` by a row `grounds.<key>` {thing: number} (a variant reads its
+## base's): `size` — the side of its picture to its squares (a stool 0.5, a tree 1.7), `thin` — the share of its short side,
+## `shimmer` — how its picture moves; a thing not in the row has `fallback`.
+static func per_prop(lib: Dictionary, key: String, fallback: float) -> PackedFloat32Array:
+	var row: Dictionary = lib["grounds"].get(key, {})
+	var props := prop_ids(lib)
+	var out := PackedFloat32Array()
+	out.resize(MAX_PROPS)
+	out.fill(fallback)
+	for i: int in mini(props.size(), MAX_PROPS):
+		out[i] = float(row.get(LayoutGen.prop_base(lib, props[i]), fallback))
 	return out
 
 
