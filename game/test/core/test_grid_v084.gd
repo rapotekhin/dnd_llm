@@ -156,7 +156,9 @@ func test_oil_catches_and_burns_who_stands_there_then_goes_out() -> void:
 	assert_array(SpellEffects.zones(s)).is_empty()
 
 
-func test_bare_ground_does_not_catch_and_fire_goes_over_oil() -> void:
+## Fire takes a puddle of oil whole, as in BG3 and Divinity (v0.8.4.43.62, the author); square by square over rounds before.
+## A puddle across bare ground is another one: it waits.
+func test_bare_ground_does_not_catch_and_fire_takes_the_whole_oil() -> void:
 	var s := _session()
 	_field(s)
 	var at := FightGrid.cell(CombatRules.player(s)) + Vector2i(3, 3)
@@ -165,10 +167,12 @@ func test_bare_ground_does_not_catch_and_fire_goes_over_oil() -> void:
 	assert_array(lines).is_empty()
 	FightField.splash(s, data, at, {"liquid": "oil"}, "Масло", lines)
 	FightField.splash(s, data, at + Vector2i(1, 0), {"liquid": "oil"}, "Масло", lines)
+	FightField.splash(s, data, at + Vector2i(3, 0), {"liquid": "oil"}, "Масло", lines)
 	FightField.kindle(s, data, [at] as Array[Vector2i], lines)
-	assert_bool(s.combat["fires"].has(FightGrid.tag(at + Vector2i(1, 0)))).is_false()
-	FightField.fire_round(s, data, lines)
 	assert_bool(s.combat["fires"].has(FightGrid.tag(at + Vector2i(1, 0)))).is_true()
+	assert_bool(s.combat["fires"].has(FightGrid.tag(at + Vector2i(3, 0)))).is_false()
+	FightField.fire_round(s, data, lines)
+	assert_bool(s.combat["fires"].has(FightGrid.tag(at + Vector2i(3, 0)))).is_false()
 
 
 func test_a_fire_bolt_lights_the_oil_under_a_foe() -> void:

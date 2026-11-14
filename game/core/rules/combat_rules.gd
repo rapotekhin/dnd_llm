@@ -1135,12 +1135,24 @@ static func _can_aim(s: GameSession, data: Dictionary, spell_id: String, at: Vec
 			return "COMBAT_BAD_TARGET"
 		return "" if FightGrid.clear(g, FightGrid.cell(f), at) else "COMBAT_NO_LINE"
 	if area_of(data, spell_id).is_empty() or data["spells"].get(spell_id, {}).has("attack"):
-		return "COMBAT_BAD_TARGET"
+		if not at_square(data, spell_id):
+			return "COMBAT_BAD_TARGET"
+		var touch := FightGrid.dist_to(f, at) <= 1 and _spell_squares(s, data, spell_id, f) <= 1
+		if FightGrid.dist_to(f, at) > _spell_squares(s, data, spell_id, f) and not touch:
+			return "COMBAT_OUT_OF_RANGE"
+		return "" if touch or FightGrid.reaches(s, data, f, at) else "COMBAT_NO_LINE"
 	if from_self(data, spell_id):
 		return ""
 	if FightGrid.dist_to(f, at) > _spell_squares(s, data, spell_id, f):
 		return "COMBAT_OUT_OF_RANGE"
 	return "" if FightGrid.reaches(s, data, f, at) else "COMBAT_NO_LINE"
+
+
+## A spell of one target that may go at a bare square (v0.8.4.43.62, as in BG3: a Fire Bolt at the oil, a Ray of Frost at
+## the water): one with a damage type and no area — only what lies on the square takes it.
+static func at_square(data: Dictionary, spell_id: String) -> bool:
+	var sp: Dictionary = data["spells"].get(spell_id, {})
+	return not str(sp.get("damage_type", "")).is_empty() and not sp.has("area") and is_engine_spell(data, spell_id)
 
 
 ## The shape of a spell {type, size}, {} when it has none.
@@ -1269,11 +1281,17 @@ static func _spell_damage(s: GameSession, data: Dictionary, spell_id: String, sl
 	lines.append_array(SpellEffects.end_on_attack(Sheet.holder(s, me)))  # a spell at a foe ends Sanctuary (v0.7.13.2)
 	var dice := spell_dice(sp, slot, level)
 	var t := aimed(s, target_id)
-	if not t.is_empty():  # fire catches what burns, and any damage leaves its surface (v0.8.4.43.45)
+	if bool(t.get("aim", false)) and not sp.has("area"):  # a bare square (v0.8.4.43.62): one who stands there takes it as aimed at it
+		var there := FightGrid.at(s, FightGrid.cell(t))
+		if not there.is_empty():
+			target_id = there
+			t = fighter(s, there)
+	if not t.is_empty():  # fire catches what burns, and any damage leaves its surface (v0.8.4.43.45; one road FightField.lands)
 		var touched: Array[Vector2i] = area_cells(s, data, sp, t) if sp.has("area") else FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1)))
-		if str(sp.get("damage_type", "")) == "fire":
-			FightField.kindle(s, data, touched, lines)
-		FightField.react(s, data, str(sp.get("damage_type", "")), touched, me, lines)
+		FightField.lands(s, data, str(sp.get("damage_type", "")), touched, me, lines)
+	if bool(t.get("aim", false)) and not sp.has("area"):
+		lines.append("%s — в клетку" % sp["name"])
+		return
 	if not sp.has("area") and _missed_unseen(s, t):
 		lines.append("%s: в пустоту — %s уже не там" % [sp["name"], t["name"]])
 		return

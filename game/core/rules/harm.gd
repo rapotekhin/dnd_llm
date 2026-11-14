@@ -59,10 +59,13 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	if dmg <= 0:
 		return
 	if dtype == "fire" and LiquidRules.fire_plus(s, me) > 0:  # oil on it catches (v0.7.12; a coat since v0.8.4.28.2)
+		var coat := LiquidRules.coat_on(s, me)
 		var more := Sheet.taken(s, data, who, "fire", LiquidRules.fire_plus(s, me))
 		LiquidRules.uncoat(me)
 		dmg += more
 		lines.append("%s: масло вспыхивает, ещё %d" % [me.get("name", ""), more])
+		if not str(coat.get("catches", "")).is_empty():  # and it burns on, as in BG3 (v0.8.4.43.62)
+			lines.append_array(LiquidRules.alight(s, data, who, str(coat["catches"]), {}, str(coat.get("liquid", "")), str(coat.get("source", {}).get("name", "масло"))))
 	if fight:
 		f["rage_kept"] = true
 	dmg = absorb(me, dmg, lines)

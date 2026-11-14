@@ -266,6 +266,16 @@ static func bodies(s: GameSession, except: String = "", data: Dictionary = {}) -
 	return out
 
 
+## The id of an active fighter whose body covers `at`, "" — none there (a spell at a square takes the one who stands on it,
+## v0.8.4.43.62).
+static func at(s: GameSession, at: Vector2i) -> String:
+	for id: String in s.combat.get("fighters", []):
+		var f: Dictionary = s.beings.get(id, {}).get("fight", {})
+		if not f.is_empty() and str(f.get("status", "active")) == "active" and body(f).has(at):
+			return id
+	return ""
+
+
 ## It shares a square (v0.8.4.27.1, the 5e swarm): a status with `share` — its square holds no one for another, and none for it.
 static func shares(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 	return ConditionRules.does(Sheet.holder(s, f), data, "share")

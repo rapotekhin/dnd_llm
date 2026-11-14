@@ -29,6 +29,8 @@ static func way(data: Dictionary, id: String, aimed: bool) -> String:
 		return "bane"
 	if data["spells"][id].has("heal_at_slot"):
 		return "heal"
+	if fx.has("splash") and aimed:  # Create Water as rain (v0.8.4.43.62)
+		return "splash"
 	return "damage" if CombatRules.is_engine_spell(data, id) and aimed else ""
 
 
@@ -116,6 +118,8 @@ static func land(s: GameSession, data: Dictionary, id: String, slot: int, target
 			CombatRules.heal(s, data, id, slot, me if t.is_empty() else t, lines)
 		"damage":
 			CombatRules._spell_damage(s, data, id, slot, target_id, lines)
+		"splash":
+			FightField.rain(s, data, id, t, me, lines)
 	if chosen and not hero and SpellEffects.picks_side(data, id) == "foe":
 		more_picks(s, data, id, slot, target_id, lines)
 

@@ -503,16 +503,22 @@ static func coat(s: GameSession, data: Dictionary, h: Dictionary, lid: String, c
 	var e := {"condition": "coated", "liquid": lid, "ends": {"at": ConditionRules.now(s) + int(k["minutes"]) * ConditionRules.ROUNDS_PER_MINUTE} if k.has("minutes") else {},
 		"source": {"kind": "liquid", "id": lid, "name": cause}}
 	var fire := not who.is_empty() and k.has("burns")
-	for key: String in ["douses", "fire_plus", "burns", "put_out"]:
+	for key: String in ["douses", "fire_plus", "burns", "put_out", "catches"]:
 		if k.has(key) and not (fire and key in ["burns", "put_out"]):
 			e[key] = k[key]
 	ConditionRules.add_effect(h, e)
 	if fire:
-		var out: Dictionary = k.get("put_out", {"ability": "dex", "dc": 10})
-		lines.append_array(ConditionRules.impose(s, data, {"condition": "burning", "harm": {"dice": str(k["burns"]), "type": "fire", "when": "start"},
-			"save": {"ability": str(out["ability"]), "dc": int(out["dc"]), "tag": "", "repeat": true},
-			"ends": {"at": ConditionRules.now(s) + ConditionRules.ROUNDS_PER_MINUTE}, "source": {"kind": "liquid", "id": lid, "name": cause}}, who))
+		lines.append_array(alight(s, data, who, str(k["burns"]), k.get("put_out", {}), lid, cause))
 	return lines
+
+
+## A creature catches fire from a liquid (v0.8.4.43.62, one road): the status `burning` of `dice` at the start of its turns
+## for a minute, `out` its save at the end of them (DEX 10 by default) — alchemist's fire splashed on it, oil on it that fire
+## takes (`catches`). A wet one does not catch (its `immune`). `who` — a fighter, Sheet.HERO. Lines.
+static func alight(s: GameSession, data: Dictionary, who: Dictionary, dice: String, out: Dictionary, lid: String, cause: String) -> Array[String]:
+	return ConditionRules.impose(s, data, {"condition": "burning", "harm": {"dice": dice, "type": "fire", "when": "start"},
+		"save": {"ability": str(out.get("ability", "dex")), "dc": int(out.get("dc", 10)), "tag": "", "repeat": true},
+		"ends": {"at": ConditionRules.now(s) + ConditionRules.ROUNDS_PER_MINUTE}, "source": {"kind": "liquid", "id": lid, "name": cause}}, who)
 
 
 ## `lid` on the ground coats a creature that walks in or stands in it (a puddle of oil, v0.8.4.43.61): the coat, renewed while

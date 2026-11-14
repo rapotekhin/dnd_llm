@@ -490,6 +490,8 @@ func on_cell(cell: Vector2i) -> void:
 		return
 	if _pending.is_valid():
 		var target := FightGrid.aim_id(cell) if not _pending_aim.is_empty() else _target_at(cell)
+		if target.is_empty() and str(_pending_check.call(FightGrid.aim_id(cell))).is_empty():
+			target = FightGrid.aim_id(cell)  # a bare square the act may go at: a Fire Bolt at the oil, as in BG3 (v0.8.4.43.62)
 		if not target.is_empty():
 			_aim(target)
 		return

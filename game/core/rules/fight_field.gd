@@ -121,7 +121,7 @@ static func _ends(m: Dictionary, d: Dictionary) -> Array[String]:
 
 ## The keys of a row a zone takes as they are: what a failed save does, what it hides, who it spares, whom it touches.
 const ZONE_KEYS: Array[String] = ["cond", "fail", "tag", "obscure", "veil", "silence", "retch", "block_ranged", "spares_friends", "for",
-	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel", "douses", "coats", "tile", "worn", "reveal"]
+	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel", "douses", "coats", "whole", "tile", "worn", "reveal"]
 
 
 ## A zone of the field by its row: one record for the ground, strewn things, the fire, a spell's zone and a trait's aura
@@ -202,13 +202,16 @@ static func react(s: GameSession, data: Dictionary, dtype: String, cells: Array[
 			continue
 		if row.has("from") and not (row["from"] as Array).has(str(Sheet.template(data, source).get("type", "")) if not source.is_empty() else ""):
 			continue
+		var where := str(row["where"])
+		var fits := func(at: Vector2i) -> bool: return _fits(s, data, g, where, at)
 		var hit: Array[Vector2i] = []
 		for at: Vector2i in cells:
-			var fits := douses_at(s, data, at) if str(row["where"]) == "wet" else FightGrid.walkable(g, at)
-			if fits:
+			if fits.call(at):
 				hit.append(at)
 		if hit.is_empty():
 			continue
+		if bool(row.get("whole", false)):  # the whole body of water, as in BG3 and Divinity (v0.8.4.43.62)
+			hit = body(s, data, hit, fits)
 		var packed := FightGrid.pack_cells(hit)
 		var gone: Array = [id] + (row.get("clears", []) as Array)  # one of its kind on a square, and what it ends there (ice — the current)
 		for z: Dictionary in SpellEffects.zones(s).duplicate():
@@ -217,11 +220,76 @@ static func react(s: GameSession, data: Dictionary, dtype: String, cells: Array[
 					(z["cells"] as Array).erase(key)
 				if (z["cells"] as Array).is_empty():
 					SpellEffects.zones(s).erase(z)
+		if not bool(row.get("lays", true)):  # it only ends what it clears: the ice thaws into its water
+			lines.append("%s (клеток: %d)" % [row["name"], hit.size()])
+			continue
 		var z := zone_of(id, (row as Dictionary).merged({"on": row.get("when", ["enter", "start"]), "by": str(source.get("id", ""))}, true), packed)
 		z["until_round"] = int(s.combat.get("round", 1)) + int(row.get("rounds", 1)) - 1  # gone by SpellEffects.zones_expire
 		SpellEffects.add_zone(s, z)
 		lines.append("%s (клеток: %d)" % [row["name"], hit.size()])
 
+
+
+## A square is `where` a surface lies: `wet` — water of the map or a puddle, `ice` — the ice on it, else any square walked.
+static func _fits(s: GameSession, data: Dictionary, g: Dictionary, where: String, at: Vector2i) -> bool:
+	match where:
+		"wet":
+			return douses_at(s, data, at)
+		"ice":
+			return _in_zone(s, at, "ice")
+	return FightGrid.walkable(g, at)
+
+
+## A zone of `spell` lies on `at`.
+static func _in_zone(s: GameSession, at: Vector2i, spell: String) -> bool:
+	var key := FightGrid.tag(at)
+	return SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return str(z["spell"]) == spell and (z.get("cells", []) as Array).has(key))
+
+
+## The squares side by side from `from` that `fits` (v0.8.4.43.62): the body of a puddle, as a surface of BG3 and Divinity,
+## up to `whole_max` of the grid — a river of the map is not electrified to its end.
+static func body(s: GameSession, data: Dictionary, from: Array[Vector2i], fits: Callable) -> Array[Vector2i]:
+	var g := FightGrid.grid(s, data)
+	var most := int(cfg(data).get("whole_max", 64))
+	var out: Array[Vector2i] = []
+	var seen := {}
+	var queue: Array[Vector2i] = from.duplicate()
+	while not queue.is_empty() and out.size() < most:
+		var at: Vector2i = queue.pop_front()
+		if seen.has(at):
+			continue
+		seen[at] = true
+		if at.x < 0 or at.y < 0 or at.x >= int(g["w"]) or at.y >= int(g["h"]) or not fits.call(at):
+			continue
+		out.append(at)
+		for d: Vector2i in WalkRules.DIRS:
+			if not seen.has(at + d):
+				queue.append(at + d)
+	return out
+
+
+## `cells` with the whole puddle each lies in, where its zone burns `whole` (oil): the squares of the same puddle side by
+## side, one puddle however many flasks poured it.
+static func whole(s: GameSession, data: Dictionary, cells: Array[Vector2i]) -> Array[Vector2i]:
+	var out: Array[Vector2i] = cells.duplicate()
+	for at: Vector2i in cells:
+		var key := FightGrid.tag(at)
+		for z: Dictionary in SpellEffects.zones(s):
+			if not bool(z.get("whole", false)) or not (z.get("cells", []) as Array).has(key):
+				continue
+			var kind := str(z["spell"])
+			for c: Vector2i in body(s, data, [at] as Array[Vector2i], func(x: Vector2i) -> bool: return _in_zone(s, x, kind)):
+				if not out.has(c):
+					out.append(c)
+	return out
+
+
+## A damage of `dtype` lands on `cells` (v0.8.4.43.62, one road for a spell at a body, an area and a square): fire thaws the
+## ice and catches what burns there, any damage leaves its surface (`react`). `source` — who dealt it. Lines.
+static func lands(s: GameSession, data: Dictionary, dtype: String, cells: Array[Vector2i], source: Dictionary, lines: Array[String]) -> void:
+	react(s, data, dtype, cells, source, lines)
+	if dtype == "fire":
+		kindle(s, data, cells, lines)
 
 
 ## The squares a body walked this turn, for the map to play. Taken by the screen as `CombatRules.take_fx`.
@@ -564,9 +632,11 @@ static func _burnable(s: GameSession, data: Dictionary, at: Vector2i) -> bool:
 	return bool(data["layouts"]["cells"].get(str(FightGrid.map(s, data)["rows"][at.y])[at.x], {}).get("burns", false))
 
 
-## Fire touches `cells`: what burns there catches. Oil and wood; bare stone does not.
+## Fire touches `cells`: what burns there catches. Oil and wood; bare stone does not. A puddle that burns `whole` (oil, as in
+## BG3 and Divinity, v0.8.4.43.62) catches at once on all its squares side by side.
 static func kindle(s: GameSession, data: Dictionary, cells: Array[Vector2i], lines: Array[String]) -> void:
 	var lit := false
+	cells = whole(s, data, cells)
 	for at: Vector2i in cells:
 		if _burnable(s, data, at) and not (s.combat["fires"] as Dictionary).has(FightGrid.tag(at)):
 			_light(s, at)
@@ -593,28 +663,71 @@ static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionar
 	if fx.has("strew"):
 		strew(s, data, at, str(fx["strew"]), side, lines, by)
 		return
-	var lid := str(fx.get("liquid", ""))
+	pour(s, data, [at] as Array[Vector2i], str(fx.get("liquid", "")), name, lines, side, by)
+
+
+## `lid` poured on `cells` (v0.8.4.43.62): a flask broken on a square, the rain of Create Water. Its `puddle` row — one zone of
+## the ground over them all (oil to slip on and burn, water that puts the fire out there); alchemist's fire — the squares
+## burn at once, the ice there thawed first and the fire out in the water, the oil it falls on burning whole. `side` and
+## `by` — the pourer's. Lines.
+static func pour(s: GameSession, data: Dictionary, cells: Array[Vector2i], lid: String, name: String, lines: Array[String], side := "player",
+		by := "") -> void:
 	var p: Dictionary = LiquidRules.kind(data, lid).get("puddle", {})
-	if p.is_empty():
+	var g := FightGrid.grid(s, data)
+	var on: Array[Vector2i] = []
+	for at: Vector2i in cells:
+		if FightGrid.walkable(g, at):
+			on.append(at)
+	if p.is_empty() or on.is_empty():
 		return
-	var key := FightGrid.tag(at)
+	var fires: Dictionary = s.combat["fires"]
 	if bool(p.get("fire", false)):
-		if douses_at(s, data, at):
+		react(s, data, "fire", on, {}, lines)  # the ice melts into the water it was
+		var dry: Array[Vector2i] = []
+		for at: Vector2i in on:
+			if not douses_at(s, data, at):
+				dry.append(at)
+		if dry.size() < on.size():
 			lines.append("%s: шипит в воде и гаснет" % name)
+		if dry.is_empty():
 			return
-		_light(s, at)
+		var more := whole(s, data, dry)  # the oil it falls on burns all of it
+		for at: Vector2i in dry:
+			_light(s, at)
 		_sync_fire(s, data)
-		lines.append("%s: клетка в огне" % name)
+		lines.append("%s: клетка в огне" % name if dry.size() == 1 else "%s: клетки в огне (%d)" % [name, dry.size()])
+		kindle(s, data, more, lines)
 		return
-	if bool(p.get("douses", false)) and (s.combat["fires"] as Dictionary).has(key):
-		(s.combat["fires"] as Dictionary).erase(key)
-		_sync_fire(s, data)
-		lines.append("%s: огонь на клетке погас" % name)
+	if bool(p.get("douses", false)):
+		var out := 0
+		for at: Vector2i in on:
+			if fires.erase(FightGrid.tag(at)):
+				out += 1
+		if out > 0:
+			_sync_fire(s, data)
+			lines.append("%s: огонь на клетке погас" % name if out == 1 else "%s: огонь погас (клеток: %d)" % [name, out])
 	SpellEffects.add_zone(s, zone_of("puddle:" + lid, p.merged({"side": side, "by": by, "on": p.get("on", []), "coats": lid if bool(p.get("coats", false)) else ""}, true),
-		FightGrid.pack_cells([at] as Array[Vector2i])))
-	lines.append("%s: %s растекается по клетке" % [name, LiquidRules.name_of(data, lid)])
-	if (s.combat["fires"] as Dictionary).has(key):
-		kindle(s, data, [at] as Array[Vector2i], lines)
+		FightGrid.pack_cells(on)))
+	lines.append("%s: %s растекается по клетке%s" % [name, LiquidRules.name_of(data, lid), " (клеток: %d)" % on.size() if on.size() > 1 else ""])
+	var lit: Array[Vector2i] = []
+	for at: Vector2i in on:
+		if fires.has(FightGrid.tag(at)):
+			lit.append(at)
+	if not lit.is_empty():
+		kindle(s, data, lit, lines)
+
+
+## A spell that pours a liquid on its area (`splash` of rules.spell_effects, v0.8.4.43.62): Create Water falls as rain, as in
+## BG3 — one puddle over the squares (`pour`), its fire out, those who stand there soaked at once (`soak`: wet, their fire out).
+## `t` — the square or the body aimed at, `me` — the caster. Lines.
+static func rain(s: GameSession, data: Dictionary, spell_id: String, t: Dictionary, me: Dictionary, lines: Array[String]) -> void:
+	var sp: Dictionary = data["spells"][spell_id]
+	var cells := CombatRules.area_cells(s, data, sp, t, me)
+	pour(s, data, cells, str(SpellEffects.spec(data, spell_id)["splash"]), str(sp["name"]), lines, str(me.get("side", "player")), str(me.get("id", "")))
+	for id: String in s.combat.get("fighters", []):
+		var f: Dictionary = CombatRules.fighter(s, id)
+		if str(f.get("status", "")) == "active" and FightGrid.body(f).any(func(at: Vector2i) -> bool: return cells.has(at)):
+			soak(s, data, f, lines)
 
 
 ## Caltrops or ball bearings strewn from `at` (v0.8.4.27): a zone of the ground by the row of `rules.combat.grid.strewn`,
