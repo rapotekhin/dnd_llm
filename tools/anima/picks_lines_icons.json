@@ -12,6 +12,7 @@
   "acts/item_spell": 3,
   "acts/parry": 3,
   "acts/shape": 2,
+  "acts/shoot": 3,
   "acts/shove": 3,
   "acts/slow_fall": 2,
   "acts/surrender": 3,
