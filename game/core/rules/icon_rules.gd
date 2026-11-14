@@ -30,10 +30,13 @@ static func of(data: Dictionary, session_items: Dictionary, r: String) -> Dictio
 	var kind := r.get_slice("/", 0)
 	var id := r.get_slice("/", 1) if r.contains("/") else ""
 	var out := {"ref": r, "path": "", "real": false, "tint": "", "frame": "", "marks": []}
-	if id.contains("@"):  # «conditions/immune@acid»: the picture of its id, the damage type's mark over it (v0.8.4.43.49)
-		var mark := id.get_slice("@", 1)
+	if id.contains("@"):  # «conditions/immune@acid»: the pair's own picture as in BG3 (immune_acid, v0.8.4.43.61), else the picture of
+		var mark := id.get_slice("@", 1)  # its id with the damage type's mark over it (v0.8.4.43.49)
+		var pair := "%s_%s" % [id.get_slice("@", 0), mark]
 		id = id.get_slice("@", 0)
-		if (cfg(data).get("elements", {}) as Dictionary).has(mark):
+		if not own(data, ref(kind, pair)).is_empty():
+			id = pair
+		elif (cfg(data).get("elements", {}) as Dictionary).has(mark):
 			out["marks"].append(_mark(data, "elements", mark))
 	if kind == "items":
 		id = ItemRules.real_id(id)

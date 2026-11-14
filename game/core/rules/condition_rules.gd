@@ -833,10 +833,10 @@ static func _blows_text(row_of: Dictionary) -> Array[String]:
 
 ## The icon of a status, a ref for IconRules (v0.8.4.43.49, the author: «Наследие фей не имеет иконки?», «иммунитет к кислоте —
 ## странная иконка»): its condition's own; one a spell, a feature, a trait or a worn thing lays — the icon of that spell,
-## feature, trait or thing; else what it does — an immunity, a resistance or a weakness to a damage type, the type as its mark
-## (`conditions/immune@acid`); else its condition's ref (the blank of the kind).
+## feature, trait or thing; else what it does — an immunity, a resistance or a weakness to a damage type (`conditions/immune@acid`:
+## the pair's own picture, else the type as a mark, IconRules.of); else its condition's ref (the blank of the kind).
 static func icon_of(data: Dictionary, e: Dictionary) -> String:
-	var id := str(e.get("condition", ""))
+	var id := look_of(data, e)
 	if not id.is_empty() and not IconRules.own(data, IconRules.ref("conditions", id)).is_empty():
 		return IconRules.ref("conditions", id)
 	if id.is_empty():
@@ -849,6 +849,20 @@ static func icon_of(data: Dictionary, e: Dictionary) -> String:
 			if dtypes.has(str(t)):
 				return "conditions/%s@%s" % [{"immune": "immune", "resist": "resistant", "vulnerable": "vulnerable"}[key], str(t)]
 	return IconRules.ref("conditions", id)
+
+
+## The id a status is shown by (v0.8.4.43.61): a coat by its liquid's own row — oil «облито маслом» (`oiled`), the row of
+## `condition_effects` with that `liquid` — else its condition. The status itself stays one `coated` (LiquidRules).
+static func look_of(data: Dictionary, e: Dictionary) -> String:
+	var id := str(e.get("condition", ""))
+	var lid := str(e.get("liquid", ""))
+	if lid.is_empty():
+		return id
+	var rows: Dictionary = data["rules"]["condition_effects"]
+	for k: String in rows:
+		if rows[k] is Dictionary and str((rows[k] as Dictionary).get("liquid", "")) == lid:
+			return k
+	return id
 
 
 ## What laid a status, as the refs it may be known by: the spell, the class feature or the race trait, the thing; [] — the
@@ -888,14 +902,15 @@ static func shown(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO
 	var out: Array[Dictionary] = []
 	for e: Dictionary in ItemRules.born_effects(data, c):
 		var id := str(e.get("condition", ""))
+		var look := look_of(data, e)
 		var kind := str(e.get("source", {}).get("kind", ""))
-		var title := name_of(data, id) if not id.is_empty() else str(e.get("source", {}).get("name", ""))
+		var title := name_of(data, look) if not id.is_empty() else str(e.get("source", {}).get("name", ""))
 		var does: Array[String] = []
 		if not boon_text(data, e).is_empty():
 			does.append(boon_text(data, e))
 		if id.begins_with(MakeRules.PREFIX):
 			does.append_array(_blows_text(row(c, data, id)))
-		var text := str(data["rules"]["conditions"].get(id, "")) if not id.is_empty() else ""
+		var text := str(data["rules"]["conditions"].get(look, "")) if not id.is_empty() else ""
 		if e.has("disease"):
 			text = str(DiseaseRules.def_of(s, data, str(e["disease"])).get("text", ""))
 		if text.is_empty() and kind == "spell":

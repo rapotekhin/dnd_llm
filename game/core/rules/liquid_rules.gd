@@ -515,6 +515,19 @@ static func coat(s: GameSession, data: Dictionary, h: Dictionary, lid: String, c
 	return lines
 
 
+## `lid` on the ground coats a creature that walks in or stands in it (a puddle of oil, v0.8.4.43.61): the coat, renewed while
+## it stands there; told once, by the name the coat is shown by («облито маслом», ConditionRules.look_of). `who` — a fighter,
+## Sheet.HERO; `cause` — the puddle's name. Lines.
+static func smear(s: GameSession, data: Dictionary, who: Dictionary, lid: String, cause: String) -> Array[String]:
+	var h := Sheet.holder(s, who)
+	var was := str(coat_on(s, h).get("liquid", "")) == lid
+	var lines := coat(s, data, h, lid, cause, who)
+	var now := coat_on(s, h)
+	if not was and str(now.get("liquid", "")) == lid:
+		lines.push_front("%s: %s" % [h.get("name", ""), ConditionRules.name_of(data, ConditionRules.look_of(data, now))])
+	return lines
+
+
 ## What fire adds to `h` now: oil on it (the coat goes with it).
 static func fire_plus(s: GameSession, h: Dictionary) -> int:
 	return int(coat_on(s, h).get("fire_plus", 0))

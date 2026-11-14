@@ -7608,6 +7608,30 @@
    "key": ""
   },
   {
+   "id": "corroded",
+   "kind": "conditions",
+   "name": "разъедает кислота",
+   "tags": "corroded",
+   "sentence": "A single corroded, a simple emblem.",
+   "key": ""
+  },
+  {
+   "id": "bleeding",
+   "kind": "conditions",
+   "name": "кровотечение",
+   "tags": "bleeding",
+   "sentence": "A single bleeding, a simple emblem.",
+   "key": ""
+  },
+  {
+   "id": "frostbitten",
+   "kind": "conditions",
+   "name": "обморожение",
+   "tags": "frostbitten",
+   "sentence": "A single frostbitten, a simple emblem.",
+   "key": ""
+  },
+  {
    "id": "oiled",
    "kind": "conditions",
    "name": "облито маслом",
@@ -7618,7 +7642,7 @@
   {
    "id": "wet",
    "kind": "conditions",
-   "name": "мокрое",
+   "name": "мокрый",
    "tags": "water drop, blue, glossy, front view",
    "sentence": "A single glossy blue water drop with a bright white highlight, seen from the front.",
    "key": ""
@@ -8105,6 +8129,14 @@
    "name": "Защита союзника",
    "tags": "shield, blue, white chevron, front view, glowing",
    "sentence": "A single blue kite shield seen from the front, with a white chevron and a soft glow.",
+   "key": ""
+  },
+  {
+   "id": "put_out",
+   "kind": "acts",
+   "name": "Потушить",
+   "tags": "put out",
+   "sentence": "A single put out, a simple emblem.",
    "key": ""
   },
   {
@@ -8844,6 +8876,110 @@
    "key": ""
   },
   {
+   "id": "immune_acid",
+   "kind": "conditions",
+   "name": "Иммунитет к кислоте",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, acid green shield, glowing centre, light rays, front view, flat emblem, acid drop, bubbles",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face bright acid green, with a bubbling drop of green acid glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_bludgeoning",
+   "kind": "conditions",
+   "name": "Иммунитет к дробящему урону",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, steel grey shield, glowing centre, light rays, front view, flat emblem, war hammer, iron",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face polished steel grey, with a heavy iron war hammer glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_cold",
+   "kind": "conditions",
+   "name": "Иммунитет к холоду",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, icy blue shield, glowing centre, light rays, front view, flat emblem, snowflake",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face pale icy blue, with a white snowflake glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_fire",
+   "kind": "conditions",
+   "name": "Иммунитет к огню",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, orange red shield, glowing centre, light rays, front view, flat emblem, flame",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face deep orange red, with a bright yellow flame glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_force",
+   "kind": "conditions",
+   "name": "Иммунитет к силовому полю",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, violet shield, glowing centre, light rays, front view, flat emblem, energy orb, ring",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face deep violet, with a glowing white orb inside a ring of force glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_lightning",
+   "kind": "conditions",
+   "name": "Иммунитет к электричеству",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, golden yellow shield, glowing centre, light rays, front view, flat emblem, lightning bolt",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face bright golden yellow, with a white zigzag lightning bolt glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_necrotic",
+   "kind": "conditions",
+   "name": "Иммунитет к некротической энергии",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, silver shield, glowing centre, light rays, front view, flat emblem, purple skull, purple smoke",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face polished silver, with a purple skull wreathed in purple smoke glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_piercing",
+   "kind": "conditions",
+   "name": "Иммунитет к колющему урону",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, steel grey shield, glowing centre, light rays, front view, flat emblem, arrowhead, red",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face polished steel grey, with a bold red arrowhead pointing down glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_poison",
+   "kind": "conditions",
+   "name": "Иммунитет к яду",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, emerald green shield, glowing centre, light rays, front view, flat emblem, poison drop, single drop",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face deep emerald green, with one bright lime green drop of poison glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_psychic",
+   "kind": "conditions",
+   "name": "Иммунитет к психической энергии",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, magenta shield, glowing centre, light rays, front view, flat emblem, spiral",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face bright magenta pink, with a white spiral swirl glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_radiant",
+   "kind": "conditions",
+   "name": "Иммунитет к излучению",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, golden shield, glowing centre, light rays, front view, flat emblem, starburst, sun, rays",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face warm gold, with a white starburst with long thin rays glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_slashing",
+   "kind": "conditions",
+   "name": "Иммунитет к рубящему урону",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, crimson shield, glowing centre, light rays, front view, flat emblem, claw marks, slash marks",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face deep crimson, with three bold white slash marks like claw cuts glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
+   "id": "immune_thunder",
+   "kind": "conditions",
+   "name": "Иммунитет к звуку",
+   "tags": "shield, kite shield, narrow shield, upright, symmetrical, gold rim, blue shield, glowing centre, light rays, front view, flat emblem, sound waves, arcs",
+   "sentence": "A single knight's kite shield standing straight upright and seen from the front, symmetrical, narrow and tall, about half as wide as it is tall, with a rounded top and a pointed bottom, a thin gold rim around its edge and its face deep blue, with three curved white sound waves glowing bright in its centre and a few long thin rays of light crossing out past its edges onto the dark field, drawn as a bold flat emblem.",
+   "key": ""
+  },
+  {
    "id": "resistant",
    "kind": "conditions",
    "name": "Устойчивость",
@@ -8852,11 +8988,219 @@
    "key": ""
   },
   {
+   "id": "resistant_acid",
+   "kind": "conditions",
+   "name": "Устойчивость к кислоте",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, acid green, acid drop, bubbles",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a bubbling drop of bright green acid painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_bludgeoning",
+   "kind": "conditions",
+   "name": "Устойчивость к дробящему урону",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, steel grey, war hammer, iron",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a heavy dark iron war hammer painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_cold",
+   "kind": "conditions",
+   "name": "Устойчивость к холоду",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, icy blue, snowflake",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a pale blue snowflake painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_fire",
+   "kind": "conditions",
+   "name": "Устойчивость к огню",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, orange red, flame",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a bright orange flame painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_force",
+   "kind": "conditions",
+   "name": "Устойчивость к силовому полю",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, violet, energy orb, ring",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a glowing violet orb inside a violet ring painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_lightning",
+   "kind": "conditions",
+   "name": "Устойчивость к электричеству",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, golden yellow, lightning bolt",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a bright yellow lightning bolt painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_necrotic",
+   "kind": "conditions",
+   "name": "Устойчивость к некротической энергии",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, silver, purple skull, purple smoke",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a purple skull wreathed in purple smoke painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_piercing",
+   "kind": "conditions",
+   "name": "Устойчивость к колющему урону",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, steel grey, arrowhead, red",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a bold red arrowhead pointing down painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_poison",
+   "kind": "conditions",
+   "name": "Устойчивость к яду",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, emerald green, poison drop, single drop",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with one bright lime green drop of poison painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_psychic",
+   "kind": "conditions",
+   "name": "Устойчивость к психической энергии",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, magenta, spiral",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a bright magenta spiral swirl painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_radiant",
+   "kind": "conditions",
+   "name": "Устойчивость к излучению",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, golden, starburst, sun, rays",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with a bright golden sun with straight rays painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_slashing",
+   "kind": "conditions",
+   "name": "Устойчивость к рубящему урону",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, crimson, claw marks, slash marks",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with three bold red diagonal slash marks like claw cuts painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "resistant_thunder",
+   "kind": "conditions",
+   "name": "Устойчивость к звуку",
+   "tags": "shield, wide heater shield, broad shield, split in half, silver and black, front view, flat emblem, blue, sound waves, arcs",
+   "sentence": "A single wide heater shield with a broad flat top and curved sides narrowing to a point at the bottom, seen from the front, split down the middle: its left half bright polished silver and its right half solid black shadow, with three curved bright blue sound waves painted large across both halves, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
    "id": "vulnerable",
    "kind": "conditions",
    "name": "Уязвимость",
    "tags": "shield, kite shield, silver, cracked, broken, shards, front view, flat emblem",
    "sentence": "A single silver kite shield seen from the front, split by one big jagged black crack running from top to bottom, two small shards falling away from it, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_acid",
+   "kind": "conditions",
+   "name": "Уязвимость к кислоте",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, acid green, front view, flat emblem, acid drop, bubbles",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted bright acid green with a bubbling drop of green acid and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_bludgeoning",
+   "kind": "conditions",
+   "name": "Уязвимость к дробящему урону",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, steel grey, front view, flat emblem, war hammer, iron",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted polished steel grey with a heavy iron war hammer and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_cold",
+   "kind": "conditions",
+   "name": "Уязвимость к холоду",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, icy blue, front view, flat emblem, snowflake",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted pale icy blue with a white snowflake and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_fire",
+   "kind": "conditions",
+   "name": "Уязвимость к огню",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, orange red, front view, flat emblem, flame",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted deep orange red with a bright yellow flame and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_force",
+   "kind": "conditions",
+   "name": "Уязвимость к силовому полю",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, violet, front view, flat emblem, energy orb, ring",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted deep violet with a glowing white orb inside a ring of force and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_lightning",
+   "kind": "conditions",
+   "name": "Уязвимость к электричеству",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, golden yellow, front view, flat emblem, lightning bolt",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted bright golden yellow with a white zigzag lightning bolt and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_necrotic",
+   "kind": "conditions",
+   "name": "Уязвимость к некротической энергии",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, silver, front view, flat emblem, purple skull, purple smoke",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted polished silver with a purple skull wreathed in purple smoke and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_piercing",
+   "kind": "conditions",
+   "name": "Уязвимость к колющему урону",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, steel grey, front view, flat emblem, arrowhead, red",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted polished steel grey with a bold red arrowhead pointing down and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_poison",
+   "kind": "conditions",
+   "name": "Уязвимость к яду",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, emerald green, front view, flat emblem, poison drop, single drop",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted deep emerald green with one bright lime green drop of poison and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_psychic",
+   "kind": "conditions",
+   "name": "Уязвимость к психической энергии",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, magenta, front view, flat emblem, spiral",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted bright magenta pink with a white spiral swirl and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_radiant",
+   "kind": "conditions",
+   "name": "Уязвимость к излучению",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, golden, front view, flat emblem, starburst, sun, rays",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted warm gold with a white starburst with long thin rays and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_slashing",
+   "kind": "conditions",
+   "name": "Уязвимость к рубящему урону",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, crimson, front view, flat emblem, claw marks, slash marks",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted deep crimson with three bold white slash marks like claw cuts and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
+   "key": "grey"
+  },
+  {
+   "id": "vulnerable_thunder",
+   "kind": "conditions",
+   "name": "Уязвимость к звуку",
+   "tags": "shield, kite shield, cracked, broken, shards, half coloured, blue, front view, flat emblem, sound waves, arcs",
+   "sentence": "A single kite shield seen from the front, split down the middle by one big jagged black crack, its left half painted deep blue with three curved white sound waves and its right half plain silver, a few silver shards flying off its upper edge, drawn as a bold flat emblem.",
    "key": "grey"
   }
  ]

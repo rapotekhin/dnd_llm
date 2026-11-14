@@ -189,6 +189,30 @@ func run() -> void:
 	if view != null:
 		view.visible = false
 
+	# Defense icons as in BG3 (v0.8.4.43.61): each pair its own picture with no mark over it; where the pair is not drawn
+	# (a worktree with no art), the kind's shield with the type's mark.
+	var data: Dictionary = node("Catalog").data
+	var defs := [["immune", "poison", "immune"], ["resist", "cold", "resistant"], ["vulnerable", "fire", "vulnerable"]]
+	for d: Array in defs:
+		Cheats.defense(s, data, wolf_id, d[0], d[1], true)
+	Knows.add(s, Knows.MONSTER, str(CombatRules.fighter(s, wolf_id).get("monster", "wolf")))  # its numbers and defenses seen
+	node("EventBus").card_requested.emit(wolf_id)
+	await frames(6)
+	view = find(screen(), "CardView") as Control
+	var row: Node = find(view, "CardDefenses") if view != null else null
+	var got: Array = []
+	if row != null:
+		for c: IconSlot in row.find_children("*", "IconSlot", true, false):
+			got.append(str(c.spec.get("path", "")).get_file() + ("+" + ",".join(c.spec["marks"].map(func(m: Dictionary) -> String: return m["id"])) if not (c.spec["marks"] as Array).is_empty() else ""))
+	var want: Array = []
+	for d: Array in defs:
+		var pair := IconRules.ref("conditions", "%s_%s" % [d[2], d[1]])
+		want.append(pair.get_file() + ".png" if not IconRules.own(data, pair).is_empty() else "%s.png+%s" % [d[2], d[1]])
+	step("the wolf's defenses each with its own picture", want.all(func(w: String) -> bool: return got.has(w)), "ждали %s, есть %s" % [want, got])
+	await shot("creature_defenses")
+	if view != null:
+		view.visible = false
+
 
 func _my_turn(gs: Node, s: GameSession) -> bool:
 	return screen_is("fight") and not gs.is_busy() and not gs.combat_playing and CombatRules.player_can_act(s)

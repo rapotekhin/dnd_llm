@@ -121,7 +121,7 @@ static func _ends(m: Dictionary, d: Dictionary) -> Array[String]:
 
 ## The keys of a row a zone takes as they are: what a failed save does, what it hides, who it spares, whom it touches.
 const ZONE_KEYS: Array[String] = ["cond", "fail", "tag", "obscure", "veil", "silence", "retch", "block_ranged", "spares_friends", "for",
-	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel", "douses", "tile", "worn", "reveal"]
+	"types", "sees", "spare_saved", "shape", "follow", "by", "side", "escape", "burns", "pass", "feel", "douses", "coats", "tile", "worn", "reveal"]
 
 
 ## A zone of the field by its row: one record for the ground, strewn things, the fire, a spell's zone and a trait's aura
@@ -529,13 +529,18 @@ static func _ruin(s: GameSession, data: Dictionary, at: Vector2i, lines: Array[S
 
 ## Water on a body that does not fly, as in BG3 (v0.8.4.43.59): the water of its square (the map's or a puddle) or a sky that wets
 ## (`wets` of the weather here) — it is `wet` and its fire out (LiquidRules.soak). On walking in and at the start of its turn.
+## A puddle that `coats` (oil, v0.8.4.43.61) lays its liquid on it the same way (LiquidRules.smear).
 static func soak(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	if CombatRules.airborne(s, data, f):
 		return
+	var key := FightGrid.tag(FightGrid.cell(f))
 	if douses_at(s, data, FightGrid.cell(f)):
 		lines.append_array(LiquidRules.soak(s, data, f, "вода"))
 	elif not WeatherRules.wets(s, data).is_empty():  # everybody under the sky: only a fire put out is told
 		lines.append_array(LiquidRules.soak(s, data, f, WeatherRules.wets(s, data), false))
+	for z: Dictionary in SpellEffects.zones(s).duplicate():
+		if not str(z.get("coats", "")).is_empty() and (z.get("cells", []) as Array).has(key):
+			lines.append_array(LiquidRules.smear(s, data, f, str(z["coats"]), str(z["name"])))
 
 
 ## Water on the square: the map's or a puddle (v0.8.4.28.2) — no fire there, and one walking in is put out and wet.
@@ -605,7 +610,8 @@ static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionar
 		(s.combat["fires"] as Dictionary).erase(key)
 		_sync_fire(s, data)
 		lines.append("%s: огонь на клетке погас" % name)
-	SpellEffects.add_zone(s, zone_of("puddle:" + lid, p.merged({"side": side, "by": by, "on": p.get("on", [])}), FightGrid.pack_cells([at] as Array[Vector2i])))
+	SpellEffects.add_zone(s, zone_of("puddle:" + lid, p.merged({"side": side, "by": by, "on": p.get("on", []), "coats": lid if bool(p.get("coats", false)) else ""}, true),
+		FightGrid.pack_cells([at] as Array[Vector2i])))
 	lines.append("%s: %s растекается по клетке" % [name, LiquidRules.name_of(data, lid)])
 	if (s.combat["fires"] as Dictionary).has(key):
 		kindle(s, data, [at] as Array[Vector2i], lines)
