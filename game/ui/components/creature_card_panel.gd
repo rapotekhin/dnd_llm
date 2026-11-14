@@ -133,16 +133,13 @@ static func _statuses(box: VBoxContainer, c: Dictionary) -> void:
 	if list.is_empty():
 		UiParts.label(box, _t("CARD_NO_STATUSES"), UiTheme.MUTED_LABEL)
 	var rows: Array = []
-	for e: Dictionary in list:  # an icon each, as on the party's portraits: its time under it, its source and words on the card
-		var src := str(e["source"])
-		var body: Array[String] = []
-		for line: String in [_t("CARD_SOURCE").format({"source": src}) if not src.is_empty() else "", str(e.get("does", "")), str(e["text"])]:
-			if not line.is_empty():
-				body.append(line)
-		rows.append([str(e.get("icon", IconRules.ref("conditions", str(e["condition"])))), "%s · %s" % [e["name"], e["left"]], "\n".join(body)])
+	for e: Dictionary in list:  # an icon each, as on the party's portraits: its time under it, its card (`CardInfo.status`) at the cursor
+		var card := CardInfo.status(Catalog.data, e, GameState.session.items if GameState.has_session() else {})
+		rows.append([str(e.get("icon", IconRules.ref("conditions", str(e["condition"])))), "%s · %s" % [e["name"], e["left"]], CardInfo.plain(card), card])
 	var flow := _icons(box, "CardStatuses", rows)
 	for i in list.size():
 		flow.get_child(i).name = "CardStatus_" + str(list[i]["name"]).validate_node_name()
+		(flow.get_child(i).get_child(0) as IconSlot).tooltip_text = str(list[i]["name"])  # the time is on the card
 
 
 ## A row of icons with their names under them (the author, 2026-11-13: «в описании мобов и NPC указывать заклинания,
