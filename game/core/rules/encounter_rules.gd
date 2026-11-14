@@ -285,7 +285,8 @@ static func roll(s: GameSession, data: Dictionary, skill: String, dc: int, dis: 
 	var r := Roll.check(s, data, Sheet.who(s, data, who), {"what": skill_name, "skill": skill, "dc": dc, "dis": dis, "target_id": target})
 	var total := int(r["total"])
 	var ok := bool(r["ok"])
-	return {"total": total, "ok": ok, "line": "%s %d против Сл %d%s — %s" % [skill_name, total, dc, " (помеха: без общего языка — жесты и оружие)" if dis else "", "успех" if ok else "провал"]}
+	return {"total": total, "ok": ok, "line": "%s %s%s — %s" % [skill_name, Roll.versus(total, dc, int(r["nat"]), ok),
+		" (помеха: без общего языка — жесты и оружие)" if dis else "", "успех" if ok else "провал"]}
 
 
 ## The foes of the encounter as creatures of the room (a truce), one per head; `extra` — what each one carries.

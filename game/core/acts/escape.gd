@@ -40,17 +40,18 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dic
 	var skill := CombatRules.better(s, data, f, hold.get("escape", ["athletics", "acrobatics"]))  # a web or a net: Strength (5e)
 	var dc := int(hold.get("escape_dc", 0))
 	var mine := 0
-	var against := "Сл %d" % dc
+	var vs := ""
 	var ok := false
 	var words: Array[String] = []
 	if dc > 0:
 		var r := Roll.check(s, data, f, {"skill": skill, "dc": dc, "quiet": true})
 		mine = int(r["total"])
 		ok = bool(r["ok"])
-		var cut := {"total": mine, "ac": dc, "nat20": false, "hit": ok, "what": "проверка"}
-		if ok and FeatureRules.cutting_words(s, data, f, cut, "roll", words):  # a bard of the foes (v0.8.4.43.46)
+		var cut := {"total": mine, "ac": dc, "nat20": int(r["nat"]) == 20, "hit": ok, "what": "проверка"}
+		if ok and FeatureRules.cutting_words(s, data, f, cut, "roll", words):  # a bard of the foes (v0.8.4.43.46); never a natural 20
 			mine = int(cut["total"])
 			ok = bool(cut["hit"])
+		vs = Roll.versus(mine, dc, int(r["nat"]), ok)
 	else:  # the grappler's Athletics: the same contest as the grapple (CombatRules.contest)
 		var g := CombatRules.fighter(s, str(hold.get("by", "")))
 		if g.is_empty():
@@ -58,14 +59,14 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, _to: String, _how: Dic
 		var c := CombatRules.contest(s, data, f, skill, g, ["athletics"], words)
 		mine = int(c["mine"])
 		ok = bool(c["won"])
-		against = "%d (%s)" % [int(c["theirs"]), Sheet.holder(s, g).get("name", "хватка") if not g.is_empty() else "хватка"]
+		vs = "%d против %d (%s)" % [mine, int(c["theirs"]), Sheet.holder(s, g).get("name", "хватка") if not g.is_empty() else "хватка"]
 	var what := ConditionRules.name_of(data, str(hold.get("condition", ""))).to_lower()
 	if ok:
 		ConditionRules.remove_effect(me, int(hold["uid"]))
 		if Sheet.is_hero(f):
 			CharacterRules.refresh(me, data, s.items)
 		CombatRules.points(s, data, f)["move"] = Move.steps(s, data, f)
-	words.append("%s вырывается: %s %d против %s — %s" % [_name(s, f), "Атлетика" if skill == "athletics" else "Акробатика", mine, against,
+	words.append("%s вырывается: %s %s — %s" % [_name(s, f), "Атлетика" if skill == "athletics" else "Акробатика", vs,
 		("больше не " + what) if ok else "не выходит"])
 	return words
 

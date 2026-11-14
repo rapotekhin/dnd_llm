@@ -1002,8 +1002,8 @@ func _parley_check(params: Dictionary) -> Dictionary:
 	if skill == "intimidation" and not CombatRules.parley_understood(session, Catalog.data):
 		p["disadvantage_reason"] = "без общего языка — жесты и оружие"  # v0.7.11
 	var result := CheckEngine.card(session, Catalog.data, p)
-	var lines: Array[String] = ["%s — %s: %d против Сл %d — %s" % [session.character["name"], tr("SKILL_" + skill.to_upper()),
-		int(result["total"]), int(result["dc"]), "успех" if bool(result["success"]) else "провал"]]
+	var lines: Array[String] = ["%s — %s: %s — %s" % [session.character["name"], tr("SKILL_" + skill.to_upper()),
+		Roll.versus(int(result["total"]), int(result["dc"]), int(result.get("nat", 0)), bool(result["success"])), "успех" if bool(result["success"]) else "провал"]]
 	var outcome := CombatRules.parley_apply(session, Catalog.data, skill, bool(result["success"]))
 	lines.append_array(outcome)
 	result["note"] = "Переговоры (исход решил движок): " + "; ".join(outcome)
@@ -2311,8 +2311,9 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 	if not check.is_empty() and session.mode != GameSession.MODE_COMBAT:  # a tagged option: the engine rolls first (v0.7.22.28)
 		var r := _engine_check(check.duplicate())
 		if not r.has("error"):
-			engine_note = ("%s [движок уже бросил для варианта: %s %d против Сл %d — %s%s]" % [engine_note, tr("SKILL_" + str(check["skill"]).to_upper()),
-				int(r["total"]), int(r["dc"]), "успех" if bool(r["success"]) else "провал", ", повтор без изменений" if bool(r.get("blocked", false)) else ""]).strip_edges()
+			engine_note = ("%s [движок уже бросил для варианта: %s %s — %s%s]" % [engine_note, tr("SKILL_" + str(check["skill"]).to_upper()),
+				Roll.versus(int(r["total"]), int(r["dc"]), int(r.get("nat", 0)), bool(r["success"])), "успех" if bool(r["success"]) else "провал",
+				", повтор без изменений" if bool(r.get("blocked", false)) else ""]).strip_edges()
 	_request("action", text + facts + ((" " + engine_note) if not engine_note.is_empty() else ""))
 	return true
 

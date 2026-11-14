@@ -2622,8 +2622,8 @@ static func look_over(s: GameSession, data: Dictionary, t: Dictionary) -> Array[
 	var r := Roll.hero(s, data, {"what": "Присмотреться", "skill": skill, "dc": dc, "target_id": str(t.get("id", ""))})  # Favored Enemy by its type
 	if bool(r["ok"]):
 		Knows.add(s, Knows.MONSTER, str(t.get("monster", Sheet.template_id(data, t))))
-	return ["%s присматривается: %s — %s %d против Сл %d — %s" % [s.character["name"], CreatureCard.name_of(s, data, t),
-		TranslationServer.translate("SKILL_" + skill.to_upper()), int(r["total"]), dc,
+	return ["%s присматривается: %s — %s %s — %s" % [s.character["name"], CreatureCard.name_of(s, data, t),
+		TranslationServer.translate("SKILL_" + skill.to_upper()), Roll.versus(int(r["total"]), dc, int(r["nat"]), r["ok"]),
 		"теперь ясно, на что способны такие враги" if bool(r["ok"]) else "ничего толкового"]]
 
 

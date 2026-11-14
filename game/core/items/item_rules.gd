@@ -1373,5 +1373,5 @@ static func read_scroll(s: GameSession, data: Dictionary, spell_id: String, leve
 	var dc := 10 + level
 	var r := Roll.check(s, data, who, {"what": "Свиток", "skill": "arcana", "dc": dc})
 	var ok := bool(r["ok"])
-	return {"ok": ok, "line": "Магия %d + %d против Сл %d: %s" % [int(r["nat"]), int(r["total"]) - int(r["nat"]), dc,
+	return {"ok": ok, "line": "Магия %s: %s" % [Roll.sum_versus(int(r["nat"]), int(r["total"]), dc, ok),
 		("свиток прочитан: " + name) if ok else "слова не даются, свиток рассыпается впустую"]}

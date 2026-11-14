@@ -48,6 +48,23 @@ static func succeeds(nat: int, total: int, dc: int) -> bool:
 	return nat == 20 or (nat != 1 and total >= dc)
 
 
+## A total against a DC as every check line says it (v0.8.4.43.53, the author: «строка проверки молчит о 1 и 20 на
+## кубе»): «15 против Сл 12», and the die when it decided against the total — «41 против Сл 15, но на кубе 1», «8 против
+## Сл 15, но на кубе 20». `ok` — the roll's outcome when the caller has it (an automatic failure is no die's doing).
+static func versus(total: int, dc: int, nat: int, ok: Variant = null) -> String:
+	var won: bool = succeeds(nat, total, dc) if ok == null else bool(ok)
+	var out := "%d против Сл %d" % [total, dc]
+	if (nat == 1 or nat == 20) and won != (total >= dc):
+		out += ", но на кубе %d" % nat
+	return out
+
+
+## The same with the die and what is added to it first: «12 + 3 = 15 против Сл 12».
+static func sum_versus(nat: int, total: int, dc: int, ok: Variant = null) -> String:
+	var rest := total - nat
+	return "%d %s %d = %s" % [nat, "−" if rest < 0 else "+", absi(rest), versus(total, dc, nat, ok)]
+
+
 ## By how much a roll passed: the step of an outcome ladder.
 static func margin(nat: int, total: int, dc: int, crit: int = CRIT_MARGIN) -> int:
 	return crit if nat == 20 else -crit if nat == 1 else total - dc

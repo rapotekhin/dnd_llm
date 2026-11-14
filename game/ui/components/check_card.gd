@@ -1,6 +1,6 @@
 class_name CheckCard
 extends PanelContainer
-## Roll card after an engine check (ADR-0008 §2): «Внимательность: 12 + 3 = 15 против DC 15 ✓», with what it
+## Roll card after an engine check (ADR-0008 §2): «Внимательность: 12 + 3 = 15 против Сл 15 ✓» (Roll.versus), with what it
 ## found, the repeat mark and the haggle outcome.
 
 var entry: Dictionary
@@ -85,6 +85,7 @@ func text_for(e: Dictionary) -> String:
 	var rolls: Array = e.get("rolls", [])
 	var dice := str(int(e.get("nat", 0))) if rolls.size() <= 1 else "%s→%d" % [", ".join(rolls.map(func(r: Variant) -> String: return str(int(r)))), int(e.get("nat", 0))]
 	return tr("CHECK_LINE").format({
-		"what": what, "roll": dice, "bonus": ("+ %d" if int(e.get("bonus", 0)) >= 0 else "− %d") % absi(int(e.get("bonus", 0))), "total": int(e.get("total", 0)),
-		"dc": int(e.get("dc", 0)), "mark": "✓" if bool(e.get("success", false)) else "✗",
+		"what": what, "roll": dice, "bonus": ("+ %d" if int(e.get("bonus", 0)) >= 0 else "− %d") % absi(int(e.get("bonus", 0))),
+		"versus": Roll.versus(int(e.get("total", 0)), int(e.get("dc", 0)), int(e.get("nat", 0)), bool(e.get("success", false))),
+		"mark": "✓" if bool(e.get("success", false)) else "✗",
 	})

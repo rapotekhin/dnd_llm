@@ -214,7 +214,7 @@ CHECK_DISADVANTAGE,Помеха: {reason}
 CHECK_FOUND,Найдено: {what}
 CHECK_HAGGLE_LOST,Торг не удался — до завтра цены не сбить
 CHECK_HAGGLE_WON,"Торг: −{pct}% к покупкам, +{pct}% к продаже"
-CHECK_LINE,{what}: {roll} {bonus} = {total} против DC {dc} {mark}
+CHECK_LINE,{what}: {roll} {bonus} = {versus} {mark}
 CHECK_REPEAT,Повтор без изменений — прежний итог
 COMBAT_ACTION,Действие
 COMBAT_ALREADY_HIDDEN,Вы уже спрятались

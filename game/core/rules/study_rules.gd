@@ -294,7 +294,7 @@ static func exam(s: GameSession, data: Dictionary, sid: String, who: String = Be
 		var r := Roll.check(s, data, Sheet.who(s, data, who), {"what": "%s — экзамен" % sc["name"], "skill": str(ex["skill"]), "dc": int(ex["dc"]), "target_id": str(sc.get("head", ""))})
 		var total := int(r["total"])
 		margin = int(r["margin"])
-		lines.append("%s — экзамен: %s %d против Сл %d — %s" % [sc["name"], CraftRules.tr_skill(data, str(ex["skill"])), total, int(ex["dc"]),
+		lines.append("%s — экзамен: %s %s — %s" % [sc["name"], CraftRules.tr_skill(data, str(ex["skill"])), Roll.versus(total, int(ex["dc"]), int(r["nat"]), margin >= 0),
 			"сдан" if margin >= 0 else "не сдан"])
 		if margin < 0:
 			state(Life.of(s, who, data))["tried"][sid] = s.day

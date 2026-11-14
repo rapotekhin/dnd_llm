@@ -407,12 +407,12 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, how: String, li
 			if bool(r["ok"]):
 				doors.erase(key)
 				WayRules.unlock(s, data, ends[0], ends[1])
-				lines.append("%s вскрывает замок двери: %d против Сл %d" % [c["name"], int(r["total"]), dc])
+				lines.append("%s вскрывает замок двери: %s" % [c["name"], Roll.versus(int(r["total"]), dc, int(r["nat"]), true)])
 				var doer := Being.HERO if Sheet.is_hero(f) else str(f.get("npc_id", ""))
 				if not doer.is_empty():
 					lines.append_array(WayRules.forced(s, data, ends[0], ends[1], doer))
 			else:
-				lines.append("Замок не поддался: %d против Сл %d" % [int(r["total"]), dc])
+				lines.append("Замок не поддался: %s" % Roll.versus(int(r["total"]), dc, int(r["nat"]), false))
 		"door_force":
 			var r := Roll.check(s, data, f, {"what": "Выломать дверь", "skill": "athletics", "dc": _door_dc(s, data, at, d), "about": "force"})
 			if bool(r["ok"]):
@@ -422,7 +422,7 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, how: String, li
 				if not doer.is_empty():  # a door forced before eyes, in a fight too: witnesses and trespass (v0.8.4.29.3)
 					lines.append_array(WayRules.forced(s, data, ends[0], ends[1], doer))
 			else:
-				lines.append("Дверь выдержала: %d против Сл %d" % [int(r["total"]), _door_dc(s, data, at, d)])
+				lines.append("Дверь выдержала: %s" % Roll.versus(int(r["total"]), int(r["dc"]), int(r["nat"]), false))
 	FightGrid.changed(s)
 
 

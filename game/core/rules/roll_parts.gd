@@ -162,7 +162,7 @@ static func text(r: Dictionary) -> String:
 		lines.append("%+d %s" % [int(p["value"]), p["label"]])
 	var end := "= %d" % int(r.get("total", 0))
 	if int(r.get("dc", 0)) > 0:
-		end += " против Сл %d" % int(r["dc"])
+		end = "= " + Roll.versus(int(r.get("total", 0)), int(r["dc"]), int(r.get("nat", 0)), r.get("ok"))
 	lines.append(end)
 	return "\n".join(lines)
 

@@ -1253,7 +1253,7 @@ static func countered(s: GameSession, data: Dictionary, who: Dictionary, counter
 		return true
 	var r := Roll.check(s, data, who, {"what": what, "ability": ability, "dc": 10 + circle})
 	var ok := bool(r["ok"])
-	lines.append("%s: %s — проверка %d против Сл %d — %s" % [me, what, int(r["total"]), 10 + circle, "«%s» срывается" % name if ok else "не вышло"])
+	lines.append("%s: %s — проверка %s — %s" % [me, what, Roll.versus(int(r["total"]), 10 + circle, int(r["nat"]), ok), "«%s» срывается" % name if ok else "не вышло"])
 	return ok
 
 

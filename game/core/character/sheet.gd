@@ -289,7 +289,7 @@ static func save(s: GameSession, data: Dictionary, who: Dictionary, ab: String, 
 	elif dis and not adv:
 		note += ", с помехой (%s)" % ", ".join(at["dis"])
 	var label := CombatRules.ab_name(ab) if not ab.is_empty() else "от смерти"  # `ab` "" — a death save (v0.8.4.29.2)
-	var text := "%s %d против Сл %d%s — %s" % [label, total, dc, note, "успех" if ok else "провал"]
+	var text := "%s %s%s — %s" % [label, Roll.versus(total, dc, nat, ok), note, "успех" if ok else "провал"]
 	var line := "%s — спасбросок %s" % [str(me.get("name", "")), text]
 	if not bool(opts.get("quiet", false)):
 		_told(s, who, line, "Спасбросок: " + label, rolls, nat, parts, total - nat, dc)

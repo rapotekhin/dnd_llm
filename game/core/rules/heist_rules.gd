@@ -214,7 +214,7 @@ static func step(s: GameSession, data: Dictionary, id: String, step_id: String) 
 	var total := int(r["total"])
 	var ok := bool(r["ok"])
 	rec[step_id] = {"day": s.day, "ok": ok}
-	return ["«%s»: %s — %s %d против Сл %d — %s" % [def(s, data, id)["name"], st["name"], CraftRules.tr_skill(data, skill), total, dc(s, data, id),
+	return ["«%s»: %s — %s %s — %s" % [def(s, data, id)["name"], st["name"], CraftRules.tr_skill(data, skill), Roll.versus(total, int(r["dc"]), int(r["nat"]), ok),
 		"удалось: +%d к делу" % int(cfg(data)["prep_bonus"]) if ok else "не вышло, завтра снова"]]
 
 

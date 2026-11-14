@@ -297,8 +297,7 @@ static func confess(s: GameSession, data: Dictionary, npc_id: String) -> Array[S
 	var ok := bool(r["ok"])
 	var e := _rw(c, npc_id)
 	e["confess_day"] = s.day
-	var lines: Array[String] = ["Признание — %s: Убеждение %d %s %d = %d против Сл %d — %s" % [who, nat, "−" if b < 0 else "+", absi(b), nat + b, dc,
-		"взаимно" if ok else "отказ"]]
+	var lines: Array[String] = ["Признание — %s: Убеждение %s — %s" % [who, Roll.sum_versus(nat, nat + b, dc, ok), "взаимно" if ok else "отказ"]]
 	if ok:
 		e["kind"] = "romance"
 		s.remember(npc_id, "герой признался в чувствах — и это взаимно")
