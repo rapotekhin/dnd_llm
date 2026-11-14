@@ -14,9 +14,14 @@ extends PanelContainer
 ## selectable and scrolled. A floating panel shows nothing for a hint without a body: the place goes to the chat.
 ## v0.8.4.43.15 (the author: «прямоугольником фиксированного размера с возможностью скроллить его вниз»; «щелчок правой
 ## кнопкой … будет блокировать окно описания»): a card is one width and at most `CARD_MAX_BODY` of text high — a longer
-## text says that the right button pins it, and pinned it scrolls; `tip_card` is the same card for an icon's own tooltip;
-## `pin_card` pins an icon's card in the one card of the screen for icons (`_pins`), the right button on it again or the
-## lock lets it go, as on any card.
+## text says that the right button pins it, and pinned it scrolls; `pin_card` pins an icon's card in the one card of the
+## screen for icons (`_pins`), the right button on it again or the lock lets it go, as on any card.
+## v0.8.4.43.64 (the author, 2026-11-14: «перехожу ровно с иконки на это окно — оно не должно закрываться»): an icon's card
+## at the cursor is no tooltip of Godot — that one goes the moment the cursor leaves the icon — but the one card of icons
+## unpinned (`hover_icon`), with the act's line under the name (`_line`: a chance, why not). Any unpinned card at the
+## cursor stays while the cursor came over onto it from its thing — it takes the cursor then, so nothing under it is
+## hovered, and its right button pins it — and a moment after the cursor left both (`REACH_MS`); with no room under the
+## cursor it stands above it, as Godot's tooltip did, not over its thing.
 ## v0.8.4.43.33 (the author, as in BG3): a card of a spell, a feature, a thing or an act is drawn from its data (`CardInfo`):
 ## the name and what it is under it, its icon in the corner, the headline number with its dice by damage type, what it lays
 ## with the icon of the condition, the description, how it works (duration, range, area, attack or save, concentration)
@@ -58,8 +63,12 @@ var _ref := ""  # a card of a link: its ref
 var _link := ""  # the ref of the link the cursor is on now, "" — none
 var _left_at := -100000  # when the cursor left a link (msec): its card waits a moment for the cursor to reach it
 var _pointer := Vector2.ZERO  # where the cursor last moved over this card's text: a link's card stands at its height
+var _line: Label  # an icon's act line under the name: its chance, why not (v0.8.4.43.64)
+var _away_at := -1  # when the cursor left both the card's thing and the card (msec), -1 — it is on one of them
+var _caught := false  # the cursor came over onto the unpinned card from its thing: the card takes it
 
 static var _pins: DetailsPanel  # the one card an icon is pinned in (`pin_card`)
+static var _mouse := Vector2(-1, -1)  # where the cursor last moved, as the interface sees it (-1 — no motion seen yet)
 static var _held: WeakRef  # the one floating card pinned now, of any screen (the author, 2026-11-13: «если я закрепил одну
 # панель осмотра — вторая не должна появляться при наведении»)
 
@@ -68,6 +77,7 @@ const CARD_MAX_BODY := 340.0  # a longer text is cut at this height and scrolls 
 const CARD_ICON := 72.0  # the icon in the corner of a card, as in BG3
 const BIG_SIZE := 30  # the headline number
 const LINK_GRACE_MS := 600  # a link's card stays this long after the cursor leaves the link: the way over to it
+const REACH_MS := 400  # an unpinned card stays this long after the cursor left its thing and it: the way over to it
 ## The colours of a cost's glyph, as the counters over the hotbar.
 const COST_COLORS := {"action": "8fb36f", "bonus": "d1a14a", "reaction": "b98fd8", "slot": "6f9fc8", "free": "9a8f7e", "time": "c9a45c", "move": "e6c47e"}
 
@@ -110,6 +120,12 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 	_lock.pressed.connect(_on_lock)
 	head.add_child(_lock)
 	head.add_child(_icon)
+	_line = Label.new()
+	_line.name = "DetailsLine"
+	_line.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_line.visible = false
+	col.add_child(_line)
 	_body = RichTextLabel.new()
 	_body.name = "DetailsText"
 	_body.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -144,11 +160,13 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 		_body.scroll_active = false
 		_body.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
 		_title.custom_minimum_size = Vector2(CARD_WIDTH - 140 - CARD_ICON, 0)  # a wrapped title has a width before it is laid out
+		_line.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
 		_hold(false)
 
 
 ## A card follows only the eye: it takes no click until pinned (the cursor reaches what is under it).
 func _hold(pinned_now: bool) -> void:
+	_caught = false
 	for n: Node in [self] + find_children("*", "Control", true, false):
 		if _child != null and is_instance_valid(_child) and (n == _child or _child.is_ancestor_of(n)):
 			continue  # the card of a link takes the cursor by its own
@@ -197,20 +215,26 @@ func _place() -> void:
 		at = Vector2(r.end.x + 8, r.position.y)
 		if _left and r.position.x - sz.x - 8 >= 0.0 or at.x + sz.x > screen.x:
 			at.x = r.position.x - sz.x - 8
-	elif at.x + sz.x > screen.x:
-		at.x = _anchor.x - sz.x - 12
+	else:
+		if at.x + sz.x > screen.x:
+			at.x = _anchor.x - sz.x - 12
+		if at.y + sz.y > screen.y - 4:  # no room under the cursor: above it (as Godot's tooltip), not over its thing (the hotbar)
+			at.y = _anchor.y - sz.y - 12
 	position = Vector2(clampf(at.x, 0.0, maxf(0.0, screen.x - sz.x)), clampf(at.y, 0.0, maxf(0.0, screen.y - sz.y - 4)))
 
 
 func _process(_delta: float) -> void:
 	if not floating or not visible:
 		return
-	if _icons and (_pinned.is_empty() or _screen == null or not is_instance_valid(_screen.get_ref()) or not (_screen.get_ref() as Node).is_inside_tree()):
+	if _icons and (_screen == null or not is_instance_valid(_screen.get_ref()) or not (_screen.get_ref() as Node).is_inside_tree()):
 		unpin()  # its screen is gone (a load, the menu): the card goes with it
-		return
-	if _pinned.is_empty() and not _still_wanted():
 		visible = false
 		return
+	if _pinned.is_empty():
+		if not _still_wanted():
+			visible = false
+			return
+		_reach()
 	if _pinned.is_empty() or not size.is_equal_approx(get_combined_minimum_size()):  # a pinned one too, once its lines settle
 		_place()
 
@@ -218,6 +242,8 @@ func _process(_delta: float) -> void:
 ## While a card is pinned the right button anywhere lets it go — on the card, on its thing, past it (the author, 2026-11-13:
 ## «щелчок правой кнопкой вне закреплённой зоны так же должен откреплять», «второй щелчок правой кнопкой … должен»).
 func _input(ev: InputEvent) -> void:
+	if ev is InputEventMouseMotion:  # after the hover of this motion (Godot 4.3+), so a card reached by a hover is deferred
+		_mouse = (ev as InputEventMouseMotion).position
 	var mb := ev as InputEventMouseButton
 	if floating and visible and not _pinned.is_empty() and mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
 		unpin()
@@ -227,9 +253,15 @@ func _input(ev: InputEvent) -> void:
 ## A pinned card is dragged by the left button (the author, 2026-11-13: «двигать окно описания, если зажмём левую кнопку»);
 ## its text is still selected on the text itself.
 func _gui_input(ev: InputEvent) -> void:
-	if not floating or _pinned.is_empty():
+	if not floating:
 		return
 	var mb := ev as InputEventMouseButton
+	if _pinned.is_empty():  # the cursor came over onto it: the right button pins it where it stands, as on its thing
+		if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
+			pin(_shown, _title_text, _plain, _card, _look, _line.text)
+		if mb != null:
+			accept_event()
+		return
 	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
 		_drag = get_global_mouse_position() - position if mb.pressed else Vector2(-1, -1)
 		accept_event()
@@ -255,7 +287,39 @@ func _still_wanted() -> bool:
 	if _beside:
 		return _shown.has_focus()
 	var hovered := get_viewport().gui_get_hovered_control()
-	return hovered != null and (hovered == _shown or _shown.is_ancestor_of(hovered))
+	if hovered != null and (hovered == _shown or _shown.is_ancestor_of(hovered) or hovered == self or is_ancestor_of(hovered)):
+		_away_at = -1
+		return true
+	if _away_at < 0:
+		_away_at = Time.get_ticks_msec()
+	return Time.get_ticks_msec() - _away_at < REACH_MS
+
+
+## The unpinned card takes the cursor once it came over onto it from its thing — nothing under it is hovered then, and its
+## right button pins it; over its thing it lets the cursor through to it.
+func _reach() -> void:
+	var on_thing := _shown != null and is_instance_valid(_shown) and _shown.get_global_rect().has_point(_cursor())
+	var catch := not _beside and not on_thing and get_global_rect().has_point(_cursor())
+	if catch != _caught:
+		_caught = catch
+		mouse_filter = Control.MOUSE_FILTER_STOP if catch else Control.MOUSE_FILTER_IGNORE
+
+
+## This unpinned card at the cursor is up for `control` already: back from the card onto its thing, it stays where it is.
+func _showing(control: Control) -> bool:
+	return floating and visible and _pinned.is_empty() and control == _shown
+
+
+## The cursor is on this unpinned card at the cursor: `control` under it is not hovered through it.
+func _covers(control: Control) -> bool:
+	return floating and visible and _pinned.is_empty() and not _beside and control != _shown \
+		and get_global_rect().has_point(_cursor())
+
+
+## Where the cursor is: by its last motion the interface saw (a playtest moves it by the interface's own events), else the
+## system's.
+func _cursor() -> Vector2:
+	return _mouse if _mouse.x >= 0.0 else get_viewport().get_mouse_position()
 
 
 ## The right column of a screen: this panel on top (a third of the height), `lower` (the chat, a summary) below.
@@ -282,37 +346,42 @@ func column(lower: Control, width: int = 440) -> VBoxContainer:
 
 ## Shows a text unless another one is pinned; a floating card at what is hovered now, or beside the focused button.
 ## `card` — a card of `CardInfo` drawn instead of the bare text, `look` — the icon (IconRules.of), by the card's own when {}.
-func show_text(title: String, body: String, card: Dictionary = {}, look: Dictionary = {}) -> void:
+## `line` — an icon's act line under the name (a chance, why not).
+func show_text(title: String, body: String, card: Dictionary = {}, look: Dictionary = {}, line := "") -> void:
 	if not _pinned.is_empty() or (floating and holding()):
 		return
-	_put(title, body, card, look)
+	_put(title, body, card, look, line)
 	if floating:
-		_float_up(body)
+		_float_up(not body.is_empty() or not _line.text.is_empty() or (_icons and not title.is_empty()))
 
 
-func _float_up(body: String) -> void:
-	if body.is_empty() or not is_inside_tree():  # a hint: nothing at the cursor, the place is the chat's
+## `shown` — there is something to show: an icon's name alone is (a window's button), a hint without a body is not.
+func _float_up(shown: bool) -> void:
+	if not shown or not is_inside_tree():  # a hint: nothing at the cursor, the place is the chat's
 		visible = false
 		return
 	var hovered := get_viewport().gui_get_hovered_control()
 	var focused := get_viewport().gui_get_focus_owner()
-	if _shown != null and is_instance_valid(_shown) and hovered != null and (hovered == _shown or _shown.is_ancestor_of(hovered)):
-		_beside = false
+	_away_at = -1
+	if _shown != null and is_instance_valid(_shown) and (_icons or hovered != null and (hovered == _shown or _shown.is_ancestor_of(hovered))):
+		_beside = false  # an icon's card is by its icon, told by the icon itself
 	elif focused is BaseButton:
 		_shown = focused
 		_beside = true
 	else:
 		_shown = hovered
 		_beside = false
-	_anchor = get_viewport().get_mouse_position()
+	_anchor = _cursor()
 	visible = true
 	_hold(false)
 	_place()
 
 
-func _put(title: String, body: String, card: Dictionary = {}, look: Dictionary = {}) -> void:
+func _put(title: String, body: String, card: Dictionary = {}, look: Dictionary = {}, line := "") -> void:
 	drop_link()
 	_title_text = title
+	_line.text = line if line != title else ""
+	_line.visible = not _line.text.is_empty()
 	_title.text = _linked(title, card.get("refs", []))
 	_plain = body
 	_card = card
@@ -339,7 +408,7 @@ func _on_lock() -> void:
 	if not _pinned.is_empty():
 		unpin()
 	else:
-		pin(_shown, _title_text, _plain, _card, _look)
+		pin(_shown, _title_text, _plain, _card, _look, _line.text)
 
 
 func title() -> String:
@@ -356,7 +425,7 @@ func pinned() -> String:
 
 
 ## Pins this text (the right button): it stays until unpinned, `control` is lit.
-func pin(control: Control, title_text: String, body_text: String, card: Dictionary = {}, look: Dictionary = {}) -> void:
+func pin(control: Control, title_text: String, body_text: String, card: Dictionary = {}, look: Dictionary = {}, line := "") -> void:
 	_unlight()
 	if floating:  # one card pinned on the screen: another one pinned lets it go
 		var held: DetailsPanel = _held.get_ref() if _held != null else null
@@ -366,14 +435,14 @@ func pin(control: Control, title_text: String, body_text: String, card: Dictiona
 		_moved = false
 	_pinned = title_text
 	_pinned_body = body_text
-	_put(title_text, body_text, card, look)
+	_put(title_text, body_text, card, look, line)
 	_light(control)
 	if floating and is_inside_tree():
 		if not visible:  # pinned straight away: by the cursor over its thing, else beside the thing
 			var hovered := get_viewport().gui_get_hovered_control()
 			_shown = control
 			_beside = control != null and is_instance_valid(control) and not (hovered != null and (hovered == control or control.is_ancestor_of(hovered)))
-			_anchor = get_viewport().get_mouse_position()
+			_anchor = _cursor()
 		visible = true
 		_hold(true)
 		_place()
@@ -397,9 +466,43 @@ func unpin() -> void:
 
 ## Pins the card of an icon (the right button on an IconSlot, v0.8.4.43.15) in the one card of the screen for icons; on
 ## the same one again lets it go. `left` — beside the icon on its left, where a menu opened at the cursor leaves room.
-static func pin_card(control: Control, title_text: String, body_text: String, left := false, card: Dictionary = {}, look: Dictionary = {}) -> void:
+static func pin_card(control: Control, title_text: String, body_text: String, left := false, card: Dictionary = {}, look: Dictionary = {}, line := "") -> void:
 	if control == null or not control.is_inside_tree():
 		return
+	var c := _icon_card(control)
+	if c._pinned == title_text and c._pinned_body == body_text:
+		c.unpin()
+		return
+	c._left = left
+	c.visible = false  # stands anew by this icon
+	c.pin(control, title_text, body_text, card, look, line)
+	if left:
+		c._beside = true
+		c._place()
+
+
+## Shows an icon's card at the cursor, unpinned, in the one card of icons (v0.8.4.43.64: it was Godot's own tooltip, which
+## goes the moment the cursor leaves the icon, so the cursor could not reach it); none while a card is pinned, nor for an
+## icon the card itself stands over.
+static func hover_icon(control: Control, title_text: String, body_text: String, line := "", card: Dictionary = {}, look: Dictionary = {}) -> void:
+	if control == null or not control.is_inside_tree() or holding():
+		return
+	var c := _icon_card(control)
+	if c._covers(control) or c._showing(control):
+		return
+	c._left = false
+	c._shown = control
+	c.show_text(title_text, body_text, card, look, line)
+
+
+## A press on an icon lets its unpinned card go, as Godot's tooltip did.
+static func drop_icon(control: Control) -> void:
+	if _pins != null and is_instance_valid(_pins) and _pins._pinned.is_empty() and _pins._shown == control:
+		_pins.visible = false
+
+
+## The one card of icons over every window, made the first time; its screen is `control`'s (the child of the scene's root).
+static func _icon_card(control: Control) -> DetailsPanel:
 	if _pins == null or not is_instance_valid(_pins):
 		var layer := CanvasLayer.new()  # over every window
 		layer.name = "PinnedCards"
@@ -409,123 +512,22 @@ static func pin_card(control: Control, title_text: String, body_text: String, le
 		_pins.name = "PinnedCard"
 		_pins._icons = true
 		layer.add_child(_pins)
-	if _pins._pinned == title_text and _pins._pinned_body == body_text:
-		_pins.unpin()
-		return
-	var top: Node = control  # the screen it is on: the child of the scene's root
+	var top: Node = control
 	var scene := control.get_tree().current_scene
 	while top.get_parent() != null and top.get_parent() != scene and top.get_parent() != control.get_tree().root:
 		top = top.get_parent()
 	_pins._screen = weakref(top)
-	_pins._left = left
-	_pins.visible = false  # stands anew by this icon
-	_pins.pin(control, title_text, body_text, card, look)
-	if left:
-		_pins._beside = true
-		_pins._place()
+	return _pins
 
 
 ## The pinned card of icons (a playtest looks at it), or null.
 static func pinned_card() -> DetailsPanel:
+	return _pins if _pins != null and is_instance_valid(_pins) and _pins.visible and not _pins._pinned.is_empty() else null
+
+
+## The card of icons shown now, pinned or at the cursor (a test, a playtest), or null.
+static func icon_card() -> DetailsPanel:
 	return _pins if _pins != null and is_instance_valid(_pins) and _pins.visible else null
-
-
-## The card an icon shows at the cursor (IconSlot's tooltip, v0.8.4.43.15): the name on top, the act's line, the text —
-## one width, a long text cut at `CARD_MAX_BODY` with «the right button pins it» under it. With a `card` of `CardInfo`
-## (v0.8.4.43.33) its body is the card's, the icon in the corner (`look`, else the card's own), the band of what it takes.
-static func tip_card(title_text: String, line: String, body_text: String, card: Dictionary = {}, look: Dictionary = {}) -> PanelContainer:
-	var panel := PanelContainer.new()
-	panel.name = "TipCard"
-	panel.theme_type_variation = UiTheme.CARD
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 6)
-	panel.add_child(col)
-	var icon := look if not look.is_empty() else look_of(card)
-	var head := HBoxContainer.new()
-	head.name = "TipHead"
-	head.add_theme_constant_override("separation", 10)
-	col.add_child(head)
-	var names := VBoxContainer.new()
-	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	names.add_theme_constant_override("separation", 0)
-	head.add_child(names)
-	var title := Label.new()
-	title.name = "TipTitle"
-	title.text = title_text
-	title.theme_type_variation = UiTheme.ACCENT_LABEL
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	title.add_theme_font_size_override("font_size", UiTheme.SIZE_BODY)
-	if str(card.get("title_color", "")) != "":
-		title.add_theme_color_override("font_color", Color(str(card["title_color"])))
-	var with_icon := not icon.is_empty() and IconSlot.texture(str(icon.get("path", ""))) != null
-	title.custom_minimum_size = Vector2(CARD_WIDTH - 24 - (CARD_ICON + 10 if with_icon else 0.0), 0)
-	names.add_child(title)
-	if str(card.get("sub", "")) != "":
-		names.add_child(_sub_label(str(card["sub"])))
-	if with_icon:
-		var rect := _icon_rect(icon)
-		rect.name = "TipIcon"
-		head.add_child(rect)
-	if line != "" and line != title_text:
-		var l := Label.new()
-		l.name = "TipLine"
-		l.text = line
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
-		col.add_child(l)
-	var shown := card_text(card) if not card.is_empty() else body_text
-	if shown != "":
-		var body := RichTextLabel.new()
-		body.name = "TipText"
-		body.bbcode_enabled = true
-		body.fit_content = true
-		body.scroll_active = false
-		body.custom_minimum_size = Vector2(CARD_WIDTH - 24, 0)
-		body.text = shown
-		body.add_theme_color_override("default_color", UiTheme.MUTED)
-		col.add_child(body)
-		var more := _more_label()
-		col.add_child(more)
-		var links := has_links(shown)  # a link is reached once the card is pinned (as in BG3: a tooltip is locked first)
-		more.text = more_text(false, links)
-		more.visible = links
-		var cut := func() -> void:
-			body.fit_content = false
-			body.custom_minimum_size.y = CARD_MAX_BODY
-			more.text = more_text(true, links)
-			more.visible = true
-		# A tooltip takes its size when it comes up: the text's height by its font, before it is laid out …
-		var font := body.get_theme_font("normal_font")
-		var plain := CardInfo.plain(card) if not card.is_empty() else RegEx.create_from_string("\\[[^\\]]*\\]").sub(body_text, "", true)
-		if font != null and font.get_multiline_string_size(plain, HORIZONTAL_ALIGNMENT_LEFT, CARD_WIDTH - 24,
-				body.get_theme_font_size("normal_font_size")).y > CARD_MAX_BODY:
-			cut.call()
-		body.resized.connect(func() -> void:  # … and once it is, should the font have told less
-			if is_instance_valid(body) and body.fit_content and body.get_content_height() > CARD_MAX_BODY + 4:
-				cut.call())
-	var band := _foot_band(card)
-	if band != null:
-		col.add_child(band)
-	# The tooltip's window takes the size of the card's first layout, when the text had no width yet and stood a word a
-	# line, and does not shrink by itself: it is made the card's size each time the card's own changes (the author,
-	# 2026-11-13: «окно информации сильно больше написанного в нём текста»).
-	panel.minimum_size_changed.connect(func() -> void: _fit_window(panel))
-	panel.tree_entered.connect(func() -> void: (func() -> void: _fit_window(panel)).call_deferred())
-	return panel
-
-
-## The window a tooltip card stands in, the card's own size and its frame.
-static func _fit_window(panel: Control) -> void:
-	if not is_instance_valid(panel) or not panel.is_inside_tree():
-		return
-	var w := panel.get_window()
-	if w == null or w == panel.get_tree().root:
-		return
-	var frame := (Vector2(w.size) - panel.size).max(Vector2.ZERO)
-	var want := Vector2i((panel.get_combined_minimum_size() + frame).ceil())
-	if want != w.size:
-		w.size = want
-		panel.size = panel.get_combined_minimum_size()
 
 
 ## The body of a card in BBCode: the headline number, its dice by damage type, what it lays with the condition's icon,
@@ -742,7 +744,7 @@ static func _set_icon(rect: TextureRect, look: Dictionary) -> void:
 
 static func _sub_label(text: String) -> Label:
 	var sub := Label.new()
-	sub.name = "TipSub"
+	sub.name = "DetailsSub"
 	sub.text = text
 	sub.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -790,11 +792,14 @@ func hook(control: Control, title_text: String, body_text: String, card: Diction
 		(control as IconSlot).tip_body = body_text
 		(control as IconSlot).card = card
 	var shown := func() -> void:
+		if not is_instance_valid(control) or _covers(control) or _showing(control):  # the cursor came over onto the card: what is under it waits
+			return
 		if _pinned.is_empty():
 			_shown = control
 		show_text(title_text, body_text, card, look)
 	if not (floating and control is IconSlot):  # an icon's own card is at the cursor already
-		control.mouse_entered.connect(shown)
+		# Godot tells the hover before the motion reaches `_input`: where the cursor is now is known at the frame's end
+		control.mouse_entered.connect(func() -> void: shown.call_deferred())
 		if control is BaseButton:
 			(control as BaseButton).pressed.connect(shown)
 	if not floating:  # a card comes by the cursor, not by the keyboard's focus passing

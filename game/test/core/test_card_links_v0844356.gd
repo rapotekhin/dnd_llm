@@ -21,9 +21,10 @@ func before_test() -> void:
 
 
 func after_test() -> void:
-	var pinned := DetailsPanel.pinned_card()
+	var pinned := DetailsPanel.icon_card()
 	if pinned != null:
 		pinned.unpin()
+		pinned.visible = false
 	GameState.session = kept
 
 
@@ -127,7 +128,9 @@ func test_a_pinned_status_shows_the_spell_s_card_while_its_link_is_hovered() -> 
 	assert_array(_refs(chip.card)).contains(["Зловонное облако=spells/stinking_cloud"])
 	assert_str(chip.card_line(chip.tooltip_text)).is_empty()  # the time is on the card, not a line over it
 	# not pinned, its card says that pinning it reaches the links
-	var tip := auto_free(chip._make_custom_tooltip(chip.tooltip_text)) as Control
+	chip.show_card()
+	var tip := DetailsPanel.icon_card()
+	assert_object(tip).is_not_null()
 	var more := tip.find_child("DetailsMore", true, false) as Label
 	assert_bool(more.visible).is_true()
 	assert_str(more.text).is_equal(tr("DETAILS_LINKS"))

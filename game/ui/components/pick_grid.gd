@@ -72,6 +72,9 @@ static func rows(options: Array, current: String, prefix: String, on_pick: Calla
 		if tex != null:
 			b.icon = tex
 			b.expand_icon = true
+			# An expanded icon gets only the width the name leaves (Godot's Button), unless the name wraps: a long name
+			# («Наследие драконьей крови» in a third of the window) left the subclass's icon 12 px (the author, 2026-11-14).
+			b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			b.add_theme_constant_override("icon_max_width", int(ROW.y) - 12)
 			b.add_theme_constant_override("h_separation", 10)
 		if info != null and str(o.get("tip", "")) != "":

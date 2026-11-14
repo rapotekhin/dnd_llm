@@ -10,6 +10,10 @@ extends Button
 ## v0.8.4.43.15 (the author: «описание не содержит названия способности»): the card's title is the name — `tip_title`, else
 ## the cell's own text, never the line of its tooltip; the card is `DetailsPanel.tip_card`, one size; the right button
 ## pins it (`pin_card`) so it stays when the cursor goes.
+## v0.8.4.43.64 (the author: «перехожу ровно с иконки на это окно — оно не должно закрываться»): the card at the cursor is
+## no tooltip of Godot, gone the moment the cursor leaves the cell, but the one card of icons unpinned
+## (`DetailsPanel.hover_icon`) after the tooltip's delay — at once while another icon's card is up — that the cursor
+## reaches; a press on the cell lets it go.
 ## v0.8.4.43.33 (the author: «разрешение иконок ужасное, они все мелкие и детали потеряны»): an icon that carries its own
 ## frame (`framed`, the lines style) is laid edge to edge with no frame of the cell around it, a lit edge when hovered; a
 ## picture is shrunk through its mipmaps, so thin lines stay whole; the card is the one of `CardInfo` when the cell has it.
@@ -33,6 +37,7 @@ var drag_key := ""  ## the hotbar's key of this cell; "" — not dragged
 var meter := -1.0  ## 0…1: a bar along the bottom — a need's fill (v0.8.4.43.4); below 0 — none
 var meter_color := Color.WHITE
 var _dragging := false
+var _hover_at := -1  # when the cursor came onto the cell (msec): its card comes after the tooltip's delay
 
 
 ## A cell of `ref` named `name_text`; `side` — its side in pixels.
@@ -55,6 +60,8 @@ func _init() -> void:
 	add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	for k: String in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color"]:
 		add_theme_color_override(k, Color.TRANSPARENT)
+	mouse_entered.connect(_hover_in)
+	button_down.connect(_pressed_down)
 
 
 ## The cell's frame: the drawn cell (not the theme's long button stretched square, v0.8.4.43.23) — none under an icon
@@ -100,15 +107,36 @@ func set_icon(ref: String) -> void:
 	queue_redraw()
 
 
-## No card at the cursor while another card is pinned (the author, 2026-11-13: «если я закрепил одну панель осмотра —
-## вторая не должна появляться при наведении»).
+## No tooltip of Godot: the cell's card is the one card of icons (`show_card`), which the cursor can reach.
 func _get_tooltip(_at: Vector2) -> String:
-	return "" if DetailsPanel.holding() else tooltip_text
+	return ""
 
 
-## The card at the cursor: the name, the act's line when it says more, the description.
-func _make_custom_tooltip(for_text: String) -> Object:
-	return DetailsPanel.tip_card(card_title(for_text), card_line(for_text), tip_body, card, spec)
+## Its card at the cursor now, unpinned: the name, the act's line when it says more, the description (none while a card is
+## pinned: the author, 2026-11-13, «если я закрепил одну панель осмотра — вторая не должна появляться при наведении»).
+func show_card() -> void:
+	if tooltip_text != "" or tip_body != "" or not card.is_empty():
+		DetailsPanel.hover_icon(self, card_title(tooltip_text), tip_body, card_line(tooltip_text), card, spec)
+
+
+## The cursor came onto the cell: its card after the tooltip's delay; while another icon's card is up, at the frame's end —
+## Godot tells the hover before the motion reaches the cards, and the cursor may be on that card over this cell.
+func _hover_in() -> void:
+	_hover_at = Time.get_ticks_msec()
+	if DetailsPanel.icon_card() != null:
+		_hover_due.call_deferred(_hover_at)
+		return
+	get_tree().create_timer(float(ProjectSettings.get_setting("gui/timers/tooltip_delay_sec", 0.5))).timeout.connect(_hover_due.bind(_hover_at))
+
+
+func _hover_due(at: int) -> void:
+	if at == _hover_at and is_hovered():
+		show_card()
+
+
+func _pressed_down() -> void:
+	_hover_at = -1
+	DetailsPanel.drop_icon(self)
 
 
 ## The name on the card: `tip_title`, else the cell's own text (its name), else the first line of its tooltip.
@@ -133,8 +161,7 @@ func card_line(for_text: String) -> String:
 
 ## Pins this cell's card (the right button): it stays on the screen until the right button on it again or its lock.
 func pin_card(left := false) -> void:
-	var line := card_line(tooltip_text)
-	DetailsPanel.pin_card(self, card_title(tooltip_text), "\n\n".join([line, tip_body].filter(func(x: String) -> bool: return x != "")), left, card, spec)
+	DetailsPanel.pin_card(self, card_title(tooltip_text), tip_body, left, card, spec, card_line(tooltip_text))
 
 
 func _gui_input(ev: InputEvent) -> void:

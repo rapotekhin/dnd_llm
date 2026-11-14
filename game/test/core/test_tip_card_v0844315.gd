@@ -6,9 +6,10 @@ extends GdUnitTestSuite
 
 
 func after_test() -> void:
-	var pinned := DetailsPanel.pinned_card()
+	var pinned := DetailsPanel.icon_card()
 	if pinned != null:
 		pinned.unpin()
+		pinned.visible = false
 
 
 func _rmb(c: Control) -> void:
@@ -30,9 +31,10 @@ func test_the_title_is_the_name_not_the_tooltip_s_line() -> void:
 	var c := _cell("Захват", "Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом.")
 	assert_str(c.card_title(c.tooltip_text)).is_equal("Захват")
 	assert_str(c.card_line(c.tooltip_text)).is_equal("Вместо одной атаки: Атлетика против Атлетики или Акробатики врага рядом.")
-	var card := c._make_custom_tooltip(c.tooltip_text) as Control
-	auto_free(card)
-	assert_str((card.find_child("TipTitle", true, false) as Label).text).is_equal("Захват")
+	c.show_card()
+	var card := DetailsPanel.icon_card()
+	assert_str(card.title()).is_equal("Захват")
+	assert_str((card.find_child("DetailsLine", true, false) as Label).text).is_equal(c.card_line(c.tooltip_text))
 
 
 func test_a_tooltip_that_begins_with_the_name_does_not_say_it_twice() -> void:
@@ -44,22 +46,27 @@ func test_a_tooltip_that_begins_with_the_name_does_not_say_it_twice() -> void:
 
 
 func test_a_long_text_is_cut_and_says_the_right_button_pins_it() -> void:
-	var card := DetailsPanel.tip_card("Длинное", "", "Очень длинное описание. ".repeat(120))
-	# cut already as it is made: a tooltip takes its size when it comes up
-	assert_float((card.find_child("TipText", true, false) as RichTextLabel).custom_minimum_size.y).is_equal(DetailsPanel.CARD_MAX_BODY)
-	add_child(card)
-	auto_free(card)
+	var card := _floating("Длинное", "Очень длинное описание. ".repeat(120))
 	await await_idle_frame()
 	await await_idle_frame()
-	var body := card.find_child("TipText", true, false) as RichTextLabel
+	var body := card.find_child("DetailsText", true, false) as RichTextLabel
 	assert_float(body.custom_minimum_size.y).is_equal(DetailsPanel.CARD_MAX_BODY)
 	assert_bool((card.find_child("DetailsMore", true, false) as Label).visible).is_true()
-	assert_float(card.get_combined_minimum_size().y).is_less(DetailsPanel.CARD_MAX_BODY + 140)
-	var short := DetailsPanel.tip_card("Короткое", "", "Две строки.")
-	add_child(short)
-	auto_free(short)
+	assert_float(card.get_combined_minimum_size().y).is_less(DetailsPanel.CARD_MAX_BODY + 160)
+	var short := _floating("Короткое", "Две строки.")
 	await await_idle_frame()
 	assert_bool((short.find_child("DetailsMore", true, false) as Label).visible).is_false()
+
+
+## A card at the cursor with this text, as it comes up.
+func _floating(title: String, body: String) -> DetailsPanel:
+	var p := DetailsPanel.new(Vector2.ZERO, true)
+	add_child(p)
+	auto_free(p)
+	p._put(title, body)
+	p.visible = true
+	p._hold(false)
+	return p
 
 
 func test_the_right_button_pins_an_icon_s_card_and_again_lets_it_go() -> void:

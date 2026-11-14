@@ -2,14 +2,16 @@ extends "res://tools/playtest/playtest_base.gd"
 ## The card at the cursor (python tools/godot_playtest.py --scenario tip_card, v0.8.4.43.15), the author's findings on
 ## 0.8.4.43.8: the rests tell what they give; a thing's right button pins its card and opens its menu; in a fight
 ## «Захват» has its name on top; a long spell's card is one size with «the right button pins it»; the right button pins
-## it so it stays when the cursor goes, and lets it go again. A tooltip of Godot does not come up in the playtest's
-## window, so the card an icon makes for it (`_make_custom_tooltip`) is set where the tooltip stands.
+## it so it stays when the cursor goes, and lets it go again. An icon's card comes by the cursor's motions over the window
+## (v0.8.4.43.64: the one card of icons, no tooltip of Godot).
+## v0.8.4.43.64 (the author: «перехожу ровно с иконки на это окно — оно не должно закрываться»): the cursor straight from
+## the long rest onto its card — the card stays past the moment it waits and takes the cursor; the right button on it pins
+## it where it stands; off the icon and the card it goes.
 ## v0.8.4.43.56, «Карточка в карточке»: the hero's «Концентрация: Зловонное облако» on its portrait — not pinned its card
 ## says that pinning it reaches the links; pinned, the cursor (real mouse motions over its lines) on the spell's name in its
 ## title and in its source line shows the spell's card beside it, it stays while the cursor is over on it and goes when the
 ## cursor leaves both; in a fight Bane on the wolf in the wolf's card links Bane's card the same way.
 
-var _hovered: Control
 var _by_signal: RichTextLabel  # the label whose link's signal the playtest gave (`_onto_link`)
 var _by_ref := ""
 
@@ -38,17 +40,38 @@ func run() -> void:
 	var short := find(bar, "ShortRestButton") as IconSlot
 	var rest := find(bar, "RestButton") as IconSlot
 	if step("the rests on the bar", short != null and rest != null):
-		var card := short._make_custom_tooltip(short.tooltip_text) as Control
-		step("«Короткий отдых»: its name on top, what it gives under it", _title(card) == tr("BTN_SHORT_REST") and _text(card).contains(tr("SHORT_REST_TIP")),
-			"%s / %s" % [_title(card), _text(card)])
-		card.free()
-		card = rest._make_custom_tooltip(rest.tooltip_text) as Control
-		step("«Долгий отдых»: its name on top, what it gives under it", _title(card) == rest.text and _text(card).contains(tr("LONG_REST_TIP")), _title(card))
-		card.free()
+		await _hover(short)
+		var card := _shown_tip()
+		step("«Короткий отдых»: its name on top, what it gives under it", card != null and _title(card) == tr("BTN_SHORT_REST")
+			and _text(card).contains(tr("SHORT_REST_TIP")), "%s / %s" % [_title(card), _text(card)] if card != null else "нет карточки")
 		await _hover(rest)
-		step("the long rest's card at the cursor", _shown_tip() != null and _title(_shown_tip()) == rest.text)
+		card = _shown_tip()
+		step("«Долгий отдых»: its name on top, what it gives under it, at the cursor", card != null and _title(card) == rest.text
+			and _text(card).contains(tr("LONG_REST_TIP")), _title(card) if card != null else "нет карточки")
 		await shot("tip_long_rest")
+		if card != null:
+			var from := rest.get_global_rect().get_center()
+			var to := card.get_global_rect().get_center()
+			for i in range(1, 6):
+				await _move_to(from.lerp(to, i / 5.0), 1)
+			await frames(40)  # longer than the moment an unpinned card waits for the cursor
+			step("the cursor straight from the icon onto its card, over other icons under it: the rest's card stays and takes the cursor",
+				DetailsPanel.icon_card() == card and card.title() == rest.text and card.mouse_filter == Control.MOUSE_FILTER_STOP,
+				"карточка: %s, ловит: %s" % [card.title(), card.mouse_filter == Control.MOUSE_FILTER_STOP])
+			await shot("tip_reached")
+			var ev := InputEventMouseButton.new()
+			ev.button_index = MOUSE_BUTTON_RIGHT
+			ev.pressed = true
+			ev.position = to
+			ev.global_position = to
+			root.push_input(ev, true)
+			await frames(3)
+			step("the right button on the card pins it where it stands", DetailsPanel.pinned_card() == card and card.get_global_rect().has_point(to))
+			card.unpin()
+			await frames(2)
+		await _hover(rest)
 		await _unhover()
+		step("off the icon and its card: it goes", DetailsPanel.icon_card() == null)
 
 	# A thing: the right button pins its card and opens its menu.
 	(screen().get("input") as Control).release_focus()
@@ -227,26 +250,17 @@ func _rmb(c: Control) -> void:
 	c._gui_input(ev)
 
 
-## The card `c` makes for its tooltip, set over it where the tooltip stands.
+## The cursor onto `c` until its card comes up at the cursor (after the tooltip's delay, at once while another is up).
 func _hover(c: Control) -> void:
-	if is_instance_valid(_hovered):
-		_hovered.queue_free()
-	var card := (c as IconSlot)._make_custom_tooltip(c.tooltip_text) as Control
-	card.top_level = true
-	card.z_index = 60
-	screen().add_child(card)
-	await frames(4)
-	var r := c.get_global_rect()
-	card.position = Vector2(clampf(r.position.x, 0, 1600 - card.size.x), maxf(0.0, r.position.y - card.size.y - 8))
-	_hovered = card
+	await _move_to(c.get_global_rect().get_center())
+	await wait_until(func() -> bool: return DetailsPanel.icon_card() != null and DetailsPanel.icon_card().get("_shown") == c, 3.0)
 	await frames(2)
 
 
+## The cursor off onto the map, where no icon is, until the card goes.
 func _unhover() -> void:
-	if is_instance_valid(_hovered):
-		_hovered.queue_free()
-	_hovered = null
-	await frames(2)
+	await _move_to(screen().get_viewport_rect().size * Vector2(0.5, 0.35))
+	await wait_until(func() -> bool: return DetailsPanel.icon_card() == null, 3.0)
 
 
 ## The cursor onto `word` in `pinned`'s `node_name` text (its line by the text, its place by the font) until the card of its
@@ -305,16 +319,16 @@ func _move_to(at: Vector2, wait := 2) -> void:
 	await frames(wait)
 
 
-## The card of a tooltip shown now.
-func _shown_tip() -> Control:
-	return _hovered if is_instance_valid(_hovered) else null
+## The icon's card at the cursor shown now.
+func _shown_tip() -> DetailsPanel:
+	return DetailsPanel.icon_card()
 
 
-func _title(card: Control) -> String:
-	var l := card.find_child("TipTitle", true, false) as Label
-	return l.text if l != null else ""
+func _title(card: DetailsPanel) -> String:
+	return card.title()
 
 
-func _text(card: Control) -> String:
-	var l := card.find_child("TipText", true, false) as RichTextLabel
-	return l.text if l != null else ""
+## Its act line and its text.
+func _text(card: DetailsPanel) -> String:
+	var line := (card.find_child("DetailsLine", true, false) as Label).text
+	return line + " " + (card.find_child("DetailsText", true, false) as RichTextLabel).text

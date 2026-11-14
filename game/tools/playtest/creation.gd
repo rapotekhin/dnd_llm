@@ -105,6 +105,23 @@ func run() -> void:
 		and fixed.text.contains(ItemRules.display_name(node("Catalog").data["items"], {}, "quiver")), fixed.text if fixed != null else "")
 	await shot("ranger_equipment")
 
+	# v0.8.4.43.64, the author: «у выбора чародея почему-то иконка супер маленькая» — a subclass's row wraps its name, so
+	# its icon is as big as a class's however long the name («Наследие драконьей крови»).
+	for k: String in ["sorcerer", "cleric", "warlock"]:
+		cs.set("step", "class")
+		cs.call("_redraw")
+		await tap("Pick_" + k)
+		cs.set("step", "subclass")
+		cs.call("_redraw")
+		await frames(3)
+		var sub := str(node("Catalog").data["classes"]["classes"][k]["subclasses"][0])
+		var row := find(cs, "Pick_" + sub) as Button
+		var st := row.get_theme_stylebox("normal") if row != null else null
+		var side := minf(row.size.y - st.get_margin(SIDE_TOP) - st.get_margin(SIDE_BOTTOM), float(row.get_theme_constant("icon_max_width"))) if st != null else 0.0
+		step("%s: the subclass «%s» wraps its name, its icon %d px as a class's" % [k, row.text if row != null else sub, int(side)],
+			row != null and row.icon != null and row.autowrap_mode == TextServer.AUTOWRAP_WORD_SMART and side >= 80.0)
+		await shot("subclass_" + k)
+
 	await tap("RandomButton")
 	await shot("random")
 	await tap("StartButton")

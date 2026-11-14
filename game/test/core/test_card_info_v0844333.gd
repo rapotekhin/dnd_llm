@@ -127,11 +127,13 @@ func test_an_act_says_what_it_costs() -> void:
 
 func test_the_drawn_card_has_its_icon_its_body_and_its_band() -> void:
 	var card := CardInfo.spell(data, "hellish_rebuke")
-	var tip := DetailsPanel.tip_card(str(card["title"]), "", CardInfo.plain(card), card)
+	var tip := DetailsPanel.new(Vector2.ZERO, true)
+	add_child(tip)
 	auto_free(tip)
-	assert_object(tip.find_child("TipIcon", true, false)).is_not_null()
-	assert_str((tip.find_child("TipSub", true, false) as Label).text).is_equal("Заклинание 1 круга · Воплощение")
-	assert_str((tip.find_child("TipText", true, false) as RichTextLabel).text).contains("2–20 урона")
+	tip._put(str(card["title"]), CardInfo.plain(card), card)
+	assert_bool((tip.find_child("DetailsIcon", true, false) as TextureRect).texture != null).is_true()
+	assert_str((tip.find_child("DetailsSub", true, false) as Label).text).is_equal("Заклинание 1 круга · Воплощение")
+	assert_str((tip.find_child("DetailsText", true, false) as RichTextLabel).text).contains("2–20 урона")
 	var band := tip.find_child("CardCost", true, false) as RichTextLabel
 	assert_str(band.text).contains("Реакция")
 	assert_str(band.text).contains("Ячейка 1 круга")
