@@ -82,9 +82,13 @@ func test_rows_by_picture_and_name() -> void:
 
 
 func test_a_class_and_a_subclass_by_their_sign() -> void:
-	var look := IconRules.of(data, {}, "classes/fighter")
-	assert_str(str(look["path"])).ends_with("features/second_wind.png")
-	assert_bool(bool(look["framed"])).is_true()
+	# a class and a background have a silver sign of their own (v0.8.4.43.54), none borrowed from a feature
+	for r: String in ["classes/fighter", "backgrounds/sage"]:
+		assert_bool((data["icons"]["shared"] as Dictionary).has(r)).is_false()
+		var look := IconRules.of(data, {}, r)
+		if IconRules.has_file(IconRules.root(data) + r + ".png"):  # the art is laid locally, not kept in git
+			assert_str(str(look["path"])).ends_with(r + ".png")
+			assert_bool(bool(look["framed"])).is_true()
 	assert_str(str(IconRules.of(data, {}, "subclasses/evocation")["path"])).ends_with("features/sculpt_spells.png")
 
 

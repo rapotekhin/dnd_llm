@@ -173,6 +173,12 @@ def entries() -> list[dict]:
         for rid, r in races[kind].items():
             out.append({"kind": kind, "id": rid, "name": r.get("name", rid), "en": r.get("name_en", ""),
                         "hint": "a people of the world; " + (f"a kind of {r['race']}" if r.get("race") else "a race")})
+    for cid, c in load("game/data/srd/classes.json")["classes"].items():  # a class at creation in silver (2026-11-14)
+        out.append({"kind": "classes", "id": cid, "name": c.get("name", cid), "en": c.get("name_en", ""),
+                    "hint": "a character class"})
+    for bid, b in load("game/data/srd/backgrounds.json").items():  # a background at creation (2026-11-14)
+        out.append({"kind": "backgrounds", "id": bid, "name": b.get("name", bid), "en": bid.replace("_", " "),
+                    "hint": "a character background"})
     told = load("game/data/rules.json")["conditions"]  # «Ослеплён: …» — the 5e conditions have their name only there
     for cid, c in load("game/data/rules.json")["condition_effects"].items():
         if cid.startswith("_"):

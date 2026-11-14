@@ -777,18 +777,8 @@ static func icon_of(data: Dictionary, e: Dictionary) -> String:
 	var id := str(e.get("condition", ""))
 	if not id.is_empty() and not IconRules.own(data, IconRules.ref("conditions", id)).is_empty():
 		return IconRules.ref("conditions", id)
-	var src: Dictionary = e.get("source", {}) if e.get("source") is Dictionary else {}
-	var sid := str(src.get("id", ""))
-	if id.is_empty() and not sid.is_empty():
-		var kind := str(src.get("kind", ""))
-		var refs: Array[String] = []
-		if kind == "spell":
-			refs = [IconRules.ref("spells", sid)]
-		elif kind in [ItemRules.BORN, "feature", "trait"]:
-			refs = [IconRules.ref("features", sid), IconRules.ref("traits", sid)]
-		elif kind in [ItemRules.WORN, "item"]:
-			refs = [IconRules.ref("items", sid)]
-		for r: String in refs:
+	if id.is_empty():
+		for r: String in source_refs(e):
 			if not IconRules.own(data, r).is_empty() or r.begins_with("spells/"):
 				return r
 	var dtypes: Dictionary = data["misc"]["damage_types"]
@@ -799,9 +789,38 @@ static func icon_of(data: Dictionary, e: Dictionary) -> String:
 	return IconRules.ref("conditions", id)
 
 
+## What laid a status, as the refs it may be known by: the spell, the class feature or the race trait, the thing; [] — the
+## engine, the master, a temple, a contest. Its icon (`icon_of`) and its card (`source_ref`) read them.
+static func source_refs(e: Dictionary) -> Array[String]:
+	var src: Dictionary = e.get("source", {}) if e.get("source") is Dictionary else {}
+	var sid := str(src.get("id", ""))
+	var kind := str(src.get("kind", ""))
+	if sid.is_empty():
+		return []
+	if kind == "spell":
+		return [IconRules.ref("spells", sid)]
+	if kind in [ItemRules.BORN, "feature", "trait"]:
+		return [IconRules.ref("features", sid), IconRules.ref("traits", sid)]
+	if kind in [ItemRules.WORN, "item"]:
+		return [IconRules.ref("items", sid)]
+	return []
+
+
+## What laid a status, as the ref of a card of its own (v0.8.4.43.56: a link in the status's card, `CardInfo.status`);
+## "" — none: the engine, the master, a monster's trait.
+static func source_ref(data: Dictionary, e: Dictionary) -> String:
+	var tables := {"spells": data["spells"], "features": data["classes"]["features"], "traits": data["races"]["traits"]}
+	for r: String in source_refs(e):
+		if r.begins_with("items/") or (tables.get(r.get_slice("/", 0), {}) as Dictionary).has(r.get_slice("/", 1)):
+			return r
+	return ""
+
+
 ## The statuses of anybody for the chips, the master and the card (v0.8.4.41: any creature, `who` of Sheet):
-## [{name, left, source, kind, text, does, condition, icon}] — `does` is what its numbers do (boon_text), `kind` where it comes
-## from (a spell, a worn thing, a trait…), `icon` its ref for IconRules (v0.8.4.43.4), `count` the level of exhaustion. A trait's status counts even when nothing laid it yet (ItemRules.born_effects).
+## [{name, left, source, kind, text, does, condition, icon, of}] — `does` is what its numbers do (boon_text), `kind` where it
+## comes from (a spell, a worn thing, a trait…), `icon` its ref for IconRules (v0.8.4.43.4), `of` the ref of the card of what
+## laid it (`source_ref`, v0.8.4.43.56: the concentration's spell), `count` the level of exhaustion. A trait's status counts
+## even when nothing laid it yet (ItemRules.born_effects).
 static func shown(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO) -> Array[Dictionary]:
 	var c := Sheet.holder(s, who)
 	var out: Array[Dictionary] = []
@@ -823,15 +842,15 @@ static func shown(s: GameSession, data: Dictionary, who: Dictionary = Sheet.HERO
 			text = ", ".join(does)
 		var icon := icon_of(data, e)
 		out.append({"condition": id, "name": title, "left": left_text(s, e), "source": str(e.get("source", {}).get("name", "")), "kind": kind,
-			"text": text, "does": ", ".join(does), "icon": icon})
+			"text": text, "does": ", ".join(does), "icon": icon, "of": source_ref(data, e)})
 	if exhaustion(c) > 0:
 		out.append({"condition": "exhaustion", "name": "Истощение %d" % exhaustion(c), "left": "до долгого отдыха", "source": "", "kind": "engine",
-			"text": exhaustion_text(exhaustion(c)), "does": "", "icon": IconRules.ref("conditions", "exhaustion"), "count": exhaustion(c)})
+			"text": exhaustion_text(exhaustion(c)), "does": "", "icon": IconRules.ref("conditions", "exhaustion"), "count": exhaustion(c), "of": ""})
 	if not str(c.get("concentration", "")).is_empty():
 		var sp := str(c["concentration"])
 		var ends := int(c.get("concentration_ends", -1))
 		out.append({"condition": "concentration", "name": "Концентрация: %s" % data["spells"].get(sp, {}).get("name", sp),
 			"left": left_text(s, {"ends": {"at": ends}} if ends >= 0 else {"ends": {}}).replace("пока не снимут", "пока держится"),
 			"source": "", "kind": "spell", "does": "", "text": "Урон — спасбросок Телосложения (Сл 10 или половина урона), иначе заклинание прервётся.",
-			"icon": IconRules.ref("spells", sp)})
+			"icon": IconRules.ref("spells", sp), "of": IconRules.ref("spells", sp) if (data["spells"] as Dictionary).has(sp) else ""})
 	return out

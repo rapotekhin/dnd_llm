@@ -28,6 +28,7 @@ func run() -> void:
 	var own: Array = field.things.filter(func(t: Dictionary) -> bool: return str(t["kind"]) == "thing")
 	step("the hall stands its own tables and benches", own.any(func(t: Dictionary) -> bool: return str(t["body"]) == "table") 		and own.any(func(t: Dictionary) -> bool: return str(t["body"]) == "bench"), str(own.map(func(t: Dictionary) -> String: return str(t["body"]))))
 	await shot("hall_own")
+	await _cat_and_stage(s, data)
 	var furniture := []
 	for i: int in 12:
 		var body: String = ["table", "table", "bench", "bench", "bench", "counter", "shelf", "barrel", "barrel", "chest", "plant_pot", "stool"][i]
@@ -70,3 +71,44 @@ func run() -> void:
 			node("EventBus").state_changed.emit()
 			await frames(4)
 			await shot(room)
+
+
+## The author (2026-11-14): the tavern's cat stood inside the stage. A stage with no whole place round its mark was laid on
+## one square and drawn whole over the squares it did not take (v0.8.4.43.60). Over seeds that did so: the stage whole,
+## the cat, the people and every thing on squares no other thing takes; the stage close up with the cat.
+func _cat_and_stage(s: GameSession, data: Dictionary) -> void:
+	var keep := s.game_seed
+	var bodies: Dictionary = data["rules"]["things"]["bodies"]
+	for seed_value: int in [3001, 3002, 1003, 4011]:
+		s.game_seed = seed_value
+		s.layouts.erase("picks")
+		s.layout_cache.clear()
+		PetRules.seed(s, data, s.room_id)
+		node("EventBus").state_changed.emit()
+		await frames(4)
+		field = find(screen(), "Field")
+		var drawn := {}
+		for t: Dictionary in field.things:
+			if t.has("corner"):
+				for c: Vector2i in MapSpots.footprint(bodies.get(str(t["body"]), {}).get("size", [1, 1]), t["corner"], int(t["turn"])):
+					drawn[c] = str(t["body"])
+		var stage: Array = field.things.filter(func(t: Dictionary) -> bool: return str(t.get("body", "")) == "stage")
+		step("seed %d: the stage whole on its six squares" % seed_value, stage.size() == 1 and (stage[0]["cells"] as Array).size() == 6, str(stage))
+		var on: Array = field.things.filter(func(t: Dictionary) -> bool:
+			return str(t["kind"]) in ["npc", "creature", "body"] and drawn.has(Vector2i(int(t["x"]), int(t["y"]))))
+		step("seed %d: the cat and the people on no thing" % seed_value, on.is_empty(), str(on.map(func(t: Dictionary) -> String: return "%s on %s" % [t["ref"], drawn[Vector2i(int(t["x"]), int(t["y"]))]])))
+		step("seed %d: the cat is in the hall" % seed_value, field.things.any(func(t: Dictionary) -> bool: return str(t["kind"]) == "creature"))
+		if seed_value == 3001 and not stage.is_empty():  # the hall whole, then the stage close up by its middle
+			field.zoom(-20, field.size / 2.0)
+			await frames(3)
+			await shot("stage_hall")
+			var mine: Array = stage[0]["cells"]
+			field.zoom(18, (field.cell_point(mine[0]) + field.cell_point(mine[mine.size() - 1])) / 2.0)
+			await frames(3)
+			await shot("stage_close")
+			field.zoom(-20, field.size / 2.0)
+	s.game_seed = keep
+	s.layouts.erase("picks")
+	s.layout_cache.clear()
+	node("EventBus").state_changed.emit()
+	await frames(4)

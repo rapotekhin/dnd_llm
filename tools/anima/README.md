@@ -166,6 +166,7 @@ python tools/anima/install.py --out tools/anima/out_painted --picks tools/anima/
 | `features`, `acts` | золотой квадрат в две линии, как ячейка панели | золотом, у умений драконьего предка — цветом своего дракона, как у черт; действия рисует FLUX (`out_lines_flux/`), как и живописные: на пробе у Anima «Помочь» — молитвенно сложенные руки, у FLUX — сцепленные предплечья |
 | `traits` | серебряный квадрат в две линии | серебром; у драконьих предков — цветом своего дракона (`tint` в `subjects.json`: десять черт отличаются только цветом) |
 | `races`, `subraces` | серебряный квадрат, как у черт | серебром; рисует FLUX (`out_lines_flux/`), как действия: голова в профиль (человек, эльф, дроу с пауком, высший эльф с обручем и звездой), лицо орка с клыками, борода дварфа с топором, колпак гнома с шестернёй читаются сразу (2026-11-13) |
+| `classes`, `backgrounds` | серебряный квадрат, как у рас | рисует FLUX (`out_lines_flux/`), как расы; класс — знак (паладин — меч с солнцем в гарде, бард — лютня, следопыт — лук), предыстория — бюст человека занятия с его вещью: одна вещь (чётки, вилы, шлем) посреди квадрата вышла тонкой и пустой, автор её отверг (2026-11-14) |
 
 **Модель рисует только знак — белыми линиями на чёрном, без рамки** (семейство `sign`: промт кнопок `gold`, «white lines… nothing is drawn around it: no frame, no ring and no border», цвета сюжета выкинуты `uncolour`). Рамку и цвет кладёт код (`lines` в `anima_gen.py`, таблица `LINES`):
 - геометрию модель портит: d20 залила, у медалей состояний торчащая стрелка рвала кольцо, у живописных плиток рамка выходила с наклоном и скруглением. Кодом рамка у всех 454 иконок одной толщины и одного поля, знак всегда внутри неё и не задевает её (вписан в круг по самой дальней точке рисунка, в квадрат — по рамке рисунка);
@@ -184,8 +185,8 @@ nohup python3 anima_gen.py jobs/icons.json --style lines --steps 20 --only spell
 tail -f lines.log                              # [12/1260] spells/fireball #1 19s, left ~6.6 h
 # дома: действия через FLUX — 34 × 3 = 102 кадра, ~7 мин, ~$0.9 → out_lines_flux/; расы и подрасы так же (14 × 3, ~$0.4)
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only acts --backend openrouter
-python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only races,subraces --backend openrouter
-python tools/anima/install.py --out tools/anima/out_lines_flux --picks tools/anima/picks_lines_icons.json --only acts,races,subraces
+python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only races,subraces,classes,backgrounds --backend openrouter
+python tools/anima/install.py --out tools/anima/out_lines_flux --picks tools/anima/picks_lines_icons.json --only acts,races,subraces,classes,backgrounds
 # out_lines/ с сервера в tools/anima/out_lines/; выбор на той же странице — вкладки «· линии»
 python tools/anima/pick.py                     # http://127.0.0.1:8791/#lines_spells; «Превью · линии» (#preview_lines) — экраны игры с выбранными иконками «линий»
 python tools/anima/anima_gen.py tools/anima/jobs/icons.json --style lines --only spells,features,traits --recut   # другая рамка или цвет
