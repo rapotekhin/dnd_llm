@@ -418,6 +418,17 @@ static func cover_at(s: GameSession, data: Dictionary, from: Vector2i, to: Vecto
 	return int(c["half"]) if hard > 0 or soft else 0
 
 
+## `f` gets an act to the square `at` (v0.8.4.43.50): a spell's area, a flask or caltrops on a square, a square lit for the
+## picked act. Not behind total cover by 5e's four lines from the nearest square of its body — the rule of a blow at one
+## standing there (`cover`); a lone tree on the straight line is half cover, not a wall. The straight line first: it is cheap.
+static func reaches(s: GameSession, data: Dictionary, f: Dictionary, at: Vector2i) -> bool:
+	var from := cell(f)
+	for x: Vector2i in body(f):
+		if WalkRules.distance(x, at) < WalkRules.distance(from, at):
+			from = x
+	return clear(grid(s, data), from, at) or cover_at(s, data, from, at, [str(f.get("id", ""))]) < FULL_COVER
+
+
 ## 2 — the line is stopped, 1 — it passes something low or someone, 0 — free.
 static func _trace(g: Dictionary, occupied: Dictionary, a: Vector2, b: Vector2, from: Vector2i, to: Vector2i) -> int:
 	var length := a.distance_to(b)

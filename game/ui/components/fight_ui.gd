@@ -347,7 +347,8 @@ func _draw_map(s: GameSession, data: Dictionary, me: bool) -> void:
 	_field.queue_redraw()
 
 
-## The squares the picked act gets to from the one who moves, a clear line to them (v0.8.4.3).
+## The squares the picked act gets to from the one who moves, not behind total cover (v0.8.4.3; FightGrid.reaches, the
+## act's own rule, v0.8.4.43.50).
 func _in_range(s: GameSession, data: Dictionary) -> Dictionary:
 	var g := FightGrid.grid(s, data)
 	var me := GameState.fight_actor()
@@ -357,7 +358,7 @@ func _in_range(s: GameSession, data: Dictionary) -> Dictionary:
 	for y: int in range(maxi(0, from.y - far), mini(int(g["map"]["h"]), from.y + far + 1)):
 		for x: int in range(maxi(0, from.x - far), mini(int(g["map"]["w"]), from.x + far + 1)):
 			var at := Vector2i(x, y)
-			if FightGrid.dist_to(me, at) <= far and FightGrid.clear(g, from, at):
+			if FightGrid.dist_to(me, at) <= far and FightGrid.reaches(s, data, me, at):
 				out[at] = true
 	return out
 

@@ -9,13 +9,13 @@ extends RefCounted
 
 ## Damage of a type with no attack roll — a trap, a poison, a fall, a monster's rider, the master's word, the console: `dmg`
 ## through `who`'s defenses (Sheet.damage), a line of `said` ({hp} — what is left, {words} — `words` of it), then `take`.
-## What was left.
+## What was left. `stable` — as `take`'s.
 static func typed(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, dtype: String, lines: Array[String], said := "−{hp} HP ({words})",
-		crit := false, by_hero := true, magical := true, silvered := false) -> int:
+		crit := false, by_hero := true, magical := true, silvered := false, stable := false) -> int:
 	var adj := Sheet.damage(s, data, who, dtype, dmg, magical, silvered)
 	var left := int(adj["damage"])
 	lines.append(said.format({"hp": left, "words": words(data, dtype, str(adj["note"]))}))
-	take(s, data, who, left, lines, dtype, crit, by_hero)
+	take(s, data, who, left, lines, dtype, crit, by_hero, stable)
 	return left
 
 
@@ -24,8 +24,11 @@ static func words(data: Dictionary, dtype: String, note: String) -> String:
 	return ", ".join([str(data["misc"]["damage_types"].get(dtype, dtype)), note].filter(func(w: String) -> bool: return not w.is_empty()))
 
 
-## `dmg` to `who`; `by_hero` — the hero's blow (a nonlethal one only knocks out). Lines into `lines`.
-static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, lines: Array[String], dtype: String = "", crit: bool = false, by_hero: bool = true) -> void:
+## `dmg` to `who`; `by_hero` — the hero's blow (a nonlethal one only knocks out). `stable` — what drops it to 0 HP leaves it
+## stable (a giant spider's poison, 5e): the hero and one of its side roll no death saves, a foe is knocked out, not killed.
+## Lines into `lines`.
+static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, lines: Array[String], dtype: String = "", crit: bool = false, by_hero: bool = true,
+		stable: bool = false) -> void:
 	var hero := Sheet.is_hero(who)
 	var fight := CombatRules.active(s) and (hero or who.has("status"))
 	var f: Dictionary = CombatRules.player(s) if hero and fight else who
@@ -81,7 +84,7 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 		lines.append_array(FeatureRules.end_shape(s, data, 0, who))
 	if hero:
 		lines.append_array(ConditionRules.impose(s, data, {"condition": "unconscious", "ends": {"rest": "long"}, "source": {"kind": "engine", "name": "0 HP"}}))
-		s.combat["death_saves"] = {"ok": 0, "fail": 0}
+		s.combat["death_saves"] = {"ok": 0, "fail": 0, "stable": true} if stable else {"ok": 0, "fail": 0}
 		FeatureRules.rage_ends(s, data, f, lines)
 		lines.append("%s падает без сознания" % me["name"])
 		return
@@ -93,12 +96,14 @@ static func take(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, li
 	if str(who.get("side")) == "ally":
 		var summoned := str(who.get("ally", "")) == "summon"
 		who["status"] = "gone" if summoned else "down"
+		if stable and not summoned:
+			who["death_saves"] = {"ok": 0, "fail": 0, "stable": true}
 		lines.append(("%s развеивается" if summoned else "%s падает без сознания") % who["name"])
 		MonsterRules.release(s, data, who, lines)
 		return
-	if (by_hero and ArenaRules.yield_bout(s)) or (bool(s.combat.get("spare_blow", false)) and bool(s.combat.get("melee_strike", false))):
+	if stable or (by_hero and ArenaRules.yield_bout(s)) or (bool(s.combat.get("spare_blow", false)) and bool(s.combat.get("melee_strike", false))):
 		who["status"] = "unconscious"  # v0.7.45: in a bout to surrender any blow only knocks out; 5e: a melee blow at 0 HP may knock out (v0.7.22.11)
-		lines.append("%s оглушён и падает без сознания" % who["name"])
+		lines.append(("%s падает без сознания" if stable else "%s оглушён и падает без сознания") % who["name"])
 		return
 	who["status"] = "dead"
 	lines.append("%s повержен" % who["name"])

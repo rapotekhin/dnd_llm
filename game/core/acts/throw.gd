@@ -31,7 +31,7 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 		var at := FightGrid.aim_of(to)
 		if FightGrid.dist_to(f, at) * int(FightGrid.cfg(data)["ft"]) > far:
 			return "COMBAT_OUT_OF_RANGE"
-		return "" if FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(f), at) else "COMBAT_NO_LINE"
+		return "" if FightGrid.reaches(s, data, f, at) else "COMBAT_NO_LINE"
 	var t := _foe(s, f, to)
 	if t.is_empty() or fx.has("strew"):
 		return "COMBAT_BAD_TARGET"

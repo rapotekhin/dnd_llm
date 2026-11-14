@@ -161,14 +161,11 @@ static func apply_effect(s: GameSession, data: Dictionary, f: Dictionary, t: Dic
 		var dmg := CombatRules.roll_dice(s.rng, str(fx["damage"]["dice"]))
 		if not failed:
 			dmg = dmg / 2 if bool(fx["damage"].get("half", false)) else 0
-		var adj := Sheet.damage(s, data, t, str(fx["damage"]["type"]), dmg)
-		dmg = int(adj["damage"])
-		if dmg > 0:
-			lines.append("%s: ещё %d (%s)" % [a["name"], dmg, Harm.words(data, str(fx["damage"]["type"]), str(adj["note"]))])
-			if hero and bool(fx.get("zero_hp_paralyzed", false)) and int(me["hp"]) - dmg <= 0 and -(int(me["hp"]) - dmg) < int(me["max_hp"]):
-				_poisoned_stable(s, data, f, a, lines)
-				return
-			Harm.take(s, data, t, dmg, lines, str(fx["damage"]["type"]), false, Sheet.is_hero(f))
+		var stable := bool(fx.get("zero_hp_paralyzed", false))  # a giant spider's poison: at 0 HP stable, not dying (5e)
+		if dmg > 0 and Harm.typed(s, data, t, dmg, str(fx["damage"]["type"]), lines, "%s: ещё {hp} ({words})" % a["name"], false, Sheet.is_hero(f),
+				true, false, stable) > 0 and stable and _fell_stable(s, t):
+			_poisoned_stable(s, data, f, t, a, lines)
+			return
 	if not failed and fx.has("save"):
 		return
 	if not failed and not save_result.is_empty():
@@ -237,16 +234,24 @@ static func _lay(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 		(", вырваться — Сл %d" % int(e["escape_dc"])) if e.has("escape_dc") else ""])
 
 
-## A spider's poison dropped the hero to 0: stable, poisoned for an hour and paralysed while so (5e).
-static func _poisoned_stable(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, lines: Array[String]) -> void:
-	var c := s.character
-	c["hp"] = 0
-	s.combat["death_saves"] = {"ok": 0, "fail": 0, "stable": true}
-	ConditionRules.impose(s, data, {"condition": "unconscious", "ends": {"rest": "long"}, "source": {"kind": "engine", "name": "0 HP"}})
+## `t` lies stable at 0 HP after a poison that leaves it so (Harm.take with `stable`): the hero alive, one of its side down,
+## a foe knocked out — not dead, not gone.
+static func _fell_stable(s: GameSession, t: Dictionary) -> bool:
+	if Attack.up(s, t):
+		return false
+	return str(s.combat.get("outcome", "")) != "dead" if Sheet.is_hero(t) else str(t.get("status")) in ["down", "unconscious"]
+
+
+## A spider's poison dropped `t` to 0 (5e): stable — the one road of damage made it so — and poisoned for an hour, paralysed
+## while so. Anybody: the hero, one of its side, a foe.
+static func _poisoned_stable(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, a: Dictionary, lines: Array[String]) -> void:
+	var me := Sheet.holder(s, t)
 	var ends := ConditionRules.ends_for(s, data, "hour")
-	ConditionRules.add_effect(c, {"condition": "poisoned", "ends": ends, "source": _source(f, a), "by": str(f["id"])})
-	ConditionRules.add_effect(c, {"condition": "paralyzed", "ends": ends, "source": _source(f, a), "by": str(f["id"]), "with": "poisoned"})
-	lines.append("%s падает: яд сковал тело — без сознания, но жив (отравлен и парализован на час)" % c.get("name", ""))
+	lines.append_array(ConditionRules.impose(s, data, {"condition": "poisoned", "ends": ends, "source": _source(f, a), "by": str(f["id"])}, t))
+	lines.append_array(ConditionRules.impose(s, data, {"condition": "paralyzed", "ends": ends, "source": _source(f, a), "by": str(f["id"]), "with": "poisoned"}, t))
+	if Sheet.is_hero(t):
+		CharacterRules.refresh(me, data, s.items)
+	lines.append("%s: яд сковал тело — жив, но отравлен и парализован на час" % me.get("name", ""))
 
 
 ## The holds of a grappler end when it dies, is incapacitated or moves off (5e), and with `conc` what it keeps by
