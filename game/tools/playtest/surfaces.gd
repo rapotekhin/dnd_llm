@@ -74,6 +74,29 @@ func run() -> void:
 		var said := " | ".join((s.combat.get("log", []) as Array).slice(log_n))
 		step("a click on a bare square of water casts Sacred Flame there and blesses the whole puddle", _all(click, _under(s, "blessed_water")),
 			said.left(300))
+	# A flask of water from the belt onto the burning oil by the items tab's button (v0.8.4.43.63): the fire there is out.
+	s.character["inventory"]["empty_flask"] = 1
+	var filled := Thing.nth(s.character, "empty_flask", 0)  # drawn full at a well
+	filled["pints"] = 1.0
+	filled["liquid"] = "water"
+	ItemRules.belt_put(s.character, data, s.items, "empty_flask")
+	hero["points"] = CombatRules.fresh_points(s, data, hero)
+	FightGrid.changed(s)
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	find(screen(), "FightUi").call("set_filter", "COMBAT_TAB_ITEMS")
+	await frames(2)
+	var flask: Button = find(screen(), "Item_empty_flask")
+	if step("the flask of water is at hand in the fight", flask != null and not flask.disabled and (flask.text + flask.tooltip_text).contains("вода"),
+		(flask.text + " | " + flask.tooltip_text) if flask != null else "нет"):
+		await press(flask)
+		await frames(3)
+		await click_cell(oil[1])
+		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+		await frames(4)
+		step("the flask thrown at the burning oil puts the fire out there", not (s.combat["fires"] as Dictionary).has(FightGrid.tag(oil[1]))
+			and FightField.douses_at(s, data, oil[1]), str(s.combat["fires"]))
+		step("the flask broke", int(s.character["inventory"].get("empty_flask", 0)) == 0)
 	FightGrid.changed(s)
 	node("EventBus").state_changed.emit()
 	await frames(3)

@@ -589,6 +589,24 @@ static func uncoat(h: Dictionary) -> void:
 	ConditionRules.remove(h, "coated")
 
 
+## A vessel of `c` thrown with what it holds (v0.8.4.43.63, the author: «кидают склянку с водой»): a vessel with `throw` in
+## `vessels` (a flask, a bottle, a vial) whose copy holds a liquid with a `throw` — that liquid's throw as `throw_of` gives
+## it, with `copy` — the copy that breaks; {} — none. The first copy that holds such a liquid.
+static func thrown(c: Dictionary, data: Dictionary, id: String) -> Dictionary:
+	if not throws(data, id):
+		return {}
+	for v: Dictionary in carried(c, data):
+		var k := kind(data, str(v["liquid"]))
+		if v["id"] == id and not bool(v["ready"]) and float(v["pints"]) > 0.0 and k.has("throw"):
+			return (k["throw"] as Dictionary).merged({"liquid": v["liquid"], "spills": k.has("puddle") or (k["throw"] as Dictionary).has("area"), "copy": int(v["i"])})
+	return {}
+
+
+## A vessel that breaks thrown: a flask, a bottle, a vial (`throw` of its row in `vessels`).
+static func throws(data: Dictionary, id: String) -> bool:
+	return bool(cfg(data)["vessels"].get(id, {}).get("throw", false))
+
+
 ## A thrown flask of a liquid: its liquid's `throw` with the liquid named and whether it spills on a square; {} — none.
 static func throw_of(data: Dictionary, id: String) -> Dictionary:
 	var r := ready(data, id)

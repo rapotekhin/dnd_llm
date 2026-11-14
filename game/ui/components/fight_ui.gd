@@ -1219,15 +1219,17 @@ func _draw_shared(s: GameSession, data: Dictionary, who: Dictionary, c: Dictiona
 	# Items.
 	var usable: Array[String] = []
 	for id: String in ItemRules.at_hand(c, data, s.items):  # only the belt's and the worn things are at hand (v0.8.4.24, v0.8.4.26)
-		var use := ItemRules.consumable(data, id, s.items) if not id.is_empty() else {}
+		var use := ItemRules.use_of(c, data, s.items, id) if not id.is_empty() else {}
 		if not use.is_empty() and int(use.get("minutes", 0)) == 0:  # work of a while (a disguise) is not for a fight
 			usable.append(id)
 	if not usable.is_empty():
 		var ib := _tab_box("COMBAT_TAB_ITEMS")
 		for id: String in usable:
 			var d := ItemRules.def_of(data["items"], s.items, id)
-			var fx := ItemRules.consumable(data, id, s.items)
+			var fx := ItemRules.use_of(c, data, s.items, id)
 			var label := "%s ×%d" % [d.get("name", id), int(c["inventory"][id])]
+			if fx.get("throw", {}).has("copy"):  # a flask thrown with what it holds (v0.8.4.43.63)
+				label = "%s — %s" % [d.get("name", id), LiquidRules.name_of(data, str(fx["throw"]["liquid"]))]
 			if ItemRules.charges_max(d) > 0:
 				label = "%s (%d/%d)" % [d.get("name", id), ItemRules.charges_left(c, d, id), ItemRules.charges_all(c, d, id)]
 			var sp_id := str(fx.get("spell", ""))

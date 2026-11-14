@@ -1198,9 +1198,13 @@ static func spell_range(s: GameSession, data: Dictionary, spell_id: String, f: D
 static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id: String, target_id: String) -> Array[String]:
 	var c := Sheet.holder(s, f)
 	points(s, data, f)["attacked"] = true
-	var fx: Dictionary = ItemRules.consumable(data, item_id, s.items)["throw"]
+	var fx: Dictionary = ItemRules.use_of(c, data, s.items, item_id)["throw"]
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
-	ItemRules.remove(c, item_id)
+	if fx.has("copy"):  # a vessel breaks with what it held: that very copy (v0.8.4.43.63)
+		name = "%s — %s" % [name, LiquidRules.name_of(data, str(fx["liquid"]))]  # as the sheet names it
+		Thing.drop_at(c, item_id, int(fx["copy"]))
+	else:
+		ItemRules.remove(c, item_id)
 	if FightGrid.is_aim(target_id):
 		var splashed: Array[String] = []
 		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed, str(f.get("side", "player")), str(f.get("id", "")))

@@ -229,6 +229,8 @@ static func belt_fits(data: Dictionary, session_items: Dictionary, id: String) -
 	var fx := consumable(data, id, session_items)
 	if not fx.is_empty() and not fx.has("meal"):
 		return true
+	if LiquidRules.throws(data, real_id(id)):  # a flask, a bottle, a vial: thrown with what it holds (v0.8.4.43.63)
+		return true
 	return (d.get("properties", []) as Array).has("light_source")
 
 
@@ -1228,6 +1230,16 @@ static func consumable(data: Dictionary, id: String, session_items: Dictionary =
 	if session_items.has(id):
 		return session_items[id].get("use", {})
 	return data["items"]["catalog"].get(id, {}).get("use", {})  # potions, scrolls, wands, the pearl (v0.7.12)
+
+
+## What `c` does with `id` used (v0.8.4.43.63): its own use (`consumable`), else the throw of the liquid in its vessel — a
+## flask of water thrown as the water (LiquidRules.thrown). One reader for the belt's use in a fight and the throw act.
+static func use_of(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String) -> Dictionary:
+	var fx := consumable(data, id, session_items)
+	if not fx.is_empty():
+		return fx
+	var th := LiquidRules.thrown(c, data, real_id(id))
+	return {"throw": th} if not th.is_empty() else {}
 
 
 ## A potion (v0.7.22.3: drunk as a bonus action in a fight): a catalog potion or a made one with a potion's `use`.
