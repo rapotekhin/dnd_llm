@@ -1,7 +1,8 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## Meetings and captivity (python tools/godot_playtest.py --scenario meeting), v0.7.22.12: the hero sneaks onto the
 ## woodcutters' trail — the wolves do not notice, there is no fight, «Напасть врасплох» starts it with them caught
-## off guard; then a captivity: the escape buttons, a successful break free, the captors lurk unaware.
+## off guard; then a captivity: the escape buttons, a successful break free (tried again after a natural 1, as a player
+## would: by ADR-0008 §2 it fails whatever the total), the captors lurk unaware.
 
 
 func run() -> void:
@@ -72,12 +73,15 @@ func run() -> void:
 	var free: Button = find(game, "Escape_athletics")
 	step("the escape buttons", free != null and find(game, "Escape_sleight") != null and find(game, "Escape_talk") != null)
 	await shot("captive")
-	s.character["skills"]["athletics"] = 40
-	if free != null:
+	var tries := 0
+	while free != null and EncounterRules.captive(s) and tries < 5:  # a natural 1 fails whatever the total (ADR-0008 §2): tried again
+		tries += 1
+		s.character["skills"]["athletics"] = 40  # again: a knock-out between the tries refreshes the sheet
 		await press(free)
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		await frames(3)
-	step("broke free", not EncounterRules.captive(s), _chat(s))
+		free = find(screen(), "Escape_athletics")
+	step("broke free", not EncounterRules.captive(s), "%d tries · %s" % [tries, _chat(s)])
 
 
 func _chat(s: GameSession) -> String:

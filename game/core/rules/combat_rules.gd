@@ -1096,7 +1096,8 @@ static func _unseen_by(s: GameSession, me: Dictionary, t: Dictionary) -> bool:
 	return ConditionRules.has(it, "invisible") and not SpellEffects.has(Sheet.holder(s, me), "see_invisible") and not ConditionRules.has(it, "outlined")
 
 
-## "" when the area of a spell can be laid on a square: in range and in sight of the caster.
+## "" when the area of a spell can be laid on a square: in range and not behind total cover from the caster
+## (FightGrid.reaches, the rule of a blow); a jump only to a free square it sees.
 static func _can_aim(s: GameSession, data: Dictionary, spell_id: String, at: Vector2i, f: Dictionary) -> String:
 	var jump := int(SpellEffects.spec(data, spell_id).get("teleport", 0))
 	if jump > 0:  # Misty Step: a free square it sees
@@ -1112,7 +1113,7 @@ static func _can_aim(s: GameSession, data: Dictionary, spell_id: String, at: Vec
 		return ""
 	if FightGrid.dist_to(f, at) > _spell_squares(s, data, spell_id, f):
 		return "COMBAT_OUT_OF_RANGE"
-	return "" if FightGrid.clear(FightGrid.grid(s, data), FightGrid.cell(f), at) else "COMBAT_NO_LINE"
+	return "" if FightGrid.reaches(s, data, f, at) else "COMBAT_NO_LINE"
 
 
 ## The shape of a spell {type, size}, {} when it has none.
