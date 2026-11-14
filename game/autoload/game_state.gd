@@ -8,6 +8,9 @@ var session: GameSession
 ## turn_id of the turn in flight, "" when idle.
 var busy_turn: String = ""
 var drawing := false  ## the brush waits for a frame (v0.7.35)
+var _icons_busy := false  ## an icon of the master's inventions is being drawn (v0.8.4.44.1)
+var _icons_failed: Dictionary = {}  ## refs whose icon failed this run: not asked again
+var _icons_stopped := false  ## the day's limit refused an icon: none more this run
 var effects := EffectEngine.new()
 
 ## Enemy turns of a fight are being played out (with a pause per line).
@@ -2193,6 +2196,7 @@ func start(s: GameSession) -> void:
 	_act_told = {}
 	EventBus.session_started.emit()
 	_prepare.call_deferred()
+	draw_made_icons.call_deferred()
 
 
 func close_session() -> void:
@@ -3539,6 +3543,7 @@ func _request(kind: String, input: String) -> void:
 	EventBus.turn_finished.emit(turn_id, true)
 	EventBus.state_changed.emit()
 	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	draw_made_icons.call_deferred()
 	if follow_up != "combat":
 		_opening = {}
 	if kind == "death":  # in a fight or out of it (v0.8.4.43.9): only the death screen, the one a load of this save opens
@@ -3928,6 +3933,39 @@ func draw_image() -> void:
 		return
 	entry["image"] = path
 	EventBus.image_drawn.emit(entry)
+
+
+## The icons of the master's inventions (v0.8.4.44.1): each made thing, spell, ability, status or trait with no picture
+## is drawn once by `icon.request`, one at a time beside the game, cut by IconCut and kept in the profile's folder.
+## A failed one is not asked again this run; a spent day's limit stops them all until the next start.
+func draw_made_icons() -> void:
+	if session == null or _icons_busy or _icons_stopped or not SaveManager.made_icons_on or not Backend.is_ready():
+		return
+	_icons_busy = true
+	var s := session
+	var cf := MadeIcons.cfg(Catalog.data)
+	while session == s and SaveManager.made_icons_on and Backend.is_ready():
+		var wants := MadeIcons.wanted(s, Catalog.data).filter(func(w: Dictionary) -> bool: return not _icons_failed.has(w["ref"]))
+		if wants.is_empty():
+			break
+		var want: Dictionary = wants[0]
+		var call := await Backend.request("icon.request", MadeIcons.params(Catalog.data, want), float(cf["timeout_s"]))
+		if call.is_error():
+			_icons_failed[want["ref"]] = true
+			if call.reason() == "budget_exceeded":
+				_icons_stopped = true  # until the next start: the day's limit is spent
+				break
+			continue
+		var img := ImageFrame.decode(str(call.result.get("mime", "")), str(call.result.get("data_b64", "")), 4096)
+		var icon := IconCut.cut(img, cf["cut"])
+		var path := MadeIcons.path_of(IconRules.made_root, str(want["ref"]))
+		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+		if icon == null or icon.save_png(path) != OK:
+			_icons_failed[want["ref"]] = true
+			continue
+		IconRules.forget()
+		EventBus.state_changed.emit()
+	_icons_busy = false
 
 
 func _summarize(kind: String, subject: String, key: String, events: Array) -> void:

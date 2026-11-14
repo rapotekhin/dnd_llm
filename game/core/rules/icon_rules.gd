@@ -12,6 +12,7 @@ const BLANK := "_blank/"
 const EMPTY_HAND := "ui/empty_hand"  # a hand that holds nothing: the hotbar's hand, an attack with no weapon (an open palm)
 
 static var _exists := {}  # path → bool: a file is looked for once a run
+static var made_root := ""  # v0.8.4.44.1: the profile's folder of the master's inventions drawn (MadeIcons.root); "" — none
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -61,6 +62,10 @@ static func own(data: Dictionary, r: String) -> String:
 		var path := root(data) + at + ".png"
 		if has_file(path):
 			return path
+	if not made_root.is_empty():  # what the master made, drawn once by the icon model (v0.8.4.44.1)
+		var path := MadeIcons.path_of(made_root, r)
+		if has_file(path):
+			return path
 	return ""
 
 
@@ -70,8 +75,8 @@ static func blank(data: Dictionary, kind: String) -> String:
 
 
 static func has_file(path: String) -> bool:
-	if not _exists.has(path):
-		_exists[path] = ResourceLoader.exists(path)
+	if not _exists.has(path):  # a file of the profile is no resource of the game: it is looked for as a file
+		_exists[path] = FileAccess.file_exists(path) if path.begins_with("user://") else ResourceLoader.exists(path)
 	return _exists[path]
 
 

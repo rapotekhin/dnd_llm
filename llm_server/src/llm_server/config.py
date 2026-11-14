@@ -89,6 +89,9 @@ IMAGE_MODELS: tuple[ImageModel, ...] = (
     ImageModel("black-forest-labs/flux.2-pro", "FLUX.2 Pro", "flux", 0.045),
 )
 DEFAULT_IMAGE_MODEL = "recraft/recraft-v4.1-flash"
+# The icon of what the master made (0.130.0): one frame of this model on a chroma ground, the client cuts it. FLUX Klein
+# reads the thing's Russian words as they are (the A/B of 2026-11-14) and draws the painted icons of tools/anima.
+ICON_MODEL = "black-forest-labs/flux-3-image-klein"
 
 # Checkpoints of an own AUTOMATIC1111 / Forge, offered when the server has the file (`checkpoint` — its file name).
 SD_MODELS: tuple[ImageModel, ...] = (

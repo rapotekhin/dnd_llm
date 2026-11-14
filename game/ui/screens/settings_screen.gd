@@ -54,7 +54,7 @@ func required() -> Dictionary:
 		"%Tabs": "TabContainer", "%BackButton": "Button", "%Fullscreen": "CheckBox", "%Url": "LineEdit", "%Token": "LineEdit",
 		"%CaPath": "LineEdit", "%CheckButton": "Button", "%CheckStatus": "Label", "%BudgetEdit": "LineEdit",
 		"%BudgetOff": "CheckBox", "%BudgetSave": "Button", "%BudgetStatus": "Label", "%AccountStatus": "Label",
-		"%BackendHint": "Label", "%ImagesOn": "CheckBox",
+		"%BackendHint": "Label", "%ImagesOn": "CheckBox", "%MadeIconsOn": "CheckBox",
 		"%ImageExtra": "VBoxContainer", "%ImagePromptAdd": "TextEdit", "%ImageNegativeAdd": "TextEdit",
 		"%ImagePromptAddLabel": "Label", "%ImageNegativeAddLabel": "Label", "%ImageNegativeOnly": "CheckBox",
 		"%ImagePromptsReset": "Button", "%GameOptions": "VBoxContainer", "%NeedsOption": "CheckButton", "%PartyOption": "OptionButton",
@@ -254,6 +254,13 @@ func _master_tab() -> void:
 
 ## The brush (v0.7.35): on or off, and the image model with its price per image; the images count in the day's limit.
 func _images_row() -> void:
+	var made: CheckBox = UiScenes.need(self, "%MadeIconsOn")  # v0.8.4.44.1: the icons of the master's inventions
+	made.button_pressed = SaveManager.made_icons_on
+	made.toggled.connect(func(on: bool) -> void:
+		SaveManager.made_icons_on = on
+		SaveManager.save_settings()
+		if on and GameState.has_session():
+			GameState.draw_made_icons())
 	_images_on = UiScenes.need(self, "%ImagesOn")
 	_images_on.button_pressed = SaveManager.images_on
 	_images_on.toggled.connect(func(on: bool) -> void:

@@ -32,6 +32,7 @@ var ui_scale: float = 1.0
 var combat_speed: String = "normal"
 ## The brush (v0.7.35): off — no button; the image model picked from the server list, "" — the server's default.
 var images_on: bool = true
+var made_icons_on: bool = true  ## v0.8.4.44.1: the master's inventions get their icons drawn (MadeIcons)
 var image_model: String = ""
 ## The player's additions to a model's prompt (v0.7.37): id → {prompt, negative, only}; absent — the model's own.
 var image_prompts: Dictionary = {}
@@ -54,6 +55,7 @@ func _ready() -> void:
 		save_dir = profile_dir + "/saves"
 		settings_path = profile_dir + "/settings.cfg"
 	DirAccess.make_dir_recursive_absolute(save_dir)
+	IconRules.made_root = MadeIcons.root(profile_dir)
 	load_settings()
 	apply_settings()
 
@@ -181,6 +183,7 @@ func load_settings() -> void:
 		ui_scale = float(cfg.get_value("display", "ui_scale", 1.0))
 		combat_speed = str(cfg.get_value("game", "combat_speed", "normal"))
 		images_on = bool(cfg.get_value("images", "on", true))
+		made_icons_on = bool(cfg.get_value("images", "made", true))
 		image_model = str(cfg.get_value("images", "model", ""))
 		image_prompts = cfg.get_value("images", "prompts", {})
 		dev_mode = bool(cfg.get_value("game", "dev_mode", OS.is_debug_build()))
@@ -201,6 +204,7 @@ func save_settings() -> void:
 	cfg.set_value("display", "ui_scale", ui_scale)
 	cfg.set_value("game", "combat_speed", combat_speed)
 	cfg.set_value("images", "on", images_on)
+	cfg.set_value("images", "made", made_icons_on)
 	cfg.set_value("images", "model", image_model)
 	cfg.set_value("images", "prompts", image_prompts)
 	cfg.set_value("keys", "keys", keys)

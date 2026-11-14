@@ -80,7 +80,12 @@ static func texture(path: String) -> Texture2D:
 	if path.is_empty():
 		return null
 	if not _textures.has(path):
-		var tex: Texture2D = load(path) if ResourceLoader.exists(path) else null
+		var tex: Texture2D = null
+		if path.begins_with("user://"):  # a made thing's picture of the profile (v0.8.4.44.1): a file, not a resource
+			var made := Image.load_from_file(path) if FileAccess.file_exists(path) else null
+			tex = ImageTexture.create_from_image(made) if made != null else null
+		elif ResourceLoader.exists(path):
+			tex = load(path)
 		if tex != null and not tex.has_mipmaps():
 			var img := tex.get_image()
 			if img != null:

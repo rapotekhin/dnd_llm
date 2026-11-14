@@ -464,6 +464,11 @@ def image_prompt(template: str, scene: str, style: str) -> str:
     return _block(f"images/{template}.md.j2", "prompt", scene=scene.strip().rstrip("."), style=(style or DEFAULT_IMAGE_STYLE).strip().rstrip(".")).strip()
 
 
+def icon_prompt(kind: str, name: str, text: str, ground: str) -> str:
+    """The icon model's prompt for a made thing (0.130.0): its words and the family's style on a chroma ground."""
+    return _block("images/icon.md.j2", "prompt", kind=kind, title=name.strip(), text=text.strip().rstrip("."), ground=ground).strip()
+
+
 def _block(name: str, block: str, **context: object) -> str:
     t = _env.get_template(name)
     return "".join(t.blocks[block](t.new_context(context))).strip() + "\n"

@@ -8,6 +8,7 @@ import logging
 import struct
 import threading
 import zlib
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,8 +17,8 @@ import httpx
 
 from . import prompts
 from .agents import build_image_agent
-from .config import SD_MODELS, ImageModel
-from .protocol import ErrorCode, ImageModelInfo, ImageParams, ImageResult, Usage
+from .config import ICON_MODEL, IMAGE_MODELS, SD_MODELS, ImageModel
+from .protocol import ErrorCode, IconParams, ImageModelInfo, ImageParams, ImageResult, Usage
 from .session import RpcError
 
 if TYPE_CHECKING:
@@ -133,20 +134,23 @@ async def _module_paths(url: str, client: httpx.AsyncClient) -> dict[str, str]:
 
 
 async def draw(spec: ImageModel, prompt: str, negative: str, aspect: str, api_key: str,
-               client: httpx.AsyncClient | None = None) -> Drawn:
+               client: httpx.AsyncClient | None = None, seed: int | None = None) -> Drawn:
     if client is None:
         async with httpx.AsyncClient(timeout=httpx.Timeout(120, connect=20)) as c:
-            return await draw(spec, prompt, negative, aspect, api_key, c)
+            return await draw(spec, prompt, negative, aspect, api_key, c, seed)
     if spec.backend == "openrouter":
-        return await _openrouter(client, spec, prompt, aspect, api_key)
+        return await _openrouter(client, spec, prompt, aspect, api_key, seed)
     if spec.backend == "a1111":
         return await _a1111(client, spec, prompt, negative, aspect)
     raise ImageError(f"unknown image backend {spec.backend}")
 
 
-async def _openrouter(c: httpx.AsyncClient, spec: ImageModel, prompt: str, aspect: str, api_key: str) -> Drawn:
+async def _openrouter(c: httpx.AsyncClient, spec: ImageModel, prompt: str, aspect: str, api_key: str,
+                      seed: int | None = None) -> Drawn:
     # No output_format: FLUX refuses it, Recraft ignores it (a 1.6 MB WebP); the client re-encodes what it keeps.
-    body = {"model": spec.id, "prompt": prompt, "n": 1, "aspect_ratio": aspect}
+    body: dict[str, object] = {"model": spec.id, "prompt": prompt, "n": 1, "aspect_ratio": aspect}
+    if seed is not None:
+        body["seed"] = seed
     resp = await c.post(OPENROUTER_IMAGES_URL, json=body, headers={"Authorization": f"Bearer {api_key}"})
     if resp.status_code != 200:
         raise ImageError(f"OpenRouter HTTP {resp.status_code}: {resp.text[:200]}")
@@ -282,6 +286,42 @@ async def _agent_image(session: "Session", params: ImageParams) -> ImageResult:
     return ImageResult(mime=drawn.mime, data_b64=drawn.data_b64, prompt=prompt, usage=usage)
 
 
+async def icon_image(session: "Session", params: IconParams) -> ImageResult:
+    """The icon of a made thing (0.130.0): one frame of ICON_MODEL by the thing's words, no text model. Without a
+    model factory (the stub server) a flat chroma frame with a dark square, so the client's cut runs the same road."""
+    prompt = prompts.icon_prompt(params.kind, params.name, params.text, params.ground)
+    services = session.services
+    if services.model_factory is None:
+        return ImageResult(mime="image/png", data_b64=base64.b64encode(_icon_png(GROUNDS[params.ground])).decode(),
+                           prompt=prompt, usage=Usage(model="stub"))
+    if services.budget.exhausted():
+        raise RpcError(ErrorCode.BUDGET_EXCEEDED)
+    spec = next(m for m in IMAGE_MODELS if m.id == ICON_MODEL)
+    try:
+        drawn = await draw(spec, prompt, "", "1:1", services.settings.openrouter_api_key, seed=params.seed)
+    except (ImageError, httpx.HTTPError) as exc:
+        log.warning("icon %s failed: %s", spec.id, str(exc)[:300])
+        raise RpcError(ErrorCode.LLM_UNAVAILABLE, f"icon: {str(exc)[:160]}") from None
+    services.budget.add(drawn.cost_usd)
+    if services.images:
+        services.images.prices.observe(spec.id, drawn.cost_usd)
+    usage = Usage(model=spec.id, cost_usd=round(drawn.cost_usd, 6))
+    if services.trace:
+        services.trace.write({"what": "icon", "image_model": spec.id, "kind": params.kind, "name": params.name,
+                              "prompt": prompt, "seed": params.seed, "image_usd": drawn.cost_usd, "mime": drawn.mime,
+                              "bytes": len(drawn.data_b64) * 3 // 4})
+    return ImageResult(mime=drawn.mime, data_b64=drawn.data_b64, prompt=prompt, usage=usage)
+
+
+GROUNDS = {"green": (0, 255, 0), "magenta": (255, 0, 255)}
+
+
+def _icon_png(ground: tuple[int, int, int], side: int = 64) -> bytes:
+    """The stub's icon: the chroma ground with a dark square in the middle third."""
+    third = side // 3
+    return _png(side, side, lambda x, y: (60, 50, 40) if third <= x < 2 * third and third <= y < 2 * third else ground)
+
+
 def _spec(session: "Session", params: ImageParams) -> ImageModel:
     spec = session.services.images.resolve(params.image_model)
     if spec is None:
@@ -289,11 +329,12 @@ def _spec(session: "Session", params: ImageParams) -> ImageModel:
     return spec
 
 
-def _png(w: int, h: int, rgb: tuple[int, int, int]) -> bytes:
-    """A flat PNG for the stub: the client's path from the bytes to the card is the same."""
+def _png(w: int, h: int, rgb: tuple[int, int, int] | Callable[[int, int], tuple[int, int, int]]) -> bytes:
+    """A PNG for the stub, flat or by a pixel's colour: the client's path from the bytes to the card is the same."""
     def chunk(kind: bytes, data: bytes) -> bytes:
         return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
 
-    rows = b"".join(b"\x00" + bytes(rgb) * w for _ in range(h))
+    at = rgb if callable(rgb) else (lambda _x, _y: rgb)
+    rows = b"".join(b"\x00" + b"".join(bytes(at(x, y)) for x in range(w)) for y in range(h))
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))

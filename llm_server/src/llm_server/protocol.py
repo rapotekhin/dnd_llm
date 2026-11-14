@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.129.0"
+PROTOCOL_VERSION = "0.130.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -590,6 +590,22 @@ class ImageResult(_Out):
     data_b64: str
     prompt: str  # what the image model was given
     usage: Usage  # the prompt and the image together
+
+
+IconKind = Literal["item", "spell", "ability", "status", "trait"]
+
+
+class IconParams(_In):
+    """The icon of a thing, a spell, an ability, a status or a trait the master made (0.130.0): one frame of the icon
+    model (config.ICON_MODEL) on a flat chroma `ground` the client cuts out, by the same `seed` every time. No text
+    model: `name` and `text` are the thing's own words in the game's language, which the model reads as they are.
+    The answer is ImageResult."""
+
+    kind: IconKind
+    name: str = Field(min_length=1, max_length=80)
+    text: str = Field(default="", max_length=600)
+    ground: Literal["green", "magenta"] = "green"  # magenta for a subject that is green itself (rules.made_icons.magenta)
+    seed: int = Field(default=11, ge=0, le=2**31 - 1)
 
 
 # --- effects (ADR-0008 §3) ------------------------------------------------------
@@ -2332,6 +2348,8 @@ CONTRACT_MODELS: dict[str, type[BaseModel]] = {
     "summary.request.result": SummaryResult,
     "image.request.params": ImageParams,
     "image.request.result": ImageResult,
+    "icon.request.params": IconParams,
+    "icon.request.result": ImageResult,
     "engine.check.params": EngineCheckParams,
     "engine.check.result": EngineCheckResult,
     "engine.validate.params": EngineValidateParams,

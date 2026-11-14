@@ -250,6 +250,13 @@ layout_mode = 2
 auto_translate_mode = 2
 autowrap_mode = 3
 theme_type_variation = &"MutedLabel"
+
+[node name="MadeIconsOn" type="CheckBox" parent="Col/Tabs/Master/MasterBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OPT_MADE_ICONS"
+autowrap_mode = 3
+
 [node name="ImagesLabel" type="Label" parent="Col/Tabs/Master/MasterBox" groups=["dev_only"]]
 layout_mode = 2
 text = "OPT_IMAGES"

@@ -1,0 +1,14 @@
+{# The icon of what the master made (0.130.0): one frame of FLUX on a flat chroma ground the client cuts out (IconCut).
+   The subject in the game's own words — FLUX Klein reads Russian. A thing is a painted object as the catalog's icons
+   (tools/anima, the painted family); a spell, an ability, a status and a trait are a glowing emblem as the lines style,
+   with no tile: the game lays its frame by code. No negative: FLUX takes none. #}
+{% block prompt %}
+{%- set g = {"green": "pure bright chroma key green background (#00FF00)", "magenta": "pure bright chroma key magenta background (#FF00FF)"}[ground] -%}
+{%- set what = {"item": "The object", "spell": "The spell", "ability": "The ability", "status": "The condition", "trait": "The trait"}[kind] -%}
+{{ what }}: «{{ title }}»{% if text %} — {{ text }}{% endif %}.{{ "\n" }}
+{%- if kind == "item" %}
+It is an icon for a fantasy role-playing game: a single object painted as a small illustration in a soft painterly style with gentle shading, rich muted colors and light from the upper left. The object is large and centered and fills almost the whole square, on a {{ g }}, perfectly flat and uniform, with no shadow, no gradient and no vignette, and none of that background colour on the object itself. No text, no letters, no frame.
+{%- else %}
+It is an icon for a fantasy role-playing game: the subject drawn as one simple bold emblem of thin glowing lines with a white-hot core and a soft colored glow, large and centered, on a {{ g }}, perfectly flat and uniform, with none of that background colour in the emblem. No tile, no frame, no text, no letters.
+{%- endif %}
+{% endblock %}

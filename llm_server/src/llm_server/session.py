@@ -21,6 +21,7 @@ from .protocol import (
     ErrorCode,
     HelloParams,
     HelloResult,
+    IconParams,
     ImageParams,
     ImageResult,
     Limits,
@@ -220,6 +221,11 @@ class Session:
             if self.image_handler is None:
                 raise RpcError(ErrorCode.METHOD_NOT_FOUND)
             return await self.image_handler(self, _parse(ImageParams, params))
+        if method == "icon.request":
+            # The icon of a made thing (0.130.0): one frame beside a turn, no text model.
+            from .images import icon_image
+
+            return await icon_image(self, _parse(IconParams, params))
         raise RpcError(ErrorCode.METHOD_NOT_FOUND)
 
     def _on_response(self, msg: dict[str, Any]) -> None:

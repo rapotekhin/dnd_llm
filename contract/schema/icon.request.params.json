@@ -1,0 +1,50 @@
+{
+  "description": "The icon of a thing, a spell, an ability, a status or a trait the master made (0.130.0): one frame of the icon\nmodel (config.ICON_MODEL) on a flat chroma `ground` the client cuts out, by the same `seed` every time. No text\nmodel: `name` and `text` are the thing's own words in the game's language, which the model reads as they are.\nThe answer is ImageResult.",
+  "properties": {
+    "ground": {
+      "default": "green",
+      "enum": [
+        "green",
+        "magenta"
+      ],
+      "title": "Ground",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "item",
+        "spell",
+        "ability",
+        "status",
+        "trait"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "seed": {
+      "default": 11,
+      "maximum": 2147483647,
+      "minimum": 0,
+      "title": "Seed",
+      "type": "integer"
+    },
+    "text": {
+      "default": "",
+      "maxLength": 600,
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "name"
+  ],
+  "title": "IconParams",
+  "type": "object"
+}
