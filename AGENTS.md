@@ -47,6 +47,7 @@ python tools/connectivity_e2e.py                                      # Godot <-
 python tools/godot_playtest.py                                        # live Godot playtest (smoke) against llm_server, screenshots in build/playtest/ (its server on a port the system gives, beside any other session's)
 python tools/playtest_all.py                                          # every stub scenario in a pack: one import, one server, 6 games side by side, game time off the frames (--jobs, --only a,b, --slow); use it for wide checks
 python tools/build_game.py                                            # the runnable Windows build of the version: build/release/<version>/BetweenTheRolls.exe with server.exe beside it (ADR-0014), no keys inside, started once to check it
+python tools/build_game.py --linux                                    # the Linux build: build/release/<version>/linux/ and a .tar.gz beside it; the server frozen and the build started in WSL Ubuntu (uv in ~/.local/bin there, Godot's linux_*.x86_64 templates), glibc 2.35 at most (docs/tech/deploy.md)
 python tools/godot_playtest.py --scenario offline                     # live Godot playtest without the server
 python tools/godot_playtest.py --scenario embedded --real             # after build_game.py: the game starts server.exe itself on a key from the settings, a turn, the server killed and restarted, the key window: none and refused (v0.7.67.1)
 python tools/godot_playtest.py --scenario live --real                 # live Godot playtest with the real OpenRouter model (cents)

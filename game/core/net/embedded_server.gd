@@ -1,6 +1,6 @@
 class_name EmbeddedServer
 extends RefCounted
-## The master's server as a child of the game (ADR-0014): server.exe beside the game, on 127.0.0.1 and a port the system
+## The master's server as a child of the game (ADR-0014): server.exe (`server` on Linux) beside the game, on 127.0.0.1 and a port the system
 ## picks. The token is new at every start and lives in memory; it and the player's key reach the child through its
 ## environment, never its command line. The server tells its port through a file when it is up, keeps a log of its
 ## own and ends with the game even when the game crashes (llm_server/embedded.py).
@@ -12,6 +12,7 @@ signal failed
 enum State { OFF, STARTING, RUNNING, FAILED }
 
 const EXE_NAME := "server.exe"
+const EXE_NAME_UNIX := "server"  ## the Linux build's (tools/build_game.py --linux)
 const EXE_ENV := "BTR_SERVER_EXE"  ## a frozen server for a run from the editor
 const STUB_ENV := "LLM_SERVER_TURN_HANDLER"
 const EXIT_KEY_REJECTED := 3  # llm_server/__main__.py
@@ -43,7 +44,7 @@ var _next_poll_ms: int = 0
 static func find_exe() -> String:
 	var path := OS.get_environment(EXE_ENV)
 	if path.is_empty():
-		path = OS.get_executable_path().get_base_dir().path_join(EXE_NAME)
+		path = OS.get_executable_path().get_base_dir().path_join(EXE_NAME if OS.get_name() == "Windows" else EXE_NAME_UNIX)
 	return path if FileAccess.file_exists(path) else ""
 
 

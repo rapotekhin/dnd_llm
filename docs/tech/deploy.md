@@ -122,3 +122,15 @@ sudo systemctl restart btr-llm
 `backend.cfg` с заполненным адресом остаётся внешним сервером: чтобы перейти на встроенный, очистите поле адреса в «Настройки → Мастер».
 
 Проверка: `build_game.py` запускает сервер и игру на заглушке мастера, смотрит, что слушается только `127.0.0.1`, что сервер кончается вместе с игрой и что значений из `.env` нет в файлах билда.
+
+### Билд для Linux
+
+`python tools/build_game.py --linux` кладёт в `build/release/<версия>/linux/` игру `BetweenTheRolls.x86_64`, сервер `server` и `server_lib/`, а рядом архив `BetweenTheRolls-<версия>-linux-x86_64.tar.gz` с битами запуска. Игрок распаковывает архив и запускает `BetweenTheRolls/BetweenTheRolls.x86_64`; данные игры — в `~/.local/share/godot/app_userdata/Between the Rolls/`.
+
+| Что | Как |
+|---|---|
+| Игра | экспорт Godot по пресету «Linux» на Windows; нужны `linux_*.x86_64` из официальных шаблонов той же версии в `%APPDATA%/Godot/export_templates/<версия>.stable/` |
+| Сервер | PyInstaller замораживает только под свою систему, поэтому этот шаг идёт в WSL (`--wsl`, по умолчанию `Ubuntu`) тем же скриптом: uv в `~/.local/bin`, Python от uv (не системный), окружение `~/.cache/btr/server-venv` на диске Linux, а не `llm_server/.venv` Windows |
+| glibc | билд не должен просить glibc новее 2.35 (Ubuntu 22.04, Debian 12): проверяется по всем ELF-файлам билда |
+| Проверка | та же, что у Windows, но в WSL: сервер на заглушке, игра без ключа и с сервером, слушает только `127.0.0.1`, сервер кончается с игрой |
+| Имя сервера | игра ищет рядом с собой `server.exe` на Windows и `server` на Linux (`EmbeddedServer.find_exe`) |
