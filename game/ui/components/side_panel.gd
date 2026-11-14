@@ -586,11 +586,14 @@ func aim_at(aim: String) -> bool:
 
 ## The pinned spell of the hero's side cast now; a concentration held asks first (v0.7.13.1, as the fight asks).
 func cast_attached() -> void:
-	var go := func() -> void:
+	held_first(str(GameState.attached.get("id", "")), func() -> void:
 		var err := GameState.cast_attached()
 		if not err.is_empty():
-			EventBus.message.emit(tr(err))
-	var spell := str(GameState.attached.get("id", ""))
+			EventBus.message.emit(tr(err)))
+
+
+## `go` casts `spell` out of a fight: when it needs the concentration another spell holds, «Точно?» first (v0.7.13.1).
+func held_first(spell: String, go: Callable) -> void:
 	var held := GameState.concentration_conflict(spell)
 	if held.is_empty():
 		go.call()
@@ -652,9 +655,10 @@ func _hotbar_pins(s: GameSession, can_act: bool) -> void:
 		cell.toggle_mode = true
 		cell.button_pressed = str(GameState.attached.get("kind", "")) == kind and str(GameState.attached.get("id", "")) == id
 		var slots: Array = ch["slots"]
+		var area := kind == "spell" and GameState.area_spell(id)  # laid on a square of the map out of a fight (v0.8.4.43.55)
 		cell.pressed.connect(func() -> void:
 			if cell.button_pressed:
-				GameState.attach(kind, id, int(slots[0]) if not slots.is_empty() else 0)
+				GameState.attach(kind, id, int(slots[0]) if not slots.is_empty() else 0)  # an area: the line under the map says what next
 			else:
 				GameState.detach())
 		var count := RegEx.create_from_string("\\((\\d+/\\d+)\\)|×(\\d+)").search(str(ch["name"]))
@@ -668,7 +672,7 @@ func _hotbar_pins(s: GameSession, can_act: bool) -> void:
 				cell.tip_title = str(ch["name"]).get_slice(" (", 0)
 			"item":
 				cell.set_card(CardInfo.item(c, Catalog.data, s.items, id))
-		cell.tooltip_text = str(ch["name"]) + "\n" + tr("BAR_PIN_TIP")
+		cell.tooltip_text = str(ch["name"]) + "\n" + tr("AREA_PIN_TIP" if area else "BAR_PIN_TIP")
 		box.add_child(cell)
 
 

@@ -464,8 +464,7 @@ static func defenders(s: GameSession, data: Dictionary, foes: Array) -> Array:
 		var tags: Array = n.get("tags", [])
 		if not guards.has(id) and not tags.any(func(t: Variant) -> bool: return (d["tags"] as Array).has(t)):
 			continue
-		out.append({"monster": str(n.get("monster", CombatRules.cfg(data)["default_npc_monster"])), "name": str(n.get("name", id)),
-			"desc": str(n.get("description", "")), "npc_id": id, "by_hero": true, "law": guards.has(id)})
+		out.append(CombatRules.npc_foe(data, id).merged({"law": guards.has(id)}))
 	return out
 
 
