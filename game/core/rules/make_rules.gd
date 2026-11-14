@@ -298,6 +298,9 @@ static func _lay(data: Dictionary, out: Dictionary, id: String, value: String, a
 			f["minus"] = amount < 0
 		"guise":
 			f["guise"] = {"name": value}
+		"harm":  # damage each turn (v0.8.4.43.54): the status's record carries it, one of it at a time (`same`)
+			f["harm"] = {"dice": "%dd6" % amount, "type": value, "when": "start"}
+			row["same"] = "max"
 
 
 ## The shape of a made spell's area (rules.make.act.shapes, v0.8.4.36): {area {type, size}, mult, extra} or {reason}; size 0 —

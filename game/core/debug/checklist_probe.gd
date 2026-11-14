@@ -864,7 +864,7 @@ static func liquid(data: Dictionary, lid: String) -> Dictionary:
 		check(steps, ItemRules.consumable(data, from).has("coat"), "смазывает клинок: %s" % from)
 	var g := fight(s, data, "goblin")
 	if k.has("coat"):
-		LiquidRules.coat(s, data, g, lid, LiquidRules.name_of(data, lid))
+		LiquidRules.coat(s, data, Sheet.holder(s, g), lid, LiquidRules.name_of(data, lid), g)
 		check(steps, str(LiquidRules.coat_on(s, g).get("liquid", "")) == lid, "облитый: %s" % LiquidRules.name_of(data, lid))
 		var co: Dictionary = k["coat"]
 		if co.has("fire_plus"):
@@ -873,7 +873,8 @@ static func liquid(data: Dictionary, lid: String) -> Dictionary:
 			Harm.typed(s, data, g, 1, "fire", lines, "огонь", false)
 			check(steps, int(g["hp"]) <= 100 - 1 - int(co["fire_plus"]), "огонь сильнее на %d" % int(co["fire_plus"]), 100 - int(g["hp"]))
 		if co.has("burns"):
-			check(steps, LiquidRules.burning(s, g) == str(co["burns"]), "горит %s, пока не собьют" % co["burns"])
+			check(steps, LiquidRules.burning(s, data, Sheet.holder(s, g)) == str(co["burns"]) and ConditionRules.has(Sheet.holder(s, g), "burning"),
+				"горит %s, пока не собьют" % co["burns"])
 		if bool(co.get("douses", false)):
 			check(steps, LiquidRules.douses(s, g), "гасит огонь, не загорается")
 	if k.has("puddle"):
@@ -1903,6 +1904,27 @@ static func condition(data: Dictionary, id: String) -> Dictionary:
 	if bool(row.get("no_threat", false)):
 		known = true
 		check(steps, ConditionRules.does(h, data, "no_threat"), "не грозит атакой по возможности", "грозит")
+	var lays: Dictionary = row.get("lays", {})
+	for ab: Variant in lays.get("save_dis", []):  # what a status of damage each turn weakens with (v0.8.4.43.54)
+		known = true
+		check(steps, bool(Sheet.save_odds(s, data, Sheet.HERO, str(ab))["dis"]), "спасбросок %s: помеха" % ab, "нет")
+	if int(lays.get("speed_plus", 0)) != 0:
+		known = true
+		check(steps, Sheet.speed(s, data, g) == int(Sheet.template(data, g).get("speed", 30)) + int(lays["speed_plus"]), "скорость %+d фт" % int(lays["speed_plus"]),
+			Sheet.speed(s, data, g))
+	var harm: Dictionary = row.get("harm", {})
+	if not harm.is_empty():  # its damage at its moment of the turn, the source's numbers or the row's
+		known = true
+		g["hp"] = 200
+		g["max_hp"] = 200
+		var burnt: Array[String] = []
+		Harm.each_turn(s, data, g, str(harm.get("when", "start")), burnt)
+		check(steps, int(g["hp"]) < 200, "урон %s каждый ход (%s хода)" % [str(harm["dice"]).replace("d", "к"), "в конце" if str(harm.get("when", "")) == "end" else "в начале"],
+			" · ".join(burnt))
+	var out: Dictionary = row.get("out", {})
+	if out.has("act"):
+		ConditionRules.impose(s, data, e.duplicate(), g)
+		check(steps, Acts.one(str(out["act"])).shown(s, data, g), "гасится действием «%s»" % Acts.one(str(out["act"])).title(), "нет кнопки")
 	if ConditionRules.INCAPACITATING.has(id):
 		known = true
 		turn(s, data, hero)

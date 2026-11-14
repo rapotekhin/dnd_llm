@@ -231,7 +231,14 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Diction
 		return lines
 	if cond == "exhaustion" and (hero or who.has("id")):  # a level of the one scale, whoever takes it (v0.8.4.11)
 		return add_exhaustion(s, data, 1, str(e.get("source", {}).get("name", "")), str(who.get("id", Being.HERO)))
-	add_effect(c, e.merged(MakeRules.fx(s, cond)))
+	var own: Dictionary = data["rules"].get("condition_effects", {}).get(cond, {})
+	var laid := e.merged(own.get("lays", {})).merged(MakeRules.fx(s, cond))  # the numbers of its row, a made one's parts
+	if own.has("ticks") and not laid.has("ticks") and not laid.get("ends", {}).has("at"):
+		laid["ticks"] = int(own["ticks"])
+	if own.has("same") and has(c, cond):  # one of it from a second source: the stronger or the renewed (v0.8.4.43.54)
+		_same(s, data, effects_of(c, cond)[0], laid, str(own["same"]))
+		return lines
+	add_effect(c, laid)
 	if cond == "invisible" and not hero:
 		FightGrid.keep_seen(c)
 	if cond == "unconscious" and not has(c, "prone"):
@@ -244,6 +251,54 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Diction
 	elif INCAPACITATING.has(cond) and not hero and c.has("id"):  # its holds and its concentration go
 		MonsterRules.release(s, data, c, lines)
 	return lines
+
+
+## One status from a second source (v0.8.4.43.54, the row's `same`): `max` keeps the stronger harm and the longer end, `renew`
+## takes the new one's end; the turns it hurts and the save that ends it go with the end they belong to.
+static func _same(s: GameSession, data: Dictionary, old: Dictionary, e: Dictionary, rule: String) -> void:
+	if rule == "max" and CombatRules.dice_avg(str(harm_of(data, e).get("dice", "0"))) > CombatRules.dice_avg(str(harm_of(data, old).get("dice", "0"))):
+		old["harm"] = harm_of(data, e)
+		for k: String in ["source", "by"]:
+			if e.has(k):
+				old[k] = e[k]
+	if rule == "renew" or _lasts(s, e) > _lasts(s, old):
+		old["ends"] = e.get("ends", {})
+		for k: String in ["ticks", "save"]:
+			if e.has(k):
+				old[k] = e[k]
+			else:
+				old.erase(k)
+
+
+## The round an effect lasts to, to weigh two: its round, its turns of harm from now, a rest, and no end at all the longest.
+static func _lasts(s: GameSession, e: Dictionary) -> int:
+	var ends: Dictionary = e.get("ends", {})
+	if ends.has("at"):
+		return int(ends["at"])
+	if e.has("ticks"):
+		return now(s) + int(e["ticks"])
+	return (1 << 50) if ends.has("rest") else (1 << 60)
+
+
+## The harm a status of a record does each turn: its own (a source's numbers) or its row's; {} — none (v0.8.4.43.54).
+static func harm_of(data: Dictionary, e: Dictionary) -> Dictionary:
+	var own := harm_in(e)
+	if not own.is_empty():
+		return (data["rules"].get("condition_effects", {}).get(str(e.get("condition", "")), {}).get("harm", {}) as Dictionary).merged(own, true)
+	return data["rules"].get("condition_effects", {}).get(str(e.get("condition", "")), {}).get("harm", {})
+
+
+static func harm_in(e: Dictionary) -> Dictionary:
+	return e["harm"] if e.get("harm") is Dictionary else {}
+
+
+## «урон 1к4 (огонь) в начале хода» — what a status's harm does, "" — none.
+static func harm_text(data: Dictionary, e: Dictionary) -> String:
+	var hm := harm_of(data, e)
+	if hm.is_empty():
+		return ""
+	return "урон %s (%s) %s хода%s" % [str(hm["dice"]).replace("d", "к"), str(data["misc"]["damage_types"].get(str(hm["type"]), hm["type"])),
+		"в конце" if str(hm.get("when", "start")) == "end" else "в начале", (", ходов: %d" % int(e["ticks"])) if e.has("ticks") else ""]
 
 
 ## What its statuses add to its maximum of hit points (Aid +, a life drain −; v0.8.4.29.2: the hero and a fighter alike).
@@ -703,6 +758,8 @@ static func cure(s: GameSession, data: Dictionary, spec: Dictionary, source: Dic
 static func boon_text(data: Dictionary, e: Dictionary) -> String:
 	var parts: Array[String] = []
 	var dtypes: Dictionary = data["misc"]["damage_types"]
+	if not harm_text(data, e).is_empty():  # a status of damage each turn (v0.8.4.43.54)
+		parts.append(harm_text(data, e))
 	if e.has("adv_tag"):
 		parts.append("преимущество на спасброски: %s" % HeroDefense.tag_name(e["adv_tag"]))
 	if e.has("dis_tag"):

@@ -109,6 +109,11 @@ static func lies_on_things(data: Dictionary, id: String) -> bool:
 	return row is Dictionary and (row.get("on", []) as Array).has("thing")
 
 
+## A status of things alone, not of a creature (`on` without "creature"): burning is both since v0.8.4.43.54.
+static func only_things(data: Dictionary, id: String) -> bool:
+	return lies_on_things(data, id) and not (data["rules"]["condition_effects"][id].get("on", []) as Array).has("creature")
+
+
 static func burns(s: GameSession, data: Dictionary, st: Dictionary, d: Dictionary) -> bool:
 	return bool(material(data, d).get("burns", false)) or LiquidRules.fire_plus(s, st) > 0
 

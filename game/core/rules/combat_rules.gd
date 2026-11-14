@@ -571,7 +571,6 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 	ItemRules.regenerate(s, data, f, lines)
 	MonsterRules.start_turn(s, data, f, lines)  # recharges, once-a-turn extras, Reckless Attack lasts until now
 	lines.append_array(SpellEffects.turn_start(s, data, f))  # Heroism (v0.7.13.1)
-	_fire(s, data, f, lines)
 	if bool(f.get("blinked", false)):  # Blink: back from the Ethereal Plane (v0.7.13.3)
 		f["blinked"] = false
 		lines.append("%s возвращается из эфира" % name)
@@ -588,6 +587,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			CharacterRules.refresh(me, data, s.items)
 			lines.append("%s поднимает %s" % [name, ItemRules.display_name(data["items"], s.items, dropped)])
 	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # Moonbeam, Spirit Guardians (v0.7.13.5)
+	Harm.each_turn(s, data, f, "start", lines)  # burning, bleeding: what its statuses deal now, the fire it stands in renewed first (v0.8.4.43.54)
 	Move.recount(s, data, f)  # a web that holds at the start of the turn
 	if ConditionRules.has(me, "slowed_spell"):
 		f["reacted"] = true  # Slow: no reactions
@@ -900,12 +900,14 @@ static func _yet_to_act(s: GameSession, f: Dictionary) -> bool:
 
 
 ## A status on anyone by a timer of its turns: `rounds` (none — until something ends it), `spell`, `save`, `tag` and `dc` of a
-## repeat save at the end of its turn, `wake` — ends on damage, `item`, `name`, `by` — who laid it, the one casting by default.
-## One condition is held once. Lines.
+## repeat save at the end of its turn, `wake` — ends on damage, `item`, `name`, `by` — who laid it, the one casting by default;
+## `harm` and `ticks` — the damage it deals each turn and how many turns (v0.8.4.43.54). One condition is held once: a second
+## replaces it, or is weighed by the row's `same`. Lines.
 static func _add_condition(s: GameSession, data: Dictionary, f: Dictionary, cond: String, timer: Dictionary) -> Array[String]:
 	var hero := Sheet.is_hero(f)
 	var me := Sheet.holder(s, f)
-	ConditionRules.remove(me, cond)
+	if not data["rules"]["condition_effects"].get(cond, {}).has("same"):  # one of it from two sources is weighed (v0.8.4.43.54)
+		ConditionRules.remove(me, cond)
 	var e := {"condition": cond, "by": str(timer.get("by", caster(s)["id"])), "source": {"kind": "spell" if timer.has("spell") else "engine", "id": str(timer.get("spell", "")), "name": str(timer.get("name", ""))}}
 	if timer.has("rounds") and cond != "prone":
 		e["ends"] = {"at": ConditionRules.now(s) + int(timer["rounds"]) - (1 if _yet_to_act(s, f) else 0)}
@@ -920,7 +922,7 @@ static func _add_condition(s: GameSession, data: Dictionary, f: Dictionary, cond
 		e["wake"] = true
 	if timer.has("item"):
 		e["item"] = str(timer["item"])
-	for k: String in ["escape_dc", "escape", "zone"]:  # held until broken by «Вырваться» (a net, a web), or until its zone is gone
+	for k: String in ["escape_dc", "escape", "zone", "harm", "ticks"]:  # held until broken by «Вырваться» (a net, a web), or until its zone is gone; its harm each turn
 		if timer.has(k):
 			e[k] = timer[k]
 	if bool(data["spells"].get(str(timer.get("spell", "")), {}).get("concentration", false)):
@@ -1164,7 +1166,7 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 	ItemRules.remove(c, item_id)
 	if FightGrid.is_aim(target_id):
 		var splashed: Array[String] = []
-		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed, str(f.get("side", "player")))
+		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed, str(f.get("side", "player")), str(f.get("id", "")))
 		if fx.has("effect"):
 			LiquidRules.burst(s, data, f, FightGrid.aim_of(target_id), fx, name, splashed)
 		return splashed
@@ -1186,12 +1188,12 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 			var dtype := str(fx["damage"][1])
 			var dmg := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, str(fx["damage"][0])))
 			lines.append("%s: %d (%s)" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype)])
-			Harm.take(s, data, t, dmg, lines, dtype)
+			Harm.take(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(f))
 	if fx.has("liquid") and Attack.up(s, t):  # what lies on it after: oil, alchemist's fire, water (v0.8.4.28.2)
 		var lid := str(fx["liquid"])
 		var holder := Sheet.holder(s, t)
-		lines.append_array(LiquidRules.coat(s, data, holder, lid, name))
-		if not LiquidRules.burning(s, holder).is_empty():
+		lines.append_array(LiquidRules.coat(s, data, holder, lid, name, t))
+		if not LiquidRules.burning(s, data, holder).is_empty():
 			FightField.kindle(s, data, FightGrid.body_at(FightGrid.cell(t), int(t.get("span", 1))), lines)
 			lines.append("%s горит" % t["name"])
 		elif LiquidRules.fire_plus(s, holder) > 0:
@@ -1202,7 +1204,8 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 		if SIZES.find(str(Sheet.template(data, t).get("size", "medium"))) > SIZES.find(str(fx.get("max_size", "large"))):
 			lines.append("%s слишком велик для сети" % t["name"])
 		else:
-			_add_condition(s, data, t, str(fx["condition"]), {"escape_dc": int(fx.get("escape_dc", 10)), "escape": ["athletics"], "item": item_id})  # a net: until broken (5e)
+			_add_condition(s, data, t, str(fx["condition"]), {"escape_dc": int(fx.get("escape_dc", 10)), "escape": ["athletics"], "item": item_id,
+				"by": str(f.get("id", ""))})  # a net: until broken (5e), held by the thrower
 			lines.append("%s: %s, вырваться — Сил Сл %d" % [t["name"], cond_name(data, str(fx["condition"])), int(fx.get("escape_dc", 10))])
 	return lines
 
@@ -1546,10 +1549,12 @@ static func _caught_friend(s: GameSession, data: Dictionary, t: Dictionary) -> v
 		s.remember(npc, "герой задел меня своим заклинанием в бою")
 
 
-## Acid Arrow's rider (v0.7.13): the second turn's acid on a hit, the splash on a miss.
+## Acid Arrow's rider (v0.7.13): the acid at the end of its next turn on a hit — the status `corroded` of damage each turn
+## (v0.8.4.43.54) with the slot's dice — the splash on a miss.
 static func _acid_rider(s: GameSession, data: Dictionary, slot: int, t: Dictionary, landed: bool, lines: Array[String]) -> void:
 	if landed:
-		t["acid"] = "%dd4" % (2 + maxi(0, slot - 2))
+		lines.append_array(_add_condition(s, data, t, "corroded", {"harm": {"dice": "%dd4" % (2 + maxi(0, slot - 2)), "type": "acid", "when": "end"},
+			"ticks": 1, "name": str(data["spells"].get("acid_arrow", {}).get("name", "Кислотная стрела"))}))
 		return
 	var half := Sheet.taken(s, data, t, "acid", roll_dice(s.rng, "%dd4" % (4 + maxi(0, slot - 2))) / 2)
 	lines.append("Кислотная стрела: брызги — %d (кислота)" % half)
@@ -1850,7 +1855,7 @@ static func _finish(s: GameSession, data: Dictionary, f: Dictionary, lines: Arra
 		if not Sheet.is_hero(f) and not driven(s, f) and Attack.up(s, f):
 			FightAI.last(s, data, f, lines)
 		ConditionRules.remove(me, "mocked")
-		_burn(s, data, f, lines)
+		Harm.each_turn(s, data, f, "end", lines)  # Acid Arrow's acid (v0.8.4.43.54)
 		lines.append_array(SpellEffects.zone_tick(s, data, f, "end"))  # Flaming Sphere (v0.7.13.5)
 		if SpellEffects.has(me, "blink") and Attack.up(s, f):  # Blink (v0.7.13.3)
 			var r := Roll.d20(s.rng)
@@ -1997,14 +2002,6 @@ static func next_actor(s: GameSession, data: Dictionary) -> Array[String]:
 
 
 ## Acid Arrow burns at the end of its next turn (v0.7.13).
-static func _burn(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	if str(f.get("status")) == "active" and f.has("acid"):
-		var acid := Sheet.taken(s, data, f, "acid", roll_dice(s.rng, str(f["acid"])))
-		f.erase("acid")
-		lines.append("%s: кислота жжёт — %d" % [f["name"], acid])
-		Harm.take(s, data, f, acid, lines, "acid")
-
-
 ## The death saves of `f` (v0.8.4.26.3, one road): the hero's are the fight's, one of its side who fell keeps its own.
 static func saves_of(s: GameSession, f: Dictionary) -> Dictionary:
 	if Sheet.is_hero(f):
@@ -2111,22 +2108,6 @@ static func _gives_up(s: GameSession, data: Dictionary, f: Dictionary, lines: Ar
 		return false
 	lines.append_array(Acts.one("surrender").go(s, data, f))
 	return true
-
-
-## A burning coat (alchemist's fire, v0.7.12; a liquid's `coat.burns` since v0.8.4.28.2) on anybody: it burns at the start
-## of its turn until a save of its `put_out` puts it out.
-static func _fire(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
-	var h := Sheet.holder(s, f)
-	var dice := LiquidRules.burning(s, h)
-	if dice.is_empty() or not Attack.up(s, f):
-		return
-	var out: Dictionary = LiquidRules.coat_on(s, h).get("put_out", {"ability": "dex", "dc": 10})
-	var burn := Sheet.taken(s, data, f, "fire", roll_dice(s.rng, dice))
-	lines.append("%s горит: %d (огонь)" % [f["name"], burn])
-	Harm.take(s, data, f, burn, lines, "fire")
-	if Attack.up(s, f) and Sheet.saved(s, data, f, str(out["ability"]), int(out["dc"]), "", false, lines):
-		LiquidRules.uncoat(h)
-		lines.append("%s сбивает пламя" % f["name"])
 
 
 ## A foe's own turn, its start already made (_begin_turn): morale, a call for help, flight, else the AI.

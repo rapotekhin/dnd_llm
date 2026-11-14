@@ -750,7 +750,7 @@ func _plan_condition(s: GameSession, data: Dictionary, turn_id: String, e: Dicti
 		duration = "long_rest"
 	if not ConditionRules.durations(data).has(duration):
 		return {"reason": "неизвестная длительность %s; есть: %s" % [duration, ", ".join(ConditionRules.durations(data))]}
-	if ThingRules.lies_on_things(data, cond):
+	if ThingRules.only_things(data, cond):
 		return {"reason": "это состояние вещи, не героя"}
 	if cond == "invisible":
 		return {"reason": "невидимость героя — только заклинанием (cast) или вещью"}

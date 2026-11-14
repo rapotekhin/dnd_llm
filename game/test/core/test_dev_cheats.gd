@@ -188,7 +188,7 @@ func test_conditions_on_a_unit_and_on_the_hero_with_the_spells_statuses() -> voi
 	assert_array(ConditionRules.attack(Catalog.data, {}, g, true)["adv"]).is_not_empty()
 	Dev.run("@гоблин cond outlined off")
 	assert_bool(ConditionRules.has(g, "outlined")).is_false()
-	assert_str(Dev.run("cond горит")).contains("не найдено")
+	assert_str(Dev.run("cond облито маслом")).contains("не найдено")  # a thing's alone; «горит» is a creature's too since v0.8.4.43.54
 	Dev.run("cond exhaustion")
 	Dev.run("cond exhaustion")
 	assert_int(ConditionRules.exhaustion(s.character)).is_equal(2)

@@ -23,12 +23,12 @@ func _turn_of(s: GameSession, f: Dictionary, lines: Array[String]) -> void:
 func test_acid_burns_a_foe_at_the_end_of_its_ordinary_turn() -> void:
 	var s := _fight([{"monster": "ogre", "col": 4}])
 	var f := CombatRules.fighter(s, TestUtils.foe(s, 1))
-	f["acid"] = "2d4"
+	CombatRules._add_condition(s, data, f, "corroded", {"harm": {"dice": "2d4", "type": "acid", "when": "end"}, "ticks": 1, "name": "Кислотная стрела"})
 	var hp := int(f["hp"])
 	var lines: Array[String] = []
 	_turn_of(s, f, lines)
 	lines.append_array(CombatRules.next_actor(s, data))
-	assert_bool(f.has("acid")).is_false()
+	assert_bool(ConditionRules.has(f, "corroded")).is_false()
 	assert_int(int(f["hp"])).override_failure_message("\n".join(lines)).is_less(hp)
 
 

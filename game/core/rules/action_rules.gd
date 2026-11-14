@@ -157,7 +157,11 @@ static func riders(s: GameSession, data: Dictionary, id: String, slot: int, t: D
 		if r.has("max_size") and CombatRules.SIZES.find(Sheet.size(s, data, t)) > int(r["max_size"]):
 			continue
 		if r.has("status"):
-			lines.append_array(CombatRules._add_condition(s, data, t, str(r["status"]), {"rounds": int(r.get("rounds", 1)), "spell": id}))
+			var timer := {"rounds": int(r.get("rounds", 1)), "spell": id}
+			for k: String in ["harm", "ticks"]:  # a status of damage each turn with the spell's own numbers (v0.8.4.43.54)
+				if r.has(k):
+					timer[k] = r[k]
+			lines.append_array(CombatRules._add_condition(s, data, t, str(r["status"]), timer))
 		if r.has("hold") or r.has("wear"):  # a status until the start of the caster's next turn (`ends.turn`, v0.8.4.27.2)
 			var me := Sheet.holder(s, t)
 			ConditionRules.add_effect(me, (r.get("wear", {}) as Dictionary).merged({"condition": str(r.get("hold", "")), "by": by,

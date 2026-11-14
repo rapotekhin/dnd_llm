@@ -203,7 +203,7 @@ func test_acid_arrow_burns_later_and_splashes_on_a_miss() -> void:
 	var f := _fight(s, [{"monster": "ogre", "col": 2}])[0]
 	var lines: Array[String] = []
 	ActionRules.riders(s, data, "acid_arrow", 2, f, true, lines)
-	assert_str(str(f["acid"])).is_equal("2d4")
+	assert_str(str(ConditionRules.effects_of(f, "corroded")[0]["harm"]["dice"])).is_equal("2d4")  # a status since v0.8.4.43.54
 	var hp := int(f["hp"])
 	CombatRules._finish(s, data, f, lines)
 	assert_int(int(f["hp"])).is_less(hp)
