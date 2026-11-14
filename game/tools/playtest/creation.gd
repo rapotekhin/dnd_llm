@@ -31,6 +31,7 @@ func run() -> void:
 	await tap("NextButton")
 	step("step: background", cs.get("step") == "background", str(cs.get("step")))
 	await tap("Pick_soldier")
+	await shot("background")  # each background with its face in silver (v0.8.4.43.57)
 	await tap("NextButton")
 	for pair: Array in [["str", 7], ["con", 6], ["dex", 5], ["wis", 4], ["cha", 2]]:
 		for i in int(pair[1]):

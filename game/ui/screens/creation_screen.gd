@@ -418,7 +418,7 @@ func _draw_background() -> void:
 	var bgs: Dictionary = data()["backgrounds"]
 	var opts: Array = []
 	for id: String in bgs:
-		opts.append({"id": id, "label": bgs[id]["name"], "tip": InfoBox.background_text(data(), id)})
+		opts.append({"id": id, "label": bgs[id]["name"], "tip": InfoBox.background_text(data(), id), "ref": "backgrounds/" + id})
 	_radio(_body, "background", opts)
 	var b := CharacterBuilder.background(choices, data())
 	if b.is_empty():

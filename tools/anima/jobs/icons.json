@@ -7439,6 +7439,167 @@
    "people": true
   },
   {
+   "id": "barbarian",
+   "kind": "classes",
+   "name": "Варвар",
+   "tags": "wolf head, snarling, fangs, front view, symmetrical",
+   "sentence": "A single snarling wolf head seen from the front, fangs bared, ears flat back, a fierce mane of fur. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "bard",
+   "kind": "classes",
+   "name": "Бард",
+   "tags": "lute, musical instrument, strings, front view",
+   "sentence": "A single lute seen from the front, tilted diagonally, its round body with a rose sound hole, a long neck with frets and the pegbox bent back at the top. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "cleric",
+   "kind": "classes",
+   "name": "Жрец",
+   "tags": "shield, sunburst, holy symbol, front view, symmetrical",
+   "sentence": "A single round shield seen from the front with a bright sunburst holy symbol in its center. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "druid",
+   "kind": "classes",
+   "name": "Друид",
+   "tags": "oak leaf, acorn, branch, spiral, front view",
+   "sentence": "A single oak branch with three leaves and an acorn, a small spiral in the middle leaf. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "fighter",
+   "kind": "classes",
+   "name": "Воин",
+   "tags": "crossed swords, shield, front view, symmetrical",
+   "sentence": "Two longswords crossed behind a small round shield, their blades pointing up. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "monk",
+   "kind": "classes",
+   "name": "Монах",
+   "tags": "fist, wrapped hands, martial arts, front view",
+   "sentence": "A single clenched fist wrapped in cloth bandages, raised and seen from the front, a knotted belt hanging below it. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "paladin",
+   "kind": "classes",
+   "name": "Паладин",
+   "tags": "longsword, holy symbol, sun, front view, symmetrical",
+   "sentence": "A single longsword standing upright with its point down, a radiant sun holy symbol with rays set in the crossguard where the blade meets the hilt, a few rays of light around it. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "ranger",
+   "kind": "classes",
+   "name": "Следопыт",
+   "tags": "longbow, arrow, leaf, front view",
+   "sentence": "A single longbow drawn with an arrow nocked and pointing up diagonally, a few leaves of a branch wound around the bow's grip. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "rogue",
+   "kind": "classes",
+   "name": "Плут",
+   "tags": "dagger, hood, front view",
+   "sentence": "A single dagger pointing down diagonally, behind it the dark opening of an empty hood. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "sorcerer",
+   "kind": "classes",
+   "name": "Чародей",
+   "tags": "flame, crystal, magic, front view, symmetrical",
+   "sentence": "A single flame rising out of an open hand's palm, a sharp crystal shard glowing in the middle of the flame. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "warlock",
+   "kind": "classes",
+   "name": "Колдун",
+   "tags": "eye, pact, magic circle, front view, symmetrical",
+   "sentence": "A single open eye with a slit pupil inside a circle of runes, two small horns above the circle. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "wizard",
+   "kind": "classes",
+   "name": "Волшебник",
+   "tags": "open book, spellbook, staff, star, front view",
+   "sentence": "A single open spellbook seen from the front, a wizard's staff standing behind it and a four-pointed star shining above the pages. Seen straight from the front, symmetrical, large and filling the square.",
+   "key": ""
+  },
+  {
+   "id": "acolyte",
+   "kind": "backgrounds",
+   "name": "Прислужник",
+   "tags": "1boy, solo, monk, priest, portrait, front view, hood, robe, prayer beads, holy symbol, closed eyes, praying, symmetrical",
+   "sentence": "A single young temple acolyte with a shaved head in a plain hooded robe, hands pressed together in prayer before the chest, a string of prayer beads with a sun pendant around the neck, eyes calmly closed. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "criminal",
+   "kind": "backgrounds",
+   "name": "Преступник",
+   "tags": "1boy, solo, thief, portrait, front view, hood, mask, mouth mask, dagger, symmetrical",
+   "sentence": "A single thief with a deep hood pulled low and a cloth mask over the nose and mouth, only the sharp narrowed eyes showing, a dagger held up beside the face. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "folk_hero",
+   "kind": "backgrounds",
+   "name": "Народный герой",
+   "tags": "1boy, solo, peasant, farmer, portrait, front view, short hair, pitchfork, determined, symmetrical",
+   "sentence": "A single young farmer with tousled short hair and a simple linen shirt, a determined look, a pitchfork resting on one shoulder like a spear. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "soldier",
+   "kind": "backgrounds",
+   "name": "Солдат",
+   "tags": "1boy, solo, soldier, portrait, front view, helmet, nasal helm, chainmail, spear, scar, symmetrical",
+   "sentence": "A single veteran soldier in an open helmet with a nose guard and a chainmail coif, a scar across the cheek, a stern look, the shaft of a spear standing upright beside the head. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "sage",
+   "kind": "backgrounds",
+   "name": "Мудрец",
+   "tags": "1boy, solo, old man, scholar, portrait, front view, long beard, glasses, book, quill, symmetrical",
+   "sentence": "A single old scholar with a long white beard and round spectacles, a soft cap, an open book held up before the chest and a quill pen behind one ear. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "outlander",
+   "kind": "backgrounds",
+   "name": "Странник",
+   "tags": "1girl, solo, ranger, portrait, front view, fur hood, braid, face paint, feather, symmetrical",
+   "sentence": "A single wilderness wanderer woman in a hood of thick fur, a long braid over one shoulder, stripes of face paint across the cheeks and a feather tied in the hair. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+   "key": "",
+   "people": true
+  },
+  {
+   "id": "entertainer",
+   "kind": "backgrounds",
+   "name": "Артист",
+   "tags": "1girl, solo, jester, bard, portrait, front view, jester cap, bells, smile, symmetrical",
+   "sentence": "A single cheerful performer woman in a jester's cap with three bells, a wide playful smile and a ruffled collar. Seen straight from the front like a portrait on a medallion, the head and the shoulders filling the square, eyes looking at the viewer.",
+   "key": "",
+   "people": true
+  },
+  {
    "id": "burning",
    "kind": "conditions",
    "name": "горит",
