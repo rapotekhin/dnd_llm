@@ -58,7 +58,8 @@ static func lay(s: GameSession, data: Dictionary) -> void:
 
 
 ## What a fighter's trait strews around it as the fight begins (`lays`: Web Sense — the lair's webs): a row of
-## `rules.combat.grid.strewn` on a `share` of the free squares within `around`, its own square among them.
+## `rules.combat.grid.strewn` on a `share` of the free squares within `around`, its own square among them; the zone is its
+## own (`by`), so what it holds is held by it, not by the hero (v0.8.4.43.52).
 static func _lays(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 	if f.is_empty() or Sheet.is_hero(f):
 		return
@@ -80,7 +81,7 @@ static func _lays(s: GameSession, data: Dictionary, f: Dictionary) -> void:
 					and (own.has(at) or s.rng.randf() < float(lays.get("share", 0.3))):
 				cells.append(at)
 		var row: Dictionary = cfg(data)["strewn"][str(lays["ground"])]
-		SpellEffects.add_zone(s, zone_of(str(lays["ground"]), row.merged({"side": str(f.get("side", "enemy"))}), FightGrid.pack_cells(cells)))
+		SpellEffects.add_zone(s, zone_of(str(lays["ground"]), row.merged({"side": str(f.get("side", "enemy")), "by": str(f["id"])}), FightGrid.pack_cells(cells)))
 
 
 ## `a` knows where `b` is through a zone it feels (Web Sense, v0.8.4.27.3): both touch one zone whose `feel` is a flag of
@@ -179,7 +180,7 @@ static func round_starts(s: GameSession, data: Dictionary, lines: Array[String])
 
 ## A damage of `dtype` touches `cells` (v0.8.4.43.45): each row of `rules.combat.grid.surfaces` by that type lays its
 ## zone on the squares it is for — water under lightning, water blessed by radiance, hellfire where a fiend's fire falls.
-## `source` — who dealt it (a fighter, {} — none). Lines.
+## `source` — who dealt it (a fighter, {} — none), the zone's author. Lines.
 static func react(s: GameSession, data: Dictionary, dtype: String, cells: Array[Vector2i], source: Dictionary, lines: Array[String]) -> void:
 	var g := FightGrid.grid(s, data)
 	for id: String in cfg(data).get("surfaces", {}):
@@ -203,7 +204,7 @@ static func react(s: GameSession, data: Dictionary, dtype: String, cells: Array[
 					(z["cells"] as Array).erase(key)
 				if (z["cells"] as Array).is_empty():
 					SpellEffects.zones(s).erase(z)
-		var z := zone_of(id, (row as Dictionary).merged({"on": row.get("when", ["enter", "start"])}, true), packed)
+		var z := zone_of(id, (row as Dictionary).merged({"on": row.get("when", ["enter", "start"]), "by": str(source.get("id", ""))}, true), packed)
 		z["until_round"] = int(s.combat.get("round", 1)) + int(row.get("rounds", 1)) - 1  # gone by SpellEffects.zones_expire
 		SpellEffects.add_zone(s, z)
 		lines.append("%s (клеток: %d)" % [row["name"], hit.size()])
@@ -559,10 +560,11 @@ static func _light(s: GameSession, at: Vector2i) -> void:
 
 
 ## A flask broken on a square: its liquid's `puddle` (v0.8.4.28.2) — a zone of the ground (oil to slip on and burn, water
-## that puts the fire out), or alchemist's fire that burns at once.
-static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionary, name: String, lines: Array[String], side := "player") -> void:
+## that puts the fire out), or alchemist's fire that burns at once. `side` and `by` — the thrower's.
+static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionary, name: String, lines: Array[String], side := "player",
+		by := "") -> void:
 	if fx.has("strew"):
-		strew(s, data, at, str(fx["strew"]), side, lines)
+		strew(s, data, at, str(fx["strew"]), side, lines, by)
 		return
 	var lid := str(fx.get("liquid", ""))
 	var p: Dictionary = LiquidRules.kind(data, lid).get("puddle", {})
@@ -581,22 +583,22 @@ static func splash(s: GameSession, data: Dictionary, at: Vector2i, fx: Dictionar
 		(s.combat["fires"] as Dictionary).erase(key)
 		_sync_fire(s, data)
 		lines.append("%s: огонь на клетке погас" % name)
-	SpellEffects.add_zone(s, zone_of("puddle:" + lid, p.merged({"side": side, "on": p.get("on", [])}), FightGrid.pack_cells([at] as Array[Vector2i])))
+	SpellEffects.add_zone(s, zone_of("puddle:" + lid, p.merged({"side": side, "by": by, "on": p.get("on", [])}), FightGrid.pack_cells([at] as Array[Vector2i])))
 	lines.append("%s: %s растекается по клетке" % [name, LiquidRules.name_of(data, lid)])
 	if (s.combat["fires"] as Dictionary).has(key):
 		kindle(s, data, [at] as Array[Vector2i], lines)
 
 
 ## Caltrops or ball bearings strewn from `at` (v0.8.4.27): a zone of the ground by the row of `rules.combat.grid.strewn`,
-## the thrower's side its own. Lines.
-static func strew(s: GameSession, data: Dictionary, at: Vector2i, row_id: String, side: String, lines: Array[String]) -> void:
+## the thrower's side and its author (`by`) its own. Lines.
+static func strew(s: GameSession, data: Dictionary, at: Vector2i, row_id: String, side: String, lines: Array[String], by := "") -> void:
 	var row: Dictionary = cfg(data)["strewn"][row_id]
 	var cells: Array[Vector2i] = []
 	var g := FightGrid.grid(s, data)
 	for c: Vector2i in FightGrid.body_at(at, int(row.get("span", 1))):
 		if FightGrid.walkable(g, c):
 			cells.append(c)
-	SpellEffects.add_zone(s, zone_of(row_id, row.merged({"side": side}), FightGrid.pack_cells(cells)))
+	SpellEffects.add_zone(s, zone_of(row_id, row.merged({"side": side, "by": by}), FightGrid.pack_cells(cells)))
 	lines.append("%s: рассыпаны по клетке — кто войдёт, спасбросок %s Сл %d" % [row["name"], CombatRules.ab_name(str(row["save"])), int(row["dc"])])
 
 

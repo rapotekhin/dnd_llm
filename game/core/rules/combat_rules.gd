@@ -1164,7 +1164,7 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 	ItemRules.remove(c, item_id)
 	if FightGrid.is_aim(target_id):
 		var splashed: Array[String] = []
-		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed, str(f.get("side", "player")))
+		FightField.splash(s, data, FightGrid.aim_of(target_id), fx, name, splashed, str(f.get("side", "player")), str(f.get("id", "")))
 		if fx.has("effect"):
 			LiquidRules.burst(s, data, f, FightGrid.aim_of(target_id), fx, name, splashed)
 		return splashed
@@ -1186,7 +1186,7 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 			var dtype := str(fx["damage"][1])
 			var dmg := Sheet.taken(s, data, t, dtype, roll_dice(s.rng, str(fx["damage"][0])))
 			lines.append("%s: %d (%s)" % [name, dmg, data["misc"]["damage_types"].get(dtype, dtype)])
-			Harm.take(s, data, t, dmg, lines, dtype)
+			Harm.take(s, data, t, dmg, lines, dtype, false, Sheet.is_hero(f))
 	if fx.has("liquid") and Attack.up(s, t):  # what lies on it after: oil, alchemist's fire, water (v0.8.4.28.2)
 		var lid := str(fx["liquid"])
 		var holder := Sheet.holder(s, t)
@@ -1202,7 +1202,8 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 		if SIZES.find(str(Sheet.template(data, t).get("size", "medium"))) > SIZES.find(str(fx.get("max_size", "large"))):
 			lines.append("%s слишком велик для сети" % t["name"])
 		else:
-			_add_condition(s, data, t, str(fx["condition"]), {"escape_dc": int(fx.get("escape_dc", 10)), "escape": ["athletics"], "item": item_id})  # a net: until broken (5e)
+			_add_condition(s, data, t, str(fx["condition"]), {"escape_dc": int(fx.get("escape_dc", 10)), "escape": ["athletics"], "item": item_id,
+				"by": str(f.get("id", ""))})  # a net: until broken (5e), held by the thrower
 			lines.append("%s: %s, вырваться — Сил Сл %d" % [t["name"], cond_name(data, str(fx["condition"])), int(fx.get("escape_dc", 10))])
 	return lines
 

@@ -789,10 +789,10 @@ static func in_cells(f: Dictionary, cells: Array[Vector2i]) -> bool:
 # --- zones on squares ------------------------------------------------------------------------------------------
 
 
-## The squares of a zone now. A zone that follows the hero is drawn around the hero; the rest are kept as "x,y".
+## The squares of a zone now. A zone that follows its author (`by`) is drawn around it; the rest are kept as "x,y".
 static func zone_cells(s: GameSession, data: Dictionary, z: Dictionary) -> Array[Vector2i]:
 	if bool(z.get("follow", false)):
-		var p: Dictionary = s.beings.get(str(z.get("by", "p")), {}).get("fight", {})
+		var p: Dictionary = s.beings.get(str(z.get("by", "")), {}).get("fight", {})
 		return area(s, data, z["shape"], cell(p), cell(p), true)
 	var out: Array[Vector2i] = []
 	for key: Variant in z.get("cells", []):

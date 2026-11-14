@@ -766,7 +766,7 @@ static func _lay(s: GameSession, data: Dictionary, z: Dictionary, at: Vector2i) 
 	z["x"] = at.x
 	z["y"] = at.y
 	var from_me := int(data["spells"].get(str(z["spell"]), {}).get("range_ft", 0)) <= 0
-	var me := CombatRules.fighter(s, str(z.get("by", CombatRules.PLAYER)))
+	var me := CombatRules.fighter(s, str(z.get("by", "")))
 	z["cells"] = FightGrid.pack_cells(FightGrid.area(s, data, z["shape"], FightGrid.cell(me), at, from_me))
 
 
@@ -869,7 +869,7 @@ static func can_act(s: GameSession, data: Dictionary, f: Dictionary, spell_id: S
 
 static func _zone_of(s: GameSession, spell_id: String, by: String) -> Vector2i:
 	for z: Dictionary in zones(s):
-		if str(z["spell"]) == spell_id and str(z.get("by", CombatRules.PLAYER)) == by:
+		if str(z["spell"]) == spell_id and str(z.get("by", "")) == by:
 			return Vector2i(int(z["x"]), int(z["y"]))
 	return Vector2i.ZERO
 
@@ -882,7 +882,7 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, spell_id: Strin
 	var by := str(f["id"])
 	if str(sus["kind"]) == "zone":
 		for z: Dictionary in zones(s):
-			if str(z["spell"]) != spell_id or str(z.get("by", CombatRules.PLAYER)) != by:
+			if str(z["spell"]) != spell_id or str(z.get("by", "")) != by:
 				continue
 			var n := FightGrid.squares_of(data, int(sus.get("move", 30)))
 			var from := Vector2i(int(z["x"]), int(z["y"]))
@@ -961,6 +961,13 @@ static func _save_hit(s: GameSession, data: Dictionary, name: String, dtype: Str
 	return lines
 
 
+## A zone's harm is the hero's blow (`Harm.take`'s `by_hero`): its own zone, or one of nobody — the ground, the fire; not one
+## a foe or another fighter laid (a spider's web, a goblin's caltrops, v0.8.4.43.52).
+static func _by_hero(z: Dictionary) -> bool:
+	var by := str(z.get("by", ""))
+	return by.is_empty() or by == CombatRules.PLAYER
+
+
 static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary) -> Array[String]:
 	if bool(z.get("reveal", false)):  # an illusion (Silent Image, v0.8.4.43.46): one who walks into it sees it for what it is
 		if (z.get("seen", []) as Array).has(str(f.get("id", ""))) or str(f.get("status")) != "active":
@@ -969,7 +976,7 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 		FightGrid.changed(s)
 		return ["%s проходит сквозь %s — это иллюзия" % [f["name"], z["name"]]]
 	if not str(z["dice"]).is_empty():
-		return _save_hit(s, data, str(z["name"]), str(z["type"]), str(z["save"]), str(z["dice"]), int(z["dc"]), f, true, str(z.get("by", CombatRules.PLAYER)) == CombatRules.PLAYER)
+		return _save_hit(s, data, str(z["name"]), str(z["type"]), str(z["save"]), str(z["dice"]), int(z["dc"]), f, true, _by_hero(z))
 	var lines: Array[String] = []
 	if str(f.get("status")) != "active" or str(z["save"]).is_empty():
 		return lines
@@ -981,7 +988,7 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 		return lines
 	_failed(s, data, z, f, lines)
 	if z.has("cond") and not ConditionRules.has(Sheet.holder(s, f), str(z["cond"])):
-		var fields := (z.get("for", {}) as Dictionary).merged({"name": str(z["name"]), "by": str(z.get("by", CombatRules.PLAYER))})
+		var fields := (z.get("for", {}) as Dictionary).merged({"name": str(z["name"]), "by": str(z.get("by", ""))})
 		if z.has("escape"):  # a web: held until broken by its skills against its DC (escape.gd), or until the zone is gone
 			fields.merge({"escape_dc": int(z["dc"]), "escape": z["escape"], "zone": str(z["spell"])})
 		lines.append_array(CombatRules._add_condition(s, data, f, str(z["cond"]), fields))
@@ -997,7 +1004,7 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 static func _failed(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	var bad: Dictionary = z.get("fail", {})
 	if bad.has("dice"):
-		Harm.typed(s, data, f, CombatRules.roll_dice(s.rng, str(bad["dice"])), str(bad["type"]), lines, "%s: −{hp} HP ({words})" % z["name"], false, true, false)
+		Harm.typed(s, data, f, CombatRules.roll_dice(s.rng, str(bad["dice"])), str(bad["type"]), lines, "%s: −{hp} HP ({words})" % z["name"], false, _by_hero(z), false)
 	var me := Sheet.holder(s, f)
 	if int(bad.get("speed", 0)) != 0 and int(me.get("hp", 0)) > 0:
 		ConditionRules.add_effect(me, {"condition": "", "speed": int(bad["speed"]), "ends": {"hp": int(me["hp"])},
@@ -1129,7 +1136,7 @@ static func bites(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary
 static func _reaches(s: GameSession, data: Dictionary, z: Dictionary, f: Dictionary) -> bool:
 	if not z.has("types") and not z.has("sees") and not z.has("spared") and not bool(z.get("follow", false)):
 		return true
-	var owner := CombatRules.fighter(s, str(z.get("by", CombatRules.PLAYER)))
+	var owner := CombatRules.fighter(s, str(z.get("by", "")))
 	if owner.is_empty() or str(f.get("id")) == str(owner.get("id")) or not Sheet.is_hero(owner) and str(owner.get("status")) != "active":
 		return false
 	if z.has("worn") and not ConditionRules.effects(Sheet.holder(s, owner)).any(func(e: Dictionary) -> bool:
@@ -1144,7 +1151,7 @@ static func _reaches(s: GameSession, data: Dictionary, z: Dictionary, f: Diction
 static func end_zones(s: GameSession, spell_id: String, by: String = CombatRules.PLAYER) -> Array[String]:
 	var lines: Array[String] = []
 	for z: Dictionary in zones(s).duplicate():
-		if str(z["spell"]) == spell_id and str(z.get("by", CombatRules.PLAYER)) == by:
+		if str(z["spell"]) == spell_id and str(z.get("by", "")) == by:
 			zones(s).erase(z)
 			lines.append("%s гаснет" % z["name"])
 			for id: String in s.combat.get("fighters", []):  # what it held is let go (a web)
