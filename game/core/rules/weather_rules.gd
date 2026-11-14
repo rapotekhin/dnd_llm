@@ -9,7 +9,8 @@ extends RefCounted
 ## `travel_mult` — a step into another location takes longer; `camp.fire_out` — a camp under the open sky soaks
 ## (a CON save, a failure — half the HP in the morning and no hit dice back); `exposure` — cold or heat: a night in a
 ## camp without its guards (shelter, warm things, a fire, water, a resistance) is a CON save against a level of
-## exhaustion by 5e, heat also once a day on the way by day; `hunt_pct` / `fish_pct` — the catch. The world flag
+## exhaustion by 5e, heat also once a day on the way by day; `hunt_pct` / `fish_pct` — the catch; `wets` — one under the sky in a
+## fight is wet (v0.8.4.43.59, FightField.soak). The world flag
 ## `weather_<kind>_<location>` drives room variants and closed exits (a flooded ford). The master's `weather` effect
 ## sets a kind for hours with a cause (Control Weather, a miracle).
 
@@ -138,6 +139,12 @@ static func here(s: GameSession, data: Dictionary) -> String:
 	if not live(s, data) or sheltered(s, data):
 		return ""
 	return at(s, data, WorldView.new(data["world"]).location_id(s.room_id))
+
+
+## The name of the weather here when it wets one under the sky (`wets`: rain, a downpour — v0.8.4.43.59, as in BG3) or "".
+static func wets(s: GameSession, data: Dictionary) -> String:
+	var k := here(s, data)
+	return kind_name(data, k) if bool(kind(data, k).get("wets", false)) else ""
 
 
 ## Why ranged attacks and Perception have disadvantage here («ливень», «туман») or "".
