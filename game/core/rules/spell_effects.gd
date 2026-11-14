@@ -978,21 +978,24 @@ static func _zone_hit(s: GameSession, data: Dictionary, z: Dictionary, f: Dictio
 	if not str(z["dice"]).is_empty():
 		return _save_hit(s, data, str(z["name"]), str(z["type"]), str(z["save"]), str(z["dice"]), int(z["dc"]), f, true, _by_hero(z))
 	var lines: Array[String] = []
-	if str(f.get("status")) != "active" or str(z["save"]).is_empty():
+	if str(f.get("status")) != "active" or str(z["save"]).is_empty() and not z.has("cond"):
 		return lines
-	lines.append("%s: %s" % [z["name"], f["name"]])
-	var ok := Sheet.saved(s, data, f, str(z["save"]), int(z["dc"]), HeroDefense.cond_tags(data, [str(z.get("cond", ""))], [str(z.get("tag", "magic"))]), false, lines)
-	if ok:
-		if bool(z.get("spare_saved", false)):  # Horrific Appearance: one who saved is not afraid of it again
-			z["spared"] = (z.get("spared", []) as Array) + [str(f["id"])]
-		return lines
+	if not str(z["save"]).is_empty():  # a zone with no save lays its status as it is: the fire's «горит» (v0.8.4.43.54)
+		lines.append("%s: %s" % [z["name"], f["name"]])
+		var ok := Sheet.saved(s, data, f, str(z["save"]), int(z["dc"]), HeroDefense.cond_tags(data, [str(z.get("cond", ""))], [str(z.get("tag", "magic"))]), false, lines)
+		if ok:
+			if bool(z.get("spare_saved", false)):  # Horrific Appearance: one who saved is not afraid of it again
+				z["spared"] = (z.get("spared", []) as Array) + [str(f["id"])]
+			return lines
 	_failed(s, data, z, f, lines)
-	if z.has("cond") and not ConditionRules.has(Sheet.holder(s, f), str(z["cond"])):
+	var renews := (data["rules"]["condition_effects"].get(str(z.get("cond", "")), {}) as Dictionary).has("same")  # burning while it stands in the fire
+	if z.has("cond") and (renews or not ConditionRules.has(Sheet.holder(s, f), str(z["cond"]))):
+		var had := ConditionRules.has(Sheet.holder(s, f), str(z["cond"]))
 		var fields := (z.get("for", {}) as Dictionary).merged({"name": str(z["name"]), "by": str(z.get("by", ""))})
 		if z.has("escape"):  # a web: held until broken by its skills against its DC (escape.gd), or until the zone is gone
 			fields.merge({"escape_dc": int(z["dc"]), "escape": z["escape"], "zone": str(z["spell"])})
 		lines.append_array(CombatRules._add_condition(s, data, f, str(z["cond"]), fields))
-		if ConditionRules.has(Sheet.holder(s, f), str(z["cond"])):  # an immunity keeps it off (ConditionRules.impose)
+		if not had and ConditionRules.has(Sheet.holder(s, f), str(z["cond"])):  # an immunity keeps it off (ConditionRules.impose)
 			lines.append("%s: %s — %s" % [z["name"], f["name"], CombatRules.cond_name(data, str(z["cond"]))])
 	if bool(z.get("retch", false)):
 		f["retching"] = true  # its next start of a turn takes the action and says so (CombatRules._begin_turn)

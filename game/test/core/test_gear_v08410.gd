@@ -139,8 +139,8 @@ func test_fire_burns_the_hero_as_it_burns_a_foe() -> void:
 	var s := _hero()
 	_foe(s, {"monster": "bandit"})
 	var p := CombatRules.player(s)
-	LiquidRules.coat(s, data, s.character, "alchemists_fire", "Алхимический огонь")
+	LiquidRules.coat(s, data, s.character, "alchemists_fire", "Алхимический огонь", p)
 	var hp := int(s.character["hp"])
 	var lines: Array[String] = []
-	CombatRules._fire(s, data, p, lines)
+	Harm.each_turn(s, data, p, "start", lines)
 	assert_int(int(s.character["hp"])).is_less(hp)

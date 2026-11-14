@@ -142,9 +142,9 @@ func test_alchemists_fire_burns_until_put_out() -> void:
 		CombatRules.economy(s)["action"] = 1
 		assert_str(Acts.one("throw").can(s, data, CombatRules.player(s), str(f["id"]), {"item": "alchemists_fire_flask"})).is_empty()
 		lines.append_array(Acts.one("throw").go(s, data, CombatRules.player(s), str(f["id"]), {"item": "alchemists_fire_flask"}))
-		if not LiquidRules.burning(s, f).is_empty():
+		if not LiquidRules.burning(s, data, f).is_empty():
 			break
-	assert_bool(not LiquidRules.burning(s, f).is_empty()).override_failure_message(" · ".join(lines)).is_true()
+	assert_bool(not LiquidRules.burning(s, data, f).is_empty()).override_failure_message(" · ".join(lines)).is_true()
 	var hp := int(f["hp"])
 	var turn: Array[String] = []
 	TestUtils.enemy_turn(s, data, f, turn)

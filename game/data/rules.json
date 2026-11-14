@@ -1518,7 +1518,10 @@
 		}
 	},
 	"conditions": {
-		"burning": "Горит: вещь сгорит, огонь идёт на соседние.",
+		"burning": "Горит: вещь сгорит, огонь идёт на соседние; существо получает урон огнём в начале каждого своего хода, пока огонь не собьют — спасбросок Ловкости, действие «Потушить», вода.",
+		"corroded": "Разъедает кислота: урон кислотой в конце своего хода.",
+		"bleeding": "Кровотечение: урон в начале каждого своего хода, помеха на спасброски Телосложения.",
+		"frostbitten": "Обморожение: урон холодом в начале каждого своего хода, скорость −10 фт.",
 		"oiled": "Облито маслом: горит даже то, что не горит само.",
 		"wet": "Мокрое: не загорается.",
 		"glowing": "Светится.",
@@ -2324,6 +2327,16 @@
 				"cost": 2,
 				"harm": false,
 				"text": "облик: value — как выглядит; стражу и свидетелей проверяет движок"
+			},
+			"harm": {
+				"cost": 2,
+				"of": "damage",
+				"number": [
+					1,
+					4
+				],
+				"harm": true,
+				"text": "урон каждый ход: amount к6 типа value в начале своего хода (v0.8.4.43.54)"
 			}
 		},
 		"tiers": [
@@ -2864,7 +2877,14 @@
 	},
 	"condition_effects": {
 		"_doc": "What a status does (SRD; v0.7.8, v0.7.63), one table for the hero, a fighter and any record. To checks: checks | skills {id} | saves {ability} | senses {sight, hearing}: disadvantage | auto_fail; a sense comes with the master's check. To attacks: attack — its own attack rolls, attacked — rolls against it, attacked_near / attacked_far — by the distance: advantage | disadvantage; attack_why, attacked_why — the words of the hint; crit_near — a hit from next to it is critical. no_move — speed 0; no_threat — it does not spoil a shot next to it; resist_all — half of every damage. Who cannot act — ConditionRules.INCAPACITATING. A status the master built has the same keys in its own `mods`. A status the spells of the engine lay has its own `name` here: it is not one of the 5e conditions the master picks from.",
-		"burning": {"on": ["thing"], "name": "горит"},
+		"_harm": "v0.8.4.43.54, as in BG3: a status that hurts each turn (Harm.each_turn) — `harm` {dice, type, when: start | end}, the default of its row; a source lays its own numbers in the record's `harm` and `ticks` (how many turns it hurts, none — until it ends otherwise). `lays` — the record's numbers it weakens with (ac_plus, speed_plus, save_dis, check_dis), as a made status's parts. `same` — one of it from a second source: max — the stronger harm and the longer end, renew — the new one's end. `out` — what ends it beside its time: `act` — the act of that id (put_out: an action, a check of `ability` against `dc`), `douse` — water (LiquidRules.put_out). `on` — thing, creature: who may hold it (none — a creature). Stacks (reverberation, heat, an ice crust) come later as `stacks` of the same row.",
+		"burning": {"on": ["thing", "creature"], "name": "горит", "harm": {"dice": "1d4", "type": "fire", "when": "start"}, "same": "max",
+			"out": {"act": "put_out", "ability": "dex", "dc": 10, "douse": true}},
+		"corroded": {"name": "разъедает кислота", "harm": {"dice": "2d4", "type": "acid", "when": "end"}, "same": "max", "ticks": 1},
+		"bleeding": {"name": "кровотечение", "harm": {"dice": "1d4", "type": "slashing", "when": "start"}, "same": "renew", "ticks": 2,
+			"lays": {"save_dis": ["con"]}},
+		"frostbitten": {"name": "обморожение", "harm": {"dice": "1d4", "type": "cold", "when": "start"}, "same": "renew", "ticks": 2,
+			"lays": {"speed_plus": -10}},
 		"oiled": {"on": ["thing"], "name": "облито маслом", "liquid": "oil"},
 		"wet": {"on": ["thing"], "name": "мокрое", "liquid": "water"},
 		"coated": {"name": "облит"},
@@ -3797,7 +3817,7 @@
 			"field.door_pick": [{"has": "fast_hands"}]
 		},
 		"grid": {
-			"_doc": "The field of a fight (v0.8.4, FightGrid): a square of `ft`; `spans` — the squares of a body by its SRD size; `start` — how far foes with no square of their own stand from the hero; `cover` — the bonus to AC and Dexterity saves; `charge` — the squares of a run before a charge; `pit` — a fall; `pursuit` — how near a way out a foe must stand to follow the hero through it, `pursuit_rounds` — when it comes; `doors` — a bar on a door; `blocks` — the map's cell that is a thing in a fight, its body and HP, how much a point of Strength shifts; `fire` — a burning square, the SRD's oil; `hazard` — the map's cell that hurts; `noise` — who hears the fight: squares, minus `wall` for each wall on the way, `beyond` left to carry through a way out.",
+			"_doc": "The field of a fight (v0.8.4, FightGrid): a square of `ft`; `spans` — the squares of a body by its SRD size; `start` — how far foes with no square of their own stand from the hero; `cover` — the bonus to AC and Dexterity saves; `charge` — the squares of a run before a charge; `pit` — a fall; `pursuit` — how near a way out a foe must stand to follow the hero through it, `pursuit_rounds` — when it comes; `doors` — a bar on a door; `blocks` — the map's cell that is a thing in a fight, its body and HP, how much a point of Strength shifts; `fire` — a burning square, the SRD's oil: it lays `burning` for a turn on whom it touches, renewed while it stands there (v0.8.4.43.54); `hazard` — the map's cell that hurts; `noise` — who hears the fight: squares, minus `wall` for each wall on the way, `beyond` left to carry through a way out.",
 			"ft": 5,
 			"spans": {"tiny": 1, "small": 1, "medium": 1, "large": 2, "huge": 3, "gargantuan": 4},
 			"slow_fall": {"slow_fall": 5, "_doc": "A feature → feet of a fall's damage its reaction takes off per level (Slow Fall, v0.8.4.26.1, core/acts/slow_fall.gd)."},
@@ -3807,7 +3827,7 @@
 			"charge": 4,
 			"pit": {"dice": "1d6"}, "lava": {"dice": "10d10", "type": "fire", "what": "падает в лаву", "name": "лава", "_doc": "v0.8.4.43.32: the DMG's lava, a square of `&` (layouts.json): one who falls or is shoved in"},
 			"pursuit": 6,
-			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "dice": "5", "type": "fire", "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "surfaces": {"_doc": "v0.8.4.43.45: a surface a damage leaves on the squares it touches (FightField.react): a row by its `damage` type, `where` — `wet` (water of the map or a puddle) or `floor` (any square walked), `from` — only from a source of these creature types, `rounds` it lies; the rest a zone's row (FightField.zone_of): `dice` of `type` on `when` (enter, start), `save` against `dc`, `types` — whom it touches, `cond` and `slow` as a zone's; `clears` — the surfaces it ends on its squares (v0.8.4.43.47: ice ends the current)", "electric_water": {"name": "Вода под током", "damage": "lightning", "where": "wet", "dice": "1d6", "type": "lightning", "save": "con", "dc": 12, "when": ["enter", "start"], "rounds": 1}, "blessed_water": {"name": "Освящённая вода", "damage": "radiant", "where": "wet", "dice": "1d6", "type": "radiant", "types": ["undead", "fiend"], "when": ["enter", "start"], "rounds": 10}, "ice": {"name": "Лёд", "damage": "cold", "where": "wet", "save": "dex", "dc": 10, "tag": "", "cond": "prone", "slow": true, "when": ["enter"], "rounds": 10, "clears": ["electric_water"]}, "hellfire": {"name": "Адский огонь", "damage": "fire", "from": ["fiend"], "where": "floor", "dice": "2d6", "type": "fire", "when": ["enter", "start"], "rounds": 3}}, "strewn": {"_doc": "Things strewn on squares (v0.8.4.27, FightField.strew): a thing's `use.throw.strew` names its row — `span` squares a side, a zone of the ground with `save` and `dc` on entering (`tag` \"\" — no magic in it), `cond` on a failed save, `fail` — what else a failed save does: `dice` of `type`, `speed` until it regains a hit point, `stop` — the walk ends there. `escape` — the skills that break its `cond` against its `dc` («Вырваться»), `burns` — fire takes its squares, `pass` / `feel` — the status flag that walks through it / feels who touches it (Web Walker, Web Sense, v0.8.4.27.3); a trait's `lays` (rules.feature_wear) strews its row around its creature when it comes into a fight: `around` squares, a `share` of them.", "caltrops": {"name": "Шипы", "span": 1, "save": "dex", "dc": 15, "tag": "", "on": ["enter"], "fail": {"dice": "1", "type": "piercing", "speed": -10, "stop": true}}, "ball_bearings": {"name": "Шарики", "span": 2, "save": "dex", "dc": 10, "tag": "", "on": ["enter"], "cond": "prone"}, "web": {"name": "Паутина", "save": "dex", "dc": 12, "tag": "", "on": ["start", "enter"], "cond": "restrained", "escape": ["athletics"], "slow": true, "burns": true, "pass": "walks_web", "feel": "feels_web"}}, "noise": {"reach": 16, "wall": 6, "beyond": 6, "loud": {"thunder": 12}, "deaf": ["road"], "_v08_4_24": "Squares of a fight's noise (80 ft), minus `wall` per wall square on the line; a room past a way out hears it from `beyond` left, only within one location and not along a way of a `deaf` kind; a blow of a `loud` damage type adds its squares to the next round's noise."}
+			"pursuit_rounds": [1, 2], "doors": {"bar_plus": 5}, "blocks": {"cell": "B", "body": "barrel", "name": "ящик", "hp": 10, "per_str": 15}, "fire": {"name": "Огонь", "cond": "burning", "for": {"harm": {"dice": "5", "type": "fire", "when": "start"}, "ticks": 1}, "rounds": 2}, "hazard": {"cell": "^", "name": "Опасная земля", "dice": "1d6", "type": "acid"}, "surfaces": {"_doc": "v0.8.4.43.45: a surface a damage leaves on the squares it touches (FightField.react): a row by its `damage` type, `where` — `wet` (water of the map or a puddle) or `floor` (any square walked), `from` — only from a source of these creature types, `rounds` it lies; the rest a zone's row (FightField.zone_of): `dice` of `type` on `when` (enter, start), `save` against `dc`, `types` — whom it touches, `cond` and `slow` as a zone's (a `cond` with no `save` is laid as it is, its record's numbers in `for`: hellfire burns through `burning`, v0.8.4.43.54); `clears` — the surfaces it ends on its squares (v0.8.4.43.47: ice ends the current)", "electric_water": {"name": "Вода под током", "damage": "lightning", "where": "wet", "dice": "1d6", "type": "lightning", "save": "con", "dc": 12, "when": ["enter", "start"], "rounds": 1}, "blessed_water": {"name": "Освящённая вода", "damage": "radiant", "where": "wet", "dice": "1d6", "type": "radiant", "types": ["undead", "fiend"], "when": ["enter", "start"], "rounds": 10}, "ice": {"name": "Лёд", "damage": "cold", "where": "wet", "save": "dex", "dc": 10, "tag": "", "cond": "prone", "slow": true, "when": ["enter"], "rounds": 10, "clears": ["electric_water"]}, "hellfire": {"name": "Адский огонь", "damage": "fire", "from": ["fiend"], "where": "floor", "cond": "burning", "for": {"harm": {"dice": "2d6", "type": "fire", "when": "start"}, "ticks": 1}, "when": ["enter", "start"], "rounds": 3}}, "strewn": {"_doc": "Things strewn on squares (v0.8.4.27, FightField.strew): a thing's `use.throw.strew` names its row — `span` squares a side, a zone of the ground with `save` and `dc` on entering (`tag` \"\" — no magic in it), `cond` on a failed save, `fail` — what else a failed save does: `dice` of `type`, `speed` until it regains a hit point, `stop` — the walk ends there. `escape` — the skills that break its `cond` against its `dc` («Вырваться»), `burns` — fire takes its squares, `pass` / `feel` — the status flag that walks through it / feels who touches it (Web Walker, Web Sense, v0.8.4.27.3); a trait's `lays` (rules.feature_wear) strews its row around its creature when it comes into a fight: `around` squares, a `share` of them.", "caltrops": {"name": "Шипы", "span": 1, "save": "dex", "dc": 15, "tag": "", "on": ["enter"], "fail": {"dice": "1", "type": "piercing", "speed": -10, "stop": true}}, "ball_bearings": {"name": "Шарики", "span": 2, "save": "dex", "dc": 10, "tag": "", "on": ["enter"], "cond": "prone"}, "web": {"name": "Паутина", "save": "dex", "dc": 12, "tag": "", "on": ["start", "enter"], "cond": "restrained", "escape": ["athletics"], "slow": true, "burns": true, "pass": "walks_web", "feel": "feels_web"}}, "noise": {"reach": 16, "wall": 6, "beyond": 6, "loud": {"thunder": 12}, "deaf": ["road"], "_v08_4_24": "Squares of a fight's noise (80 ft), minus `wall` per wall square on the line; a room past a way out hears it from `beyond` left, only within one location and not along a way of a `deaf` kind; a blow of a `loud` damage type adds its squares to the next round's noise."}
 		},
 		"classed": {
 			"_doc": "The class of a fighter by its SRD template (v0.8.4.9, FeatureRules.give_class): class, level, subclass. A pack's NPC or an encounter may name its own.",
@@ -3830,7 +3850,7 @@
 			"flow": 80,
 			"flee_lost": 12,
 			"keep_most": 8,
-			"acts": {"frenzy": 4, "dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100, "pick_up": 6, "avert": 10, "escape": 6, "help": 0.5, "grapple": 2, "shove": 3, "shape": 2},
+			"acts": {"frenzy": 4, "dash": 5, "dodge": 1, "disengage": 3, "hide": 3, "stand": 100, "pick_up": 6, "avert": 10, "escape": 6, "put_out": 8, "help": 0.5, "grapple": 2, "shove": 3, "shape": 2},
 			"items": {"_doc": "What a thing is worth to the AI (core/acts/use_item.gd, v0.8.4.10): a healing one is taken `when` (first — before it walks) under `heal_below` of its HP. A flask is thrown for its damage, a scroll is weighed as its spell.", "when": "first", "heal_below": 0.5},
 			"features": {"_doc": "What a feature is worth to the AI (core/acts/feature.gd): `when` first or last — taken for its bonus or free action before it walks or when all is done; `power` — an act beside its blows; `below` — only under this share of its HP; `foes` — only with a foe of these types within 30 ft; `near` — only with a foe beside it (Divine Eminence, v0.8.4.27.5).",
 				"rage": {"when": "first"}, "divine_eminence": {"when": "first", "near": true}, "reckless": {"when": "first"}, "action_surge": {"when": "first"}, "second_wind": {"when": "first", "below": 0.5},

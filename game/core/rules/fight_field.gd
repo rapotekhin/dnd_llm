@@ -242,8 +242,7 @@ static func hero_stands(s: GameSession, data: Dictionary) -> void:
 static func stepped(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> bool:
 	var g := FightGrid.grid(s, data)
 	var bits := FightGrid.flags_at(g, FightGrid.cell(f))
-	if douses_at(s, data, FightGrid.cell(f)) and not LiquidRules.burning(s, Sheet.holder(s, f)).is_empty():
-		LiquidRules.uncoat(Sheet.holder(s, f))
+	if douses_at(s, data, FightGrid.cell(f)) and LiquidRules.put_out(s, data, Sheet.holder(s, f)):
 		lines.append("%s гасит пламя в воде" % f["name"])
 	var hero := str(f.get("id")) == CombatRules.PLAYER
 	var flying := CombatRules.airborne(s, data, f)

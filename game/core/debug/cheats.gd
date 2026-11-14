@@ -93,7 +93,7 @@ static func conditions(data: Dictionary) -> Dictionary:
 		if not id.begins_with("_") and not ids.has(id):
 			ids.append(id)
 	for id: String in ids:
-		if not ThingRules.lies_on_things(data, id) and not EXHAUSTION_STEP.search(id):
+		if not ThingRules.only_things(data, id) and not EXHAUSTION_STEP.search(id):
 			out[id] = {"name": ConditionRules.name_of(data, id)}
 	return out
 
@@ -196,16 +196,24 @@ static func defense(s: GameSession, data: Dictionary, who: String, kind: String,
 
 
 ## A status of the engine on `who` (an id) until it is taken off, laid as anything lays it (ConditionRules.impose), or
-## lifted. Lines.
-static func condition(s: GameSession, data: Dictionary, who: String, cond: String, on: bool) -> Array[String]:
+## lifted. `dice` — the damage each turn of a status that has it (`cond burning 2d6`, v0.8.4.43.54): its row's type and moment.
+## Lines.
+static func condition(s: GameSession, data: Dictionary, who: String, cond: String, on: bool, dice: String = "") -> Array[String]:
 	var w := Sheet.own(s, who)
 	if not on and cond == "exhaustion":  # a level of the one scale off, as a rest takes it
 		return ConditionRules.add_exhaustion(s, data, -1, "", who)
 	if not on:
 		ConditionRules.remove(Sheet.holder(s, w), cond)
 		return ["снято: %s" % ConditionRules.name_of(data, cond)]
-	var lines := ConditionRules.impose(s, data, {"condition": cond, "ends": {}, "source": SOURCE.duplicate()}, w)
-	lines.push_front("состояние: %s" % ConditionRules.name_of(data, cond))
+	var e := {"condition": cond, "ends": {}, "source": SOURCE.duplicate()}
+	var row_harm: Dictionary = data["rules"]["condition_effects"].get(cond, {}).get("harm", {})
+	if not dice.is_empty():
+		if row_harm.is_empty():
+			return ["у состояния «%s» нет урона каждый ход" % ConditionRules.name_of(data, cond)]
+		e["harm"] = row_harm.merged({"dice": dice}, true)
+	var lines := ConditionRules.impose(s, data, e, w)
+	var hm := ConditionRules.harm_text(data, ConditionRules.effects_of(Sheet.holder(s, w), cond)[0]) if ConditionRules.has(Sheet.holder(s, w), cond) else ""
+	lines.push_front("состояние: %s%s" % [ConditionRules.name_of(data, cond), (" — " + hm) if not hm.is_empty() else ""])
 	return lines
 
 

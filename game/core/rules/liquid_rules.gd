@@ -485,24 +485,29 @@ static func coat_on(s: GameSession, h: Dictionary) -> Dictionary:
 	return {}
 
 
-## `h` is splashed with `lid`: its `coat` replaces what was on it; water puts out a fire. Lines.
-static func coat(s: GameSession, data: Dictionary, h: Dictionary, lid: String, cause: String) -> Array[String]:
+## `h` is splashed with `lid`: its `coat` replaces what was on it; water puts out a fire. `who` — the creature it is on (a
+## fighter, Sheet.HERO; {} — a thing): a coat that burns sets it on fire — the status `burning` of its dice for a minute or until
+## put out, its `put_out` the save at the end of its turns (v0.8.4.43.54, one status for every fire). Lines.
+static func coat(s: GameSession, data: Dictionary, h: Dictionary, lid: String, cause: String, who: Dictionary = {}) -> Array[String]:
 	var k: Dictionary = kind(data, lid).get("coat", {})
 	if k.is_empty():
 		return []
 	var lines: Array[String] = []
-	var was := coat_on(s, h)
-	if bool(k.get("douses", false)):
-		if was.has("burns") and h.has("name"):
-			lines.append("%s: пламя погасло" % h["name"])
-		ConditionRules.remove(h, "burning")  # a thing's fire
+	if bool(k.get("douses", false)) and put_out(s, data, h) and h.has("name"):  # a thing's fire, a creature's
+		lines.append("%s: пламя погасло" % h["name"])
 	ConditionRules.remove(h, "coated")
 	var e := {"condition": "coated", "liquid": lid, "ends": {"at": ConditionRules.now(s) + int(k["minutes"]) * ConditionRules.ROUNDS_PER_MINUTE} if k.has("minutes") else {},
 		"source": {"kind": "liquid", "id": lid, "name": cause}}
+	var fire := not who.is_empty() and k.has("burns")
 	for key: String in ["douses", "fire_plus", "burns", "put_out"]:
-		if k.has(key):
+		if k.has(key) and not (fire and key in ["burns", "put_out"]):
 			e[key] = k[key]
 	ConditionRules.add_effect(h, e)
+	if fire:
+		var out: Dictionary = k.get("put_out", {"ability": "dex", "dc": 10})
+		lines.append_array(ConditionRules.impose(s, data, {"condition": "burning", "harm": {"dice": str(k["burns"]), "type": "fire", "when": "start"},
+			"save": {"ability": str(out["ability"]), "dc": int(out["dc"]), "tag": "", "repeat": true},
+			"ends": {"at": ConditionRules.now(s) + ConditionRules.ROUNDS_PER_MINUTE}, "source": {"kind": "liquid", "id": lid, "name": cause}}, who))
 	return lines
 
 
@@ -516,9 +521,29 @@ static func douses(s: GameSession, h: Dictionary) -> bool:
 	return bool(coat_on(s, h).get("douses", false))
 
 
-## The dice it burns with at the start of its turn, "" — it does not burn.
-static func burning(s: GameSession, h: Dictionary) -> String:
-	return str(coat_on(s, h).get("burns", ""))
+## The dice it burns with at the start of its turn, "" — it does not burn: a burning coat of a thing, a creature's `burning`.
+static func burning(s: GameSession, data: Dictionary, h: Dictionary) -> String:
+	if coat_on(s, h).has("burns"):
+		return str(coat_on(s, h)["burns"])
+	for e: Dictionary in ConditionRules.effects_of(h, "burning"):
+		if not ConditionRules.harm_of(data, e).is_empty():
+			return str(ConditionRules.harm_of(data, e)["dice"])
+	return ""
+
+
+## Water or a beaten flame on `h` (v0.8.4.43.54): every status whose row is put out by water (`out.douse`: burning — a thing's
+## fire and a creature's) and a coat that burns go. True when something went out.
+static func put_out(s: GameSession, data: Dictionary, h: Dictionary) -> bool:
+	var out := false
+	var table: Dictionary = data["rules"]["condition_effects"]
+	for id: String in table:
+		if table[id] is Dictionary and bool((table[id] as Dictionary).get("out", {}).get("douse", false)) and ConditionRules.has(h, id):
+			ConditionRules.remove(h, id)
+			out = true
+	if coat_on(s, h).has("burns"):
+		uncoat(h)
+		out = true
+	return out
 
 
 ## The coat goes (it burnt off, was put out, washed off).

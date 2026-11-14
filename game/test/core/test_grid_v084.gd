@@ -147,7 +147,9 @@ func test_oil_catches_and_burns_who_stands_there_then_goes_out() -> void:
 	assert_array(lines).contains(["Огонь занимается"])
 	assert_array(TestUtils.zones_on(s, foe)).contains(["Огонь"])
 	var hp := int(foe["hp"])
-	lines.append_array(SpellEffects.zone_tick(s, data, foe, "start"))
+	lines.append_array(SpellEffects.zone_tick(s, data, foe, "start"))  # the fire lays «горит», the status burns (v0.8.4.43.54)
+	assert_bool(ConditionRules.has(foe, "burning")).is_true()
+	Harm.each_turn(s, data, foe, "start", lines)
 	assert_int(int(foe["hp"])).is_less(hp)
 	s.combat["round"] = int(s.combat["round"]) + 2
 	FightField.fire_round(s, data, lines)

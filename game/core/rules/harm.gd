@@ -19,6 +19,27 @@ static func typed(s: GameSession, data: Dictionary, who: Dictionary, dmg: int, d
 	return left
 
 
+## The damage its statuses deal at the `when` of its turn (start | end, v0.8.4.43.54, as in BG3): each status of anybody with a
+## harm — the source's numbers or its row's (ConditionRules.harm_of) — through the defenses and `take`; one with `ticks` goes
+## after its last. One of a kind: a second source is weighed by the row's `same` (ConditionRules.impose).
+static func each_turn(s: GameSession, data: Dictionary, who: Dictionary, when: String, lines: Array[String]) -> void:
+	var h := Sheet.holder(s, who)
+	for e: Dictionary in ConditionRules.effects(h).duplicate():
+		var hm := ConditionRules.harm_of(data, e)
+		if hm.is_empty() or str(hm.get("when", "start")) != when or not Attack.up(s, who):
+			continue
+		var by := str(e.get("by", ""))
+		typed(s, data, who, CombatRules.roll_dice(s.rng, str(hm["dice"])), str(hm["type"]), lines,
+			"%s — %s: −{hp} HP ({words})" % [h.get("name", ""), ConditionRules.name_of(data, str(e.get("condition", "")))], false,
+			by.is_empty() or by == CombatRules.PLAYER)
+		if e.has("ticks"):
+			e["ticks"] = int(e["ticks"]) - 1
+			if int(e["ticks"]) <= 0:
+				ConditionRules.remove_effect(h, int(e["uid"]))
+				if Sheet.is_hero(who):
+					CharacterRules.refresh(h, data, s.items)
+
+
 ## A damage type's name with what a defense did to it: «огонь, сопротивление: …».
 static func words(data: Dictionary, dtype: String, note: String) -> String:
 	return ", ".join([str(data["misc"]["damage_types"].get(dtype, dtype)), note].filter(func(w: String) -> bool: return not w.is_empty()))
