@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## v0.8.4.43.31: furnishings of a chunk — lists of things laid by the author (`furnish` of a chunk in layouts.json).
-## The generator turns them with their chunk and mixes the things of all furnishings: each stands where it meets none.
+## The generator turns them with their chunk; since v0.8.4.43.51 a room stands one of them whole, never a mix.
 
 var data: Dictionary
 
@@ -35,7 +35,7 @@ func test_a_thing_of_a_furnishing_keeps_its_shape_on_the_turned_chunk() -> void:
 					assert_bool(cells.has(c)).override_failure_message("%d %s %d" % [rot, flip, turn]).is_true()
 
 
-func test_the_furnishings_of_a_room_mix_and_never_meet() -> void:
+func test_a_room_stands_one_of_its_furnishings_never_a_mix() -> void:
 	var s := TestUtils.new_session()
 	s.room_id = "brod-tavern-hall"
 	s.props[s.room_id] = []
@@ -60,7 +60,7 @@ func test_the_furnishings_of_a_room_mix_and_never_meet() -> void:
 		{"name": "одна", "things": [{"body": "stool", "x": a.x, "y": a.y}, {"body": "barrel", "x": b.x, "y": b.y}]},
 		{"name": "другая", "things": [{"body": "crate", "x": a.x, "y": a.y}, {"body": "chest", "x": b.x, "y": b.y}]},
 	]
-	var mixed := false
+	var used := {}
 	for seed: int in 30:
 		s.game_seed = 100 + seed
 		s.layout_cache.clear()
@@ -78,8 +78,9 @@ func test_the_furnishings_of_a_room_mix_and_never_meet() -> void:
 		for t: Dictionary in mine:
 			assert_bool(str(t["body"]) in ["stool", "barrel", "crate", "chest"]).is_true()
 			sets[int(t["set"])] = true
-		mixed = mixed or sets.size() == 2
-	assert_bool(mixed).override_failure_message("never a thing of each furnishing in one room").is_true()
+		assert_int(sets.size()).override_failure_message("seed %d: a mix of furnishings" % seed).is_equal(1)
+		used.merge(sets)
+	assert_int(used.size()).override_failure_message("another seed — another furnishing").is_equal(2)
 
 
 func test_a_furnishings_thing_is_no_place_the_master_names() -> void:

@@ -103,23 +103,39 @@ func _screen(out: Array) -> Dictionary:  # key → [the column of the bar, the r
 	return seen
 
 
-func test_a_divider_slides_the_next_group_under_and_no_icon_moves() -> void:
+## v0.8.4.43.51, the author: «словно линия-разделитель между группами — это край карты в колоде… все иконки прикреплены к
+## своим позициям и просто смещаются, когда выдвигают или задвигают их группу».
+func test_a_divider_is_the_edge_of_the_card_on_its_right() -> void:
 	var st := {}
 	var cells := {"Do_a": "common", "Do_b": "common", "Do_c": "common", "spell:x": "class", "spell:y": "class", "spell:z": "class", "spell:w": "class"}
 	var before := _screen(HotbarLayout.place(st, "fight", cells, 8))
 	assert_int(before.size()).is_equal(7)
-	HotbarLayout.shift(st, "fight", 0, 1)  # the common group over the first column of the spells
+	HotbarLayout.shift(st, "fight", 0, 1)  # the edge to the right: the spells go with it, none hidden, none left behind
 	var after := _screen(HotbarLayout.place(st, "fight", cells, 8))
+	assert_int(after.size()).is_equal(7)
 	for k: String in after:
-		assert_array(after[k]).is_equal(before[k])  # every icon in sight where it stood
-	assert_int(after.size()).is_less(7)  # the spells of the column under the common group are hidden
+		var moved: Array = [int(before[k][0]) + (1 if k.begins_with("spell:") else 0), before[k][1]]
+		assert_array(after[k]).override_failure_message("%s: %s → %s" % [k, before[k], after[k]]).is_equal(moved)
 	HotbarLayout.shift(st, "fight", 0, -1)
-	assert_dict(_screen(HotbarLayout.place(st, "fight", cells, 8))).is_equal(before)  # and back in their places
-	HotbarLayout.shift(st, "fight", 0, -1)  # the spells shown further left: an empty column before them, none moved
-	var wider := _screen(HotbarLayout.place(st, "fight", cells, 8))
+	assert_dict(_screen(HotbarLayout.place(st, "fight", cells, 8))).is_equal(before)  # and back
+	var common := int(HotbarLayout.place(st, "fight", cells, 8)[0]["cols"])
+	HotbarLayout.shift(st, "fight", 0, 1 - common)  # to the left as far as it goes: the common card one column wide
+	var left := _screen(HotbarLayout.place(st, "fight", cells, 8))
 	for k: String in before:
-		if str(k).begins_with("spell:"):
-			assert_array(wider[k]).is_equal(before[k])
+		if k.begins_with("spell:"):  # the spells' first icons at the edge, as before
+			assert_array(left[k]).is_equal([int(before[k][0]) + 1 - common, before[k][1]])
+		elif int(before[k][0]) == 0:
+			assert_array(left[k]).is_equal(before[k])
+		else:
+			assert_bool(left.has(k)).override_failure_message(k + " is under the spells' card").is_false()
+	HotbarLayout.shift(st, "fight", 0, 99)  # to the right as far as it goes: the spells' card one column, the rest past the end
+	var right := _screen(HotbarLayout.place(st, "fight", cells, 8))
+	for k: String in ["spell:x", "spell:y"]:
+		assert_array(right[k]).is_equal([7, before[k][1]])
+	assert_bool(right.has("spell:z") or right.has("spell:w")).is_false()
+	HotbarLayout.shift(st, "fight", 0, -99)
+	HotbarLayout.shift(st, "fight", 0, common - 1)
+	assert_dict(_screen(HotbarLayout.place(st, "fight", cells, 8))).is_equal(before)  # every icon in its column of its card
 
 
 ## The author: «новые заклинания и умения встают в первую свободную видимую клетку своей группы, а не в конец».

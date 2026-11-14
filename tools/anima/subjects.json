@@ -4604,54 +4604,56 @@
  },
  "races/dragonborn": {
   "dark": false,
-  "sentence": "A single proud dragon head in profile facing right on a strong scaly neck, its mouth closed, two horns swept back and a frill of spikes on its cheek, the collar of a breastplate around the base of its neck.",
-  "tags": "dragon head, profile, horns, scales, closed mouth, armor collar"
+  "sentence": "A single dragonborn face: a dragon-like head with a short scaly snout and two nostrils, two horns swept back on both sides of the head, a frill of spikes on the cheeks, the collar of a breastplate. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "dragon head, dragonborn, portrait, front view, looking at viewer, horns, scales, armor collar, symmetrical"
  },
  "races/dwarf": {
   "dark": false,
-  "sentence": "A single thick long beard braided into two plaits with metal rings on them, under a big nose and bushy eyebrows, and a double-bladed battle axe standing upright behind it.",
-  "tags": "beard, braided beard, bushy eyebrows, big nose, battle axe, front view",
+  "sentence": "A single dwarf face, a broad stern man with a big nose, bushy eyebrows and a thick long beard braided into two plaits with metal rings. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, dwarf, portrait, face, front view, looking at viewer, beard, braided beard, bushy eyebrows, big nose, symmetrical",
   "people": true
  },
  "races/elf": {
   "dark": false,
-  "sentence": "A single head of an elf in profile facing right, a slender young face, long straight hair flowing down the back of the neck and a long pointed ear rising high and sharp out of the hair, drawn as a simple outline like the head on an old coin.",
-  "tags": "elf, pointy ears, long pointy ears, profile, head, long hair, coin portrait",
+  "sentence": "A single elf face, a slender young woman with long straight hair falling to the shoulders on both sides and two long pointed ears rising high and sharp out of the hair. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1girl, solo, elf, portrait, face, front view, looking at viewer, long hair, long pointy ears, symmetrical",
   "people": true
  },
  "races/gnome": {
   "dark": false,
-  "sentence": "A single tall pointed cone hat with its tip bent to one side, and a big cogwheel pinned on its band.",
-  "tags": "pointed hat, cone hat, gear, cogwheel, front view"
+  "sentence": "A single gnome face, a small round face with big curious eyes, a big round nose, a wide grin, large ears sticking out on both sides and tufts of messy hair. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, gnome, portrait, face, front view, looking at viewer, big nose, big eyes, grin, messy hair, symmetrical",
+  "people": true
  },
  "races/half_elf": {
   "dark": false,
-  "sentence": "Two ears seen from the side, back to back and joined in the middle as one emblem: on the left a rounded human ear, on the right a long pointed elf ear.",
-  "tags": "ear, pointy ears, human ear, elf ear, symmetry, from side",
+  "sentence": "A single half-elf face, a young woman with shoulder-length hair and two slightly pointed ears showing through the hair on both sides, a calm look. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1girl, solo, portrait, face, front view, looking at viewer, medium hair, pointy ears, symmetrical",
   "people": true
  },
  "races/half_orc": {
   "dark": false,
-  "sentence": "A single heavy jaw of an orc seen from the front, two big tusks jutting up from the lower lip, a flat broad nose and a scowling brow above.",
-  "tags": "orc, tusks, jaw, underbite, flat nose, front view",
+  "sentence": "A single half-orc face, a man with a heavy square jaw, two small tusks jutting up from the lower lip, a flat broad nose, a scowling heavy brow and short rough hair. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, orc, portrait, face, front view, looking at viewer, tusks, underbite, flat nose, short hair, symmetrical",
   "people": true
  },
  "races/halfling": {
   "dark": false,
-  "sentence": "A single small bare foot seen from the side, with short round toes and a tuft of curly hair on its top.",
-  "tags": "bare foot, foot, toes, hairy feet, from side",
+  "sentence": "A single halfling face, a round young cheerful woman with soft cheeks, a small smile, curly hair and small slightly pointed ears. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1girl, solo, halfling, portrait, face, front view, looking at viewer, curly hair, smile, symmetrical",
   "people": true
  },
  "races/human": {
   "dark": false,
-  "sentence": "A single human head in profile facing right, with short hair, a straight nose and a calm look, drawn as a simple outline like the head on an old coin.",
-  "tags": "profile, head, face, short hair, coin portrait, from side",
+  "sentence": "A single human face, a man with short hair, a straight nose and a calm look, a plain collar. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, portrait, face, front view, looking at viewer, short hair, symmetrical",
   "people": true
  },
  "races/tiefling": {
   "dark": false,
-  "sentence": "A single pair of thick ridged horns curling back like a ram's, and below them a long thin tail ending in a spade-shaped tip curling in an S.",
-  "tags": "demon horns, curved horns, demon tail, spade tail, front view"
+  "sentence": "A single tiefling face, a sharp handsome man with eyes without pupils, long hair and two thick ridged horns curling back from the forehead like a ram's on both sides. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, tiefling, portrait, face, front view, looking at viewer, demon horns, curled horns, long hair, symmetrical",
+  "people": true
  },
  "spells/acid_arrow": {
   "green": true,
@@ -5492,31 +5494,32 @@
  "subraces/drow": {
   "dark": false,
   "people": true,
-  "sentence": "A single head of an elf in profile facing right, a slender face, long straight hair and a long pointed ear rising high out of the hair, and a big spider with eight long legs hanging on a thread just above the head.",
-  "tags": "elf, pointy ears, long pointy ears, profile, head, spider, hanging spider"
+  "sentence": "A single drow face, a slender woman with long straight white hair, two long pointed ears rising out of the hair on both sides and a thin circlet across the brow with a small spider at its front. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1girl, solo, drow, elf, portrait, face, front view, looking at viewer, long hair, white hair, long pointy ears, circlet, spider, symmetrical"
  },
  "subraces/high_elf": {
   "dark": false,
   "people": true,
-  "sentence": "A single head of an elf in profile facing right, a slender face, long straight hair and a long pointed ear rising high out of the hair, a thin circlet on the brow with a bright four-pointed magic star shining at its front.",
-  "tags": "elf, pointy ears, long pointy ears, profile, head, circlet, four-pointed star"
+  "sentence": "A single high elf face, a slender man with long straight hair, two long pointed ears rising out of the hair on both sides and a thin circlet on the brow with a bright four-pointed star at its front. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, elf, portrait, face, front view, looking at viewer, long hair, long pointy ears, circlet, four-pointed star, symmetrical"
  },
  "subraces/hill_dwarf": {
   "dark": false,
   "people": true,
-  "sentence": "A single rounded grassy hill at the bottom with a few tufts of grass on its slope, and a dwarf's head rising from behind its top: a big nose, bushy eyebrows and a long braided beard falling over the hill.",
-  "tags": "dwarf, beard, braided beard, bushy eyebrows, big nose, hill, front view"
+  "sentence": "A single hill dwarf face, a broad kindly man with a big nose, bushy eyebrows and a long braided beard, a thick traveller's hood over the head. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, dwarf, portrait, face, front view, looking at viewer, beard, braided beard, bushy eyebrows, big nose, hood, symmetrical"
  },
  "subraces/lightfoot_halfling": {
   "dark": false,
   "people": true,
-  "sentence": "A single small bare foot seen from the side, stepping lightly on its toes, with a long feather floating under its heel.",
-  "tags": "bare foot, tiptoe, feather, from side"
+  "sentence": "A single lightfoot halfling face, a round young cheerful man with soft cheeks, curly hair, small slightly pointed ears and a long feather tucked behind one ear. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1boy, solo, halfling, portrait, face, front view, looking at viewer, curly hair, smile, feather, symmetrical"
  },
  "subraces/rock_gnome": {
   "dark": false,
-  "sentence": "A single big cogwheel set into a rough boulder, half of the gear sticking out of the cracked stone.",
-  "tags": "gear, cogwheel, rock, boulder, stone"
+  "sentence": "A single rock gnome face, a small round face with big curious eyes, a big round nose, large ears sticking out on both sides and a pair of round goggles pushed up on the forehead. Seen straight from the front like a portrait on a medallion, symmetrical, the head and the top of the shoulders filling the square, eyes looking at the viewer.",
+  "tags": "1girl, solo, gnome, portrait, face, front view, looking at viewer, big nose, big eyes, goggles on head, symmetrical",
+  "people": true
  },
  "traits/artificers_lore": {
   "dark": false,

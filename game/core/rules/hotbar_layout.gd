@@ -7,16 +7,18 @@ extends RefCounted
 ## hidden until it is dragged back from the sheet. A slot keeps its key while the act is not offered (a spent scroll, a
 ## fight's act out of a fight), so it comes back to its place. Pure data: the state is a Dictionary the profile keeps
 ## (SaveManager.hotbar).
-## {rows, modes: {<mode>: {sections: [{kind, cols, width, fixed, skip, grid: [[key|"" × MAX_ROWS], …]}], hidden: [key]}}}
+## {rows, modes: {<mode>: {sections: [{kind, cols, width, fixed, grid: [[key|"" × MAX_ROWS], …]}], hidden: [key]}}}
 ## v0.8.4.43.14 (the author: «вся эта панель должна быть идентична как в бою, так и вне боя»): the bar has one layout, `BAR`,
 ## in a fight and out of it, and a section «Боевые» (`combat`) of the fight's acts. `cols` is what is drawn now, `width`
 ## what the player set by a divider: a bar too narrow for it draws less this time and never forgets it.
-## v0.8.4.43.49 (the author: «группы как карты из колоды, как в BG3… иконка, оказавшаяся под соседней группой, прячется на
-## своём месте, а не переезжает в другую клетку»): a section is a card of columns, its `grid` a list of columns of
-## MAX_ROWS slots each, and the bar shows `cols` of them from `skip`. A divider moved right slides the next card under
-## the one on its left (its first columns hidden, `skip` grows); moved left it shows them again — no icon ever changes its
-## cell or its place on the screen. A row taken off by «−» only hides its icons; the bar never scrolls. A slot is told by
-## `at(column, row)`.
+## v0.8.4.43.49: a section is a card of columns, its `grid` a list of columns of MAX_ROWS slots each; a row taken off by «−»
+## only hides its icons; the bar never scrolls. A slot is told by `at(column, row)`.
+## v0.8.4.43.51 (the author: «словно линия-разделитель между группами — это край карты в колоде… все иконки прикреплены к
+## своим позициям и просто смещаются, когда выдвигают или задвигают их группу»): the cards lie as a deck, each on the one on
+## its left, a divider the left edge of the card on its right. A card is always seen from its first column, `cols` of
+## them: its icons go with its edge. A divider moved right shows more of the left card and slides the right one on, its
+## last columns under the next card (the last card's past the bar's end); moved left the other way. No icon changes its
+## column of the card.
 
 const ROWS := 2
 const MAX_ROWS := 4
@@ -70,11 +72,11 @@ static func mode(state: Dictionary, m: String) -> Dictionary:
 
 
 ## A section as a card of columns: one laid out in rows of its `cols` (the bar before v0.8.4.43.49) keeps each key in its
-## column and row; a key past the last row goes back to the first free slot.
+## column and row; a key past the last row goes back to the first free slot. The first columns a card of v0.8.4.43.49 hid
+## under the one on its left (`skip`) are seen again: a card is seen from its first column (v0.8.4.43.51).
 static func _card(sec: Dictionary) -> void:
 	if sec.has("grid"):
-		if not sec.has("skip"):
-			sec["skip"] = 0
+		sec.erase("skip")
 		return
 	var grid: Array = []
 	var wide := maxi(1, int(sec.get("cols", 0)))
@@ -85,7 +87,6 @@ static func _card(sec: Dictionary) -> void:
 		if str(slots[j]) != "" and row < MAX_ROWS:
 			_column(grid, col)[row] = str(slots[j])
 	sec["grid"] = grid
-	sec["skip"] = 0
 	sec.erase("slots")
 
 
@@ -99,7 +100,7 @@ static func _column(grid: Array, col: int) -> Array:
 	return grid[col]
 
 
-## The sections as they are to be drawn: each {kind, cols, skip, slots, index} — `slots` the keys seen in the order the
+## The sections as they are to be drawn: each {kind, cols, slots, index} — `slots` the keys seen in the order the
 ## grid is drawn (row by row, "" for an empty slot or a cell not offered now), `index` the number of each slot (`at`);
 ## `cells` — {key: kind} of what is offered, `total` — the columns the bar has room for. A section with no cell takes no
 ## column. `side` — "fight" or "peace" for the one bar of both (v0.8.4.43.14): a section is as wide as the larger of its two
@@ -129,8 +130,8 @@ static func place(state: Dictionary, m: String, cells: Dictionary, total: int, s
 	var out: Array = []
 	for sec: Dictionary in sections:
 		if int(sec["cols"]) > 0:
-			var seen := view(state, sec, int(sec["skip"]), int(sec["cols"]), cells)
-			out.append({"kind": sec["kind"], "cols": sec["cols"], "skip": sec["skip"], "slots": seen["slots"], "index": seen["index"]})
+			var seen := view(state, sec, 0, int(sec["cols"]), cells)
+			out.append({"kind": sec["kind"], "cols": sec["cols"], "slots": seen["slots"], "index": seen["index"]})
 	return out
 
 
@@ -152,13 +153,12 @@ static func view(state: Dictionary, sec: Dictionary, from: int, n: int, cells: D
 ## hides the fewest; with none, the first free one past the seen columns.
 static func _put_new(sec: Dictionary, key: String, r: int) -> void:
 	var grid: Array = sec["grid"]
-	var from := int(sec["skip"])
-	for col in range(from, from + maxi(1, int(sec["cols"]))):
+	for col in maxi(1, int(sec["cols"])):
 		for row in r:
 			if str(_column(grid, col)[row]) == "":
 				grid[col][row] = key
 				return
-	var col := from + maxi(1, int(sec["cols"]))
+	var col := maxi(1, int(sec["cols"]))
 	while true:
 		var c := _column(grid, col)
 		for row in r:
@@ -185,10 +185,10 @@ static func move(state: Dictionary, m: String, key: String, to: int, index: int,
 		return
 	var col := index / MAX_ROWS
 	var row := index % MAX_ROWS
-	if packed and (col < int(sec["skip"]) or col >= int(sec["skip"]) + int(sec["cols"]) or row >= rows(state)):
+	if packed and (col >= int(sec["cols"]) or row >= rows(state)):
 		var free := _free_in_sight(state, sec)
 		if free < 0:
-			free = at(int(sec["skip"]) + int(sec["cols"]) - 1, rows(state) - 1)
+			free = at(int(sec["cols"]) - 1, rows(state) - 1)
 		col = free / MAX_ROWS
 		row = free % MAX_ROWS
 	var target := _column(sec["grid"], col)
@@ -207,7 +207,7 @@ static func move(state: Dictionary, m: String, key: String, to: int, index: int,
 ## The first free slot in sight of `sec` (`at`), -1 — none.
 static func _free_in_sight(state: Dictionary, sec: Dictionary) -> int:
 	var grid: Array = sec["grid"]
-	for col in range(int(sec["skip"]), int(sec["skip"]) + int(sec["cols"])):
+	for col in int(sec["cols"]):
 		for row in rows(state):
 			if col >= grid.size() or str(grid[col][row]) == "":
 				return at(col, row)
@@ -224,10 +224,10 @@ static func hide(state: Dictionary, m: String, key: String) -> void:
 		(md["hidden"] as Array).append(key)
 
 
-## The divider after drawn section `i` moves by `delta` columns (v0.8.4.43.49, as a deck of cards): the section on its
-## left shows as many more (or fewer) of its own columns, the one on its right hides as many of its first ones under it
-## (or shows them again, with empty ones before its first when it had none hidden). No icon moves; each section keeps at
-## least one column, and both keep the width the player gave them.
+## The divider after drawn section `i` moves by `delta` columns (v0.8.4.43.51, the edge of a card of the deck): the
+## section on its left shows as many more (or fewer) of its own columns, the one on its right goes with its edge — as
+## many fewer (or more) of its last columns seen, the rest under the next card. Its icons stay in their columns of the
+## card; each section keeps at least one column, and both keep the width the player gave them.
 static func shift(state: Dictionary, m: String, i: int, delta: int) -> void:
 	var sections := _drawn(mode(state, m)["sections"])
 	if i < 0 or i + 1 >= sections.size() or delta == 0:
@@ -237,14 +237,6 @@ static func shift(state: Dictionary, m: String, i: int, delta: int) -> void:
 	var d := reach(state, m, i, delta)
 	a["cols"] = int(a["cols"]) + d
 	b["cols"] = int(b["cols"]) - d
-	b["skip"] = int(b["skip"]) + d
-	if int(b["skip"]) < 0:  # its card had nothing before: empty columns laid before it, its icons where they stood
-		for n in -int(b["skip"]):
-			var empty: Array = []
-			empty.resize(MAX_ROWS)
-			empty.fill("")
-			(b["grid"] as Array).push_front(empty)
-		b["skip"] = 0
 	for sec: Dictionary in [a, b]:
 		sec["width"] = int(sec["cols"])
 		sec["fixed"] = true
@@ -266,7 +258,7 @@ static func _section_of(sections: Array, kind: String) -> Dictionary:
 	for sec: Dictionary in sections:
 		if str(sec["kind"]) == kind:
 			return sec
-	var sec := {"kind": kind, "cols": 0, "grid": [], "skip": 0}
+	var sec := {"kind": kind, "cols": 0, "grid": []}
 	sections.append(sec)
 	return sec
 
@@ -295,7 +287,7 @@ static func _fit(state: Dictionary, sections: Array, cells: Dictionary, fresh: D
 			for row in r:
 				if cells.has(str(grid[col][row])):
 					n += 1
-					far = maxi(far, col + 1 - int(sec["skip"]))
+					far = maxi(far, col + 1)
 		var want := maxi(ceili(float(n) / r), far) if n > 0 else 0
 		if want > 0:
 			live.append(sec)

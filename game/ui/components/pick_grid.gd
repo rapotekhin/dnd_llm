@@ -12,7 +12,8 @@ extends VBoxContainer
 signal changed(picked: Array)
 
 const TILE := 72
-const ROW := Vector2(200, 84)  # an icon of 72 beside the name (the author, 2026-11-13: «иконки классов можно сделать больше»)
+const ROW := Vector2(230, 112)  # an icon of 100 beside the name (the author, 2026-11-13: «иконки классов можно сделать больше»;
+	# 2026-11-14: «Иконки рас и классов крупнее» — a race's face as in BG3)
 const NAMED := 112  # the width of an icon with its name under it
 
 var _picked: Array = []

@@ -9,7 +9,11 @@ const OPEN := "open"
 
 
 static func lib(data: Dictionary) -> Dictionary:
-	return data["layouts"]
+	var out: Dictionary = data["layouts"]
+	var things: Dictionary = (data.get("rules", {}) as Dictionary).get("things", {})
+	if not out.has("bodies") and things.has("bodies"):  # the sizes of the furnishings' things for the generator (LayoutGen._covered, v0.8.4.43.51)
+		out["bodies"] = things["bodies"]
+	return out
 
 
 ## What a room says of its place on a map.

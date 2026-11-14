@@ -155,8 +155,8 @@ func test_benches_stand_along_their_tables() -> void:
 	assert_int(benches).is_greater(5)
 
 
-## A table of a furnishing and the benches beside it are one group: they stand whole or not at all, never a table of
-## one furnishing with a crate of another where its bench was.
+## A table of a furnishing and the benches beside it stand whole, never a table of one furnishing with a crate of another
+## where its bench was (v0.8.4.43.51: a room stands one furnishing whole).
 func test_a_table_of_a_furnishing_stands_with_its_benches() -> void:
 	var d := data.duplicate(true)
 	var s := TestUtils.new_session()

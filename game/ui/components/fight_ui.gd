@@ -35,6 +35,7 @@ var _pending_check: Callable
 var _pending_preview: Callable
 var _pending_aim := ""  # the spell whose target is a square: its area follows the mouse
 var _pending_feet := 0  # how far the picked act gets, 0 — no rim on the map
+var _pending_way: Callable  # the way walked up before the picked act at a target (v0.8.4.43.51), invalid — none
 var _acts: Array[Dictionary] = []  # the acts with a target of this redraw: the tabs below and a foe's menu
 var _throws: Array[Dictionary] = []  # what may be thrown this redraw: the «Бросить» cell's list (v0.8.4.43.49)
 var _act_tab := ""  # the tab being drawn, and the list inside it for a foe's menu
@@ -293,6 +294,7 @@ func refresh() -> void:
 	if me and not _pending.is_valid() and not CombatRules.volley(s).is_empty():  # v0.7.22.4: the next dart is armed at once
 		_pending = func(t: String) -> String: return GameState.combat_act("volley", t)
 		_pending_check = func(t: String) -> String: return Acts.one("volley").can(s, data, CombatRules.player(s), t)
+		_pending_way = Callable()
 		_pending_preview = func(_t: String) -> Dictionary: return {}
 		_pending_name = "Volley"
 		_pending_text = ""
@@ -559,7 +561,7 @@ func point_at(id: String) -> void:
 		var cell := FightGrid.shown(CombatRules.fighter(s, id))
 		_field.pointed = cell
 		var text := _about(s, Catalog.data, cell, id)
-		_hint.text = text if not text.is_empty() else _name_of(s, id)
+		_hint.text = text + _walk_up(s, Catalog.data, id) if not text.is_empty() else _name_of(s, id)
 	_field.queue_redraw()
 
 
@@ -579,6 +581,20 @@ func _said_at(id: String) -> String:
 	var why := str(_pending_check.call(id))
 	var said := tr(why) if not why.is_empty() else _preview_text(_pending_preview.call(id))
 	return said if not said.is_empty() else _pending_text
+
+
+## The picked act walks up to `id` first (v0.8.4.43.51, the author: «пунктиром путь куда мой персонаж пойдёт и как, чтобы
+## ударить врага»): its way dashed on the map, what the hint adds — « · подойдёт на 15 фт»; "" — no walk.
+func _walk_up(s: GameSession, data: Dictionary, id: String) -> String:
+	if not _pending_way.is_valid() or id.is_empty() or not _pending_aim.is_empty() or not str(_pending_check.call(id)).is_empty():
+		return ""
+	var path: Array[Vector2i] = _pending_way.call(id)
+	if path.size() < 2:
+		return ""
+	_field.way = path
+	_field.dashed = true
+	var paid: Array = Move.routes(s, data, GameState.fight_actor()).get(path[-1], [0])
+	return " · " + tr("COMBAT_WALK_UP").format({"ft": int(paid[0]) * int(FightGrid.cfg(data)["ft"])})
 
 
 ## The square before the way out shown at `cell`, FightGrid.NONE — no way out there.
@@ -634,7 +650,7 @@ func on_hover(cell: Vector2i) -> void:
 	_field.way = []
 	var about := _about(s, data, cell, id)
 	if not about.is_empty():
-		text = about
+		text = about + _walk_up(s, data, id)
 	elif onto() and _field.routes.has(cell):
 		_field.way = FightGrid.route(_field.routes, cell)
 		text = tr("COMBAT_WALK_COST").format({"ft": int(_field.routes[cell][0]) * int(FightGrid.cfg(data)["ft"])})
@@ -1046,9 +1062,8 @@ func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 	var main := CombatRules.weapon_profile(c, data, s.items, str(c.get("equipped", {}).get("main_hand", "")))
 	var main_id := str(c.get("equipped", {}).get("main_hand", ""))
 	var main_b := _action(w, "Attack_main", tr("COMBAT_ATTACK").format({"name": main["name"], "hit": "%+d" % int(main["to_hit"]), "dmg": _dmg_text(main)}), me,
-		func(t: String) -> String: return GameState.combat_act("attack", t),
-		func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t),
-		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", _blow_far(main))
+		func(t: String) -> String: return GameState.combat_act("attack", t), _near("attack")[0],
+		func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", _blow_far(main), "", _near("attack")[1])
 	if not main_id.is_empty():
 		_details.hook(main_b, str(main["name"]), "", CardInfo.item(c, data, s.items, main_id))
 	if Attack.throwable(Attack.of_weapon(main)):  # v0.8.4.31: a dagger or a spear thrown, it leaves the hand
@@ -1060,16 +1075,14 @@ func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 	if not main_id.is_empty() and not fists:  # fists with a weapon in hand (v0.7.22.11, big test #45), unless «Атака» is them
 		var fist := CombatRules.weapon_profile(c, data, s.items, "")
 		_action(w, "Attack_unarmed", tr("COMBAT_ATTACK").format({"name": fist["name"], "hit": "%+d" % int(fist["to_hit"]), "dmg": _dmg_text(fist)}), me,
-			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "fists"}),
-			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "fists"}),
-			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false, true))
+			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "fists"}), _near("attack", {"hand": "fists"})[0],
+			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false, true), "", 0, "", _near("attack", {"hand": "fists"})[1])
 	var off := CharacterRules.off_weapon(c.get("equipped", {}), data, s.items)  # a shield there strikes not
 	if not off.is_empty():
 		var ow := CombatRules.weapon_profile(c, data, s.items, off, true)
 		_action(w, "Attack_off", tr("COMBAT_ATTACK_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), me,
-			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "off"}),
-			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "off"}),
-			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true), "", _blow_far(ow))
+			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "off"}), _near("attack", {"hand": "off"})[0],
+			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true), "", _blow_far(ow), "", _near("attack", {"hand": "off"})[1])
 		if Attack.throwable(Attack.of_weapon(ow)):
 			_throw("Throw_off", off, tr("COMBAT_THROW_OFF").format({"name": ow["name"], "dmg": _dmg_text(ow)}), me,
 				func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "off", "throw": true}),
@@ -1077,9 +1090,8 @@ func _draw_hero(s: GameSession, data: Dictionary, me: bool) -> void:
 				func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, true, false, true), "", _far(ow))
 	if bool(CombatRules.player(s).get("frenzy", false)):
 		_action(w, "Attack_frenzy", tr("COMBAT_ATTACK_FRENZY").format({"name": main["name"], "dmg": _dmg_text(main)}), me,
-			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "frenzy"}),
-			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, {"hand": "frenzy"}),
-			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", 0, "acts/frenzy")
+			func(t: String) -> String: return GameState.combat_act("attack", t, {"hand": "frenzy"}), _near("attack", {"hand": "frenzy"})[0],
+			func(t: String) -> Dictionary: return CombatRules.attack_preview(s, data, t, false), "", 0, "acts/frenzy", _near("attack", {"hand": "frenzy"})[1])
 	# Spells.
 	if not SpellRules.ready(c).is_empty() and not Guise.has_body(c):
 		var sp := _tab_box("COMBAT_TAB_SPELLS")
@@ -1150,9 +1162,8 @@ func _draw_companion(s: GameSession, data: Dictionary, who: Dictionary, me: bool
 					func(t: String) -> Dictionary: return CombatRules.blow_preview(s, data, who, t, how), "", int((a.get("range", [0, 0]) as Array)[1]))
 				continue
 			var cell := _action(w, "Blow_" + en, text, me,
-				func(t: String) -> String: return GameState.combat_act("attack", t, how),
-				func(t: String) -> String: return Acts.one("attack").can(s, data, who, t, how),
-				func(t: String) -> Dictionary: return CombatRules.blow_preview(s, data, who, t, how), "", far, icon)
+				func(t: String) -> String: return GameState.combat_act("attack", t, how), _near("attack", how)[0],
+				func(t: String) -> Dictionary: return CombatRules.blow_preview(s, data, who, t, how), "", far, icon, _near("attack", how)[1])
 			_details.hook(cell, nm, text + ("\n" + rider if not rider.is_empty() else ""))
 	var casts := MonsterRules.castable(data, who)
 	if casts.is_empty() or Guise.has_body(who):
@@ -1373,7 +1384,8 @@ func _act_button(parent: Control, act: Act, row: Dictionary, me: bool) -> void:
 					_second = {"act": id, "to": t}
 					return ""
 				return GameState.combat_act(id, t, how),
-			func(t: String) -> String: return act.can(s, data, hero, t, how), func(_t: String) -> Dictionary: return {}, "", 0, "acts/" + id)
+			func(t: String) -> String: return act.can(s, data, hero, t, how) if act.second() else GameState.combat_can(id, t, how),
+			func(_t: String) -> Dictionary: return {}, "", 0, "acts/" + id, _near(id, how)[1] if not act.second() else Callable())
 	elif act.second():
 		b = _button(parent, str(row["name"]), text, me and stop.is_empty(), "acts/" + id)
 		b.toggle_mode = true
@@ -1399,17 +1411,24 @@ func _act_button(parent: Control, act: Act, row: Dictionary, me: bool) -> void:
 
 
 ## A button that needs a target: pressing it lights the bodies that can be hit. `aims` — the spell whose target is a square.
-func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "", feet := 0, icon := "") -> Button:
+## The check and the way of act `id` of `Acts` with `how` at a target (v0.8.4.43.51): out of reach is no reason while a walk
+## up brings the target in (GameState.combat_can), and the way the hover draws as dashes (GameState.combat_way).
+func _near(id: String, how: Dictionary = {}) -> Array[Callable]:
+	return [func(t: String) -> String: return GameState.combat_can(id, t, how), func(t: String) -> Array[Vector2i]: return GameState.combat_way(id, t, how)]
+
+
+func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "", feet := 0, icon := "",
+		way := Callable()) -> Button:
 	var b := _button(parent, node_name, text, enabled, icon)
 	_acts.append({"tab": _act_tab, "sub": _act_sub, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims})
 	b.toggle_mode = true
 	b.button_pressed = _pending.is_valid() and _pending_name == node_name
-	b.pressed.connect(_arm.bind(node_name, text, act, check, preview, aims, feet))
+	b.pressed.connect(_arm.bind(node_name, text, act, check, preview, aims, feet, way))
 	return b
 
 
 ## Picks an act to aim — a cell's press and a pick of the «Бросить» list alike; picked again, it is let go.
-func _arm(node_name: String, text: String, act: Callable, check: Callable, preview: Callable, aims: String, feet: int) -> void:
+func _arm(node_name: String, text: String, act: Callable, check: Callable, preview: Callable, aims: String, feet: int, way := Callable()) -> void:
 	if _pending.is_valid() and _pending_name == node_name:
 		_pending = Callable()
 	else:
@@ -1420,6 +1439,7 @@ func _arm(node_name: String, text: String, act: Callable, check: Callable, previ
 		_pending_text = text
 		_pending_aim = aims
 		_pending_feet = feet
+		_pending_way = way
 	refresh()
 
 
@@ -1443,11 +1463,10 @@ func _strikes(s: GameSession, data: Dictionary, c: Dictionary, w: Control, me: b
 			if hand == "stowed" else CombatRules.weapon_profile(c, data, s.items, "")
 		var key := "COMBAT_ATTACK" if kind == "melee" else "COMBAT_SHOOT"
 		var b := _action(w, "Attack_" + kind, tr(key).format({"name": prof["name"], "hit": "%+d" % int(prof["to_hit"]), "dmg": _dmg_text(prof)}), me,
-			func(t: String) -> String: return GameState.combat_act("attack", t, how),
-			func(t: String) -> String: return Acts.one("attack").can(s, data, CombatRules.player(s), t, how),
+			func(t: String) -> String: return GameState.combat_act("attack", t, how), _near("attack", how)[0],
 			func(t: String) -> Dictionary: return CombatRules.as_stowed(s, func() -> Dictionary: return CombatRules.attack_preview(s, data, t, false)) if hand == "stowed" \
 				else CombatRules.attack_preview(s, data, t, false, hand.is_empty()), "", _blow_far(prof) if kind == "melee" else _far(prof),
-			"acts/attack" if kind == "melee" else "acts/shoot")
+			"acts/attack" if kind == "melee" else "acts/shoot", _near("attack", how)[1])
 		if not id.is_empty():
 			_details.hook(b, str(prof["name"]), "", CardInfo.item(c, data, s.items, id))
 	return fists

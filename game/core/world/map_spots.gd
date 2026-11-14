@@ -8,9 +8,11 @@ extends RefCounted
 ## v0.8.4.43.23: a thing with a body (rules.things.bodies) takes the squares of its `size`, turned as the seed says, and a
 ## station of a mark stands as its thing (`rules.map.station_bodies`); `walls` — what the squares of things bar, for the
 ## walk, the eye and the fight.
-## v0.8.4.43.26: the spots of a chunk (marks `spot:<group>`, `layouts.json` → `spots`) get the room's own things by the
-## seed — a share of them filled with a body of the group, each with its companions (`near`); a mark of a station stands
-## as its thing on every square of it; the spots left free are the master's, its furniture with a body stands there.
+## v0.8.4.43.26: the spots of a chunk (marks `spot:<group>`, `layouts.json` → `spots`) are where the master's furniture
+## with a body of the group stands; a mark of a station stands as its thing on every square of it.
+## v0.8.4.43.51 (the author: «брать только те фурнитуры и расстановки предметов в помещении, которые были сделаны заранее в
+## редакторе… фиксированную расстановку полностью»): a room's things are one furnishing of its chunk, whole (`arranged`),
+## a station's thing as that furnishing sets it; nothing stands by chance. The spots no thing stands on are the master's.
 
 const SPOT := "spot:"  ## a mark of a chunk where a thing of a group may stand (v0.8.4.43.26)
 const PATH := 1  ## a square of a thing bars the way
@@ -53,34 +55,48 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 	var bodies: Dictionary = cfg(data).get("station_bodies", {})
 	var room_key := "%d|%s" % [s.game_seed, s.room_id]
 	var keys := LayoutGen.ground_keys(lib, map)
-	for m: Dictionary in map["marks"]:
-		var mark := str(m["name"])
-		var at := Vector2i(int(m["x"]), int(m["y"]))
-		if int(m["room"]) != index or taken.has(at):
-			continue
-		var station := stations.has(mark) and not seen.has(mark)
-		var body_id := LayoutGen.by_keys(bodies.get(mark, ""), keys)  # by the place: water in a cave is no well (v0.8.4.43.40)
-		if not station and body_id.is_empty():
-			continue
-		var t := _token("station:" + mark, "station", mark, _word(data, mark), at) if station \
-			else _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, body_id), at)
-		if not station:
-			t["still"] = true
-		seen[mark] = true
-		if not body_id.is_empty():  # the mark's square is its thing's: the rest of it where it fits round the mark, along it
-			var want := {}
-			for o: Dictionary in map["marks"]:
-				if str(o["name"]) == mark and int(o["room"]) == index:
-					want[Vector2i(int(o["x"]), int(o["y"]))] = true
-			var around: Array[Vector2i] = spots.duplicate()
-			if not around.has(at):
-				around.append(at)
-			_with_body(data, t, body_id, _lay(data, body_id, "%s|%s|%d,%d" % [room_key, mark, at.x, at.y], at, around, cells, ways, walls, taken, true, want), walls)
-		for c: Vector2i in t.get("cells", [at]):
-			taken[c] = true
-		out.append(t)
-		if not body_id.is_empty():
-			_companions(data, t, room_key, spots, cells, ways, walls, taken, out)
+	var floor := {}  # the free floor before anything stands: what a furnishing must fit in whole
+	for c: Vector2i in spots:
+		if not taken.has(c):
+			floor[c] = true
+	var arranged := arranged(data, map, index, room_key, keys, floor)
+	var stand := func(late: bool) -> void:  # the stations: first those the furnishing sets, `late` the rest round their marks
+		for m: Dictionary in map["marks"]:
+			var mark := str(m["name"])
+			var at := Vector2i(int(m["x"]), int(m["y"]))
+			if int(m["room"]) != index or taken.has(at):
+				continue
+			var station := stations.has(mark) and not seen.has(mark)
+			var body_id := LayoutGen.by_keys(bodies.get(mark, ""), keys)  # by the place: water in a cave is no well (v0.8.4.43.40)
+			if not station and body_id.is_empty():
+				continue
+			var laid := {}
+			if not body_id.is_empty():  # the mark's square is its thing's: as the furnishing sets it, else round the mark, along it
+				var around: Array[Vector2i] = spots.duplicate()
+				if not around.has(at):
+					around.append(at)
+				laid = _station_laid(data, arranged, mark, at, around, taken)
+				if laid.is_empty() != late:
+					continue
+				if laid.is_empty():
+					var want := {}
+					for o: Dictionary in map["marks"]:
+						if str(o["name"]) == mark and int(o["room"]) == index:
+							want[Vector2i(int(o["x"]), int(o["y"]))] = true
+					laid = _lay(data, body_id, "%s|%s|%d,%d" % [room_key, mark, at.x, at.y], at, around, cells, ways, walls, taken, true, want)
+			elif late:
+				continue
+			var t := _token("station:" + mark, "station", mark, _word(data, mark), at) if station \
+				else _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, body_id), at)
+			if not station:
+				t["still"] = true
+			seen[mark] = true
+			if not laid.is_empty():
+				_with_body(data, t, body_id, laid, walls)
+			for c: Vector2i in t.get("cells", [at]):
+				taken[c] = true
+			out.append(t)
+	stand.call(false)
 	var held: Array[Vector2i] = []  # the square of a thing put by hand: no furnishing or spot thing on it (v0.8.4.43.48)
 	for p: Dictionary in PropRules.room_props(s, s.room_id):
 		if p.get("at") is Array:
@@ -88,38 +104,11 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 			if not taken.has(own):
 				held.append(own)
 				taken[own] = true
-	_furnished(data, map, index, room_key, spots, cells, ways, walls, taken, out)
-	for sp: Dictionary in spot_marks(map, index):  # the room's own things on its spots, by the seed
-		var at: Vector2i = sp["at"]
-		var rng := RandomNumberGenerator.new()
-		rng.seed = hash("%s|spot|%d,%d" % [room_key, at.x, at.y])
-		var group: Dictionary = (lib.get("spots", {}).get("groups", {}) as Dictionary).get(str(sp["group"]), {})
-		if (sp["area"] as Array).all(func(c: Vector2i) -> bool: return taken.has(c)):  # a thing of a station or a furnishing stands over it: no spot (v0.8.4.43.40, the stage of 3×2)
-			continue
-		if rng.randf() >= float(group.get("fill", 0.5)):
+	_furnished(data, arranged, spots, cells, ways, walls, taken, out)
+	stand.call(true)  # a station no furnishing sets — a mark the place wants that its chunk lacks — where the things leave room
+	for sp: Dictionary in spot_marks(map, index):  # a spot no thing stands on is the master's
+		if not (sp["area"] as Array).any(func(c: Vector2i) -> bool: return taken.has(c)):
 			free.append(sp)
-			continue
-		var key := "%s|%d,%d" % [room_key, at.x, at.y]
-		var weights: Variant = _weights(group.get("bodies", {}), keys)
-		if (sp["area"] as Array).size() > 1 and weights is Dictionary:  # an area takes only what fits in it (v0.8.4.43.48)
-			var fit := {}
-			for id: String in weights:
-				if not bool(_on_spot(data, id, key, sp, spots, cells, ways, walls, taken).get("loose", false)):
-					fit[id] = weights[id]
-			weights = fit
-		var body_id := _pick(weights, rng)
-		var laid := _on_spot(data, body_id, key, sp, spots, cells, ways, walls, taken) if not body_id.is_empty() else {"loose": true}
-		if bool(laid.get("loose", false)):
-			free.append(sp)
-			continue
-		var t := _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, body_id), at)
-		t["still"] = true
-		t["spot"] = str(sp["group"])
-		_with_body(data, t, body_id, laid, walls)
-		for c: Vector2i in t["cells"]:
-			taken[c] = true
-		out.append(t)
-		_companions(data, t, room_key, spots, cells, ways, walls, taken, out)
 	for c: Vector2i in held:  # its own again, for the thing itself below
 		taken.erase(c)
 	var world := WorldView.new(data["world"])
@@ -177,95 +166,97 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 	return {"tokens": out, "free": free}
 
 
-## The things of the room's furnishings (marks `set:<body>` of LayoutGen.furnish_marks, v0.8.4.43.31): all the
-## furnishings of its chunk mixed — each thing in an order of the seed stands if its squares are free floor and it cuts no
-## way; one that meets a thing already standing is left out. A room gets the bed of one furnishing, the cabinet of another.
-static func _furnished(data: Dictionary, map: Dictionary, index: int, room_key: String, spots: Array[Vector2i], cells: Array[Vector2i],
-		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary, out: Array[Dictionary]) -> void:
-	var marks: Array[Dictionary] = []
+## The furnishing each piece of the room stands, whole (v0.8.4.43.51): of the furnishings of a chunk laid on the map
+## (marks `set:<body>` of LayoutGen.furnish_marks, a chunk's place by `piece`) those for the place's kind — the first of
+## `keys` some of them name in `kinds`, else those that name none — one by the seed, the first from it that fits whole on
+## `floor` (a way laid by a wall may stand where another one's thing would), else the one most of whose things fit.
+## `floor` empty — no check. Its marks.
+static func arranged(data: Dictionary, map: Dictionary, index: int, room_key: String, keys: Array[String], floor := {}) -> Array[Dictionary]:
+	var pieces := {}  # piece → {set: [marks]}
 	for m: Dictionary in map["marks"]:
-		if int(m["room"]) == index and str(m["name"]).begins_with(LayoutGen.SET):
-			marks.append(m)
-	if marks.is_empty():
-		return
+		if int(m["room"]) != index or not str(m["name"]).begins_with(LayoutGen.SET):
+			continue
+		var piece := str(m.get("piece", ""))
+		if not pieces.has(piece):
+			pieces[piece] = {}
+		var sets: Dictionary = pieces[piece]
+		if not sets.has(int(m["set"])):
+			sets[int(m["set"])] = []
+		(sets[int(m["set"])] as Array).append(m)
+	var out: Array[Dictionary] = []
+	var names: Array = pieces.keys()
+	names.sort()
+	for piece: String in names:
+		var sets: Dictionary = pieces[piece]
+		var fit := _for_kind(sets, keys)
+		if fit.is_empty():
+			continue
+		fit.sort()
+		var first := absi(hash("%s|furnish|%s" % [room_key, piece])) % fit.size()
+		var best: Array = []
+		var fewest := 1 << 30  # the things of the best that do not fit
+		for n: int in fit.size():
+			var marks: Array = sets[fit[(first + n) % fit.size()]]
+			var left := marks.filter(func(m: Dictionary) -> bool:
+				return not floor.is_empty() and not (set_laid(data, m)["cells"] as Array).all(func(c: Vector2i) -> bool: return floor.has(c))).size()
+			if left < fewest:
+				best = marks
+				fewest = left
+			if left == 0:
+				break
+		out.append_array(best)
+	return out
+
+
+## The furnishings of `sets` ({set: [marks]}) for a place of `keys`, the most exact first.
+static func _for_kind(sets: Dictionary, keys: Array[String]) -> Array:
+	var of := func(i: int) -> Array: return ((sets[i] as Array)[0] as Dictionary).get("kinds", [])
+	for k: String in keys:
+		var mine := sets.keys().filter(func(i: int) -> bool: return (of.call(i) as Array).has(k))
+		if not mine.is_empty():
+			return mine
+	return sets.keys().filter(func(i: int) -> bool: return (of.call(i) as Array).is_empty())
+
+
+## The thing of station `mark` the room's furnishing sets over its square `at`, when its squares are free floor; {} — none
+## (a station of a room with no furnishing, or one the furnishing does not hold, is laid round its mark by `_lay`).
+static func _station_laid(data: Dictionary, arranged: Array[Dictionary], mark: String, at: Vector2i, around: Array[Vector2i], taken: Dictionary) -> Dictionary:
+	for m: Dictionary in arranged:
+		if str(m.get("station", "")) != mark:
+			continue
+		var laid := set_laid(data, m)
+		var mine: Array = laid["cells"]
+		if mine.has(at) and mine.all(func(c: Vector2i) -> bool: return around.has(c) and not taken.has(c)):
+			return laid
+	return {}
+
+
+## The things of the room's furnishing (`arranged`) where the chunk's author set them (v0.8.4.43.31): each on free floor,
+## cutting no way; a station's own thing stands with its station.
+static func _furnished(data: Dictionary, arranged: Array[Dictionary], spots: Array[Vector2i], cells: Array[Vector2i], ways: Array[Vector2i],
+		walls: Dictionary, taken: Dictionary, out: Array[Dictionary]) -> void:
 	var bodies: Dictionary = ThingRules.cfg(data)["bodies"]
 	var floor := {}
 	for c: Vector2i in spots:
 		floor[c] = true
-	var groups := _clusters(data, marks.filter(func(m: Dictionary) -> bool: return bodies.has(str(m["name"]).substr(LayoutGen.SET.length()))))
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(room_key + "|furnish")
-	for i: int in range(groups.size() - 1, 0, -1):
-		var j := rng.randi_range(0, i)
-		var was: Array = groups[i]
-		groups[i] = groups[j]
-		groups[j] = was
-	for group: Array in groups:  # a table with its benches stands whole or not at all (v0.8.4.43.49)
-		var mine := {}
-		var ok := true
-		for laid: Dictionary in group:
-			for c: Vector2i in laid["cells"]:
-				ok = ok and floor.has(c) and not taken.has(c) and not mine.has(c)
-				mine[c] = true
-		var barring: Array[Vector2i] = []
-		for laid: Dictionary in group:
-			if (bodies[str(laid["body"])].get("blocks", []) as Array).has("path"):
-				barring.append_array(laid["cells"])
-		if not ok or (not barring.is_empty() and not _joined_without(cells, ways, walls, barring)):
+	for m: Dictionary in arranged:
+		var body_id := str(m["name"]).substr(LayoutGen.SET.length())
+		if not str(m.get("station", "")).is_empty() or not bodies.has(body_id):
 			continue
-		for laid: Dictionary in group:
-			var at: Vector2i = laid["at"]
-			var t := _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, str(laid["body"])), at)
-			t["still"] = true
-			t["set"] = int(laid["set"])
-			_with_body(data, t, str(laid["body"]), laid, walls)
-			for c: Vector2i in laid["cells"]:
-				taken[c] = true
-			out.append(t)
-
-
-## The things of the furnishings as groups (v0.8.4.43.49, the author: «расстановка нелогичная, скамьи не рядом со
-## столами»): the things of one furnishing whose squares touch side by side are one group — a table and its benches, a
-## bed and its chest; a room mixes the groups of all its furnishings, never a table of one with the benches of another.
-## [[{body, set, at, turn, cells}]].
-static func _clusters(data: Dictionary, marks: Array) -> Array:
-	var laid: Array[Dictionary] = []
-	for m: Dictionary in marks:
-		var one := set_laid(data, m)
-		one["body"] = str(m["name"]).substr(LayoutGen.SET.length())
-		one["set"] = int(m.get("set", 0))
-		laid.append(one)
-	var group_of: Array[int] = []
-	for i: int in laid.size():
-		group_of.append(i)
-	for i: int in laid.size():
-		for j: int in range(i + 1, laid.size()):
-			if int(laid[i]["set"]) == int(laid[j]["set"]) and _touch(laid[i]["cells"], laid[j]["cells"]):
-				var a := _root(group_of, i)
-				var b := _root(group_of, j)
-				group_of[maxi(a, b)] = mini(a, b)
-	var by := {}
-	for i: int in laid.size():
-		var r := _root(group_of, i)
-		if not by.has(r):
-			by[r] = []
-		(by[r] as Array).append(laid[i])
-	return by.values()
-
-
-static func _root(parent: Array[int], i: int) -> int:
-	while parent[i] != i:
-		i = parent[i]
-	return i
-
-
-## Two things side by side: a square of one beside a square of the other, not only at a corner.
-static func _touch(a: Array, b: Array) -> bool:
-	var next := {}
-	for c: Vector2i in a:
-		for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			next[c + d] = true
-	return b.any(func(c: Vector2i) -> bool: return next.has(c))
+		var laid := set_laid(data, m)
+		var mine: Array[Vector2i] = laid["cells"]
+		if not mine.all(func(c: Vector2i) -> bool: return floor.has(c) and not taken.has(c)):
+			continue
+		if (bodies[body_id].get("blocks", []) as Array).has("path") and not _joined_without(cells, ways, walls, mine):
+			continue
+		var at: Vector2i = laid["at"]
+		var t := _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, body_id), at)
+		t["still"] = true
+		t["set"] = int(m["set"])
+		_with_body(data, t, body_id, laid, walls)
+		for c: Vector2i in mine:
+			taken[c] = true
+		out.append(t)
 
 
 ## The squares of a thing of a furnishing on the map from its mark: {"at": top left, "turn", "cells"}.
@@ -338,89 +329,6 @@ static func _free_spot_for(lib: Dictionary, keys: Array[String], body_id: String
 	return fits[absi(key.hash()) % fits.size()]
 
 
-## A body by weights {id: weight}; "" — none.
-static func _pick(weights: Variant, rng: RandomNumberGenerator) -> String:
-	if not weights is Dictionary or (weights as Dictionary).is_empty():
-		return ""
-	var total := 0.0
-	for id: String in weights:
-		total += float(weights[id])
-	var roll := rng.randf() * total
-	for id: String in weights:
-		roll -= float(weights[id])
-		if roll < 0.0:
-			return id
-	return str((weights as Dictionary).keys().back())
-
-
-## The things that stand by a thing (`layouts.json` → `spots.near`): each row by its chance, `count` times, on squares
-## beside the thing's own, side by side, never at a corner; one with `same_turn` laid the way the thing is, its long side
-## against the thing's long side (benches along a table, the author 2026-11-13: «скамьи не рядом со столами»). Nothing
-## fits — none.
-static func _companions(data: Dictionary, t: Dictionary, room_key: String, spots: Array[Vector2i], cells: Array[Vector2i], ways: Array[Vector2i],
-		walls: Dictionary, taken: Dictionary, out: Array[Dictionary]) -> void:
-	var rows: Array = data["layouts"].get("spots", {}).get("near", {}).get(str(t.get("body", "")), [])
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash("%s|near|%s" % [room_key, str(t["ref"])])
-	var n := 0
-	for row: Dictionary in rows:
-		for i: int in int(row.get("count", 1)):
-			if rng.randf() >= float(row.get("chance", 1.0)):
-				continue
-			var body_id := str(row["body"])
-			var key := "%s|%s|%d" % [room_key, str(t["ref"]), n]
-			n += 1
-			var laid := _along(data, body_id, key, t["cells"], int(t["turn"]), spots, cells, ways, walls, taken) if bool(row.get("same_turn", false)) \
-				else _lay(data, body_id, key, t["corner"], spots, cells, ways, walls, taken, false, {}, t["cells"])
-			if bool(laid.get("loose", false)):
-				continue
-			var at: Vector2i = laid["cells"][0]
-			var c := _token("thing:%d,%d" % [at.x, at.y], "thing", "%d,%d" % [at.x, at.y], _body_name(data, body_id), at)
-			c["still"] = true
-			_with_body(data, c, body_id, laid, walls)
-			for sq: Vector2i in c["cells"]:
-				taken[sq] = true
-			out.append(c)
-
-
-## A companion laid along a long side of the thing of `thing` squares, turned as it is (`turn`): its long side against
-## the thing's, on one side or the other as the seed of `key` says first, from the thing's end along it. Nothing fits —
-## "loose".
-static func _along(data: Dictionary, body_id: String, key: String, thing: Array, turn: int, spots: Array[Vector2i], cells: Array[Vector2i],
-		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary) -> Dictionary:
-	var body: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
-	var size: Array = body.get("size", [1, 1])
-	var bars := (body.get("blocks", []) as Array).has("path")
-	var lo := Vector2i(thing[0])
-	var hi := Vector2i(thing[0])
-	for c: Vector2i in thing:
-		lo = Vector2i(mini(lo.x, c.x), mini(lo.y, c.y))
-		hi = Vector2i(maxi(hi.x, c.x), maxi(hi.y, c.y))
-	var free := {}
-	for c: Vector2i in spots:
-		if not taken.has(c):
-			free[c] = true
-	var w := int(size[1]) if turn % 2 == 1 else int(size[0])
-	var h := int(size[0]) if turn % 2 == 1 else int(size[1])
-	var across := hi.x - lo.x >= hi.y - lo.y  # the thing's long side runs left to right: the companion above or under it
-	var sides := [-1, 1] if absi(key.hash()) % 2 == 0 else [1, -1]
-	for side: int in sides:
-		var starts: Array[Vector2i] = []
-		if across:
-			var y := lo.y - h if side < 0 else hi.y + 1
-			for x: int in range(mini(lo.x, hi.x - w + 1), maxi(lo.x, hi.x - w + 1) + 1):
-				starts.append(Vector2i(x, y))
-		else:
-			var x := lo.x - w if side < 0 else hi.x + 1
-			for y: int in range(mini(lo.y, hi.y - h + 1), maxi(lo.y, hi.y - h + 1) + 1):
-				starts.append(Vector2i(x, y))
-		for at: Vector2i in starts:
-			var mine := footprint(size, at, turn)
-			if mine.all(func(c: Vector2i) -> bool: return free.has(c)) and (not bars or _joined_without(cells, ways, walls, mine)):
-				return {"at": at, "turn": turn, "cells": mine}
-	return {"at": lo, "turn": turn, "cells": [lo] as Array[Vector2i], "loose": true}
-
-
 static func _body_name(data: Dictionary, body_id: String) -> String:
 	return str(ThingRules.cfg(data)["bodies"].get(body_id, {}).get("name", body_id)).capitalize()
 
@@ -483,10 +391,9 @@ static func footprint(size: Array, at: Vector2i, turn: int) -> Array[Vector2i]:
 ## A thing of a body laid near `at`: its squares all free among `spots` and not `taken`, turned as the seed of `key` says
 ## first; one that bars the way keeps every way of the room joined. `must` — one of its squares is `at` itself (a station
 ## of a mark, a thing put by hand). {"at": top left, "turn", "cells"}; nothing fits — one square at `at`.
-## `want` — of the fits the one with most squares in it (a counter along its marks); `beside` — one of its squares next to
-## one of these (a companion); `turn_first` — that turn tried first. Nothing fits — "loose".
+## `want` — of the fits the one with most squares in it (a counter along its marks). Nothing fits — "loose".
 static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, spots: Array[Vector2i], cells: Array[Vector2i],
-		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary, must: bool, want: Dictionary = {}, beside: Array = [], turn_first: int = -1) -> Dictionary:
+		ways: Array[Vector2i], walls: Dictionary, taken: Dictionary, must: bool, want: Dictionary = {}) -> Dictionary:
 	var body: Dictionary = ThingRules.cfg(data)["bodies"].get(body_id, {})
 	var size: Array = body.get("size", [1, 1])
 	var bars := (body.get("blocks", []) as Array).has("path")
@@ -496,12 +403,6 @@ static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, s
 			free[c] = true
 	var h := absi(key.hash())
 	var turns: Array[int] = [h % 4, (h + 1) % 4, (h + 2) % 4, (h + 3) % 4]
-	if turn_first >= 0:
-		turns = [turn_first % 4, (turn_first + 2) % 4, (turn_first + 1) % 4, (turn_first + 3) % 4]
-	var near := {}  # side by side with the thing, never only at its corner (v0.8.4.43.49)
-	for c: Vector2i in beside:
-		for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			near[c + d] = true
 	var best := {}
 	var best_score := -1
 	var starts: Array[Vector2i] = [at]
@@ -520,8 +421,6 @@ static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, s
 					var mine := footprint(size, start - Vector2i(ox, oy), turn)
 					if not mine.all(func(c: Vector2i) -> bool: return free.has(c)):
 						continue
-					if not beside.is_empty() and not mine.any(func(c: Vector2i) -> bool: return near.has(c)):
-						continue
 					if bars and not _joined_without(cells, ways, walls, mine):
 						continue
 					var laid := {"at": start - Vector2i(ox, oy), "turn": turn, "cells": mine}
@@ -531,8 +430,6 @@ static func _lay(data: Dictionary, body_id: String, key: String, at: Vector2i, s
 					if score > best_score:
 						best = laid
 						best_score = score
-		if not beside.is_empty() and WalkRules.distance(start, at) > 4:
-			break
 	if not best.is_empty():
 		return best
 	return {"at": at, "turn": turns[0], "cells": [at] as Array[Vector2i], "loose": true}

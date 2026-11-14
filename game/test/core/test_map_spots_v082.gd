@@ -188,9 +188,9 @@ func test_a_thing_turns_by_the_seed_and_its_squares_follow() -> void:
 	assert_array(MapSpots.footprint([3, 2], Vector2i(1, 1), 1)).not_contains([Vector2i(3, 1)])
 
 
-## v0.8.4.43.26: the spots of a chunk. The tavern's hall has its own tables with benches beside them, its counter along
-## the whole run of its marks; another seed — another hall; the spots left free and what stands go to the master.
-func test_a_room_stands_its_own_things_on_its_spots_with_their_companions() -> void:
+## v0.8.4.43.26: the tavern's hall has its own tables with benches beside them, its counter along the whole run of its
+## marks; another seed — another of its furnishings (v0.8.4.43.51); the spots left free and what stands go to the master.
+func test_a_room_stands_its_own_things_by_its_furnishing() -> void:
 	var s := _session()
 	s.props[s.room_id] = []
 	var things := _tokens(s).filter(func(t: Dictionary) -> bool: return str(t["kind"]) == "thing")

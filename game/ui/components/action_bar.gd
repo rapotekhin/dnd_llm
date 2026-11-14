@@ -90,7 +90,7 @@ var _filter := ""  # a kind shown alone, "" — the player's own bar
 var _toggles := {}  # id of rules.toggles → its cell, kept while the hero has it
 var _ghosts: Array[Control] = []  # the other mode's acts drawn grey this laying, freed by the next
 var _drawn_kinds := {}  # the kinds of the sections on the bar now: their tabs
-var _dragging_divider := false  # a divider in the hand: the grid is not laid again under it
+var _held := {}  # a divider in the hand (v0.8.4.43.51): {"i": its index, "x": where it was taken, "done": columns moved}
 
 
 func _init() -> void:
@@ -471,7 +471,7 @@ func _detach(cell: Node) -> void:
 
 
 func _lay_grid() -> void:
-	if _dragging_divider or _whole() < CELL * 4:  # under the hand, or not sized yet: `resized` lays it then
+	if _whole() < CELL * 4:  # not sized yet: `resized` lays it then
 		return
 	for slot: Node in _grid.find_children("*", "HotSlot", true, false):  # every cell out before its slot goes: the
 		for ch: Node in slot.get_children():  # other mode's too — a cell is freed only by the box that made it
@@ -565,10 +565,10 @@ func _whole() -> float:
 
 
 ## The divider after the layout's section `i` (v0.8.4.43.14, the author: «плавными как в BG3, лёгкими на движение»): the
-## line follows the mouse while it is held — the grid is not laid again under it — and when let go it goes to the
-## nearest boundary of a column, as far as each side keeps one. v0.8.4.43.49 (the author: «граница групп иногда не
-## двигается»): the whole strip between the sections takes the mouse, not the thin line in it, and a button let go out of
-## sight of the bar (the window left, a dialog over it) still ends the drag at the next move.
+## whole strip between the sections takes the mouse (v0.8.4.43.49). v0.8.4.43.51 (the author: «словно линия-разделитель
+## между группами — это край карты в колоде»): held, it is the edge of the card on its right — the card goes with the
+## mouse column by column, its icons with it, the grid laid again at each column (`_held_move`); let go, it stays where
+## it is and the widths are the player's.
 func _divider(i: int) -> Control:
 	var pad := MarginContainer.new()
 	pad.name = "Divider_%d" % i
@@ -579,46 +579,44 @@ func _divider(i: int) -> Control:
 	pad.tooltip_text = tr("BAR_DIVIDER_TIP")
 	var d := ColorRect.new()
 	d.name = "Line"
-	d.color = UiTheme.BAD.darkened(0.3)
+	d.color = UiTheme.ACCENT_BRIGHT if int(_held.get("i", -1)) == i else UiTheme.BAD.darkened(0.3)
 	d.custom_minimum_size = Vector2(DIVIDER - 6, 0)
 	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pad.add_child(d)
-	var held := ColorRect.new()  # the line in the hand, over the grid
-	held.name = "Held"
-	held.top_level = true
-	held.visible = false
-	held.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	held.color = UiTheme.ACCENT_BRIGHT
-	pad.add_child(held)
-	var start := [0.0]
 	pad.gui_input.connect(func(e: InputEvent) -> void:
-		var lost := e is InputEventMouseMotion and _dragging_divider and ((e as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_LEFT) == 0
-		if lost or e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-			var x := (e as InputEventMouse).global_position.x
-			if not lost and (e as InputEventMouseButton).pressed:
-				start[0] = x
-				_dragging_divider = true
-				var seen := _grid_scroll.get_global_rect()  # the line as tall as the grid in sight, not the rows under it
-				held.size = Vector2(d.size.x, minf(d.size.y, seen.size.y))
-				held.global_position = Vector2(d.global_position.x, maxf(d.global_position.y, seen.position.y))
-				held.visible = true
-				d.modulate.a = 0.35
-			elif _dragging_divider:
-				_dragging_divider = false
-				held.visible = false
-				d.modulate.a = 1.0
-				var cols := HotbarLayout.reach(SaveManager.hotbar, HotbarLayout.BAR, i, snap(x - start[0]))
-				if cols != 0:
-					HotbarLayout.shift(SaveManager.hotbar, HotbarLayout.BAR, i, cols)
-					SaveManager.save_settings()
-				_relay()
-		elif e is InputEventMouseMotion and _dragging_divider:
-			var step := float(CELL + GAP)
-			var lo := HotbarLayout.reach(SaveManager.hotbar, HotbarLayout.BAR, i, -99) * step
-			var hi := HotbarLayout.reach(SaveManager.hotbar, HotbarLayout.BAR, i, 99) * step
-			var dx := clampf((e as InputEventMouseMotion).global_position.x - start[0], lo, hi)
-			held.global_position.x = d.global_position.x + dx)
+		if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT and (e as InputEventMouseButton).pressed:
+			_held = {"i": i, "x": (e as InputEventMouse).global_position.x, "done": 0}
+			d.color = UiTheme.ACCENT_BRIGHT
+		else:
+			held_input(e))
 	return pad
+
+
+## The mouse while a divider is held, wherever it is — the strip is laid anew under it at each column: a move takes the
+## card's edge to the nearest boundary of a column the mouse is past, as far as each side keeps one; the button let go
+## (or found up at the next move: let go out of sight of the bar) ends it and keeps the widths.
+func _input(e: InputEvent) -> void:
+	if not _held.is_empty() and e is InputEventMouse:
+		held_input(e)
+
+
+func held_input(e: InputEvent) -> void:
+	if _held.is_empty():
+		return
+	var up := e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT and not (e as InputEventMouseButton).pressed
+	if e is InputEventMouseMotion and ((e as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_LEFT) == 0:
+		up = true
+	if not up and e is InputEventMouseMotion:
+		var want := snap((e as InputEventMouse).global_position.x - float(_held["x"]))
+		var cols := HotbarLayout.reach(SaveManager.hotbar, HotbarLayout.BAR, int(_held["i"]), want - int(_held["done"]))
+		if cols != 0:
+			HotbarLayout.shift(SaveManager.hotbar, HotbarLayout.BAR, int(_held["i"]), cols)
+			_held["done"] = int(_held["done"]) + cols
+			_relay()
+	if up:
+		_held = {}
+		SaveManager.save_settings()
+		_relay()
 
 
 ## The columns a divider let go `dx` pixels away moves: to the nearest boundary of a column.

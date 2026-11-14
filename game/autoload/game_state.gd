@@ -867,18 +867,45 @@ func combat_cast(spell_id: String, slot: int, target_id: String) -> String:
 	return _combat_do(why, func() -> Array[String]: return act.go(session, Catalog.data, hero, target_id, how))
 
 
-## An act of `Acts` by the hero: the same the AI picks from. A check it asks for is the game's, with its card.
+## An act of `Acts` by the hero: the same the AI picks from. A check it asks for is the game's, with its card. Out of reach
+## it walks up first by `Acts.approach` (v0.8.4.43.51); stopped on the way — by a blow, a window, a fall — it does not go on.
 func combat_act(id: String, to: String = "", how: Dictionary = {}) -> String:
 	if session == null or not CombatRules.active(session):
 		return "COMBAT_NONE"
 	var hero := fight_actor()
 	var act := Acts.one(id)
-	return _combat_do(act.can(session, Catalog.data, hero, to, how), func() -> Array[String]:
-		var lines := act.go(session, Catalog.data, hero, to, how)
+	var way := Acts.approach(session, Catalog.data, hero, id, to, how)
+	return _combat_do(act.can(session, Catalog.data, hero, to, how) if way.is_empty() else "", func() -> Array[String]:
+		var lines: Array[String] = []
+		if not way.is_empty():
+			lines = Acts.one("walk").go(session, Catalog.data, hero, FightGrid.aim_id(way[-1]))
+			if not Attack.up(session, hero) or session.combat.has("prompt") or not act.can(session, Catalog.data, hero, to, how).is_empty():
+				return lines
+		lines.append_array(act.go(session, Catalog.data, hero, to, how))
 		var chk := act.check(how)
 		if not chk.is_empty():
 			lines.append_array(_parley_check(chk)["lines"])
 		return lines)
+
+
+## Why the one whose turn it is cannot do act `id` at `to`, a walk up first counted (Acts.near_why): a button's check.
+func combat_can(id: String, to: String = "", how: Dictionary = {}) -> String:
+	if session == null or not CombatRules.active(session):
+		return "COMBAT_NONE"
+	return Acts.near_why(session, Catalog.data, fight_actor(), id, to, how)
+
+
+## The way the one whose turn it is walks before act `id` at `to` (Acts.approach), from its own square: [] — none.
+func combat_way(id: String, to: String, how: Dictionary = {}) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	if session == null or not CombatRules.active(session):
+		return out
+	var who := fight_actor()
+	var way := Acts.approach(session, Catalog.data, who, id, to, how)
+	if not way.is_empty():
+		out.append(FightGrid.cell(who))
+		out.append_array(way)
+	return out
 
 
 ## A feature in a fight costs what rules.resources say (combat_cost): Rage and Second Wind — a bonus action,

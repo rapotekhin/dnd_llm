@@ -84,7 +84,7 @@ func run() -> void:
 			and int(_where(moved)[0]) == int(at[0]), "%s: %s, с вкладки %s" % [key, str(_where(moved)), str(at)])
 		await shot("whole_bar_after_drop")
 
-	# A divider: follows the mouse, snaps when let go.
+	# A divider: the edge of the card on its right — the card and its icons go with the mouse (v0.8.4.43.51).
 	bar.call("set_filter", "")
 	await frames(4)
 	var di := 0  # the first divider with a column to take from its right neighbour (cells of 72 leave fewer to share)
@@ -96,27 +96,32 @@ func run() -> void:
 		var stepw := float(_const(bar, "CELL") + _const(bar, "GAP"))
 		var cols0 := _cols(di)
 		var can := HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.BAR, di, 2)
+		var right := _first_icon(di + 1)  # the right card's first icon: it goes with the edge
+		var x_icon := right.get_global_rect().position.x if right != null else 0.0
+		var right_name := str(right.name) if right != null else ""  # a ghost cell is made anew by every laying: by its name
 		var x0 := line.get_global_rect().get_center().x
+		var y := pad.get_global_rect().get_center().y  # the strip is laid anew under the mouse: its height kept
 		_mouse(pad, x0, true)  # v0.8.4.43.49: the whole strip takes the mouse
 		for k in 8:
-			_motion(pad, x0 + stepw * 1.6 * (k + 1) / 8.0)
-			await frames(1)
-		var held := find(pad, "Held") as Control
-		step("held: the line follows the mouse, the grid not laid again under it", is_instance_valid(pad) and not pad.is_queued_for_deletion()
-			and held.visible and absf(held.global_position.x - line.global_position.x - minf(stepw * 1.6, can * stepw)) < 2.0,
-			"%.0f → %.0f" % [line.global_position.x, held.global_position.x])
+			bar.call("held_input", _move_event(Vector2(x0 + stepw * 1.6 * (k + 1) / 8.0, y)))
+			await frames(2)
+		await frames(3)
+		var moved := find(bar, right_name) as Control if not right_name.is_empty() else null  # the same icon, wherever it went
+		step("held: the card goes with the mouse column by column, its icons with it", _cols(di) == cols0 + can and moved != null
+			and absf(moved.get_global_rect().position.x - x_icon - can * stepw) < 2.0,
+			"%d → %d; %.0f → %.0f" % [cols0, _cols(di), x_icon, moved.get_global_rect().position.x if moved != null else -1.0])
 		await shot("divider_held")
-		_mouse(pad, x0 + stepw * 1.6, false)
+		bar.call("held_input", _up_event(Vector2(x0 + stepw * 1.6, y)))
 		await frames(5)
-		step("let go mid-cell it snaps to the nearest column", _cols(di) == cols0 + can, "%d → %d (можно %d)" % [cols0, _cols(di), can])
+		step("let go it stays at the nearest column", _cols(di) == cols0 + can, "%d → %d (можно %d)" % [cols0, _cols(di), can])
 		pad = find(bar, "Divider_%d" % di) as Control
 		line = find(pad, "Line") as Control if pad != null else null
 		var cols1 := _cols(di)
 		if line != null:
 			var x1 := line.get_global_rect().get_center().x
 			_mouse(pad, x1, true)
-			_motion(pad, x1 + stepw * 0.4)
-			_mouse(pad, x1 + stepw * 0.4, false)
+			bar.call("held_input", _move_event(Vector2(x1 + stepw * 0.4, y)))
+			bar.call("held_input", _up_event(Vector2(x1 + stepw * 0.4, y)))
 			await frames(5)
 		step("a little nudge stays where it was", _cols(di) == cols1, "%d → %d" % [cols1, _cols(di)])
 		var sec: Dictionary = _drawn()[di]
@@ -241,8 +246,29 @@ func _mouse(on: Control, x: float, down: bool) -> void:
 	on.gui_input.emit(e)
 
 
-func _motion(on: Control, x: float) -> void:
+## A move of the mouse with the button held, as a real drag; the bar takes it wherever it is (ActionBar.held_input).
+func _move_event(at: Vector2) -> InputEventMouseMotion:
 	var e := InputEventMouseMotion.new()
-	e.button_mask = MOUSE_BUTTON_MASK_LEFT  # the button held, as a real drag
-	e.global_position = Vector2(x, on.get_global_rect().get_center().y)
-	on.gui_input.emit(e)
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT
+	e.global_position = at
+	return e
+
+
+func _up_event(at: Vector2) -> InputEventMouseButton:
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = false
+	e.global_position = at
+	return e
+
+
+## The first icon in sight of drawn section `i`: the cell in its slot of the lowest index.
+func _first_icon(i: int) -> Control:
+	var g := find(screen(), "Kind_" + str(_drawn()[i]["kind"])) as GridContainer
+	if g == null:
+		return null
+	for slot: Node in g.get_children():
+		for c: Node in slot.get_children():
+			if c is Control and (c as Control).visible:
+				return c as Control
+	return null

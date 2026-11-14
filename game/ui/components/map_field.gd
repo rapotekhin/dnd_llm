@@ -43,7 +43,11 @@ var cones: Dictionary = {}  ## the squares under watch while sneaking
 var fighters: Array[Dictionary] = []  ## the bodies of a fight: {"id", "mark", "portrait", "name", "colour", "span", "x", "y", "hp", "most", "out", "now", "dim", "gear", "states"}
 var anim_lib: Dictionary = {}  ## data/anims.json: the art of a weapon, a shield and a state over a token (v0.8.4.23)
 var routes: Dictionary = {}  ## where the hero can walk this turn: FightGrid.reach
-var way: Array[Vector2i] = []  ## the path under the mouse
+var way: Array[Vector2i] = []:  ## the path under the mouse; set anew — a plain line again
+	set(v):
+		way = v
+		dashed = false
+var dashed := false  ## the way is a walk up before an act (v0.8.4.43.51): dashes from the walker's square, a ring where it stops
 var blast: Dictionary = {}  ## the squares of the area under the mouse
 var lit: Dictionary = {}  ## the squares of a choice (a shove's side, a jump)
 var over: Dictionary = {}  ## what a fight changed on the map: {square: Color}
@@ -472,9 +476,17 @@ func _draw_fight_squares(t: float) -> void:
 	for at: Variant in blast:
 		_tint(at, Color(UiTheme.BAD, 0.42), t)
 	var from := Vector2(way[0]) if not way.is_empty() else Vector2.ZERO
+	var thick := maxf(2.0, t * 0.08)
 	for cell: Vector2i in way:
-		draw_line(_corner + (from + Vector2(0.5, 0.5)) * t, _corner + (Vector2(cell) + Vector2(0.5, 0.5)) * t, UiTheme.ACCENT_BRIGHT, maxf(2.0, t * 0.08))
+		var a := _corner + (from + Vector2(0.5, 0.5)) * t
+		var b := _corner + (Vector2(cell) + Vector2(0.5, 0.5)) * t
+		if dashed:
+			draw_dashed_line(a, b, UiTheme.ACCENT_BRIGHT, thick, maxf(4.0, t * 0.16))
+		else:
+			draw_line(a, b, UiTheme.ACCENT_BRIGHT, thick)
 		from = Vector2(cell)
+	if dashed and way.size() > 1:
+		draw_arc(_corner + (Vector2(way[-1]) + Vector2(0.5, 0.5)) * t, t * 0.32, 0.0, TAU, 32, UiTheme.ACCENT_BRIGHT, thick)
 
 
 ## The edge of `reach` on the sides of `at` that look out of it.

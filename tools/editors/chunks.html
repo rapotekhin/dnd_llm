@@ -318,7 +318,7 @@ function furnishProblems(ch) {
 			if (Object.keys(known).length && !known[t.body]) { out.push(`${name}: неизвестная вещь ${t.body}`); continue; }
 			for (const [x, y] of cellsOf(t)) {
 				if (!floor(x, y)) out.push(`${name}: ${bodyName(t.body)} (${x + 1}, ${y + 1}) не на полу`);
-				else if (stationAt(ch, x, y)) out.push(`${name}: ${bodyName(t.body)} (${x + 1}, ${y + 1}) на метке «${stationAt(ch, x, y)}» — там игра ставит её`);
+				else if (stationAt(ch, x, y) && t.station !== stationAt(ch, x, y)) out.push(`${name}: ${bodyName(t.body)} (${x + 1}, ${y + 1}) на метке «${stationAt(ch, x, y)}» — там стоит её вещь`);
 				const k = x + ',' + y;
 				if (seen.has(k)) out.push(`${name}: ${bodyName(t.body)} и ${seen.get(k)} на одной клетке (${x + 1}, ${y + 1})`);
 				seen.set(k, bodyName(t.body));
@@ -326,59 +326,6 @@ function furnishProblems(ch) {
 		}
 	});
 	return [...new Set(out)];
-}
-
-// A seeded random of the preview: mulberry32.
-function seeded(a) {
-	return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-}
-
-// What the generator may lay in this chunk (MapSpots._furnished): the groups of every furnishing — the things of one
-// furnishing side by side (a table and its benches, MapSpots._clusters) — in an order of the seed, each group standing
-// whole where its squares are free floor and the floor stays one piece; a station's mark is taken first.
-function mixOf(e, seed) {
-	const rnd = seeded(seed);
-	const things = (e.furnish || []).flatMap((set, i) => (set.things || []).map((t) => ({ ...t, set: i })));
-	const sq = things.map((t) => new Set(cellsOf(t).map(([x, y]) => x + ',' + y)));
-	const touch = (a, b) => [...a].some((k) => { const [x, y] = k.split(',').map(Number); return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => b.has(`${x + dx},${y + dy}`)); });
-	const root = things.map((_, i) => i);
-	const top = (i) => { while (root[i] !== i) i = root[i]; return i; };
-	for (let i = 0; i < things.length; i++) for (let j = i + 1; j < things.length; j++)
-		if (things[i].set === things[j].set && touch(sq[i], sq[j])) { const a = top(i), b = top(j); root[Math.max(a, b)] = Math.min(a, b); }
-	const groups = Object.values(things.reduce((by, t, i) => { (by[top(i)] ||= []).push(t); return by; }, {}));
-	for (let i = groups.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
-	const rows = e.rows, marks = e.marks || {};
-	const stations = new Set([...(RULES_MAP().stations || []), ...Object.keys(RULES_MAP().station_bodies || {})]);
-	const taken = new Set();
-	const floor = new Set();
-	rows.forEach((r, y) => [...r].forEach((c, x) => {
-		if (c === MapView.BLANK || (!(c in marks) && lib.cells[c]?.solid) || lib.cells[c]?.keep_free) return;
-		floor.add(x + ',' + y);
-		if (c in marks && stations.has(marks[c])) taken.add(x + ',' + y);
-	}));
-	const walls = new Set();
-	const whole = (extra) => {  // MapSpots._whole: the free floor one piece
-		const open = [...floor].filter((k) => !walls.has(k) && !extra.has(k));
-		if (!open.length) return true;
-		const seen = new Set([open[0]]), todo = [open[0]], set = new Set(open);
-		while (todo.length) {
-			const [x, y] = todo.pop().split(',').map(Number);
-			for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = `${x + dx},${y + dy}`; if (set.has(k) && !seen.has(k)) { seen.add(k); todo.push(k); } }
-		}
-		return seen.size === set.size;
-	};
-	const out = [];
-	for (const group of groups) {  // whole or none: never a table of one furnishing with the benches of another
-		if (group.some((t) => !bodies()[t.body])) continue;
-		const mine = group.flatMap((t) => cellsOf(t).map(([x, y]) => x + ',' + y));
-		if (new Set(mine).size !== mine.length || !mine.every((k) => floor.has(k) && !taken.has(k))) continue;
-		const barring = group.filter((t) => (bodies()[t.body].blocks || []).includes('path')).flatMap((t) => cellsOf(t).map(([x, y]) => x + ',' + y));
-		if (barring.length && !whole(new Set(barring))) continue;
-		mine.forEach((k) => taken.add(k));
-		barring.forEach((k) => walls.add(k));
-		out.push(...group);
-	}
-	return out;
 }
 
 // The groups of the catalog of things: the groups of spots (layouts.json → spots), the stations, the rest.
@@ -466,10 +413,13 @@ function painter(app, c, e) {
 	const activeIndex = () => sets().indexOf(active());
 	const floorAt = (x, y) => { const ch = at(x, y); return ch !== undefined && ch !== MapView.BLANK && (ch in (e.marks || {}) || !lib.cells[ch]?.solid); };
 	const thingAt = (set, x, y) => (set?.things || []).findIndex((t) => cellsOf(t).some(([a, b]) => a === x && b === y));
-	const fits = (set, t, skip = -1) => cellsOf(t).every(([x, y]) => floorAt(x, y) && !stationAt(e, x, y) && (set.things || []).every((o, i) => i === skip || !cellsOf(o).some(([a, b]) => a === x && b === y)));
+	// A station's own thing (rules.map.station_bodies) stands on its marks; any other thing keeps off them.
+	const ownStation = (t) => { const marks = cellsOf(t).map(([x, y]) => stationAt(e, x, y)).filter(Boolean); const b = RULES_MAP().station_bodies?.[marks[0]];
+		return marks.length && (b === t.body || (b && typeof b === 'object' && Object.values(b).includes(t.body))) ? marks[0] : ''; };
+	const fits = (set, t, skip = -1) => cellsOf(t).every(([x, y]) => floorAt(x, y) && (!stationAt(e, x, y) || stationAt(e, x, y) === ownStation(t)) && (set.things || []).every((o, i) => i === skip || !cellsOf(o).some(([a, b]) => a === x && b === y)));
 	const centred = (body, turn, p) => { const [w, hh] = dimsOf(body, turn); return { x: p[0] - Math.floor((w - 1) / 2), y: p[1] - Math.floor((hh - 1) / 2) }; };
-	const ghost = () => (paint.body && hover && furnishing() && paint.preview == null ? { body: paint.body, turn: paint.turn || 0, ...centred(paint.body, paint.turn || 0, hover) } : null);
-	const shown = () => (paint.preview != null ? mixOf(e, paint.preview) : furnishing() || paint.showThings !== false ? active()?.things || [] : []);
+	const ghost = () => (paint.body && hover && furnishing() ? { body: paint.body, turn: paint.turn || 0, ...centred(paint.body, paint.turn || 0, hover) } : null);
+	const shown = () => (furnishing() || paint.showThings !== false ? active()?.things || [] : []);
 	const rotate = () => {
 		if (!furnishing()) return;
 		if (paint.body) { paint.turn = ((paint.turn || 0) + 1) % 4; overlay(); return; }
@@ -499,7 +449,6 @@ function painter(app, c, e) {
 		const p = cellAt(ev);
 		hover = p;  // a click with no move before it still places where it is
 		if (furnishing()) {
-			if (paint.preview != null) return;
 			let set = active();
 			if (ev.button === 2) {  // the right button takes away the thing under it
 				const i = thingAt(set, ...p);
@@ -514,9 +463,10 @@ function painter(app, c, e) {
 			const g = ghost();
 			if (g) {
 				if (!set) { sets().push({ name: 'Обстановка 1', things: [] }); set = active(); }
-				if (!fits(set, g)) return app.toast('Здесь не встанет: нужна клетка пола, свободная от вещей этой обстановки и от меток станций (очаг, кровать, горн…)');
+				if (!fits(set, g)) return app.toast('Здесь не встанет: нужна клетка пола, свободная от вещей этой обстановки; на метке станции (очаг, кровать, горн…) — только её вещь');
 				const before = snapshot();
-				(set.things ||= []).push({ body: g.body, x: g.x, y: g.y, ...(g.turn ? { turn: g.turn } : {}) });
+				const st = ownStation(g);
+				(set.things ||= []).push({ body: g.body, x: g.x, y: g.y, ...(g.turn ? { turn: g.turn } : {}), ...(st ? { station: st } : {}) });
 				paint.sel = set.things.length - 1;
 				commit(before);
 				refreshSets();
@@ -737,21 +687,12 @@ function painter(app, c, e) {
 		}
 		drawSpots(g);
 		if (furnishing()) {
-			if (paint.preview != null) {  // which furnishing each thing of the mix came from
-				g.font = `700 ${Math.round(px * 0.32)}px system-ui, sans-serif`;
-				for (const t of mixOf(e, paint.preview)) {
-					g.fillStyle = 'rgba(23,24,26,0.8)';
-					g.beginPath(); g.arc(t.x * px + px * 0.24, t.y * px + px * 0.24, px * 0.2, 0, 7); g.fill();
-					g.fillStyle = '#ffd36a'; g.fillText(String(t.set + 1), t.x * px + px * 0.24, t.y * px + px * 0.25);
-				}
-			} else {
-				const mine = activeIndex();
-				if (paint.others) sets().forEach((set, i) => { if (i !== mine) for (const t of set.things || []) drawThing(g, t, 0.35, 'rgba(255,255,255,0.45)', true); });
-				const sel = active()?.things?.[paint.sel ?? -1];
-				if (sel) drawThing(g, sel, 0, '#ffd36a');
-				const gh = ghost();
-				if (gh) drawThing(g, gh, 0.75, fits(active() || { things: [] }, gh) ? '#7bd88f' : '#ff5a4f');
-			}
+			const mine = activeIndex();
+			if (paint.others) sets().forEach((set, i) => { if (i !== mine) for (const t of set.things || []) drawThing(g, t, 0.35, 'rgba(255,255,255,0.45)', true); });
+			const sel = active()?.things?.[paint.sel ?? -1];
+			if (sel) drawThing(g, sel, 0, '#ffd36a');
+			const gh = ghost();
+			if (gh) drawThing(g, gh, 0.75, fits(active() || { things: [] }, gh) ? '#7bd88f' : '#ff5a4f');
 		} else if (drag && (paint.tool === 'rect' || paint.tool === 'frame')) {
 			const [x0, y0, x1, y1] = box(drag.from, drag.to);
 			g.strokeStyle = '#ffd36a'; g.lineWidth = 2;
@@ -863,31 +804,30 @@ function painter(app, c, e) {
 
 	/* the bar of furnishings */
 	const setBar = h('div', { class: 'palette setbar' });
-	const pickSet = (i) => { (paint.sets ||= {})[e.id] = i; paint.sel = null; paint.preview = null; refreshSets(); redraw(); };
+	const pickSet = (i) => { (paint.sets ||= {})[e.id] = i; paint.sel = null; refreshSets(); redraw(); };
 	function refreshSets() {
 		const list = sets();
 		const mine = activeIndex();
 		const edit = (f) => () => { const before = snapshot(); f(); commit(before); refreshSets(); };
 		setBar.replaceChildren(...[h('span', { class: 'muted' }, 'Обстановки:'),
-			...list.map((set, i) => h('button', { class: i === mine && paint.preview == null ? 'on' : '', title: 'Сделать текущей: её вещи правятся', onclick: () => pickSet(i) }, `${set.name || 'Обстановка ' + (i + 1)} (${(set.things || []).length})`)),
+			...list.map((set, i) => h('button', { class: i === mine ? 'on' : '', title: 'Сделать текущей: её вещи правятся' + (set.kinds?.length ? `\nТолько для мест: ${set.kinds.join(', ')}` : ''), onclick: () => pickSet(i) },
+				`${set.name || 'Обстановка ' + (i + 1)}${set.kinds?.length ? ' · ' + set.kinds.join(', ') : ''} (${(set.things || []).length})`)),
 			h('button', { class: 'small', title: 'Новая пустая обстановка', onclick: edit(() => { list.push({ name: `Обстановка ${list.length + 1}`, things: [] }); (paint.sets ||= {})[e.id] = list.length - 1; }) }, '+ новая'),
 			mine >= 0 ? h('button', { class: 'small', title: 'Копия текущей — поменять в ней пару вещей', onclick: edit(() => { list.push({ ...JSON.parse(JSON.stringify(list[mine])), name: (list[mine].name || 'Обстановка') + ' — копия' }); (paint.sets ||= {})[e.id] = list.length - 1; }) }, '⧉ копия') : null,
 			mine >= 0 ? h('button', { class: 'small', title: 'Переименовать текущую', onclick: () => { const n = (prompt('Имя обстановки', list[mine].name || '') || '').trim(); if (n) edit(() => { list[mine].name = n; })(); } }, '✎') : null,
+			mine >= 0 ? h('button', { class: 'small', title: 'Для каких видов мест (kinds) текущая: пусто — для любого. Комната берёт обстановку своего вида, если такие есть.', onclick: () => { const n = prompt('Виды мест через запятую (пусто — любой)', (list[mine].kinds || []).join(', ')); if (n !== null) edit(() => { const k = n.split(',').map((x) => x.trim()).filter(Boolean); if (k.length) list[mine].kinds = k; else delete list[mine].kinds; })(); } }, 'виды') : null,
 			mine >= 0 ? h('button', { class: 'small', title: 'Удалить текущую', onclick: () => { if (confirm(`Удалить «${list[mine].name}»?`)) edit(() => { list.splice(mine, 1); (paint.sets ||= {})[e.id] = Math.max(0, mine - 1); })(); } }, '✕') : null,
 			h('span', { class: 'grow' }),
-			h('label', { class: 'small', title: 'Вещи остальных обстановок — бледно, пунктиром' }, h('input', { type: 'checkbox', checked: !!paint.others, onchange: (ev) => { paint.others = ev.target.checked; overlay(); } }), ' другие обстановки'),
-			list.length ? h('button', { class: paint.preview != null ? 'on' : '', title: 'Как генератор смешает обстановки: каждая вещь из любой обстановки, если не мешает уже поставленным и не перекрывает проход. Нажать ещё — другой сид.',
-				onclick: () => { paint.preview = Math.floor(Math.random() * 1e9); paint.body = null; refreshSets(); refreshThings(); redraw(); } }, '🎲 Пример генерации') : null,
-			paint.preview != null ? h('button', { class: 'small', onclick: () => { paint.preview = null; refreshSets(); redraw(); } }, 'К правке') : null].filter(Boolean));
+			h('label', { class: 'small', title: 'Вещи остальных обстановок — бледно, пунктиром' }, h('input', { type: 'checkbox', checked: !!paint.others, onchange: (ev) => { paint.others = ev.target.checked; overlay(); } }), ' другие обстановки')].filter(Boolean));
 		setBar.style.display = furnishing() ? '' : 'none';
 		setHelp.style.display = furnishing() ? '' : 'none';
 	}
-	const setHelp = h('p', { class: 'muted small' }, 'Выберите вещь слева — она следует за курсором, R поворачивает, щелчок ставит в текущую обстановку (вещь остаётся выбранной — можно ставить ещё). Без выбранной вещи: щелчок выделяет, перетаскивание двигает, R поворачивает, Delete или правая кнопка убирает. Esc снимает выбор. Обстановки могут ставить вещи на одни и те же клетки: игра возьмёт из них непересекающийся набор.');
+	const setHelp = h('p', { class: 'muted small' }, 'Выберите вещь слева — она следует за курсором, R поворачивает, щелчок ставит в текущую обстановку (вещь остаётся выбранной — можно ставить ещё). Без выбранной вещи: щелчок выделяет, перетаскивание двигает, R поворачивает, Delete или правая кнопка убирает. Esc снимает выбор. Каждая обстановка — готовый вариант комнаты: игра берёт одну целиком по сиду (своего вида места, если такие есть, — кнопка «виды»). Вещь станции ставится на её метку и помечается станцией.');
 
 	const modeBar = h('div', { class: 'palette modes' });
 	function refreshMode() {
 		modeBar.replaceChildren(...[['cells', 'Клетки'], ['furnish', 'Обстановка']].map(([id, label]) =>
-			h('button', { class: (paint.mode || 'cells') === id ? 'on' : '', onclick: () => { paint.mode = id; paint.preview = null; paint.sel = null; refreshMode(); refreshCatalog(); refreshTools(); refreshSets(); redraw(); } }, label)));
+			h('button', { class: (paint.mode || 'cells') === id ? 'on' : '', onclick: () => { paint.mode = id; paint.sel = null; refreshMode(); refreshCatalog(); refreshTools(); refreshSets(); redraw(); } }, label)));
 		setBar.style.display = furnishing() ? '' : 'none';
 		tools.style.display = furnishing() ? 'none' : '';
 	}

@@ -52,7 +52,7 @@ func run() -> void:
 	step("lists by the tabs, not one long window", tabs.has(tr("COMBAT_TAB_WEAPONS")) and tabs.has(tr("COMBAT_TAB_SPELLS")) and tabs.has(tr("COMBAT_TAB_COMMON")), str(tabs))
 	var weapons: PopupMenu = find(menu, "List_" + tr("COMBAT_TAB_WEAPONS"))
 	var blow := _line(weapons, "Булава")
-	step("the blade out of reach is grey with why", blow >= 0 and weapons.is_item_disabled(blow) and not weapons.get_item_tooltip(blow).is_empty(), weapons.get_item_tooltip(blow) if blow >= 0 else "")
+	step("the blade out of reach walks up, not grey (v0.8.4.43.51)", blow >= 0 and not weapons.is_item_disabled(blow), weapons.get_item_tooltip(blow) if blow >= 0 else "")
 	var magic: PopupMenu = find(menu, "List_" + tr("COMBAT_TAB_SPELLS"))
 	var circles: Array = _texts(magic)
 	step("the spells inside by circles", circles.has(tr("DETAILS_CANTRIP")) and circles.has(tr("DETAILS_CIRCLE").format({"n": 1})), str(circles))
@@ -61,6 +61,21 @@ func run() -> void:
 	await shot("foe_menu")
 	menu.hide()
 
+	var strike: Button = find(screen(), "Attack_melee")  # v0.8.4.43.51: the way the hero walks up to strike, dashed
+	if step("«Атака» on the bar", strike != null):
+		await press(strike)
+		await frames(2)
+		field.call("emit_signal", "cell_hovered", at)
+		await frames(3)
+		var way: Array = field.get("way")
+		step("a hover over the foe dashes the way up", way.size() > 1 and bool(field.get("dashed")) and way[0] == hero, "%s %s" % [way, field.get("dashed")])
+		step("and the hint says how far", hint.text.contains("подойдёт на"), hint.text)
+		await shot("walk_up")
+		find(screen(), "FightUi").call("cancel")
+		await frames(3)
+		field.call("emit_signal", "cell_hovered", at)
+		await frames(2)
+		step("no way once let go", (field.get("way") as Array).is_empty() and FightGrid.cell(CombatRules.player(s)) == hero)
 	var cast: Button = find(screen(), "Cast_sacred_flame")
 	if step("a spell at a range on the tab", cast != null):
 		await press(cast)

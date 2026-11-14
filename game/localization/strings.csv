@@ -245,6 +245,8 @@ COMBAT_BAD_MOVE,Туда не дойти за этот ход
 COMBAT_NO_LINE,Цели не видно
 COMBAT_NOT_AT_EXIT,Уйти можно только у выхода с этого места
 COMBAT_WALK_COST,Дойти: {ft} фт
+COMBAT_WALK_UP,подойдёт на {ft} фт
+WALK_UP_STRIKE,Подойдёт на {ft} фт и ударит
 COMBAT_WAY_OUT,Выход: дойдите до него и выходите. Кто рядом — побежит следом
 COMBAT_PICK_JUMP,Куда прыгнуть? Клетки подсвечены
 COMBAT_NO_ALLY,Рядом нет союзника

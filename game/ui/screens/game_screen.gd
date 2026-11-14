@@ -99,7 +99,7 @@ func _ready() -> void:
 	_field.arrived.connect(_on_arrived)
 	_fight = UiScenes.need(self, "%FightUi")
 	_fight.setup(self)
-	_field.cell_hovered.connect(_fight.on_hover)
+	_field.cell_hovered.connect(_on_hover)
 	_field.cell_right.connect(_on_right)
 	_dim = UiScenes.need(self, "%Dim")
 	_talk_card = UiScenes.need(self, "%TalkCard")
@@ -513,6 +513,7 @@ func _strike(ref: String) -> bool:
 			EventBus.message.emit(tr(err))
 	if not GameState.poised.is_empty():
 		if GameState.poised_melee():
+			_field.way = []
 			_approach(ref, "touch", func() -> void: said.call(GameState.strike_at(target)))
 		else:
 			said.call(GameState.strike_at(target))
@@ -522,6 +523,41 @@ func _strike(ref: String) -> bool:
 		return false
 	said.call(why)
 	return true
+
+
+## The mouse over a square: in a fight the fight's own hover; out of it, with a blow at arm's length readied (v0.8.4.43.51,
+## the author: «при наведении курсора на врага мне показывался пунктиром путь куда мой персонаж пойдёт»), the way the hero
+## walks up to the person or the foe under the mouse, dashed as in a fight.
+func _on_hover(cell: Vector2i) -> void:
+	if _fight.active():
+		_fight.on_hover(cell)
+		return
+	var path := _strike_way(cell)
+	if path == _field.way:
+		return
+	_field.way = path
+	_field.dashed = not path.is_empty()
+	_field.queue_redraw()
+
+
+## The hero's square and the way it walks to strike what stands on `cell` with the readied blow; [] — no blow at arm's
+## length readied, nobody to strike there or the hero stands beside it already.
+func _strike_way(cell: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var s := GameState.session if GameState.has_session() else null
+	if s == null or s.in_conversation() or GameState.poised.is_empty() or not GameState.poised_melee():
+		return out
+	var ref := _field.ref_at(cell)
+	if not (ref.begins_with("npc:") or ref.begins_with("foe:")):
+		return out
+	var to := _field.cell_of(ref)
+	if to.x < 0:
+		return out
+	var steps := WalkRules.near(_field.map, Catalog.data["layouts"], _field.hero_cell(), to, MapSpots.reach(s, Catalog.data, "touch", ref), s.room_id)
+	if not steps.is_empty():
+		out.append(_field.hero_cell())
+		out.append_array(steps)
+	return out
 
 
 ## The left button on someone or something (v0.8.4.43.4, as in BG3): its main act — a person is talked to, a body

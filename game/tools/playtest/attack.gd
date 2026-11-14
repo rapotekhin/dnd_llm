@@ -29,6 +29,27 @@ func run() -> void:
 	if not step("the «Напасть» button by the NPC", attack != null and not attack.disabled, str(here)):
 		return
 	await shot("people")
+	var field: Control = find(screen(), "Field")  # v0.8.4.43.51: a blow readied out of a fight dashes the way up to the one hovered
+	var aim := Vector2i(-1, -1)
+	for one: String in here:  # one who stands away from the hero
+		var at: Vector2i = field.call("cell_of", "npc:" + one)
+		if at.x >= 0 and WalkRules.distance(at, field.call("hero_cell")) > 2:
+			aim = at
+	if step("someone away from the hero", aim.x >= 0):
+		gs.poise_strike("main")
+		await frames(2)
+		field.call("emit_signal", "cell_hovered", aim)
+		await frames(2)
+		var way: Array = field.get("way")
+		step("a readied blow dashes the way up out of a fight", way.size() > 1 and bool(field.get("dashed")) and way[0] == field.call("hero_cell"), str(way))
+		await shot("walk_up")
+		gs.poise_strike("main")
+		field.call("emit_signal", "cell_hovered", aim + Vector2i(0, 1))
+		field.call("emit_signal", "cell_hovered", aim)
+		await frames(2)
+		step("let go — no way", (field.get("way") as Array).is_empty())
+		await open_row("More_" + first)  # the panel was drawn anew
+		attack = find(screen(), "Attack_" + first)
 	await press(attack)
 	if not step("the fight at once", await wait_until(func() -> bool: return screen_is("fight") and not gs.is_busy(), 60.0)):
 		return

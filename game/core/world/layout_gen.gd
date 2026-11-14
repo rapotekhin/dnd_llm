@@ -71,9 +71,12 @@ static func turn_of(turn: int, rot: int, flip: bool) -> int:
 	return posmod((2 - turn if flip else turn) - rot, ROTATIONS)
 
 
-## The things of a chunk's furnishings (`furnish`: [{"name", "things": [{"body", "x", "y", "turn"}]}], v0.8.4.43.31) as
-## marks of the map: `set:<body>` on the square its top left lands on once the chunk is turned and mirrored, with its own
-## `turn`, the chunk's `rot` and `flip` (MapSpots lays its squares) and the furnishing's place `set`.
+## The things of a chunk's furnishings (`furnish`: [{"name", "kinds"?, "things": [{"body", "x", "y", "turn", "station"?}]}],
+## v0.8.4.43.31) as marks of the map: `set:<body>` on the square its top left lands on once the chunk is turned and
+## mirrored, with its own `turn`, the chunk's `rot` and `flip` (MapSpots lays its squares), the furnishing's place `set`
+## and the chunk's own place on the map `piece` — a room stands one furnishing of each piece whole (v0.8.4.43.51, the
+## author: «брать какую-то фиксированную расстановку полностью»), the one for its kind of place (`kinds`); `station` — the
+## thing of that station's mark.
 static func furnish_marks(at: Dictionary, pos: Vector2i, index: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var sets: Array = at.get("furnish", [])
@@ -84,10 +87,13 @@ static func furnish_marks(at: Dictionary, pos: Vector2i, index: int) -> Array[Di
 	var flip := bool(at.get("flip", false))
 	var w := str(rows[0]).length() if rot % 2 == 0 else rows.size()
 	var h := rows.size() if rot % 2 == 0 else str(rows[0]).length()
+	var piece := "%d,%d" % [pos.x, pos.y]
 	for i: int in sets.size():
+		var kinds: Array = (sets[i] as Dictionary).get("kinds", [])
 		for t: Dictionary in (sets[i] as Dictionary).get("things", []):
 			var c := pos + turn_cell(Vector2i(int(t["x"]), int(t["y"])), w, h, rot, flip)
-			out.append({"name": SET + str(t["body"]), "x": c.x, "y": c.y, "room": index, "set": i, "turn": int(t.get("turn", 0)), "rot": rot, "flip": flip})
+			out.append({"name": SET + str(t["body"]), "x": c.x, "y": c.y, "room": index, "set": i, "turn": int(t.get("turn", 0)), "rot": rot, "flip": flip,
+				"piece": piece, "kinds": kinds, "station": str(t.get("station", ""))})
 	return out
 
 
@@ -292,6 +298,7 @@ static func _stitch(lib: Dictionary, asks: Array[Dictionary], seed_value: int, p
 	out["doors"] = _shifted(doors, out["origin"])
 	out["exits"] = []
 	var rests: Array[Dictionary] = _shifted(free, out["origin"])
+	out["covered"] = _covered(lib, out["marks"])  # a way by a wall or a wanted mark stands by no thing of a furnishing
 	for a: Dictionary in asks:
 		var id := str(a["id"])
 		var index := ids.find(id)
@@ -304,7 +311,27 @@ static func _stitch(lib: Dictionary, asks: Array[Dictionary], seed_value: int, p
 			_exits_of(out, a, index, ways, rests, rng, pick, int(lib["open"].get("room_gap", 0)))
 			kept[id]["spots"] = _wanted_marks(out, a, index, rng, pick)
 			kept[id]["ways"] = _ways_of(out, id)
+	out.erase("covered")
 	_close_sockets(out)
+	return out
+
+
+## The squares the things of the furnishings take (marks `set:<body>`, v0.8.4.43.51), by the sizes of `lib.bodies`
+## (LayoutRules.lib): {square: true}. Without them — the squares of the marks alone.
+static func _covered(lib: Dictionary, marks: Array) -> Dictionary:
+	var out := {}
+	var bodies: Dictionary = lib.get("bodies", {})
+	for m: Dictionary in marks:
+		var name := str(m["name"])
+		if not name.begins_with(SET):
+			continue
+		var size: Array = bodies.get(name.substr(SET.length()), {}).get("size", [1, 1])
+		var turn := int(m.get("turn", 0))
+		var w := int(size[1]) if turn % 2 == 1 else int(size[0])
+		var h := int(size[0]) if turn % 2 == 1 else int(size[1])
+		for y: int in h:
+			for x: int in w:
+				out[Vector2i(int(m["x"]), int(m["y"])) + turn_offset(Vector2i(x, y), int(m.get("rot", 0)), bool(m.get("flip", false)))] = true
 	return out
 
 
@@ -647,12 +674,15 @@ static func _opens_out(out: Dictionary, s: Dictionary) -> bool:
 	return not _inside(out, beyond.x, beyond.y) or str(out["rows"][beyond.y][beyond.x]) == BLANK
 
 
-static func _by_wall(out: Dictionary, index: int, rng: RandomNumberGenerator) -> Dictionary:
+## A free square by a wall of room `index`, else any free one: no mark, no way, no thing of a furnishing on it while there
+## is such a square (v0.8.4.43.51).
+static func _by_wall(out: Dictionary, index: int, rng: RandomNumberGenerator, past_things := false) -> Dictionary:
 	var by_wall: Array[Dictionary] = []
 	var free: Array[Dictionary] = []
+	var covered: Dictionary = {} if past_things else out.get("covered", {})
 	for y: int in int(out["h"]):
 		for x: int in int(out["w"]):
-			if room_at(out, x, y) != index or str(out["rows"][y][x]) != FLOOR or _marked(out, x, y):
+			if room_at(out, x, y) != index or str(out["rows"][y][x]) != FLOOR or _marked(out, x, y) or covered.has(Vector2i(x, y)):
 				continue
 			free.append({"x": x, "y": y})
 			for side: String in SIDES:
@@ -661,6 +691,8 @@ static func _by_wall(out: Dictionary, index: int, rng: RandomNumberGenerator) ->
 					by_wall.append({"x": x, "y": y})
 					break
 	var list := by_wall if not by_wall.is_empty() else free
+	if list.is_empty() and not past_things and not covered.is_empty():
+		return _by_wall(out, index, rng, true)
 	return list[rng.randi_range(0, list.size() - 1)] if not list.is_empty() else {"x": 1, "y": 1}
 
 
