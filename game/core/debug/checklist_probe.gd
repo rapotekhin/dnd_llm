@@ -865,8 +865,18 @@ static func liquid(data: Dictionary, lid: String) -> Dictionary:
 	var g := fight(s, data, "goblin")
 	if k.has("coat"):
 		LiquidRules.coat(s, data, Sheet.holder(s, g), lid, LiquidRules.name_of(data, lid), g)
-		check(steps, str(LiquidRules.coat_on(s, g).get("liquid", "")) == lid, "облитый: %s" % LiquidRules.name_of(data, lid))
 		var co: Dictionary = k["coat"]
+		if bool(co.get("douses", false)):  # water on a creature is the status `wet` (v0.8.4.43.59)
+			g["hp"] = 100
+			var hit: Array[String] = []
+			Harm.typed(s, data, g, 4, "lightning", hit, "молния", false)
+			check(steps, ConditionRules.has(Sheet.holder(s, g), LiquidRules.WET) and int(g["hp"]) == 92, "мокрый: молния вдвое", 100 - int(g["hp"]))
+			check(steps, ConditionRules.impose(s, data, {"condition": "burning", "ends": {}}, g).is_empty() and not ConditionRules.has(g, "burning"), "мокрый не загорается")
+			var t := {}
+			ThingRules.douse(s, data, t)  # a thing keeps the coat of water
+			check(steps, LiquidRules.douses(s, t), "мокрая вещь не загорается")
+		else:
+			check(steps, str(LiquidRules.coat_on(s, g).get("liquid", "")) == lid, "облитый: %s" % LiquidRules.name_of(data, lid))
 		if co.has("fire_plus"):
 			g["hp"] = 100
 			var lines: Array[String] = []
@@ -875,8 +885,6 @@ static func liquid(data: Dictionary, lid: String) -> Dictionary:
 		if co.has("burns"):
 			check(steps, LiquidRules.burning(s, data, Sheet.holder(s, g)) == str(co["burns"]) and ConditionRules.has(Sheet.holder(s, g), "burning"),
 				"горит %s, пока не собьют" % co["burns"])
-		if bool(co.get("douses", false)):
-			check(steps, LiquidRules.douses(s, g), "гасит огонь, не загорается")
 	if k.has("puddle"):
 		var at := FightGrid.cell(g) + Vector2i(1, 0)
 		var lines: Array[String] = []
@@ -1912,6 +1920,17 @@ static func condition(data: Dictionary, id: String) -> Dictionary:
 		known = true
 		check(steps, Sheet.speed(s, data, g) == int(Sheet.template(data, g).get("speed", 30)) + int(lays["speed_plus"]), "скорость %+d фт" % int(lays["speed_plus"]),
 			Sheet.speed(s, data, g))
+	for key: String in ["vulnerable", "resist"]:  # a damage type it takes double or half (wet, v0.8.4.43.59)
+		for dt: Variant in lays.get(key, []):
+			known = true
+			var got := Sheet.taken(s, data, g, str(dt), PROBE)
+			check(steps, got == int(LEFT[key]), "%s: %s" % ["уязвимость" if key == "vulnerable" else "сопротивление",
+				data["misc"]["damage_types"].get(str(dt), dt)], got)
+	for cond: Variant in lays.get("immune", []):  # a condition it does not take and ends (wet puts out burning)
+		if data["rules"]["conditions"].has(str(cond)):
+			known = true
+			ConditionRules.impose(s, data, {"condition": str(cond), "ends": {}, "source": Cheats.SOURCE.duplicate()}, g)
+			check(steps, not ConditionRules.has(g, str(cond)), "не бывает: %s" % ConditionRules.name_of(data, str(cond)).to_lower(), "легло")
 	var harm: Dictionary = row.get("harm", {})
 	if not harm.is_empty():  # its damage at its moment of the turn, the source's numbers or the row's
 		known = true

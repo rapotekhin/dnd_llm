@@ -51,7 +51,7 @@ func test_alchemists_fire_burns_until_water_puts_it_out() -> void:
 	lines.assign(LiquidRules.coat(s, data, ogre, LiquidRules.WATER, "вода", ogre))
 	assert_str(LiquidRules.burning(s, data, ogre)).is_empty()
 	assert_bool(ConditionRules.has(ogre, "burning")).is_false()
-	assert_bool(LiquidRules.douses(s, ogre)).is_true()
+	assert_bool(ConditionRules.has(ogre, LiquidRules.WET)).is_true()  # water on a creature is the status `wet` (v0.8.4.43.59)
 
 
 func test_spilt_oil_trips_and_burns_away() -> void:

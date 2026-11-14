@@ -235,6 +235,11 @@ static func impose(s: GameSession, data: Dictionary, e: Dictionary, who: Diction
 	var laid := e.merged(own.get("lays", {})).merged(MakeRules.fx(s, cond))  # the numbers of its row, a made one's parts
 	if own.has("ticks") and not laid.has("ticks") and not laid.get("ends", {}).has("at"):
 		laid["ticks"] = int(own["ticks"])
+	if own.has("rounds") and (laid.get("ends", {}) as Dictionary).is_empty() and not laid.has("ticks"):  # its row's length: wet 2 rounds
+		laid["ends"] = {"at": now(s) + int(own["rounds"])}
+	for x: Variant in laid.get("immune", []):  # what it is immune to now ends: wet puts the fire out (v0.8.4.43.59)
+		if has(c, str(x)):
+			remove(c, str(x))
 	if own.has("same") and has(c, cond):  # one of it from a second source: the stronger or the renewed (v0.8.4.43.54)
 		_same(s, data, effects_of(c, cond)[0], laid, str(own["same"]))
 		return lines

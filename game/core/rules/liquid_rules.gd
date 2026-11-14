@@ -10,6 +10,7 @@ extends RefCounted
 ## the liquids of its `only` (a lamp only oil); a light of `burns_hours` lights the way only with that in it and burns it.
 
 const WATER := "water"
+const WET := "wet"  ## the status water lays on a creature (v0.8.4.43.59)
 const FOUL := "foul_water"
 
 
@@ -486,14 +487,17 @@ static func coat_on(s: GameSession, h: Dictionary) -> Dictionary:
 
 
 ## `h` is splashed with `lid`: its `coat` replaces what was on it; water puts out a fire. `who` — the creature it is on (a
-## fighter, Sheet.HERO; {} — a thing): a coat that burns sets it on fire — the status `burning` of its dice for a minute or until
+## fighter, Sheet.HERO; {} — a thing): water makes it `wet` (`soak`, v0.8.4.43.59), a coat that burns sets it on fire — the status `burning` of its dice for a minute or until
 ## put out, its `put_out` the save at the end of its turns (v0.8.4.43.54, one status for every fire). Lines.
 static func coat(s: GameSession, data: Dictionary, h: Dictionary, lid: String, cause: String, who: Dictionary = {}) -> Array[String]:
 	var k: Dictionary = kind(data, lid).get("coat", {})
 	if k.is_empty():
 		return []
 	var lines: Array[String] = []
-	if bool(k.get("douses", false)) and put_out(s, data, h) and h.has("name"):  # a thing's fire, a creature's
+	if bool(k.get("douses", false)) and not who.is_empty():  # water on a creature is the status `wet`, what was on it washed off (v0.8.4.43.59)
+		ConditionRules.remove(h, "coated")
+		return soak(s, data, who, cause)
+	if bool(k.get("douses", false)) and put_out(s, data, h) and h.has("name"):  # a thing's fire
 		lines.append("%s: пламя погасло" % h["name"])
 	ConditionRules.remove(h, "coated")
 	var e := {"condition": "coated", "liquid": lid, "ends": {"at": ConditionRules.now(s) + int(k["minutes"]) * ConditionRules.ROUNDS_PER_MINUTE} if k.has("minutes") else {},
@@ -519,6 +523,21 @@ static func fire_plus(s: GameSession, h: Dictionary) -> int:
 ## Water on `h`: no fire takes it.
 static func douses(s: GameSession, h: Dictionary) -> bool:
 	return bool(coat_on(s, h).get("douses", false))
+
+
+## Water on a creature, as in BG3 (v0.8.4.43.59): the status `wet` of its row — vulnerable to lightning and cold, resistant to fire,
+## no fire takes it and its own goes out — for the row's rounds, renewed while it stands in water or under rain. `who` — a fighter,
+## Sheet.HERO; `cause` — the water's name. Lines: the fire that went out, the first soaking (`say` — told).
+static func soak(s: GameSession, data: Dictionary, who: Dictionary, cause: String, say := true) -> Array[String]:
+	var h := Sheet.holder(s, who)
+	var was := ConditionRules.has(h, WET)
+	var lit := put_out(s, data, h)  # its fire, a status or a coat that burns
+	var lines := ConditionRules.impose(s, data, {"condition": WET, "source": {"kind": "liquid", "id": WATER, "name": cause}}, who)
+	if lit:
+		lines.append("%s: пламя погасло — %s" % [h.get("name", ""), cause])
+	elif say and not was and ConditionRules.has(h, WET):
+		lines.append("%s промокает — %s" % [h.get("name", ""), cause])
+	return lines
 
 
 ## The dice it burns with at the start of its turn, "" — it does not burn: a burning coat of a thing, a creature's `burning`.

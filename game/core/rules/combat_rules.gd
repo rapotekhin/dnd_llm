@@ -586,6 +586,7 @@ static func _begin_turn(s: GameSession, data: Dictionary, lines: Array[String]) 
 			hands["main_hand"] = dropped
 			CharacterRules.refresh(me, data, s.items)
 			lines.append("%s поднимает %s" % [name, ItemRules.display_name(data["items"], s.items, dropped)])
+	FightField.soak(s, data, f, lines)  # wet again in water or under rain, before the current of the water hurts (v0.8.4.43.59)
 	lines.append_array(SpellEffects.zone_tick(s, data, f, "start"))  # Moonbeam, Spirit Guardians (v0.7.13.5)
 	Harm.each_turn(s, data, f, "start", lines)  # burning, bleeding: what its statuses deal now, the fire it stands in renewed first (v0.8.4.43.54)
 	Move.recount(s, data, f)  # a web that holds at the start of the turn

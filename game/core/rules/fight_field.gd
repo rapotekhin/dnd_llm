@@ -242,8 +242,7 @@ static func hero_stands(s: GameSession, data: Dictionary) -> void:
 static func stepped(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> bool:
 	var g := FightGrid.grid(s, data)
 	var bits := FightGrid.flags_at(g, FightGrid.cell(f))
-	if douses_at(s, data, FightGrid.cell(f)) and LiquidRules.put_out(s, data, Sheet.holder(s, f)):
-		lines.append("%s гасит пламя в воде" % f["name"])
+	soak(s, data, f, lines)
 	var hero := str(f.get("id")) == CombatRules.PLAYER
 	var flying := CombatRules.airborne(s, data, f)
 	if bits & FightGrid.PIT != 0 and not flying:
@@ -515,7 +514,18 @@ static func _ruin(s: GameSession, data: Dictionary, at: Vector2i, lines: Array[S
 # --- fire ----------------------------------------------------------------------------------------------------
 
 
-## Water on the square: the map's or a puddle (v0.8.4.28.2) — no fire there, and one walking in is put out.
+## Water on a body that does not fly, as in BG3 (v0.8.4.43.59): the water of its square (the map's or a puddle) or a sky that wets
+## (`wets` of the weather here) — it is `wet` and its fire out (LiquidRules.soak). On walking in and at the start of its turn.
+static func soak(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
+	if CombatRules.airborne(s, data, f):
+		return
+	if douses_at(s, data, FightGrid.cell(f)):
+		lines.append_array(LiquidRules.soak(s, data, f, "вода"))
+	elif not WeatherRules.wets(s, data).is_empty():  # everybody under the sky: only a fire put out is told
+		lines.append_array(LiquidRules.soak(s, data, f, WeatherRules.wets(s, data), false))
+
+
+## Water on the square: the map's or a puddle (v0.8.4.28.2) — no fire there, and one walking in is put out and wet.
 static func douses_at(s: GameSession, data: Dictionary, at: Vector2i) -> bool:
 	var key := FightGrid.tag(at)
 	return FightGrid.flags_at(FightGrid.grid(s, data), at) & FightGrid.WET != 0 		or SpellEffects.zones(s).any(func(z: Dictionary) -> bool: return bool(z.get("douses", false)) and (z.get("cells", []) as Array).has(key))
