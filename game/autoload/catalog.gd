@@ -86,6 +86,17 @@ func playable() -> Array[Dictionary]:
 	return bundles.filter(func(b: Dictionary) -> bool: return b["errors"].is_empty())
 
 
+## The packs a new game is picked from: not a dream, which is played only before its world (DreamRules, v0.8.4.44.2).
+func worlds() -> Array[Dictionary]:
+	return bundles.filter(func(b: Dictionary) -> bool: return not DreamRules.is_dream(b["pack"]))
+
+
+## The dream pack `id` names its prologue, "" — none (or not playable).
+func prologue_of(id: String) -> String:
+	var pro := str(bundle(id).get("pack", {}).get("prologue", ""))
+	return pro if DreamRules.is_dream(bundle(pro).get("pack", {})) else ""
+
+
 func bundle(id: String) -> Dictionary:
 	for b: Dictionary in playable():
 		if b["id"] == id:

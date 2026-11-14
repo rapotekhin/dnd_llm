@@ -1399,6 +1399,13 @@
           "title": "Adult",
           "type": "boolean"
         },
+        "closed": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Closed",
+          "type": "array"
+        },
         "dm_style": {
           "default": "classic",
           "enum": [
@@ -1409,6 +1416,11 @@
           ],
           "title": "Dm Style",
           "type": "string"
+        },
+        "dream": {
+          "default": false,
+          "title": "Dream",
+          "type": "boolean"
         },
         "lines": {
           "items": {

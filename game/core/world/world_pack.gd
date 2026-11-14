@@ -82,6 +82,11 @@ static func validate(b: Dictionary, base: Dictionary) -> Array[String]:
 			or (names["male"] as Array).is_empty() or (names["female"] as Array).is_empty():
 		e.append("pack.names: непустые списки male и female")
 	e.append_array(_validate_rules(p.get("rules", {}), base))
+	if p.has("dream") and not (DreamRules.is_dream(p) and _when_ok(DreamRules.of(p).get("wake", {}).get("when"), false)
+			and not str(DreamRules.of(p).get("wake", {}).get("text", "")).is_empty()):
+		e.append("pack.dream: wake {when — одно условие, text}")  # v0.8.4.44.2
+	if p.has("closed") and not _strings(p["closed"]):
+		e.append("pack.closed: список видов эффектов (create:…)")
 	if not e.is_empty():
 		return e
 	var data := apply_rules(base, b)

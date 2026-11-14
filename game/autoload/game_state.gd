@@ -83,8 +83,9 @@ func world() -> WorldView:
 
 
 ## A new game: `settings` from the new game screen (world pack and master settings; {} = the active world's
-## defaults) and a built character ({} = the world's first ready-made character).
-func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: int = -1) -> void:
+## defaults) and a built character ({} = the world's first ready-made character). `settings.tutorial` with the creation
+## `choices` begins it as the dream of the world's `prologue` (DreamRules, v0.8.4.44.2).
+func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: int = -1, choices: Dictionary = {}) -> void:
 	if game_seed < 0:
 		game_seed = GameSession.seed_of(settings.get("seed", LaunchArgs.value("--seed", str(randi()))))
 	if settings.has("world"):
@@ -93,13 +94,20 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 		settings = WorldPack.default_settings(Catalog.data["pack"])
 	if character.is_empty():
 		character = CharacterBuilder.build_preset(Catalog.data["presets"][0], Catalog.data)
+	var dream_of := ""
+	if bool(settings.get("tutorial", false)) and not choices.is_empty() and Catalog.activate(Catalog.prologue_of(Catalog.active_world)):
+		dream_of = str(settings.get("world", ""))
 	var s := GameSession.create(game_seed, Time.get_datetime_string_from_system(), world().start_room(), character)
 	s.world_id = Catalog.active_world
 	s.world_version = str(Catalog.data["pack"].get("version", ""))
 	s.settings = settings.duplicate(true)
 	s.settings["world"] = Catalog.active_world
 	s.settings.erase("seed")  # the game's own, not a setting for the master
-	BackgroundRules.apply_ties(s, Catalog.data)  # the people of the hero's past (v0.7.11)
+	s.settings.erase("tutorial")
+	if not dream_of.is_empty():
+		DreamRules.begin(s, Catalog.data, dream_of, choices, settings)
+	else:
+		BackgroundRules.apply_ties(s, Catalog.data)  # the people of the hero's past (v0.7.11)
 	PetRules.seed(s, Catalog.data, s.room_id)  # the start room's wild beasts (v0.7.43)
 	start(s)
 	TimeRules.settle(s, Catalog.data)  # a festival and the weather of the first day (v0.7.44, v0.7.46)
@@ -2058,6 +2066,21 @@ func office_act(what: String, id: String, arg: String = "") -> String:
 
 ## The hero died and an adult child goes on (v0.7.32): the heir's character takes the dead hero's place in the same
 ## game — its coins, things, places and family; the world and what it knows stay.
+## «Проснуться» (v0.8.4.44.2): the dream ends — a new game of its world begins from the same creation choices and settings,
+## the hero at level 1 with its starting kit; nothing of the dream is kept. The profile remembers the tutorial was played.
+func wake() -> void:
+	if session == null or session.dream.is_empty():
+		return
+	var choices: Dictionary = session.dream.get("choices", {})
+	var settings := DreamRules.waking_settings(session)
+	SaveManager.tutorial_done = true
+	SaveManager.save_settings()
+	cancel_turn()
+	if not Catalog.activate(str(settings["world"])):
+		return
+	new_game(CharacterBuilder.build(choices, Catalog.data), settings)
+
+
 func continue_as_heir(character: Dictionary) -> void:
 	var s := session
 	if s == null or character.is_empty() or FamilyRules.heir(s, Catalog.data).is_empty():

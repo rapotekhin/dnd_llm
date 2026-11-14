@@ -1,0 +1,177 @@
+{
+	"start_room": "dream-1",
+	"locations": {
+		"dream-cave": {
+			"name": "Пещера сна",
+			"indoor": true,
+			"terrain": "underdark",
+			"description": "Пещера из семи залов, связанных узкими ходами; свет — от бледного мха на стенах."
+		}
+	},
+	"sites": {
+		"dream-1": {
+			"name": "Сырая пещера",
+			"location_id": "dream-cave",
+			"tags": [
+				"cave"
+			],
+			"public": true,
+			"description": "Один из залов пещеры сна: из него ход ведёт только дальше."
+		},
+		"dream-2": {
+			"name": "Зал с костями",
+			"location_id": "dream-cave",
+			"tags": [
+				"cave"
+			],
+			"public": true,
+			"description": "Один из залов пещеры сна: из него ход ведёт только дальше."
+		},
+		"dream-3": {
+			"name": "Зал с колодками",
+			"location_id": "dream-cave",
+			"tags": [
+				"cave"
+			],
+			"public": true,
+			"description": "Один из залов пещеры сна: из него ход ведёт только дальше."
+		},
+		"dream-4": {
+			"name": "Гоблинья нора",
+			"location_id": "dream-cave",
+			"tags": [
+				"cave"
+			],
+			"public": true,
+			"description": "Один из залов пещеры сна: из него ход ведёт только дальше."
+		},
+		"dream-5": {
+			"name": "Сторожевой грот",
+			"location_id": "dream-cave",
+			"tags": [
+				"cave"
+			],
+			"public": true,
+			"description": "Один из залов пещеры сна: из него ход ведёт только дальше."
+		},
+		"dream-6": {
+			"name": "Зал отголосков",
+			"location_id": "dream-cave",
+			"tags": [
+				"cave"
+			],
+			"public": true,
+			"description": "Один из залов пещеры сна: из него ход ведёт только дальше."
+		},
+		"dream-7": {
+			"name": "Огненное логово",
+			"location_id": "dream-cave",
+			"tags": [
+				"cave"
+			],
+			"public": true,
+			"description": "Один из залов пещеры сна: из него ход ведёт только дальше."
+		}
+	},
+	"rooms": {
+		"dream-1": {
+			"name": "Сырая пещера",
+			"description": "Низкий свод, сочащаяся по стенам вода, бледный мох даёт ровно столько света, чтобы видеть свои руки. Пахнет мокрым камнем. Из пещеры ведёт один ход.",
+			"location_id": "dream-cave",
+			"site_id": "dream-1",
+			"exits": [
+				"dream-2"
+			],
+			"npcs": [],
+			"hooks": [],
+			"layout": {
+				"size": "medium"
+			}
+		},
+		"dream-2": {
+			"name": "Зал с костями",
+			"description": "Ход расширяется в зал с низким потолком. Под ногами хрустит мелкий щебень, у стены темнеет что-то большое. Дальше — узкий проход.",
+			"location_id": "dream-cave",
+			"site_id": "dream-2",
+			"exits": [
+				"dream-3"
+			],
+			"npcs": [],
+			"hooks": [],
+			"layout": {
+				"size": "medium"
+			}
+		},
+		"dream-3": {
+			"name": "Зал с колодками",
+			"description": "Здесь кто-то жил: следы старого костра, вбитые в камень кольца. Тишину нарушает только капель. Ход ведёт дальше.",
+			"location_id": "dream-cave",
+			"site_id": "dream-3",
+			"exits": [
+				"dream-4"
+			],
+			"npcs": [],
+			"hooks": [],
+			"layout": {
+				"size": "medium"
+			}
+		},
+		"dream-4": {
+			"name": "Гоблинья нора",
+			"description": "Тесный зал пропах дымом и гнилью: у стен — подстилки из тряпья, обглоданные кости, черепки. Ход за норой уходит вниз.",
+			"location_id": "dream-cave",
+			"site_id": "dream-4",
+			"exits": [
+				"dream-5"
+			],
+			"npcs": [],
+			"hooks": [],
+			"layout": {
+				"size": "medium"
+			}
+		},
+		"dream-5": {
+			"name": "Сторожевой грот",
+			"description": "Высокий грот, по которому гуляет эхо. Камни здесь сложены в грубые укрытия, будто кто-то держал оборону. Дальше — широкий спуск.",
+			"location_id": "dream-cave",
+			"site_id": "dream-5",
+			"exits": [
+				"dream-6"
+			],
+			"npcs": [],
+			"hooks": [],
+			"layout": {
+				"size": "medium"
+			}
+		},
+		"dream-6": {
+			"name": "Зал отголосков",
+			"description": "Круглый зал с гладкими, словно отполированными стенами. Каждое слово звучит здесь дольше, чем должно, и будто что-то прислушивается в ответ. За дальней аркой — жар и рыжий отсвет.",
+			"location_id": "dream-cave",
+			"site_id": "dream-6",
+			"exits": [
+				"dream-7"
+			],
+			"npcs": [],
+			"hooks": [],
+			"layout": {
+				"size": "medium"
+			}
+		},
+		"dream-7": {
+			"name": "Огненное логово",
+			"description": "Огромная пещера, раскалённая и красная: в трещинах пола течёт лава, свод теряется в дыму. Здесь чьё-то логово.",
+			"location_id": "dream-cave",
+			"site_id": "dream-7",
+			"exits": [],
+			"npcs": [],
+			"hooks": [],
+			"layout": {
+				"size": "large"
+			}
+		}
+	},
+	"npcs": {},
+	"quests": {},
+	"factions": {}
+}

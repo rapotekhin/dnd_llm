@@ -239,6 +239,13 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         validator = jsonschema.Draft202012Validator({**SCHEMA, "$ref": f"#/$defs/{name}"})
         for e in sorted(validator.iter_errors(doc), key=lambda e: list(e.path)):
             errors.append(f"{name}.{'.'.join(str(p) for p in e.path)}: {e.message}")
+    if pack.get("prologue"):  # v0.8.4.44.2: the dream played before this world
+        pro = WORLDS / str(pack["prologue"]) / "pack.json"
+        if not pro.exists() or not isinstance(load(pro).get("dream"), dict):
+            errors.append(f"pack.prologue: нет пакета-сна {pack['prologue']} (pack.json с dream)")
+    wake = (pack.get("dream") or {}).get("wake", {}) if isinstance(pack.get("dream"), dict) else {}
+    if wake.get("when") and not errors:
+        errors += check_when(wake["when"], "pack.dream.wake.when", world.get("rooms", {}), world.get("npcs", {}), set(), False, world.get("quests", {}))
     if errors:
         return errors
 

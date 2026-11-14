@@ -315,11 +315,13 @@ async def _agent_turn(session: Session, params: TurnRequestParams) -> TurnResult
     await _pick_providers(llm)
     user_prompt = turn_user_prompt(params)
     checker = llm if services.settings.made_check else None
-    ctx = TurnContext(session, params, services.library, model=checker)
+    world = params.snapshot.world
+    library = None if world is not None and world.dream else services.library  # a dream borrows and keeps nothing
+    ctx = TurnContext(session, params, library, model=checker)
 
     def fresh() -> TurnContext:  # each attempt anew; the last one is the turn's (its checks decide a repeat)
         nonlocal ctx
-        ctx = TurnContext(session, params, services.library, model=checker)
+        ctx = TurnContext(session, params, library, model=checker)
         return ctx
 
     async def attempt():

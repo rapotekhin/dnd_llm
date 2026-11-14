@@ -101,7 +101,7 @@ func _move(delta: int) -> void:
 func _finish() -> void:
 	if not CharacterBuilder.complete(choices, data()):
 		return
-	GameEntry.enter({"kind": "heir" if heir else "new", "character": CharacterBuilder.build(choices, data()), "settings": settings})
+	GameEntry.enter({"kind": "heir" if heir else "new", "character": CharacterBuilder.build(choices, data()), "settings": settings, "choices": choices})
 
 
 ## A callback that stores a multi-pick (Array) into choices[key].

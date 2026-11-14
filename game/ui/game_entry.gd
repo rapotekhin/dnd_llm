@@ -15,7 +15,7 @@ static func enter(action: Dictionary) -> void:
 static func perform(action: Dictionary) -> void:
 	match str(action.get("kind", "")):
 		"new":
-			GameState.new_game(action.get("character", {}), action.get("settings", {}))
+			GameState.new_game(action.get("character", {}), action.get("settings", {}), -1, action.get("choices", {}))
 		"heir":  # v0.7.32
 			GameState.continue_as_heir(action.get("character", {}))
 		"load":

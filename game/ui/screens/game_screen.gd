@@ -26,6 +26,7 @@ var _short_rest: SmallDialog
 var _long_rest: SmallDialog
 var _wilds: SmallDialog  # v0.7.41
 var _wait: SmallDialog  # v0.8.4.2
+var _wake: WakeBox  # v0.8.4.44.2: the dream's end
 var _track: Button  # the followed quest's step over the chat (v0.7.22.32)
 var _theft: TheftPanel
 var _container: ContainerPanel
@@ -832,6 +833,8 @@ func _refresh() -> void:
 		input.release_focus()  # the fight's keys are not letters of the chat; typing still lands in the input
 	_was_fight = _fight.active()
 	var s0 := GameState.session if GameState.has_session() else null
+	if s0 != null and not busy and _wake == null and DreamRules.wake_due(s0, Catalog.data):
+		_wake = WakeBox.open(self, DreamRules.wake_text(Catalog.data))
 	brush.visible = SaveManager.images_enabled() and not Backend.image_models().is_empty()
 	brush.disabled = not online or GameState.drawing or s0 == null or ImageFrame.event_index(s0) < 0
 	brush.tooltip_text = "BTN_DRAW_EVENT_BUSY" if GameState.drawing else "BTN_DRAW_EVENT"

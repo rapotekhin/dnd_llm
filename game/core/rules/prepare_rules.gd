@@ -72,7 +72,7 @@ static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Di
 			if not part(s, ACTS).has(key) and not busy.has("act:" + key):
 				out.append({"kind": "act", "key": key, "quest": qid})
 	var giver := GoalRules.quest_due(s, data)  # v0.8.4.36: the quest for the hero's life goal, from the last clue's giver
-	if not giver.is_empty() and not part(s, GOAL).has(giver) and not busy.has("goal:" + giver) 			and TimeRules.today(s, s.prepared, "goal_tries") < int(c.get("goal_per_day", 2)):
+	if not giver.is_empty() and not DreamRules.closes(data, "create:quest") and not part(s, GOAL).has(giver) and not busy.has("goal:" + giver) 			and TimeRules.today(s, s.prepared, "goal_tries") < int(c.get("goal_per_day", 2)):
 		out.append({"kind": "goal", "key": giver, "npc": giver, "room": Where.npc_room(s, data, giver)})
 	if bool(c.get("setbacks", false)):  # v0.8.4.31: the act after a failed check or a lost fight, readied beside the act after a success
 		for qid: String in s.quests_active.keys():
@@ -113,7 +113,7 @@ static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Di
 
 ## A person who may give the hero work: alive, not hostile, not with the hero, with no made quest of its own waiting.
 static func gives_work(s: GameSession, data: Dictionary, npc: String) -> bool:
-	return not Being.follows(s, npc) and not Being.dead(s, npc) and not SocialRules.refuses(s, data, npc) \
+	return not DreamRules.closes(data, "create:quest") and not Being.follows(s, npc) and not Being.dead(s, npc) and not SocialRules.refuses(s, data, npc) \
 		and QuestGen.offered_by(s, npc).is_empty()
 
 

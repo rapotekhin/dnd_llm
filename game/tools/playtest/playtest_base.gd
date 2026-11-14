@@ -38,6 +38,7 @@ func _main() -> void:
 	node("SaveManager").confirm_risky = false  # the questions «Точно?» have their own scenario (v0.7.22.27)
 	node("SaveManager").hotbar = {}  # the bar of a new player each run: a layout an older run left in the profile is no state of it
 	node("GameState").instant_walk = true  # walking has its own scenario (v0.8.2)
+	node("SaveManager").tutorial_done = true  # a new game is the world itself; the dream has its own scenario (v0.8.4.44.2)
 	await run()
 	_report.append("RESULT %s" % ("FAIL" if _failed else "OK"))
 	var f := FileAccess.open(out_dir.path_join("report.txt"), FileAccess.WRITE)

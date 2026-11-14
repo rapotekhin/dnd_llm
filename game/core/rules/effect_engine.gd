@@ -111,6 +111,8 @@ func validate(s: GameSession, data: Dictionary, turn_id: String, effect: Diction
 	var pending := _of_turn(turn_id)
 	if pending.size() >= int(rules["turn_limits"]["max_effects"]):
 		return _reject("лимит эффектов на ход исчерпан")
+	if DreamRules.closes(data, key(effect)):  # v0.8.4.44.2: a world closed to the master's making (the tutorial's dream)
+		return _reject("в этом мире %s не создают: здесь только то, что уже есть" % key(effect))
 	var res := _plan(s, data, turn_id, effect.merged(ahead.get(turn_id, {}), true), pending)
 	if res.has("reason"):
 		return _reject(str(res["reason"]))

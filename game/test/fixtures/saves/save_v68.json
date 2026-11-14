@@ -290,6 +290,7 @@
 		"talk_creature": "",
 		"tracked_quest": "",
 		"epitaph": "",
+		"dream": {},
 		"traps": {},
 		"trespass_warned": {},
 		"turn_counter": 2,

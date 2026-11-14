@@ -94,6 +94,19 @@ text = "Тон и магия мира"
 autowrap_mode = 3
 theme_type_variation = &"MutedLabel"
 
+[node name="TutorialToggle" type="CheckButton" parent="Col/Row/Right/RightScroll/Form"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "NG_TUTORIAL"
+
+[node name="TutorialToggleHint" type="Label" parent="Col/Row/Right/RightScroll/Form"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "NG_TUTORIAL_HINT"
+size_flags_horizontal = 3
+theme_type_variation = &"MutedLabel"
+autowrap_mode = 3
+
 [node name="DmStyleLabel" type="Label" parent="Col/Row/Right/RightScroll/Form"]
 layout_mode = 2
 text = "NG_DM_STYLE"

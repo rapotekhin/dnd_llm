@@ -129,7 +129,8 @@ static func world_info(s: GameSession, data: Dictionary) -> Dictionary:
 	return {"name": str(p.get("name", "")), "lore": str(p.get("lore", "")), "tone": str(p.get("tone", "")),
 		"magic": str(p.get("magic", "")), "dm_style": str(st.get("dm_style", "classic")),
 		"violence": str(st.get("violence", "medium")), "lines": st.get("lines", []), "veils": st.get("veils", []), "wishes": st.get("wishes", []),
-		"adult": bool(st.get("adult", false)), "minors": minors(s, data), "slavery": PropertyRules.slavery(s, data)}
+		"adult": bool(st.get("adult", false)), "minors": minors(s, data), "slavery": PropertyRules.slavery(s, data),
+		"closed": (p.get("closed", []) as Array).duplicate(), "dream": DreamRules.is_dream(p)}
 
 
 ## The hero and the people here who are children or teens (v0.7.38.7, back in v0.8.4.42.22): the master never makes them

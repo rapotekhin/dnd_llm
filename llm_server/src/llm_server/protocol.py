@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.130.0"
+PROTOCOL_VERSION = "0.131.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -374,6 +374,8 @@ class WorldInfo(_In):
     adult: bool = False  # 0.76.0: 18+ — intimacy of adults told openly, else off screen
     minors: list[str] = Field(default_factory=list)  # 0.76.0, back in 0.126.0: the hero and the people here who are children or teens
     slavery: bool = False  # 0.122.0: the world keeps slaves — a thinking prisoner is sold, else handed to the guard
+    closed: list[str] = Field(default_factory=list)  # 0.131.0: effect kinds the master may not make here (the tutorial's dream)
+    dream: bool = False  # 0.131.0: the tutorial's dream before a world: no item library — nothing borrowed, nothing kept
 
 
 class TradeLine(_In):

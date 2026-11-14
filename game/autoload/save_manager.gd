@@ -42,6 +42,8 @@ var dev_mode: bool = OS.is_debug_build()
 var inventory_view: Dictionary = {}
 ## The hotbar's layout (v0.8.4.43, as in BG3): where each icon stands, the rows, the dividers — `HotbarLayout`.
 var hotbar: Dictionary = {}
+## The tutorial was played to its end (v0.8.4.44.2): the new game screen's «Обучение» is off by default.
+var tutorial_done: bool = false
 const COMBAT_SPEEDS := {"slow": 1.0, "normal": 0.6, "fast": 0.25, "instant": 0.0}
 const UI_SCALES: Array[float] = [0.85, 1.0, 1.15, 1.3]
 
@@ -189,6 +191,7 @@ func load_settings() -> void:
 		dev_mode = bool(cfg.get_value("game", "dev_mode", OS.is_debug_build()))
 		inventory_view = cfg.get_value("ui", "inventory", {})
 		hotbar = cfg.get_value("ui", "hotbar", {})
+		tutorial_done = bool(cfg.get_value("game", "tutorial_done", false))
 	Hotkeys.apply(keys)
 
 
@@ -211,6 +214,7 @@ func save_settings() -> void:
 	cfg.set_value("ui", "inventory", inventory_view)
 	cfg.set_value("ui", "hotbar", hotbar)
 	cfg.set_value("game", "dev_mode", dev_mode)
+	cfg.set_value("game", "tutorial_done", tutorial_done)
 	cfg.save(settings_path)
 
 

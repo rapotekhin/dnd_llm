@@ -48,6 +48,9 @@ var world_id: String = ""
 var world_version: String = ""
 ## Master settings of the new game screen: dm_style, death_mode, violence, lines, veils, wishes (WorldPack.default_settings).
 var settings: Dictionary = {}
+## A game in a dream before its world (DreamRules, v0.8.4.44.2): {world, choices, settings} the real game begins from on
+## waking; {} — a game of its own world.
+var dream: Dictionary = {}
 var room_id: String = ""
 var mode: String = MODE_EXPLORATION
 ## The conversation partner in social / trade.
@@ -517,6 +520,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"world_id": world_id,
 		"world_version": world_version,
 		"settings": settings,
+		"dream": dream,
 		"room_id": room_id,
 		"mode": mode,
 		"npc_id": npc_id,
@@ -603,6 +607,7 @@ static func from_dict(saved: Dictionary) -> GameSession:
 	s.world_id = str(d.get("world_id", ""))
 	s.world_version = str(d.get("world_version", ""))
 	s.settings = d.get("settings", {})
+	s.dream = d.get("dream", {})
 	s.room_id = str(d.get("room_id", ""))
 	s.mode = str(d.get("mode", MODE_EXPLORATION))
 	s.npc_id = str(d.get("npc_id", ""))

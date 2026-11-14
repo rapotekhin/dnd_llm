@@ -1,10 +1,11 @@
 class_name NewGameScreen
 extends Control
 ## New game (ADR-0010 §1, §3, §5): the world pack, the master's style, the death mode and the content limits.
-## Defaults come from the picked pack; «Далее» activates the pack and opens character creation.
+## Defaults come from the picked pack; «Далее» activates the pack and opens character creation. «Обучение» (v0.8.4.44.2)
+## — the world's prologue played first as a dream (DreamRules), on until the profile remembers it was played.
 
 const SCENE := "res://ui/screens/new_game_screen.tscn"
-const TOGGLES := {"%NeedsToggle": "needs", "%SlaveryToggle": "slavery", "%AdultToggle": "adult"}
+const TOGGLES := {"%TutorialToggle": "tutorial", "%NeedsToggle": "needs", "%SlaveryToggle": "slavery", "%AdultToggle": "adult"}
 const DEFAULT_ON := {"needs": true}
 const LISTS := {"%Edit_lines": "lines", "%Edit_veils": "veils", "%Edit_wishes": "wishes"}
 
@@ -18,6 +19,7 @@ func required() -> Dictionary:
 		"%Worlds": "VBoxContainer", "%Form": "VBoxContainer", "%PackName": "Label", "%PackTone": "Label",
 		"%DmStyleChoices": "HFlowContainer", "%DmStyleHint": "Label", "%DifficultyChoices": "HFlowContainer",
 		"%DifficultyHint": "Label", "%PartyChoices": "HFlowContainer", "%PartyHint": "Label", "%ViolenceChoices": "HFlowContainer", "%ToMenu": "Button", "%NextButton": "Button", "%SeedEdit": "LineEdit",
+		"%TutorialToggleHint": "Label",
 	}
 	for path: String in TOGGLES:
 		nodes[path] = "CheckButton"
@@ -37,7 +39,7 @@ func _ready() -> void:
 	for path: String in LISTS:
 		_list_field(path, LISTS[path])
 	(UiScenes.need(self, "%SeedEdit") as LineEdit).text_changed.connect(func(t: String) -> void: settings["seed"] = t)
-	var playable := Catalog.playable()
+	var playable := Catalog.worlds().filter(func(b: Dictionary) -> bool: return b["errors"].is_empty())
 	if not playable.is_empty():
 		_pick_world(str(Catalog.active_world if not Catalog.bundle(Catalog.active_world).is_empty() else playable[0]["id"]))
 	else:
@@ -48,6 +50,7 @@ func _ready() -> void:
 func _pick_world(id: String) -> void:
 	settings = WorldPack.default_settings(Catalog.bundle(id)["pack"])
 	settings["seed"] = (UiScenes.need(self, "%SeedEdit") as LineEdit).text
+	settings["tutorial"] = not Catalog.prologue_of(id).is_empty() and not SaveManager.tutorial_done
 	_redraw()
 
 
@@ -62,7 +65,7 @@ func _redraw() -> void:
 		_worlds.remove_child(c)
 		c.queue_free()
 	_label(_worlds, "NG_WORLD", UiTheme.MUTED_LABEL)
-	for b: Dictionary in Catalog.bundles:
+	for b: Dictionary in Catalog.worlds():
 		var p: Dictionary = b["pack"]
 		var ok: bool = b["errors"].is_empty()
 		var btn := Button.new()
@@ -95,6 +98,9 @@ func _redraw() -> void:
 	for path: String in TOGGLES:
 		var key: String = TOGGLES[path]
 		(UiScenes.need(self, path) as CheckButton).set_pressed_no_signal(bool(settings.get(key, DEFAULT_ON.get(key, false))))
+	var has_prologue := not Catalog.prologue_of(str(settings["world"])).is_empty()
+	for path: String in ["%TutorialToggle", "%TutorialToggleHint"]:
+		(UiScenes.need(self, path) as Control).visible = has_prologue
 	_choice("%ViolenceChoices", "violence", WorldPack.VIOLENCE, "VIOLENCE_")
 	for path: String in LISTS:
 		var edit: LineEdit = UiScenes.need(self, path)

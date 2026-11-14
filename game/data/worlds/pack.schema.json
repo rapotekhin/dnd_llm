@@ -117,7 +117,17 @@
 					}
 				},
 				"world": {"type": "string"},
-				"characters": {"type": "string"}
+				"characters": {"type": "string"},
+				"prologue": {"type": "string", "description": "v0.8.4.44.2: the dream pack the new game's «Обучение» plays first (DreamRules)"},
+				"dream": {
+					"type": "object",
+					"description": "v0.8.4.44.2: a dream before a world — not in the list of worlds, the hero comes with no things; `wake.when` (Cond) wakes the player into a new game of the world",
+					"properties": {
+						"wake": {"type": "object", "required": ["when", "text"], "properties": {"when": {"$ref": "#/$defs/when"}, "text": {"$ref": "#/$defs/nonempty"}}, "additionalProperties": false}
+					},
+					"additionalProperties": false
+				},
+				"closed": {"type": "array", "items": {"type": "string", "pattern": "^create:[a-z_]+$"}, "description": "v0.8.4.44.2: the master's effect kinds refused in this world (a dream makes nothing new)"}
 			}
 		},
 		"world": {
