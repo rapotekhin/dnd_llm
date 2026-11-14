@@ -62,11 +62,17 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 		if not taken.has(c):
 			floor[c] = true
 	var arranged := arranged(data, map, index, room_key, keys, floor)
+	var marks := marks_set(data, map, index, arranged)
 	var stand := func(late: bool) -> void:  # the stations: first those the furnishing sets, `late` the rest round their marks
-		for m: Dictionary in map["marks"]:
+		for m: Dictionary in marks:
 			var mark := str(m["name"])
 			var at := Vector2i(int(m["x"]), int(m["y"]))
 			if int(m["room"]) != index or taken.has(at):
+				continue
+			if bool(m.get("built", false)):  # a thing the hands built draws itself (a prop): its mark gives only its station
+				if not late and stations.has(mark) and not seen.has(mark):
+					seen[mark] = true
+					out.append(_token("station:" + mark, "station", mark, _word(data, mark), at))
 				continue
 			var station := stations.has(mark) and not seen.has(mark)
 			var body_id := LayoutGen.by_keys(bodies.get(mark, ""), keys)  # by the place: water in a cave is no well (v0.8.4.43.40)
@@ -82,7 +88,7 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 					continue
 				if laid.is_empty():
 					var want := {}
-					for o: Dictionary in map["marks"]:
+					for o: Dictionary in marks:
 						if str(o["name"]) == mark and int(o["room"]) == index:
 							want[Vector2i(int(o["x"]), int(o["y"]))] = true
 					laid = _lay(data, body_id, "%s|%s|%d,%d" % [room_key, mark, at.x, at.y], at, around, cells, ways, walls, taken, true, want)
@@ -119,7 +125,7 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 	for id: String in _sorted(s.npcs_here(data["world"], s.room_id)):
 		if followers.has(id):
 			continue
-		var at := _npc_cell(s, data, map, s.room_id, spots, taken, id, part)
+		var at := _npc_cell(s, data, map, s.room_id, spots, taken, id, part, marks)
 		taken[at] = true
 		var n := world.npc(id)
 		var t := _token("npc:" + id, "npc", id, str(n.get("name", id)), at)
@@ -220,11 +226,63 @@ static func _for_kind(sets: Dictionary, keys: Array[String]) -> Array:
 	return sets.keys().filter(func(i: int) -> bool: return (of.call(i) as Array).is_empty())
 
 
+## The room's marks (index `index`) as its furnishing `arranged` has them: a station whose thing the furnishing sets off
+## every mark of its station (the author moved the counter in the chunk editor, v0.8.4.44.2.1) stands where its things
+## stand — a mark at each of them, its marks of the chunk left; a mark of a thing the hands built (`built`) always stays.
+## Where the furnishing keeps its station on its marks, the marks are as drawn.
+static func marks_set(data: Dictionary, map: Dictionary, index: int, arranged: Array[Dictionary]) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var drawn := {}  # station -> {square: true} of the chunk's marks
+	for m: Dictionary in map["marks"]:
+		if int(m["room"]) != index:
+			continue
+		out.append(m)
+		var name := str(m["name"])
+		if not drawn.has(name):
+			drawn[name] = {}
+		drawn[name][Vector2i(int(m["x"]), int(m["y"]))] = true
+	var things := {}  # station -> the top left squares of its things in the furnishing
+	var moved := {}
+	for m: Dictionary in arranged:
+		var station := station_of(data, m)
+		if station.is_empty():
+			continue
+		var laid := set_laid(data, m)
+		if not things.has(station):
+			things[station] = []
+		(things[station] as Array).append(laid["at"])
+		var own: Dictionary = drawn.get(station, {})
+		if not (laid["cells"] as Array).any(func(c: Vector2i) -> bool: return own.has(c)):
+			moved[station] = true
+	if moved.is_empty():
+		return out
+	out = out.filter(func(m: Dictionary) -> bool: return bool(m.get("built", false)) or not moved.has(str(m["name"])))
+	for station: String in moved:
+		for at: Vector2i in things[station]:
+			out.append({"name": station, "x": at.x, "y": at.y, "room": index})
+	return out
+
+
+## The station a thing of a furnishing stands for: its own `station`, else the station whose thing it is by
+## `station_bodies` — a hearth is the hearth wherever the author sets it (v0.8.4.44.2.1); "" — none.
+static func station_of(data: Dictionary, m: Dictionary) -> String:
+	var own := str(m.get("station", ""))
+	if not own.is_empty():
+		return own
+	var body_id := str(m["name"]).substr(LayoutGen.SET.length())
+	var bodies: Dictionary = cfg(data).get("station_bodies", {})
+	for mark: String in bodies:
+		var b: Variant = bodies[mark]
+		if (b is Dictionary and (b as Dictionary).values().has(body_id)) or (b is String and b == body_id):
+			return mark
+	return ""
+
+
 ## The thing of station `mark` the room's furnishing sets over its square `at`, when its squares are free floor; {} — none
 ## (a station of a room with no furnishing, or one the furnishing does not hold, is laid round its mark by `_lay`).
 static func _station_laid(data: Dictionary, arranged: Array[Dictionary], mark: String, at: Vector2i, around: Array[Vector2i], taken: Dictionary) -> Dictionary:
 	for m: Dictionary in arranged:
-		if str(m.get("station", "")) != mark:
+		if station_of(data, m) != mark:
 			continue
 		var laid := set_laid(data, m)
 		var mine: Array = laid["cells"]
@@ -243,7 +301,7 @@ static func _furnished(data: Dictionary, arranged: Array[Dictionary], spots: Arr
 		floor[c] = true
 	for m: Dictionary in arranged:
 		var body_id := str(m["name"]).substr(LayoutGen.SET.length())
-		if not str(m.get("station", "")).is_empty() or not bodies.has(body_id):
+		if not station_of(data, m).is_empty() or not bodies.has(body_id):
 			continue
 		var laid := set_laid(data, m)
 		var mine: Array[Vector2i] = laid["cells"]
@@ -477,14 +535,15 @@ static func _shown(data: Dictionary, p: Dictionary) -> bool:
 		or not str(p.get("text", "")).is_empty() or QuestGen.is_board(data, p) or not ThingRules.body_id(data, p).is_empty()
 
 
-static func _npc_cell(s: GameSession, data: Dictionary, map: Dictionary, room: String, cells: Array[Vector2i], taken: Dictionary, id: String, part: String) -> Vector2i:
+static func _npc_cell(s: GameSession, data: Dictionary, map: Dictionary, room: String, cells: Array[Vector2i], taken: Dictionary, id: String, part: String,
+		marks: Array[Dictionary] = []) -> Vector2i:
 	var moved: Dictionary = (s.layouts.get("moved", {}) as Dictionary).get(id, {})
 	if str(moved.get("room", "")) == room and str(moved.get("part", "")) == part:
 		var at := LayoutGen.off_grid(map, Vector2i(int(moved["x"]), int(moved["y"])))
 		return at if cells.has(at) else _closest(cells, taken, at)  # walked up to the hero in a doorway: the free square beside it
 	if WorldView.new(data["world"]).is_trader(id):
 		for wanted: String in cfg(data)["trader_marks"]:
-			var at := _mark_cell(map, room, wanted)
+			var at := _mark_cell(map, room, wanted, marks)
 			if at.x >= 0:
 				return _closest(cells, taken, at)
 	return _seeded(cells, taken, "%d|%s|%s" % [s.game_seed, id, part])
@@ -822,9 +881,9 @@ static func _closest(cells: Array[Vector2i], taken: Dictionary, to: Vector2i) ->
 	return best
 
 
-static func _mark_cell(map: Dictionary, room: String, name: String) -> Vector2i:
+static func _mark_cell(map: Dictionary, room: String, name: String, marks: Array[Dictionary] = []) -> Vector2i:
 	var index := (map["ids"] as Array).find(room)
-	for m: Dictionary in map["marks"]:
+	for m: Dictionary in (marks if not marks.is_empty() else map["marks"]):
 		if str(m["name"]) == name and int(m["room"]) == index:
 			return Vector2i(int(m["x"]), int(m["y"]))
 	return Vector2i(-1, -1)

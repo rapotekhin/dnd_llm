@@ -146,8 +146,11 @@ static func shape_of(lib: Dictionary, kind: String, indoor: bool) -> String:
 
 
 ## The chain of a room's chunks from the exact to the general: it cannot end in nothing, a generic one fits every size.
-## A chunk made for a room's tag comes first; with `rng` the chunks of one step come in a random order.
+## A chunk made for a room's tag comes first; with `rng` the chunks of one step come in a random order, those that have
+## every mark the room wants (a stage of a hall tagged `stage`) before the rest (v0.8.4.44.2.1: a stage of the author's
+## chunk, not one by a random wall of another).
 static func candidates(lib: Dictionary, ask: Dictionary, rng: RandomNumberGenerator = null) -> Array[Dictionary]:
+	var wanted: Array = ask.get("marks", [])
 	var kind := str(ask.get("kind", ""))
 	var role := str(ask.get("role", ""))
 	var tags: Array = ask.get("tags", [])
@@ -160,24 +163,28 @@ static func candidates(lib: Dictionary, ask: Dictionary, rng: RandomNumberGenera
 	if rng != null:
 		_shuffle(tagged, rng)  # one shuffle of them all, as ever: the seed's later draws stay where they were
 	for n: int in range(tags.size(), 0, -1):  # then more of the room's tags first, the shuffled order kept within
-		_step(out, tagged.filter(func(c: Dictionary) -> bool: return shared.call(c) == n), null)
+		_step(out, tagged.filter(func(c: Dictionary) -> bool: return shared.call(c) == n), null, wanted)
 	var family := kind
 	while not family.is_empty():
 		var step_family := family
 		_step(out, rooms_only.filter(func(c: Dictionary) -> bool:
-			return (c.get("kinds", []) as Array).has(step_family) and (role.is_empty() or not c.has("roles") or (c["roles"] as Array).has(role))), rng)
+			return (c.get("kinds", []) as Array).has(step_family) and (role.is_empty() or not c.has("roles") or (c["roles"] as Array).has(role))), rng, wanted)
 		family = str(lib["kinds"].get(family, {}).get("family", ""))
-	_step(out, rooms_only.filter(func(c: Dictionary) -> bool: return bool(c.get("generic", false)) and str(c["size"]) == size), rng)
-	_step(out, rooms_only.filter(func(c: Dictionary) -> bool: return bool(c.get("generic", false))), rng)
+	_step(out, rooms_only.filter(func(c: Dictionary) -> bool: return bool(c.get("generic", false)) and str(c["size"]) == size), rng, wanted)
+	_step(out, rooms_only.filter(func(c: Dictionary) -> bool: return bool(c.get("generic", false))), rng, wanted)
 	return out
 
 
-static func _step(out: Array[Dictionary], list: Array, rng: RandomNumberGenerator) -> void:
+static func _step(out: Array[Dictionary], list: Array, rng: RandomNumberGenerator, wanted: Array = []) -> void:
 	if rng != null:
 		_shuffle(list, rng)
-	for c: Dictionary in list:
-		if not out.has(c):
-			out.append(c)
+	var holds := func(c: Dictionary) -> bool:  # every mark the room wants is drawn in the chunk
+		var names: Array = (c.get("marks", {}) as Dictionary).values()
+		return wanted.all(func(w: Variant) -> bool: return names.has(str(w)))
+	for first: bool in [true, false]:
+		for c: Dictionary in list:
+			if holds.call(c) == first and not out.has(c):
+				out.append(c)
 
 
 # --- stitched maps: a building's floor, tunnels ----------------------------------------------------------------------
@@ -506,14 +513,18 @@ static func _place(lib: Dictionary, ask: Dictionary, grid: Dictionary, free: Arr
 	return {}
 
 
+## The turns a chunk is tried in: as the author drew it first, the others in a random order only when it does not join
+## its neighbours so (the author's choice, 2026-11-14: «как нарисовано» — a tavern's stage by the wall it was drawn at).
 static func _turns(rng: RandomNumberGenerator, src: Dictionary, fixed: Dictionary) -> Array[Vector2i]:
 	if str(fixed.get("id", "")) == str(src["id"]):
 		return [Vector2i(int(fixed.get("rot", 0)), 1 if fixed.get("flip", false) else 0)]
 	var out: Array[Vector2i] = []
 	for rot: int in ROTATIONS:
 		for f: int in 2:
-			out.append(Vector2i(rot, f))
+			if rot != 0 or f != 0:
+				out.append(Vector2i(rot, f))
 	_shuffle(out, rng)
+	out.push_front(Vector2i.ZERO)
 	return out
 
 

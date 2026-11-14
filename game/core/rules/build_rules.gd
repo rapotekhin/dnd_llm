@@ -154,7 +154,7 @@ static func lay(map: Dictionary, v: WorldView) -> void:
 		for t: Dictionary in rec.get("things", []):
 			if not str(t.get("mark", "")).is_empty():
 				var at := LayoutGen.off_grid(map, Vector2i(int(t["x"]), int(t["y"])))
-				(map["marks"] as Array).push_front({"name": str(t["mark"]), "x": at.x, "y": at.y, "room": i})
+				(map["marks"] as Array).push_front({"name": str(t["mark"]), "x": at.x, "y": at.y, "room": i, "built": true})
 
 
 static func _put_cell(map: Dictionary, at: Vector2i, c: String) -> void:

@@ -368,7 +368,7 @@ func test_a_room_added_later_moves_nothing_of_the_old_rooms() -> void:
 		for e: Dictionary in before["exits"]:
 			ways[[str(e["to"]), LayoutGen.on_grid(before, Vector2i(int(e["x"]), int(e["y"])))]] = true
 		for e: Dictionary in after["exits"]:
-			if str(e["room"]) != "new":
+			if str(e["room"]) != "new" and str(e["to"]) != "new":  # a way to the new room is new, not an old one moved
 				assert_bool(ways.has([str(e["to"]), LayoutGen.on_grid(after, Vector2i(int(e["x"]), int(e["y"])))])).override_failure_message("way %s, seed %d" % [e["to"], sd]).is_true()
 
 
@@ -439,11 +439,16 @@ func test_a_room_with_a_tag_of_its_own_gets_its_chunk() -> void:
 
 func test_the_seed_picks_among_the_chunks_of_a_step() -> void:
 	var halls: Dictionary = {}
+	var ask := {"id": "hall", "kind": "tavern", "role": "hall", "tags": [], "size": "large"}
 	for sd: int in 12:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = sd
+		halls[str(LayoutGen.candidates(layouts, ask, rng)[0]["id"])] = true
+	assert_int(halls.size()).is_equal(2)
+	for sd: int in 6:  # the Brod hall wants a stage: the chunk with the stage drawn, for every seed (v0.8.4.44.2.1)
 		var s := _session(sd)
 		LayoutRules.map_of(s, data, "brod-tavern-hall")
-		halls[str(s.layouts["picks"]["brod-tavern-hall"]["brod-tavern-hall"]["chunk"])] = true
-	assert_int(halls.size()).is_equal(2)
+		assert_str(str(s.layouts["picks"]["brod-tavern-hall"]["brod-tavern-hall"]["chunk"])).is_equal("tavern_hall")
 
 
 func test_the_author_pins_a_chunk_and_draws_a_room() -> void:

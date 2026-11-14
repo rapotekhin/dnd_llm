@@ -206,14 +206,18 @@ func test_a_room_stands_its_own_things_by_its_furnishing() -> void:
 	var counters := things.filter(func(t: Dictionary) -> bool: return str(t["body"]) == "counter")
 	var view := WalkRules.view(s, data)
 	var index := (view["ids"] as Array).find(s.room_id)
-	var run := (view["marks"] as Array).filter(func(m: Dictionary) -> bool: return str(m["name"]) == "counter" and int(m["room"]) == index)
+	var arranged := MapSpots.arranged(data, view, index, "%d|%s" % [s.game_seed, s.room_id], LayoutGen.ground_keys(data["layouts"], view))
+	var run := MapSpots.marks_set(data, view, index, arranged).filter(func(m: Dictionary) -> bool: return str(m["name"]) == "counter")
+	var marked := {}
 	var covered := {}
+	for m: Dictionary in run:
+		marked[Vector2i(int(m["x"]), int(m["y"]))] = true
 	for t: Dictionary in counters:
 		for c: Vector2i in t["cells"]:
 			covered[c] = true
+		assert_bool((t["cells"] as Array).any(func(c: Vector2i) -> bool: return marked.has(c))).is_true()  # no counter but on its marks
 	for m: Dictionary in run:  # the counter's marks covered whole, a counter of three squares along them
 		assert_bool(covered.has(Vector2i(int(m["x"]), int(m["y"])))).is_true()
-	assert_int(covered.size()).is_equal(run.size())
 	var seen := {}
 	for t: Dictionary in _tokens(s):
 		for c: Vector2i in t.get("cells", [_at(t)]):

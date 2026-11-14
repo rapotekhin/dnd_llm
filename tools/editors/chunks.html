@@ -508,6 +508,11 @@ function painter(app, c, e) {
 	over.onpointerup = () => {
 		if (!drag) return;
 		const before = drag.before;
+		if (drag.move != null) {  // a moved thing is the station of the marks under it, if any; off them the game knows it by its body
+			const t = active()?.things?.[drag.move];
+			const st = t ? ownStation(t) : '';
+			if (t && st) t.station = st; else if (t) delete t.station;
+		}
 		if (drag.move == null) {
 			const [x0, y0, x1, y1] = box(drag.from, drag.to);
 			if (paint.tool === 'rect') for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, drag.ch);
@@ -903,7 +908,7 @@ function painter(app, c, e) {
 		propsPanel(app, c, e),
 		h('div', { class: 'actions' }, modeBar, tools, h('span', { class: 'grow' }),
 			h('button', { title: 'Ctrl+Z', onclick: undo }, '↶'), h('button', { title: 'Ctrl+Y', onclick: redo }, '↷'),
-			h('button', { title: 'Повернуть чанк на четверть по часовой вместе с обстановками (генератор и так пробует все повороты)', onclick: turnAll(1, false) }, 'Повернуть'),
+			h('button', { title: 'Повернуть чанк на четверть по часовой вместе с обстановками (игра ставит чанк так, как он нарисован, и поворачивает, только если иначе комната не стыкуется с соседями)', onclick: turnAll(1, false) }, 'Повернуть'),
 			h('button', { title: 'Отразить слева направо вместе с обстановками', onclick: turnAll(0, true) }, 'Отразить')),
 		setBar, setHelp,
 		h('div', { class: 'actions' }, sideBtns('n', 'сверху'), sideBtns('s', 'снизу'), sideBtns('w', 'слева'), sideBtns('e', 'справа'),

@@ -180,18 +180,28 @@ func _folded(s: GameSession, gs: Node) -> void:
 	await shot("chat_folded")
 
 
+## A trader on the map now, `ref` first if it is still there.
+func _trader(gs: Node, ref: String = "") -> Dictionary:
+	var out := {}
+	for th: Dictionary in field.things:
+		if str(th["kind"]) == "npc" and gs.world().is_trader(str(th["id"])) and (out.is_empty() or str(th["ref"]) == ref):
+			out = th
+	return out
+
+
 ## v0.8.4.43.4: the right button on a person opens its one menu where the hero stands — a list with lists inside; a trade
 ## picked there walks right up (v0.8.2).
 func _people(s: GameSession, gs: Node, lib: Dictionary) -> void:
-	var trader := {}
-	for th: Dictionary in field.things:
-		if str(th["kind"]) == "npc" and gs.world().is_trader(str(th["id"])):
-			trader = th
+	var trader := _trader(gs)
 	if not step("the trader stands on the map", not trader.is_empty(), str(field.things.size())):
 		return
 	var at := Vector2i(int(trader["x"]), int(trader["y"]))
 	await _click(_far_from(at, s.room_id, lib))
 	await wait_until(func() -> bool: return not field.walking(), 20.0)
+	trader = _trader(gs, str(trader["ref"]))  # the walk takes minutes: the hour may send a trader away by its hours
+	if not step("a trader is still there", not trader.is_empty()):
+		return
+	at = Vector2i(int(trader["x"]), int(trader["y"]))
 	field.labels = true
 	field.queue_redraw()
 	await frames(1)
@@ -226,12 +236,13 @@ func _far_from(cell: Vector2i, room: String, lib: Dictionary) -> Vector2i:
 		for x: int in int(field.map["w"]):
 			var at := Vector2i(x, y)
 			if WalkRules.room_of(field.map, at) == room and WalkRules.passable(field.map, lib, at) and field.ref_at(at).is_empty() \
+					and WalkRules.way_at(field.map, room, at).is_empty() \
 					and WalkRules.distance(at, cell) > WalkRules.distance(best, cell):
 				best = at
 	return best
 
 
-## The farthest square of a room from the hero.
+## The farthest square of a room from the hero where a click walks: free of people and things, no door or way out.
 func _far(room: String, lib: Dictionary) -> Vector2i:
 	var best := Vector2i(-1, -1)
 	var length := -1
@@ -243,7 +254,7 @@ func _far(room: String, lib: Dictionary) -> Vector2i:
 	for y: int in int(field.map["h"]):
 		for x: int in int(field.map["w"]):
 			var cell := Vector2i(x, y)
-			if WalkRules.room_of(field.map, cell) != room or not WalkRules.passable(field.map, lib, cell) or cell == field.hero_cell() 					or int(things.get(cell, 0)) & MapSpots.PATH:
+			if WalkRules.room_of(field.map, cell) != room or not WalkRules.passable(field.map, lib, cell) or cell == field.hero_cell() or not field.ref_at(cell).is_empty() or not WalkRules.way_at(field.map, room, cell).is_empty() 					or int(things.get(cell, 0)) & MapSpots.PATH:
 				continue
 			var steps := WalkRules.path(field.map, lib, field.hero_cell(), cell).size()
 			if steps > length:

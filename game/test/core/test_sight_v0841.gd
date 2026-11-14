@@ -505,11 +505,16 @@ func _caster(room: String) -> GameSession:
 	return s
 
 
-## Squares [hero, foe, aim]: a wall stops every line from the hero to the foe, the aim is in the open and the blast gets there.
+## Squares [hero, foe, aim]: a wall stops every line from the hero to every square of the foe's body (an ogre is Large),
+## the aim is in the open and the blast gets there.
 func _round_the_corner(s: GameSession) -> Array:
 	var g := FightGrid.grid(s, data)
 	var m: Dictionary = g["map"]
 	var sp: Dictionary = data["spells"]["fireball"]
+	var f := CombatRules.fighter(s, CombatRules.enemies(s)[0])
+	var shape: Array[Vector2i] = []
+	for c: Vector2i in FightGrid.body(f):
+		shape.append(c - FightGrid.cell(f))
 	var open: Array[Vector2i] = []
 	for y: int in int(g["h"]):
 		for x: int in int(g["w"]):
@@ -518,11 +523,14 @@ func _round_the_corner(s: GameSession) -> Array:
 	for aim: Vector2i in open:
 		var cells := FightGrid.area(s, data, sp["area"], aim, aim, false)
 		for foe: Vector2i in cells:
-			if not FightGrid.walkable(g, foe):
+			var body: Array[Vector2i] = []
+			for o: Vector2i in shape:
+				body.append(foe + o)
+			if not body.all(func(c: Vector2i) -> bool: return FightGrid.walkable(g, c)):
 				continue
 			for hero: Vector2i in open:
-				if WalkRules.distance(hero, aim) in range(2, 20) and hero != foe and not cells.has(hero) and FightGrid.clear(g, hero, aim) \
-						and FightGrid.cover_at(s, data, hero, foe) >= FightGrid.FULL_COVER:
+				if WalkRules.distance(hero, aim) in range(2, 20) and not body.has(hero) and not cells.has(hero) and FightGrid.clear(g, hero, aim) \
+						and body.all(func(c: Vector2i) -> bool: return FightGrid.cover_at(s, data, hero, c) >= FightGrid.FULL_COVER):
 					return [hero, foe, aim]
 	assert_str(str(m["id"])).is_equal("a map with a corner")
 	return []
