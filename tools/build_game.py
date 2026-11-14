@@ -3,6 +3,7 @@
     python tools/build_game.py            # build/release/<version>/BetweenTheRolls.exe with server.exe beside it
     python tools/build_game.py --linux    # build/release/<version>/linux/BetweenTheRolls.x86_64 with `server` beside it
                                           # and build/release/<version>/BetweenTheRolls-<version>-linux-x86_64.tar.gz
+                                          # with README.md of how to start it
 
 Takes the version from the root VERSION. The player starts the game: it runs the server (frozen by PyInstaller, its
 libraries in server_lib/) on 127.0.0.1 with the player's own OpenRouter key from the settings (ADR-0014); no key or
@@ -49,6 +50,41 @@ START_TIMEOUT_S = 60.0
 BAD = ("SCRIPT ERROR", "Parse Error", "Failed to load", "Cannot open file")
 SECRETS = ("OPENROUTER_API_KEY", "LLM_SERVER_TOKEN")
 # One folder, not one file: a one-file build is two processes, and killing the first leaves the second alive.
+LINUX_README = """# Between the Rolls {version} для Linux
+
+## Запуск
+
+```bash
+tar xzf BetweenTheRolls-{version}-linux-x86_64.tar.gz
+./BetweenTheRolls/BetweenTheRolls.x86_64
+```
+
+Или двойной щелчок по `BetweenTheRolls.x86_64` в файловом менеджере.
+
+При первом запуске игра попросит ключ OpenRouter (https://openrouter.ai/keys). Сервер мастера (`server`) игра
+запускает сама, отдельно его запускать не нужно.
+
+## Требования
+
+- 64-битный Linux не старее Ubuntu 22.04 или Debian 12 (glibc 2.35 и новее);
+- видеокарта с Vulkan или OpenGL 3.3;
+- ставить Python или что-то ещё не нужно.
+
+## Если не запускается
+
+«Permission denied» — дайте права на запуск:
+
+```bash
+chmod +x BetweenTheRolls/BetweenTheRolls.x86_64 BetweenTheRolls/server
+```
+
+Папку `BetweenTheRolls` переносите целиком: игре нужны `server` и `server_lib/` рядом с ней.
+
+## Где данные
+
+Сохранения, настройки и журнал сервера (`master/server.log`):
+`~/.local/share/godot/app_userdata/Between the Rolls/`
+"""
 FREEZE_ARGS = ["--noconfirm", "--onedir", "--log-level", "WARN", "--name", "server", "--contents-directory", SERVER_LIB,
                "--collect-submodules", "uvicorn", "--collect-data", "genai_prices", "--copy-metadata", "genai_prices",
                "--copy-metadata", "pydantic_ai_slim", "--copy-metadata", "opentelemetry-api", "--exclude-module", "tkinter",
@@ -285,6 +321,7 @@ def build(platform: str, distro: str) -> int:
     size = sum(path.stat().st_size for path in folder.rglob("*") if path.is_file())
     print(f"{out} — {size / 1e6:.0f} MB with the server, starts")
     if platform == "linux":
+        (folder / "README.md").write_text(LINUX_README.format(version=version), encoding="utf-8", newline="\n")
         archive = folder.parent / f"BetweenTheRolls-{version}-linux-x86_64.tar.gz"
         pack_linux(folder, spec["name"], archive)
         print(f"{archive} — {archive.stat().st_size / 1e6:.0f} MB, glibc {glibc[0]}.{glibc[1]} or newer")

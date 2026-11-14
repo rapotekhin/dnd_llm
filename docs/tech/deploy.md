@@ -125,7 +125,7 @@ sudo systemctl restart btr-llm
 
 ### Билд для Linux
 
-`python tools/build_game.py --linux` кладёт в `build/release/<версия>/linux/` игру `BetweenTheRolls.x86_64`, сервер `server` и `server_lib/`, а рядом архив `BetweenTheRolls-<версия>-linux-x86_64.tar.gz` с битами запуска. Игрок распаковывает архив и запускает `BetweenTheRolls/BetweenTheRolls.x86_64`; данные игры — в `~/.local/share/godot/app_userdata/Between the Rolls/`.
+`python tools/build_game.py --linux` кладёт в `build/release/<версия>/linux/` игру `BetweenTheRolls.x86_64`, сервер `server`, `server_lib/` и `README.md` о том, как запускать, а рядом архив `BetweenTheRolls-<версия>-linux-x86_64.tar.gz` с битами запуска. Игрок распаковывает архив и запускает `BetweenTheRolls/BetweenTheRolls.x86_64`; данные игры — в `~/.local/share/godot/app_userdata/Between the Rolls/`.
 
 | Что | Как |
 |---|---|
