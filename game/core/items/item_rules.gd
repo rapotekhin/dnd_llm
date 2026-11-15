@@ -909,8 +909,14 @@ static func generated_id(item: Dictionary) -> String:
 	return "gen_" + key.md5_text().left(10)
 
 
+## A level past every gate and every cap of making (v0.8.4.44.6): the level of a boundless place (MakeRules.level_of) —
+## no rarity's level, no reward's cap, no cap of a wand's charges or of a spell's circle in a thing. The shapes stay.
+const BOUNDLESS := 1000
+
+
 ## {"ok": true, "def": normalized definition} or {"ok": false, "reason": text for the master}. What it lays while it works
-## (`wear`, v0.8.4.28.7) and what it calls (`use.summon`) are priced as its properties are.
+## (`wear`, v0.8.4.28.7) and what it calls (`use.summon`) are priced as its properties are. `level` — the gate of the
+## hero's level, BOUNDLESS — none (a boundless place).
 static func check_generated(data: Dictionary, item: Dictionary, level: int) -> Dictionary:
 	var items_data: Dictionary = data["items"]
 	var costs: Dictionary = items_data["properties"]
@@ -922,7 +928,7 @@ static func check_generated(data: Dictionary, item: Dictionary, level: int) -> D
 	var base := str(item.get("base", ""))
 	if not base.is_empty() and not items_data["catalog"].has(base):
 		return {"ok": false, "reason": "базового предмета %s нет в каталоге" % base}
-	var use := _generated_use(data, item)  # v0.7.18: what the thing does when used
+	var use := _generated_use(data, item, level >= BOUNDLESS)  # v0.7.18: what the thing does when used
 	if use.has("reason"):
 		return {"ok": false, "reason": use["reason"]}
 	points += int(use.get("points", 0))
@@ -934,7 +940,7 @@ static func check_generated(data: Dictionary, item: Dictionary, level: int) -> D
 	if hit.has("reason"):
 		return {"ok": false, "reason": hit["reason"]}
 	points += int(hit.get("points", 0))
-	var spells := _generated_spells(data, item)  # v0.8.4.36: spells a long rest, spells kept in it
+	var spells := _generated_spells(data, item, level >= BOUNDLESS)  # v0.8.4.36: spells a long rest, spells kept in it
 	if spells.has("reason"):
 		return {"ok": false, "reason": spells["reason"]}
 	points += int(spells.get("points", 0))
@@ -1063,7 +1069,8 @@ static func _laid(data: Dictionary, a: Dictionary, field: String, base: int) -> 
 
 
 ## The spells of a made thing (v0.8.4.36, items.json spells_points): {spells, store, stored, points} or {reason}; {} — none.
-static func _generated_spells(data: Dictionary, item: Dictionary) -> Dictionary:
+## `free` — a boundless place: any circle of the book, any uses, any store.
+static func _generated_spells(data: Dictionary, item: Dictionary, free := false) -> Dictionary:
 	var row: Dictionary = data["items"]["spells_points"]
 	var list: Variant = item.get("spells")
 	var room := int(item.get("store", 0)) if item.get("store") != null else 0
@@ -1075,15 +1082,15 @@ static func _generated_spells(data: Dictionary, item: Dictionary) -> Dictionary:
 		if not data["spells"].has(sp):
 			return {"reason": "spells: заклинания %s нет в книге движка" % sp}
 		var lv := int(data["spells"][sp].get("level", 0))
-		if lv > int(row["circle_max"]):
+		if lv > int(row["circle_max"]) and not free:
 			return {"reason": "spells: не выше %d круга" % int(row["circle_max"])}
 		var uses := int(r.get("uses", 1)) if r.get("uses") != null else 1
-		if uses < int(row["uses"][0]) or uses > int(row["uses"][1]):
+		if uses < int(row["uses"][0]) or (uses > int(row["uses"][1]) and not free):
 			return {"reason": "spells.uses — от %d до %d за долгий отдых" % [int(row["uses"][0]), int(row["uses"][1])]}
 		out["spells"].append({"spell": sp, "uses": uses})
-		out["points"] = int(out["points"]) + int(row["by_circle"][lv]) + (uses - 1) / int(row["per_uses"])
+		out["points"] = int(out["points"]) + int(row["by_circle"][mini(lv, (row["by_circle"] as Array).size() - 1)]) + (uses - 1) / int(row["per_uses"])
 	if room > 0:
-		if room > int(row["store_max"]):
+		if room > int(row["store_max"]) and not free:
 			return {"reason": "store — не больше %d кругов" % int(row["store_max"])}
 		out["store"] = room
 		out["points"] = int(out["points"]) + room * int(row["store_per_circle"])
@@ -1153,7 +1160,8 @@ static func _summon_row(data: Dictionary, u: Dictionary, once: bool) -> Dictiona
 ## The `use` of a generated thing (v0.7.18, by the catalog's own shapes): a spell of the engine's book with charges
 ## (a wand) or once (a scroll), healing, a resistance or an advantage once (a potion), creatures it calls (v0.8.4.28.7,
 ## with charges or once). {} — none; {reason}; or {use, charges?, look?, points}. Points by items.json `use_points`.
-static func _generated_use(data: Dictionary, item: Dictionary) -> Dictionary:
+## `free` — a boundless place: any circle of the book, any charges; the points of the highest row.
+static func _generated_use(data: Dictionary, item: Dictionary, free := false) -> Dictionary:
 	var items_data: Dictionary = data["items"]
 	var spells: Dictionary = data.get("spells", {})
 	var u: Variant = item.get("use")
@@ -1169,16 +1177,17 @@ static func _generated_use(data: Dictionary, item: Dictionary) -> Dictionary:
 		if spell.is_empty():
 			return {"reason": "заклинания %s нет в книге движка" % sp}
 		var lvl := maxi(int(spell.get("level", 0)), int(u.get("level", 0)) if u.get("level") != null else 0)
-		if lvl > 3:
+		if lvl > 3 and not free:
 			return {"reason": "заклинание в предмете — не выше 3 круга"}
 		out["use"] = {"spell": sp, "level": lvl}
+		var row := mini(lvl, (cost["scroll"] as Array).size() - 1)
 		if once:
 			out["use"]["scroll"] = true
 			out["look"] = "свиток"
-			out["points"] = int(cost["scroll"][lvl])
+			out["points"] = int(cost["scroll"][row])
 		else:
 			out["look"] = "волшебная палочка"
-			out["points"] = int(cost["wand"][lvl])
+			out["points"] = int(cost["wand"][row])
 	elif u.get("heal") != null and not str(u["heal"]).is_empty():
 		var h: Dictionary = cost["heal"].get(str(u["heal"]), {})
 		if h.is_empty():
@@ -1206,7 +1215,7 @@ static func _generated_use(data: Dictionary, item: Dictionary) -> Dictionary:
 		if not out["use"].has("spell") and not out["use"].has("summon"):
 			return {"reason": "заряды — только у предмета с заклинанием (жезл) или с призывом; зелья и свитки одноразовые"}
 		var most := int(cost["charges_max"])
-		if charges > most:
+		if charges > most and not free:
 			return {"reason": "зарядов не больше %d" % most}
 		out["charges"] = {"max": charges, "regain": "1d%d" % maxi(1, charges - 1), "crumble": true}
 		if str(item.get("item_type", "")) not in ["wondrous", "weapon", "gear"]:
@@ -1379,7 +1388,8 @@ static func _spell_use(c: Dictionary, data: Dictionary, session_items: Dictionar
 
 ## DC and attack bonus of a scroll's spell by the circle (DMG).
 static func scroll_numbers(data: Dictionary, level: int) -> Array:
-	return cfg(data)["scrolls"].get(str(clampi(level, 0, 3)), [13, 5])
+	var rows: Dictionary = cfg(data)["scrolls"]
+	return rows.get(str(clampi(level, 0, rows.size() - 1)), [13, 5])  # the DMG's to the 9th circle (a boundless place's, v0.8.4.44.6)
 
 
 ## Reading a scroll: {"ok", "line"}. A spell of the reader's class list and within the slots it has — no check;

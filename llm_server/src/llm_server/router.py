@@ -57,6 +57,8 @@ def by_kind(params: TurnRequestParams) -> str:
         scene = params.snapshot.scene
         return "full" if scene is not None and scene.furnish else "short"  # a new room is furnished with an effect
     if params.kind == "action" and params.mode != "combat" and "[движок уже" not in params.input:
+        if prompts.boundless(params.snapshot):
+            return "full"  # v0.8.4.44.6: a room of boundless making — what the player asks is made by effects
         if prompts.wants_full(params.snapshot, params.input):
             return "full"  # v0.7.47: a rumour told goes into the journal with an effect (v0.8.4.29.7: any topic's row that says so)
         return ""

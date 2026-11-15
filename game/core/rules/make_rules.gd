@@ -22,6 +22,20 @@ const IDS := {"status": "st", "skill": "sk", "trait": "tr", "spell": "sp", "abil
 const ACTS: Array[String] = ["spell", "ability"]
 
 
+## A place where the master makes without limits (v0.8.4.44.6, the dream's sixth hall): a room — or a place above it —
+## with `boundless`. Things, recipes and spells of any price and power, as many as asked; the shapes of the parts, the
+## second look at what was made and who may learn a spell stay (docs/design/systems/tutorial/description.md). `room` —
+## another room than the hero's (a furnishing readied ahead).
+static func boundless(s: GameSession, data: Dictionary, room := "") -> bool:
+	var at := room if not room.is_empty() else (s.room_id if s != null else "")
+	return not at.is_empty() and WorldView.new(data["world"]).flag(at, "boundless")
+
+
+## The level that gates what the master makes here: the hero's, ItemRules.BOUNDLESS in a boundless place.
+static func level_of(s: GameSession, data: Dictionary, room := "") -> int:
+	return ItemRules.BOUNDLESS if boundless(s, data, room) else int(s.character.get("level", 1))
+
+
 static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["make"]
 
@@ -189,7 +203,7 @@ static func _property(s: GameSession, data: Dictionary, name: String, parts: Var
 		tokens.append(token)
 		points += int(costs[token])
 	var rarity := ItemRules.rarity_for_points(data["items"], points)
-	var level := int(s.character.get("level", 1))
+	var level := level_of(s, data)
 	if level < ItemRules.rarity_level(data["items"], rarity):  # the threshold of check_generated (v0.8.4.29.5)
 		return {"reason": "«%s» — редкость %s: %d очков, это от %d уровня героя, а герой %d" % [name, rarity, points, ItemRules.rarity_level(data["items"], rarity), level]}
 	return {"tokens": tokens, "on": on, "points": points, "tier": rarity, "rarity": rarity}
@@ -316,9 +330,10 @@ static func _shape(cf: Dictionary, type: String, size: int) -> Dictionary:
 	return {"area": {"type": type, "size": ft}, "mult": float(row["mult"]), "extra": maxi(0, ft - int(row["default"])) / int(shapes.get("per_ft", 20))}
 
 
-## The tier of `points`: its row, or {} past the last one.
-static func tier(data: Dictionary, points: int) -> Dictionary:
-	return Scale.up_to(cfg(data)["tiers"], points)
+## The tier of `points`: its row, or {} past the last one — the last one in a boundless place (`free`).
+static func tier(data: Dictionary, points: int, free := false) -> Dictionary:
+	var t := Scale.up_to(cfg(data)["tiers"], points)
+	return (cfg(data)["tiers"] as Array)[-1] if t.is_empty() and free else t
 
 
 ## The effect `make`: {plan, summary} or {reason}.
@@ -382,7 +397,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary, pending: Array
 		s.items[str(made["book"]["id"])] = made["book"]["item"]  # the library of the game: `give_item` of this turn finds it
 		summary += ", книга «%s»" % title
 	if not scroll.is_empty():
-		made["scroll"] = _scroll(data, id, def, scroll)
+		made["scroll"] = _scroll(data, id, def, scroll, boundless(s, data))
 		if made["scroll"].is_empty():
 			return {"reason": "свиток держит заклинание не выше 3 круга, а это — %d круга" % int(def["circle"])}
 		s.items[str(made["scroll"]["id"])] = made["scroll"]["item"]
@@ -415,11 +430,11 @@ static func _built(s: GameSession, data: Dictionary, what: String, name: String,
 	if what == "trait" and (p["fx"] as Dictionary).has("guise"):
 		return {"reason": "облик не бывает постоянной чертой"}
 	var points := int(p["points"]) * (int(cfg(data)["trait_mult"]) if what == "trait" else 1)
-	var t := tier(data, points)
+	var t := tier(data, points, boundless(s, data))
 	if t.is_empty():
 		var top: Dictionary = (cfg(data)["tiers"] as Array)[-1]
 		return {"reason": "%d очков — движок так сильно не собирает (предел %d)" % [points, int(top["points"])]}
-	var level := int(s.character.get("level", 1))
+	var level := level_of(s, data)
 	if level < int(t["level"]):
 		return {"reason": "«%s» — %s: %d очков, это от %d уровня героя, а герой %d" % [name, t["name"], points, int(t["level"]), level]}
 	var dc := int(data["rules"]["dc_tiers"][str(t["dc"])])
@@ -444,13 +459,13 @@ static func _book(data: Dictionary, id: String, def: Dictionary, title: String) 
 			"fee_cp": 0, "generated": true}}
 
 
-## A scroll of a built spell, {} past the 3rd circle.
-static func _scroll(data: Dictionary, id: String, def: Dictionary, title: String) -> Dictionary:
+## A scroll of a built spell, {} past the 3rd circle — of any circle in a boundless place (`free`), at the price of the last.
+static func _scroll(data: Dictionary, id: String, def: Dictionary, title: String, free := false) -> Dictionary:
 	var cost: Array = cfg(data)["act"]["scroll_cp"]
 	var circle := int(def["circle"])
-	if circle >= cost.size():
+	if circle >= cost.size() and not free:
 		return {}
-	return {"id": "gen_scroll_" + id.md5_text().left(8), "item": {"name": title, "item_type": "consumable", "value_cp": int(cost[circle]), "weight": 0,
+	return {"id": "gen_scroll_" + id.md5_text().left(8), "item": {"name": title, "item_type": "consumable", "value_cp": int(cost[mini(circle, cost.size() - 1)]), "weight": 0,
 		"properties": [], "description": str(def["text"]), "generated": true, "use": {"spell": id, "level": circle, "scroll": true}}}
 
 
@@ -526,7 +541,7 @@ static func _acted(s: GameSession, data: Dictionary, what: String, id: String, n
 		area = shape["area"]
 		points = ceili(points * float(shape["mult"])) + int(shape["extra"])
 	points = maxi(1, points) + charges
-	var rank := _rank(cf, points)
+	var rank := _rank(cf, points, boundless(s, data))
 	if rank.is_empty():
 		var top: Dictionary = (cf["circles"] as Array)[-1]
 		return {"reason": "%d очков — движок так сильно не собирает (предел %d)" % [points, int(top["points"])]}
@@ -551,11 +566,11 @@ static func _acted(s: GameSession, data: Dictionary, what: String, id: String, n
 		var ab := str(e.get("ability", "")) if e.get("ability") != null else ""
 		if not (data["rules"]["saves"] as Array).has(ab):
 			return {"reason": "ability способности — её характеристика, из %s" % ", ".join(data["rules"]["saves"])}
-		var t := tier(data, points)
+		var t := tier(data, points, boundless(s, data))
 		if t.is_empty():
 			var top: Dictionary = (cfg(data)["tiers"] as Array)[-1]
 			return {"reason": "%d очков — движок так сильно не собирает (предел %d)" % [points, int(top["points"])]}
-		var level := int(s.character.get("level", 1))
+		var level := level_of(s, data)
 		if level < int(t["level"]):
 			return {"reason": "«%s» — %s: %d очков, это от %d уровня героя, а герой %d" % [name, t["name"], points, int(t["level"]), level]}
 		circle = 0
@@ -670,10 +685,10 @@ static func _liquid(s: GameSession, data: Dictionary, id: String, name: String, 
 	if got.has("save"):
 		points += maxi(0, num.call("save") - int(dcf["from"])) / int(dcf["per"])
 	points = ceili(points * float(cf["mult"]))
-	var t := tier(data, points)
+	var t := tier(data, points, boundless(s, data))
 	if t.is_empty():
 		return {"reason": "%d очков — движок так сильно не собирает" % points}
-	var level := int(s.character.get("level", 1))
+	var level := level_of(s, data)
 	if level < int(t["level"]):
 		return {"reason": "«%s» — %s: %d очков, это от %d уровня героя, а герой %d" % [name, t["name"], points, int(t["level"]), level]}
 	if acts and (got.has("lay") or got.has("save")):
@@ -721,9 +736,10 @@ static func _lay_cost(data: Dictionary, cond: String) -> int:
 	return int(cfg(data)["act"]["lay_cost"].get(cond, -1))
 
 
-## The first row of `circles` that holds `points`.
-static func _rank(cf: Dictionary, points: int) -> Dictionary:
-	return Scale.up_to(cf["circles"], points)
+## The first row of `circles` that holds `points`; past the last — the last in a boundless place (`free`).
+static func _rank(cf: Dictionary, points: int, free := false) -> Dictionary:
+	var r := Scale.up_to(cf["circles"], points)
+	return (cf["circles"] as Array)[-1] if r.is_empty() and free else r
 
 
 ## The plan of `make` applied. Lines.

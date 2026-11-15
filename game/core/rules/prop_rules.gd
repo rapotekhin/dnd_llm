@@ -150,6 +150,7 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 	if specs.is_empty() or specs.size() + had.size() > cap:
 		return {"reason": "обстановка — от 1 до %d вещей в комнате (уже %d)" % [cap, had.size()]}
 	var level := str(int(s.character.get("level", 1)))
+	var free := MakeRules.boundless(s, data, room)  # v0.8.4.44.6: no price limit in a boundless place
 	var value_cap := int(cfg(data)["room_value_cap_cp"].get(level, cfg(data)["room_value_cap_cp"]["5"]))
 	var item_cap := int(cfg(data)["item_value_cap_cp"])
 	var here := owners(s, data, room)
@@ -167,7 +168,7 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			continue  # the pack's own board is there already: not a second one
 		var item := str(spec.get("item_id", "")) if spec.get("item_id") != null else ""
 		if spec.get("item") != null and spec["item"] is Dictionary:  # a portable thing the catalog lacks (v0.7.34.4)
-			var chk := ItemRules.check_generated(data, spec["item"], int(s.character.get("level", 1)))
+			var chk := ItemRules.check_generated(data, spec["item"], MakeRules.level_of(s, data, room))
 			if not bool(chk["ok"]):
 				return {"reason": "%s: %s" % [spec["name"], chk["reason"]]}
 			item = ItemRules.generated_id(chk["def"])
@@ -177,7 +178,7 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			if def.is_empty():
 				return {"reason": "нет такого предмета %s — найди его через find_items" % item}
 			var value := int(def.get("value_cp", 0))
-			if value > item_cap:
+			if value > item_cap and not free:
 				return {"reason": "%s слишком дорог для обстановки (%d мм при пределе %d)" % [def.get("name", item), value, item_cap]}
 			total += value
 		var owner := str(spec.get("owner", "")) if spec.get("owner") != null else ""
@@ -194,7 +195,7 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			if not (ThingRules.cfg(data)["bodies"] as Dictionary).has(shape):
 				return {"reason": "body — из %s" % ", ".join((ThingRules.cfg(data)["bodies"] as Dictionary).keys())}
 			prop["body"] = shape
-		var box := ContainerRules.plan_spec(s, data, spec)
+		var box := ContainerRules.plan_spec(s, data, spec, room)
 		if box.has("reason"):
 			return {"reason": box["reason"]}
 		var hidden := _hidden_why(s, data, prop["name"], ([item] if not item.is_empty() else []) + (box.get("contents", {}) as Dictionary).keys())
@@ -209,11 +210,11 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 		props.append(prop)
 	if props.is_empty():
 		return {"reason": "эти вещи в комнате уже есть — обставь её другими"}
-	if total > value_cap:
+	if total > value_cap and not free:
 		return {"reason": "переносные вещи комнаты стоят %d мм при пределе %d для %s уровня — убери дорогое" % [total, value_cap, level]}
-	if gift > EffectEngine.budget_left(s, data):
+	if gift > EffectEngine.budget_left(s, data) and not free:
 		return {"reason": "ничейное в контейнерах стоит %d мм — больше, чем мастер может дать до долгого отдыха (%d мм); положи меньше или дай им хозяина" % [gift, EffectEngine.budget_left(s, data)]}
-	return {"plan": {"room": room, "props": props, "made": made, "reward": gift, "add": add, "cause": cause},
+	return {"plan": {"room": room, "props": props, "made": made, "reward": 0 if free else gift, "add": add, "cause": cause},
 		"summary": ("Добавлено в комнату (%s): " % cause if add else "Обстановка: ") + ", ".join(props.map(func(p: Dictionary) -> String: return p["name"]))}
 
 

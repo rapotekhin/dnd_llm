@@ -4589,7 +4589,7 @@
 		"collect_minutes": 1,
 		"element_dice": "1d6",
 		"small_races": ["small", "tiny"],
-		"scrolls": {"0": [13, 5], "1": [13, 5], "2": [13, 5], "3": [15, 7]},
+		"scrolls": {"0": [13, 5], "1": [13, 5], "2": [13, 5], "3": [15, 7], "4": [15, 7], "5": [17, 9], "6": [17, 9], "7": [18, 10], "8": [18, 10], "9": [19, 11]},
 		"max_found_rarity": "uncommon",
 		"rarity_order": ["common", "uncommon", "rare", "very_rare", "legendary", "artifact"],
 		"unknown_suffix": ", свойства неизвестны",

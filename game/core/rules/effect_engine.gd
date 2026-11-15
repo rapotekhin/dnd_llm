@@ -396,13 +396,12 @@ func _plan_coins(s: GameSession, data: Dictionary, turn_id: String, e: Dictionar
 func _plan_give_item(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var rules: Dictionary = data["rules"]
 	var items: Dictionary = data["items"]
-	var c := s.character
-	var level := int(c.get("level", 1))
+	var level := MakeRules.level_of(s, data)  # v0.8.4.44.6: a boundless place gives anything, outside the budget
 	var given := _plan_quest_give(s, data, str(e.get("item_id", "")) if e.get("item_id") != null else "")
 	if not given.is_empty():
 		return given
 	var give := _plan_give(s, items, rules, turn_id, e, level, pending)
-	if give.has("plan"):  # the master's own gift: within the budget until the long rest (v0.7.14.3)
+	if give.has("plan") and level < ItemRules.BOUNDLESS:  # the master's own gift: within the budget until the long rest (v0.7.14.3)
 		var def := ItemRules.def_of(items, s.items, str(give["plan"]["item_id"])) if not give["plan"].has("def") else (give["plan"]["def"] as Dictionary)
 		var value := int(def.get("value_cp", 0)) * int(give["plan"]["qty"])
 		if not str(def.get("rarity", "common")) in ["common", ""]:  # big test #16 (v0.7.22.2): magic is a find, not coins
@@ -1522,6 +1521,8 @@ func _over_budget(s: GameSession, data: Dictionary, turn_id: String, pending: Ar
 
 
 static func _reward_cap(rules: Dictionary, level: int) -> int:
+	if level >= ItemRules.BOUNDLESS:  # a boundless place (MakeRules.level_of)
+		return 1 << 60
 	for row: Array in rules["reward_max_cp_by_level"]:
 		if level <= int(row[0]):
 			return int(row[1])

@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.131.0"
+PROTOCOL_VERSION = "0.132.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -250,6 +250,7 @@ class Scene(_In):
     creatures: list[str] = Field(default_factory=list)  # 0.45.0: foes a fight left here — «Гоблин 2 [c3] — сдался, связан»
     furnish: bool = False  # the room was never furnished: propose `furnish` before describing it (0.11.0)
     closed_exits: list[str] = Field(default_factory=list)  # ways the pack keeps shut until the engine opens them (0.14.0)
+    boundless: bool = False  # 0.132.0: the master makes things, recipes and spells here without limits of price and power (the dream's sixth hall)
     notes: list[str] = Field(default_factory=list)  # the master's own memory of events here, in Russian (0.14.0)
     chronicle: list[str] = Field(default_factory=list)  # the last facts of the engine: «день 2, 09:12, Таверна — …» (0.19.0)
     reputation: str = ""  # the hero's name in this settlement: «Ольховый Брод — свой (+1)» (0.24.0)

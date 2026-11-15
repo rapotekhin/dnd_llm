@@ -759,7 +759,7 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 		var gen: Variant = spec.get("output")
 		if not (gen is Dictionary):
 			return {"reason": "нужен output_id (вещь каталога) или output (новая вещь)"}
-		var chk := ItemRules.check_generated(data, gen, int(s.character.get("level", 1)))
+		var chk := ItemRules.check_generated(data, gen, MakeRules.level_of(s, data))
 		if not bool(chk["ok"]):
 			return {"reason": str(chk["reason"])}
 		item = chk["def"]
@@ -768,11 +768,14 @@ static func make(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictiona
 		var od := ItemRules.def_of(data["items"], s.items, out_id)
 		if od.is_empty():
 			return {"reason": "вещи %s нет в каталоге" % out_id}
-		var why := ItemRules.rarity_ok(data, od, int(s.character.get("level", 1)))
+		var why := ItemRules.rarity_ok(data, od, MakeRules.level_of(s, data))
 		if not why.is_empty():
 			return {"reason": why}
 	var out_def := item if not item.is_empty() else ItemRules.def_of(data["items"], s.items, out_id)
-	hours = maxi(hours, labor_hours(data, int(out_def.get("value_cp", 0)) * qty, mats_cp))
+	if MakeRules.boundless(s, data):  # v0.8.4.44.6: a boundless place — the work is the master's hours, not the thing's price
+		hours = mini(hours, int(m["hours"][1]))
+	else:
+		hours = maxi(hours, labor_hours(data, int(out_def.get("value_cp", 0)) * qty, mats_cp))
 	if hours > int(m["hours"][1]):
 		return {"reason": "такая работа — %d ч, больше %d: дороже материалы (сейчас на %s) или меньше qty" % [hours, int(m["hours"][1]), Money.format(mats_cp)]}
 	var name := str(spec.get("name", "")).strip_edges().left(60)

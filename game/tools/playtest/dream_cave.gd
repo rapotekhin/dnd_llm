@@ -6,7 +6,8 @@ extends "res://tools/playtest/playtest_base.gd"
 ## the cleric waits under the goblins' guard; the fifth hall's step brings the hero and the fighter to the 2nd level.
 ## The fights themselves are the combat scenarios': here they are counted fought. v0.8.4.44.5: the screens of teaching of
 ## each hall are shot as they come, darkened with their arrow, and passed by «Продолжить»; the fourth hall's ready words
-## and the sixth's three are the only options under the chat.
+## and the sixth's three are the only options under the chat. v0.8.4.44.6: the sixth hall's first ask makes a legendary
+## sword past every budget.
 
 
 func _go(gs: Node, to: String) -> bool:
@@ -134,6 +135,14 @@ func run() -> void:
 	await _go(gs, "dream-6")
 	step("the sixth hall's screen and its three asks", await lessons("teach") == ["making"] and s.options.size() == 3, str(s.options))
 	await shot("hall_6")
+	var spent := s.reward_spent
+	gs.choose_option(0)  # v0.8.4.44.6: the archangel's sword asked; the stub makes a legendary one past every budget
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	await frames(4)
+	var made: Array = (s.character["inventory"] as Dictionary).keys().filter(func(id: String) -> bool:
+		return str(ItemRules.def_of(data["items"], s.items, id).get("rarity", "")) == "legendary")
+	step("the sixth hall makes a legendary sword outside the budget", made.size() == 1 and s.reward_spent == spent and s.magic_given == 0, str(s.character["inventory"]))
+	await shot("hall_6_made")
 	await _go(gs, "dream-7")
 	step("the last hall: the dream's end, «Проснуться»", await lessons("teach") == ["wake"])
 	await shot("hall_7")

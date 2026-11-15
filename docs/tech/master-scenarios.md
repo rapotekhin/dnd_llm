@@ -198,6 +198,13 @@
 - **Движок:** после `find_items`; свойства — только из словаря движка; действие (`use`) — заклинание книги движка, лечение, сопротивление, преимущество; редкость по уровню; цена по свойствам ([ItemRules.check_generated](../../game/core/items/item_rules.gd#L350)).
 - **Итог:** вещь в листе героя и в библиотеке бэкенда ([library.py](../../llm_server/src/llm_server/llm/library.py)) — в следующий раз `find_items` её найдёт; автор переносит в каталог `tools/promote_items.py`.
 - **Правила:** тема `items`.
+
+### Создать без ограничений (шестой зал сна)
+
+- **Когда:** сцена с `boundless` (v0.8.4.44.6) — игрок просит меч архангела, жезл на десять зарядов, заклинание сильнее обычного.
+- **Пайплайн:** тот же — `find_items` → `move_item:world>hero {item}`; заклинание вне книги — `make what=spell` (со `scroll` — свиток), потом вещь с `use.spell` `new:<key>` и `charges`; рецепт — `create:recipe`. Ход игрока там всегда с полным промптом, темы `items`, `make`, `craft` — целиком.
+- **Движок:** уровень `ItemRules.BOUNDLESS` (`MakeRules.level_of`) — нет бюджета, порога редкости, предела цены, круга и зарядов вещи, предела очков сборки; счётчики `reward_spent` и `magic_given` не растут ([MakeRules.boundless](../../game/core/rules/make_rules.gd)).
+- **Правила:** строка «Здесь создают без ограничений» в `_scene.md.j2`.
 - **Golden:** `item_dedupe`, `item_letter_with_text`, `item_wand_with_charges`, `master_item_by_description`, `item_unknown_not_revealed`.
 
 ### Вариант с проверкой (v0.7.22.28)

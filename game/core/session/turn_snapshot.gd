@@ -53,6 +53,7 @@ static func build(s: GameSession, data: Dictionary, history_chars: int) -> Dicti
 			"furniture": furniture["stood"], "free_spots": furniture["free"],  # v0.8.4.43.26: what the room's plan stood, where is room
 			"creatures": CreatureRules.snapshot(s, data, s.room_id) + EncounterRules.snapshot(s, data, s.room_id),  # v0.7.22.11, v0.7.22.12
 			"closed_exits": WayRules.closed_texts(s, data["world"], s.room_id),
+			"boundless": MakeRules.boundless(s, data),  # v0.8.4.44.6: making without limits here
 			"summons": AllyRules.summon_lines(s, data),  # v0.7.22.22
 			"chronicle": s.chronicle_tail(data["world"], 12),
 			"reputation": ReputationRules.text(s, data, loc_id),

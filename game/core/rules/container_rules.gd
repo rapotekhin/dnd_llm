@@ -149,7 +149,7 @@ static func contents_text(data: Dictionary, session_items: Dictionary, contents:
 
 ## Checks the container part of a furnish spec: {container, contents, locked, lock_dc, key, value} or {reason}.
 ## `level` and `spells` let the master make new things inside (a generated `item`).
-static func plan_spec(s: GameSession, data: Dictionary, spec: Dictionary) -> Dictionary:
+static func plan_spec(s: GameSession, data: Dictionary, spec: Dictionary, room := "") -> Dictionary:
 	var k := str(spec.get("container", "")) if spec.get("container") != null else ""
 	if k.is_empty():
 		return {}
@@ -164,7 +164,7 @@ static func plan_spec(s: GameSession, data: Dictionary, spec: Dictionary) -> Dic
 		var qty := clampi(int(c.get("qty", 1)) if c.get("qty") != null else 1, 1, 99)
 		var id := str(c.get("item_id", "")) if c.get("item_id") != null else ""
 		if c.get("item") != null and c["item"] is Dictionary:
-			var chk := ItemRules.check_generated(data, c["item"], int(s.character.get("level", 1)))
+			var chk := ItemRules.check_generated(data, c["item"], MakeRules.level_of(s, data, room))
 			if not bool(chk["ok"]):
 				return {"reason": "вещь в %s: %s" % [kind_name(data, k), chk["reason"]]}
 			id = ItemRules.generated_id(chk["def"])

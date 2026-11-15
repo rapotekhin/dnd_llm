@@ -29,12 +29,15 @@ from .protocol import (
     ConditionEffect,
     DamageEffect,
     Effect,
+    EngineFindItemsParams,
     EngineFindNpcsParams,
     EngineFindQuestsParams,
     EngineValidateParams,
     EngineValidateResult,
     CreateQuestEffect,
     FurnishEffect,
+    GeneratedItem,
+    MoveItemEffect,
     PropSpec,
     QuestAct,
     QuestNpc,
@@ -75,6 +78,8 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
     if params.kind != "action" or "без проверки" in params.input:  # «Осмотреться» asks no check (v0.8.4.44)
         return TurnResult(turn_id=params.turn_id, narration="Вы осматриваетесь.", usage=usage)
+    if prompts.boundless(params.snapshot) and _MAKE_ASK.match(params.input):
+        return await _stub_make(session, params, usage)
 
     raw = await session.call_engine(
         "engine.check",
@@ -100,6 +105,22 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         effect_ids=effect_ids,
         usage=usage,
     )
+
+
+_MAKE_ASK = re.compile(r"^\s*(создай|сделай|сотвори|яви|именем)", re.I)
+
+
+async def _stub_make(session: Session, params: TurnRequestParams, usage: Usage) -> TurnResult:
+    """The stub in a room of boundless making (v0.8.4.44.6): whatever is asked, a legendary sword past every budget."""
+    await session.call_engine("engine.find_items", EngineFindItemsParams(turn_id=params.turn_id, query="длинный меч", base="longsword"))
+    sword = GeneratedItem(name="Меч архангела", item_type="weapon", base="longsword", rarity="legendary", value_cp=5_000_000,
+                          properties=["magic_plus3", "radiant_damage", "fire_damage", "force_damage"],
+                          description="Тяжёлый клинок в белых перьях, лёгкий в любой руке.")
+    v = EngineValidateResult.model_validate(await session.call_engine(
+        "engine.validate", EngineValidateParams(turn_id=params.turn_id, effect=MoveItemEffect(source="world", target="hero", item=sword))))
+    if not v.accepted or not v.effect_id:
+        return TurnResult(turn_id=params.turn_id, narration=f"Не вышло: {v.reason}", usage=usage)
+    return TurnResult(turn_id=params.turn_id, narration="В руках у вас вспыхивает меч в белых перьях.", effect_ids=[v.effect_id], usage=usage)
 
 
 _FRAME_HEAD = re.compile(r"^\[quest (\S+) \| act (\d+) \| giver (\S*) \| here (\S*) \| near (\S*)\]")

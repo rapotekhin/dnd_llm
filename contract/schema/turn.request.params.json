@@ -720,6 +720,11 @@
     },
     "Scene": {
       "properties": {
+        "boundless": {
+          "default": false,
+          "title": "Boundless",
+          "type": "boolean"
+        },
         "calendar": {
           "items": {
             "type": "string"

@@ -300,7 +300,8 @@
 							"kind": {"type": "string"},
 							"staff": {"type": "array", "items": {"type": "object", "required": ["npc", "role"], "properties": {"npc": {"type": "string"}, "role": {"$ref": "#/$defs/nonempty"}}, "additionalProperties": false}},
 							"arena": {"type": "object", "properties": {"rule": {"enum": ["yield", "death"]}}, "additionalProperties": false},
-							"remains": {"type": "boolean"}
+							"remains": {"type": "boolean"},
+							"boundless": {"type": "boolean"}
 						},
 						"additionalProperties": false
 					}
@@ -324,6 +325,7 @@
 							"props": {"type": "array", "items": {"type": "object", "required": ["id", "name"], "properties": {"id": {"$ref": "#/$defs/nonempty"}, "name": {"$ref": "#/$defs/nonempty"}, "description": {"type": "string"}, "text": {"type": "string"}, "container": {"$ref": "#/$defs/nonempty"}, "contents": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}}, "coins_cp": {"type": "integer", "minimum": 0}, "lock": {"enum": ["simple", "good", "masterwork"]}, "key": {"$ref": "#/$defs/nonempty"}, "owner": {"$ref": "#/$defs/nonempty"}, "body": {"$ref": "#/$defs/nonempty"}, "near": {"$ref": "#/$defs/nonempty"}}, "additionalProperties": false}},
 							"creatures": {"type": "array", "items": {"type": "object", "required": ["id", "state"], "properties": {"id": {"$ref": "#/$defs/nonempty"}, "monster": {"$ref": "#/$defs/nonempty"}, "npc": {"$ref": "#/$defs/nonempty"}, "name": {"$ref": "#/$defs/nonempty"}, "state": {"enum": ["dead", "bound"]}, "contents": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}}, "coins_cp": {"type": "integer", "minimum": 0}, "gear": {"type": "boolean"}, "owner": {"type": "string"}, "bonds": {"$ref": "#/$defs/nonempty"}, "joins": {"type": "boolean"}, "near": {"$ref": "#/$defs/nonempty"}}, "additionalProperties": false}},
 							"remains": {"type": "boolean"},
+							"boundless": {"type": "boolean"},
 							"secrets": {
 								"type": "array",
 								"items": {

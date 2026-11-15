@@ -232,6 +232,15 @@ def goal_words(snap: Snapshot) -> re.Pattern[str] | None:
     return re.compile("|".join(map(re.escape, stems)), re.IGNORECASE) if stems else None
 
 
+def boundless(snap: Snapshot) -> bool:
+    """A room where the master makes things, recipes and spells without limits (v0.8.4.44.6, the dream's sixth hall)."""
+    return bool(snap.scene and snap.scene.boundless)
+
+
+def _making(mode: str, snap: Snapshot, said: str) -> bool:
+    return mode == "exploration" and boundless(snap)
+
+
 def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
     """Topics the scene needs now: they go into the system prompt whole. Conditions come often and by words in a scene
     (v0.7.20.4 goldens); a conversation keeps only its own topic — the NPC's prompt grew to 28k characters with conditions,
@@ -254,7 +263,7 @@ TOPICS: dict[str, Topic] = {
     "pay": Topic("покупка у не-торговца, плата за услугу или сведения, платный вариант (`option_costs`), ночлег", ()),
     "theft": Topic("кража из карманов: как её отыграть", ()),
     "items": Topic("новый предмет (`move_item.item`): жезлы, свитки, зелья, вещи с текстом; магические вещи, неопознанные и проклятые; вещь, что даёт полёт, плавание, лазание или призывает существ (`wear`, `use.summon`)", (),
-                   words=FIND_WORDS, gate=lambda snap: bool(snap.scene and snap.scene.hooks)),
+                   words=FIND_WORDS, gate=lambda snap: bool(snap.scene and snap.scene.hooks), alone=_making),
     "places": Topic("новое место: на открытом краю мира или объект внутри локации — лавка за городом, баня у площади (`create:place`)", ("create:place",),
                    words=PLACE_WORDS, gate=lambda snap: bool(snap.scene and snap.scene.open_edges)),
     "crime": Topic("преступления героя: убитые, розыск, стража, признание (`crime:known`)", ("crime:known", "crime:release"),
@@ -277,7 +286,7 @@ TOPICS: dict[str, Topic] = {
                    alone=lambda mode, snap, said: bool(snap.scene and any(not n.understands_hero for n in snap.scene.npcs))),
     "tools": Topic("действие инструментом: замок, травы, подделка, грим (`request_check` с `tool`)", ()),
     "craft": Topic("ремесло и готовка: герой куёт, шьёт, мастерит, варит зелье, жарит мясо, варит похлёбку; новый рецепт из слов игрока (`create:recipe`)", ("create:recipe",),
-                   words=CRAFT_WORDS),
+                   words=CRAFT_WORDS, alone=_making),
     "property": Topic("имущество: купить дом, землю, мельницу, лавку; купчая; место, которого нет в продаже (`create:property`); свои места, животные; свой вид места — школа, причал (`new_kind`); улучшение или вещь своего места по просьбе — станок, лодка, сундук на N фунтов, кровать, наковальня (`create:upgrade`); конь, мул, вьюк, телега, аренда у барышника; новый зверь у барышника (`create:stock` с `animal`)", ("create:property", "create:upgrade"),
                    words=MOUNT_WORDS, gate=lambda snap: bool(snap.scene and any(n.animals for n in snap.scene.npcs))),
     "bank": Topic("деньги в долг и на хранение: вклад, кредит под залог, ячейка; ростовщик, которого нет (`create:bank`)", ("create:bank",),
@@ -304,7 +313,7 @@ TOPICS: dict[str, Topic] = {
     "guise": Topic("чужой облик: маскировка, кем выглядит герой, за кого его принимают", ("guise",),
                    alone=lambda mode, snap, said: bool(snap.character and snap.character.guise)),
     "make": Topic("нового нет в данных и в 5e: мастер собирает из частей (`make`) статус, навык, черту, заклинание, способность с зарядами, свойство вещи, жидкость (питьё, яд на клинок, бросок): проклятие, благословение места, редкое умение наставника, неведомое заклинание, свиток или трактат о нём", ("make",),
-                   words=MAKE_WORDS),
+                   words=MAKE_WORDS, alone=_making),
     "factions": Topic("фракции: новая фракция, чьи это люди и стража, отношение за поступок (`create:faction`)", ("create:faction", "shift:standing"),
                    alone=lambda mode, snap, said: names_a_faction(said, snap.scene)),
     "rumors": Topic("слухи: что говорят в округе, пересказ слуха NPC, слух о герое или пущенный героем, ложь и её опровержение (`rumor`)", ("rumor",),
