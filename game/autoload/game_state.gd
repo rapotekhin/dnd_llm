@@ -64,6 +64,11 @@ func _out_of_fight() -> bool:
 	return _idle() and session.mode != GameSession.MODE_COMBAT
 
 
+## In a conversation or a fight: a window's deed waits.
+func _engaged() -> bool:
+	return session.in_conversation() or CombatRules.active(session)
+
+
 ## Out of a fight and of a conversation.
 func _at_leisure() -> bool:
 	return _out_of_fight() and not session.in_conversation()
@@ -513,7 +518,7 @@ static func _quiet_feature(id: String) -> bool:
 func attune(item_id: String) -> String:
 	if not _idle():
 		return "EQUIP_BUSY"
-	if CombatRules.active(session) or session.in_conversation():
+	if _engaged():
 		return "ATTUNE_NOT_NOW"
 	var c := session.character
 	var why := ItemRules.can_attune(c, Catalog.data, session.items, item_id)
@@ -1037,7 +1042,7 @@ func _parley_check(params: Dictionary) -> Dictionary:
 func look_around() -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var text := tr("LOOK_SAY")
 	_add(GameSession.player_entry(text))
@@ -1052,7 +1057,7 @@ func look_around() -> String:
 func search_room() -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var skill := ExplorationRules.SEARCH_SKILL
 	var result := _engine_check({"skill": skill, "dc_tier": "medium", "search": true})
@@ -1077,7 +1082,7 @@ func search_room() -> String:
 func take_all() -> String:
 	if not _idle():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var plan := PropRules.take_all_plan(session, Catalog.data)
 	if (plan["take"] as Array).is_empty():
@@ -1103,7 +1108,7 @@ func look_at(prop_id: String) -> String:
 func take_prop(prop_id: String) -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var r := PropRules.plan_take(session, Catalog.data, {"prop_id": prop_id})
 	if r.has("reason"):
@@ -1129,7 +1134,7 @@ func take_prop(prop_id: String) -> String:
 ## The container window (v0.7.18.1): take or put without a master's turn — like the gear in the sheet; taking from
 ## someone else's container before them is a theft, the master narrates the owner's reaction. "" or a localization key.
 func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> String:
-	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
+	if not _idle() or _engaged():
 		return "WAIT_NOT_NOW"
 	var r := ContainerRules.plan_take(session, Catalog.data, prop_id, item_id, qty) if take else ContainerRules.plan_put(session, Catalog.data, prop_id, item_id, qty)
 	if r.has("reason"):
@@ -1140,36 +1145,29 @@ func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> S
 		lines.append_array(ContainerRules.apply_take(session, Catalog.data, r["plan"]))
 	else:
 		ContainerRules.apply_put(session, Catalog.data, r["plan"])
-	if take and not str(r["plan"].get("owner", "")).is_empty():  # caught: the master narrates the owner
-		_effect_lines(lines)
-		_request("action", "Беру из чужого %s [движок: %s]" % [PropRules.find(session, session.room_id, prop_id).get("name", ""), " · ".join(lines)])
-		return ""
-	_effect_lines(lines, true)
+	_told_to_master("Беру из чужого %s" % PropRules.find(session, session.room_id, prop_id).get("name", ""), lines,
+		take and not str(r["plan"].get("owner", "")).is_empty())  # caught: the master narrates the owner
 	return ""
 
 
 ## The coins of a container into the purse (v0.8.4.44.3): «Взять» by the coins in its window; one master turn when its
 ## owner saw it.
 func container_coins(prop_id: String) -> String:
-	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
+	if not _idle() or _engaged():
 		return "WAIT_NOT_NOW"
 	var p := ContainerRules.target(session, Catalog.data, prop_id)
 	var got := ContainerRules.take_coins(session, Catalog.data, p, "container:coins")
 	var lines: Array[String] = got["lines"]
 	if lines.is_empty():
 		return ""
-	if not str(got["caught"]).is_empty():
-		_effect_lines(lines)
-		_request("action", "Беру монеты из чужого %s [движок: %s]" % [p.get("name", ""), " · ".join(lines)])
-		return ""
-	_effect_lines(lines, true)
+	_told_to_master("Беру монеты из чужого %s" % p.get("name", ""), lines, not str(got["caught"]).is_empty())
 	return ""
 
 
 ## «Взять всё» in a container's window (v0.7.49.4, the author's finding): every thing of it whole, one after another,
 ## until the hero can carry no more; one engine line, and one master turn when the container is someone else's.
 func container_take_all(prop_id: String) -> String:
-	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
+	if not _idle() or _engaged():
 		return "WAIT_NOT_NOW"
 	var p := ContainerRules.target(session, Catalog.data, prop_id)
 	var coins := ContainerRules.take_coins(session, Catalog.data, p, "container:coins")  # the coins first (v0.8.4.44.3)
@@ -1186,11 +1184,7 @@ func container_take_all(prop_id: String) -> String:
 			owner = str(r["plan"].get("owner", ""))
 	if lines.is_empty():
 		return ""
-	if not owner.is_empty():  # caught: the master narrates the owner
-		_effect_lines(lines)
-		_request("action", "Беру всё из чужого %s [движок: %s]" % [PropRules.find(session, session.room_id, prop_id).get("name", ""), " · ".join(lines)])
-		return ""
-	_effect_lines(lines, true)
+	_told_to_master("Беру всё из чужого %s" % PropRules.find(session, session.room_id, prop_id).get("name", ""), lines, not owner.is_empty())
 	return ""
 
 
@@ -1238,7 +1232,7 @@ func drop_item(what: String, qty: int = 1) -> String:
 func container_unlock(prop_id: String, how: String) -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var p := PropRules.find(session, session.room_id, prop_id)
 	if p.is_empty() or not ContainerRules.ways(session, Catalog.data, p).has(how):
@@ -1252,8 +1246,7 @@ func container_unlock(prop_id: String, how: String) -> String:
 			lines.append("%s не поддался" % p["name"])
 	if lines.is_empty():
 		lines = ContainerRules.unlock(p, how)
-	_effect_lines(lines)
-	_request("action", "%s %s [движок: %s]" % [{"key": "Открываю ключом", "pick": "Вскрываю отмычками", "force": "Выбиваю"}[how], p["name"], " · ".join(lines)])
+	_told_to_master("%s %s" % [{"key": "Открываю ключом", "pick": "Вскрываю отмычками", "force": "Выбиваю"}[how], p["name"]], lines)
 	return ""
 
 
@@ -1277,7 +1270,7 @@ func container_lock(prop_id: String, how: String) -> String:
 func door_act(to: String, how: String, spell_id: String = "") -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var data := Catalog.data
 	var from := session.room_id
@@ -1328,10 +1321,9 @@ func door_act(to: String, how: String, spell_id: String = "") -> String:
 		lines.append_array(TimeRules.advance(session, data, minutes))
 	if how in ["pick", "force", "hit", "torch"] or (how == "spell" and str(data["rules"]["spell_effects"].get(spell_id, {}).get("door", "")) != "lock"):
 		lines.append_array(WayRules.forced(session, data, from, to))
-	_effect_lines(lines)
 	var verb: String = {"key": "Отпираю ключом", "latch": "Отодвигаю засов", "pick": "Вскрываю отмычками", "force": "Выбиваю", "hit": "Рублю",
 		"spell": "Колдую на", "torch": "Поджигаю", "wait": "Жду, пока откроют"}[how]
-	_request("wait" if how == "wait" else "action", "%s дверь в «%s» [движок: %s]" % [verb, world().room(to).get("name", to), " · ".join(lines)])
+	_told_to_master("%s дверь в «%s»" % [verb, world().room(to).get("name", to)], lines, true, "wait" if how == "wait" else "action")
 	return ""
 
 
@@ -1447,6 +1439,16 @@ func _effect_lines(lines: Array[String], save := false) -> void:
 	EventBus.state_changed.emit()
 	if save:
 		SaveManager.save_slot(SaveManager.AUTOSAVE, session)
+
+
+## What the engine did to the chat, then one master turn of the player's `say` with it — someone answers the deed (an
+## owner who saw it, the one set free, a door). Not `asked` — the lines alone, saved.
+func _told_to_master(say: String, lines: Array[String], asked := true, kind := "action") -> void:
+	if not asked:
+		_effect_lines(lines, true)
+		return
+	_effect_lines(lines)
+	_request(kind, "%s [движок: %s]" % [say, " · ".join(lines)])
 
 
 ## What the engine did goes to the chat and the log.
@@ -2117,7 +2119,7 @@ func hint_shown(row: Dictionary) -> void:
 	if HintRules.shown(session, row) and not SaveManager.hints_seen.has(str(row["id"])):
 		SaveManager.hints_seen.append(str(row["id"]))
 		SaveManager.save_settings()
-	var ph := HintRules.phrases(row)
+	var ph := HintRules.phrases(row, Catalog.data)
 	if not ph.is_empty():
 		var texts: Array[String] = ph["texts"]
 		_set_options(texts, [], ph["checks"])
@@ -2323,7 +2325,7 @@ func wait(target: String) -> String:
 func wait_for(minutes: int) -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var mins := mini(minutes, int(TimeRules.cfg(Catalog.data)["wait_max_minutes"]))
 	if mins <= 0:
@@ -3137,7 +3139,7 @@ func follower_grow(npc_id: String) -> String:
 func follower_act(npc_id: String, what: String) -> String:
 	if not _idle():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var here := Being.follows(session, npc_id) or str(Being.view(session, npc_id).get("at", "")) == session.room_id
 	if not here:
@@ -3171,7 +3173,7 @@ func dismiss_summon(summon_id: String) -> String:
 func creature_act(id: String, what: String) -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var c := CreatureRules.find(session, session.room_id, id)
 	var why := CreatureRules.can(session, id, what, Catalog.data)  # talking too (v0.8.4.29.6)
@@ -3186,8 +3188,7 @@ func creature_act(id: String, what: String) -> String:
 	var c_name := str(c.get("name", id))
 	var lines := CreatureRules.act(session, Catalog.data, id, what)
 	if what == "untie":  # a rescue: the freed one answers it (v0.8.4.44.3)
-		_effect_lines(lines)
-		_request("action", "Развязываю пленника: %s [движок: %s]" % [c_name, " · ".join(lines)])
+		_told_to_master("Развязываю пленника: %s" % c_name, lines)
 		return ""
 	_effect_lines(lines, what != "attack")
 	if what == "attack":
@@ -3208,7 +3209,7 @@ func _forget_gone_creature() -> void:
 func hide_body(npc_id: String) -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
-	if session.in_conversation() or CombatRules.active(session):
+	if _engaged():
 		return "WAIT_NOT_NOW"
 	var why := CrimeRules.can_hide(session, Catalog.data, npc_id)
 	if not why.is_empty():
@@ -3805,9 +3806,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 	var checks: Array = []
 	var raw: Array = result.get("option_checks", []) if result.get("option_checks") is Array else []
 	for i in options.size():
-		var ch: Variant = raw[i] if i < raw.size() else null
-		var ok: bool = ch is Dictionary and Catalog.rules()["skills"].has(str(ch.get("skill", ""))) and Catalog.rules()["dc_tiers"].has(str(ch.get("dc_tier", "")))
-		checks.append({"skill": str(ch["skill"]), "dc_tier": str(ch["dc_tier"])} if ok else {})
+		checks.append(CheckEngine.option_check(Catalog.data, raw[i] if i < raw.size() else null))
 	_set_options(options, costs, checks)
 	_forget_gone_creature()
 

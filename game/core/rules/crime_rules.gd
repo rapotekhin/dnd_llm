@@ -683,7 +683,7 @@ static func bodies_here(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for id: String in Being.with(s, "body"):
 		if str(Being.of(s, id)["body"]) == s.room_id:
-			out.append({"npc_id": id, "name": "Тело: " + str(WorldView.new(data["world"]).npc_name(id)), "searched": Being.searched(s, id)})
+			out.append({"npc_id": id, "name": CreatureRules.body_name(data, str(WorldView.new(data["world"]).npc_name(id))), "searched": Being.searched(s, id)})
 	return out
 
 

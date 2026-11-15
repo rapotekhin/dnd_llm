@@ -145,15 +145,7 @@ static func _terrain(s: GameSession, data: Dictionary) -> Dictionary:
 ## One beast of the location's terrain by weight.
 static func _beast(s: GameSession, data: Dictionary) -> Dictionary:
 	var list: Array = _terrain(s, data)["game"]
-	var total := 0
-	for b: Dictionary in list:
-		total += int(b.get("weight", 1))
-	var roll := s.rng.randi_range(1, maxi(1, total))
-	for b: Dictionary in list:
-		roll -= int(b.get("weight", 1))
-		if roll <= 0:
-			return b
-	return list[0]
+	return list[maxi(0, Roll.index(s.rng, list.map(func(b: Dictionary) -> float: return float(b.get("weight", 1)))))]
 
 
 static func _predator(s: GameSession, data: Dictionary) -> String:

@@ -3387,6 +3387,7 @@
 			"bandit_captain": ["healing_potion", "alchemists_fire_flask", "manacles"], "thug": ["oil_flask", "manacles"], "spy": ["acid_vial"], "guard": ["manacles"],
 			"priest": ["healing_potion"], "mage": ["healing_potion", "spell_scroll_burning_hands"], "archmage": ["potion_of_greater_healing"]},
 		"heap_name": "Брошенные вещи",
+		"body_name": "Тело: %s",
 		"_v07_22_16": "A creature keeps hp and xp_given (fought again — its wounds, no XP twice); the helpless (unconscious or bound) is finished off without a fight. A pack NPC knocked out lies as a creature with its npc_id; waking or let go it goes home with woken_attitude and the assault is known (crime kind `assault`).",
 		"woken_attitude": -3,
 		"_v07_22_17": "The prisoner's branch (v0.7.22.17, docs/design/concepts.md «Пленник»): a bound one is the hero's (owner `hero`, OwnerRules). Handed to the law's guard — bounty_cp_per_xp × its XP and hand_over_reputation in the settlement; executed (finished off bound) before NPCs — execute_attitude for each who sees; sold (the master's `owner` with price_cp) — at most sale_cp_per_xp × its XP and the buyer's purse; a thinking one is not sold while slavery is off (v0.7.27 makes it a setting of the world); v0.7.49.4 — it is handed over to an NPC of the scene for the law's bounty at most (bounty_cp_per_xp × its XP): the NPC takes it to the guard.",

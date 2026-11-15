@@ -99,7 +99,14 @@ func reward_left(s: GameSession, data: Dictionary, turn_id: String, pending: Arr
 	return maxi(0, left)
 
 
-static func budget_left(s: GameSession, data: Dictionary) -> int:
+const UNLIMITED := 1 << 60  ## the budget and the reward's cap of a boundless place
+
+
+## The budget of the master's gifts until the long rest (cp); none in a boundless place (MakeRules.boundless, v0.8.4.44.6) —
+## `room` another than the hero's (a furnishing readied ahead).
+static func budget_left(s: GameSession, data: Dictionary, room := "") -> int:
+	if MakeRules.boundless(s, data, room):
+		return UNLIMITED
 	var per: Dictionary = data["rules"]["reward_budget"]["per_rest_cp"]
 	var level := clampi(int(s.character.get("level", 1)), 1, per.size())
 	return maxi(0, DifficultyRules.reward(s, data, int(per[str(level)])) - s.reward_spent)  # the party's treasure (v0.8.4.42.2)
@@ -134,9 +141,10 @@ func apply(s: GameSession, turn_id: String, ids: Array) -> Array[String]:
 		if r.is_empty() or r["turn_id"] != turn_id:
 			continue
 		_extra_lines.clear()
-		s.reward_spent += int(r["plan"].get("reward", 0))  # the master's gift counts against the budget (v0.7.14.3)
-		if bool(r["plan"].get("magic", false)):
-			s.magic_given += 1
+		if not MakeRules.boundless(s, _data):  # a boundless place spends nothing of the budget (v0.8.4.44.6); a reserve was checked, so _data is set
+			s.reward_spent += int(r["plan"].get("reward", 0))  # the master's gift counts against the budget (v0.7.14.3)
+			if bool(r["plan"].get("magic", false)):
+				s.magic_given += 1
 		_apply_one(s, r["kind"], r["plan"])
 		lines.append(str(r.get("line", r["summary"])))
 		lines.append_array(_extra_lines)  # an owner's reaction to a taken thing (v0.7.0)
@@ -396,12 +404,12 @@ func _plan_coins(s: GameSession, data: Dictionary, turn_id: String, e: Dictionar
 func _plan_give_item(s: GameSession, data: Dictionary, turn_id: String, e: Dictionary, pending: Array[Dictionary]) -> Dictionary:
 	var rules: Dictionary = data["rules"]
 	var items: Dictionary = data["items"]
-	var level := MakeRules.level_of(s, data)  # v0.8.4.44.6: a boundless place gives anything, outside the budget
+	var level := MakeRules.level_of(s, data)
 	var given := _plan_quest_give(s, data, str(e.get("item_id", "")) if e.get("item_id") != null else "")
 	if not given.is_empty():
 		return given
 	var give := _plan_give(s, items, rules, turn_id, e, level, pending)
-	if give.has("plan") and level < ItemRules.BOUNDLESS:  # the master's own gift: within the budget until the long rest (v0.7.14.3)
+	if give.has("plan"):  # the master's own gift: within the budget until the long rest (v0.7.14.3)
 		var def := ItemRules.def_of(items, s.items, str(give["plan"]["item_id"])) if not give["plan"].has("def") else (give["plan"]["def"] as Dictionary)
 		var value := int(def.get("value_cp", 0)) * int(give["plan"]["qty"])
 		if not str(def.get("rarity", "common")) in ["common", ""]:  # big test #16 (v0.7.22.2): magic is a find, not coins
@@ -1505,6 +1513,8 @@ static func _damage_dice(rules: Dictionary, level: int, severity: String) -> Arr
 ## than the whole budget of levels 1-5), but rules.reward_budget.magic_per_rest of them until the long rest, each
 ## in a turn with a check that passed (a search, Arcana, Perception). "" or the reason.
 func _magic_why_not(s: GameSession, data: Dictionary, turn_id: String, pending: Array[Dictionary]) -> String:
+	if MakeRules.boundless(s, data):  # v0.8.4.44.6: no find needed, as many as asked
+		return ""
 	if (_won.get(turn_id, []) as Array).is_empty():
 		return "магическая вещь — находка: только в ходе с пройденной проверкой (обыск, Анализ, Внимательность — engine.check); иначе награди словами или обычной вещью"
 	var given := s.magic_given + pending.filter(func(p: Dictionary) -> bool: return bool(p["plan"].get("magic", false))).size()
@@ -1522,7 +1532,7 @@ func _over_budget(s: GameSession, data: Dictionary, turn_id: String, pending: Ar
 
 static func _reward_cap(rules: Dictionary, level: int) -> int:
 	if level >= ItemRules.BOUNDLESS:  # a boundless place (MakeRules.level_of)
-		return 1 << 60
+		return UNLIMITED
 	for row: Array in rules["reward_max_cp_by_level"]:
 		if level <= int(row[0]):
 			return int(row[1])

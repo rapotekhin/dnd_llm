@@ -229,8 +229,7 @@ static func splash(s: GameSession, data: Dictionary, room: String, prop: String,
 
 ## Its owner sees what the hero did to its thing: the reaction to a caught theft.
 static func _seen(s: GameSession, data: Dictionary, p: Dictionary) -> Array[String]:
-	var owner := str(p.get("owner", ""))
-	return TheftRules.react(s, data, owner) if WatchRules.sees_hero(s, data, owner) else [] as Array[String]
+	return TheftRules.if_seen(s, data, str(p.get("owner", "")))
 
 
 ## The thing is broken or burnt: what was in it falls out. Lines.

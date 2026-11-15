@@ -83,7 +83,7 @@ func _cat_and_stage(s: GameSession, data: Dictionary) -> void:
 		s.game_seed = seed_value
 		s.layouts.erase("picks")
 		s.layout_cache.clear()
-		PetRules.seed(s, data, s.room_id)
+		CreatureRules.seed(s, data, s.room_id)
 		node("EventBus").state_changed.emit()
 		await frames(4)
 		field = find(screen(), "Field")

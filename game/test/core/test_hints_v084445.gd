@@ -73,7 +73,7 @@ func test_the_ready_words_wait_for_the_goblins_and_the_cleric_set_free() -> void
 	assert_bool(Cond.met(s, {"free": "npc_dream_cleric"})).is_true()
 	var row := HintRules.due(s, dream, [], true)
 	assert_str(str(row["id"])).is_equal("improvise")
-	var ph := HintRules.phrases(row)
+	var ph := HintRules.phrases(row, dream)
 	assert_array(ph["texts"]).has_size(1)
 	var check: Dictionary = ph["checks"][0]
 	assert_int(int(CheckEngine.preview(s, dream, check)["dc"])).is_equal(2)  # the pack's own floor

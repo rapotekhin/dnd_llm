@@ -17,7 +17,7 @@ func _room(room: String, seed_value: int) -> GameSession:
 	var s := TestUtils.new_session()
 	s.room_id = room
 	s.game_seed = seed_value
-	PetRules.seed(s, data, room)  # the room's beasts: the tavern's cat
+	PetRules.wild(s, data, room)  # the room's beasts: the tavern's cat
 	return s
 
 

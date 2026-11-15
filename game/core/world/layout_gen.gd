@@ -1071,21 +1071,10 @@ static func _tile_codes(rows: Array[String]) -> Dictionary:
 static func _weighted(list: Array, rng: RandomNumberGenerator) -> Dictionary:
 	if list.is_empty():
 		return {}
-	var key := "weight"
-	var total := 0.0
-	for p: Dictionary in list:
-		total += float(p["weight"])
-	if total <= 0.0:
-		key = "base"
-		total = 0.0
-		for p: Dictionary in list:
-			total += float(p["base"])
-	var roll := rng.randf() * total
-	for p: Dictionary in list:
-		roll -= float(p[key])
-		if roll < 0.0:
-			return p
-	return list.back()
+	var i := Roll.index(rng, list.map(func(p: Dictionary) -> float: return float(p["weight"])))
+	if i < 0:
+		i = Roll.index(rng, list.map(func(p: Dictionary) -> float: return float(p["base"])))
+	return list[i] if i >= 0 else list.back()
 
 
 static func _pond(grid: Array[PackedStringArray], share: float, rng: RandomNumberGenerator, cell: String = WATER) -> void:
@@ -1815,8 +1804,7 @@ static func _patch(lib: Dictionary, map: Dictionary, out: PackedByteArray) -> vo
 	var under := order.find(ground_of(lib, keys, FLOOR))
 	var w := int(map["w"])
 	var h := int(map["h"])
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([map.get("seed", 0), map.get("id", "")])
+	var rng := Roll.seeded([map.get("seed", 0), map.get("id", "")])
 	var all: Dictionary = lib["grounds"].get("patches", {})
 	var rows: Array = []
 	for k: String in keys:

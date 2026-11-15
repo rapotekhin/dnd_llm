@@ -302,20 +302,11 @@ static func _wild(s: GameSession, data: Dictionary, room: String, monster: Strin
 	return CreatureRules.add(s, room, cr)
 
 
-## A pack room's `beasts` (wild ones to tame) come once, on the first visit. Lines — none (they are on the panel).
-static func seed(s: GameSession, data: Dictionary, room: String) -> void:
+## A pack room's `beasts` (wild ones to tame), laid on the room's first visit (CreatureRules.seed, the one mark of it).
+static func wild(s: GameSession, data: Dictionary, room: String) -> void:
 	if not on(data):
 		return
-	var gen := WorldGen.generated(s)
-	var done: Array = gen.get("beasts_seeded", [])
-	if done.has(room):
-		return
-	var list: Array = WorldView.new(data["world"]).room(room).get("beasts", [])
-	if list.is_empty():
-		return
-	done.append(room)
-	gen["beasts_seeded"] = done
-	for m: Variant in list:
+	for m: Variant in WorldView.new(data["world"]).room(room).get("beasts", []):
 		if tameable(data, str(m)):
 			_wild(s, data, room, str(m), "")
 

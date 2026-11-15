@@ -182,7 +182,7 @@ static func character_sheet(s: GameSession, data: Dictionary) -> Dictionary:
 		"class_name": class_text, "level": int(c.get("level", 1)), "hp": int(c.get("hp", 0)),
 		"max_hp": int(c.get("max_hp", 0)), "ac": int(c.get("ac", 10)), "conditions": _conditions(c, data),
 		"skills": c.get("skills", {}), "gold_cp": int(c.get("gold_cp", 0)),
-		"reward_left_cp": EffectEngine.budget_left(s, data),
+		"reward_left_cp": null if MakeRules.boundless(s, data) else EffectEngine.budget_left(s, data),  # no budget where making is boundless
 		"bags": ContainerRules.bags_text(c, data, s.items),
 		"development": DevelopmentRules.text(c, data),
 		"goal": GoalRules.text_of(c, data),  # v0.7.22: the hero's thoughts

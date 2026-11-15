@@ -257,7 +257,7 @@ static func describe(s: GameSession, data: Dictionary, a: String, b: String) -> 
 static func dcs(s: GameSession, data: Dictionary, a: String, b: String) -> Dictionary:
 	var d := def(data, a, b)
 	var own: Dictionary = s.ways.get(key(a, b), {})
-	var dc := int(own["lock_dc"]) if own.has("lock_dc") else int(data["rules"]["containers"]["lock_dc"].get(str(d.get("lock", "simple")), 10))
+	var dc := int(own["lock_dc"]) if own.has("lock_dc") else ContainerRules.lock_dc(data, str(d.get("lock", "simple")))
 	var out := ThingRules.lock_dcs(data, dc, d)
 	if has_effect(s, a, b, "arcane_lock") and not has_effect(s, a, b, "knocked"):
 		out["pick"] = int(out["pick"]) + int(cfg(data)["arcane_plus"])

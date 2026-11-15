@@ -46,15 +46,15 @@ static func add(s: GameSession, room_id: String, fields: Dictionary) -> Dictiona
 
 
 ## What a room keeps from the pack and from before the hero (v0.8.4.44.3), once, on the first visit: its wild beasts
-## (PetRules.seed), its `creatures` — the dead and the bound the author set — and the dead of its place (`remains`). No master.
+## (PetRules.wild), its `creatures` — the dead and the bound the author set — and the dead of its place (`remains`). No master.
 static func seed(s: GameSession, data: Dictionary, room: String) -> void:
-	PetRules.seed(s, data, room)
 	var gen := WorldGen.generated(s)
 	var done: Array = gen.get("creatures_seeded", [])
 	if done.has(room):
 		return
 	done.append(room)
 	gen["creatures_seeded"] = done
+	PetRules.wild(s, data, room)
 	for row: Dictionary in WorldView.new(data["world"]).room(room).get("creatures", []):
 		from_pack(s, data, room, row)
 	remains(s, data, room)
@@ -76,11 +76,12 @@ static func from_pack(s: GameSession, data: Dictionary, room: String, row: Dicti
 	if name.is_empty():
 		name = str(world.npc_name(npc)) if not npc.is_empty() else str(data["monsters"].get(monster, {}).get("name", monster))
 	var dead := str(row.get("state", "")) == DEAD
-	var c := {"name": ("Тело: " + name) if dead else name, "monster": monster, "state": DEAD if dead else "surrendered",
-		"bound": not dead, "led": false, "since": TimeRules.abs_minute(s), "xp_given": true, "pack": str(row.get("id", ""))}
+	var c := _record(s, body_name(data, name) if dead else name, monster, DEAD if dead else "surrendered")
+	c["bound"] = not dead
+	c["pack"] = str(row.get("id", ""))
 	var things: Dictionary = ItemRules.whole(row["contents"]) if row.get("contents") is Dictionary else {}
-	if dead and not row.get("contents") is Dictionary and bool(row.get("gear", true)):
-		things = Gear.start(data, monster)["inventory"]
+	if dead and not row.get("contents") is Dictionary and bool(row.get("gear", true)):  # searched as after a fight
+		things = CombatRules.spoils(data, {"monster": monster, "status": DEAD}, s.rng)
 	if not things.is_empty():
 		c["contents"] = things.duplicate()
 	if int(row.get("coins_cp", 0)) > 0:
@@ -132,12 +133,10 @@ static func remains(s: GameSession, data: Dictionary, room: String) -> Array[Dic
 		row = by.get(LayoutRules.kind_of(v, data, room), {})
 	if row.is_empty():
 		return out
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([s.game_seed, room, "remains"])
+	var rng := Roll.seeded([s.game_seed, room, "remains"])
 	if rng.randf() >= float(row.get("chance", 0.0)):
 		return out
-	var n_range: Array = row.get("n", [1, 1])
-	for i: int in rng.randi_range(int(n_range[0]), int(n_range[-1])):
+	for i: int in Roll.between(rng, row.get("n", [1, 1])):
 		var tid := Roll.weighted(rng, row.get("who", {}))
 		if tid.is_empty() or not data["monsters"].has(tid):
 			continue
@@ -147,12 +146,12 @@ static func remains(s: GameSession, data: Dictionary, room: String) -> Array[Dic
 			for k: int in int(kit[item]):
 				if rng.randf() < float(row.get("gear", 0.0)):
 					things[item] = int(things.get(item, 0)) + 1
-		var c := {"name": "%s: %s" % [cfg_r.get("name", "Останки"), data["monsters"][tid].get("name", tid)], "monster": tid,
-			"state": DEAD, "bound": false, "led": false, "since": TimeRules.abs_minute(s), "xp_given": true, "kept": true, "remains": true}
+		var c := _record(s, "%s: %s" % [cfg_r.get("name", "Останки"), data["monsters"][tid].get("name", tid)], tid, DEAD)
+		c["kept"] = true
+		c["remains"] = true
 		if not things.is_empty():
 			c["contents"] = things
-		var c_range: Array = row.get("coins_cp", [0, 0])
-		var cp := rng.randi_range(int(c_range[0]), int(c_range[-1]))
+		var cp := Roll.between(rng, row.get("coins_cp", [0, 0]))
 		if cp > 0:
 			c["coins_cp"] = cp
 		out.append(add(s, room, c))
@@ -189,9 +188,10 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String, treas
 			continue
 		if not state in ["truce", "surrendered", "unconscious", DEAD] or (person and state != "unconscious"):
 			continue  # a pack NPC who surrendered or made peace is a person of the scene, not a creature
-		var c := Being.put(s, fid, "creature", {"name": str(f["name"]), "monster": str(f["monster"]), "state": state, "at": room_id,
-			"bound": false, "led": false, "since": TimeRules.abs_minute(s), "hp": int(f.get("hp", 1)), "max_hp": int(f.get("max_hp", 1)),
-			"xp_given": not bool(f.get("no_xp", false)) and str(s.combat.get("outcome", "")) in ["victory", "truce"]})
+		var rec := _record(s, str(f["name"]), str(f["monster"]), state)
+		rec.merge({"at": room_id, "hp": int(f.get("hp", 1)), "max_hp": int(f.get("max_hp", 1)),
+			"xp_given": not bool(f.get("no_xp", false)) and str(s.combat.get("outcome", "")) in ["victory", "truce"]}, true)
+		var c := Being.put(s, fid, "creature", rec)
 		if not person and not gear.is_empty():
 			c["contents"] = gear
 		if state != "truce" and not person:
@@ -203,7 +203,7 @@ static func after_fight(s: GameSession, data: Dictionary, room_id: String, treas
 			c["npc_id"] = npc
 		comes_to(s, data, c, int(c["since"]))  # the hour it comes to is rolled at the blow
 		if state == DEAD:
-			c["name"] = "Тело: " + str(f["name"])
+			c["name"] = body_name(data, str(f["name"]))
 			var at := FightGrid.cell(f)
 			c["x"] = at.x
 			c["y"] = at.y
@@ -237,8 +237,20 @@ static func _lay(s: GameSession, data: Dictionary, room_id: String, holders: Arr
 
 ## A heap of things on the spot: it stays until taken.
 static func _heap(s: GameSession, data: Dictionary, room_id: String) -> Dictionary:
-	return add(s, room_id, {"name": str(cfg(data)["heap_name"]), "monster": "", "state": DEAD, "bound": false, "led": false, "kept": true,
-		"since": TimeRules.abs_minute(s), "xp_given": true})
+	var c := _record(s, str(cfg(data)["heap_name"]), "", DEAD)
+	c["kept"] = true
+	return add(s, room_id, c)
+
+
+## The record of a creature the engine lays in a room (a body, a heap, a pack's captive, one a fight left): not bound, not
+## led, since now, its experience given; the caller adds its own.
+static func _record(s: GameSession, name: String, monster: String, state: String) -> Dictionary:
+	return {"name": name, "monster": monster, "state": state, "bound": false, "led": false, "since": TimeRules.abs_minute(s), "xp_given": true}
+
+
+## A body's name (rules.creatures.body_name): a creature's, a person's.
+static func body_name(data: Dictionary, name: String) -> String:
+	return str(cfg(data)["body_name"]) % name
 
 
 ## A body is gone: what it still held stays.
@@ -310,14 +322,14 @@ static func captive(c: Dictionary) -> bool:
 
 ## Someone else's: an NPC owns it — leading it away or letting it go is a theft.
 static func foreign(c: Dictionary) -> bool:
-	return not str(c.get("owner", "")).is_empty() and str(c["owner"]) != OwnerRules.HERO and not str(c["owner"]).begins_with(OwnerRules.FOES)
+	return OwnerRules.claims(str(c.get("owner", "")))
 
 
 ## A prisoner neither the hero's nor a person's (v0.8.4.44.3): bound by foes (`enc:<encounter>`) or by nobody the hero
 ## knows — a pack's captive. «Развязать» sets it free: a rescue, not an assault.
 static func held(c: Dictionary) -> bool:
 	var owner := str(c.get("owner", ""))
-	return bool(c.get("bound", false)) and str(c.get("state", "")) != DEAD and (owner.is_empty() or owner.begins_with(OwnerRules.FOES))
+	return bool(c.get("bound", false)) and str(c.get("state", "")) != DEAD and owner != OwnerRules.HERO and not OwnerRules.claims(owner)
 
 
 ## Beaten by words (v0.7.50.1): stays in the room and may go with the hero, fighting beside.
@@ -420,12 +432,7 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 				Gear.take(s, data, Being.HERO, str(row["item"]), 1)
 			return ["%s связан (%s) — ваш пленник" % [c["name"], row["name"]]]
 		"join":
-			var going := not bool(c.get("ally", false))
-			c["led"] = going
-			c.erase("ally")
-			if going:
-				c["ally"] = true
-			return ["%s %s" % [c["name"], "идёт с вами" if going else "остаётся здесь"]]
+			return [_go_along(c, not bool(c.get("ally", false)))]
 		"lead":
 			var lines: Array[String] = _taken_from_owner(s, data, c)
 			c["led"] = not bool(c.get("led", false))
@@ -474,7 +481,7 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 			if bool(c.get("bound", false)):
 				lines.append_array(_executed(s, data, c))
 			c["state"] = DEAD
-			c["name"] = "Тело: " + str(c["name"])
+			c["name"] = body_name(data, str(c["name"]))
 			c["since"] = TimeRules.abs_minute(s)
 			_unbind(s, data, c)
 			c["led"] = false
@@ -513,9 +520,7 @@ static func _taken_from_owner(s: GameSession, data: Dictionary, c: Dictionary) -
 		return []
 	var owner := str(c["owner"])
 	c["owner"] = OwnerRules.HERO
-	if WatchRules.sees_hero(s, data, owner):
-		return TheftRules.react(s, data, owner)
-	return []
+	return TheftRules.if_seen(s, data, owner)
 
 
 ## A knocked-out pack NPC searched: what its pockets hold; whoever sees it — a theft before their eyes. Lines.
@@ -551,6 +556,15 @@ static func _npc_back(s: GameSession, data: Dictionary, c: Dictionary) -> Array[
 	return CrimeRules.assault_known(s, data, npc)
 
 
+## It goes with the hero as an ally (`going`) or stays here. Its line.
+static func _go_along(c: Dictionary, going: bool) -> String:
+	c["led"] = going
+	c.erase("ally")
+	if going:
+		c["ally"] = true
+	return "%s %s" % [c["name"], "идёт с вами" if going else "остаётся здесь"]
+
+
 ## The led ones go with the hero from `from` to `to`.
 static func follow(s: GameSession, from: String, to: String) -> void:
 	if from == to:
@@ -560,10 +574,11 @@ static func follow(s: GameSession, from: String, to: String) -> void:
 			c["at"] = to
 
 
-## The bonds come off: manacles go back to the hero's hands (v0.8.4.27).
-static func _unbind(s: GameSession, data: Dictionary, c: Dictionary) -> void:
+## The bonds come off: manacles go back to the hero's hands (v0.8.4.27) — to its own when `give` (a rescue: those of
+## nobody's prisoner).
+static func _unbind(s: GameSession, data: Dictionary, c: Dictionary, give := true) -> void:
 	var row := EncounterRules.bond(data, str(c.get("bonds", "")))
-	if bool(c.get("bound", false)) and row.has("item"):
+	if give and bool(c.get("bound", false)) and row.has("item"):
 		Gear.give(s, data, Being.HERO, str(row["item"]), 1)
 	c["bound"] = false
 	c.erase("bonds")
@@ -574,11 +589,7 @@ static func _unbind(s: GameSession, data: Dictionary, c: Dictionary) -> void:
 ## the hero by rules.creatures.rescued_attitude and remembering it. The pack row's `joins` — it goes with the hero at once
 ## (a person while there is room for one more, FollowRules). Lines.
 static func rescue(s: GameSession, data: Dictionary, c: Dictionary) -> Array[String]:
-	var row := EncounterRules.bond(data, str(c.get("bonds", "")))
-	if row.has("item") and str(c.get("owner", "")).is_empty():  # what bound it is the hero's now
-		Gear.give(s, data, Being.HERO, str(row["item"]), 1)
-	c["bound"] = false
-	c.erase("bonds")
+	_unbind(s, data, c, str(c.get("owner", "")).is_empty())  # what bound nobody's prisoner is the hero's now
 	c["owner"] = ""
 	var joins := bool(c.get("joins", false))
 	var lines: Array[String] = ["%s развязан(а) — свободен(на)" % c["name"]]
@@ -588,9 +599,7 @@ static func rescue(s: GameSession, data: Dictionary, c: Dictionary) -> Array[Str
 		c["kept"] = true
 		c["since"] = TimeRules.abs_minute(s)
 		if joins:
-			c["led"] = true
-			c["ally"] = true
-			lines.append("%s идёт с вами" % c["name"])
+			lines.append(_go_along(c, true))
 		return lines
 	remove(s, c)
 	Being.of(s, npc)["at"] = s.room_id

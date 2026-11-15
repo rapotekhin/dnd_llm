@@ -96,7 +96,7 @@ static func _lock_wares(s: GameSession, data: Dictionary, p: Dictionary) -> void
 	if quality.is_empty():
 		return
 	if not p.has("lock_dc"):  # a shop of an older save, or a new one
-		p["lock_dc"] = int(c["lock_dc"][quality])
+		p["lock_dc"] = ContainerRules.lock_dc(data, quality)
 		p["locked"] = true
 		return
 	if bool(p.get("locked", false)):
@@ -135,6 +135,21 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 	return out
 
 
+## The most one portable thing of the room may cost (rules.props.item_value_cap_cp): furnishing, a thing laid in the world,
+## the candidates readied; none in a boundless place (MakeRules.boundless, v0.8.4.44.6). `room` — another than the hero's.
+static func item_cap(s: GameSession, data: Dictionary, room := "") -> int:
+	return EffectEngine.UNLIMITED if MakeRules.boundless(s, data, room) else int(cfg(data)["item_value_cap_cp"])
+
+
+## The most the room's portable things may cost together, by the hero's level (rules.props.room_value_cap_cp); none in a
+## boundless place.
+static func room_cap(s: GameSession, data: Dictionary, room := "") -> int:
+	if MakeRules.boundless(s, data, room):
+		return EffectEngine.UNLIMITED
+	var caps: Dictionary = cfg(data)["room_value_cap_cp"]
+	return int(caps.get(str(int(s.character.get("level", 1))), caps["5"]))
+
+
 ## Checks a `furnish` effect: {"plan": {room, props, add}, "summary"} or {"reason"}. A furnished room takes more only
 ## with a `cause` in the world (v0.7.39.8: a thing brought, built, left) — within the same caps, the room's things
 ## counted. `room` — the room it is for when the master furnishes ahead (v0.8.4.25, set by the engine), else here.
@@ -150,9 +165,8 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 	if specs.is_empty() or specs.size() + had.size() > cap:
 		return {"reason": "обстановка — от 1 до %d вещей в комнате (уже %d)" % [cap, had.size()]}
 	var level := str(int(s.character.get("level", 1)))
-	var free := MakeRules.boundless(s, data, room)  # v0.8.4.44.6: no price limit in a boundless place
-	var value_cap := int(cfg(data)["room_value_cap_cp"].get(level, cfg(data)["room_value_cap_cp"]["5"]))
-	var item_cap := int(cfg(data)["item_value_cap_cp"])
+	var value_cap := room_cap(s, data, room)
+	var each_cap := item_cap(s, data, room)
 	var here := owners(s, data, room)
 	var total := 0
 	for p: Dictionary in had:
@@ -178,8 +192,8 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 			if def.is_empty():
 				return {"reason": "нет такого предмета %s — найди его через find_items" % item}
 			var value := int(def.get("value_cp", 0))
-			if value > item_cap and not free:
-				return {"reason": "%s слишком дорог для обстановки (%d мм при пределе %d)" % [def.get("name", item), value, item_cap]}
+			if value > each_cap:
+				return {"reason": "%s слишком дорог для обстановки (%d мм при пределе %d)" % [def.get("name", item), value, each_cap]}
 			total += value
 		var owner := str(spec.get("owner", "")) if spec.get("owner") != null else ""
 		if not owner.is_empty() and not here.has(owner):
@@ -210,11 +224,11 @@ static func plan_furnish(s: GameSession, data: Dictionary, e: Dictionary) -> Dic
 		props.append(prop)
 	if props.is_empty():
 		return {"reason": "эти вещи в комнате уже есть — обставь её другими"}
-	if total > value_cap and not free:
+	if total > value_cap:
 		return {"reason": "переносные вещи комнаты стоят %d мм при пределе %d для %s уровня — убери дорогое" % [total, value_cap, level]}
-	if gift > EffectEngine.budget_left(s, data) and not free:
-		return {"reason": "ничейное в контейнерах стоит %d мм — больше, чем мастер может дать до долгого отдыха (%d мм); положи меньше или дай им хозяина" % [gift, EffectEngine.budget_left(s, data)]}
-	return {"plan": {"room": room, "props": props, "made": made, "reward": 0 if free else gift, "add": add, "cause": cause},
+	if gift > EffectEngine.budget_left(s, data, room):
+		return {"reason": "ничейное в контейнерах стоит %d мм — больше, чем мастер может дать до долгого отдыха (%d мм); положи меньше или дай им хозяина" % [gift, EffectEngine.budget_left(s, data, room)]}
+	return {"plan": {"room": room, "props": props, "made": made, "reward": gift, "add": add, "cause": cause},
 		"summary": ("Добавлено в комнату (%s): " % cause if add else "Обстановка: ") + ", ".join(props.map(func(p: Dictionary) -> String: return p["name"]))}
 
 
@@ -276,8 +290,6 @@ static func apply_furnish(s: GameSession, plan: Dictionary) -> void:
 
 ## Checks a `move_item:room>hero`: a portable thing of this room. The plan says whether its owner is here and sees it.
 static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
-	if EncounterRules.captive(s):
-		return {"reason": "герой связан — сначала освободиться"}
 	var p := find(s, s.room_id, str(e.get("prop_id", "")))
 	if p.is_empty():
 		return {"reason": "в комнате нет вещи %s (есть: %s)" % [e.get("prop_id", ""), ", ".join(room_props(s, s.room_id).map(func(x: Dictionary) -> String: return x["id"]))]}
@@ -285,8 +297,8 @@ static func plan_take(s: GameSession, data: Dictionary, e: Dictionary) -> Dictio
 		return {"reason": "%s не унести — это обстановка; опиши попытку словами или `prop_state`" % p["name"]}
 	if not ContainerRules.load_why(data, p).is_empty():
 		return {"reason": ContainerRules.load_why(data, p)}
-	if ContainerRules.is_container(p) and not ContainerRules.closed_why(p).is_empty():
-		return {"reason": ContainerRules.closed_why(p)}
+	if not ContainerRules.reach_why(s, p).is_empty():
+		return {"reason": ContainerRules.reach_why(s, p)}
 	var owner := str(p.get("owner", ""))
 	var seen := WatchRules.sees_hero(s, data, owner)
 	return {"plan": {"room": s.room_id, "prop": p["id"], "owner": owner if seen else ""},

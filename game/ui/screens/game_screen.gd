@@ -303,6 +303,11 @@ func _overlays() -> Array[Control]:
 	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _wait, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _gear, _card, _heists, _org, _office, _image, _build]
 
 
+## The windows open over the screen now.
+func _open() -> Array:
+	return _overlays().filter(func(o: Control) -> bool: return o.visible)
+
+
 # _input, not _unhandled_input: the focused chat input would swallow Esc.
 # v0.7.22.27 (as in BG3): the keys work outside the input; Esc leaves the input, Enter or a letter comes back to it.
 func _input(event: InputEvent) -> void:
@@ -311,7 +316,7 @@ func _input(event: InputEvent) -> void:
 		_field.queue_redraw()
 	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo():
 		return
-	var open := _overlays().filter(func(o: Control) -> bool: return o.visible)
+	var open := _open()
 	if get_window().get_node_or_null("ConfirmBox") != null or is_instance_valid(_lesson):
 		return
 	if event.is_action_pressed("quick_save"):
@@ -405,7 +410,7 @@ func _on_turn_finished(_turn_id: String, _ok: bool) -> void:
 		GameState.session.character.erase("contest_offer")
 		_contest.open(str(offer["npc"]), str(offer["kind"]))
 		return
-	if Backend.is_ready() and _typed and not _fight.active() and not _pause.visible and _overlays().all(func(o: Control) -> bool: return not o.visible):
+	if Backend.is_ready() and _typed and not _fight.active() and not _pause.visible and _open().is_empty():
 		input.grab_focus()
 
 
@@ -810,7 +815,7 @@ func _on_arrived() -> void:
 ## The screen of teaching due now (HintRules), one at a time: never over the master's turn, a walk, a fight's animation
 ## or its question, an open window or «Точно?».
 func _teach_due() -> void:
-	if is_instance_valid(_lesson) or not GameState.has_session() or GameState.is_busy() or _field.walking() or _fight.holds() 			or _pause.visible or trade_panel.visible or get_window().get_node_or_null("ConfirmBox") != null 			or _overlays().any(func(o: Control) -> bool: return o.visible):
+	if is_instance_valid(_lesson) or not GameState.has_session() or GameState.is_busy() or _field.walking() or _fight.holds() 			or _pause.visible or trade_panel.visible or get_window().get_node_or_null("ConfirmBox") != null 			or not _open().is_empty():
 		return
 	var row := GameState.hint_due()
 	if row.is_empty():

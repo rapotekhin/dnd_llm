@@ -50,8 +50,7 @@ static func fit(data: Dictionary, given: Dictionary, gender: String) -> Dictiona
 
 ## {age, build, height} ids: `given` stays (when it is an id of the list), the rest picked by weights.
 static func make(data: Dictionary, gender: String, given: Dictionary, seed_text: String, hero: bool = false) -> Dictionary:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(seed_text)
+	var rng := Roll.seeded(seed_text)
 	var out := {}
 	for key: String in KEYS:
 		var g := str(given.get(key, "")) if given.get(key) != null else ""

@@ -7,6 +7,17 @@ extends RefCounted
 ## names the skill and a DC tier. Locks of failed checks — ExplorationRules.
 
 
+## An option's check the engine rolls on the pick (the master's `option_checks`, a pack hint's phrase): {skill, dc_tier,
+## target_id?} of a known skill and tier; {} — none or not one.
+static func option_check(data: Dictionary, ch: Variant) -> Dictionary:
+	if not ch is Dictionary or not data["rules"]["skills"].has(str(ch.get("skill", ""))) or not data["rules"]["dc_tiers"].has(str(ch.get("dc_tier", ""))):
+		return {}
+	var out := {"skill": str(ch["skill"]), "dc_tier": str(ch["dc_tier"])}
+	if not str(ch.get("target_id", "")).is_empty():
+		out["target_id"] = str(ch["target_id"])
+	return out
+
+
 ## What this moment gives a check of `who` by `spec` (a skill or a bare ability; `adv_why`, `dis_why`, `fail_why` — the
 ## caller's reasons, a text or a list; `tool`, `target_id`, `sense`, `about` — a creature type or a subject): {adv, dis, fail: [why], parts: [{label, value}]}.
 ## `peek` — a chance shown before the roll: a spell's die counts by its mean and is not spent.

@@ -55,19 +55,10 @@ static func table(s: GameSession, data: Dictionary, loc_id: String) -> Dictionar
 
 
 static func _roll(s: GameSession, data: Dictionary, loc_id: String, t: Dictionary, was: String) -> String:
-	var r := RandomNumberGenerator.new()
-	r.seed = hash("weather|%s|%d|%d" % [loc_id, s.day, int(s.rng.seed)])
+	var r := Roll.seeded("weather|%s|%d|%d" % [loc_id, s.day, int(s.rng.seed)])
 	if t.has(was) and r.randi_range(1, 100) <= int(cfg(data).get("stay_pct", 0)):
 		return was
-	var total := 0
-	for k: String in t:
-		total += maxi(0, int(t[k]))
-	var roll := r.randi_range(1, maxi(1, total))
-	for k: String in t:
-		roll -= maxi(0, int(t[k]))
-		if roll <= 0:
-			return k
-	return "" if t.is_empty() else str(t.keys()[0])
+	return Roll.weighted(r, t)
 
 
 ## A new day rolls every location; the master's magic runs out; the world flags follow. Lines for the hero's place.

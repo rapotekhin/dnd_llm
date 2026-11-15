@@ -48,7 +48,7 @@ static func plan_assess(c: Dictionary, data: Dictionary, e: Dictionary) -> Dicti
 	var plan := {"goal_scale": scale, "direction": dir, "concepts": concepts}
 	var also := ""
 	if e.get("item") is Dictionary:  # v0.8.4.42.16: the thing the goal is, by the engine's price, not the level's gate
-		var chk := ItemRules.check_generated(data, e["item"], NO_GATE)
+		var chk := ItemRules.check_generated(data, e["item"], ItemRules.ANY_RARITY)
 		if not bool(chk["ok"]):
 			return {"reason": "вещь цели: %s" % chk["reason"]}
 		var def: Dictionary = chk["def"]
@@ -61,8 +61,6 @@ static func plan_assess(c: Dictionary, data: Dictionary, e: Dictionary) -> Dicti
 			cfg(data)["names"].get(floor, floor)]
 	return {"plan": plan, "summary": "Цель оценена: %s%s" % [text_of({"goal": goal(c).merged(plan, true)}, data), also]}
 
-
-const NO_GATE := 99  ## a level past every rarity's: the goal's thing is priced, its level is the goal's threshold
 
 
 static func _need(data: Dictionary, scale: String) -> int:

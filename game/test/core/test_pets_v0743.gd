@@ -42,8 +42,8 @@ func test_what_a_pet_gives_comes_from_its_template() -> void:
 
 func test_the_pack_puts_a_cat_in_the_tavern_hall_once() -> void:
 	var s := _session("brod-tavern-hall")
-	PetRules.seed(s, data, s.room_id)
-	PetRules.seed(s, data, s.room_id)
+	CreatureRules.seed(s, data, s.room_id)
+	CreatureRules.seed(s, data, s.room_id)
 	var cats := CreatureRules.here(s, s.room_id).filter(func(c: Dictionary) -> bool: return str(c["monster"]) == "cat")
 	assert_int(cats.size()).is_equal(1)
 	assert_str(str(cats[0]["state"])).is_equal(PetRules.WILD)

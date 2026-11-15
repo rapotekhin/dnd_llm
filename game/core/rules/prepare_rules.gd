@@ -123,7 +123,7 @@ static func candidates(s: GameSession, data: Dictionary, room: String) -> Array[
 	var c := cfg(data)
 	var v := WorldView.new(data["world"])
 	var cat: Dictionary = data["items"]["catalog"]
-	var cap := int(PropRules.cfg(data)["item_value_cap_cp"])
+	var cap := PropRules.item_cap(s, data, room)
 	var own: Array = []
 	own.append_array(c.get("by_kind", {}).get(LayoutRules.kind_of(v, data, room), []))
 	own.append_array(c.get("by_role", {}).get(str(LayoutRules.fields(v.room(room)).get("role", "")), []))
@@ -136,8 +136,7 @@ static func candidates(s: GameSession, data: Dictionary, room: String) -> Array[
 			own.append_array((row.get("stock", {}) as Dictionary).keys())
 			own.append_array(row.get("extras", {}).get("pool", []))
 	var daily: Array = (c.get("everyday", []) as Array).duplicate()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([s.game_seed, room])
+	var rng := Roll.seeded([s.game_seed, room])
 	for i in range(daily.size() - 1, 0, -1):  # the everyday ones in an order of this game and room
 		var j := rng.randi_range(0, i)
 		var x: Variant = daily[i]

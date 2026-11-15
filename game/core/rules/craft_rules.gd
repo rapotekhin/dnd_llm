@@ -692,7 +692,7 @@ static func gather(s: GameSession, data: Dictionary, tag: String) -> Array[Strin
 	if not ok:
 		lines.append("Ничего толкового не нашлось")
 		return lines
-	var qty := s.rng.randi_range(int(g["qty"][0]), int(g["qty"][1]))
+	var qty := Roll.between(s.rng, g["qty"])
 	var pool: Array = g.get("items", [g.get("item", "")])
 	var item := str(pool[s.rng.randi_range(0, pool.size() - 1)])
 	if FoodRules.spoils_days(data, s.items, item) > 0 and FeatureRules.forage_mult(s, data) > 1:  # food twice in the favored terrain (5e)

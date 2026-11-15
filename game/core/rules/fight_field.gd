@@ -943,7 +943,7 @@ static func leave(s: GameSession, data: Dictionary, lines: Array[String]) -> voi
 		var f := CombatRules.fighter(s, id)
 		f["status"] = "away" if chasers.has(id) else "left"
 		if chasers.has(id):
-			list.append({"id": id, "at": int(s.combat["round"]) + s.rng.randi_range(int(bounds[0]), int(bounds[1])), "x": came.x, "y": came.y})
+			list.append({"id": id, "at": int(s.combat["round"]) + Roll.between(s.rng, bounds), "x": came.x, "y": came.y})
 	s.combat["chasers"] = list
 	FightGrid.changed(s)
 	lines.append("%s выбегает: %s — за ним погоня" % [s.character["name"], SceneRules.room(s, data["world"], s.room_id).get("name", s.room_id)])

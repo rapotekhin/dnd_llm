@@ -149,7 +149,7 @@ static func notice(s: GameSession, data: Dictionary, map: Dictionary, cell: Vect
 	var passive := Sheet.passive(s, data, Sheet.HERO)
 	var reach := int(SightRules.cfg(data)["notice"])
 	for sec: Dictionary in secrets(data["world"], s.room_id):
-		if not on_square(sec) or not noticed_passively(sec) or passive < int(sec["dc"]) or is_found(s, s.room_id, sec) or s.traps.has(secret_key(s.room_id, sec)):
+		if not on_square(sec) or not noticed_passively(sec) or passive < int(sec["dc"]) or not still_hidden(s, s.room_id, sec):
 			continue
 		var at := MapSpots.secret_cell(s, data, map, s.room_id, sec)
 		if at.x >= 0 and WalkRules.distance(at, cell) <= reach and SightRules.line(map, data["layouts"], cell, at) and _reveal(s, s.room_id, sec):
@@ -161,8 +161,7 @@ static func notice(s: GameSession, data: Dictionary, map: Dictionary, cell: Vect
 ## The live trap under the hero's feet that the hero does not know of, or {}.
 static func trap_at(s: GameSession, data: Dictionary, map: Dictionary, cell: Vector2i) -> Dictionary:
 	for sec: Dictionary in secrets(data["world"], s.room_id):
-		if sec.get("trap") is Dictionary and not is_found(s, s.room_id, sec) and not s.traps.has(secret_key(s.room_id, sec)) \
-				and MapSpots.secret_cell(s, data, map, s.room_id, sec) == cell:
+		if sec.get("trap") is Dictionary and still_hidden(s, s.room_id, sec) and MapSpots.secret_cell(s, data, map, s.room_id, sec) == cell:
 			return sec
 	return {}
 
@@ -200,6 +199,11 @@ static func found_by(sec: Dictionary, skill: String) -> bool:
 	return findable(sec) and (skill == SEARCH_SKILL or (not hidden_for(sec).is_empty() and hidden_for(sec) == skill))
 
 
+## Not found, not sprung, not disarmed: a look may still find it.
+static func still_hidden(s: GameSession, room_id: String, sec: Dictionary) -> bool:
+	return not is_found(s, room_id, sec) and not s.traps.has(secret_key(room_id, sec))
+
+
 ## A look may find it at all: not marked `search: false` (a trap that always springs).
 static func findable(sec: Dictionary) -> bool:
 	return bool(sec.get("search", true))
@@ -210,7 +214,7 @@ static func findable(sec: Dictionary) -> bool:
 static func search_dc(s: GameSession, data: Dictionary, room_id: String) -> int:
 	var best := -1
 	for sec: Dictionary in secrets(data["world"], room_id):
-		if found_by(sec, SEARCH_SKILL) and not is_found(s, room_id, sec) and not s.traps.has(secret_key(room_id, sec)) 				and (best < 0 or int(sec["dc"]) < best):
+		if found_by(sec, SEARCH_SKILL) and still_hidden(s, room_id, sec) and (best < 0 or int(sec["dc"]) < best):
 			best = int(sec["dc"])
 	return best if best >= 0 else int(data["rules"]["dc_tiers"]["medium"])
 

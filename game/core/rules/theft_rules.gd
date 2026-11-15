@@ -184,6 +184,12 @@ static func reaction_kind(data: Dictionary, npc_id: String) -> String:
 	return str(r.get(Sheet.template_id(data, npc), r["_default"]))
 
 
+## A thing of `owner` taken or spoilt before its eyes: its reaction (react) when it is a person here who sees the hero,
+## else none. Lines.
+static func if_seen(s: GameSession, data: Dictionary, owner: String) -> Array[String]:
+	return react(s, data, owner) if WatchRules.sees_hero(s, data, owner) else [] as Array[String]
+
+
 ## `memory` (with %s for the NPC's gender ending), `rep_key`, `deed` and `why` name the caught act — a theft by default,
 ## cheating at a game (v0.7.40).
 static func react(s: GameSession, data: Dictionary, npc_id: String, memory: String = "поймал%s героя на краже из своих карманов",

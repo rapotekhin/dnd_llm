@@ -392,7 +392,7 @@ func _level(c: Dictionary, data: Dictionary, args: PackedStringArray) -> String:
 	if to <= int(c["level"]):
 		return "уже %d уровень (наибольший %d; к первому — reset)" % [int(c["level"]), top]
 	while int(c["level"]) < to:
-		XpRules.award(c, data, LevelUp.xp_for(data, int(c["level"]) + 1) - int(c.get("xp", 0)), "консоль")
+		XpRules.raise_to(GameState.session, data, int(c["level"]) + 1, [], "консоль")
 		var why := GameState.level_up(LevelUp.default_picks(c, data))
 		if not why.is_empty():
 			return tr(why)

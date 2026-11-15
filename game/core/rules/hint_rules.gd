@@ -53,12 +53,12 @@ static func shown(s: GameSession, row: Dictionary) -> bool:
 
 
 ## The row's phrases as the master's options: {texts: Array[String], checks: Array}; none — {}.
-static func phrases(row: Dictionary) -> Dictionary:
+static func phrases(row: Dictionary, data: Dictionary) -> Dictionary:
 	var texts: Array[String] = []
 	var checks: Array = []
 	for ph: Variant in row.get("phrases", []):
 		texts.append(str(ph["text"]) if ph is Dictionary else str(ph))
-		checks.append((ph as Dictionary).get("check", {}) if ph is Dictionary else {})
+		checks.append(CheckEngine.option_check(data, (ph as Dictionary).get("check")) if ph is Dictionary else {})
 	return {} if texts.is_empty() else {"texts": texts, "checks": checks}
 
 

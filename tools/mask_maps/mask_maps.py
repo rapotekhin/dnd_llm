@@ -329,16 +329,12 @@ def aspect(m: dict) -> str:
     return min(ASPECTS, key=lambda k: abs(ASPECTS[k] - r))
 
 
-def _b64(img: Image.Image) -> str:
-    buf = io.BytesIO()
-    img.save(buf, "PNG")
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+TITLE = "Between the Rolls mask maps"
 
 
 def _post(url: str, body: dict, key: str) -> dict:
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={
-        "Authorization": f"Bearer {key}", "Content-Type": "application/json",
-        "X-Title": "Between the Rolls mask maps"})
+        "Authorization": f"Bearer {key}", "Content-Type": "application/json", "X-Title": TITLE})
     with urllib.request.urlopen(req, timeout=400) as r:
         return json.loads(r.read())
 
@@ -348,19 +344,17 @@ _TL = threading.local()
 
 
 def by_images(model: str, text: str, ref: Image.Image, asp: str, key: str) -> tuple[Image.Image, float, dict]:
-    data = _post(anima_gen.OPENROUTER_IMAGES, {"model": model, "prompt": text, "n": 1, "aspect_ratio": ("3:4" if asp == "4:5" and "gpt" in model else asp),
+    img, usage = anima_gen.openrouter_image({"model": model, "prompt": text, "n": 1, "aspect_ratio": ("3:4" if asp == "4:5" and "gpt" in model else asp),
         **({} if model == "black-forest-labs/flux-3-image" else {"seed": getattr(_TL, "seed", 7)}),
-        "input_references": [{"type": "image_url", "image_url": {"url": _b64(ref)}}]}, key)
-    first = data["data"][0]
-    raw = base64.b64decode(first["b64_json"]) if first.get("b64_json") else urllib.request.urlopen(first["url"], timeout=120).read()
-    return Image.open(io.BytesIO(raw)).convert("RGB"), float((data.get("usage") or {}).get("cost") or 0), data.get("usage") or {}
+        "input_references": [{"type": "image_url", "image_url": {"url": anima_gen.data_url(ref)}}]}, key, tries=1, timeout=400, title=TITLE)
+    return img, float(usage.get("cost") or 0), usage
 
 
 def by_chat(model: str, text: str, ref: Image.Image, asp: str, key: str) -> tuple[Image.Image, float, dict]:
     data = _post("https://openrouter.ai/api/v1/chat/completions", {"model": model, "modalities": ["image", "text"],
         "image_config": {"aspect_ratio": asp},
         "messages": [{"role": "user", "content": [{"type": "text", "text": text},
-                                                  {"type": "image_url", "image_url": {"url": _b64(ref)}}]}]}, key)
+                                                  {"type": "image_url", "image_url": {"url": anima_gen.data_url(ref)}}]}]}, key)
     msg = data["choices"][0]["message"]
     url = msg["images"][0]["image_url"]["url"]
     raw = base64.b64decode(url.split(",", 1)[1])

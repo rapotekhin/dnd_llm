@@ -103,9 +103,7 @@ static func rank_name(data: Dictionary, i: int) -> String:
 
 ## The day's seeded numbers of an arena: the same opponent and card all day long.
 static func _rng(s: GameSession, sid: String, salt: String) -> RandomNumberGenerator:
-	var r := RandomNumberGenerator.new()
-	r.seed = hash("%s|%d|%s|%d" % [sid, s.day, salt, int(s.rng.seed)])
-	return r
+	return Roll.seeded("%s|%d|%s|%d" % [sid, s.day, salt, int(s.rng.seed)])
 
 
 static func _nick(data: Dictionary, r: RandomNumberGenerator) -> String:

@@ -10,25 +10,44 @@ extends RefCounted
 const CRIT_MARGIN := 5
 
 
-## A key of `weights` {key: weight} by its weight (v0.8.4.44.3: a chest's things, the dead of a place, a buyer's pick);
-## "" — none or all weights 0.
-static func weighted(rng: RandomNumberGenerator, weights: Dictionary) -> String:
+## A generator of its own for `key` (any value, hashed): one key — the same rolls (a chest's things in one game, a
+## trader's extras of a day, the weather of a day, the patches of a map).
+static func seeded(key: Variant) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(key)
+	return rng
+
+
+## A whole number from the first to the last of `pair` (a table's range [a, b]; [a] — a).
+static func between(rng: RandomNumberGenerator, pair: Array) -> int:
+	return rng.randi_range(int(pair[0]), int(pair[-1]))
+
+
+## An index of `weights` by its weight, one draw of `rng` (a negative weight counts as 0); -1 — none or all 0. The one pick
+## by weight: a chest's things, the dead of a place, the weather of a day, a beast of the hunt, a map's chunk.
+static func index(rng: RandomNumberGenerator, weights: Array) -> int:
 	var total := 0.0
-	for k: Variant in weights:
-		total += maxf(0.0, float(weights[k]))
+	for w: Variant in weights:
+		total += maxf(0.0, float(w))
 	if total <= 0.0:
-		return ""
+		return -1
 	var r := rng.randf() * total
-	var last := ""
-	for k: Variant in weights:
-		var w := maxf(0.0, float(weights[k]))
+	var last := -1
+	for i: int in weights.size():
+		var w := maxf(0.0, float(weights[i]))
 		if w <= 0.0:
 			continue
-		last = str(k)
+		last = i
 		r -= w
 		if r < 0.0:
-			return last
+			return i
 	return last
+
+
+## A key of `weights` {key: weight} by its weight (index); "" — none or all weights 0.
+static func weighted(rng: RandomNumberGenerator, weights: Dictionary) -> String:
+	var i := index(rng, weights.values())
+	return "" if i < 0 else str(weights.keys()[i])
 
 
 ## A plain die of a creature or a table.

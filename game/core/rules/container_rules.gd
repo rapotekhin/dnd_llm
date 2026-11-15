@@ -184,7 +184,7 @@ static func plan_spec(s: GameSession, data: Dictionary, spec: Dictionary, room :
 		return {"reason": "%s не запирается или замок не из %s" % [kind_name(data, k), ", ".join((cfg(data)["lock_dc"] as Dictionary).keys())]}
 	var key := str(spec.get("key", "")) if spec.get("key") != null else ""
 	return {"container": k, "contents": contents, "made": made, "locked": not lock.is_empty(),
-		"lock_dc": int(cfg(data)["lock_dc"].get(lock, 0)), "key": key, "value": value(data, all_items, contents)}
+		"lock_dc": lock_dc(data, lock) if not lock.is_empty() else 0, "key": key, "value": value(data, all_items, contents)}
 
 
 # --- the pack's containers (v0.8.4.44.3) -------------------------------------------------------------------------
@@ -208,7 +208,7 @@ static func lay_pack(s: GameSession, data: Dictionary, room: String, spec: Dicti
 	var lock := str(spec.get("lock", ""))
 	if not lock.is_empty():
 		p["locked"] = true
-		p["lock_dc"] = int(cfg(data)["lock_dc"].get(lock, 10))
+		p["lock_dc"] = lock_dc(data, lock)
 	if not str(spec.get("key", "")).is_empty():
 		p["key"] = str(spec["key"])
 
@@ -221,14 +221,12 @@ static func fill(s: GameSession, data: Dictionary, room: String, kind_id: String
 	var row: Dictionary = cfg(data).get("fill", {}).get(kind_id, {})
 	if row.is_empty():
 		return out
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([s.game_seed, room, key])
+	var rng := Roll.seeded([s.game_seed, room, key])
 	var level := int(s.character.get("level", 1))
 	var cat: Dictionary = data["items"]["catalog"]
 	var ok := func(id: String) -> bool:
 		return cat.has(id) and ItemRules.rarity_ok(data, cat[id], level).is_empty()
-	var n_range: Array = row.get("n", [0, 0])
-	var n := rng.randi_range(int(n_range[0]), int(n_range[-1]))
+	var n := Roll.between(rng, row.get("n", [0, 0]))
 	var place: Array = PrepareRules.candidates(s, data, room).filter(ok) if int(row.get("place", 0)) > 0 else []
 	var pool := {}
 	for id: String in row.get("pool", {}):
@@ -240,8 +238,7 @@ static func fill(s: GameSession, data: Dictionary, room: String, kind_id: String
 		if not id.is_empty() and room_for(data, s.items, box, id) > 0:
 			out["contents"][id] = int(out["contents"].get(id, 0)) + 1
 	if rng.randf() < float(row.get("coins", 0.0)):
-		var c_range: Array = row.get("coins_cp", [0, 0])
-		out["coins_cp"] = rng.randi_range(int(c_range[0]), int(c_range[-1]))
+		out["coins_cp"] = Roll.between(rng, row.get("coins_cp", [0, 0]))
 	return out
 
 
@@ -252,19 +249,26 @@ static func take_coins(s: GameSession, data: Dictionary, p: Dictionary, why: Str
 	var lines: Array[String] = []
 	var out := {"lines": lines, "caught": ""}
 	var cp := int(p.get("coins_cp", 0))
-	if cp <= 0 or not closed_why(p).is_empty() or EncounterRules.captive(s):
+	if cp <= 0 or not reach_why(s, p).is_empty():
 		return out
 	p.erase("coins_cp")
 	Ledger.add(s, cp, why)
 	lines.append("+" + Money.format(cp) if why.begins_with("creature") else "%s: +%s" % [p.get("name", ""), Money.format(cp)])
 	var owner := str(p.get("owner", ""))
-	if not owner.is_empty() and owner != OwnerRules.HERO and WatchRules.sees_hero(s, data, owner):
+	if WatchRules.sees_hero(s, data, owner):  # a person of the scene: nobody's, the hero's or the foes' is no theft
 		out["caught"] = owner
 		lines.append_array(TheftRules.react(s, data, owner))
 	return out
 
 
 # --- taking and putting ------------------------------------------------------------------------------------------
+
+
+## Why the hero cannot take from `p` now ("" — can): bound, or the container locked (a thing of the room, a chest, a body).
+static func reach_why(s: GameSession, p: Dictionary) -> String:
+	if EncounterRules.captive(s):
+		return "герой связан — сначала освободиться"
+	return closed_why(p) if is_container(p) else ""
 
 
 ## Why the hero cannot reach inside now ("" — can).
@@ -296,12 +300,10 @@ static func target(s: GameSession, data: Dictionary, id: String) -> Dictionary:
 
 ## Checks taking `qty` of `item_id` out of the container `prop_id` (of the room or a bag): {plan, summary} or {reason}.
 static func plan_take(s: GameSession, data: Dictionary, prop_id: String, item_id: String, qty: int) -> Dictionary:
-	if EncounterRules.captive(s):
-		return {"reason": "герой связан — сначала освободиться"}
 	var p := target(s, data, prop_id)
 	if p.is_empty():
 		return {"reason": "нет контейнера %s (в комнате или сумка героя)" % prop_id}
-	var why := closed_why(p)
+	var why := reach_why(s, p)
 	if not why.is_empty():
 		return {"reason": why}
 	var have := int((p.get("contents", {}) as Dictionary).get(item_id, 0))
@@ -376,6 +378,11 @@ static func apply_put(s: GameSession, data: Dictionary, plan: Dictionary) -> voi
 # --- locks -------------------------------------------------------------------------------------------------------
 
 
+## The DC of a lock of `quality` (rules.containers.lock_dc): a chest, a trader's wares, a door, the hero's own lock.
+static func lock_dc(data: Dictionary, quality: String) -> int:
+	return int(cfg(data)["lock_dc"].get(quality, 10))
+
+
 ## The ways to open a locked container now: "key" (the hero carries it), "pick" (thieves' tools), "force".
 static func ways(s: GameSession, data: Dictionary, p: Dictionary) -> Array[String]:
 	var out: Array[String] = []
@@ -423,7 +430,7 @@ static func own_lock(s: GameSession, data: Dictionary) -> String:
 
 ## The lock_dc of the hero's own lock `item`.
 static func own_lock_dc(data: Dictionary, item: String) -> int:
-	return int(cfg(data)["lock_dc"][str(cfg(data)["own_locks"][item])])
+	return lock_dc(data, str(cfg(data)["own_locks"][item]))
 
 
 ## A key made for what the hero's lock shuts: a copy of `key_item` named by it, given to the hero. Its id.

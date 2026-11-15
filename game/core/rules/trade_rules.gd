@@ -123,12 +123,11 @@ static func _day_extras(s: GameSession, rules: Dictionary, npc_id: String, npc: 
 	var x: Dictionary = kinds(rules).get(kind_of(rules, npc), {}).get("extras", {})
 	var pool: Array = (x.get("pool", []) as Array).filter(func(id: Variant) -> bool: return not pack.has(str(id)))
 	var qty: Array = x.get("qty", [1, 1])
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash("%d|%s|%d" % [s.game_seed, npc_id, s.day])
+	var rng := Roll.seeded("%d|%s|%d" % [s.game_seed, npc_id, s.day])
 	var got := {}
 	for i in mini(int(x.get("per_day", 0)), pool.size()):
 		var id := str(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
-		got[id] = rng.randi_range(int(qty[0]), int(qty[-1]))
+		got[id] = Roll.between(rng, qty)
 		stock[id] = int(stock.get(id, 0)) + int(got[id])
 	m["extras"] = got
 
@@ -580,7 +579,7 @@ static func make_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Di
 		var gen: Variant = spec.get("item")
 		if not (gen is Dictionary):
 			return {"reason": "нужен item_id (вещь каталога, find_items) или item (новая вещь)"}
-		var chk := ItemRules.check_generated(data, gen, int(s.character.get("level", 1)))
+		var chk := ItemRules.check_generated(data, gen, MakeRules.level_of(s, data))
 		if not bool(chk["ok"]):
 			return {"reason": str(chk["reason"])}
 		item = chk["def"]
@@ -589,7 +588,7 @@ static func make_stock(s: GameSession, data: Dictionary, spec: Dictionary) -> Di
 		var d := ItemRules.def_of(data["items"], s.items, id)
 		if d.is_empty():
 			return {"reason": "вещи %s нет в каталоге — find_items или item" % id}
-		var why := ItemRules.rarity_ok(data, d, int(s.character.get("level", 1)))
+		var why := ItemRules.rarity_ok(data, d, MakeRules.level_of(s, data))
 		if not why.is_empty():
 			return {"reason": why}
 	if int(shelf["stock"].get(id, 0)) > 0:

@@ -386,24 +386,23 @@ def draw_openrouter(job: dict, n: int, seed: int, a: argparse.Namespace) -> tupl
     return openrouter_frame(full_prompt(job, n, a), seed, a.key, a.model)
 
 
-def openrouter_frame(prompt: str, seed: int, key: str, model: str = OPENROUTER_MODEL,
-                     aspect: str = "1:1", refs: list[Image.Image] | None = None) -> tuple[Image.Image, float]:
-    """One frame of a prompt by a model of OpenRouter and its cost in USD (the map's tiles draw by it too); `refs` —
-    pictures it repaints (input_references, a mask of the map's edges)."""
-    ask = {"model": model, "prompt": prompt, "n": 1, "aspect_ratio": aspect, "seed": seed}
-    if refs:
-        urls = []
-        for ref in refs:
-            buf = io.BytesIO()
-            ref.save(buf, "PNG")
-            urls.append("data:image/png;base64," + base64.b64encode(buf.getvalue()).decode())
-        ask["input_references"] = [{"type": "image_url", "image_url": {"url": u}} for u in urls]
+def data_url(img: Image.Image) -> str:
+    """A picture as a PNG data URL for a model's input (a mask, a frame it repaints)."""
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def openrouter_image(ask: dict, key: str, tries: int = 5, timeout: int = 180, title: str = "") -> tuple[Image.Image, dict]:
+    """One picture of OpenRouter's images endpoint by the request `ask` and its usage (`cost` in USD): the one road of the
+    icons, the map's tiles and the painted maps. A wrong model, no key or no money is raised at once; others are tried
+    again up to `tries` times."""
     body = json.dumps(ask).encode()
-    for attempt in range(5):
-        req = urllib.request.Request(OPENROUTER_IMAGES, data=body, headers={
-            "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json", **({"X-Title": title} if title else {})}
+    for attempt in range(tries):
+        req = urllib.request.Request(OPENROUTER_IMAGES, data=body, headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=180) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 data = json.loads(r.read())
             first = data["data"][0]
             if first.get("b64_json"):
@@ -411,16 +410,28 @@ def openrouter_frame(prompt: str, seed: int, key: str, model: str = OPENROUTER_M
             else:
                 with urllib.request.urlopen(first["url"], timeout=120) as r:
                     raw = r.read()
-            cost = float((data.get("usage") or {}).get("cost") or 0)
-            return Image.open(io.BytesIO(raw)).convert("RGB"), cost
+            return Image.open(io.BytesIO(raw)).convert("RGB"), data.get("usage") or {}
         except urllib.error.HTTPError as exc:
             if exc.code in (400, 401, 402, 403, 404):  # a wrong model, no key, no money: nothing to wait for
                 raise RuntimeError(f"openrouter: HTTP {exc.code} {exc.read()[:200]!r}") from None
-            print(f"  openrouter: HTTP {exc.code}; again in {20 * (attempt + 1)} s", flush=True)
+            print(f"  openrouter: HTTP {exc.code}", flush=True)
         except (urllib.error.URLError, TimeoutError, ConnectionError, KeyError, IndexError, ValueError) as exc:
-            print(f"  openrouter: {exc}; again in {20 * (attempt + 1)} s", flush=True)
-        time.sleep(20 * (attempt + 1))
+            print(f"  openrouter: {exc}", flush=True)
+        if attempt < tries - 1:
+            print(f"  again in {20 * (attempt + 1)} s", flush=True)
+            time.sleep(20 * (attempt + 1))
     raise RuntimeError("openrouter does not answer")
+
+
+def openrouter_frame(prompt: str, seed: int, key: str, model: str = OPENROUTER_MODEL,
+                     aspect: str = "1:1", refs: list[Image.Image] | None = None) -> tuple[Image.Image, float]:
+    """One frame of a prompt by a model of OpenRouter and its cost in USD (the map's tiles draw by it too); `refs` —
+    pictures it repaints (input_references, a mask of the map's edges)."""
+    ask = {"model": model, "prompt": prompt, "n": 1, "aspect_ratio": aspect, "seed": seed}
+    if refs:
+        ask["input_references"] = [{"type": "image_url", "image_url": {"url": data_url(ref)}} for ref in refs]
+    img, usage = openrouter_image(ask, key)
+    return img, float(usage.get("cost") or 0)
 
 
 # --- the cut --------------------------------------------------------------------------------------------------------

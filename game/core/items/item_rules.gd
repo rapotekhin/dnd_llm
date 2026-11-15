@@ -909,8 +909,11 @@ static func generated_id(item: Dictionary) -> String:
 	return "gen_" + key.md5_text().left(10)
 
 
-## A level past every gate and every cap of making (v0.8.4.44.6): the level of a boundless place (MakeRules.level_of) —
-## no rarity's level, no reward's cap, no cap of a wand's charges or of a spell's circle in a thing. The shapes stay.
+## The levels past the gates of making, given as `level` to check_generated, rarity_ok and the caps by level. ANY_RARITY —
+## past every rarity's level, a thing's caps kept (the thing of the hero's life goal, GoalRules); BOUNDLESS — past every
+## gate and every cap: no reward's cap, no cap of a wand's charges or of a spell's circle in a thing (a boundless place,
+## MakeRules.level_of, v0.8.4.44.6). The shapes stay.
+const ANY_RARITY := 99
 const BOUNDLESS := 1000
 
 
@@ -1177,10 +1180,11 @@ static func _generated_use(data: Dictionary, item: Dictionary, free := false) ->
 		if spell.is_empty():
 			return {"reason": "заклинания %s нет в книге движка" % sp}
 		var lvl := maxi(int(spell.get("level", 0)), int(u.get("level", 0)) if u.get("level") != null else 0)
-		if lvl > 3 and not free:
-			return {"reason": "заклинание в предмете — не выше 3 круга"}
+		var top := (cost["scroll"] as Array).size() - 1  # the circles items.json prices
+		if lvl > top and not free:
+			return {"reason": "заклинание в предмете — не выше %d круга" % top}
 		out["use"] = {"spell": sp, "level": lvl}
-		var row := mini(lvl, (cost["scroll"] as Array).size() - 1)
+		var row := mini(lvl, top)
 		if once:
 			out["use"]["scroll"] = true
 			out["look"] = "свиток"

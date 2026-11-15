@@ -30,9 +30,8 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 	if def.is_empty():
 		return {"reason": "вещи %s нет — item_id из каталога (find_items) или item — новая вещь" % item}
 	var value := int(def.get("value_cp", 0))
-	var free := MakeRules.boundless(s, data)  # v0.8.4.44.6: no price limit in a boundless place
-	if op == "give" and value > int(PropRules.cfg(data)["item_value_cap_cp"]) and not free:
-		return {"reason": "%s слишком дорога — до %s за вещь" % [def.get("name", item), Money.format(int(PropRules.cfg(data)["item_value_cap_cp"]))]}
+	if op == "give" and value > PropRules.item_cap(s, data):
+		return {"reason": "%s слишком дорога — до %s за вещь" % [def.get("name", item), Money.format(PropRules.item_cap(s, data))]}
 	var name := str(def.get("name", item))
 	var p := {"op": op, "item_id": item, "qty": qty, "cause": cause, "made": made}
 	if not npc.is_empty():
@@ -59,7 +58,7 @@ static func plan(s: GameSession, data: Dictionary, e: Dictionary) -> Dictionary:
 		var add := float(def.get("weight", 0)) * qty
 		if ContainerRules.weight(data, s.items, box.get("contents", {})) + add > float(ContainerRules.kind(data, str(box["container"])).get("capacity_lb", 0)):
 			return {"reason": "в %s не влезет" % box["name"]}
-		if str(box.get("owner", "")).is_empty() and not free:  # nobody's: the master's gift (v0.7.14.3)
+		if str(box.get("owner", "")).is_empty():  # nobody's: the master's gift (v0.7.14.3)
 			if value * qty > EffectEngine.budget_left(s, data):
 				return {"reason": "ничейное стоит %d мм — больше, чем мастер может дать до долгого отдыха (%d мм); дай хозяина или меньше" % [value * qty, EffectEngine.budget_left(s, data)]}
 			p["reward"] = value * qty
