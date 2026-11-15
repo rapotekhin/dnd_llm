@@ -187,6 +187,83 @@ static func plan_spec(s: GameSession, data: Dictionary, spec: Dictionary) -> Dic
 		"lock_dc": int(cfg(data)["lock_dc"].get(lock, 0)), "key": key, "value": value(data, all_items, contents)}
 
 
+# --- the pack's containers (v0.8.4.44.3) -------------------------------------------------------------------------
+
+
+## A container of the pack's room `spec` (a row of the room's `props` with `container`) on its prop `p`: its contents and
+## coins as the author wrote them, or — none written — what the engine lays by the kind's row (`fill`); its lock by its
+## quality, its key. A pack's chest needs no master.
+static func lay_pack(s: GameSession, data: Dictionary, room: String, spec: Dictionary, p: Dictionary) -> void:
+	var k := str(spec["container"])
+	p["container"] = k
+	if spec.get("contents") is Dictionary:
+		p["contents"] = (spec["contents"] as Dictionary).duplicate()
+		p["coins_cp"] = int(spec.get("coins_cp", 0))
+	else:
+		var got := fill(s, data, room, k, str(p["id"]))
+		p["contents"] = got["contents"]
+		p["coins_cp"] = int(got["coins_cp"]) + int(spec.get("coins_cp", 0))
+	if int(p["coins_cp"]) <= 0:
+		p.erase("coins_cp")
+	var lock := str(spec.get("lock", ""))
+	if not lock.is_empty():
+		p["locked"] = true
+		p["lock_dc"] = int(cfg(data)["lock_dc"].get(lock, 10))
+	if not str(spec.get("key", "")).is_empty():
+		p["key"] = str(spec["key"])
+
+
+## What the engine lays in a container nobody filled (rules.containers.fill by its kind), as a trader's goods by its trade
+## kind: things of its own `pool` by weight and `place` of them of the place (PrepareRules.candidates), coins by `coins`.
+## The seed of the game, the room and `key`: one chest holds the same in one game. {contents, coins_cp}.
+static func fill(s: GameSession, data: Dictionary, room: String, kind_id: String, key: String) -> Dictionary:
+	var out := {"contents": {}, "coins_cp": 0}
+	var row: Dictionary = cfg(data).get("fill", {}).get(kind_id, {})
+	if row.is_empty():
+		return out
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([s.game_seed, room, key])
+	var level := int(s.character.get("level", 1))
+	var cat: Dictionary = data["items"]["catalog"]
+	var ok := func(id: String) -> bool:
+		return cat.has(id) and ItemRules.rarity_ok(data, cat[id], level).is_empty()
+	var n_range: Array = row.get("n", [0, 0])
+	var n := rng.randi_range(int(n_range[0]), int(n_range[-1]))
+	var place: Array = PrepareRules.candidates(s, data, room).filter(ok) if int(row.get("place", 0)) > 0 else []
+	var pool := {}
+	for id: String in row.get("pool", {}):
+		if ok.call(id):
+			pool[id] = row["pool"][id]
+	var box := {"container": kind_id, "contents": out["contents"]}
+	for i: int in n:
+		var id := str(place[rng.randi_range(0, place.size() - 1)]) if i < int(row.get("place", 0)) and not place.is_empty() else Roll.weighted(rng, pool)
+		if not id.is_empty() and room_for(data, s.items, box, id) > 0:
+			out["contents"][id] = int(out["contents"].get(id, 0)) + 1
+	if rng.randf() < float(row.get("coins", 0.0)):
+		var c_range: Array = row.get("coins_cp", [0, 0])
+		out["coins_cp"] = rng.randi_range(int(c_range[0]), int(c_range[-1]))
+	return out
+
+
+## The coins a container holds (`coins_cp` of a chest or a body) into the hero's purse (v0.8.4.44.3): one road for a
+## chest's window and a body's search; a locked one gives none. Someone else's before its owner's eyes — a theft.
+## {lines, caught: the owner who saw it or ""}.
+static func take_coins(s: GameSession, data: Dictionary, p: Dictionary, why: String) -> Dictionary:
+	var lines: Array[String] = []
+	var out := {"lines": lines, "caught": ""}
+	var cp := int(p.get("coins_cp", 0))
+	if cp <= 0 or not closed_why(p).is_empty() or EncounterRules.captive(s):
+		return out
+	p.erase("coins_cp")
+	Ledger.add(s, cp, why)
+	lines.append("+" + Money.format(cp) if why.begins_with("creature") else "%s: +%s" % [p.get("name", ""), Money.format(cp)])
+	var owner := str(p.get("owner", ""))
+	if not owner.is_empty() and owner != OwnerRules.HERO and WatchRules.sees_hero(s, data, owner):
+		out["caught"] = owner
+		lines.append_array(TheftRules.react(s, data, owner))
+	return out
+
+
 # --- taking and putting ------------------------------------------------------------------------------------------
 
 

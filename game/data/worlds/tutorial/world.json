@@ -4,6 +4,7 @@
 		"dream-cave": {
 			"name": "Пещера сна",
 			"indoor": true,
+			"remains": false,
 			"terrain": "underdark",
 			"description": "Пещера из семи залов, связанных узкими ходами; свет — от бледного мха на стенах."
 		}

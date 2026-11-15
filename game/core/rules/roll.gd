@@ -10,6 +10,27 @@ extends RefCounted
 const CRIT_MARGIN := 5
 
 
+## A key of `weights` {key: weight} by its weight (v0.8.4.44.3: a chest's things, the dead of a place, a buyer's pick);
+## "" — none or all weights 0.
+static func weighted(rng: RandomNumberGenerator, weights: Dictionary) -> String:
+	var total := 0.0
+	for k: Variant in weights:
+		total += maxf(0.0, float(weights[k]))
+	if total <= 0.0:
+		return ""
+	var r := rng.randf() * total
+	var last := ""
+	for k: Variant in weights:
+		var w := maxf(0.0, float(weights[k]))
+		if w <= 0.0:
+			continue
+		last = str(k)
+		r -= w
+		if r < 0.0:
+			return last
+	return last
+
+
 ## A plain die of a creature or a table.
 static func d20(rng: RandomNumberGenerator) -> int:
 	return rng.randi_range(1, 20)

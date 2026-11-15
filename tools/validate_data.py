@@ -21,6 +21,50 @@ WORLDS = DATA / "worlds"
 SCHEMA = json.loads((WORLDS / "pack.schema.json").read_text(encoding="utf-8"))
 
 
+def check_held(rid: str, room: dict, rules: dict, items: set, npcs: dict, monsters: set) -> list[str]:
+    """v0.8.4.44.3: a room's chests (`props` with `container`) and its dead and bound (`creatures`) — what they name exists."""
+    errors: list[str] = []
+    kinds = rules["containers"]["kinds"]
+    bodies = rules["things"]["bodies"]
+    for p in room.get("props", []):
+        where = f"комната {rid}, вещь {p['id']}"
+        kind = p.get("container")
+        if kind is None:
+            errors += [f"{where}: {k} без container" for k in ("contents", "coins_cp", "lock", "key") if k in p]
+        elif kind not in kinds:
+            errors.append(f"{where}: нет вида контейнера {kind}")
+        elif p.get("lock") and not kinds[kind].get("lockable"):
+            errors.append(f"{where}: {kind} не запирается")
+        errors += [f"{where}: нет предмета {x}" for x in p.get("contents", {}) if x not in items]
+        if p.get("key") and p["key"] not in items:
+            errors.append(f"{where}: ключ — нет предмета {p['key']}")
+        if p.get("owner") and p["owner"] not in npcs:
+            errors.append(f"{where}: хозяин — нет NPC {p['owner']}")
+        if p.get("body") and p["body"] not in bodies:
+            errors.append(f"{where}: нет тела вещи {p['body']}")
+    seen: set[str] = set()
+    for c in room.get("creatures", []):
+        where = f"комната {rid}, существо {c['id']}"
+        if c["id"] in seen:
+            errors.append(f"{where}: id повторяется")
+        seen.add(c["id"])
+        if not c.get("monster") and not c.get("npc"):
+            errors.append(f"{where}: нужен monster или npc")
+        if c.get("monster") and c["monster"] not in monsters:
+            errors.append(f"{where}: нет монстра {c['monster']}")
+        if c.get("npc") and c["npc"] not in npcs:
+            errors.append(f"{where}: нет NPC {c['npc']}")
+        errors += [f"{where}: нет предмета {x}" for x in c.get("contents", {}) if x not in items]
+        owner = c.get("owner", "")
+        if owner and not owner.startswith("enc:") and owner not in npcs:
+            errors.append(f"{where}: хозяин пленника — не enc:<встреча> и не NPC: {owner}")
+        if c["state"] == "dead" and any(k in c for k in ("owner", "bonds", "joins")):
+            errors.append(f"{where}: у мёртвого нет owner, bonds и joins")
+        if c.get("bonds") and c["bonds"] not in rules["encounters"]["bonds"]:
+            errors.append(f"{where}: нет пут {c['bonds']}")
+    return errors
+
+
 def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bool, quests: dict | None = None) -> list[str]:
     """A condition of the one language (Cond): one fact (encounter, secret, room, flag, quest), a button (talk with an
     item, choice — only on a quest step), or all / any of facts."""
@@ -432,6 +476,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         if not room.get("indoor") and len(room["exits"]) > layouts["open"]["ways"]:  # v0.8.2
             errors.append(f"комната {rid}: под открытым небом не больше {layouts['open']['ways']} выходов")
         errors += [f"комната {rid}: зверь {b} — не монстр SRD" for b in room.get("beasts", []) if b not in ids["monsters"]]  # v0.7.43: wild ones to tame
+        errors += check_held(rid, room, game_rules, items, npcs, ids["monsters"])  # v0.8.4.44.3: chests, the dead and the bound of the pack
         enc = room.get("encounter")
         if enc:
             if enc.get("faction", next(iter(factions), None)) not in factions:  # v0.7.50: every foe is somebody's

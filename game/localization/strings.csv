@@ -547,6 +547,7 @@ BTN_OPEN_CONTAINER,Открыть: {name}
 BTN_TAKE_OUT,Взять
 BTN_TAKE_STACK,Взять все
 BTN_TAKE_ALL_CONTAINER,Взять всё
+BTN_TAKE_COINS,Взять монеты
 BTN_PUT_IN,Положить
 BTN_UNLOCK_KEY,Открыть ключом
 BTN_LOCK_HANG,Повесить свой замок
@@ -554,6 +555,7 @@ BTN_LOCK_RELOCK,Запереть ключом
 BTN_UNLOCK_PICK,Взломать
 BTN_UNLOCK_FORCE,Выбить
 CONTAINER_LOAD,"Внутри {w} из {cap} фнт"
+CONTAINER_COINS,"Монеты: {coins}"
 CONTAINER_OWNER,"хозяин: {name}"
 CONTAINER_LOCKED,"Заперто."
 CONTAINER_INSIDE,Внутри
@@ -919,6 +921,7 @@ UNFREE_CAPTIVE,Вы в плену — сначала вырвитесь на с�
 UNFREE_HELD,Вы под стражей — сначала ответьте страже
 BTN_CREATURE_BIND,Связать
 BTN_CREATURE_FREE,Отпустить
+BTN_CREATURE_UNTIE,Развязать
 BTN_CREATURE_JOIN,Взять с собой
 BTN_CREATURE_LEAD,Вести с собой
 BTN_CREATURE_STAY,Оставить здесь
@@ -935,6 +938,9 @@ CREATURE_NOT_HELPLESS,"Он может драться — нападайте"
 CREATURE_NOTHING,Обыскивать нечего
 CREATURE_CANNOT_TALK,С ним сейчас не поговорить
 CREATURE_CANNOT_FREE,Отпускать нечего — оно и так на воле
+CREATURE_GUARDED,"Пленника стерегут — сначала разберитесь со стражей"
+CREATURE_NOT_HELD,"Он не связан чужими руками — развязывать некого"
+CREATURE_UNTIE_IT,"Это чужой пленник — его развязывают, а не отпускают"
 CREATURE_TALK_SAY,Обращаюсь к: {name}
 CREATURE_TALK_SAY_CAPTIVE,Обращаюсь к пленнику: {name}
 CREATURE_NONE,Его здесь уже нет

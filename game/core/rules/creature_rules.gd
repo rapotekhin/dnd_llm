@@ -45,6 +45,109 @@ static func add(s: GameSession, room_id: String, fields: Dictionary) -> Dictiona
 	return Being.made(s, "creature", c)
 
 
+## What a room keeps from the pack and from before the hero (v0.8.4.44.3), once, on the first visit: its wild beasts
+## (PetRules.seed), its `creatures` — the dead and the bound the author set — and the dead of its place (`remains`). No master.
+static func seed(s: GameSession, data: Dictionary, room: String) -> void:
+	PetRules.seed(s, data, room)
+	var gen := WorldGen.generated(s)
+	var done: Array = gen.get("creatures_seeded", [])
+	if done.has(room):
+		return
+	done.append(room)
+	gen["creatures_seeded"] = done
+	for row: Dictionary in WorldView.new(data["world"]).room(room).get("creatures", []):
+		from_pack(s, data, room, row)
+	remains(s, data, room)
+
+
+## A creature of a pack room's `creatures` (v0.8.4.44.3): {id, monster | npc, name, state: dead | bound, contents,
+## coins_cp, gear, owner, joins}. The dead one is a body searched as after a fight — its `contents`, else its template's
+## kit (`gear`: false — nothing); it is the pack's and does not rot. The bound one is a prisoner: of nobody (`owner` ""),
+## of the foes of an encounter (`enc:<id>`) — «Развязать» rescues it — or of a person (its id) — letting it go is a theft;
+## its `contents` only (its captors took the rest). A pack NPC (`npc`) is that person, held here until set free.
+static func from_pack(s: GameSession, data: Dictionary, room: String, row: Dictionary) -> Dictionary:
+	var npc := str(row.get("npc", ""))
+	var monster := str(row.get("monster", ""))
+	var world := WorldView.new(data["world"])
+	if not npc.is_empty() and monster.is_empty():
+		monster = Sheet.template_id(data, {"npc_id": npc})
+	var name := str(row.get("name", ""))
+	if name.is_empty():
+		name = str(world.npc_name(npc)) if not npc.is_empty() else str(data["monsters"].get(monster, {}).get("name", monster))
+	var dead := str(row.get("state", "")) == DEAD
+	var c := {"name": ("Тело: " + name) if dead else name, "monster": monster, "state": DEAD if dead else "surrendered",
+		"bound": not dead, "led": false, "since": TimeRules.abs_minute(s), "xp_given": true, "pack": str(row.get("id", ""))}
+	var things: Dictionary = row["contents"] if row.get("contents") is Dictionary else {}
+	if dead and not row.get("contents") is Dictionary and bool(row.get("gear", true)):
+		things = Gear.start(data, monster)["inventory"]
+	if not things.is_empty():
+		c["contents"] = things.duplicate()
+	if int(row.get("coins_cp", 0)) > 0:
+		c["coins_cp"] = int(row["coins_cp"])
+	if dead:
+		c["kept"] = true
+		c["remains"] = true
+	else:
+		c["owner"] = str(row.get("owner", ""))
+		c["bonds"] = str(row.get("bonds", "tied"))
+		if bool(row.get("joins", false)):
+			c["joins"] = true
+	if npc.is_empty():
+		return add(s, room, c)
+	c["npc_id"] = npc
+	c["at"] = room
+	return Being.put(s, npc, "creature", c)
+
+
+## The dead a place keeps from before the hero (v0.8.4.44.3, rules.creatures.remains): the row of `by` for a tag of the
+## room, else `lair` for a room of the pack's encounter, else the place's kind; by the seed of the game and the room —
+## `chance` of any, `n` bodies of `who` by weight, each with `gear` of its kit and `coins_cp`. Old: «<name>: <template>»,
+## kept for good. None where `remains` is false up the places (a dream). The bodies made.
+static func remains(s: GameSession, data: Dictionary, room: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var v := WorldView.new(data["world"])
+	var cfg_r: Dictionary = cfg(data).get("remains", {})
+	if not bool(v.inherit(room, "remains", true)) or cfg_r.is_empty():
+		return out
+	var by: Dictionary = cfg_r["by"]
+	var row := {}
+	for tag: Variant in SceneRules.tags(s, data["world"], room):
+		if by.has(str(tag)):
+			row = by[str(tag)]
+			break
+	if row.is_empty() and not v.room(room).get("encounter", {}).is_empty() and by.has("lair"):
+		row = by["lair"]
+	if row.is_empty():
+		row = by.get(LayoutRules.kind_of(v, data, room), {})
+	if row.is_empty():
+		return out
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([s.game_seed, room, "remains"])
+	if rng.randf() >= float(row.get("chance", 0.0)):
+		return out
+	var n_range: Array = row.get("n", [1, 1])
+	for i: int in rng.randi_range(int(n_range[0]), int(n_range[-1])):
+		var tid := Roll.weighted(rng, row.get("who", {}))
+		if tid.is_empty() or not data["monsters"].has(tid):
+			continue
+		var things := {}
+		var kit: Dictionary = Gear.start(data, tid)["inventory"]
+		for item: String in kit:
+			for k: int in int(kit[item]):
+				if rng.randf() < float(row.get("gear", 0.0)):
+					things[item] = int(things.get(item, 0)) + 1
+		var c := {"name": "%s: %s" % [cfg_r.get("name", "Останки"), data["monsters"][tid].get("name", tid)], "monster": tid,
+			"state": DEAD, "bound": false, "led": false, "since": TimeRules.abs_minute(s), "xp_given": true, "kept": true, "remains": true}
+		if not things.is_empty():
+			c["contents"] = things
+		var c_range: Array = row.get("coins_cp", [0, 0])
+		var cp := rng.randi_range(int(c_range[0]), int(c_range[-1]))
+		if cp > 0:
+			c["coins_cp"] = cp
+		out.append(add(s, room, c))
+	return out
+
+
 ## It leaves the rooms: a person of the pack goes back to its life, anyone else is gone.
 static func remove(s: GameSession, c: Dictionary) -> void:
 	var id := str(c["id"])
@@ -196,7 +299,14 @@ static func captive(c: Dictionary) -> bool:
 
 ## Someone else's: an NPC owns it — leading it away or letting it go is a theft.
 static func foreign(c: Dictionary) -> bool:
-	return not str(c.get("owner", "")).is_empty() and str(c["owner"]) != OwnerRules.HERO
+	return not str(c.get("owner", "")).is_empty() and str(c["owner"]) != OwnerRules.HERO and not str(c["owner"]).begins_with(OwnerRules.FOES)
+
+
+## A prisoner neither the hero's nor a person's (v0.8.4.44.3): bound by foes (`enc:<encounter>`) or by nobody the hero
+## knows — a pack's captive. «Развязать» sets it free: a rescue, not an assault.
+static func held(c: Dictionary) -> bool:
+	var owner := str(c.get("owner", ""))
+	return bool(c.get("bound", false)) and str(c.get("state", "")) != DEAD and (owner.is_empty() or owner.begins_with(OwnerRules.FOES))
 
 
 ## Beaten by words (v0.7.50.1): stays in the room and may go with the hero, fighting beside.
@@ -234,6 +344,13 @@ static func can(s: GameSession, id: String, what: String, data: Dictionary = {})
 		"free":
 			if str(c["state"]) == PetRules.WILD:
 				return "CREATURE_CANNOT_FREE"
+			if held(c):  # a captive of others is untied, not let go
+				return "CREATURE_UNTIE_IT"
+		"untie":
+			if not held(c):
+				return "CREATURE_NOT_HELD"
+			if not data.is_empty() and not EncounterRules.live(s, data, s.room_id).is_empty():
+				return "CREATURE_GUARDED"
 		"attack":
 			if helpless(c):
 				return "CREATURE_HELPLESS"
@@ -253,7 +370,7 @@ static func can(s: GameSession, id: String, what: String, data: Dictionary = {})
 			if not joinable(c):
 				return "CREATURE_CANNOT_JOIN"
 		"hand_over":
-			if not bool(c.get("bound", false)) or foreign(c) or not str(c.get("npc_id", "")).is_empty():
+			if not bool(c.get("bound", false)) or foreign(c) or held(c) or not str(c.get("npc_id", "")).is_empty():
 				return "CREATURE_NOT_YOUR_PRISONER"
 			if data.is_empty() or CrimeRules.law(data, WorldView.new(data["world"]).location_id(s.room_id)).is_empty():
 				return "CREATURE_NO_LAW"
@@ -267,7 +384,7 @@ static func acts(s: GameSession, data: Dictionary, c: Dictionary) -> Array:
 	var keys := {"tame": "BTN_PET_TAME_OPEN", "talk": "BTN_CREATURE_TALK", "bind": "BTN_CREATURE_BIND",
 		"lead": "BTN_CREATURE_STAY" if bool(c.get("led", false)) else "BTN_CREATURE_LEAD",
 		"join": "BTN_CREATURE_STAY" if bool(c.get("ally", false)) else "BTN_CREATURE_JOIN", "search": "BTN_CREATURE_SEARCH",
-		"hand_over": "BTN_CREATURE_HAND_OVER", "hide": "BTN_HIDE_BODY", "free": "BTN_CREATURE_FREE", "finish": "BTN_CREATURE_FINISH",
+		"hand_over": "BTN_CREATURE_HAND_OVER", "hide": "BTN_HIDE_BODY", "untie": "BTN_CREATURE_UNTIE", "free": "BTN_CREATURE_FREE", "finish": "BTN_CREATURE_FINISH",
 		"attack": "BTN_CREATURE_ATTACK"}
 	var out: Array = []
 	for what: String in keys:
@@ -303,6 +420,8 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 			c["led"] = not bool(c.get("led", false))
 			lines.push_front("%s %s" % [c["name"], "идёт за вами на верёвке" if bool(c["led"]) else "остаётся здесь, связанный"])
 			return lines
+		"untie":
+			return rescue(s, data, c)
 		"free":
 			var lines: Array[String] = _taken_from_owner(s, data, c)
 			lines.push_front("%s отпущен и уходит" % c["name"])
@@ -354,12 +473,7 @@ static func act(s: GameSession, data: Dictionary, id: String, what: String) -> A
 			c["searched"] = true
 			if c.has("npc_id"):
 				return _search(s, data, str(c["npc_id"]), str(c["name"]))
-			var cp := int(c.get("coins_cp", 0))  # the coins come at once, the things through the chest's window
-			c.erase("coins_cp")
-			if cp <= 0:
-				return []
-			Ledger.add(s, cp, "creature:search")
-			return ["+" + Money.format(cp)]
+			return ContainerRules.take_coins(s, data, c, "creature:search")["lines"]  # the coins at once, the things through the chest's window
 		"hide":
 			_leave_things(s, data, c)
 			remove(s, c)
@@ -444,13 +558,48 @@ static func _unbind(s: GameSession, data: Dictionary, c: Dictionary) -> void:
 	c.erase("bonds")
 
 
+## «Развязать» a prisoner neither the hero's nor a person's (v0.8.4.44.3): its bonds off and no assault — a rescue. A
+## creature stays free and at peace (`kept`, a truce), free to come along; a pack NPC is itself again here, thinking better of
+## the hero by rules.creatures.rescued_attitude and remembering it. The pack row's `joins` — it goes with the hero at once
+## (a person while there is room for one more, FollowRules). Lines.
+static func rescue(s: GameSession, data: Dictionary, c: Dictionary) -> Array[String]:
+	var row := EncounterRules.bond(data, str(c.get("bonds", "")))
+	if row.has("item") and str(c.get("owner", "")).is_empty():  # what bound it is the hero's now
+		Gear.give(s, data, Being.HERO, str(row["item"]), 1)
+	c["bound"] = false
+	c.erase("bonds")
+	c["owner"] = ""
+	var joins := bool(c.get("joins", false))
+	var lines: Array[String] = ["%s развязан(а) — свободен(на)" % c["name"]]
+	var npc := str(c.get("npc_id", ""))
+	if npc.is_empty():
+		c["state"] = "truce"
+		c["kept"] = true
+		c["since"] = TimeRules.abs_minute(s)
+		if joins:
+			c["led"] = true
+			c["ally"] = true
+			lines.append("%s идёт с вами" % c["name"])
+		return lines
+	remove(s, c)
+	Being.of(s, npc)["at"] = s.room_id
+	s.shift_attitude(npc, int(cfg(data).get("rescued_attitude", 0)), data)
+	s.remember(npc, "герой освободил меня из плена")
+	if joins:
+		var plan := FollowRules.plan(s, data, npc, true, false, true)
+		if plan.has("plan"):
+			FollowRules.apply(s, plan["plan"])
+			lines.append(str(plan["summary"]))
+	return lines
+
+
 ## A bound prisoner left unwatched (not in the hero's room, not led) tries to get free every leave_minutes.bound: the
 ## better of Athletics against breaking its bonds and Sleight of Hand against slipping out, as the hero's escape
 ## (v0.8.4.27). True when it is free; the manacles go with it.
 static func _breaks_free(s: GameSession, data: Dictionary, c: Dictionary, now: int) -> bool:
 	var limit := int(cfg(data)["leave_minutes"].get("bound", 0))
 	if not bool(c.get("bound", false)) or bool(c.get("led", false)) or str(c["at"]) == s.room_id or str(c["state"]) == DEAD \
-			or limit <= 0 or now - int(c["since"]) < limit:
+			or held(c) or limit <= 0 or now - int(c["since"]) < limit:  # a pack's captive waits for its rescue (v0.8.4.44.3)
 		return false
 	c["since"] = now
 	for how: String in EncounterRules.ESCAPES:
@@ -485,7 +634,7 @@ static func tick(s: GameSession, data: Dictionary) -> Array[String]:
 	var now := TimeRules.abs_minute(s)
 	var leave: Dictionary = cfg(data)["leave_minutes"]
 	for c: Dictionary in all(s):
-		if str(c["state"]) == DEAD and bool(c.get("kept", false)) and _empty(c):  # a heap taken away
+		if str(c["state"]) == DEAD and bool(c.get("kept", false)) and _empty(c) and not bool(c.get("remains", false)):  # a heap taken away
 			remove(s, c)
 			continue
 		if comes_to(s, data, c, now):
@@ -524,8 +673,10 @@ static func snapshot(s: GameSession, data: Dictionary, room_id: String) -> Array
 		var extra := " — не пленник: свободен, не связан, при оружии, говорит на равных" if str(c["state"]) == "truce" else ""
 		if str(c["state"]) == DEAD:
 			extra = " — лежит здесь, его вещи герой берёт кнопкой «Обыскать»"
-		if bool(c.get("kept", false)) and str(c["state"]) != "truce":
+		if bool(c.get("kept", false)) and not str(c["state"]) in ["truce", DEAD]:
 			extra = " — запуган, больше не враждебен" + ("" if bool(c.get("bound", false)) else ", не связан")
+		if held(c):  # v0.8.4.44.3
+			extra = " — чужой пленник, связан не героем: «Развязать» — спасение, не нападение"
 		if bool(c.get("pet", false)):  # v0.7.43
 			extra = " — питомец героя: " + PetRules.text(data, c)
 		elif PetRules.tameable(data, str(c["monster"])) and str(c["state"]) in ["wild", "truce", "surrendered"]:

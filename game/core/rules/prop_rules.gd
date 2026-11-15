@@ -46,14 +46,21 @@ static func ensure(s: GameSession, data: Dictionary, room_id: String) -> void:
 
 ## The pack's fixed things of a room (v0.8.4.25.4: a notice board is there before anyone furnishes the room, so its
 ## orders are readied from the start): `props` of the room, kept as «f_<id>» and never counted as its furnishing.
+## v0.8.4.44.3: one with `container` is a chest of the pack — its things as written or laid by the engine
+## (ContainerRules.lay_pack), its `owner`, lock and key; `body` — how it stands on the map.
 static func ensure_fixed(s: GameSession, data: Dictionary, room_id: String) -> void:
 	var list: Array = s.props.get(room_id, [])
 	for spec: Dictionary in data["world"]["rooms"].get(room_id, {}).get("props", []):
 		var pid := "f_" + str(spec["id"])
 		if list.any(func(x: Dictionary) -> bool: return str(x["id"]) == pid):
 			continue
-		list.append({"id": pid, "name": str(spec["name"]), "description": str(spec.get("description", "")), "item_id": "",
-			"owner": "", "text": str(spec.get("text", "")), "state": "", "fixed": true})
+		var p := {"id": pid, "name": str(spec["name"]), "description": str(spec.get("description", "")), "item_id": "",
+			"owner": str(spec.get("owner", "")), "text": str(spec.get("text", "")), "state": "", "fixed": true}
+		if not str(spec.get("body", "")).is_empty():
+			p["body"] = str(spec["body"])
+		if not str(spec.get("container", "")).is_empty():
+			ContainerRules.lay_pack(s, data, room_id, spec, p)
+		list.append(p)
 		s.props[room_id] = list
 
 

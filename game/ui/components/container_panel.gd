@@ -161,7 +161,14 @@ func _rebuild() -> void:
 		for how: String in locks:
 			var h := how
 			_row_button(lrow, "Lock_" + how, tr("BTN_LOCK_" + how.to_upper()), can_act, func() -> String: return GameState.container_lock(prop_id, h))
-	if not contents.is_empty():  # v0.7.49.4: everything at once
+	var coins := int(p.get("coins_cp", 0))
+	if coins > 0:  # v0.8.4.44.3: the coins of a chest
+		var crow := HBoxContainer.new()
+		crow.add_theme_constant_override("separation", 12)
+		top.add_child(crow)
+		crow.add_child(UiParts.label(null, tr("CONTAINER_COINS").format({"coins": Money.format(coins)})))
+		_row_button(crow, "TakeCoins", tr("BTN_TAKE_COINS"), can_act, func() -> String: return GameState.container_coins(prop_id))
+	if not contents.is_empty() or coins > 0:  # v0.7.49.4: everything at once
 		_row_button(head, "TakeAll", tr("BTN_TAKE_ALL_CONTAINER"), can_act, func() -> String: return GameState.container_take_all(prop_id))
 	_box.where = {"kind": "box", "prop": prop_id}
 	_box.show_items(contents)

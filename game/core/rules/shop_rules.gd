@@ -259,25 +259,14 @@ static func sell_round(s: GameSession, data: Dictionary, vid: String, n: int, wh
 	var sold := {}
 	var revenue := 0
 	for i in n:
-		var ids: Array[String] = []
-		var weights: Array[float] = []
-		var total := 0.0
+		var weights := {}
 		for id: String in stock:
 			if int(stock[id]) <= 0 or (tavern and not is_food(data, id)):
 				continue
-			var w := float(cfg(data)["competition"]) if rivals.has(id) else float(cfg(data)["scarce"])
-			ids.append(id)
-			weights.append(w)
-			total += w
-		if ids.is_empty():
+			weights[id] = float(cfg(data)["competition"]) if rivals.has(id) else float(cfg(data)["scarce"])
+		var pick := Roll.weighted(s.rng, weights)
+		if pick.is_empty():
 			break
-		var r := s.rng.randf() * total
-		var pick := ids[ids.size() - 1]
-		for j in ids.size():
-			r -= weights[j]
-			if r <= 0.0:
-				pick = ids[j]
-				break
 		var ratio := float(price_pct(s, data, vid, pick, who)) / 100.0
 		if s.rng.randf() >= buy_chance(data, ratio):
 			continue

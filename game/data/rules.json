@@ -180,7 +180,17 @@
 		"bag_weight_share": 0.5,
 		"worn_bags": {"big": 1, "small": 2, "ammo": 2},
 		"_bags": "v0.7.22.9 (the author's request): what lies in a bag weighs bag_weight_share of its weight (a bag of holding — nothing); the hero carries at most worn_bags of each size as bags (a backpack or a sack — big, a pouch or a scroll case — small, a quiver or a bolt case — ammo), more of them are plain things, a size not here is never a bag; a bag does not go into a bag.",
-		"force_dc_plus": 2
+		"force_dc_plus": 2,
+		"fill": {
+			"_doc": "v0.8.4.44.3: what the engine lays in a container of the pack nobody filled (no `contents` of its own), as a trader's goods by its trade kind (ContainerRules.fill): a row by the container's kind — `n` things [lo, hi], of them `place` from the things of the place (PrepareRules.candidates), the rest from `pool` by weight; `coins` the chance of coins, `coins_cp` [lo, hi]. By the seed of the game, the room and the thing: one chest holds the same in one game. A thing of a rarity the hero's level does not find or that does not fit is not laid. The master's furnishing adds things of its own beside it",
+			"chest": {"n": [1, 3], "place": 1, "coins": 0.6, "coins_cp": [30, 800], "pool": {"blanket": 3, "clothes_common": 3, "clothes_travelers": 2, "candle": 3, "tinderbox": 2, "pouch": 2, "comb": 2, "silver_ring": 1, "dice_set": 1, "playing_card_set": 1, "letter": 1, "healing_potion": 1}},
+			"strongbox": {"n": [0, 2], "place": 0, "coins": 1.0, "coins_cp": [200, 2500], "pool": {"silver_ring": 3, "signet_ring": 1, "silver_bar": 2, "letter": 2, "key_iron": 1}},
+			"cabinet": {"n": [1, 3], "place": 2, "coins": 0.2, "coins_cp": [5, 100], "pool": {"candle": 2, "clothes_common": 2, "blanket": 1, "book": 1, "oil_lamp_clay": 1}},
+			"crate": {"n": [1, 3], "place": 2, "coins": 0.0, "pool": {"rations": 3, "rope": 1, "nails": 2, "torch": 2, "cloth_bolt": 1, "dried_fish": 2}},
+			"barrel": {"n": [1, 1], "place": 0, "coins": 0.0, "pool": {"ale": 2, "dried_fish": 2, "grain": 1}},
+			"sack": {"n": [1, 2], "place": 1, "coins": 0.1, "coins_cp": [1, 30], "pool": {"grain": 2, "flour_sack": 1, "oats_sack": 1, "rations": 1}},
+			"basket": {"n": [1, 2], "place": 1, "coins": 0.0, "pool": {"bread": 2, "cheese": 2, "dried_fish": 1}}
+		}
 	},
 	"development": {
 		"_doc": "Peaceful development (v0.7.19.1, DevelopmentRules): the 5e levelling carried over to peaceful deeds — a direction has its own experience (`xp` — the experience of levels 0–5), its sources (`sources`) and its skills, one picked on every level from those of a level ≤ the direction's (`needs` — skills taken first); a skill's `effect` works only in the deeds of its direction. Trade: buy_pct / sell_pct (prices), haggle_adv, haggle_plus (percent of a won haggle), haggle_retry (a failed haggle does not lock the day once), no_haggle_escalation, other_mult (other goods ×0.7 → ×0.7·mult), saturation_mult, max_ratio (the ceiling of a sell price).",
@@ -3384,7 +3394,22 @@
 		"hand_over_reputation": 1,
 		"execute_attitude": -1,
 		"sale_cp_per_xp": 50,
-		"slavery": false
+		"slavery": false,
+		"rescued_attitude": 3,
+		"_rescued": "v0.8.4.44.3: «Развязать» a prisoner neither the hero's nor a person's (CreatureRules.rescue) — no assault: it thinks better of the hero by rescued_attitude and stays, free to come along; a pack row's `joins` — it goes with the hero at once",
+		"remains": {
+			"_doc": "v0.8.4.44.3: the dead a place keeps from before the hero (CreatureRules.remains), laid once at the first visit by the seed of the game and the room: the row of `by` for a tag of the room (crypt, battlefield), else `lair` — a room of the pack's encounter, else the place's kind (LayoutRules.kind_of); `chance` of any, `n` [lo, hi] bodies, `who` templates by weight, `gear` the share of each one's kit left on it (the rest taken or rotted), `coins_cp` [lo, hi] on each. Such a body is old — «<name>: <template>», it neither rots nor goes when emptied (`remains`). A place with `remains: false` (WorldView.inherit, down from the location) has none",
+			"name": "Останки",
+			"by": {
+				"crypt": {"chance": 0.8, "n": [1, 3], "who": {"commoner": 3, "noble": 1, "priest": 1}, "gear": 0.5, "coins_cp": [0, 60]},
+				"battlefield": {"chance": 1.0, "n": [2, 4], "who": {"guard": 3, "bandit": 2, "thug": 1}, "gear": 0.4, "coins_cp": [0, 30]},
+				"lair": {"chance": 0.5, "n": [1, 2], "who": {"commoner": 3, "scout": 1, "guard": 1}, "gear": 0.5, "coins_cp": [0, 80]},
+				"ruin": {"chance": 0.4, "n": [1, 1], "who": {"commoner": 2, "bandit": 1, "guard": 1}, "gear": 0.3, "coins_cp": [0, 40]},
+				"hideout": {"chance": 0.3, "n": [1, 1], "who": {"commoner": 2, "bandit": 1}, "gear": 0.3, "coins_cp": [0, 20]},
+				"mine": {"chance": 0.3, "n": [1, 1], "who": {"commoner": 1}, "gear": 0.6, "coins_cp": [0, 20]},
+				"cave": {"chance": 0.25, "n": [1, 1], "who": {"commoner": 2, "scout": 1}, "gear": 0.5, "coins_cp": [0, 30]}
+			}
+		}
 	},
 	"services": {
 		"_doc": "v0.8.4.35, the concept «Услуга» (ServiceRules, pillar 6): a paid act any person does for the hero, a row of item_rules.services (the rules'), world.services (the pack's) or the master's create:service. Ops the master builds: status — a status on the hero (`status`: a made one, `make` what=status, never a harmful one) for `hours` or until the long rest (`rest`: true), priced status_point_cp × its points × the mult of the first duration row that holds its hours; enchant — a mark on one copy of the hero's thing of `needs` (`property`: a token of items.json properties or a made one, `make` what=property), priced property_point_cp × its points, its rarity asks the hero's level. per_npc — the most services one person offers; hours — the bounds of a status's time.",

@@ -108,7 +108,7 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 		DreamRules.begin(s, Catalog.data, dream_of, choices, settings)
 	else:
 		BackgroundRules.apply_ties(s, Catalog.data)  # the people of the hero's past (v0.7.11)
-	PetRules.seed(s, Catalog.data, s.room_id)  # the start room's wild beasts (v0.7.43)
+	CreatureRules.seed(s, Catalog.data, s.room_id)  # the start room's wild beasts, its pack creatures and dead (v0.7.43, v0.8.4.44.3)
 	start(s)
 	TimeRules.settle(s, Catalog.data)  # a festival and the weather of the first day (v0.7.44, v0.7.46)
 	RumorRules.seed(s, Catalog.data)  # the pack's talk (v0.7.47)
@@ -1145,14 +1145,33 @@ func container_move(prop_id: String, item_id: String, qty: int, take: bool) -> S
 	return ""
 
 
+## The coins of a container into the purse (v0.8.4.44.3): «Взять» by the coins in its window; one master turn when its
+## owner saw it.
+func container_coins(prop_id: String) -> String:
+	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
+		return "WAIT_NOT_NOW"
+	var p := ContainerRules.target(session, Catalog.data, prop_id)
+	var got := ContainerRules.take_coins(session, Catalog.data, p, "container:coins")
+	var lines: Array[String] = got["lines"]
+	if lines.is_empty():
+		return ""
+	if not str(got["caught"]).is_empty():
+		_effect_lines(lines)
+		_request("action", "Беру монеты из чужого %s [движок: %s]" % [p.get("name", ""), " · ".join(lines)])
+		return ""
+	_effect_lines(lines, true)
+	return ""
+
+
 ## «Взять всё» in a container's window (v0.7.49.4, the author's finding): every thing of it whole, one after another,
 ## until the hero can carry no more; one engine line, and one master turn when the container is someone else's.
 func container_take_all(prop_id: String) -> String:
 	if session == null or is_busy() or session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
 	var p := ContainerRules.target(session, Catalog.data, prop_id)
-	var lines: Array[String] = []
-	var owner := ""
+	var coins := ContainerRules.take_coins(session, Catalog.data, p, "container:coins")  # the coins first (v0.8.4.44.3)
+	var lines: Array[String] = coins["lines"]
+	var owner := str(coins["caught"])
 	for id: String in (p.get("contents", {}) as Dictionary).keys():
 		var r := ContainerRules.plan_take(session, Catalog.data, prop_id, id, int(p["contents"][id]))
 		if r.has("reason"):
@@ -1160,7 +1179,8 @@ func container_take_all(prop_id: String) -> String:
 			break
 		lines.append(str(r["summary"]))
 		lines.append_array(ContainerRules.apply_take(session, Catalog.data, r["plan"]))
-		owner = str(r["plan"].get("owner", ""))
+		if owner.is_empty():
+			owner = str(r["plan"].get("owner", ""))
 	if lines.is_empty():
 		return ""
 	if not owner.is_empty():  # caught: the master narrates the owner
@@ -2472,7 +2492,7 @@ func _step(room_id: String, lines: Array[String]) -> Array[String]:
 	lines.append_array(WayRules.on_pass(session, Catalog.data, from, room_id))  # a way down is a fall (v0.7.66)
 	lines.append_array(TimeRules.on_move(session, Catalog.data, from, room_id))
 	CreatureRules.follow(session, from, room_id)  # a bound captive on the rope (v0.7.22.11)
-	PetRules.seed(session, Catalog.data, room_id)  # the pack's wild beasts to tame (v0.7.43)
+	CreatureRules.seed(session, Catalog.data, room_id)  # the pack's wild beasts, creatures and the dead of the place (v0.7.43, v0.8.4.44.3)
 	var gone := PropRules.abandon(session, Catalog.data, room_id)  # big test #28 (v0.7.22.8)
 	if not gone.is_empty():
 		lines.append("Того, что вы здесь оставили, уже нет: " + ", ".join(gone))
@@ -3141,7 +3161,13 @@ func creature_act(id: String, what: String) -> String:
 			return "WAIT_BUSY"
 		session.talk_creature = id
 		return ""
-	_effect_lines(CreatureRules.act(session, Catalog.data, id, what), what != "attack")
+	var c_name := str(c.get("name", id))
+	var lines := CreatureRules.act(session, Catalog.data, id, what)
+	if what == "untie":  # a rescue: the freed one answers it (v0.8.4.44.3)
+		_effect_lines(lines)
+		_request("action", "Развязываю пленника: %s [движок: %s]" % [c_name, " · ".join(lines)])
+		return ""
+	_effect_lines(lines, what != "attack")
 	if what == "attack":
 		_start_pending_fight()
 	return ""
