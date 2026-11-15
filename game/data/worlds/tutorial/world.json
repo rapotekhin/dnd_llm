@@ -86,8 +86,46 @@
 			"npcs": [],
 			"hooks": [],
 			"layout": {
+				"chunk": {
+					"id": "dream_1"
+				},
 				"size": "medium"
-			}
+			},
+			"props": [
+				{
+					"id": "chest",
+					"name": "Старый сундук",
+					"description": "Окованный железом сундук в нише стены, весь в пятнах плесени; крышка не заперта.",
+					"container": "chest",
+					"contents": {
+						"healing_potion": 2,
+						"silver_ring": 1,
+						"figurine": 1
+					},
+					"coins_cp": 1500,
+					"body": "chest",
+					"near": "niche"
+				}
+			],
+			"secrets": [
+				{
+					"id": "tripwire",
+					"dc": 2,
+					"passive": false,
+					"text": "у самого выхода поперёк хода натянута тонкая жила к шатким камням свода",
+					"trap": {
+						"guards": "dream-2",
+						"disarm_dc": 5,
+						"save": {
+							"ability": "dex",
+							"dc": 10
+						},
+						"damage": "1d4",
+						"damage_type": "bludgeoning",
+						"sprung_text": "нога цепляет жилу — со свода сыплются камни"
+					}
+				}
+			]
 		},
 		"dream-2": {
 			"name": "Зал с костями",
@@ -100,8 +138,41 @@
 			"npcs": [],
 			"hooks": [],
 			"layout": {
+				"chunk": {
+					"id": "dream_2"
+				},
 				"size": "medium"
-			}
+			},
+			"creatures": [
+				{
+					"id": "wanderer",
+					"monster": "guard",
+					"name": "Путник",
+					"state": "dead",
+					"near": "niche",
+					"contents": {
+						"leather_armor": 1,
+						"shortsword": 1,
+						"shield": 1
+					}
+				}
+			],
+			"secrets": [
+				{
+					"id": "needles",
+					"dc": 20,
+					"passive": false,
+					"search": false,
+					"text": "в узком проходе под щебнем — плита-нажимник, от неё к стенам идут ржавые иглы",
+					"trap": {
+						"guards": "dream-3",
+						"disarm_dc": 10,
+						"damage": "1d4",
+						"damage_type": "piercing",
+						"sprung_text": "под ногой проседает плита — из стен узкого прохода бьют ржавые иглы"
+					}
+				}
+			]
 		},
 		"dream-3": {
 			"name": "Зал с колодками",
@@ -114,8 +185,35 @@
 			"npcs": [],
 			"hooks": [],
 			"layout": {
+				"chunk": {
+					"id": "dream_3"
+				},
 				"size": "medium"
-			}
+			},
+			"creatures": [
+				{
+					"id": "fighter",
+					"npc": "npc_dream_fighter",
+					"state": "bound",
+					"joins": true,
+					"near": "rings"
+				},
+				{
+					"id": "archer",
+					"monster": "scout",
+					"name": "Лучник",
+					"state": "dead",
+					"near": "niche",
+					"contents": {
+						"chain_shirt": 1,
+						"longsword": 1,
+						"shortbow": 1,
+						"arrows": 20,
+						"quiver": 1,
+						"amulet": 1
+					}
+				}
+			]
 		},
 		"dream-4": {
 			"name": "Гоблинья нора",
@@ -128,8 +226,36 @@
 			"npcs": [],
 			"hooks": [],
 			"layout": {
+				"chunk": {
+					"id": "dream_4"
+				},
 				"size": "medium"
-			}
+			},
+			"encounter": {
+				"id": "dream_goblins",
+				"faction": "dream_goblins",
+				"enemies": [
+					{
+						"monster": "goblin",
+						"count": 2,
+						"name": "Гоблин",
+						"desc": "Тощий серо-зелёный гоблин с ятаганом; глаза светятся в полутьме, как угли."
+					}
+				],
+				"loot": {
+					"coins_cp": 300,
+					"items": {}
+				}
+			},
+			"creatures": [
+				{
+					"id": "cleric",
+					"npc": "npc_dream_cleric",
+					"state": "bound",
+					"owner": "enc:dream_goblins",
+					"near": "rings"
+				}
+			]
 		},
 		"dream-5": {
 			"name": "Сторожевой грот",
@@ -142,7 +268,32 @@
 			"npcs": [],
 			"hooks": [],
 			"layout": {
+				"chunk": {
+					"id": "dream_5"
+				},
 				"size": "medium"
+			},
+			"encounter": {
+				"id": "dream_guards",
+				"faction": "dream_goblins",
+				"enemies": [
+					{
+						"monster": "hobgoblin",
+						"count": 1,
+						"name": "Хобгоблин-десятник",
+						"desc": "Рослый хобгоблин в ржавой кольчуге; держит строй даже один."
+					},
+					{
+						"monster": "goblin",
+						"count": 1,
+						"name": "Гоблин-лучник",
+						"desc": "Гоблин за каменным укрытием, с коротким луком наготове."
+					}
+				],
+				"loot": {
+					"coins_cp": 500,
+					"items": {}
+				}
 			}
 		},
 		"dream-6": {
@@ -156,6 +307,9 @@
 			"npcs": [],
 			"hooks": [],
 			"layout": {
+				"chunk": {
+					"id": "dream_6"
+				},
 				"size": "medium"
 			}
 		},
@@ -168,11 +322,101 @@
 			"npcs": [],
 			"hooks": [],
 			"layout": {
+				"chunk": {
+					"id": "dream_7"
+				},
 				"size": "large"
 			}
 		}
 	},
-	"npcs": {},
-	"quests": {},
-	"factions": {}
+	"npcs": {
+		"npc_dream_fighter": {
+			"name": "Безымянный воин",
+			"role": "пленник",
+			"race": "человек",
+			"gender": "male",
+			"faction": "dream_captives",
+			"monster": "guard",
+			"class": "fighter",
+			"level": 1,
+			"description": "Крепкий мужчина лет тридцати в рваной рубахе; на запястьях — свежие следы верёвок.",
+			"personality": "немногословный и прямой; не помнит ни своего имени, ни как сюда попал; хочет выбраться не меньше героя и сам предлагает идти дальше вместе"
+		},
+		"npc_dream_cleric": {
+			"name": "Безымянная жрица",
+			"role": "пленница",
+			"race": "дварф",
+			"gender": "female",
+			"faction": "dream_captives",
+			"monster": "acolyte",
+			"class": "cleric",
+			"level": 1,
+			"subclass": "life",
+			"description": "Коренастая дварфийка с седой прядью в косе; на шее — пустой шнурок, где был священный символ.",
+			"personality": "осторожная и недоверчивая после плена у гоблинов; помнит молитвы, но не своё имя и не своего бога; пойдёт с тем, кто убедит её, что вместе выбраться вернее"
+		}
+	},
+	"quests": {
+		"find_the_exit": {
+			"title": "Найти выход",
+			"start": true,
+			"description": "Вы очнулись в сырой пещере — голым, без вещей и без памяти о том, как сюда попали. Надо найти выход.",
+			"steps": [
+				{
+					"text": "Выбраться из сырой пещеры",
+					"when": {
+						"room": "dream-2"
+					}
+				},
+				{
+					"text": "Пройти зал с костями",
+					"when": {
+						"room": "dream-3"
+					}
+				},
+				{
+					"text": "Пройти зал с колодками",
+					"when": {
+						"room": "dream-4"
+					}
+				},
+				{
+					"text": "Одолеть гоблинов в их норе",
+					"when": {
+						"encounter": "dream_goblins"
+					}
+				},
+				{
+					"text": "Прорваться через сторожевой грот",
+					"when": {
+						"encounter": "dream_guards"
+					},
+					"xp_level": 2
+				},
+				{
+					"text": "Выйти к рыжему свету за аркой",
+					"when": {
+						"room": "dream-7"
+					}
+				}
+			]
+		}
+	},
+	"factions": {
+		"dream_captives": {
+			"name": "Пленники пещеры",
+			"kind": "people",
+			"scope": "global",
+			"hostile": false,
+			"description": "Те, кого пещера держит в путах: никто не помнит, как сюда попал."
+		},
+		"dream_goblins": {
+			"name": "Гоблины пещеры",
+			"kind": "monsters",
+			"scope": "global",
+			"hostile": true,
+			"friendable": false,
+			"description": "Гоблины и их десятник: стерегут ходы пещеры и держат пленников."
+		}
+	}
 }

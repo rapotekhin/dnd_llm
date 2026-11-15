@@ -61,10 +61,11 @@ static func seed(s: GameSession, data: Dictionary, room: String) -> void:
 
 
 ## A creature of a pack room's `creatures` (v0.8.4.44.3): {id, monster | npc, name, state: dead | bound, contents,
-## coins_cp, gear, owner, joins}. The dead one is a body searched as after a fight — its `contents`, else its template's
+## coins_cp, gear, owner, joins, near — the mark of its chunk it lies or sits by}. The dead one is a body searched as after a fight — its `contents`, else its template's
 ## kit (`gear`: false — nothing); it is the pack's and does not rot. The bound one is a prisoner: of nobody (`owner` ""),
 ## of the foes of an encounter (`enc:<id>`) — «Развязать» rescues it — or of a person (its id) — letting it go is a theft;
-## its `contents` only (its captors took the rest). A pack NPC (`npc`) is that person, held here until set free.
+## its `contents` only (its captors took the rest). A pack NPC (`npc`) is that person, held here until set free, with
+## only its `contents` and `coins_cp` on it — no kit of its template.
 static func from_pack(s: GameSession, data: Dictionary, room: String, row: Dictionary) -> Dictionary:
 	var npc := str(row.get("npc", ""))
 	var monster := str(row.get("monster", ""))
@@ -77,13 +78,15 @@ static func from_pack(s: GameSession, data: Dictionary, room: String, row: Dicti
 	var dead := str(row.get("state", "")) == DEAD
 	var c := {"name": ("Тело: " + name) if dead else name, "monster": monster, "state": DEAD if dead else "surrendered",
 		"bound": not dead, "led": false, "since": TimeRules.abs_minute(s), "xp_given": true, "pack": str(row.get("id", ""))}
-	var things: Dictionary = row["contents"] if row.get("contents") is Dictionary else {}
+	var things: Dictionary = ItemRules.whole(row["contents"]) if row.get("contents") is Dictionary else {}
 	if dead and not row.get("contents") is Dictionary and bool(row.get("gear", true)):
 		things = Gear.start(data, monster)["inventory"]
 	if not things.is_empty():
 		c["contents"] = things.duplicate()
 	if int(row.get("coins_cp", 0)) > 0:
 		c["coins_cp"] = int(row["coins_cp"])
+	if not str(row.get("near", "")).is_empty():  # by a mark of its chunk (v0.8.4.44.4)
+		c["near"] = str(row["near"])
 	if dead:
 		c["kept"] = true
 		c["remains"] = true
@@ -96,6 +99,14 @@ static func from_pack(s: GameSession, data: Dictionary, room: String, row: Dicti
 		return add(s, room, c)
 	c["npc_id"] = npc
 	c["at"] = room
+	if not dead:  # a captive of the pack has on it only what its row gives: its captors took the rest (v0.8.4.44.4)
+		c.erase("contents")
+		c.erase("coins_cp")
+		var b := Being.of(s, npc)
+		b["inventory"] = things.duplicate()
+		b["equipped"] = {}
+		b["stowed"] = {}
+		Ledger.purse(b, int(row.get("coins_cp", 0)))
 	return Being.put(s, npc, "creature", c)
 
 

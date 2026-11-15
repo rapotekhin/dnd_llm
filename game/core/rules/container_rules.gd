@@ -197,7 +197,7 @@ static func lay_pack(s: GameSession, data: Dictionary, room: String, spec: Dicti
 	var k := str(spec["container"])
 	p["container"] = k
 	if spec.get("contents") is Dictionary:
-		p["contents"] = (spec["contents"] as Dictionary).duplicate()
+		p["contents"] = ItemRules.whole(spec["contents"])
 		p["coins_cp"] = int(spec.get("coins_cp", 0))
 	else:
 		var got := fill(s, data, room, k, str(p["id"]))
@@ -310,7 +310,7 @@ static func plan_take(s: GameSession, data: Dictionary, prop_id: String, item_id
 	var owner := str(p.get("owner", ""))
 	var seen := WatchRules.sees_hero(s, data, owner)
 	return {"plan": {"room": s.room_id, "from": prop_id, "item_id": item_id, "qty": qty, "owner": owner if seen else ""},
-		"summary": "Взято из %s: %s%s%s" % [p["name"], ItemRules.display_name(data["items"], s.items, item_id), " ×%d" % qty if qty > 1 else "",
+		"summary": "Взято: %s%s (%s)%s" % [ItemRules.display_name(data["items"], s.items, item_id), " ×%d" % qty if qty > 1 else "", p["name"],
 			" — на глазах у хозяина" if seen else ""]}
 
 

@@ -140,6 +140,24 @@ static func _validate_rules(rules: Variant, base: Dictionary) -> Array[String]:
 				e.append("pack.rules.rename.%s: неизвестный id %s" % [kind, id])
 			elif not (r is Dictionary) or not (r as Dictionary).keys().all(func(k: Variant) -> bool: return k in ["name", "desc"]):
 				e.append("pack.rules.rename.%s.%s: только name и desc" % [kind, id])
+	e.append_array(_numbers_ok(rules.get("numbers", {}), base["rules"], "pack.rules.numbers"))
+	return e
+
+
+## The pack's own numbers (v0.8.4.44.4): each key one rules.json has, a number for a number, a word for a word.
+static func _numbers_ok(own: Variant, base: Variant, at: String) -> Array[String]:
+	if not (own is Dictionary) or not (base is Dictionary):
+		return ["%s: объект, как в rules.json" % at]
+	var e: Array[String] = []
+	for k: String in own:
+		var was: Variant = (base as Dictionary).get(k)
+		var v: Variant = own[k]
+		if was == null:
+			e.append("%s.%s: такого числа нет в rules.json" % [at, k])
+		elif was is Dictionary:
+			e.append_array(_numbers_ok(v, was, "%s.%s" % [at, k]))
+		elif (was is float or was is int) != (v is float or v is int) or (was is bool) != (v is bool) or (was is String) != (v is String):
+			e.append("%s.%s: не того вида, что в rules.json" % [at, k])
 	return e
 
 
@@ -168,9 +186,9 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 			elif not q.has("steps"):
 				if str(q.get("action", "")).is_empty() or str(q.get("done_text", "")).is_empty() or not rooms.has(str(q.get("room", ""))):
 					e.append("задание %s: title, action, done_text и room из комнат пакета" % qid)
-			elif not w["npcs"].has(str(q.get("giver", ""))) or not (q["steps"] is Array) or (q["steps"] as Array).is_empty() \
+			elif not (w["npcs"].has(str(q.get("giver", ""))) or bool(q.get("start", false)) and str(q.get("giver", "")).is_empty()) or not (q["steps"] is Array) or (q["steps"] as Array).is_empty() \
 					or not (q.get("offer_items", {}) as Dictionary).keys().all(func(i: String) -> bool: return data["items"]["catalog"].has(i) or (w.get("items", {}) as Dictionary).has(i)):
-				e.append("задание %s: giver — NPC пакета, steps — непустой список, offer_items — предметы каталога или пакета" % qid)
+				e.append("задание %s: giver — NPC пакета (у start — никого), steps — непустой список, offer_items — предметы каталога или пакета" % qid)
 			else:
 				for st: Variant in q["steps"]:
 					var when: Variant = st.get("when") if st is Dictionary else null
@@ -229,8 +247,8 @@ static func _validate_world(w: Dictionary, data: Dictionary) -> Array[String]:
 				e.append("комната %s: ловушка %s стережёт не выход комнаты" % [id, sec.get("id")])
 			if not (sec is Dictionary) or str(sec.get("id", "")).is_empty() or str(sec.get("text", "")).is_empty() \
 					or not (sec.get("dc") is float or sec.get("dc") is int) or ids.has(sec.get("id")) \
-					or not str(sec.get("skill", ExplorationRules.SEARCH_SKILL)) in data["rules"]["quest_gen"]["hide_skills"] 					or not (sec.get("passive", true) is bool):
-				e.append("комната %s: секрет — уникальный id, dc (число), text, passive (да или нет), skill из %s" % [id, ", ".join(data["rules"]["quest_gen"]["hide_skills"])])
+					or not str(sec.get("skill", ExplorationRules.SEARCH_SKILL)) in data["rules"]["quest_gen"]["hide_skills"] 					or not (sec.get("passive", true) is bool) or not (sec.get("search", true) is bool):
+				e.append("комната %s: секрет — уникальный id, dc (число), text, passive и search (да или нет), skill из %s" % [id, ", ".join(data["rules"]["quest_gen"]["hide_skills"])])
 			else:
 				ids[sec["id"]] = true
 		for v: Variant in r.get("variants", []):  # v0.7.14.1: the room by the world's flags
@@ -366,6 +384,7 @@ static func apply_rules(base: Dictionary, b: Dictionary) -> Dictionary:
 		catalog[id] = def
 		if def.has("food"):  # a dish of the pack's own kitchen (v0.7.39.1): its points feed the hero and the camp
 			d["rules"]["hero_effects"]["camp"]["food"][id] = int(def["food"])
+	_merge_numbers(d["rules"], rules.get("numbers", {}))  # the pack's own numbers (v0.8.4.44.4)
 	var rename: Dictionary = rules.get("rename", {})
 	for kind: String in rename:
 		var pool := _known(d, kind)
@@ -377,6 +396,14 @@ static func apply_rules(base: Dictionary, b: Dictionary) -> Dictionary:
 	d["presets"] = b["characters"].get("presets", [])
 	d["names"] = p.get("names", d["game"]["creation"]["names"])
 	return d
+
+
+static func _merge_numbers(into: Dictionary, own: Dictionary) -> void:
+	for k: String in own:
+		if own[k] is Dictionary and into.get(k) is Dictionary:
+			_merge_numbers(into[k], own[k])
+		else:
+			into[k] = own[k]
 
 
 ## Master defaults of a pack for the new game screen.

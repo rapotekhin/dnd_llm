@@ -149,14 +149,16 @@ static func shape_of(lib: Dictionary, kind: String, indoor: bool) -> String:
 ## The chain of a room's chunks from the exact to the general: it cannot end in nothing, a generic one fits every size.
 ## A chunk made for a room's tag comes first; with `rng` the chunks of one step come in a random order, those that have
 ## every mark the room wants (a stage of a hall tagged `stage`) before the rest (v0.8.4.44.2.1: a stage of the author's
-## chunk, not one by a random wall of another).
+## chunk, not one by a random wall of another). A chunk marked `named` is never among them: only a room that names it in its
+## `layout.chunk` takes it (v0.8.4.44.4: the halls of the tutorial's cave).
 static func candidates(lib: Dictionary, ask: Dictionary, rng: RandomNumberGenerator = null) -> Array[Dictionary]:
 	var wanted: Array = ask.get("marks", [])
 	var kind := str(ask.get("kind", ""))
 	var role := str(ask.get("role", ""))
 	var tags: Array = ask.get("tags", [])
 	var size := str(ask.get("size", "medium"))
-	var rooms_only: Array = (lib["chunks"] as Array).filter(func(c: Dictionary) -> bool: return not c.has("landmarks") and not c.has("tile"))
+	var rooms_only: Array = (lib["chunks"] as Array).filter(func(c: Dictionary) -> bool:
+		return not c.has("landmarks") and not c.has("tile") and not bool(c.get("named", false)))
 	var out: Array[Dictionary] = []
 	var shared := func(c: Dictionary) -> int:  # the room's tags a chunk carries
 		return tags.filter(func(t: Variant) -> bool: return (c.get("tags", []) as Array).has(t)).size()

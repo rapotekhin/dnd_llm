@@ -3194,7 +3194,7 @@
 		"trader_marks": ["counter", "stall", "anvil", "desk", "altar"],
 		"by_mark": 2,
 		"distance": [{"at": 0, "word": "рядом"}, {"at": 3, "word": "в нескольких шагах"}, {"at": 9, "word": "в другом конце"}],
-		"mark_words": {"hearth": "очаг", "counter": "стойка", "bed": "кровать", "bench": "верстак", "water": "вода", "stone": "камень", "forge": "горн", "millstone": "жёрнов", "anvil": "наковальня", "vein": "жила", "desk": "стол", "stall": "прилавок", "stage": "сцена", "camp": "стоянка", "altar": "алтарь", "ring": "круг", "cell": "клетка"}
+		"mark_words": {"hearth": "очаг", "counter": "стойка", "bed": "кровать", "bench": "верстак", "water": "вода", "stone": "камень", "forge": "горн", "millstone": "жёрнов", "anvil": "наковальня", "vein": "жила", "desk": "стол", "stall": "прилавок", "stage": "сцена", "camp": "стоянка", "altar": "алтарь", "ring": "круг", "cell": "клетка", "niche": "ниша", "rings": "кольца в стене"}
 	},
 	"things": {
 		"_doc": "v0.7.65, ThingRules: the body of any thing, a door too. AC by the material, HP by size (by weight, `up_to` lb) and frailty (DMG); a door has its own `door_hp`. `immune` — damage types that do nothing to a thing. `by_type` — the material of a catalog item by its type. Fire lasts burn_minutes, catches what stands beside it after spread_minutes, a wet thing does not burn (the coat of water, rules.liquids, v0.8.4.28.2). master_damage — the most the master's words do to a thing at once; status_minutes — how long a status it lays stays. bodies: what a thing does on the map (v0.8): blocks (path, sight, shots), cover (half, three_quarters, full), made_of; `size` — the squares it takes [long, short], a turn lays it the other way (v0.8.4.43.23), its picture assets/tiles/props/<id>.png drawn from above.",

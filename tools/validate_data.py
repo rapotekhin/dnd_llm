@@ -65,6 +65,21 @@ def check_held(rid: str, room: dict, rules: dict, items: set, npcs: dict, monste
     return errors
 
 
+def check_numbers(own, base, at: str) -> list[str]:
+    """v0.8.4.44.4: a pack's own numbers over rules.json — each key one it has, a number for a number, a word for a word."""
+    if not isinstance(own, dict) or not isinstance(base, dict):
+        return [f"{at}: объект, как в rules.json"]
+    errors: list[str] = []
+    for k, v in own.items():
+        if k not in base:
+            errors.append(f"{at}.{k}: такого числа нет в rules.json")
+        elif isinstance(base[k], dict):
+            errors += check_numbers(v, base[k], f"{at}.{k}")
+        elif isinstance(base[k], bool) != isinstance(v, bool) or isinstance(base[k], (int, float)) != isinstance(v, (int, float)) or isinstance(base[k], str) != isinstance(v, str):
+            errors.append(f"{at}.{k}: не того вида, что в rules.json")
+    return errors
+
+
 def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bool, quests: dict | None = None) -> list[str]:
     """A condition of the one language (Cond): one fact (encounter, secret, room, flag, quest), a button (talk with an
     item, choice — only on a quest step), or all / any of facts."""
@@ -307,6 +322,7 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     errors += [f"NPC {k}: нет фракции {n.get('faction')}" for k, n in npcs.items() if n.get("faction") not in factions]
     errors += [f"фракция {k}: нет врага {x}" for k, d in world.get("factions", {}).items() for x in d.get("foes", []) if x not in factions]  # v0.7.63
     game_rules = json.loads((ROOT / "game" / "data" / "rules.json").read_text(encoding="utf-8"))
+    errors += check_numbers(rules.get("numbers", {}), game_rules, "pack.rules.numbers")  # v0.8.4.44.4
     services = {**game_rules["item_rules"]["services"], **world.get("services", {})}
     craft = game_rules["craft"]
     room_tags = ROOM_TAGS | set(craft["stations"]) | set(craft["gather"])  # v0.7.24: workplaces and gathering spots
@@ -598,7 +614,9 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
         errors += [f"задание {qid}: в offer_items нет предмета {x}" for x in q.get("offer_items", {}) if x not in items]
         if "festival" in q and q["festival"] not in world.get("calendar", {}).get("festivals", {}):  # v0.7.44
             errors.append(f"задание {qid}: festival {q['festival']} — нет такого праздника в календаре")
-        if q.get("giver") not in npcs:
+        if q.get("start") and q.get("giver"):  # v0.8.4.44.4: the hero's from the first moment, nobody gives it
+            errors.append(f"задание {qid}: start — без заказчика")
+        elif not q.get("start") and q.get("giver") not in npcs:
             errors.append(f"задание {qid}: нет NPC-заказчика {q.get('giver')}")
         for i, st in enumerate(q["steps"]):
             w = st["when"]

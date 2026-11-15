@@ -110,6 +110,9 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 		BackgroundRules.apply_ties(s, Catalog.data)  # the people of the hero's past (v0.7.11)
 	CreatureRules.seed(s, Catalog.data, s.room_id)  # the start room's wild beasts, its pack creatures and dead (v0.7.43, v0.8.4.44.3)
 	start(s)
+	var begun := QuestRules.begin(s, Catalog.data)  # the pack's quests of the first moment (v0.8.4.44.4)
+	if not begun.is_empty():
+		_told(begun)
 	TimeRules.settle(s, Catalog.data)  # a festival and the weather of the first day (v0.7.44, v0.7.46)
 	RumorRules.seed(s, Catalog.data)  # the pack's talk (v0.7.47)
 	_request("enter", "")
@@ -1052,7 +1055,7 @@ func search_room() -> String:
 	if session.in_conversation() or CombatRules.active(session):
 		return "WAIT_NOT_NOW"
 	var skill := ExplorationRules.SEARCH_SKILL
-	var result := _engine_check({"skill": skill, "dc_tier": "medium"})
+	var result := _engine_check({"skill": skill, "dc_tier": "medium", "search": true})
 	if result.has("error"):
 		return "MSG_MASTER_FAILED"
 	var passed := TimeRules.advance(session, Catalog.data, int(TimeRules.cfg(Catalog.data)["search_minutes"]))
@@ -4088,6 +4091,9 @@ func _forced_skill(params: Dictionary) -> String:
 func _engine_check(params: Dictionary) -> Dictionary:
 	for k: String in ["dc", "dc_reason", "disadvantage_reason", "auto_fail_reason"]:
 		params.erase(k)  # the DC number and the reasons are the engine's
+	if bool(params.get("search", false)):  # «Обыскать»: the DC of the easiest thing hidden here (v0.8.4.44.4)
+		params["dc"] = ExplorationRules.search_dc(session, Catalog.data, session.room_id)
+	params.erase("search")
 	var sp := CheckEngine.spec(session, Catalog.data, params)
 	if sp.has("error"):
 		return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(sp["error"]))

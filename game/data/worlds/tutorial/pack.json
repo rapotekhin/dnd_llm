@@ -24,6 +24,14 @@
 			"Безымянная"
 		]
 	},
+	"rules": {
+		"numbers": {
+			"social": {
+				"dc_min": 2,
+				"attitude_step": 4
+			}
+		}
+	},
 	"dream": {
 		"wake": {
 			"when": {

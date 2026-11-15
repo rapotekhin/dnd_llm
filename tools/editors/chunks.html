@@ -157,7 +157,7 @@ function propsPanel(app, c, e) {
 	const landmark = !!e.landmarks;
 	const tile = !!e.tile;  // a piece of an open map (v0.8.4.43.27)
 	const purpose = h('select', { onchange: (ev) => {
-		for (const k of ['kinds', 'roles', 'size', 'generic', 'tags', 'landmarks', 'tile', 'weight']) delete e[k];
+		for (const k of ['kinds', 'roles', 'size', 'generic', 'named', 'tags', 'landmarks', 'tile', 'weight']) delete e[k];
 		if (ev.target.value === 'landmark') e.landmarks = ['wild'];
 		else if (ev.target.value === 'tile') e.tile = 'glade';
 		else { e.kinds = []; e.roles = []; e.size = 'medium'; }
@@ -175,7 +175,8 @@ function propsPanel(app, c, e) {
 			row('', h('label', { class: 'small' }, h('input', { type: 'checkbox', checked: !!e.generic, onchange: (ev) => set('generic', ev.target.checked) }), ' общий — годится любому виду места своего размера')),
 			row('Роли комнаты:', chips(e.roles, opts.roles(e.kinds), (x) => ru(ROLE_RU, x), (v) => set('roles', v)), 'пусто — любая роль'),
 			row('Размер:', h('select', { onchange: (ev) => set('size', ev.target.value) }, opts.sizes().map((s) => h('option', { value: s, selected: e.size === s }, ru(SIZE_RU, s))))),
-			row('Теги комнаты:', chips(e.tags, opts.tags(), (x) => ru(TAG_RU, x), (v) => set('tags', v)), 'чанк для комнаты с таким тегом идёт первым'));
+			row('Теги комнаты:', chips(e.tags, opts.tags(), (x) => ru(TAG_RU, x), (v) => set('tags', v)), 'чанк для комнаты с таким тегом идёт первым'),
+			row('', h('label', { class: 'small' }, h('input', { type: 'checkbox', checked: !!e.named, onchange: (ev) => set('named', ev.target.checked) }), ' только по имени — генератор его не берёт, комнату пака им рисует её `layout.chunk`')));
 	}
 	return h('div', { class: 'props' }, ...parts);
 }
@@ -200,10 +201,10 @@ const app = new EditorApp({
 		app.addColl({
 			id: 'chunks', title: 'Чанки', group: 'Карты', file: L, at: ['chunks'], type: 'array', idKey: 'id',
 			name: (e) => e.id,
-			sub: (e) => [e.tile ? 'кусок открытого места: ' + ru(TILE_RU, e.tile) : e.landmarks ? 'примета: ' + e.landmarks.map((x) => KIND_RU[x] || x).join(', ') : e.generic && !e.kinds?.length ? 'общий' : (e.kinds || []).map((x) => KIND_RU[x] || x).join(', '), (e.roles || []).map((x) => ROLE_RU[x] || x).join(', '), SIZE_RU[e.size] || e.size, size(e)].filter(Boolean).join(' · '),
-			labels: { kinds: 'виды мест', roles: 'роли комнат', size: 'размер', marks: 'метки', rows: 'клетки', furnish: 'обстановки', landmarks: 'примета открытой карты', generic: 'общий для любого вида', tags: 'теги комнаты' },
+			sub: (e) => [e.tile ? 'кусок открытого места: ' + ru(TILE_RU, e.tile) : e.landmarks ? 'примета: ' + e.landmarks.map((x) => KIND_RU[x] || x).join(', ') : e.generic && !e.kinds?.length ? 'общий' : (e.named ? 'по имени: ' : '') + (e.kinds || []).map((x) => KIND_RU[x] || x).join(', '), (e.roles || []).map((x) => ROLE_RU[x] || x).join(', '), SIZE_RU[e.size] || e.size, size(e)].filter(Boolean).join(' · '),
+			labels: { kinds: 'виды мест', roles: 'роли комнат', size: 'размер', marks: 'метки', rows: 'клетки', furnish: 'обстановки', landmarks: 'примета открытой карты', generic: 'общий для любого вида', named: 'только по имени', tags: 'теги комнаты' },
 			refs: [{ p: 'kinds.[]', to: 'kinds' }],
-			filterOrder: ['kinds', 'roles', 'size', 'landmarks', 'generic', 'tags'],
+			filterOrder: ['kinds', 'roles', 'size', 'landmarks', 'generic', 'named', 'tags'],
 			computed: { 'ширина': (e) => e.rows?.[0]?.length, 'высота': (e) => e.rows?.length },
 		});
 		app.addColl({ id: 'kinds', title: 'Виды мест', group: 'Справка', file: L, at: ['kinds'], sub: (e) => [e.shape && SHAPES[e.shape], e.family && 'семья: ' + e.family].filter(Boolean).join(' · ') });

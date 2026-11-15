@@ -152,6 +152,15 @@ static func found(c: Dictionary, data: Dictionary, session_items: Dictionary, id
 	return add(c, key, qty)
 
 
+## Counts of things as data writes them {id: n} (a JSON number is a float) made whole: a pack's chest, a body, a captive.
+static func whole(counts: Dictionary) -> Dictionary:
+	var out := {}
+	for id: Variant in counts:
+		if int(counts[id]) > 0:
+			out[str(id)] = int(counts[id])
+	return out
+
+
 ## `qty` of a thing known for what it is into anybody's things (v0.8.4.29: the one road of «+N»): bought, made, a prize or a
 ## parcel named by who gives it. Returns its id. A thing found is `found`, a thing gone is `remove`.
 static func add(c: Dictionary, id: String, qty: int = 1) -> String:

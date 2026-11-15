@@ -6,8 +6,10 @@ extends RefCounted
 ##   v0.7.22.2-3) the state the check was rolled in: the hero's conditions and spells, the darkness of a look, the
 ##   listener's attitude and the charms on it (paralysis gone — the look is rolled again); a social check — also a
 ##   new argument of the player (`argument`, the master names it), not the same words ten times;
-## - hidden things of a room (world.json `secrets`: id, dc, text, passive?, skill?) are noticed by passive Perception
-##   on entering (unless `passive: false` — only a search finds it), or found by a successful search with total ≥ DC.
+## - hidden things of a room (world.json `secrets`: id, dc, text, passive?, skill?, search?) are noticed by passive
+##   Perception on entering (unless `passive: false` — only a search finds it), or found by a successful search with
+##   total ≥ DC; `search: false` — no look finds it, its trap springs (v0.8.4.44.4: the dream's second trap).
+##   The search's own DC is that of the easiest thing it can find there still hidden, else a medium one (`search_dc`).
 ##   The search is one check, Perception (v0.8.4.44, the author: «Осмотреться» only describes, «Обыскать» finds both
 ##   what can be noticed and what is hidden): it finds any secret; a thing hidden for another skill (`skill` of
 ##   rules.quest_gen.hide_skills: a root in black water — Survival) is found by that skill too and never noticed in passing;
@@ -190,12 +192,27 @@ static func active_reveal(s: GameSession, world: Dictionary, skill: String, tota
 ## A secret passive Perception notices in passing: one not marked `passive: false` (only a search finds it) and hidden
 ## for no other skill.
 static func noticed_passively(sec: Dictionary) -> bool:
-	return bool(sec.get("passive", true)) and hidden_for(sec).is_empty()
+	return bool(sec.get("passive", true)) and hidden_for(sec).is_empty() and findable(sec)
 
 
 ## A check of `skill` finds `sec`: the search (Perception) finds any; a thing hidden for another skill — that skill too.
 static func found_by(sec: Dictionary, skill: String) -> bool:
-	return skill == SEARCH_SKILL or (not hidden_for(sec).is_empty() and hidden_for(sec) == skill)
+	return findable(sec) and (skill == SEARCH_SKILL or (not hidden_for(sec).is_empty() and hidden_for(sec) == skill))
+
+
+## A look may find it at all: not marked `search: false` (a trap that always springs).
+static func findable(sec: Dictionary) -> bool:
+	return bool(sec.get("search", true))
+
+
+## The DC of «Обыскать» here (v0.8.4.44.4, the author: a trap of DC 2 found by the search): of the easiest thing still
+## hidden it can find — not found, not sprung, not disarmed —, else rules.dc_tiers.medium when there is nothing.
+static func search_dc(s: GameSession, data: Dictionary, room_id: String) -> int:
+	var best := -1
+	for sec: Dictionary in secrets(data["world"], room_id):
+		if found_by(sec, SEARCH_SKILL) and not is_found(s, room_id, sec) and not s.traps.has(secret_key(room_id, sec)) 				and (best < 0 or int(sec["dc"]) < best):
+			best = int(sec["dc"])
+	return best if best >= 0 else int(data["rules"]["dc_tiers"]["medium"])
 
 
 ## The skill a thing is hidden for besides the search (rules.quest_gen.hide_skills), "" — the search alone.

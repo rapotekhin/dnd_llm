@@ -29,6 +29,15 @@ static func share(s: GameSession, data: Dictionary, amount: int, source: String,
 	return lines
 
 
+## The experience of level `lv` to the hero and each of `members` below it (v0.8.4.44.4, the dream: «2-й уровень всем»):
+## what each lacks by the hero's table, whatever the party's size and the fights before; each rises by its button. Lines.
+static func raise_to(s: GameSession, data: Dictionary, lv: int, members: Array) -> Array[String]:
+	var lines := award(s.character, data, LevelUp.xp_for(data, lv) - int(s.character.get("xp", 0)), "задание")
+	for id: Variant in members:
+		lines.append_array(GrowthRules.raise_to(s, data, str(id), lv))
+	return lines
+
+
 ## Adds experience; returns the chat lines (with «можно повысить уровень» when it is time).
 static func award(c: Dictionary, data: Dictionary, amount: int, source: String) -> Array[String]:
 	var lines: Array[String] = []

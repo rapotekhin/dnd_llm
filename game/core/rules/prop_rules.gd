@@ -58,6 +58,8 @@ static func ensure_fixed(s: GameSession, data: Dictionary, room_id: String) -> v
 			"owner": str(spec.get("owner", "")), "text": str(spec.get("text", "")), "state": "", "fixed": true}
 		if not str(spec.get("body", "")).is_empty():
 			p["body"] = str(spec["body"])
+		if not str(spec.get("near", "")).is_empty():  # by a mark of its chunk (v0.8.4.44.4: the chest in the cave's niche)
+			p["near"] = str(spec["near"])
 		if not str(spec.get("container", "")).is_empty():
 			ContainerRules.lay_pack(s, data, room_id, spec, p)
 		list.append(p)

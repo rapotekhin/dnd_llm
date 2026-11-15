@@ -137,6 +137,8 @@ static func _of(s: GameSession, data: Dictionary, map: Dictionary) -> Dictionary
 		if CreatureRules.with_hero(c):
 			continue
 		var fell := Vector2i(int(c.get("x", -1)), int(c.get("y", -1)))
+		if not cells.has(fell) and c.has("near"):  # a body or a captive of the pack by its chunk's mark (v0.8.4.44.4)
+			fell = _mark_cell(map, s.room_id, str(c["near"]))
 		var at := _closest(spots, taken, fell) if cells.has(fell) else _seeded(spots, taken, "%d|%s" % [s.game_seed, id])
 		taken[at] = true
 		var tc := _token("cr:" + id, "body" if str(c["state"]) == CreatureRules.DEAD else "creature", id, str(c["name"]), at)

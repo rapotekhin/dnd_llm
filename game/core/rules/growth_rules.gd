@@ -34,6 +34,14 @@ static func gain(s: GameSession, data: Dictionary, npc_id: String, amount: int) 
 	return lines
 
 
+## What it lacks of level `lv`'s experience by the hero's table (XpRules.raise_to). Lines.
+static func raise_to(s: GameSession, data: Dictionary, npc_id: String, lv: int) -> Array[String]:
+	if not row(data, npc_id).has("class"):
+		return []
+	var have := int(Being.view(s, npc_id).get("xp", LevelUp.xp_for(data, level(s, data, npc_id))))
+	return gain(s, data, npc_id, LevelUp.xp_for(data, lv) - have)
+
+
 ## Its experience past the next threshold of the hero's table, below rules.xp.max_level.
 static func ready(s: GameSession, data: Dictionary, npc_id: String) -> bool:
 	var lv := level(s, data, npc_id)

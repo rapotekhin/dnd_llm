@@ -27,6 +27,10 @@ func run() -> void:
 	step("with no things and no coins", (s.character["inventory"] as Dictionary).is_empty() and int(s.character.get("gold_cp", 0)) == 0, str(s.character["inventory"]))
 	step("with the wizard's spells", not (s.character["spells"]["cantrips"] as Array).is_empty(), str(s.character["spells"]["cantrips"]))
 	await shot("dream_hall_1")
+	for enc: String in ["dream_goblins", "dream_guards"]:  # the halls' fights and traps are dream_cave's (v0.8.4.44.4)
+		s.encounters_done.append(enc)
+	for trap: String in ["dream-1:tripwire", "dream-2:needles"]:
+		s.traps[trap] = "disarmed"
 	for i in range(2, 8):
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		var back := WayRules.open_exits(s, node("Catalog").data["world"], s.room_id)

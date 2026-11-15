@@ -91,11 +91,24 @@ static func can_accept(s: GameSession, world: Dictionary, quest_id: String) -> S
 	return ""
 
 
+## The pack's quests taken at the new game (v0.8.4.44.4: «Найти выход» of the dream, the hero's from its first moment):
+## `start`, with no giver. Lines.
+static func begin(s: GameSession, data: Dictionary) -> Array[String]:
+	var lines: Array[String] = []
+	var all := stepped(data["world"])
+	for id: String in all:
+		if bool(all[id].get("start", false)) and not s.quests_active.has(id) and not s.quests_done.has(id):
+			lines.append_array(accept(s, data, id))
+	return lines
+
+
 ## Takes the quest (can_accept first); steps already done by the facts close at once. Lines.
 static func accept(s: GameSession, data: Dictionary, quest_id: String) -> Array[String]:
 	var q := quest(data["world"], quest_id)
 	s.quests_active[quest_id] = 0
-	s.remember(stand_in(s, data["world"], str(q.get("giver", ""))), "герой взял задание «%s»" % q["title"])
+	var giver := stand_in(s, data["world"], str(q.get("giver", "")))
+	if not giver.is_empty():
+		s.remember(giver, "герой взял задание «%s»" % q["title"])
 	var first: String = str(q["steps"][0]["text"]) if not (q["steps"] as Array).is_empty() else str(q["acts"][0]["goal"])
 	var lines: Array[String] = ["Новое задание: %s" % q["title"], "Цель: %s" % first]
 	var given: Dictionary = q.get("offer_items", {})  # what the giver hands over (v0.6.5: the letter, the writ)
@@ -555,6 +568,8 @@ static func _reward(s: GameSession, data: Dictionary, r: Dictionary, lines: Arra
 		lines.append("%s: отношение %s" % [world.npc_name(npc), "лучше" if int(att[npc]) > 0 else "хуже"])
 	if class_xp:
 		lines.append_array(XpRules.share(s, data, DifficultyRules.reward(s, data, int(r.get("xp", 0))), "задание", GrowthRules.company(s)))  # the party's, split with who walked it (v0.8.4.42.2)
+		if r.has("xp_level"):  # the party brought to a level (v0.8.4.44.4: the dream's fifth hall, «2-й уровень всем»)
+			lines.append_array(XpRules.raise_to(s, data, int(r["xp_level"]), GrowthRules.company(s)))
 
 
 ## Taken quests for the snapshot and the journal: [{id, title, description, done, failed, step}]; failed ones —
