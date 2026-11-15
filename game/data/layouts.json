@@ -260,7 +260,7 @@
 					{"body": "bench", "x": 4, "y": 6, "turn": 2}, {"body": "bench", "x": 10, "y": 6, "turn": 2}, {"body": "stool", "x": 3, "y": 7, "turn": 3},
 					{"body": "table", "x": 4, "y": 7, "turn": 2}, {"body": "stool", "x": 9, "y": 7, "turn": 0}, {"body": "table", "x": 10, "y": 7, "turn": 2},
 					{"body": "bench", "x": 4, "y": 8, "turn": 2}, {"body": "bench", "x": 10, "y": 8, "turn": 2}, {"body": "stage", "x": 12, "y": 8, "turn": 3, "station": "stage"},
-					{"body": "chest", "x": 1, "y": 10, "turn": 0}
+					{"body": "chest", "x": 1, "y": 10, "turn": 2}
 				]},
 				{"name": "Вариант 2", "things": [
 					{"body": "barrel", "x": 12, "y": 1, "turn": 0}, {"body": "counter", "x": 2, "y": 2, "turn": 0, "station": "counter"}, {"body": "counter", "x": 5, "y": 2, "turn": 0, "station": "counter"},
@@ -361,7 +361,7 @@
 				]},
 				{"name": "Вариант 3", "things": [
 					{"body": "crate", "x": 3, "y": 1, "turn": 2}, {"body": "shelf", "x": 5, "y": 1, "turn": 0}, {"body": "crate", "x": 7, "y": 1, "turn": 2},
-					{"body": "chest", "x": 3, "y": 3, "turn": 0}, {"body": "chest", "x": 5, "y": 3, "turn": 2}, {"body": "chest", "x": 1, "y": 5, "turn": 0}
+					{"body": "chest", "x": 3, "y": 3, "turn": 0}, {"body": "chest", "x": 5, "y": 3, "turn": 2}, {"body": "chest", "x": 1, "y": 5, "turn": 2}
 				]}
 			]},
 		{"id": "guest_rooms", "kinds": ["tavern"], "roles": ["upstairs"], "size": "large", "marks": {"E": "entry", "R": "bed"},
@@ -380,19 +380,19 @@
 			"furnish": [
 				{"name": "Вариант 1", "things": [
 					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 8, "y": 1, "turn": 0}, {"body": "bed", "x": 9, "y": 1, "turn": 3, "station": "bed"},
-					{"body": "chest", "x": 8, "y": 2, "turn": 1}, {"body": "chest", "x": 1, "y": 7, "turn": 3}, {"body": "nightstand", "x": 8, "y": 7, "turn": 3},
-					{"body": "plant_pot", "x": 9, "y": 7, "turn": 0}, {"body": "bed", "x": 1, "y": 8, "turn": 2, "station": "bed"}, {"body": "bed", "x": 8, "y": 8, "turn": 2, "station": "bed"}
+					{"body": "chest", "x": 8, "y": 2, "turn": 1}, {"body": "chest", "x": 1, "y": 7, "turn": 1}, {"body": "nightstand", "x": 8, "y": 7, "turn": 3},
+					{"body": "plant_pot", "x": 9, "y": 7, "turn": 0}, {"body": "bed", "x": 1, "y": 8, "turn": 0, "station": "bed"}, {"body": "bed", "x": 8, "y": 8, "turn": 2, "station": "bed"}
 				]},
 				{"name": "Вариант 2", "things": [
-					{"body": "bed", "x": 1, "y": 1, "turn": 1, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 3}, {"body": "bed", "x": 9, "y": 1, "turn": 1, "station": "bed"},
+					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 3}, {"body": "bed", "x": 9, "y": 1, "turn": 3, "station": "bed"},
 					{"body": "chest", "x": 1, "y": 7, "turn": 1}, {"body": "nightstand", "x": 8, "y": 7, "turn": 1}, {"body": "bed", "x": 1, "y": 8, "turn": 0, "station": "bed"},
-					{"body": "bed", "x": 8, "y": 8, "turn": 0, "station": "bed"}
+					{"body": "bed", "x": 8, "y": 8, "turn": 2, "station": "bed"}
 				]},
 				{"name": "Вариант 3", "things": [
 					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 1}, {"body": "nightstand", "x": 8, "y": 1, "turn": 0},
 					{"body": "bed", "x": 9, "y": 1, "turn": 3, "station": "bed"}, {"body": "chest", "x": 2, "y": 2, "turn": 2}, {"body": "chest", "x": 8, "y": 2, "turn": 1},
 					{"body": "plant_pot", "x": 1, "y": 3, "turn": 3}, {"body": "nightstand", "x": 1, "y": 7, "turn": 3}, {"body": "plant_pot", "x": 2, "y": 7, "turn": 0},
-					{"body": "nightstand", "x": 8, "y": 7, "turn": 3}, {"body": "chest", "x": 9, "y": 7, "turn": 0}, {"body": "bed", "x": 1, "y": 8, "turn": 2, "station": "bed"},
+					{"body": "nightstand", "x": 8, "y": 7, "turn": 3}, {"body": "chest", "x": 9, "y": 7, "turn": 0}, {"body": "bed", "x": 1, "y": 8, "turn": 0, "station": "bed"},
 					{"body": "bed", "x": 8, "y": 8, "turn": 2, "station": "bed"}
 				]}
 			]},
@@ -432,7 +432,7 @@
 			],
 			"furnish": [
 				{"name": "Вариант 1", "things": [
-					{"body": "forge", "x": 1, "y": 1, "turn": 3, "station": "forge"}, {"body": "crate", "x": 7, "y": 1, "turn": 2}, {"body": "workbench", "x": 8, "y": 1, "turn": 3, "station": "bench"},
+					{"body": "forge", "x": 1, "y": 1, "turn": 1, "station": "forge"}, {"body": "crate", "x": 7, "y": 1, "turn": 2}, {"body": "workbench", "x": 8, "y": 1, "turn": 3, "station": "bench"},
 					{"body": "anvil", "x": 5, "y": 3, "turn": 0, "station": "anvil"}, {"body": "crate", "x": 9, "y": 5, "turn": 0}
 				]},
 				{"name": "Вариант 2", "things": [
@@ -440,7 +440,7 @@
 					{"body": "crate", "x": 1, "y": 5, "turn": 2}, {"body": "barrel", "x": 9, "y": 5, "turn": 2}
 				]},
 				{"name": "Вариант 3", "things": [
-					{"body": "forge", "x": 1, "y": 1, "turn": 3, "station": "forge"}, {"body": "barrel", "x": 3, "y": 1, "turn": 1}, {"body": "workbench", "x": 8, "y": 1, "turn": 3, "station": "bench"},
+					{"body": "forge", "x": 1, "y": 1, "turn": 1, "station": "forge"}, {"body": "barrel", "x": 3, "y": 1, "turn": 1}, {"body": "workbench", "x": 8, "y": 1, "turn": 3, "station": "bench"},
 					{"body": "anvil", "x": 5, "y": 3, "turn": 0, "station": "anvil"}, {"body": "barrel", "x": 1, "y": 5, "turn": 0}, {"body": "crate", "x": 9, "y": 5, "turn": 0}
 				]}
 			]},
@@ -522,9 +522,9 @@
 					{"body": "plant_pot", "x": 9, "y": 8, "turn": 3}
 				]},
 				{"name": "Вариант 2", "things": [
-					{"body": "statue", "x": 9, "y": 1, "turn": 2}, {"body": "bench", "x": 2, "y": 3, "turn": 1}, {"body": "bench", "x": 8, "y": 3, "turn": 3},
+					{"body": "statue", "x": 9, "y": 1, "turn": 0}, {"body": "bench", "x": 2, "y": 3, "turn": 1}, {"body": "bench", "x": 8, "y": 3, "turn": 3},
 					{"body": "bench", "x": 8, "y": 5, "turn": 1}, {"body": "bench", "x": 2, "y": 7, "turn": 1}, {"body": "bench", "x": 8, "y": 7, "turn": 3},
-					{"body": "plant_pot", "x": 1, "y": 8, "turn": 1}, {"body": "chest", "x": 9, "y": 8, "turn": 1}
+					{"body": "plant_pot", "x": 1, "y": 8, "turn": 1}, {"body": "chest", "x": 9, "y": 8, "turn": 3}
 				]},
 				{"name": "Вариант 3", "things": [
 					{"body": "bench", "x": 2, "y": 3, "turn": 3}, {"body": "bench", "x": 8, "y": 3, "turn": 1}, {"body": "stool", "x": 2, "y": 5, "turn": 1},
@@ -600,7 +600,7 @@
 					{"body": "desk", "x": 1, "y": 1, "turn": 0, "station": "desk"}, {"body": "rug", "x": 4, "y": 3, "turn": 2}
 				]},
 				{"name": "Ратуша, вариант 2", "kinds": ["registry"], "things": [
-					{"body": "desk", "x": 1, "y": 1, "turn": 2, "station": "desk"}, {"body": "shelf", "x": 4, "y": 1, "turn": 2}
+					{"body": "desk", "x": 1, "y": 1, "turn": 0, "station": "desk"}, {"body": "shelf", "x": 4, "y": 1, "turn": 2}
 				]},
 				{"name": "Ратуша, вариант 3", "kinds": ["registry"], "things": [
 					{"body": "desk", "x": 1, "y": 1, "turn": 0, "station": "desk"}, {"body": "chest", "x": 5, "y": 1, "turn": 0}, {"body": "cabinet", "x": 1, "y": 3, "turn": 2}
@@ -609,7 +609,7 @@
 					{"body": "desk", "x": 1, "y": 1, "turn": 0, "station": "desk"}, {"body": "rug", "x": 4, "y": 3, "turn": 2}
 				]},
 				{"name": "Школа, вариант 2", "kinds": ["school"], "things": [
-					{"body": "desk", "x": 1, "y": 1, "turn": 2, "station": "desk"}, {"body": "crate", "x": 5, "y": 1, "turn": 2}
+					{"body": "desk", "x": 1, "y": 1, "turn": 0, "station": "desk"}, {"body": "crate", "x": 5, "y": 1, "turn": 2}
 				]},
 				{"name": "Школа, вариант 3", "kinds": ["school"], "things": [
 					{"body": "desk", "x": 1, "y": 1, "turn": 0, "station": "desk"}, {"body": "shelf", "x": 4, "y": 1, "turn": 0}, {"body": "barrel", "x": 1, "y": 3, "turn": 2}
@@ -618,7 +618,7 @@
 					{"body": "desk", "x": 1, "y": 1, "turn": 0, "station": "desk"}, {"body": "plant_pot", "x": 5, "y": 3, "turn": 2}
 				]},
 				{"name": "Храм, вариант 2", "kinds": ["temple"], "things": [
-					{"body": "desk", "x": 1, "y": 1, "turn": 2, "station": "desk"}, {"body": "cabinet", "x": 4, "y": 1, "turn": 2}
+					{"body": "desk", "x": 1, "y": 1, "turn": 0, "station": "desk"}, {"body": "cabinet", "x": 4, "y": 1, "turn": 2}
 				]},
 				{"name": "Храм, вариант 3", "kinds": ["temple"], "things": [
 					{"body": "desk", "x": 1, "y": 1, "turn": 0, "station": "desk"}, {"body": "plant_pot", "x": 5, "y": 1, "turn": 0}, {"body": "chest", "x": 1, "y": 3, "turn": 2}
@@ -636,24 +636,24 @@
 			],
 			"furnish": [
 				{"name": "Вариант 1", "things": [
-					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 2}, {"body": "bed", "x": 3, "y": 1, "turn": 1, "station": "bed"},
-					{"body": "bed", "x": 5, "y": 1, "turn": 3, "station": "bed"}, {"body": "plant_pot", "x": 6, "y": 1, "turn": 0}, {"body": "bed", "x": 7, "y": 1, "turn": 1, "station": "bed"},
-					{"body": "bed", "x": 1, "y": 4, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 4, "turn": 0}, {"body": "nightstand", "x": 3, "y": 4, "turn": 2},
+					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 2}, {"body": "bed", "x": 3, "y": 1, "turn": 3, "station": "bed"},
+					{"body": "bed", "x": 5, "y": 1, "turn": 3, "station": "bed"}, {"body": "plant_pot", "x": 6, "y": 1, "turn": 0}, {"body": "bed", "x": 7, "y": 1, "turn": 3, "station": "bed"},
+					{"body": "bed", "x": 1, "y": 4, "turn": 1, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 4, "turn": 0}, {"body": "nightstand", "x": 3, "y": 4, "turn": 2},
 					{"body": "nightstand", "x": 6, "y": 4, "turn": 2}, {"body": "bed", "x": 7, "y": 4, "turn": 1, "station": "bed"}, {"body": "bed", "x": 2, "y": 5, "turn": 2, "station": "bed"}
 				]},
 				{"name": "Вариант 2", "things": [
-					{"body": "bed", "x": 1, "y": 1, "turn": 1, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 3}, {"body": "bed", "x": 3, "y": 1, "turn": 3, "station": "bed"},
-					{"body": "bed", "x": 5, "y": 1, "turn": 1, "station": "bed"}, {"body": "nightstand", "x": 6, "y": 1, "turn": 2}, {"body": "bed", "x": 7, "y": 1, "turn": 3, "station": "bed"},
+					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 3}, {"body": "bed", "x": 3, "y": 1, "turn": 3, "station": "bed"},
+					{"body": "bed", "x": 5, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 6, "y": 1, "turn": 2}, {"body": "bed", "x": 7, "y": 1, "turn": 3, "station": "bed"},
 					{"body": "nightstand", "x": 2, "y": 2, "turn": 0}, {"body": "chest", "x": 4, "y": 2, "turn": 1}, {"body": "bed", "x": 1, "y": 4, "turn": 1, "station": "bed"},
-					{"body": "nightstand", "x": 2, "y": 4, "turn": 2}, {"body": "bed", "x": 3, "y": 4, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 4, "y": 4, "turn": 0},
-					{"body": "nightstand", "x": 6, "y": 4, "turn": 0}, {"body": "bed", "x": 7, "y": 4, "turn": 3, "station": "bed"}, {"body": "chest", "x": 2, "y": 5, "turn": 3},
+					{"body": "nightstand", "x": 2, "y": 4, "turn": 2}, {"body": "bed", "x": 3, "y": 4, "turn": 1, "station": "bed"}, {"body": "nightstand", "x": 4, "y": 4, "turn": 0},
+					{"body": "nightstand", "x": 6, "y": 4, "turn": 0}, {"body": "bed", "x": 7, "y": 4, "turn": 1, "station": "bed"}, {"body": "chest", "x": 2, "y": 5, "turn": 3},
 					{"body": "plant_pot", "x": 6, "y": 5, "turn": 1}
 				]},
 				{"name": "Вариант 3", "things": [
-					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 1}, {"body": "bed", "x": 3, "y": 1, "turn": 1, "station": "bed"},
-					{"body": "bed", "x": 5, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 6, "y": 1, "turn": 0}, {"body": "bed", "x": 7, "y": 1, "turn": 1, "station": "bed"},
+					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 1}, {"body": "bed", "x": 3, "y": 1, "turn": 3, "station": "bed"},
+					{"body": "bed", "x": 5, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 6, "y": 1, "turn": 0}, {"body": "bed", "x": 7, "y": 1, "turn": 3, "station": "bed"},
 					{"body": "chest", "x": 2, "y": 2, "turn": 2}, {"body": "chest", "x": 4, "y": 2, "turn": 2}, {"body": "plant_pot", "x": 3, "y": 3, "turn": 2},
-					{"body": "bed", "x": 1, "y": 4, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 4, "turn": 0}, {"body": "bed", "x": 3, "y": 4, "turn": 1, "station": "bed"},
+					{"body": "bed", "x": 1, "y": 4, "turn": 1, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 4, "turn": 0}, {"body": "bed", "x": 3, "y": 4, "turn": 1, "station": "bed"},
 					{"body": "nightstand", "x": 6, "y": 4, "turn": 2}, {"body": "bed", "x": 7, "y": 4, "turn": 1, "station": "bed"}, {"body": "chest", "x": 2, "y": 5, "turn": 1},
 					{"body": "chest", "x": 6, "y": 5, "turn": 3}
 				]}
@@ -670,7 +670,7 @@
 			],
 			"furnish": [
 				{"name": "Вариант 1", "things": [
-					{"body": "desk", "x": 1, "y": 5, "turn": 0, "station": "desk"}
+					{"body": "desk", "x": 1, "y": 5, "turn": 2, "station": "desk"}
 				]},
 				{"name": "Вариант 2", "things": [
 					{"body": "desk", "x": 1, "y": 5, "turn": 2, "station": "desk"}
@@ -693,14 +693,14 @@
 					{"body": "bench", "x": 3, "y": 4, "turn": 0}
 				]},
 				{"name": "Вариант 2", "things": [
-					{"body": "bed", "x": 1, "y": 1, "turn": 1, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 3}, {"body": "barrel", "x": 5, "y": 1, "turn": 0},
+					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 3}, {"body": "barrel", "x": 5, "y": 1, "turn": 0},
 					{"body": "hearth", "x": 6, "y": 1, "turn": 3, "station": "hearth"}, {"body": "bench", "x": 3, "y": 2, "turn": 2}, {"body": "stool", "x": 2, "y": 3, "turn": 3},
 					{"body": "table", "x": 3, "y": 3, "turn": 2}, {"body": "crate", "x": 1, "y": 5, "turn": 2}
 				]},
 				{"name": "Вариант 3", "things": [
 					{"body": "bed", "x": 1, "y": 1, "turn": 3, "station": "bed"}, {"body": "nightstand", "x": 2, "y": 1, "turn": 1}, {"body": "stool", "x": 5, "y": 1, "turn": 2},
 					{"body": "hearth", "x": 6, "y": 1, "turn": 1, "station": "hearth"}, {"body": "chest", "x": 2, "y": 2, "turn": 2}, {"body": "bench", "x": 3, "y": 2, "turn": 0},
-					{"body": "table", "x": 3, "y": 3, "turn": 0}, {"body": "bench", "x": 3, "y": 4, "turn": 0}, {"body": "chest", "x": 1, "y": 5, "turn": 0}
+					{"body": "table", "x": 3, "y": 3, "turn": 0}, {"body": "bench", "x": 3, "y": 4, "turn": 0}, {"body": "chest", "x": 1, "y": 5, "turn": 2}
 				]}
 			]},
 		{"id": "room_small", "generic": true, "size": "small", "marks": {"E": "entry", "s": "spot:storage", "d": "spot:decor"},
@@ -747,7 +747,7 @@
 					{"body": "plant_pot", "x": 7, "y": 1, "turn": 0}, {"body": "crate", "x": 1, "y": 5, "turn": 2}
 				]},
 				{"name": "Вариант 2", "things": [
-					{"body": "statue", "x": 7, "y": 1, "turn": 2}, {"body": "chest", "x": 1, "y": 5, "turn": 0}
+					{"body": "statue", "x": 7, "y": 1, "turn": 0}, {"body": "chest", "x": 1, "y": 5, "turn": 2}
 				]},
 				{"name": "Вариант 3", "things": [
 					{"body": "statue", "x": 7, "y": 1, "turn": 0}, {"body": "crate", "x": 1, "y": 5, "turn": 2}

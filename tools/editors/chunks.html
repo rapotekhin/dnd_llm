@@ -316,6 +316,7 @@ function furnishProblems(ch) {
 		const seen = new Map();
 		for (const t of set.things || []) {
 			if (Object.keys(known).length && !known[t.body]) { out.push(`${name}: неизвестная вещь ${t.body}`); continue; }
+			if (facesWall(ch, t)) out.push(`${name}: ${bodyName(t.body)} (${t.x + 1}, ${t.y + 1}) стоит лицом к стене — поверните её (R) спиной к стене`);
 			for (const [x, y] of cellsOf(t)) {
 				if (!floor(x, y)) out.push(`${name}: ${bodyName(t.body)} (${x + 1}, ${y + 1}) не на полу`);
 				else if (stationAt(ch, x, y) && t.station !== stationAt(ch, x, y)) out.push(`${name}: ${bodyName(t.body)} (${x + 1}, ${y + 1}) на метке «${stationAt(ch, x, y)}» — там стоит её вещь`);
@@ -326,6 +327,24 @@ function furnishProblems(ch) {
 		}
 	});
 	return [...new Set(out)];
+}
+
+// A thing whose picture has a front (`back` of its body in rules.things.bodies, v0.8.4.44.3.1) with its front to a wall
+// and its back free — the stage that looked at the wall; MapSpots.back_to_wall in the game, test_backs_v08444022 alike.
+// The top of a picture after `turn` quarter turns against the clock looks n, w, s, e (LayoutGen.TOPS).
+function facesWall(ch, t) {
+	const back = bodies()[t.body]?.back;
+	if (!back) return false;
+	const rows = ch.rows || [];
+	const marks = ch.marks || {};
+	const tops = ['n', 'w', 's', 'e'];
+	const step = { n: [0, -1], w: [-1, 0], s: [0, 1], e: [1, 0] };
+	const wallAt = (x, y) => { const c = rows[y]?.[x]; return c === undefined || c === MapView.BLANK || (!(c in marks) && !!lib.cells[c]?.solid && c !== 'D' && c !== '+'); };
+	const mine = cellsOf(t);
+	const has = new Set(mine.map(([x, y]) => x + ',' + y));
+	const walled = (side) => mine.every(([x, y]) => has.has(`${x + step[side][0]},${y + step[side][1]}`) || wallAt(x + step[side][0], y + step[side][1]));
+	const k = tops.indexOf(back) + (t.turn || 0);
+	return walled(tops[(k + 2) % 4]) && !walled(tops[k % 4]);
 }
 
 // The groups of the catalog of things: the groups of spots (layouts.json → spots), the stations, the rest.
