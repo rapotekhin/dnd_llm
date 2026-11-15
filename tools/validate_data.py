@@ -105,6 +105,10 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
         errors.append(f"{where}: нет NPC {w['talk']}")
     if "item" in w and (not ({"talk", "arrive"} & set(w)) or w["item"] not in items or not top):
         errors.append(f"{where}: item — предмет каталога и только вместе с talk или arrive шага задания")
+    if "free" in w and w["free"] not in npcs:  # v0.8.4.44.5: a person not held bound
+        errors.append(f"{where}: нет NPC {w['free']}")
+    if "has" in w and items and w["has"] not in items:
+        errors.append(f"{where}: нет предмета {w['has']}")
     for k in ("quest", "quest_done"):
         if k in w and quests is not None and w[k] not in quests:
             errors.append(f"{where}: нет задания {w[k]}")
@@ -305,6 +309,16 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     wake = (pack.get("dream") or {}).get("wake", {}) if isinstance(pack.get("dream"), dict) else {}
     if wake.get("when") and not errors:
         errors += check_when(wake["when"], "pack.dream.wake.when", world.get("rooms", {}), world.get("npcs", {}), set(), False, world.get("quests", {}))
+    hint_ids: list[str] = []
+    for row in pack.get("hints", []) if not errors else []:  # v0.8.4.44.5: screens of teaching (HintRules)
+        where = f"pack.hints.{row['id']}"
+        if row["id"] in hint_ids or row["id"] == "wake":
+            errors.append(f"{where}: id повторяется")
+        if "after" in row and row["after"] not in hint_ids:
+            errors.append(f"{where}: after — id строки выше")
+        if "when" in row:
+            errors += check_when(row["when"], where, world.get("rooms", {}), world.get("npcs", {}), set(), False, world.get("quests", {}))
+        hint_ids.append(row["id"])
     if errors:
         return errors
 

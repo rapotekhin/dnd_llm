@@ -26,7 +26,7 @@ var _short_rest: SmallDialog
 var _long_rest: SmallDialog
 var _wilds: SmallDialog  # v0.7.41
 var _wait: SmallDialog  # v0.8.4.2
-var _wake: WakeBox  # v0.8.4.44.2: the dream's end
+var _lesson: HintBox  # v0.8.4.44.5: a screen of teaching, the dream's end among them
 var _track: Button  # the followed quest's step over the chat (v0.7.22.32)
 var _theft: TheftPanel
 var _container: ContainerPanel
@@ -272,6 +272,12 @@ func _ready() -> void:
 	EventBus.options_changed.connect(_on_options_changed)
 	EventBus.backend_state_changed.connect(_on_backend_state_changed)
 	EventBus.state_changed.connect(_refresh)
+	var teach := Timer.new()  # the queue of the screens of teaching looks for its next row (HintRules)
+	teach.name = "HintTimer"
+	teach.wait_time = 0.25
+	teach.autostart = true
+	teach.timeout.connect(_teach_due)
+	add_child(teach)
 	_refresh()
 	input.grab_focus.call_deferred()
 	for o: Control in _overlays() + [_pause]:
@@ -306,7 +312,7 @@ func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo():
 		return
 	var open := _overlays().filter(func(o: Control) -> bool: return o.visible)
-	if get_window().get_node_or_null("ConfirmBox") != null:
+	if get_window().get_node_or_null("ConfirmBox") != null or is_instance_valid(_lesson):
 		return
 	if event.is_action_pressed("quick_save"):
 		var err := GameState.quick_save()
@@ -801,6 +807,33 @@ func _on_arrived() -> void:
 		_walk(plan["path"])
 
 
+## The screen of teaching due now (HintRules), one at a time: never over the master's turn, a walk, a fight's animation
+## or its question, an open window or «Точно?».
+func _teach_due() -> void:
+	if is_instance_valid(_lesson) or not GameState.has_session() or GameState.is_busy() or _field.walking() or _fight.holds() 			or _pause.visible or trade_panel.visible or get_window().get_node_or_null("ConfirmBox") != null 			or _overlays().any(func(o: Control) -> bool: return o.visible):
+		return
+	var row := GameState.hint_due()
+	if row.is_empty():
+		return
+	_lesson = HintBox.open(self, row, _point_rect.bind(str(row.get("point", ""))))
+	GameState.hint_shown(row)
+
+
+## Where a screen of teaching points (HintRules `point`): a control of the screen by its name, a person, a creature or a
+## thing of the map by its pack id; an empty rect — nothing to point at now.
+func _point_rect(point: String) -> Rect2:
+	if point.is_empty():
+		return Rect2()
+	if point.begins_with(HintRules.MAP):
+		var ref := HintRules.map_ref(GameState.session, Catalog.data, point.trim_prefix(HintRules.MAP)) if GameState.has_session() else ""
+		return _field.cell_rect(_field.cell_of(ref)) if not ref.is_empty() else Rect2()
+	var c := find_child(point, true, false) as Control
+	if c != null and not c.is_visible_in_tree():
+		(UiScenes.need(self, "%Bar") as ActionBar).reveal(c)  # a cell with no room on the bar: its tab shows it
+		return Rect2()
+	return c.get_global_rect() if c != null else Rect2()
+
+
 func _on_options_changed(_options_list: Array[String]) -> void:
 	_refresh()
 
@@ -833,8 +866,6 @@ func _refresh() -> void:
 		input.release_focus()  # the fight's keys are not letters of the chat; typing still lands in the input
 	_was_fight = _fight.active()
 	var s0 := GameState.session if GameState.has_session() else null
-	if s0 != null and not busy and _wake == null and DreamRules.wake_due(s0, Catalog.data):
-		_wake = WakeBox.open(self, DreamRules.wake_text(Catalog.data))
 	brush.visible = SaveManager.images_enabled() and not Backend.image_models().is_empty()
 	brush.disabled = not online or GameState.drawing or s0 == null or ImageFrame.event_index(s0) < 0
 	brush.tooltip_text = "BTN_DRAW_EVENT_BUSY" if GameState.drawing else "BTN_DRAW_EVENT"

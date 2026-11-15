@@ -3,7 +3,7 @@ extends RefCounted
 ## One language of conditions (v0.7.68): a quest step's `when` and `needs`, a way's `when`, a room's and a trader's
 ## variant `when`, a row of `requires` (Require) are all read here. One fact: `encounter` (with `defeat` — a fight won, not
 ## slipped past), `secret` "room:id", `room` (been there), `arrive` (there now), `flag`, `not_flag`, `quest` (taken),
-## `quest_done`; `all` / `any` of facts. `item` with `qty` — the hero carries it, beside the fact. `has` — the hero carries
+## `quest_done`, `free` (a person not held bound as a creature: set free or never caught, v0.8.4.44.5); `all` / `any` of facts. `item` with `qty` — the hero carries it, beside the fact. `has` — the hero carries
 ## this thing: enough by itself, whatever the fact beside it (a quest's find closed by the thing got another way, v0.8.4.42.1). Facts of the place, read
 ## with `data` (v0.8.4.27.4): `terrain` — the location's terrain is one of these, `weather` — today's weather here under the
 ## open sky is one of these (WeatherRules.here).
@@ -30,6 +30,8 @@ static func met(s: GameSession, when: Dictionary, data: Dictionary = {}) -> bool
 		return s.visited.has(str(when["room"]))
 	if when.has("arrive"):  # the master's quests (v0.7.34.4): the hero is there now, whatever was before
 		return s.room_id == str(when["arrive"])
+	if when.has("free"):
+		return not s.held_as_creature(str(when["free"]))
 	if when.has("flag"):
 		return s.flags.has(str(when["flag"]))
 	if when.has("not_flag"):  # v0.7.46: a ford open while it is not flooded

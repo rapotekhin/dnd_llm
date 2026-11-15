@@ -308,6 +308,18 @@ func current() -> String:
 	return _filter
 
 
+## A cell of the grid with no room on the bar now (a screen of teaching points at it, HintBox, v0.8.4.44.5): its kind's
+## tab alone shows it. False — no cell of the bar, shown already, or its tab is up.
+func reveal(cell: Control) -> bool:
+	if cell == null or not is_ancestor_of(cell) or cell.is_visible_in_tree():
+		return false
+	for k: String in _stage:
+		if KEYS.has(k) and _cells_of(k).has(cell) and str(KEYS[k][1]) != _filter:
+			set_filter(str(KEYS[k][1]))
+			return true
+	return false
+
+
 ## After a fill: the cells take their icons and their slots.
 func tidy() -> void:
 	for k: String in _stage:

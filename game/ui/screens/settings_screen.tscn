@@ -390,6 +390,19 @@ layout_mode = 2
 tooltip_text = "OPT_CONFIRM_RISKY_TIP"
 text = "OPT_CONFIRM_RISKY"
 
+[node name="HintsOn" type="CheckBox" parent="Col/Tabs/Controls/ControlsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "OPT_HINTS_ON_TIP"
+text = "OPT_HINTS_ON"
+
+[node name="HintsReset" type="Button" parent="Col/Tabs/Controls/ControlsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+tooltip_text = "BTN_HINTS_RESET_TIP"
+text = "BTN_HINTS_RESET"
+
 [node name="DevMode" type="CheckBox" parent="Col/Tabs/Controls/ControlsBox"]
 unique_name_in_owner = true
 layout_mode = 2

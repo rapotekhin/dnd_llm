@@ -68,10 +68,11 @@ func test_the_tutorial_begins_in_the_dream_with_no_things_and_its_spells() -> vo
 func test_waking_begins_the_mark_from_the_same_choices_with_nothing_of_the_dream() -> void:
 	var choices := _dream()
 	var s := GameState.session
-	assert_bool(DreamRules.wake_due(s, Catalog.data)).is_false()
-	ExplorationRules.place(s, "dream-7")  # the hero came into the last hall
-	assert_bool(DreamRules.wake_due(s, Catalog.data)).is_true()
-	assert_str(DreamRules.wake_text(Catalog.data)).contains("Пепел над Маркой")
+	assert_str(str(GameState.hint_due().get("button", ""))).is_not_equal(HintRules.WAKE)
+	ExplorationRules.place(s, "dream-7")  # the hero came into the last hall: the last screen of teaching (v0.8.4.44.5)
+	var wake := GameState.hint_due()
+	assert_str(str(wake.get("button", ""))).is_equal(HintRules.WAKE)
+	assert_str(str(wake["text"])).contains("Пепел над Маркой")
 	GameState.wake()
 	var woke := GameState.session
 	assert_str(Catalog.active_world).is_equal("frontier")

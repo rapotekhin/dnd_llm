@@ -291,6 +291,7 @@
 		"tracked_quest": "",
 		"epitaph": "",
 		"dream": {},
+		"hints": {},
 		"traps": {},
 		"trespass_warned": {},
 		"turn_counter": 2,

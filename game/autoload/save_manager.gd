@@ -44,6 +44,9 @@ var inventory_view: Dictionary = {}
 var hotbar: Dictionary = {}
 ## The tutorial was played to its end (v0.8.4.44.2): the new game screen's «Обучение» is off by default.
 var tutorial_done: bool = false
+## First-time hints (HintRules, v0.8.4.44.5): shown at all, and the ids this player has seen — the profile's, not a save's.
+var hints_on: bool = true
+var hints_seen: Array = []
 const COMBAT_SPEEDS := {"slow": 1.0, "normal": 0.6, "fast": 0.25, "instant": 0.0}
 const UI_SCALES: Array[float] = [0.85, 1.0, 1.15, 1.3]
 
@@ -192,6 +195,8 @@ func load_settings() -> void:
 		inventory_view = cfg.get_value("ui", "inventory", {})
 		hotbar = cfg.get_value("ui", "hotbar", {})
 		tutorial_done = bool(cfg.get_value("game", "tutorial_done", false))
+		hints_on = bool(cfg.get_value("game", "hints_on", true))
+		hints_seen = cfg.get_value("game", "hints_seen", [])
 	Hotkeys.apply(keys)
 
 
@@ -215,6 +220,8 @@ func save_settings() -> void:
 	cfg.set_value("ui", "hotbar", hotbar)
 	cfg.set_value("game", "dev_mode", dev_mode)
 	cfg.set_value("game", "tutorial_done", tutorial_done)
+	cfg.set_value("game", "hints_on", hints_on)
+	cfg.set_value("game", "hints_seen", hints_seen)
 	cfg.save(settings_path)
 
 

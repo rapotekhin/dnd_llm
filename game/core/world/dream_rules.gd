@@ -5,7 +5,7 @@ extends RefCounted
 ## the master makes nothing of the pack's `closed` kinds there (EffectEngine, the prompt); the hero comes into it with
 ## no things — its spells stay; when `wake.when` holds, the player wakes: a new game of the real world begins from the
 ## same creation choices and settings, at level 1 with its starting kit, and nothing of the dream remains (the session
-## is a new one). The profile remembers the tutorial was played (SaveManager.tutorial_done).
+## is a new one): the last screen of teaching says so (wake_row). The profile remembers the tutorial was played (SaveManager.tutorial_done).
 
 
 ## The dream part of a pack: {wake?}; {} — a world of its own.
@@ -30,15 +30,14 @@ static func begin(s: GameSession, data: Dictionary, world_id: String, choices: D
 	CharacterRules.refresh(s.character, data, s.items)
 
 
-## The dream asks to wake now: its `wake.when` holds (Cond).
-static func wake_due(s: GameSession, data: Dictionary) -> bool:
-	var wake: Dictionary = of(data.get("pack", {})).get("wake", {})
-	return not s.dream.is_empty() and wake.get("when") is Dictionary and Cond.met(s, wake["when"], data)
-
-
-## The words of waking: the pack's own.
-static func wake_text(data: Dictionary) -> String:
-	return str(of(data.get("pack", {})).get("wake", {}).get("text", ""))
+## The dream's end as a screen of teaching (HintRules, v0.8.4.44.5): `wake.when` and its words, «Проснуться» instead of
+## «Продолжить» — the last row of the queue, shown in every dream whatever the hints' setting; {} — not a dream.
+static func wake_row(pack: Dictionary) -> Dictionary:
+	var wake: Dictionary = of(pack).get("wake", {})
+	if not wake.get("when") is Dictionary:
+		return {}
+	return {"id": HintRules.WAKE, "when": wake["when"], "title": TranslationServer.translate("WAKE_TITLE"), "text": str(wake.get("text", "")),
+		"once": HintRules.GAME, "button": HintRules.WAKE}
 
 
 ## The settings the real game begins with: the new game screen's, without the dream's tick.

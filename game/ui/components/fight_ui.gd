@@ -135,6 +135,11 @@ func active() -> bool:
 	return GameState.has_session() and CombatRules.active(GameState.session)
 
 
+## A moment a screen of teaching waits for (HintBox): a strike still drawn, a question or a reaction asked.
+func holds() -> bool:
+	return active() and (_ask.visible or _anims.busy())
+
+
 func mine() -> bool:
 	return active() and not CombatRules.actor(GameState.session).is_empty() and not GameState.is_busy() and Backend.is_ready()
 

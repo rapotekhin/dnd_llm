@@ -87,6 +87,14 @@ static func validate(b: Dictionary, base: Dictionary) -> Array[String]:
 		e.append("pack.dream: wake {when — одно условие, text}")  # v0.8.4.44.2
 	if p.has("closed") and not _strings(p["closed"]):
 		e.append("pack.closed: список видов эффектов (create:…)")
+	var hint_ids: Array = []
+	for row: Variant in p.get("hints", []) if p.get("hints", []) is Array else [null]:  # v0.8.4.44.5
+		for f: String in HintRules.faults(row, hint_ids):
+			e.append("pack.hints: " + f)
+		if row is Dictionary:
+			hint_ids.append(str(row.get("id", "")))
+			if row.has("when") and not _when_ok(row["when"], false):
+				e.append("pack.hints: %s: when — одно условие" % row.get("id", ""))
 	if not e.is_empty():
 		return e
 	var data := apply_rules(base, b)
@@ -427,5 +435,5 @@ static func _when_ok(when: Variant, top: bool) -> bool:
 		return top
 	if k in ["all", "any"]:
 		return when[k] is Array and not (when[k] as Array).is_empty() and (when[k] as Array).all(func(w: Variant) -> bool: return _when_ok(w, false))
-	return k in ["encounter", "secret", "room", "arrive", "flag", "not_flag", "quest", "quest_done"]
+	return k in ["encounter", "secret", "room", "arrive", "flag", "not_flag", "quest", "quest_done", "free", "has"]
 

@@ -96,6 +96,28 @@ func walk_up(s: GameSession, data: Dictionary, id: String) -> bool:
 	return true
 
 
+## The screens of teaching as they come (HintBox, v0.8.4.44.5): each one's id, whether it points where its row says, a
+## shot of it, then «Продолжить» — until none comes within `wait_s`; the dream's end is left up. The ids in order.
+func lessons(prefix: String, wait_s: float = 2.0) -> Array[String]:
+	var ids: Array[String] = []
+	while ids.size() < 12:
+		await wait_until(func() -> bool: return not node("GameState").is_busy(), 90.0)
+		if not await wait_until(func() -> bool: return not find_all(get_root(), "HintBox").is_empty(), wait_s):
+			break
+		var box: Node = find_all(get_root(), "HintBox")[0]
+		await frames(4)
+		var row: Dictionary = box.get("row")
+		ids.append(str(row["id"]))
+		if not str(row.get("point", "")).is_empty():
+			step("the screen «%s» points at %s" % [row["id"], row["point"]], (box.call("target") as Rect2).has_area())
+		await shot("%s_%s" % [prefix, row["id"]])
+		if str(row.get("button", "")) == HintRules.WAKE:
+			break
+		await press(find(box, "HintContinue"))
+		await frames(3)  # freed at the frame's end; the next comes with the queue's timer
+	return ids
+
+
 func find_all(from: Node, cls: String) -> Array[Node]:
 	var out: Array[Node] = []
 	for n in from.find_children("*", "", true, false):

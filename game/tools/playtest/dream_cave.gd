@@ -4,7 +4,9 @@ extends "res://tools/playtest/playtest_base.gd"
 ## things; the found trap is gone around; the body of the second hall is searched and its armour put on; the second
 ## trap springs on the way out whatever was searched; the fighter is untied and goes along, the archer's body searched;
 ## the cleric waits under the goblins' guard; the fifth hall's step brings the hero and the fighter to the 2nd level.
-## The fights themselves are the combat scenarios': here they are counted fought.
+## The fights themselves are the combat scenarios': here they are counted fought. v0.8.4.44.5: the screens of teaching of
+## each hall are shot as they come, darkened with their arrow, and passed by «Продолжить»; the fourth hall's ready words
+## and the sixth's three are the only options under the chat.
 
 
 func _go(gs: Node, to: String) -> bool:
@@ -35,7 +37,10 @@ func run() -> void:
 	step("the hall is drawn of its own chunk", str(map["picks"]["dream-1"]["chunk"]) == "dream_1")
 	step("the old chest stands on the map", MapSpots.of(s, data, map).any(func(t: Dictionary) -> bool: return str(t["ref"]) == "prop:f_chest"))
 	step("no trap seen in passing", ExplorationRules.found_traps(s, data["world"], "dream-1").is_empty())
+	step("the first hall's screens: walking, then «Осмотреться»", await lessons("teach") == ["walk", "look"])
 	await shot("hall_1")
+	await tap("LookButton")
+	step("after the look — «Обыскать»", await lessons("teach") == ["search"])
 
 	await tap("SearchButton")
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
@@ -75,12 +80,14 @@ func run() -> void:
 		await _go(gs, "dream-2")
 	if not step("in the hall of bones", s.room_id == "dream-2", s.room_id):
 		return
+	step("the body's screen", await lessons("teach") == ["body"])
 	var body: Array = CreatureRules.here(s, "dream-2").filter(func(c: Dictionary) -> bool: return str(c["state"]) == CreatureRules.DEAD)
 	step("the body lies by the wall", not body.is_empty())
 	await shot("hall_2")
 	step("the body searched", not body.is_empty() and gs.creature_act(str(body[0]["id"]), "search").is_empty()
 		and gs.container_take_all(CreatureRules.BOX + str(body[0]["id"])).is_empty()
 		and int(s.character["inventory"].get("leather_armor", 0)) == 1 and int(s.character["inventory"].get("shield", 0)) == 1, str(s.character["inventory"]))
+	step("the armour taken — the screen of gear", await lessons("teach") == ["gear"])
 	step("the leather armour put on", gs.equip("leather_armor", "armor").is_empty() and str(s.character["equipped"].get("armor", "")) == "leather_armor",
 		str(s.character["equipped"]))
 	var hp := int(s.character["hp"])
@@ -89,6 +96,7 @@ func run() -> void:
 		"%d → %d" % [hp, int(s.character["hp"])])
 	if not step("in the hall of the rings", s.room_id == "dream-3", s.room_id):
 		return
+	step("the third hall's screens: the wound, then the captive", await lessons("teach") == ["hurt", "captive"])
 	await shot("hall_3")
 	step("the fighter is bound, nothing on him", s.held_as_creature("npc_dream_fighter") and (Gear.of(s, data, "npc_dream_fighter")["inventory"] as Dictionary).is_empty())
 	step("«Развязать»", gs.creature_act("npc_dream_fighter", "untie").is_empty())
@@ -99,6 +107,7 @@ func run() -> void:
 	step("the archer's bow, arrows and quiver", not archer.is_empty() and gs.creature_act(str(archer[0]["id"]), "search").is_empty()
 		and gs.container_take_all(CreatureRules.BOX + str(archer[0]["id"])).is_empty()
 		and int(s.character["inventory"].get("shortbow", 0)) == 1 and int(s.character["inventory"].get("quiver", 0)) == 1, str(s.character["inventory"]))
+	step("the quiver taken — the screen of arrows", await lessons("teach") == ["arrows"])
 	await shot("hall_3_party")
 
 	step("the goblins wait in their den, the guards in the grotto", not EncounterRules.live(s, data, "dream-4").is_empty() and not EncounterRules.live(s, data, "dream-5").is_empty())
@@ -111,6 +120,9 @@ func run() -> void:
 	await frames(4)
 	step("the cleric does not go along by herself", not Being.follows(s, "npc_dream_cleric"))
 	step("talked into it at DC 2", int(SocialRules.dc(s, data, "npc_dream_cleric", "persuasion", "easy")["dc"]) == 2)
+	step("the cleric free — the screen of improvising", await lessons("teach") == ["improvise"])
+	step("its ready words the only option, Persuasion against DC 2", s.options.size() == 1 and s.options[0].contains("жрице")
+		and int(gs.option_preview(0).get("dc", -1)) == 2, "%s, %s" % [s.options, gs.option_preview(0)])
 	await shot("hall_4")
 
 	s.encounters_done.append("dream_guards")
@@ -119,9 +131,12 @@ func run() -> void:
 		str(s.character["xp"]))
 	step("and the fighter beside", GrowthRules.ready(s, data, "npc_dream_fighter"))
 	await shot("hall_5_level")
-	for i in [6, 7]:
-		await _go(gs, "dream-%d" % i)
-		await shot("hall_%d" % i)
+	await _go(gs, "dream-6")
+	step("the sixth hall's screen and its three asks", await lessons("teach") == ["making"] and s.options.size() == 3, str(s.options))
+	await shot("hall_6")
+	await _go(gs, "dream-7")
+	step("the last hall: the dream's end, «Проснуться»", await lessons("teach") == ["wake"])
+	await shot("hall_7")
 	step("«Найти выход» done in the last hall", s.quests_done.has("find_the_exit"), str(s.quests_active))
 	sm.tutorial_done = false
 	sm.save_settings()

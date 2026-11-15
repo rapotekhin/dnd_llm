@@ -327,6 +327,14 @@ func cell_point(cell: Vector2i) -> Vector2:
 	return _corner + (Vector2(cell) + Vector2(0.5, 0.5)) * _tile
 
 
+## A square on the screen (global), cut by the field; off the field's frame — the field itself, (-1, -1) — nothing.
+func cell_rect(cell: Vector2i) -> Rect2:
+	if cell.x < 0:
+		return Rect2()
+	var r := Rect2(global_position + _corner + Vector2(cell) * _tile, Vector2.ONE * _tile).intersection(get_global_rect())
+	return r if r.has_area() else get_global_rect()
+
+
 ## Who or what is on a square: its ref, "" — nothing.
 func ref_at(cell: Vector2i) -> String:
 	for f: Dictionary in fighters:

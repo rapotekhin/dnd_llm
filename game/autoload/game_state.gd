@@ -2104,6 +2104,25 @@ func wake() -> void:
 	new_game(CharacterBuilder.build(choices, Catalog.data), settings)
 
 
+## The screen of teaching due now (HintRules): the first of the pack's queue, {} — none.
+func hint_due() -> Dictionary:
+	if session == null:
+		return {}
+	return HintRules.due(session, Catalog.data, SaveManager.hints_seen, SaveManager.hints_on)
+
+
+## A screen of teaching is up: this game remembers it, the profile too for a first-time hint; its phrases are the
+## master's options for the moment, his own taken away (the tutorial's ready words, v0.8.4.44.5).
+func hint_shown(row: Dictionary) -> void:
+	if HintRules.shown(session, row) and not SaveManager.hints_seen.has(str(row["id"])):
+		SaveManager.hints_seen.append(str(row["id"]))
+		SaveManager.save_settings()
+	var ph := HintRules.phrases(row)
+	if not ph.is_empty():
+		var texts: Array[String] = ph["texts"]
+		_set_options(texts, [], ph["checks"])
+
+
 func continue_as_heir(character: Dictionary) -> void:
 	var s := session
 	if s == null or character.is_empty() or FamilyRules.heir(s, Catalog.data).is_empty():

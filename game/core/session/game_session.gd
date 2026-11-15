@@ -51,6 +51,8 @@ var settings: Dictionary = {}
 ## A game in a dream before its world (DreamRules, v0.8.4.44.2): {world, choices, settings} the real game begins from on
 ## waking; {} — a game of its own world.
 var dream: Dictionary = {}
+## The screens of teaching shown in this game (HintRules, v0.8.4.44.5): {hint_id: the turn it came at}.
+var hints: Dictionary = {}
 var room_id: String = ""
 var mode: String = MODE_EXPLORATION
 ## The conversation partner in social / trade.
@@ -521,6 +523,7 @@ func to_dict(kept_chat: int) -> Dictionary:
 		"world_version": world_version,
 		"settings": settings,
 		"dream": dream,
+		"hints": hints,
 		"room_id": room_id,
 		"mode": mode,
 		"npc_id": npc_id,
@@ -608,6 +611,7 @@ static func from_dict(saved: Dictionary) -> GameSession:
 	s.world_version = str(d.get("world_version", ""))
 	s.settings = d.get("settings", {})
 	s.dream = d.get("dream", {})
+	s.hints = d.get("hints", {})
 	s.room_id = str(d.get("room_id", ""))
 	s.mode = str(d.get("mode", MODE_EXPLORATION))
 	s.npc_id = str(d.get("npc_id", ""))
