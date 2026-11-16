@@ -84,7 +84,7 @@ def check_when(w: dict, where: str, rooms: dict, npcs: dict, items: set, top: bo
     """A condition of the one language (Cond): one fact (encounter, secret, room, flag, quest), a button (talk with an
     item, choice — only on a quest step), or all / any of facts."""
     errors: list[str] = []
-    keys = set(w) - {"item", "qty"}  # v0.7.44: qty of the item handed over
+    keys = set(w) - {"item", "qty", "defeat"}  # v0.7.44: qty of the item handed over; an encounter's defeat — won, not slipped past
     if len(keys) != 1:
         return [f"{where}: в when ровно одно условие (item — только к talk или arrive)"]
     if ("talk" in w or "choice" in w) and not top:
@@ -309,6 +309,10 @@ def validate_pack(pack_dir: Path, ids: dict[str, set[str]]) -> list[str]:
     wake = (pack.get("dream") or {}).get("wake", {}) if isinstance(pack.get("dream"), dict) else {}
     if wake.get("when") and not errors:
         errors += check_when(wake["when"], "pack.dream.wake.when", world.get("rooms", {}), world.get("npcs", {}), set(), False, world.get("quests", {}))
+    fall = (pack.get("dream") or {}).get("fall", {}) if isinstance(pack.get("dream"), dict) else {}
+    for rid in fall.get("end", []) if isinstance(fall, dict) else []:  # v0.8.4.44.7: the halls where a death ends the dream
+        if rid not in world.get("rooms", {}):
+            errors.append(f"pack.dream.fall.end: нет комнаты {rid}")
     hint_ids: list[str] = []
     for row in pack.get("hints", []) if not errors else []:  # v0.8.4.44.5: screens of teaching (HintRules)
         where = f"pack.hints.{row['id']}"

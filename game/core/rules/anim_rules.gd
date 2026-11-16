@@ -116,8 +116,7 @@ static func of_blow(s: GameSession, data: Dictionary, f: Dictionary, t: Dictiona
 
 ## A save action of a template (a breath, a gaze, a song): by its area.
 static func of_save(data: Dictionary, a: Dictionary) -> String:
-	var area := str(a.get("effect", {}).get("area", {}).get("type", ""))
-	return str(cfg(data)["save_by_area"].get(area, "burst"))
+	return str(cfg(data)["save_by_area"].get(str(MonsterRules.area_of(a).get("type", "")), "burst"))
 
 
 ## "Claw (Bite in Beast Form)" → "Claw".

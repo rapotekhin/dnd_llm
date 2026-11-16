@@ -19,6 +19,7 @@ var combat_playing: bool = false
 var combat_delay: float = 0.6
 var instant_walk := false  # a walk on the map ends at once: the playtests
 const COMBAT_SAVE := "autosave_combat"
+const DREAM_SAVE := "autosave_dream"  ## the dream's checkpoint: the moment before the hero walks into a hall (v0.8.4.44.7)
 
 var _last_kind: String = ""
 var _last_input: String = ""
@@ -120,6 +121,8 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 		_told(begun)
 	TimeRules.settle(s, Catalog.data)  # a festival and the weather of the first day (v0.7.44, v0.7.46)
 	RumorRules.seed(s, Catalog.data)  # the pack's talk (v0.7.47)
+	if not s.dream.is_empty():  # the first hall's checkpoint: a death there begins the dream again (v0.8.4.44.7)
+		SaveManager.save_slot(DREAM_SAVE, s)
 	_request("enter", "")
 
 
@@ -666,8 +669,44 @@ func short_rest(dice: int) -> String:
 func _exhaustion_death() -> bool:
 	if session == null or not ConditionRules.dead(session.character) or CombatRules.active(session):
 		return false
-	_request("death", "Герой умирает от истощения (шестая степень).\n" + _hero_path())
+	_hero_dies("Герой умирает от истощения (шестая степень).\n" + _hero_path())
 	return true
+
+
+## The hero dies (a fight lost, exhaustion): the master's epitaph and the death screen. In a dream (DreamRules.fall) — not a
+## death: the hall again from its entry; in its last hall the dream is over and the wake comes.
+func _hero_dies(input: String) -> void:
+	match DreamRules.fall(session, Catalog.data):
+		DreamRules.BACK:
+			if SaveManager.has_slot(DREAM_SAVE):
+				_dream_again.call_deferred()
+				return
+		DreamRules.END:
+			DreamRules.end(session, Catalog.data)
+			return
+	_request("death", input)
+
+
+## The dream's checkpoint (v0.8.4.44.7): the moment before the hero walks into a hall it has not seen — a death there brings it
+## back to this moment and walks it in again.
+func _dream_entry(room_id: String) -> void:
+	if session.dream.is_empty() or session.visited.has(room_id):
+		return
+	session.dream["again"] = room_id
+	SaveManager.save_slot(DREAM_SAVE, session)
+	session.dream.erase("again")
+
+
+## Back to the dream's checkpoint after a death: the save loaded, the hall walked into again (the first one told anew).
+func _dream_again() -> void:
+	if not load_from(DREAM_SAVE).is_empty():
+		_request("death", _hero_path())
+		return
+	_add(GameSession.system_entry("DREAM_AGAIN"))
+	var again := str(session.dream.get("again", ""))
+	session.dream.erase("again")
+	if again.is_empty() or not go(again):
+		_request("enter", "")
 
 
 ## The hero cannot act outside a fight (asleep, paralysed for a while — v0.7.8): the engine lets the time pass until
@@ -700,6 +739,9 @@ func prepare_spells(ids: Array) -> String:
 
 
 # --- combat (v0.6.1, CombatRules) ---------------------------------------------------------------
+
+
+const DREAM_END := "dream_end"  ## the outcome of a fight lost in the dream's last hall: the dream is over (v0.8.4.44.7)
 
 
 ## Starts a fight: an autosave to come back to, the combat screen, the master describes the start.
@@ -1654,6 +1696,10 @@ func _combat_outcome() -> void:
 		return
 	s.combat["narrated"] = true
 	var outcome := str(s.combat["outcome"])
+	if outcome in ["dead", "captured"] and DreamRules.fall(s, Catalog.data) == DreamRules.END:  # the dream's last hall: lost or taken — the end (v0.8.4.44.7)
+		outcome = DREAM_END
+		s.combat["outcome"] = outcome
+		DreamRules.end(s, Catalog.data)
 	if outcome in ["victory", "truce"]:
 		CombatRules.results(s, Catalog.data)
 		var xp_lines := XpRules.share(s, Catalog.data, int(s.combat["xp"]), "бой", GrowthRules.fought(s))  # split with the followers who fought (v0.8.4.42.2)
@@ -1668,7 +1714,7 @@ func _combat_outcome() -> void:
 	story.append_array(log)
 	story = story.slice(maxi(0, story.size() - int(CombatRules.cfg(Catalog.data)["told"]["lines"])))
 	if outcome == "dead":
-		_request("death", "\n".join(story) + "\n" + _hero_path())
+		_hero_dies("\n".join(story) + "\n" + _hero_path())
 	else:
 		_request("combat_round", "\n".join(story) + "\nИтог боя: " + tr("COMBAT_OUTCOME_" + outcome.to_upper()))
 
@@ -2500,6 +2546,7 @@ func _enter_ready(lines: Array[String]) -> bool:
 ## The engine side of a step into `room_id` (no master, no fight): sneaking past people, time, passive Perception,
 ## caches, quest steps. Appends the lines; returns what passive Perception found on entering.
 func _step(room_id: String, lines: Array[String]) -> Array[String]:
+	_dream_entry(room_id)  # every road into a hall: a walk, fast travel, a trap passed, the master's move (v0.8.4.44.7)
 	var from := session.room_id
 	if session.sneak_noticed != room_id:
 		session.sneak_noticed = ""  # a new room: people there have not seen the player sneak yet
@@ -3822,7 +3869,7 @@ func _apply_result(s: GameSession, turn_id: String, result: Dictionary, turn_kin
 		if not slept.is_empty():
 			_told(slept)
 	if ConditionRules.dead(s.character) and turn_kind != "death":
-		_request.call_deferred("death", "Герой умирает от истощения (шестая степень).\n" + _hero_path())
+		_hero_dies.call_deferred("Герой умирает от истощения (шестая степень).\n" + _hero_path())
 		return ""
 	if int(s.character["hp"]) <= 0:
 		var out := ExplorationRules.knock_out(s)

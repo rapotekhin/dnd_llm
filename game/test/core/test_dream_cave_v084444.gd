@@ -105,7 +105,7 @@ func test_the_dead_of_the_halls_carry_what_the_pack_gives() -> void:
 	assert_dict(body["contents"]).is_equal({"leather_armor": 1, "shortsword": 1, "shield": 1})
 	var s3 := _at("dream-3")
 	CreatureRules.seed(s3, dream, "dream-3")
-	var archer: Array = CreatureRules.here(s3, "dream-3").filter(func(c: Dictionary) -> bool: return str(c.get("pack", "")) == "archer")
+	var archer: Array = CreatureRules.here(s3, "dream-3").filter(func(c: Dictionary) -> bool: return str(c.get("pack_row", "")) == "archer")
 	assert_dict(archer[0]["contents"]).contains_keys(["shortbow", "arrows", "quiver", "longsword", "chain_shirt"])
 
 

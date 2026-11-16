@@ -57,6 +57,7 @@ const NESTED := {
 		"hand_day": TYPE_INT, "bond_day": TYPE_INT, "tame_day": TYPE_INT, "hungry": TYPE_INT, "scout_day": TYPE_INT, "scouts": TYPE_INT,
 		"pack": TYPE_DICTIONARY, "cart": TYPE_DICTIONARY, "waiting": TYPE_BOOL, "rent_day": TYPE_INT, "rent_from": TYPE_STRING,
 		"contents": TYPE_DICTIONARY, "coins_cp": TYPE_INT, "x": TYPE_INT, "y": TYPE_INT, "until": TYPE_INT, "spell": TYPE_STRING, "carries_lb": TYPE_INT,
+		"pack_row": TYPE_STRING, "near": TYPE_STRING, "remains": TYPE_BOOL,
 	},
 	"summon": {
 		"id": TYPE_STRING, "n": TYPE_INT, "spell": TYPE_STRING, "monster": TYPE_STRING, "name": TYPE_STRING, "until": TYPE_INT,

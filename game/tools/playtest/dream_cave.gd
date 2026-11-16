@@ -7,7 +7,8 @@ extends "res://tools/playtest/playtest_base.gd"
 ## The fights themselves are the combat scenarios': here they are counted fought. v0.8.4.44.5: the screens of teaching of
 ## each hall are shot as they come, darkened with their arrow, and passed by «Продолжить»; the fourth hall's ready words
 ## and the sixth's three are the only options under the chat. v0.8.4.44.6: the sixth hall's first ask makes a legendary
-## sword past every budget.
+## sword past every budget. v0.8.4.44.7: a death in the fifth hall brings the hero back to its entry, the hall walked into
+## again; the seventh is the red dragon's — its screen, the hero burnt (or taken), the dream over, «Проснуться».
 
 
 func _go(gs: Node, to: String) -> bool:
@@ -104,7 +105,7 @@ func run() -> void:
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(4)
 	step("the fighter goes along", Being.follows(s, "npc_dream_fighter"))
-	var archer: Array = CreatureRules.here(s, "dream-3").filter(func(c: Dictionary) -> bool: return str(c.get("pack", "")) == "archer")
+	var archer: Array = CreatureRules.here(s, "dream-3").filter(func(c: Dictionary) -> bool: return str(c.get("pack_row", "")) == "archer")
 	step("the archer's bow, arrows and quiver", not archer.is_empty() and gs.creature_act(str(archer[0]["id"]), "search").is_empty()
 		and gs.container_take_all(CreatureRules.BOX + str(archer[0]["id"])).is_empty()
 		and int(s.character["inventory"].get("shortbow", 0)) == 1 and int(s.character["inventory"].get("quiver", 0)) == 1, str(s.character["inventory"]))
@@ -132,6 +133,12 @@ func run() -> void:
 		str(s.character["xp"]))
 	step("and the fighter beside", GrowthRules.ready(s, data, "npc_dream_fighter"))
 	await shot("hall_5_level")
+	gs._hero_dies("")  # v0.8.4.44.7: a death in the dream — not the hero's: back to the entry of this hall
+	step("a death brings the hall back", await wait_until(func() -> bool: return gs.session != s and not gs.is_busy(), 60.0))
+	s = gs.session
+	step("walked into the fifth hall again, the 2nd level still at hand", s.room_id == "dream-5" and LevelUp.can_level_up(s.character, data)
+		and s.chat.any(func(e: Dictionary) -> bool: return str(e.get("key", "")) == "DREAM_AGAIN"), s.room_id)
+	await shot("hall_5_again")
 	await _go(gs, "dream-6")
 	step("the sixth hall's screen and its three asks", await lessons("teach") == ["making"] and s.options.size() == 3, str(s.options))
 	await shot("hall_6")
@@ -143,7 +150,35 @@ func run() -> void:
 		return str(ItemRules.def_of(data["items"], s.items, id).get("rarity", "")) == "legendary")
 	step("the sixth hall makes a legendary sword outside the budget", made.size() == 1 and s.reward_spent == spent and s.magic_given == 0, str(s.character["inventory"]))
 	await shot("hall_6_made")
-	await _go(gs, "dream-7")
+	gs.go("dream-7")
+	step("the last hall: the red dragon's fight", await wait_until(func() -> bool: return CombatRules.active(s) and not gs.is_busy(), 90.0))
+	step("its screen: the dragon need not be beaten", await lessons("teach") == ["dragon"])
+	var dragon := CombatRules.fighter(s, CombatRules.enemies(s)[0])
+	step("the dragon with its legendary actions", str(dragon.get("monster", "")) == "adult_red_dragon" and MonsterRules.legendary_left(data, dragon) == 3)
+	await shot("hall_7_dragon")
+	s.character["hp"] = 1
+	for id: String in CombatRules.friends_of(s, CombatRules.player(s)):
+		Sheet.holder(s, CombatRules.fighter(s, id))["hp"] = 1
+	dragon["hp"] = 2000
+	node("EventBus").state_changed.emit()
+	var turns := 0
+	while CombatRules.active(s) and str(s.combat.get("outcome", "")).is_empty() and turns < 60:
+		if not await wait_until(func() -> bool: return (CombatRules.player_can_act(s) and not gs.is_busy()) or not str(s.combat.get("outcome", "")).is_empty(), 120.0):
+			break
+		if not str(s.combat.get("outcome", "")).is_empty():
+			break
+		turns += 1
+		gs.combat_end_turn()
+		await frames(2)
+	await wait_until(func() -> bool: return not gs.is_busy(), 120.0)
+	var legendary := s.chat.any(func(e: Dictionary) -> bool: return str(e.get("lines", e.get("log", ""))).contains("легендарное действие"))
+	step("the fight lost in the last hall ends the dream", str(s.combat.get("outcome", "")) == "dream_end" and s.flags.has("dream_end"),
+		"%s after %d turns" % [s.combat.get("outcome", ""), turns])
+	step("info: legendary actions seen", true, str(legendary))
+	await shot("hall_7_burnt")
+	var finish: Button = find(screen(), "FinishCombat")
+	if step("the results", finish != null and finish.is_visible_in_tree()):
+		await press(finish)
 	step("the last hall: the dream's end, «Проснуться»", await lessons("teach") == ["wake"])
 	await shot("hall_7")
 	step("«Найти выход» done in the last hall", s.quests_done.has("find_the_exit"), str(s.quests_active))

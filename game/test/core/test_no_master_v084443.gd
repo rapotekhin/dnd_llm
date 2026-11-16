@@ -140,7 +140,7 @@ func test_a_guarded_captive_is_not_untied_and_does_not_slip_away_alone() -> void
 	_creatures("pushcha-burrow", [{"id": "victim", "monster": "commoner", "state": "bound"}])
 	var s := _at("pushcha-burrow")
 	CreatureRules.seed(s, data, "pushcha-burrow")
-	var c: Dictionary = CreatureRules.here(s, "pushcha-burrow").filter(func(x: Dictionary) -> bool: return str(x.get("pack", "")) == "victim")[0]
+	var c: Dictionary = CreatureRules.here(s, "pushcha-burrow").filter(func(x: Dictionary) -> bool: return str(x.get("pack_row", "")) == "victim")[0]
 	assert_str(CreatureRules.can(s, str(c["id"]), "untie", data)).is_equal("CREATURE_GUARDED")
 	s.room_id = CELLAR
 	TimeRules.advance(s, data, 2000)

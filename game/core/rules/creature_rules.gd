@@ -78,7 +78,7 @@ static func from_pack(s: GameSession, data: Dictionary, room: String, row: Dicti
 	var dead := str(row.get("state", "")) == DEAD
 	var c := _record(s, body_name(data, name) if dead else name, monster, DEAD if dead else "surrendered")
 	c["bound"] = not dead
-	c["pack"] = str(row.get("id", ""))
+	c["pack_row"] = str(row.get("id", ""))  # its row of the pack (`pack` is a beast's load)
 	var things: Dictionary = ItemRules.whole(row["contents"]) if row.get("contents") is Dictionary else {}
 	if dead and not row.get("contents") is Dictionary and bool(row.get("gear", true)):  # searched as after a fight
 		things = CombatRules.spoils(data, {"monster": monster, "status": DEAD}, s.rng)

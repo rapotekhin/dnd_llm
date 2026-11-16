@@ -123,6 +123,7 @@ _MIND = "речь, телепатия, облики: социальное и с�
 _LIGHT = "свет: мастер в сцене (тьма — из времени суток)"
 MONSTER_TRAITS = {
     "pack_tactics": (_E, "преимущество, когда союзник рядом с героем"),
+    "legendary_resistance": (_E, "проваленный спасбросок становится успехом, пока есть использования за день (Sheet.save)"),
     **{k: (_E, "+5 к пассивной Внимательности против скрытности героя") for k in
        ["keen_hearing", "keen_hearing_and_sight", "keen_hearing_and_smell", "keen_senses", "keen_sight", "keen_sight_and_smell", "keen_smell"]},
     "charge": (_E, "после сближения — лишний урон и спасбросок Силы против падения"),

@@ -4656,6 +4656,21 @@
    ]
   },
   {
+   "id": "adult_red_dragon",
+   "kind": "portraits/monsters",
+   "name": "Взрослый красный дракон",
+   "style": "portrait",
+   "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+   ],
+   "tags": "solo, portrait, looking at viewer, no humans, dragon, red scales, yellow eyes, horns, fangs, spikes, sharp teeth",
+   "sentence": "A huge red dragon with thick crimson scales, a long horned head, glowing yellow eyes and white fangs, its neck ridged with darker red spines."
+  },
+  {
    "id": "ankheg",
    "kind": "portraits/monsters",
    "name": "Анкег",

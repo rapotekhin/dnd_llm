@@ -66,7 +66,7 @@ static func phrases(row: Dictionary, data: Dictionary) -> Dictionary:
 ## "" — none here now.
 static func map_ref(s: GameSession, data: Dictionary, id: String) -> String:
 	for c: Dictionary in CreatureRules.here(s, s.room_id):
-		if str(c.get("pack", "")) == id or str(c.get("npc_id", "")) == id:
+		if str(c.get("pack_row", "")) == id or str(c.get("npc_id", "")) == id:
 			return "cr:" + str(c["id"])
 	if not PropRules.find(s, s.room_id, id).is_empty():
 		return "prop:" + id

@@ -85,6 +85,9 @@ static func validate(b: Dictionary, base: Dictionary) -> Array[String]:
 	if p.has("dream") and not (DreamRules.is_dream(p) and _when_ok(DreamRules.of(p).get("wake", {}).get("when"), false)
 			and not str(DreamRules.of(p).get("wake", {}).get("text", "")).is_empty()):
 		e.append("pack.dream: wake {when — одно условие, text}")  # v0.8.4.44.2
+	var fall: Variant = DreamRules.of(p).get("fall", {})
+	if not (fall is Dictionary) or (not (fall as Dictionary).is_empty() and (not _strings(fall.get("end", [])) or str(fall.get("flag", "")).is_empty())):
+		e.append("pack.dream.fall: {end — список комнат, flag}")  # v0.8.4.44.7
 	if p.has("closed") and not _strings(p["closed"]):
 		e.append("pack.closed: список видов эффектов (create:…)")
 	var hint_ids: Array = []
@@ -427,7 +430,7 @@ static func default_settings(p: Dictionary) -> Dictionary:
 static func _when_ok(when: Variant, top: bool) -> bool:
 	if not (when is Dictionary):
 		return false
-	var keys: Array = (when as Dictionary).keys().filter(func(k: String) -> bool: return k != "item" and k != "qty")  # v0.7.44: qty
+	var keys: Array = (when as Dictionary).keys().filter(func(k: String) -> bool: return not k in ["item", "qty", "defeat"])  # v0.7.44: qty; an encounter's defeat
 	if keys.size() != 1:
 		return false
 	var k := str(keys[0])

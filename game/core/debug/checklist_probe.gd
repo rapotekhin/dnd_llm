@@ -859,7 +859,13 @@ static func liquid(data: Dictionary, lid: String) -> Dictionary:
 	else:
 		check(steps, LiquidRules.drink_why(data, LiquidRules.first(c, data, into)) == "LIQUID_NOT_DRINK", "это не пьют")
 	if k.has("throw"):
-		check(steps, str(ItemRules.consumable(data, from).get("throw", {}).get("liquid", "")) == lid, "бросается склянкой: %s" % from)
+		var flask := from  # a ready flask, or a vessel that breaks with the liquid poured in (v0.8.4.43.63)
+		if str(ItemRules.consumable(data, from).get("throw", {}).get("liquid", "")) != lid:
+			flask = ""
+			for v: String in LiquidRules.cfg(data)["vessels"]:
+				if LiquidRules.throws(data, v) and flask.is_empty():
+					flask = v
+		check(steps, flask == from or (not flask.is_empty() and LiquidRules.kind(data, lid).has("throw")), "бросается склянкой: %s" % (flask if not flask.is_empty() else from))
 	if k.has("blade"):
 		check(steps, ItemRules.consumable(data, from).has("coat"), "смазывает клинок: %s" % from)
 	var g := fight(s, data, "goblin")

@@ -103,6 +103,211 @@
 			"innate": false
 		}
 	},
+	"adult_red_dragon": {
+		"name": "Взрослый красный дракон",
+		"name_en": "Adult Red Dragon",
+		"size": "huge",
+		"type": "dragon",
+		"cr": 17,
+		"xp": 18000,
+		"ac": 19,
+		"hp": 256,
+		"hit_dice": "19d12",
+		"speed": 40,
+		"fly": 80,
+		"swim": 0,
+		"climb": 40,
+		"burrow": 0,
+		"darkvision": 120,
+		"blindsight": 60,
+		"truesight": 0,
+		"abilities": {
+			"str": 27,
+			"dex": 10,
+			"con": 25,
+			"int": 16,
+			"wis": 13,
+			"cha": 21
+		},
+		"prof": 6,
+		"saves": {
+			"dex": 6,
+			"con": 13,
+			"wis": 7,
+			"cha": 11
+		},
+		"skills": {
+			"perception": 13,
+			"stealth": 6
+		},
+		"passive_perception": 23,
+		"resistances": [],
+		"immunities": [
+			"fire"
+		],
+		"vulnerabilities": [],
+		"condition_immunities": [],
+		"actions": [
+			{
+				"name_en": "Bite",
+				"damage": [
+					{
+						"dice": "2d10+8",
+						"type": "piercing"
+					},
+					{
+						"dice": "2d6",
+						"type": "fire"
+					}
+				],
+				"to_hit": 14,
+				"kind": "melee",
+				"reach": 10,
+				"name": "Укус"
+			},
+			{
+				"name_en": "Claw",
+				"damage": [
+					{
+						"dice": "2d6+8",
+						"type": "slashing"
+					}
+				],
+				"to_hit": 14,
+				"kind": "melee",
+				"reach": 5,
+				"name": "Коготь"
+			},
+			{
+				"name_en": "Tail",
+				"damage": [
+					{
+						"dice": "2d8+8",
+						"type": "bludgeoning"
+					}
+				],
+				"to_hit": 14,
+				"kind": "melee",
+				"reach": 15,
+				"name": "Хвост"
+			},
+			{
+				"name_en": "Frightful Presence",
+				"damage": [],
+				"kind": "save",
+				"save": {
+					"ability": "wis",
+					"dc": 19,
+					"success": "none"
+				},
+				"effect": {
+					"condition": "frightened",
+					"duration": "minute",
+					"repeat": true,
+					"area": {
+						"shape": "sphere",
+						"ft": 120,
+						"around": true,
+						"choice": true
+					},
+					"spare": true
+				},
+				"name": "Ужасающая внешность"
+			},
+			{
+				"name_en": "Fire Breath",
+				"damage": [
+					{
+						"dice": "18d6",
+						"type": "fire"
+					}
+				],
+				"kind": "save",
+				"save": {
+					"ability": "dex",
+					"dc": 21,
+					"success": "half"
+				},
+				"effect": {
+					"area": {
+						"shape": "cone",
+						"ft": 60
+					}
+				},
+				"recharge": 5,
+				"name": "Огненное дыхание"
+			}
+		],
+		"multiattack": [
+			{
+				"action": "Frightful Presence",
+				"count": 1
+			},
+			{
+				"action": "Bite",
+				"count": 1
+			},
+			{
+				"action": "Claw",
+				"count": 2
+			}
+		],
+		"traits": [
+			{
+				"id": "legendary_resistance",
+				"name": "Легендарное сопротивление",
+				"desc": "Если дракон проваливает спасбросок, он может вместо этого преуспеть.",
+				"per_day": 3
+			}
+		],
+		"equipment": [],
+		"languages": "Common, Draconic",
+		"reactions": [],
+		"legendary": {
+			"per_round": 3,
+			"actions": [
+				{
+					"name_en": "Detect",
+					"name": "Обнаружение",
+					"cost": 1,
+					"kind": "detect"
+				},
+				{
+					"name_en": "Tail Attack",
+					"name": "Атака хвостом",
+					"cost": 1,
+					"kind": "action",
+					"action": "Tail"
+				},
+				{
+					"name_en": "Wing Attack",
+					"name": "Атака крыльями",
+					"cost": 2,
+					"damage": [
+						{
+							"dice": "2d6+8",
+							"type": "bludgeoning"
+						}
+					],
+					"kind": "save",
+					"save": {
+						"ability": "dex",
+						"dc": 22,
+						"success": "none"
+					},
+					"effect": {
+						"condition": "prone",
+						"area": {
+							"shape": "sphere",
+							"ft": 10,
+							"around": true
+						},
+						"then_fly": 0.5
+					}
+				}
+			]
+		}
+	},
 	"animated_armor": {
 		"name": "Оживлённый доспех",
 		"name_en": "Animated Armor",
@@ -4141,6 +4346,7 @@
 				},
 				"effect": {
 					"condition": "charmed",
+					"spare": true,
 					"magic": true,
 					"duration": "day",
 					"tag": "charm"
@@ -7845,7 +8051,7 @@
 				"save": {
 					"ability": "con",
 					"dc": 11,
-					"success": "none"
+					"success": "half"
 				},
 				"effect": {
 					"area": {
@@ -13658,7 +13864,8 @@
 						"dc": 11
 					},
 					"duration": "minute",
-					"repeat": true
+					"repeat": true,
+					"spare": true
 				}
 			}
 		],
@@ -14401,8 +14608,9 @@
 						"half": false
 					},
 					"area": {
-						"shape": "burst",
-						"ft": 5
+						"shape": "sphere",
+						"ft": 5,
+						"around": true
 					}
 				}
 			},
@@ -16938,7 +17146,7 @@
 				"save": {
 					"ability": "dex",
 					"dc": 12,
-					"success": "none"
+					"success": "half"
 				},
 				"effect": {
 					"area": {

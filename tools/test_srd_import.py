@@ -34,7 +34,7 @@ def source() -> dict[str, Any]:
 
 
 def in_scope(m: dict[str, Any]) -> bool:
-    return m["challenge_rating"] <= imp.MAX_MONSTER_CR or m["index"] in imp.NPC_TEMPLATES
+    return m["challenge_rating"] <= imp.MAX_MONSTER_CR or m["index"] in imp.NPC_TEMPLATES | imp.EXTRA_MONSTERS
 
 
 def blows(m: dict[str, Any]) -> list[dict[str, Any]]:

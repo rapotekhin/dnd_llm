@@ -36,9 +36,12 @@ func run() -> void:
 		var back := WayRules.open_exits(s, node("Catalog").data["world"], s.room_id)
 		step("hall %d leads only onwards" % (i - 1), back == ["dream-%d" % i], str(back))
 		await lessons("pass", 1.0)  # the hall's screens of teaching (v0.8.4.44.5) are dream_cave's
+		if i == 7:
+			s.encounters_done.append("dream_dragon")  # the dragon's fight is dream_cave's (v0.8.4.44.7)
 		step("walked into hall %d" % i, gs.go("dream-%d" % i))
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		await frames(3)
+	step("the last hall's screen, then the waking", await lessons("last") == ["dragon", "wake"])
 	await wait_until(func() -> bool: return not find_all(get_root(), "HintBox").is_empty(), 20.0)  # a lambda keeps no outer local
 	var boxes := find_all(get_root(), "HintBox")
 	var wake: Control = boxes[0] as Control if not boxes.is_empty() else null

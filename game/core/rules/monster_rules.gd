@@ -64,6 +64,8 @@ static func start_turn(s: GameSession, data: Dictionary, f: Dictionary, lines: A
 					lines.append("%s: «%s» снова готово" % [f["name"], a["name"]])
 	f["once"] = []  # once-per-turn extras used (martial advantage, sneak attack)
 	f["reckless"] = has_trait(data, f, "reckless")
+	if not legendary(data, f).is_empty():  # its legendary actions come back (v0.8.4.44.7, 5e)
+		f["legendary_left"] = int(legendary(data, f)["per_round"])
 
 
 ## The best action of this kind (melee / ranged) it can use now at `t`: one that would lay a condition `t` does
@@ -91,22 +93,106 @@ static func pick(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary,
 	return control if not control.is_empty() else best
 
 
-## A save action worth using now at `t` (a breath, a gaze, a song): ready, `t` within its area, and — for a pure
-## condition — not under it already. {} when none.
+## A save action worth using now at `t` (a breath, a gaze, a song) as an action of its own: not one its Multiattack uses
+## (Frightful Presence comes with the blows, Attack._plan), ready_save. {} when none.
 static func save_action(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, squares: int) -> Dictionary:
-	for a: Dictionary in Sheet.template(data, f).get("actions", []):
-		if str(a.get("kind")) != "save" or not available(f, a):
-			continue
-		var fx: Dictionary = a.get("effect", {})
-		if squares > FightGrid.squares_of(data, int(fx.get("area", {}).get("ft", 5))):
-			continue
-		var cond := str(fx.get("condition", ""))
-		if (a.get("damage", []) as Array).is_empty() and (cond.is_empty() or ConditionRules.has(Sheet.holder(s, t), cond)):
-			continue
-		if not works_on(s, data, t, fx):
-			continue
-		return a
+	var m := Sheet.template(data, f)
+	var multi: Array = (m.get("multiattack", []) as Array).map(func(x: Dictionary) -> String: return str(x["action"]))
+	for a: Dictionary in m.get("actions", []):
+		if str(a.get("kind")) == "save" and not multi.has(str(a["name_en"])) and ready_save(s, data, f, t, a, squares):
+			return a
 	return {}
+
+
+## A save action `a` worth using now: ready; one around it (Frightful Presence, a Wing Attack) — a foe around it it would
+## catch and do something to; one at `t` — `t` within its area, not spared by it and, for a pure condition, not under it.
+static func ready_save(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, a: Dictionary, squares: int) -> bool:
+	if str(a.get("kind")) != "save" or not available(f, a):
+		return false
+	var fx: Dictionary = a.get("effect", {})
+	var bare := (a.get("damage", []) as Array).is_empty()
+	var cond := str(fx.get("condition", ""))
+	var does := func(o: Dictionary) -> bool:
+		return works_on(s, data, o, fx) and not (bare and (cond.is_empty() or ConditionRules.has(Sheet.holder(s, o), cond)))
+	if bool(area_of(a).get("around", false)):
+		return around(s, data, f, a).any(func(o: Dictionary) -> bool: return CombatRules.foes_of(s, f).has(str(o["id"])) and does.call(o))
+	if squares > FightGrid.squares_of(data, int(area_of(a).get("size", 5))) or spared(f, a, str(t.get("id", ""))):
+		return false
+	return does.call(t)
+
+
+## The area of a template's save action as a shape of the field {type, size, around, choice} (a burst is a sphere; `around`
+## — everyone within `size` feet of it, `choice` — of its foes only); {} — at one target. The one reader of `effect.area`.
+static func area_of(a: Dictionary) -> Dictionary:
+	var ar: Dictionary = a.get("effect", {}).get("area", {})
+	if ar.is_empty():
+		return {}
+	var shape := str(ar.get("shape", "cone"))
+	return {"type": "sphere" if shape == "burst" else shape, "size": int(ar.get("ft", 5)), "around": bool(ar.get("around", false)),
+		"choice": bool(ar.get("choice", false))}
+
+
+## Who a save action around `f` catches (v0.8.4.44.7): every fighter up within its feet of it — of its foes only by its choice
+## (Frightful Presence), its friends too otherwise (a Wing Attack) —, not those it spared.
+static func around(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var ar := area_of(a)
+	var squares := FightGrid.squares_of(data, int(ar.get("size", 5)))
+	var ids := CombatRules.foes_of(s, f) + ([] if bool(ar.get("choice", false)) else CombatRules.friends_of(s, f))
+	for id: String in ids:
+		var o := CombatRules.fighter(s, id)
+		if id != str(f["id"]) and Attack.up(s, o) and FightGrid.dist(f, o) <= squares and not spared(f, a, id):
+			out.append(o)
+	return out
+
+
+## `id` was caught by `a` once in this fight and is not again (`spare` — «immune for the next 24 hours»: Frightful Presence,
+## a harpy's song).
+static func spared(f: Dictionary, a: Dictionary, id: String) -> bool:
+	return bool(a.get("effect", {}).get("spare", false)) and (f.get("spared", {}).get(str(a.get("name_en", "")), []) as Array).has(id)
+
+
+## Those `a` caught are spared by it from now (`spare`).
+static func spare(f: Dictionary, a: Dictionary, caught: Array[Dictionary]) -> void:
+	if not bool(a.get("effect", {}).get("spare", false)):
+		return
+	var all: Dictionary = f.get("spared", {})
+	var key := str(a.get("name_en", ""))
+	var ids: Array = all.get(key, [])
+	for o: Dictionary in caught:
+		if not ids.has(str(o["id"])):
+			ids.append(str(o["id"]))
+	all[key] = ids
+	f["spared"] = all
+
+
+# --- legendary (v0.8.4.44.7) ----------------------------------------------------------------------------
+
+
+## Its legendary actions: {per_round, actions: [{name_en, name, cost, kind: action | detect | save, …}]} of its template; {} — none.
+static func legendary(data: Dictionary, f: Dictionary) -> Dictionary:
+	return Sheet.template(data, f).get("legendary", {})
+
+
+## The legendary actions it has left this round (all of them before its first turn).
+static func legendary_left(data: Dictionary, f: Dictionary) -> int:
+	return int(f.get("legendary_left", legendary(data, f).get("per_round", 0)))
+
+
+## Legendary Resistance (a trait with `per_day`): a failed save of anybody with it turns into a success while its uses last.
+## The uses left after this one; -1 — none to spend (Sheet.save).
+static func legendary_resist(s: GameSession, data: Dictionary, who: Dictionary) -> int:
+	var tr := trait_of(data, who, "legendary_resistance")
+	if tr.is_empty():
+		return -1
+	var me := Sheet.holder(s, who)
+	var used: Dictionary = me.get("used", {})
+	var n := int(used.get("legendary_resistance", 0))
+	if n >= int(tr.get("per_day", 0)):
+		return -1
+	used["legendary_resistance"] = n + 1
+	me["used"] = used
+	return int(tr["per_day"]) - n - 1
 
 
 # --- effects on anybody ---------------------------------------------------------------------------------

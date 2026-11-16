@@ -288,6 +288,11 @@ static func save(s: GameSession, data: Dictionary, who: Dictionary, ab: String, 
 		note += ", с преимуществом (%s)" % ", ".join(at["adv"])
 	elif dis and not adv:
 		note += ", с помехой (%s)" % ", ".join(at["dis"])
+	if not ok and not ab.is_empty():  # Legendary Resistance: it chooses to succeed (v0.8.4.44.7)
+		var left := MonsterRules.legendary_resist(s, data, who)
+		if left >= 0:
+			ok = true
+			note += ", легендарное сопротивление (осталось %d)" % left
 	var label := CombatRules.ab_name(ab) if not ab.is_empty() else "от смерти"  # `ab` "" — a death save (v0.8.4.29.2)
 	var text := "%s %s%s — %s" % [label, Roll.versus(total, dc, nat, ok), note, "успех" if ok else "провал"]
 	var line := "%s — спасбросок %s" % [str(me.get("name", "")), text]

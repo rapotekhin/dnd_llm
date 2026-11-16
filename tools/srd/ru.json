@@ -1241,6 +1241,22 @@
 		"name": "Плащ морского ската",
 		"desc": "Пока вы носите плащ с поднятым капюшоном, вы можете дышать под водой и имеете скорость плавания 60 футов. Поднять или опустить капюшон требует действия."
 	},
+	"item:clockwork_fire_starter": {
+		"en": "clockwork_fire_starter",
+		"name": "Заводное огниво"
+	},
+	"item:clockwork_music_box": {
+		"en": "clockwork_music_box",
+		"name": "Музыкальная шкатулка"
+	},
+	"item:clockwork_parts": {
+		"en": "clockwork_parts",
+		"name": "Шестерёнки и пружинки"
+	},
+	"item:clockwork_toy": {
+		"en": "clockwork_toy",
+		"name": "Заводная игрушка"
+	},
 	"item:cloth_bolt": {
 		"en": "cloth_bolt",
 		"name": "Отрез холста"
@@ -2464,6 +2480,10 @@
 		"en": "Acolyte",
 		"name": "Послушник"
 	},
+	"monster:adult-red-dragon": {
+		"en": "Adult Red Dragon",
+		"name": "Взрослый красный дракон"
+	},
 	"monster:animated-armor": {
 		"en": "Animated Armor",
 		"name": "Оживлённый доспех"
@@ -3356,6 +3376,10 @@
 		"en": "Dagger",
 		"name": "Кинжал"
 	},
+	"monster_action:Detect": {
+		"en": "Detect",
+		"name": "Обнаружение"
+	},
 	"monster_action:Dreadful Glare": {
 		"en": "Dreadful Glare",
 		"name": "Ужасающий взгляд"
@@ -3379,6 +3403,10 @@
 	"monster_action:Fist": {
 		"en": "Fist",
 		"name": "Кулак"
+	},
+	"monster_action:Frightful Presence": {
+		"en": "Frightful Presence",
+		"name": "Ужасающая внешность"
 	},
 	"monster_action:Frost Breath": {
 		"en": "Frost Breath",
@@ -3564,6 +3592,14 @@
 		"en": "Strength Drain",
 		"name": "Высасывание Силы"
 	},
+	"monster_action:Tail": {
+		"en": "Tail",
+		"name": "Хвост"
+	},
+	"monster_action:Tail Attack": {
+		"en": "Tail Attack",
+		"name": "Атака хвостом"
+	},
 	"monster_action:Tail Spike": {
 		"en": "Tail Spike",
 		"name": "Шип хвоста"
@@ -3595,6 +3631,10 @@
 	"monster_action:Web": {
 		"en": "Web",
 		"name": "Паутина"
+	},
+	"monster_action:Wing Attack": {
+		"en": "Wing Attack",
+		"name": "Атака крыльями"
 	},
 	"monster_trait:Aberrant Ground": {
 		"en": "Aberrant Ground",
@@ -3851,6 +3891,11 @@
 		"name": "Память лабиринта",
 		"desc": "Минотавр безошибочно помнит любой пройденный путь."
 	},
+	"monster_trait:Legendary Resistance": {
+		"en": "Legendary Resistance",
+		"name": "Легендарное сопротивление",
+		"desc": "Если существо проваливает спасбросок, оно может вместо этого преуспеть."
+	},
 	"monster_trait:Limited Amphibiousness": {
 		"en": "Limited Amphibiousness",
 		"name": "Ограниченная амфибийность",
@@ -4080,6 +4125,11 @@
 		"en": "Spellcasting",
 		"name": "Заклинания",
 		"desc": "Послушник — заклинатель 1-го уровня, базовая характеристика заклинаний — Мудрость (Сл спасброска 12, +4 к броскам атаки заклинаниями). Заговоры (без ограничений): свет, священное пламя, чудотворство; 1-го уровня (3 ячейки): благословение, лечение ран, убежище."
+	},
+	"monster_trait:adult-red-dragon:Legendary Resistance": {
+		"en": "Legendary Resistance",
+		"name": "Легендарное сопротивление",
+		"desc": "Если дракон проваливает спасбросок, он может вместо этого преуспеть."
 	},
 	"monster_trait:animated-armor:Antimagic Susceptibility": {
 		"en": "Antimagic Susceptibility",

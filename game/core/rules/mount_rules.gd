@@ -76,7 +76,7 @@ static func container(s: GameSession, data: Dictionary, id: String) -> Dictionar
 	var cap := capacity(data, cr)
 	if cap <= 0:
 		return {}
-	if not (cr.get("pack") is Dictionary):
+	if not cr.has("pack"):
 		cr["pack"] = {}
 	return {"name": "Вьюк: %s" % cr["name"], "container": "pack", "contents": cr["pack"], "capacity_lb": cap, "owner": ""}
 

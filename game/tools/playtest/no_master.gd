@@ -34,8 +34,8 @@ func run() -> void:
 	var crate := PropRules.find(s, CELLAR, "f_crate")
 	step("the crate holds what the engine laid", not (crate.get("contents", {}) as Dictionary).is_empty(), ContainerRules.contents_text(data, s.items, crate.get("contents", {})))
 	var here := CreatureRules.here(s, CELLAR)
-	var body: Dictionary = here.filter(func(c: Dictionary) -> bool: return str(c.get("pack", "")) == "smuggler")[0] if not here.is_empty() else {}
-	var carter: Dictionary = here.filter(func(c: Dictionary) -> bool: return str(c.get("pack", "")) == "carter")[0] if here.size() > 1 else {}
+	var body: Dictionary = here.filter(func(c: Dictionary) -> bool: return str(c.get("pack_row", "")) == "smuggler")[0] if not here.is_empty() else {}
+	var carter: Dictionary = here.filter(func(c: Dictionary) -> bool: return str(c.get("pack_row", "")) == "carter")[0] if here.size() > 1 else {}
 	step("the smuggler lies here, the carter is bound", str(body.get("state", "")) == CreatureRules.DEAD and CreatureRules.held(carter), str(here.map(func(c: Dictionary) -> String: return str(c["name"]))))
 	await shot("cellar")
 

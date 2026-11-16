@@ -176,10 +176,13 @@ static func _plan(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary
 	if not shot(f, t, of_action(data, f, act)) or str(act.get("kind")) != "melee":  # a throw of a melee weapon is one attack (v0.7.22.19, #13)
 		for x: Dictionary in m.get("multiattack", []):
 			var a: Dictionary = by_en.get(str(x["action"]), {})
-			if not a.is_empty() and (str(a.get("kind")) == str(act.get("kind")) or (str(act.get("kind")) == "ranged" and a.has("range"))):
+			if str(a.get("kind")) == "save":  # «it can use its Frightful Presence, then…»: first, when it would catch someone (v0.8.4.44.7)
+				if MonsterRules.ready_save(s, data, f, t, a, FightGrid.dist(f, t)):
+					plan.append(a)
+			elif not a.is_empty() and (str(a.get("kind")) == str(act.get("kind")) or (str(act.get("kind")) == "ranged" and a.has("range"))):
 				for i in int(x["count"]):
 					plan.append(a)
-	if plan.is_empty():
+	if plan.all(func(a: Dictionary) -> bool: return str(a.get("kind")) == "save"):
 		for i in 1 + CharacterRules.extra_attacks(Sheet.holder(s, f), data):  # a class on a template with no Multiattack
 			plan.append(act)
 	if ConditionRules.has(Sheet.holder(s, f), "slowed_spell"):  # Slow: one attack (v0.7.13.6)
@@ -195,12 +198,15 @@ static func one(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, 
 		swing(s, data, f, t, of_action(data, f, a), lines)
 
 
-## A save action: a breath, a gaze, a song, at `t` and at every foe of it in its area.
+## A save action: a breath, a gaze, a song, at `t` and at every foe of it in its area; one around it — at everyone it catches
+## there (MonsterRules.around). Those it caught are spared by it after (`spare`); a Wing Attack's flight after (`then_fly`).
 static func breath(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, a: Dictionary, lines: Array[String]) -> void:
 	MonsterRules.spend(f, a)
 	AnimRules.breath(s, data, f, t, a)
 	var caught: Array[Dictionary] = [t]
-	if not a.get("effect", {}).get("area", {}).is_empty() and not (a["damage"] as Array).is_empty() and bool(CombatRules.cfg(data)["friendly_fire"]["on"]):
+	if bool(MonsterRules.area_of(a).get("around", false)):
+		caught = MonsterRules.around(s, data, f, a)
+	elif not a.get("effect", {}).get("area", {}).is_empty() and not (a["damage"] as Array).is_empty() and bool(CombatRules.cfg(data)["friendly_fire"]["on"]):
 		var cells := CombatRules.monster_area(s, data, f, a, FightGrid.cell(t))
 		for id: String in CombatRules.foes_of(s, f):
 			var o := CombatRules.fighter(s, id)
@@ -208,6 +214,9 @@ static func breath(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionar
 				caught.append(o)
 	for x: Dictionary in caught:
 		_saves(s, data, f, x, a, lines)
+	MonsterRules.spare(f, a, caught)
+	if a.get("effect", {}).has("then_fly") and up(s, f) and not CombatRules.driven(s, f):
+		FightAI.fly_off(s, data, f, float(a["effect"]["then_fly"]), lines)
 
 
 static func _saves(s: GameSession, data: Dictionary, f: Dictionary, t: Dictionary, a: Dictionary, lines: Array[String]) -> void:

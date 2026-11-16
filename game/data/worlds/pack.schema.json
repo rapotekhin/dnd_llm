@@ -38,6 +38,7 @@
 			"minProperties": 1,
 			"properties": {
 				"encounter": {"type": "string"},
+				"defeat": {"type": "boolean", "description": "v0.8.4.44.7: with `encounter` — the fight won, not slipped past"},
 				"secret": {"type": "string", "pattern": "^[^:]+:[^:]+$"},
 				"room": {"type": "string"},
 				"arrive": {"type": "string"},
@@ -126,7 +127,8 @@
 					"type": "object",
 					"description": "v0.8.4.44.2: a dream before a world — not in the list of worlds, the hero comes with no things; `wake.when` (Cond) wakes the player into a new game of the world",
 					"properties": {
-						"wake": {"type": "object", "required": ["when", "text"], "properties": {"when": {"$ref": "#/$defs/when"}, "text": {"$ref": "#/$defs/nonempty"}}, "additionalProperties": false}
+						"wake": {"type": "object", "required": ["when", "text"], "properties": {"when": {"$ref": "#/$defs/when"}, "text": {"$ref": "#/$defs/nonempty"}}, "additionalProperties": false},
+						"fall": {"type": "object", "description": "v0.8.4.44.7: a death in the dream — back to the entry of the hall; in a room of `end` the dream is over and `flag` is set", "required": ["end", "flag"], "properties": {"_doc": {"type": "string"}, "end": {"type": "array", "items": {"type": "string"}}, "flag": {"$ref": "#/$defs/nonempty"}}, "additionalProperties": false}
 					},
 					"additionalProperties": false
 				},

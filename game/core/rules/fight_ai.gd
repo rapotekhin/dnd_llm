@@ -291,6 +291,122 @@ static func act(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[St
 		act(s, data, f, lines)  # its action is still there, or Action Surge gave one more
 
 
+## The legendary actions at the end of `after`'s turn (v0.8.4.44.7, 5e): each fighter of a template with them — up, not the one
+## whose turn ended, not in the player's hands, not incapacitated — takes one it has points for, by what it is worth now. Lines.
+static func legendary(s: GameSession, data: Dictionary, after: Dictionary, lines: Array[String]) -> void:
+	for id: String in s.combat.get("order", []):
+		var f := CombatRules.fighter(s, id)
+		var leg := MonsterRules.legendary(data, f)
+		if leg.is_empty() or id == str(after.get("id", "")) or str(f.get("status")) != "active" or not Attack.up(s, f) or CombatRules.driven(s, f) \
+				or ConditionRules.incapacitated(Sheet.holder(s, f)):
+			continue
+		var left := MonsterRules.legendary_left(data, f)
+		var pick := _legendary_pick(s, data, f, leg, left)
+		if pick.is_empty():
+			continue
+		f["legendary_left"] = left - int(pick["row"]["cost"])
+		lines.append("%s — легендарное действие «%s» (осталось %d)" % [f["name"], pick["row"]["name"], int(f["legendary_left"])])
+		_legendary_do(s, data, f, pick, lines)
+
+
+## The legendary action worth most now with `left` points: {row, t} or {}. A wide one (a Wing Attack) when it catches two
+## foes or more, or one while nothing else reaches; a blow (a tail) at the weakest foe it reaches; a look for one hidden.
+static func _legendary_pick(s: GameSession, data: Dictionary, f: Dictionary, leg: Dictionary, left: int) -> Dictionary:
+	var by := {}
+	for row: Dictionary in leg.get("actions", []):
+		if int(row.get("cost", 1)) > left:
+			continue
+		match str(row.get("kind", "")):
+			"detect":
+				if CombatRules.foes_of(s, f).any(func(id: String) -> bool: return bool(CombatRules.fighter(s, id).get("hidden", false))):
+					by["detect"] = {"row": row, "t": {}}
+			"action":
+				var a := _own_action(data, f, str(row.get("action", "")))
+				var t := _weakest_in_reach(s, data, f, a)
+				if not t.is_empty():
+					by["blow"] = {"row": row, "t": t, "a": a}
+			"save":
+				var caught := MonsterRules.around(s, data, f, row).filter(func(o: Dictionary) -> bool: return CombatRules.foes_of(s, f).has(str(o["id"])))
+				if not caught.is_empty():
+					by["wide"] = {"row": row, "t": caught[0], "n": caught.size()}
+	if by.has("wide") and (int(by["wide"]["n"]) >= 2 or not by.has("blow")):
+		return by["wide"]
+	for k: String in ["blow", "detect"]:
+		if by.has(k):
+			return by[k]
+	return {}
+
+
+static func _legendary_do(s: GameSession, data: Dictionary, f: Dictionary, pick: Dictionary, lines: Array[String]) -> void:
+	var row: Dictionary = pick["row"]
+	match str(row.get("kind", "")):
+		"detect":  # a Wisdom (Perception) check against each one hidden from it
+			var r := Roll.check(s, data, f, {"what": TranslationServer.translate("SKILL_PERCEPTION"), "skill": "perception"})
+			for id: String in CombatRules.foes_of(s, f):
+				var o := CombatRules.fighter(s, id)
+				if bool(o.get("hidden", false)) and int(r["total"]) >= int(CombatRules.stealth_roll(s, data, o)["total"]):
+					o["hidden"] = false
+					lines.append("%s находит, где прячется %s" % [f["name"], Sheet.holder(s, o).get("name", "")])
+		"action":
+			Attack.one(s, data, f, pick["t"], pick["a"], lines)
+		"save":
+			Attack.one(s, data, f, pick["t"], row, lines)
+
+
+## An action of its template by its English name, {} — none.
+static func _own_action(data: Dictionary, f: Dictionary, name_en: String) -> Dictionary:
+	for a: Dictionary in Sheet.template(data, f).get("actions", []):
+		if str(a["name_en"]) == name_en:
+			return a
+	return {}
+
+
+## The foe up with the fewest hit points within the reach of its blow `a`; {} — none.
+static func _weakest_in_reach(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary) -> Dictionary:
+	var best := {}
+	if a.is_empty():
+		return best
+	for id: String in CombatRules.foes_of(s, f):
+		var o := CombatRules.fighter(s, id)
+		if Attack.up(s, o) and CombatRules.blade_reaches(s, data, f, o, FightGrid.squares_of(data, int(a.get("reach", 5)))) \
+				and (best.is_empty() or int(Sheet.holder(s, o).get("hp", 0)) < int(Sheet.holder(s, best).get("hp", 0))):
+			best = o
+	return best
+
+
+## A flight after a Wing Attack (v0.8.4.44.7): up to `share` of its fly speed, to the square of that flight farthest from the
+## nearest foe — out of their blades. Lines.
+static func fly_off(s: GameSession, data: Dictionary, f: Dictionary, share: float, lines: Array[String]) -> void:
+	var fly := int(Move.speeds(s, data, f).get("fly", 0))
+	var budget := FightGrid.steps_of(data, int(fly * share))
+	if budget <= 0:
+		return
+	var e := CombatRules.points(s, data, f)
+	var had := int(e.get("move", 0))
+	e["move"] = budget
+	var ghost := f.duplicate()
+	var best := FightGrid.cell(f)
+	var far := _nearest_foe(s, f, ghost, best)
+	for cell: Vector2i in Move.routes(s, data, f, budget):
+		var d := _nearest_foe(s, f, ghost, cell)
+		if d > far:
+			far = d
+			best = cell
+	if best != FightGrid.cell(f) and Move.go(s, data, f, best, lines) > 0:
+		lines.append("%s взлетает и отлетает" % f["name"])
+	e["move"] = had
+
+
+static func _nearest_foe(s: GameSession, f: Dictionary, ghost: Dictionary, cell: Vector2i) -> int:
+	FightGrid.put(ghost, cell)
+	var near := 1 << 20
+	for id: String in CombatRules.foes_of(s, f):
+		var o := CombatRules.fighter(s, id)
+		if Attack.up(s, o):
+			near = mini(near, FightGrid.dist(ghost, o))
+	return near
+
+
 ## One who runs: to the nearest way out, away from the hero when there is none. Off the map or out of sight — gone.
 static func flee(s: GameSession, data: Dictionary, f: Dictionary, lines: Array[String]) -> void:
 	first(s, data, f, lines)

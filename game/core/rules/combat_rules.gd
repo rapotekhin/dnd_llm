@@ -1574,8 +1574,8 @@ static func area_targets(s: GameSession, data: Dictionary, sp: Dictionary, t: Di
 
 ## The squares of a monster's breath or burst: `effect.area` {ft, type}, a cone unless it says otherwise.
 static func monster_area(s: GameSession, data: Dictionary, f: Dictionary, a: Dictionary, aim: Vector2i) -> Array[Vector2i]:
-	var area: Dictionary = a.get("effect", {}).get("area", {})
-	return FightGrid.area(s, data, {"type": str(area.get("type", "cone")), "size": int(area.get("ft", 5))}, FightGrid.cell(f), aim, true)
+	var area := MonsterRules.area_of(a)
+	return FightGrid.area(s, data, {"type": str(area.get("type", "cone")), "size": int(area.get("size", 5))}, FightGrid.cell(f), aim, true)
 
 
 ## A follower caught in the hero's area thinks worse of the hero.
@@ -1924,6 +1924,7 @@ static func _finish(s: GameSession, data: Dictionary, f: Dictionary, lines: Arra
 		FeatureRules.end_turn(s, data, f, lines)
 		lines.append_array(ConditionRules.end_of_turn(s, data, f))
 	s.combat.erase("prompt")
+	FightAI.legendary(s, data, f, lines)  # at the end of another's turn (v0.8.4.44.7)
 	_check_end(s, data, lines)
 	if str(s.combat["outcome"]).is_empty():
 		_advance(s, data, lines)

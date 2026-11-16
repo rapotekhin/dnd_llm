@@ -33,6 +33,8 @@ CUT_SPELLS = {"tiny_hut", "alarm", "rope_trick", "meld_into_stone", "water_breat
               "locate_animals_or_plants", "revivify", "nondetection", "arcanists_magic_aura"}
 MAX_MONSTER_CR = 3  # the combat of v0.6.x: levels 1–5
 NPC_TEMPLATES = {"mage", "archmage"}  # v0.7.39.7: teachers of the higher circles — people of the world, not foes of levels 1–5
+EXTRA_MONSTERS = {"adult-red-dragon"}  # v0.8.4.44.7: beyond MAX_MONSTER_CR by the list — the dream's last hall
+LEGENDARY_PER_ROUND = 3  # the SRD's legendary creatures take 3 legendary actions a round; its JSON keeps the number only in prose
 ABILITIES = ["str", "dex", "con", "int", "wis", "cha"]
 
 # --- glossary: core terms by hand, always wins over ru.json -------------------------------------------
@@ -693,7 +695,7 @@ class Builder:
             for t in m.get("special_abilities", []):
                 texts.setdefault(t["name"], set()).add(t.get("desc", ""))
         for m in all_of("monsters"):
-            if m["challenge_rating"] > MAX_MONSTER_CR and m["index"] not in NPC_TEMPLATES:
+            if m["challenge_rating"] > MAX_MONSTER_CR and m["index"] not in NPC_TEMPLATES | EXTRA_MONSTERS:
                 continue
             ru = self.tr(f"monster:{m['index']}", m["name"])
             abilities = {a[:3]: m[a] for a in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")}
@@ -730,6 +732,8 @@ class Builder:
                     trait["into"] = "spellcasting"
                 elif "included in the attack" in t.get("desc", "").lower():  # its damage is in the actions already (v0.8.4.27.6)
                     trait["into"] = "actions"
+                if (t.get("usage") or {}).get("type") == "per day":  # Legendary Resistance: 3 a day (v0.8.4.44.7)
+                    trait["per_day"] = int(t["usage"]["times"])
                 seen = re.search(r"successful DC (\d+) \w+ \(([\w ]+)\) check", t.get("desc", ""))
                 if seen:  # told apart by a check (Mimicry: Insight), v0.8.4.27.2 — CheckEngine.trait_dc
                     trait["check"] = {"skill": seen.group(2).lower().replace(" ", "_"), "dc": int(seen.group(1))}
@@ -762,6 +766,34 @@ class Builder:
             spells = monster_spells(m)
             if spells:
                 out[sid(m["index"])]["spellcasting"] = spells
+            legendary = self.legendary(m, actions)
+            if legendary:
+                out[sid(m["index"])]["legendary"] = {"per_round": LEGENDARY_PER_ROUND, "actions": legendary}
+        return out
+
+    def legendary(self, m: dict[str, Any], actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """The legendary actions of a template (v0.8.4.44.7), each with its `cost`: one of its own actions (`action` — «makes
+        a tail attack»), a Perception check for the hidden (`detect`) or a save action of its own (the Wing Attack: its area
+        around it, `then_fly` — the share of its fly speed it may fly after)."""
+        own = {a["name_en"].lower(): a["name_en"] for a in actions}
+        out = []
+        for la in m.get("legendary_actions", []):
+            cost = re.search(r"\(Costs (\d+) Actions\)", la["name"])
+            base = re.sub(r"\s*\(Costs \d+ Actions\)", "", la["name"]).strip()
+            row: dict[str, Any] = {"name_en": base, "name": self.tr(f"monster_action:{base}", base)["name"], "cost": int(cost.group(1)) if cost else 1}
+            use = re.search(r"makes an? ([\w ]+?) attack", la.get("desc", ""))
+            if "Wisdom (Perception) check" in la.get("desc", ""):
+                row["kind"] = "detect"
+            elif use and use.group(1).lower() in own:
+                row["kind"] = "action"
+                row["action"] = own[use.group(1).lower()]
+            else:
+                act = monster_action({**la, "name": base})
+                if act is None:
+                    continue
+                act.pop("name_en", None)
+                row.update(act)
+            out.append(row)
         return out
 
     def categories(self, items: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -937,6 +969,14 @@ def parse_effect(desc: str) -> dict[str, Any]:
     area = re.search(r"(\d+)-foot(?:-radius)? (cone|line|sphere|cube)", desc) or re.search(r"within (\d+) (?:ft\.|feet) of (it|the flash|the mephit)", desc)
     if area:
         fx["area"] = {"shape": area.group(2) if area.group(2) in ("cone", "line", "sphere", "cube") else "burst", "ft": int(area.group(1))}
+    each = re.search(r"Each creature (of the [\w ]+'s choice )?(?:that is )?within (\d+) (?:ft\.|feet) of the [\w ]+? (?:and aware of it )?must", desc)
+    if each and "at a point" not in desc:  # v0.8.4.44.7: everyone around it at once (Frightful Presence, a Wing Attack); `choice` — only its foes
+        fx["area"] = {"shape": "sphere", "ft": int(each.group(2)), "around": True, **({"choice": True} if each.group(1) else {})}
+    if re.search(r"is immune to the [\w ]+'s [\w ]+ for the next 24 hours", desc):
+        fx["spare"] = True  # one it caught once is not caught again in this fight
+    fly = re.search(r"can then fly up to half its flying speed", desc)
+    if fly:
+        fx["then_fly"] = 0.5
     if "magically" in desc or "magic" in desc:
         fx["magic"] = True
     return fx if any(k in fx for k in ("condition", "damage", "extra", "save", "zero_hp_paralyzed", "relentless")) else {}
@@ -1013,6 +1053,8 @@ def monster_action(a: dict[str, Any], override: dict[str, Any] | None = None) ->
         act["kind"] = "save"
         dc = a.get("dc") or {}
         act["save"] = override.get("save") or {"ability": dc["dc_type"]["index"], "dc": dc["dc_value"], "success": dc.get("success_type", "none")}
+        if "half as much damage" in desc and not override.get("save"):  # the SRD's data says «none» where the text halves (v0.8.4.44.7)
+            act["save"]["success"] = "half"
     else:
         return None
     fx = {} if override.get("master") else parse_effect(desc)

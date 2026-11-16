@@ -69,7 +69,10 @@ func test_waking_begins_the_mark_from_the_same_choices_with_nothing_of_the_dream
 	var choices := _dream()
 	var s := GameState.session
 	assert_str(str(GameState.hint_due().get("button", ""))).is_not_equal(HintRules.WAKE)
-	ExplorationRules.place(s, "dream-7")  # the hero came into the last hall: the last screen of teaching (v0.8.4.44.5)
+	ExplorationRules.place(s, "dream-7")  # the last hall: the dragon first (v0.8.4.44.7)
+	assert_str(str(GameState.hint_due().get("id", ""))).is_equal("dragon")
+	HintRules.shown(s, GameState.hint_due())
+	s.encounters_done.append("dream_dragon")  # the dragon beaten — or the hero burnt (dream.fall's flag): the last screen
 	var wake := GameState.hint_due()
 	assert_str(str(wake.get("button", ""))).is_equal(HintRules.WAKE)
 	assert_str(str(wake["text"])).contains("Пепел над Маркой")

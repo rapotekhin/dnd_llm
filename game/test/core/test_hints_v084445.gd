@@ -34,7 +34,7 @@ func _queue(s: GameSession, data: Dictionary, seen: Array = [], on: bool = true)
 func test_the_pack_s_screens_are_valid_and_the_dream_s_end_comes_last() -> void:
 	assert_array(Catalog.bundle("tutorial").get("errors", ["нет пакета"])).is_empty()
 	var ids: Array = HintRules.rows(dream).map(func(r: Dictionary) -> String: return str(r["id"]))
-	assert_array(ids).is_equal(["walk", "look", "search", "body", "gear", "hurt", "captive", "arrows", "improvise", "making", HintRules.WAKE])
+	assert_array(ids).is_equal(["walk", "look", "search", "body", "gear", "hurt", "captive", "arrows", "improvise", "making", "dragon", HintRules.WAKE])
 	var wake: Dictionary = HintRules.rows(dream).back()
 	assert_str(str(wake["button"])).is_equal(HintRules.WAKE)
 	assert_str(HintRules.once(wake)).is_equal(HintRules.GAME)

@@ -8,7 +8,11 @@ extends RefCounted
 ## is a new one): the last screen of teaching says so (wake_row). The profile remembers the tutorial was played (SaveManager.tutorial_done).
 
 
-## The dream part of a pack: {wake?}; {} — a world of its own.
+const BACK := "back"  ## a death in the dream: the hall again from its entry
+const END := "end"  ## a death in the dream's last hall: the dream is over
+
+
+## The dream part of a pack: {wake?, fall?}; {} — a world of its own.
 static func of(pack: Dictionary) -> Dictionary:
 	return pack["dream"] if pack.get("dream") is Dictionary else {}
 
@@ -38,6 +42,23 @@ static func wake_row(pack: Dictionary) -> Dictionary:
 		return {}
 	return {"id": HintRules.WAKE, "when": wake["when"], "title": TranslationServer.translate("WAKE_TITLE"), "text": str(wake.get("text", "")),
 		"once": HintRules.GAME, "button": HintRules.WAKE}
+
+
+## What a death does in the dream `s` (the pack's `dream.fall`, v0.8.4.44.7, the author's decision 12): "" — not a dream, a
+## death; END — in a hall of its `end`: the dream is over, its `flag` set (a wake's `when`), nothing reset; BACK — the hero
+## comes back to the entry of the hall where it fell (the checkpoint GameState made when it walked in).
+static func fall(s: GameSession, data: Dictionary) -> String:
+	var f: Dictionary = of(data.get("pack", {})).get("fall", {})
+	if s.dream.is_empty() or f.is_empty():
+		return ""
+	return END if (f.get("end", []) as Array).has(s.room_id) else BACK
+
+
+## The dream is over by a death in its last hall: its flag. Lines — none.
+static func end(s: GameSession, data: Dictionary) -> void:
+	var flag := str(of(data.get("pack", {})).get("fall", {}).get("flag", ""))
+	if not flag.is_empty() and not s.flags.has(flag):
+		s.flags.append(flag)
 
 
 ## The settings the real game begins with: the new game screen's, without the dream's tick.
