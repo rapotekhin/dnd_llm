@@ -2607,7 +2607,7 @@
         "charges": {
           "anyOf": [
             {
-              "maximum": 7,
+              "maximum": 99,
               "minimum": 1,
               "type": "integer"
             },

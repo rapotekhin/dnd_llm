@@ -20,6 +20,7 @@ var combat_delay: float = 0.6
 var instant_walk := false  # a walk on the map ends at once: the playtests
 const COMBAT_SAVE := "autosave_combat"
 const DREAM_SAVE := "autosave_dream"  ## the dream's checkpoint: the moment before the hero walks into a hall (v0.8.4.44.7)
+var _dream_falls := 0  ## the halls come back after a death in this run: other dice each time (DreamRules.again)
 
 var _last_kind: String = ""
 var _last_input: String = ""
@@ -702,6 +703,8 @@ func _dream_again() -> void:
 	if not load_from(DREAM_SAVE).is_empty():
 		_request("death", _hero_path())
 		return
+	_dream_falls += 1
+	DreamRules.again(session, Catalog.data, _dream_falls)
 	_add(GameSession.system_entry("DREAM_AGAIN"))
 	var again := str(session.dream.get("again", ""))
 	session.dream.erase("again")

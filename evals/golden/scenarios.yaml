@@ -52,6 +52,54 @@ bases:
       find_edges:  # the town's edge next to the hall, as the engine's reach shows it (0.48.0)
         - {room_id: room_market, room: "Рыночная площадь", location: "Серое Устье", edge: 0, text: "переулки и дворы вокруг рынка — дома, лавки, мастерские", terrain: [grassland], new_location: false}
 
+  dream:  # v0.8.4.44.8: the tutorial's dream — a closed world, the hero naked in a cave of seven halls
+    mode: exploration
+    kind: action
+    settings:
+      dm_style: classic
+      content: {violence: medium, veils: [], lines: []}
+    snapshot:
+      world:
+        name: "Сон в пещере"
+        lore: "Герой приходит в себя в сырой пещере — без вещей, без одежды и без памяти о том, как сюда попал. Пещера — семь залов, связанных узкими ходами, каждый ведёт только дальше; свет даёт бледный мох на стенах. Других мест здесь нет: только пещера и путь из неё. Это сон героя, но ни герой, ни мастер не говорят об этом до самого пробуждения: для героя всё по-настоящему."
+        tone: "Тягучий сон: сырой камень, бледный свет мха, чувство, что всё это уже было"
+        dm_style: classic
+        violence: medium
+        closed: ["create:npc", "create:place", "create:quest", "create:job", "create:course", "create:way", "create:service", "create:beast", "create:property", "create:stock", "create:faction"]
+        dream: true
+      scene:
+        location: {id: dream, name: "Пещера", type: cave}
+        room: {id: dream-2, name: "Зал с костями",
+               description: "Ход расширяется в зал с низким потолком. Под ногами хрустит мелкий щебень, у стены темнеет что-то большое. Дальше — узкий проход."}
+        exits:
+          - {id: dream-3, name: "Узкий проход"}
+        npcs: []
+        items_visible: []
+        hooks: []
+        time: "ночь"
+      character:
+        name: "Аира"
+        gender: female
+        class: fighter
+        level: 1
+        hp: {current: 12, max: 12}
+        ac: 10
+        conditions: []
+        skills: {athletics: 5, perception: 3, investigation: 0, persuasion: 1,
+                 deception: 1, insight: 1, stealth: 1, intimidation: 3, survival: 3}
+        saves: {str: 5, dex: 1, con: 4, int: 0, wis: 1, cha: 1}
+        spells: []
+        features: ["Боевой стиль: защита", "Второе дыхание"]
+      history: []
+      summaries: {location: "", npcs: {}}
+      limits: {max_checks: 1, max_effects: 3, reward_cap_cp: 0}
+    engine:
+      check: {d20: [11], bonus: 3, total: 14, dc: 12, success: true, nat: null, blocked: false}
+      validate: accept
+      find_items: []
+      lookup: {}
+      find_edges: []
+
 scenarios:
 
   - id: search_room_fail
@@ -5352,3 +5400,133 @@ scenarios:
                 field_in: {item.wear.status: ["invisible", "spell:invisibility", "spell:greater_invisibility"]}}
     rubric:
       - "Мастер оценивает цель одним goal:assess с вещью цели `item`, которая делает носящего невидимым (`wear.status` invisible или spell:invisibility), а не расплывчатым и не преимуществом Скрытности; в рассказе — мысль героя, без событий"
+
+  - id: dream_no_new_person
+    title: "Сон: мастер не выдумывает людей — мир закрыт (v0.8.4.44.8)"
+    category: limits
+    extends: dream
+    input: "Кричу в темноту: есть тут кто живой? Может, отшельник или сторож, который знает дорогу наружу?"
+    expect:
+      effects: {forbidden_kinds: [create:npc, create:place, create:quest, create:way]}
+      narration:
+        must_not_match: ["(?i)\\bсон\\b", "снится", "сновиден", "\\bспишь\\b"]
+    rubric:
+      - "Никто не отзывается или откликается только эхо: мастер не вводит нового человека"
+      - "Мастер не говорит герою, что это сон"
+
+  - id: dream_no_side_passage
+    title: "Сон: боковых ходов и других пещер нет — только путь дальше (v0.8.4.44.8)"
+    category: limits
+    extends: dream
+    input: "Ищу боковой лаз в соседнюю пещеру — где-то же должен быть другой выход наружу."
+    expect:
+      effects: {forbidden_kinds: [create:place, create:way, move]}
+    rubric:
+      - "Мастер не открывает нового места или пути: из зала ведёт только узкий проход дальше"
+      - "Если просит проверку, итог — не новый выход, а что-то о том, что путь один"
+
+  - id: dream_enter_hall_not_a_dream
+    title: "Сон: описание зала — без слова «сон» и без выдуманных людей (v0.8.4.44.8)"
+    category: style
+    extends: dream
+    kind: enter
+    input: null
+    expect:
+      check: {required: false}
+      effects: {forbidden_kinds: [create:npc, create:place, create:quest]}
+      narration:
+        must_not_match: ["(?i)\\bсон\\b", "снится", "сновиден", "\\bспишь\\b", "просн[её]шься|проснуться"]
+    rubric:
+      - "Два-четыре предложения о зале с костями: щебень, низкий потолок, тёмное у стены, проход дальше"
+      - "Для героя всё по-настоящему: ни намёка, что это сон"
+
+  - id: dream_cleric_joins_by_the_roll
+    title: "Сон: вариант с проверкой — жрица идёт с героем по успеху движка (v0.8.4.44.8)"
+    category: modes
+    extends: dream
+    input: "Предлагаю освобождённой жрице присоединиться к нам и искать выход вместе [движок уже бросил для варианта: Убеждение 14 против Сл 2 — успех]"
+    snapshot:
+      scene:
+        room: {id: dream-4, name: "Гоблинья нора",
+               description: "Тесный зал пропах дымом и гнилью: у стен — подстилки из тряпья, обглоданные кости, черепки. Ход за норой уходит вниз."}
+        exits: [{id: dream-5, name: "Ход вниз"}]
+        npcs:
+          - {id: npc_dream_cleric, name: "Безымянная жрица", role: "пленница", template: acolyte, attitude: unfriendly,
+             description: "Коренастая дварфийка с седой прядью в косе; на шее — пустой шнурок, где был священный символ.",
+             personality: "осторожная и недоверчивая после плена у гоблинов; помнит молитвы, но не своё имя и не своего бога; пойдёт с тем, кто убедит её, что вместе выбраться вернее"}
+    expect:
+      check: {required: false}
+      effects: {required_kinds_any: [grant:follow], forbidden_kinds: [create:npc]}
+    rubric:
+      - "Жрица соглашается идти вместе — по успеху движка, без новой проверки"
+      - "Её осторожность видна в реплике или в том, как она соглашается"
+
+  - id: dream_sixth_hall_makes_a_legendary_sword
+    title: "Сон, шестой зал: меч архангела без ограничений (v0.8.4.44.8)"
+    category: items
+    extends: dream
+    input: "Создай в комнате меч архангела с сумасшедшим уроном, которым может владеть любой, кто его держит"
+    snapshot:
+      scene:
+        room: {id: dream-6, name: "Зал отголосков",
+               description: "Круглый зал с гладкими, словно отполированными стенами. Каждое слово звучит здесь дольше, чем должно, и будто что-то прислушивается в ответ. За дальней аркой — жар и рыжий отсвет."}
+        exits: [{id: dream-7, name: "Дальняя арка"}]
+        boundless: true
+    expect:
+      check: {required: false}
+      effects: {required_kinds_any: [move_item:world>hero], forbidden_kinds: [create:npc]}
+      tools_required: [find_items]
+    rubric:
+      - "Мастер делает именно меч с огромным уроном, без отказа и без урезания до бюджета"
+      - "Сила меча — в его свойствах, а не только в словах описания"
+
+  - id: dream_sixth_hall_makes_a_wand_of_chain_lightning
+    title: "Сон, шестой зал: жезл цепной молнии с 10 зарядами (v0.8.4.44.8)"
+    category: items
+    extends: dream
+    input: "Сделай жезл цепной молнии с 10 зарядами"
+    snapshot:
+      scene:
+        room: {id: dream-6, name: "Зал отголосков",
+               description: "Круглый зал с гладкими, словно отполированными стенами. Каждое слово звучит здесь дольше, чем должно. За дальней аркой — жар и рыжий отсвет."}
+        exits: [{id: dream-7, name: "Дальняя арка"}]
+        boundless: true
+    expect:
+      check: {required: false}
+      effects: {required_kinds_any: [move_item:world>hero, make]}
+    rubric:
+      - "Жезл творит цепную молнию и несёт 10 зарядов — без отказа по кругу заклинания или уровню героя"
+
+  - id: dream_sixth_hall_makes_no_people
+    title: "Сон, шестой зал: вещи без ограничений, но не люди (v0.8.4.44.8)"
+    category: limits
+    extends: dream
+    input: "Создай здесь торговца зельями, чтобы я купила у него десяток зелий исцеления"
+    snapshot:
+      scene:
+        room: {id: dream-6, name: "Зал отголосков",
+               description: "Круглый зал с гладкими, словно отполированными стенами. Каждое слово звучит здесь дольше, чем должно. За дальней аркой — жар и рыжий отсвет."}
+        exits: [{id: dream-7, name: "Дальняя арка"}]
+        boundless: true
+    expect:
+      effects: {forbidden_kinds: [create:npc, create:service, create:stock]}
+    rubric:
+      - "Торговца нет: люди здесь не создаются; мастер может дать сами зелья вещью"
+
+  - id: dream_sixth_hall_makes_a_bolter
+    title: "Сон, шестой зал: тяжёлый болтер — и чем из него стрелять (v0.8.4.44.8)"
+    category: items
+    extends: dream
+    input: "Именем Императора человечества, яви мне священный тяжёлый болтер для уничтожения врагов Империума"
+    snapshot:
+      scene:
+        room: {id: dream-6, name: "Зал отголосков",
+               description: "Круглый зал с гладкими, словно отполированными стенами. Каждое слово звучит здесь дольше, чем должно. За дальней аркой — жар и рыжий отсвет."}
+        exits: [{id: dream-7, name: "Дальняя арка"}]
+        boundless: true
+    expect:
+      check: {required: false}
+      effects: {required_kinds_any: [move_item:world>hero]}
+    rubric:
+      - "Мастер делает оружие дальнего боя без отказа"
+      - "Из него можно стрелять: в основе (`base`) — стреляющее оружие каталога (арбалет, лук), а не вещь без основы, и тем же ходом герою даны боеприпасы к нему"

@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.132.0"
+PROTOCOL_VERSION = "0.133.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -657,7 +657,7 @@ class GeneratedUse(_Out):
 
     spell: str | None = None
     level: int | None = Field(default=None, ge=0, le=3)
-    charges: int | None = Field(default=None, ge=1, le=7)
+    charges: int | None = Field(default=None, ge=1, le=99)  # 0.133.0: the engine caps it (items.json charges_max), none in a boundless room
     heal: Literal["light", "medium", "strong"] | None = None
     resist: str | None = None
     check_adv: str | None = None

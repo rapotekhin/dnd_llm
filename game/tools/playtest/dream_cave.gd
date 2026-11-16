@@ -163,9 +163,7 @@ func run() -> void:
 	node("EventBus").state_changed.emit()
 	var turns := 0
 	while CombatRules.active(s) and str(s.combat.get("outcome", "")).is_empty() and turns < 60:
-		if not await wait_until(func() -> bool: return (CombatRules.player_can_act(s) and not gs.is_busy()) or not str(s.combat.get("outcome", "")).is_empty(), 120.0):
-			break
-		if not str(s.combat.get("outcome", "")).is_empty():
+		if not await hero_turn(120.0):  # a companion's turn in the player's hands is ended there too (v0.8.4.43.11)
 			break
 		turns += 1
 		gs.combat_end_turn()

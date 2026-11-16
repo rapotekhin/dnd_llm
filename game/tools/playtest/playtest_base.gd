@@ -336,3 +336,48 @@ func hero_turn(timeout_s: float = 90.0) -> bool:
 			gs.combat_end_turn()
 		await frames(2)
 	return false
+
+
+## One turn of the hero in a fight by the buttons: up to the nearest foe (walking, a dash when short), the main blow at
+## whom it reaches up to three times, «Конец хода» (the combat scenarios and the tutorial's halls).
+func strike_turn(s: GameSession) -> void:
+	var game := screen()
+	var near := ""
+	var best := 1 << 20
+	for id: String in CombatRules.enemies(s):
+		var d := FightGrid.dist(CombatRules.fighter(s, id), CombatRules.player(s))
+		if d < best:
+			best = d
+			near = id
+	if near.is_empty():
+		return
+	if best > 1:
+		var data: Dictionary = node("Catalog").data
+		await walk_up(s, data, near)
+		if FightGrid.dist(CombatRules.fighter(s, near), CombatRules.player(s)) > 1:
+			var dash: Button = find(game, "Do_dash")
+			if dash != null and not dash.disabled:
+				await press(dash)
+				await walk_up(s, data, near)
+	for i in 3:
+		if not CombatRules.active(s) or not str(s.combat.get("outcome", "")).is_empty():
+			return
+		var target := ""
+		for id: String in CombatRules.enemies(s):
+			if Acts.one("attack").can(s, node("Catalog").data, CombatRules.player(s), id).is_empty():
+				target = id
+		if target.is_empty():
+			break
+		var atk: Button = find(game, "Attack_main")
+		if atk == null or atk.disabled:
+			break
+		await press(atk)
+		var card: Button = find(screen(), "Turn_" + target)
+		if card == null or card.disabled:
+			break
+		await press(card)
+	if CombatRules.active(s) and str(s.combat.get("outcome", "")).is_empty() and CombatRules.is_player_turn(s):
+		var end: Button = find(screen(), "EndTurnButton")
+		if end != null and not end.disabled:
+			await press(end)
+

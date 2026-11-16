@@ -147,45 +147,7 @@ func _player_turn(gs: Node, s: GameSession) -> void:
 				step("info: parley", true, " | ".join((s.combat.get("log", []) as Array).slice(-3)))
 				if not str(s.combat.get("outcome", "")).is_empty() or not CombatRules.player_can_act(s):
 					return
-	var near := ""
-	var best := 1 << 20
-	for id: String in CombatRules.enemies(s):
-		var d := FightGrid.dist(CombatRules.fighter(s, id), CombatRules.player(s))
-		if d < best:
-			best = d
-			near = id
-	if near.is_empty():
-		return
-	if best > 1:
-		var data: Dictionary = node("Catalog").data
-		await walk_up(s, data, near)
-		if FightGrid.dist(CombatRules.fighter(s, near), CombatRules.player(s)) > 1:
-			var dash: Button = find(game, "Do_dash")
-			if dash != null and not dash.disabled:
-				await press(dash)
-				await walk_up(s, data, near)
-	for i in 3:
-		if not CombatRules.active(s) or not str(s.combat.get("outcome", "")).is_empty():
-			return
-		var target := ""
-		for id: String in CombatRules.enemies(s):
-			if Acts.one("attack").can(s, node("Catalog").data, CombatRules.player(s), id).is_empty():
-				target = id
-		if target.is_empty():
-			break
-		var atk: Button = find(screen(), "Attack_main")
-		if atk == null or atk.disabled:
-			break
-		await press(atk)
-		var card: Button = find(screen(), "Turn_" + target)
-		if card == null or card.disabled:
-			break
-		await press(card)
-	if CombatRules.active(s) and str(s.combat.get("outcome", "")).is_empty() and CombatRules.is_player_turn(s):
-		var end: Button = find(screen(), "EndTurnButton")
-		if end != null and not end.disabled:
-			await press(end)
-
+	await strike_turn(s)
 
 var _hinted := false
 var _parleyed := false

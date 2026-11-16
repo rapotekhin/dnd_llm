@@ -298,9 +298,10 @@ func _belt(c: Dictionary) -> Control:
 func _belt_rows(c: Dictionary, id: String, at: int) -> Array[Dictionary]:
 	var s := GameState.session
 	var rows: Array[Dictionary] = []
-	if not ItemRules.consumable(Catalog.data, id, s.items).is_empty():
-		var why := ItemRules.can_use(c, Catalog.data, s.items, id)
-		rows.append({"act": "use", "item": id, "name": "BeltUse_%d" % at, "label": "BTN_USE", "args": {}, "group": "",
-			"why": why if not why.is_empty() else ("" if Backend.is_ready() else "ABILITY_BUSY")})
+	var use := ItemActs.use_row(s, Catalog.data, c, id, "BeltUse_%d" % at)
+	if not use.is_empty():
+		if str(use["why"]).is_empty() and not Backend.is_ready():
+			use["why"] = "ABILITY_BUSY"
+		rows.append(use)
 	rows.append({"act": "belt_take", "item": id, "at": at, "name": "BeltTake_%d" % at, "label": "BTN_BELT_TAKE", "args": {}, "group": "", "why": ""})
 	return rows

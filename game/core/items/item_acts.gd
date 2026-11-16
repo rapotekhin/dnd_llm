@@ -33,6 +33,14 @@ static func of(s: GameSession, data: Dictionary, who: String, item: String, worn
 	return out
 
 
+## «Использовать» a thing of the belt — a potion, a scroll, a wand —, grey with why it may not be used now; {} — not a thing
+## used so. One row for the belt's cell and the pack's grid.
+static func use_row(s: GameSession, data: Dictionary, c: Dictionary, item: String, node_name: String) -> Dictionary:
+	if ItemRules.consumable(data, item, s.items).is_empty():
+		return {}
+	return _row("use", item, node_name, "BTN_USE", ItemRules.can_use(c, data, s.items, item))
+
+
 ## The act a double click takes: the first of MAIN that may be done now, {} — none.
 static func main(rows: Array[Dictionary]) -> Dictionary:
 	for act: String in MAIN:
@@ -64,6 +72,8 @@ static func _hero_rows(s: GameSession, data: Dictionary, c: Dictionary, item: St
 		out.append(_row("use", item, "UseItem_" + item, "BTN_USE", ""))
 	elif worn.is_empty() and ItemRules.belt_fits(data, s.items, item) and not ItemRules.on_belt(c, data, s.items, item):
 		out.append(_row("belt", item, "BeltPut_" + item, "BTN_BELT_PUT", ItemRules.belt_why(c, data, s.items, item)))
+	elif ItemRules.on_belt(c, data, s.items, item) and not use_row(s, data, c, item, "").is_empty():  # at hand: a double click in the pack drinks it too (v0.8.4.44.8)
+		out.append(use_row(s, data, c, item, "UseItem_" + item))
 	_liquid_rows(s, data, c, item, out)
 	if not LetterRules.way_by(data, "tool", item).is_empty():  # a forgery kit writes in the letter's window (v0.8.4.26.4)
 		out.append(_row("letter", item, "Letter_" + item, "BTN_LETTER_WRITE", ""))

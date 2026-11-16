@@ -54,6 +54,17 @@ static func fall(s: GameSession, data: Dictionary) -> String:
 	return END if (f.get("end", []) as Array).has(s.room_id) else BACK
 
 
+## The hall again after a death (v0.8.4.44.7, found by the tutorial playtest of v0.8.4.44.8): the party whole — the hero
+## and whoever walks with it at their hit points' maximum — and other dice than last time (the save keeps the generator's
+## state: without it the same blows fell the hero the same way at every try, from the same wounded entry). `tries` — how
+## many times the hall came back in this game.
+static func again(s: GameSession, data: Dictionary, tries: int) -> void:
+	for p: Dictionary in AllyRules.party(s, data):
+		var who: Dictionary = p["who"]
+		Harm.mend(s, data, who, Sheet.max_hp(s, data, who))
+	s.rng.seed = Roll.seeded([s.game_seed, s.room_id, "dream_again", tries]).seed
+
+
 ## The dream is over by a death in its last hall: its flag. Lines — none.
 static func end(s: GameSession, data: Dictionary) -> void:
 	var flag := str(of(data.get("pack", {})).get("fall", {}).get("flag", ""))

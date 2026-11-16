@@ -167,6 +167,7 @@ func _dream() -> GameSession:
 func test_a_hall_walked_into_keeps_the_moment_before_and_a_death_brings_it_back() -> void:
 	var s := _dream()
 	assert_bool(SaveManager.has_slot(GameState.DREAM_SAVE)).is_true()  # the first hall's
+	s.character["hp"] = 3  # walked in wounded: the hall comes back whole (DreamRules.again)
 	GameState._dream_entry("dream-2")
 	assert_bool(s.dream.has("again")).is_false()
 	var kept: Variant = SaveManager.read_slot(GameState.DREAM_SAVE)
@@ -175,11 +176,13 @@ func test_a_hall_walked_into_keeps_the_moment_before_and_a_death_brings_it_back(
 	if kept is GameSession:
 		again = str((kept as GameSession).dream.get("again", ""))
 	assert_bool(again == "dream-2").override_failure_message("again: [%s] %d" % [again, again.length()]).is_true()
+	var state := s.rng.state
 	s.character["hp"] = 0
 	GameState._dream_again()
 	var back := GameState.session
 	assert_bool(back == s).is_false()
 	assert_int(int(back.character["hp"])).is_equal(int(back.character["max_hp"]))
+	assert_bool(back.rng.state == state).override_failure_message("the hall again with other dice").is_false()
 	assert_bool(back.dream.has("again")).is_false()
 	assert_bool(back.chat.any(func(e: Dictionary) -> bool: return str(e.get("key", "")) == "DREAM_AGAIN")).is_true()
 

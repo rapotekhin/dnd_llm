@@ -105,6 +105,8 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                  "lines": content.get("lines", []), "veils": content.get("veils", []), "wishes": content.get("wishes", []),
                  "adult": bool(content.get("adult", False)), "minors": content.get("minors", []),
                  "slavery": bool(content.get("slavery", False))}
+    if snap.get("world"):  # the pack's own: name, lore, tone, closed kinds, a dream (v0.8.4.44.8)
+        world = {**(world or {}), **{k: v for k, v in snap["world"].items() if k in ("name", "lore", "tone", "magic", "closed", "dream")}}
     params = {
         "turn_id": "t-1",
         "mode": mode,
@@ -137,6 +139,7 @@ def to_turn_params(sc: dict[str, Any]) -> TurnRequestParams:
                 "rumors": scene.get("rumors", []),  # what the place or the NPC knows (0.91.0)
                 "factions": scene.get("factions", []),  # 0.95.0
                 "shrine": scene.get("shrine", ""),  # the shrine of the room (0.93.0)
+                "boundless": bool(scene.get("boundless", False)),  # the dream's sixth hall (0.132.0)
             },
             "character": {
                 "name": ch.get("name", ""), "gender": ch.get("gender", "other"), "class_name": ch.get("class", ""),
