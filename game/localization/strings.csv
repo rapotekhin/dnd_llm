@@ -1192,6 +1192,7 @@ KEY_ACT_QUICK_SAVE,Быстрое сохранение
 KEY_ACT_QUICK_LOAD,Быстрая загрузка
 KEY_ACT_END_TURN,Бой: конец хода
 KEY_ACT_NEXT_TARGET,Бой: следующая цель
+KEY_ACT_PARTY,Вещи отряда
 OPTION_CHECK_TIP,"{skill} {bonus} против Сл {dc} — шанс {chance}%"
 SHORT_REST_FULL,"Здоровье полное: отдых вернёт только умения"
 SHORT_REST_EXPECT,≈ +{hp} HP
@@ -2206,6 +2207,8 @@ BTN_GIVE,Отдать
 BTN_GIVE_TO,{name}
 BTN_OK,Готово
 GEAR_THINGS_OF,Вещи: {name}
+PARTY_TITLE,Вещи отряда
+PARTY_ALONE,"С героем никто не идёт: вещи передают спутнику, нанятому или позвавшему себя в дорогу"
 BTN_PUT_IN_STACK,Положить всё
 CONTAINER_HERO_THINGS,Ваши вещи
 ATTACH_AIM_NONE,Сначала прикрепите заклинание для своих

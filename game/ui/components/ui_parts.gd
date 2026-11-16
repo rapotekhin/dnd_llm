@@ -165,6 +165,24 @@ static func hp_line(value: int, most: int, temp: int, height: float = 14.0, corn
 	return row
 
 
+## «Вес: 24 из 150 фнт.» and its bar coloured by the share, «Слишком тяжело» past the most (the character window, the
+## party window — one look of a load). The numbers are Sheet's: `carried` by Sheet.carried, `most` by Sheet.capacity.
+static func weight(label: Label, bar: ProgressBar, carried: float, most: int) -> void:
+	label.text = TranslationServer.translate("SHEET_WEIGHT").format({"n": int(ceilf(carried)), "max": most})
+	label.remove_theme_color_override("font_color")
+	if carried > most:
+		label.text += " — " + TranslationServer.translate("TOO_HEAVY")
+		label.add_theme_color_override("font_color", UiTheme.WARN)
+	var share := carried / maxf(1.0, most)
+	bar.max_value = 1.0
+	bar.step = 0.0
+	bar.show_percentage = false
+	bar.value = minf(share, 1.0)
+	var col := UiTheme.OK if share < 0.75 else UiTheme.WARN if share <= 1.0 else UiTheme.BAD
+	bar.add_theme_stylebox_override("fill", UiTheme.box(col, col, 0, 0, 3))
+	bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 3))
+
+
 static func hp_bar(value: int, most: int, height: float = 14.0, corner: int = 3) -> ProgressBar:
 	var bar := ProgressBar.new()
 	bar.max_value = maxi(1, most)

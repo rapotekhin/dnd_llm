@@ -3427,15 +3427,15 @@ func swap_weapons() -> String:
 		func() -> Array[String]: return Acts.one("swap").go(session, Catalog.data, who)]})
 
 
-## The «Снаряжение» window of a follower (v0.8.4.40): a thing handed over either way, the sets swapped. Equip's rules.
-func gear_act(what: String, who: String, item: String = "") -> String:
+## The «Снаряжение» window of a follower (v0.8.4.40) and the party window (v0.8.4.44.10): a thing of `who` handed to `to`
+## (the hero by default) — between any two of the party, the sets swapped. Equip's rules.
+func gear_act(what: String, who: String, item: String = "", to: String = Being.HERO) -> String:
 	if not _idle():
 		return "EQUIP_BUSY"
 	var data := Catalog.data
 	var s := session
 	return _act(what, {
-		"give": _row(Equip.hand_why, Equip.hand, [s, data, Being.HERO, who, item]),
-		"take": _row(Equip.hand_why, Equip.hand, [s, data, who, Being.HERO, item]),
+		"give": _row(Equip.hand_why, Equip.hand, [s, data, who, to, item]),
 		"swap": [Equip.swap_why.bind(s, data, who), func() -> Array:
 			Equip.swap(s, data, who)
 			return []],
@@ -3467,8 +3467,8 @@ func item_act(row: Dictionary, who: String = Being.HERO) -> String:
 		"store": store_spell.bind(item, str(row.get("spell", "")), int(row.get("circle", 0))),
 		"drop": drop_item.bind(item, int(row.get("qty", 1))),
 		"drop_bag": drop_item.bind(str(row.get("bag", ""))),
-		"give": func() -> String: return _handed("give", str(row.get("to", "")), item, int(row.get("qty", 1))),
-		"take": func() -> String: return _handed("take", who, item, int(row.get("qty", 1))),
+		"give": func() -> String: return _handed(who, str(row.get("to", "")), item, int(row.get("qty", 1))),
+		"take": func() -> String: return _handed(who, Being.HERO, item, int(row.get("qty", 1))),
 	}
 	if not roads.has(str(row.get("act", ""))):
 		return "PROPERTY_NOT_NOW"
@@ -3476,10 +3476,10 @@ func item_act(row: Dictionary, who: String = Being.HERO) -> String:
 
 
 ## `qty` copies handed over one by one (Equip.hand passes one): stops at the first refusal, "" when at least one went.
-func _handed(what: String, who: String, item: String, qty: int) -> String:
+func _handed(from: String, to: String, item: String, qty: int) -> String:
 	var err := ""
 	for i in maxi(1, qty):
-		err = gear_act(what, who, item)
+		err = gear_act("give", from, item, to)
 		if not err.is_empty():
 			return err if i == 0 else ""
 	return ""

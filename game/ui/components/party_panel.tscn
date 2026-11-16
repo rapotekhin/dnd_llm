@@ -1,0 +1,54 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://ui/components/modal_frame.tscn" id="1"]
+[ext_resource type="Script" path="res://ui/components/party_panel.gd" id="2"]
+
+[node name="PartyPanel" instance=ExtResource("1")]
+script = ExtResource("2")
+width = 1560.0
+above_bar = true
+tall = true
+
+[node name="ModalDim" parent="." index="0"]
+color = Color(0, 0, 0, 0.35)
+
+[node name="ModalTitle" parent="ModalPanel/Col/Head" index="0"]
+text = "PARTY_TITLE"
+
+[node name="SampleText" parent="ModalPanel/Col/ModalScroll/ModalBody" index="0"]
+visible = false
+
+[node name="SampleButton" parent="ModalPanel/Col/ModalFooter" index="0"]
+visible = false
+
+[node name="ModalScroll" parent="ModalPanel/Col" index="1"]
+visible = false
+
+[node name="PartySplit" type="VBoxContainer" parent="ModalPanel/Col" index="2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="PartyAlone" type="Label" parent="ModalPanel/Col/PartySplit"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "PARTY_ALONE"
+theme_type_variation = &"MutedLabel"
+
+[node name="PartyCols" type="HBoxContainer" parent="ModalPanel/Col/PartySplit"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="SampleCol" type="Label" parent="ModalPanel/Col/PartySplit/PartyCols" groups=["editor_sample"]]
+layout_mode = 2
+auto_translate_mode = 2
+text = "Колонка на каждого: лицо, имя, монеты, вес, сетка вещей"
+
+[node name="PartyActsBox" type="VBoxContainer" parent="ModalPanel/Col" index="3"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2

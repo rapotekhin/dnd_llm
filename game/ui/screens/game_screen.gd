@@ -45,6 +45,7 @@ var _arena: ArenaPanel  # v0.7.45
 var _family: FamilyPanel
 var _pet: PetPanel  # v0.7.43
 var _gear: GearPanel  # v0.8.4.40
+var _party: PartyPanel  # v0.8.4.44.10: the party's things side by side on Tab
 var _card: CreatureCardPanel  # v0.8.4.41
 var _letter: LetterPanel  # v0.7.48
 var _faith: FaithPanel  # v0.7.49
@@ -242,6 +243,7 @@ func _ready() -> void:
 	_faith = _window(FaithPanel.SCENE, "FaithView")  # v0.7.49
 	_pet = _window(PetPanel.SCENE, "PetView")  # v0.7.43
 	_gear = _window(GearPanel.SCENE, "GearView")  # v0.8.4.40
+	_party = _window(PartyPanel.SCENE, "PartyView")  # v0.8.4.44.10
 	_card = _window(CreatureCardPanel.SCENE, "CardView")  # v0.8.4.41: the card of any creature, from the side panel and a fight
 	EventBus.card_requested.connect(_card.open)
 	_family = _window(FamilyPanel.SCENE, "FamilyView")  # v0.7.32
@@ -300,7 +302,7 @@ func _mount(w: Control) -> void:
 
 
 func _overlays() -> Array[Control]:
-	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _wait, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _gear, _card, _heists, _org, _office, _image, _build]
+	return [_menu, _sheet, _map, _journal, _level_up, _short_rest, _prepare, _long_rest, _wilds, _wait, _theft, _container, _craft, _jobs, _property, _bank, _shop, _study, _bond, _contest, _arena, _family, _pet, _gear, _party, _card, _heists, _org, _office, _image, _build]
 
 
 ## The windows open over the screen now.
@@ -337,6 +339,8 @@ func _input(event: InputEvent) -> void:
 			_pause.toggle()
 	elif input.has_focus() and input.text.is_empty() and open.is_empty() and not _fight.active() and _option_key(event) >= 0:  # 1–3 over an empty input
 		_hotkey(event, true)
+	elif input.has_focus() and open.is_empty() and not _fight.active() and event.is_action_pressed("party"):  # Tab never types
+		_toggle_party()
 	elif input.has_focus() and input.text.is_empty() and open.is_empty() and _fight.active() and (event.is_action_pressed("next_target") or event.is_action_pressed("end_turn")):
 		_fight.key(event)  # an empty input does not hold the fight's keys
 	elif input.has_focus() or _pause.visible or get_viewport().gui_get_focus_owner() is LineEdit or get_viewport().gui_get_focus_owner() is TextEdit:
@@ -376,6 +380,9 @@ func _hotkey(event: InputEvent, nothing_open: bool) -> bool:
 			else:
 				_sheet.open_tab(int(tab[1]))
 			return true
+	if event.is_action_pressed("party") and not _fight.active():
+		_toggle_party()
+		return true
 	for view: Array in [["map", _map], ["journal", _journal]]:
 		if event.is_action_pressed(view[0]):
 			if (view[1] as WorldNotes).visible:
@@ -392,6 +399,16 @@ func _hotkey(event: InputEvent, nothing_open: bool) -> bool:
 					EventBus.message.emit(tr(err))
 			return true
 	return false
+
+
+## The party window on Tab (v0.8.4.44.10, as in BG3): opened over the screen, closed by Tab or Esc.
+func _toggle_party() -> void:
+	if _party.visible:
+		_party.visible = false
+		return
+	var err := _party.open()
+	if not err.is_empty():
+		EventBus.message.emit(tr(err))
 
 
 func _on_turn_started(_turn_id: String) -> void:
