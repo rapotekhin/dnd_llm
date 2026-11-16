@@ -124,7 +124,8 @@ func new_game(character: Dictionary = {}, settings: Dictionary = {}, game_seed: 
 	RumorRules.seed(s, Catalog.data)  # the pack's talk (v0.7.47)
 	if not s.dream.is_empty():  # the first hall's checkpoint: a death there begins the dream again (v0.8.4.44.7)
 		SaveManager.save_slot(DREAM_SAVE, s)
-	_request("enter", "")
+	if not _pack_told():
+		_request("enter", "")
 
 
 ## Long rest (ADR-0010 §6): in a safe room outside a conversation with the price paid, or — v0.7.8, the author: «as in
@@ -1084,22 +1085,10 @@ func _parley_check(params: Dictionary) -> Dictionary:
 ## "" or a localization key.
 ## «Осмотреться» (v0.8.4.44, the author: a look by Perception only described the room and confused the player): the master
 ## tells what is in sight, with no check — what is hidden is found by «Обыскать». "" or a localization key.
+## «Осмотреться»: the one look and search (v0.8.4.44.9, the author: «Осмотреться и Обыскать у нас теперь одна кнопка») —
+## Perception (ExplorationRules.SEARCH_SKILL) finds what can be noticed and what is hidden (caches, traps, mechanisms) with
+## DC ≤ total, takes rules.time.search_minutes, and the master tells the room with what was found. "" or a localization key.
 func look_around() -> String:
-	if not _master_ready():
-		return "WAIT_BUSY"
-	if _engaged():
-		return "WAIT_NOT_NOW"
-	var text := tr("LOOK_SAY")
-	_add(GameSession.player_entry(text))
-	_log("Игрок: " + text)
-	EventBus.state_changed.emit()
-	_request("action", text + " [движок: только описание того, что на виду, без проверки — спрятанное ищут кнопкой «Обыскать»]")
-	return ""
-
-
-## «Обыскать»: the one search check — Perception (ExplorationRules.SEARCH_SKILL) — finds what can be noticed and what is
-## hidden (caches, traps, mechanisms) with DC ≤ total, and takes rules.time.search_minutes. "" or a localization key.
-func search_room() -> String:
 	if not _master_ready():
 		return "WAIT_BUSY"
 	if _engaged():
@@ -1114,7 +1103,7 @@ func search_room() -> String:
 	var found: Array = result.get("revealed", [])
 	var note := "[движок уже бросил: %s %d%s — %s]" % [tr("SKILL_" + skill.to_upper()), int(result["total"]), " (повтор без изменений)" if bool(result.get("blocked", false)) else "",
 		("найдено: " + "; ".join(found)) if not found.is_empty() else "ничего нового"]
-	var text := tr("SEARCH_SAY")
+	var text := tr("LOOK_SAY")
 	_add(GameSession.player_entry(text))
 	_log("Игрок: " + text)
 	EventBus.state_changed.emit()
@@ -1699,10 +1688,14 @@ func _combat_outcome() -> void:
 		return
 	s.combat["narrated"] = true
 	var outcome := str(s.combat["outcome"])
-	if outcome in ["dead", "captured"] and DreamRules.fall(s, Catalog.data) == DreamRules.END:  # the dream's last hall: lost or taken — the end (v0.8.4.44.7)
+	var fall := DreamRules.fall(s, Catalog.data) if outcome in ["dead", "captured"] else ""
+	if fall == DreamRules.END:  # the dream's last hall: lost or taken — the end (v0.8.4.44.7)
 		outcome = DREAM_END
 		s.combat["outcome"] = outcome
 		DreamRules.end(s, Catalog.data)
+	elif fall == DreamRules.BACK and outcome == "captured":  # a dream knows no captivity: taken is fallen, the hall comes
+		outcome = "dead"  # back as after a death (v0.8.4.44.9, the tutorial playtest: bound in the goblins' den for good)
+		s.combat["outcome"] = outcome
 	if outcome in ["victory", "truce"]:
 		CombatRules.results(s, Catalog.data)
 		var xp_lines := XpRules.share(s, Catalog.data, int(s.combat["xp"]), "бой", GrowthRules.fought(s))  # split with the followers who fought (v0.8.4.42.2)
@@ -2520,9 +2513,28 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 	if not again.is_empty():  # described today and nothing on the way: the engine's line, no master (v0.7.22.20, #8)
 		_effect_lines([again] as Array[String], true)
 		return
+	if lines.size() <= 1 and _pack_told():
+		return
 	session.described[room_id] = session.day
 	if not _enter_ready(lines):
 		_request("enter", "\n".join(lines.slice(1)))
+
+
+## A room the pack tells by its own words on the first entry (`told` of the room, v0.8.4.44.9, the author: «убрать первую
+## генерацию мастера и заменить её на захардкоженную вставку»): no master's turn, the room described for the day.
+func _pack_told() -> bool:
+	var s := session
+	var text := str(world().room(s.room_id).get("told", ""))
+	if text.is_empty() or s.described.has(s.room_id):
+		return false
+	s.described[s.room_id] = s.day
+	_add(GameSession.dm_entry(text, s.next_turn_id()))
+	EventBus.state_changed.emit()
+	SaveManager.save_slot(SaveManager.AUTOSAVE, s)
+	_maybe_tell_quests()
+	_prepare()
+	_after_turn(s, "enter")
+	return true
 
 
 ## The room's description readied with its furnishing (v0.8.4.25.3): told at once, without the master, when nothing
@@ -2531,10 +2543,10 @@ func _move_to(room_id: String, lines: Array[String], announce: bool = true) -> v
 func _enter_ready(lines: Array[String]) -> bool:
 	var s := session
 	var text := PrepareRules.told(s, Catalog.data, s.room_id) if lines.size() <= 1 else ""
-	if text.is_empty() or not PropRules.needs_furnish(s, s.room_id):  # told of the things it lays, not of others
+	if text.is_empty() or not PropRules.needs_furnish(s, s.room_id, Catalog.data):  # told of the things it lays, not of others
 		return false
 	_lay_furnishing(s)
-	if PropRules.needs_furnish(s, s.room_id):
+	if PropRules.needs_furnish(s, s.room_id, Catalog.data):
 		return false
 	_add(GameSession.dm_entry(text, s.next_turn_id()))
 	EventBus.state_changed.emit()
@@ -2596,8 +2608,8 @@ func walked(map: Dictionary) -> bool:
 	if not said.is_empty():
 		_effect_lines(said)
 	var fight := bool(eyes["fight"])
-	if trap.is_empty() and not fight:
-		return eyes.has("new_sight")
+	if trap.is_empty() and not fight:  # a screen of teaching that waits at a way out stops the walk (v0.8.4.44.9)
+		return eyes.has("new_sight") or HintRules.stops(s, data, SaveManager.hints_seen, SaveManager.hints_on)
 	if is_busy() or not Backend.is_ready():
 		return true
 	if not trap.is_empty():
@@ -3746,7 +3758,7 @@ func ask_work(npc_id: String) -> String:
 
 ## The readied furnishing of the room the hero enters is laid before the entry turn, which then only tells of it.
 func _lay_furnishing(s: GameSession) -> void:
-	if PropRules.needs_furnish(s, s.room_id):
+	if PropRules.needs_furnish(s, s.room_id, Catalog.data):
 		var lines := _lay_prepared(s, [PrepareRules.furnishing(s, Catalog.data, s.room_id)])
 		if not lines.is_empty():
 			_log("События: " + ", ".join(lines))

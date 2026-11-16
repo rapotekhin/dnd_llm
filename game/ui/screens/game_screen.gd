@@ -812,13 +812,14 @@ func _on_arrived() -> void:
 		_walk(plan["path"])
 
 
-## The screen of teaching due now (HintRules), one at a time: never over the master's turn, a walk, a fight's animation
-## or its question, an open window or «Точно?».
+## The screen of teaching due now (HintRules), one at a time: never over a walk, a fight's animation or its question, an
+## open window or «Точно?». Over the master's turn too (v0.8.4.44.9, the author: «сначала подсказка… и потом генерация
+## мастера, можно независимо»), but a row with ready words waits for it: the master's own options would come after them.
 func _teach_due() -> void:
-	if is_instance_valid(_lesson) or not GameState.has_session() or GameState.is_busy() or _field.walking() or _fight.holds() 			or _pause.visible or trade_panel.visible or get_window().get_node_or_null("ConfirmBox") != null 			or not _open().is_empty():
+	if is_instance_valid(_lesson) or not GameState.has_session() or GameState.combat_playing or _field.walking() or _fight.holds() 			or _pause.visible or trade_panel.visible or get_window().get_node_or_null("ConfirmBox") != null 			or not _open().is_empty():
 		return
 	var row := GameState.hint_due()
-	if row.is_empty():
+	if row.is_empty() or (row.has("phrases") and GameState.is_busy()):
 		return
 	_lesson = HintBox.open(self, row, _point_rect.bind(str(row.get("point", ""))))
 	GameState.hint_shown(row)

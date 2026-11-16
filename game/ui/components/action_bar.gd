@@ -47,7 +47,7 @@ const PASSIVE := "BAR_PASSIVE"
 const KIND_TITLES := {"common": "BAR_KIND_COMMON", "combat": "BAR_KIND_COMBAT", "class": "BAR_KIND_CLASS", "items": "BAR_KIND_ITEMS",
 	"deeds": "BAR_DEEDS", "passive": "BAR_KIND_PASSIVE"}
 const TABS := ["", "common", "combat", "class", "items", "deeds", "passive"]
-const CELL := 72
+const CELL := 56
 const GAP := 4
 const STRIP := 36  ## the strip of the frame's top edge: the counters' plaque and the tabs of kinds stand in it
 const OVERLAP := 6  ## how far the plaque and the tabs come down over the frame's line
@@ -421,8 +421,8 @@ func _cells() -> Dictionary:
 				out[key] = [str(KEYS[k][1]), c]
 			else:
 				other.append([key, str(KEYS[k][1]), c])
-	for o: Array in other:
-		if not out.has(o[0]) and o[2] is IconSlot:
+	for o: Array in other:  # the side panel's cells are the hero's: a companion's bar has none of them (v0.8.4.44.9)
+		if not out.has(o[0]) and o[2] is IconSlot and Sheet.is_hero(who):
 			var src := o[2] as IconSlot
 			out[o[0]] = [str(o[1]), _ghost(str(o[0]), src.spec, src.tip_title if not src.tip_title.is_empty() else src.text.get_slice("\n", 0), src.tip_body, src.card)]
 	if not _fight:
@@ -450,6 +450,11 @@ func _ghost(key: String, look: Dictionary, title: String, body: String, card: Di
 	_park.add_child(g)
 	_ghosts.append(g)
 	return g
+
+
+## The layout this bar shows: the hero's own or the companion's whose turn the player plays (`HotbarLayout.layout_of`).
+func layout() -> String:
+	return HotbarLayout.layout_of(GameState.session, who) if GameState.session != null else HotbarLayout.BAR
 
 
 func _cells_of(key: String) -> Array:
@@ -506,9 +511,11 @@ func _lay_grid() -> void:
 	for key: String in cells:
 		kinds[key] = cells[key][0]
 	var side := "fight" if _fight else "peace"
-	var probe := HotbarLayout.place(SaveManager.hotbar.duplicate(true), HotbarLayout.BAR, kinds, total, side)  # how many sections: a copy,
-	total = _columns(probe.size() if _filter.is_empty() else 1)  # the new cells laid once, into the room the dividers leave (v0.8.4.43.49)
-	var sections := HotbarLayout.place(SaveManager.hotbar, HotbarLayout.BAR, kinds, total, side)
+	var probe := HotbarLayout.place(SaveManager.hotbar.duplicate(true), layout(), kinds, total, side)  # how many sections: a copy,
+	total = _columns(probe.size())  # the new cells laid once, into the room the dividers leave (v0.8.4.43.49)
+	var wide := _columns(1)  # a tab of one kind draws its card the bar's whole width; the layout stays the bar's own, so
+	# «in sight» on the tab is in sight of the whole bar (v0.8.4.44.9: an empty section keeps a column)
+	var sections := HotbarLayout.place(SaveManager.hotbar, layout(), kinds, total, side)
 	_drawn_kinds = {}
 	var shown := []  # [the section's index in the layout, the section] to draw
 	for i in sections.size():
@@ -527,8 +534,8 @@ func _lay_grid() -> void:
 		var index: Array = sec["index"]
 		var cols := int(sec["cols"])
 		if not _filter.is_empty():  # one kind alone: its card from its first column, the bar's whole width
-			cols = total
-			var whole := HotbarLayout.view(SaveManager.hotbar, HotbarLayout.drawn(SaveManager.hotbar, HotbarLayout.BAR, at), 0, total, cells)
+			cols = wide
+			var whole := HotbarLayout.view(SaveManager.hotbar, HotbarLayout.drawn(SaveManager.hotbar, layout(), at), 0, wide, cells)
 			slots = whole["slots"]
 			index = whole["index"]
 		if n > 0:
@@ -620,9 +627,9 @@ func held_input(e: InputEvent) -> void:
 		up = true
 	if not up and e is InputEventMouseMotion:
 		var want := snap((e as InputEventMouse).global_position.x - float(_held["x"]))
-		var cols := HotbarLayout.reach(SaveManager.hotbar, HotbarLayout.BAR, int(_held["i"]), want - int(_held["done"]))
+		var cols := HotbarLayout.reach(SaveManager.hotbar, layout(), int(_held["i"]), want - int(_held["done"]))
 		if cols != 0:
-			HotbarLayout.shift(SaveManager.hotbar, HotbarLayout.BAR, int(_held["i"]), cols)
+			HotbarLayout.shift(SaveManager.hotbar, layout(), int(_held["i"]), cols)
 			_held["done"] = int(_held["done"]) + cols
 			_relay()
 	if up:
@@ -637,7 +644,7 @@ static func snap(dx: float) -> int:
 
 
 func _on_drop(key: String, sec: int, index: int) -> void:
-	HotbarLayout.move(SaveManager.hotbar, HotbarLayout.BAR, cell_key(key), sec, index, not _filter.is_empty())
+	HotbarLayout.move(SaveManager.hotbar, layout(), cell_key(key), sec, index, not _filter.is_empty())
 	SaveManager.save_settings()
 	_relay()
 
@@ -649,7 +656,7 @@ static func cell_key(key: String) -> String:
 
 
 func _on_off(key: String) -> void:
-	HotbarLayout.hide(SaveManager.hotbar, HotbarLayout.BAR, key)
+	HotbarLayout.hide(SaveManager.hotbar, layout(), key)
 	SaveManager.save_settings()
 	_relay()
 

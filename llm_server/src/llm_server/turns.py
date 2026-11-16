@@ -76,7 +76,8 @@ async def stub_turn(session: Session, params: TurnRequestParams) -> TurnResult:
         return await _stub_prepare(session, params, usage)
     if params.kind in ("deal", "quest", "ability", "downed", "combat_start", "combat_round", "death", "law"):
         return TurnResult(turn_id=params.turn_id, narration=f"Готово. ({params.input})", usage=usage)
-    if params.kind != "action" or "без проверки" in params.input:  # «Осмотреться» asks no check (v0.8.4.44)
+    # «Осмотреться» and a check option come rolled by the engine: no second check (v0.8.4.44.9, one button of the search)
+    if params.kind != "action" or "без проверки" in params.input or "движок уже бросил" in params.input:
         return TurnResult(turn_id=params.turn_id, narration="Вы осматриваетесь.", usage=usage)
     if prompts.boundless(params.snapshot) and _MAKE_ASK.match(params.input):
         return await _stub_make(session, params, usage)

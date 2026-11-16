@@ -94,7 +94,7 @@ static func jobs(s: GameSession, data: Dictionary, busy: Array = []) -> Array[Di
 				out.append({"kind": "board", "key": key, "room": room, "prop": str(p["id"]), "left": left})
 	for room: String in rooms:
 		var rec: Dictionary = part(s, ROOMS).get(room, {})
-		if PropRules.needs_furnish(s, room) and not busy.has("furnish:" + room) \
+		if PropRules.needs_furnish(s, room, data) and not busy.has("furnish:" + room) \
 				and (str(rec.get("ver", "")) != fingerprint(s, data, room) or str(rec.get("moment", "")) != moment(s, data, room)):
 			out.append({"kind": "furnish", "key": room, "room": room})
 	var today := TimeRules.today(s, s.prepared, "quests_today") + busy.filter(func(b: Variant) -> bool: return str(b).begins_with("quest:")).size()

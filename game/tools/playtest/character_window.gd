@@ -101,7 +101,7 @@ func run() -> void:
 	bar.call("set_filter", "class")
 	await frames(4)
 	var pinned: IconSlot = find(bar, "Pin_spell_cure_wounds")
-	if step("Cure Wounds on the hotbar", pinned != null and pinned.is_visible_in_tree(), str((HotbarLayout.mode(node("SaveManager").hotbar, HotbarLayout.BAR)["sections"] as Array).map(func(x: Dictionary) -> String: return "%s %d/%d %s" % [x["kind"], int(x["cols"]), int(x.get("skip", 0)), str(x.get("grid", []))]))):
+	if step("Cure Wounds on the hotbar", pinned != null and pinned.is_visible_in_tree(), str((HotbarLayout.mode(node("SaveManager").hotbar, HotbarLayout.layout_of(node("GameState").session, Sheet.HERO))["sections"] as Array).map(func(x: Dictionary) -> String: return "%s %d/%d %s" % [x["kind"], int(x["cols"]), int(x.get("skip", 0)), str(x.get("grid", []))]))):
 		pinned.dropped_off.emit(pinned.drag_key)
 		await frames(4)
 		step("dragged off the bar, it is gone", not _on_bar(bar, "Pin_spell_cure_wounds"))

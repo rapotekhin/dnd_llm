@@ -4,7 +4,7 @@ extends Control
 ## too; on the left the party column of the peace (v0.8.4.43.10, as in BG3: the hero and its party, never a foe), the acts on
 ## the hotbar under it, the log on the right; the windows of a choice and the results stand over all.
 ## An act that needs a target lights it: a click on a body or a line of the list does it, an area follows the mouse and a
-## click lays it on the square. A click on a free square walks, on a foe opens its acts. The screen only shows and sends:
+## click lays it on the square. A click on a free square walks, on a foe strikes it (the right button — its acts). The screen only shows and sends:
 ## every rule is in `core/`, FightGrid and CombatRules.
 
 var _screen: Control
@@ -482,7 +482,7 @@ static func onto() -> bool:
 	return Input.is_key_pressed(KEY_SHIFT)
 
 
-## A click on the field: the picked act goes at the square or the body, a foe opens its acts, else the hero walks.
+## A click on the field: the picked act goes at the square or the body, a foe is struck (v0.8.4.44.9), else the hero walks.
 func on_cell(cell: Vector2i) -> void:
 	if not mine():
 		return
@@ -504,7 +504,7 @@ func on_cell(cell: Vector2i) -> void:
 		_do(GameState.combat_act("walk", FightGrid.aim_id(cell)))
 		return
 	if not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
-		_foe_menu(id)
+		_strike_foe(id)
 		return
 	if not id.is_empty() and id != CombatRules.PLAYER:  # one of the hero's side: its card (v0.8.4.41)
 		EventBus.card_requested.emit(id)
@@ -520,9 +520,52 @@ func on_cell(cell: Vector2i) -> void:
 		_do(GameState.combat_act("walk", FightGrid.aim_id(cell)))
 
 
-## The right button lets the picked act go.
-func on_right(_cell: Vector2i) -> void:
-	cancel()
+## The right button lets the picked act go; with none picked, on a foe it opens the foe's acts (v0.8.4.44.9, the author:
+## «почему в бою на левую кнопку меню действий, а в мирное время на правую? Всегда на правую должно быть»).
+func on_right(cell: Vector2i) -> void:
+	var id := _id_at(cell)
+	if _pending.is_valid() or not _second.is_empty() or id.is_empty() or not mine() \
+			or str(CombatRules.fighter(GameState.session, id).get("side")) != "enemy":
+		cancel()
+		return
+	_foe_menu(id)
+
+
+## The left button on a foe (v0.8.4.44.9, as in BG3): the blow that gets to it — «Атака», walking up as its cell does,
+## else «Стрельба»; with neither, its acts as the right button opens them.
+func _strike_foe(id: String) -> void:
+	var row := _strike_row(id)
+	if row.is_empty():
+		_foe_menu(id)
+		return
+	_take(row)
+	_press(id)
+
+
+## The blow a left click on foe `id` makes (as in BG3): «Атака», else «Стрельба», as it can go now; {} — none.
+func _strike_row(id: String) -> Dictionary:
+	for node_name: String in ["Attack_melee", "Attack_ranged"]:
+		for row: Dictionary in _acts:
+			if str(row.get("name", "")) == node_name and bool(row["on"]) and str((row["check"] as Callable).call(id)).is_empty():
+				return row
+	return {}
+
+
+## What the hint says over `id` on `cell` with the picked act — or, with none picked, the blow a left click would make:
+## its chance and its way up dashed (the author: «игрок должен понимать, что … сейчас он к нему побежит бить», v0.8.4.44.9);
+## "" — nothing to say of an act.
+func _pick_text(s: GameSession, data: Dictionary, cell: Vector2i, id: String) -> String:
+	var lent := false
+	if not _pending.is_valid() and mine() and not id.is_empty() and str(CombatRules.fighter(s, id).get("side")) == "enemy":
+		var row := _strike_row(id)
+		if not row.is_empty():
+			_take(row)
+			lent = true
+	var about := _about(s, data, cell, id)
+	var text := about + _walk_up(s, data, id) if not about.is_empty() else ""
+	if lent:
+		_pending = Callable()
+	return text
 
 
 ## A fighter picked by its portrait — in the queue, the fight's list or the hotbar (v0.8.4.43.8, as in BG3): the picked act
@@ -535,7 +578,7 @@ func on_fighter(id: String) -> void:
 		_aim(_target_of(id))
 	elif str(f.get("side")) == "enemy":
 		if mine():
-			_foe_menu(id)
+			_strike_foe(id)
 	elif id != CombatRules.PLAYER:  # an ally's card is a look, free at any turn
 		EventBus.card_requested.emit(id)
 
@@ -568,8 +611,8 @@ func point_at(id: String) -> void:
 	else:
 		var cell := FightGrid.shown(CombatRules.fighter(s, id))
 		_field.pointed = cell
-		var text := _about(s, Catalog.data, cell, id)
-		_hint.text = text + _walk_up(s, Catalog.data, id) if not text.is_empty() else _name_of(s, id)
+		var text := _pick_text(s, Catalog.data, cell, id)
+		_hint.text = text if not text.is_empty() else _name_of(s, id)
 	_field.queue_redraw()
 
 
@@ -656,9 +699,9 @@ func on_hover(cell: Vector2i) -> void:
 	var text := _base_hint(me)
 	_field.blast = {}
 	_field.way = []
-	var about := _about(s, data, cell, id)
+	var about := _pick_text(s, data, cell, id)
 	if not about.is_empty():
-		text = about + _walk_up(s, data, id)
+		text = about
 	elif onto() and _field.routes.has(cell):
 		_field.way = FightGrid.route(_field.routes, cell)
 		text = tr("COMBAT_WALK_COST").format({"ft": int(_field.routes[cell][0]) * int(FightGrid.cfg(data)["ft"])})
@@ -1430,27 +1473,35 @@ func _near(id: String, how: Dictionary = {}) -> Array[Callable]:
 func _action(parent: Control, node_name: String, text: String, enabled: bool, act: Callable, check: Callable, preview: Callable, aims := "", feet := 0, icon := "",
 		way := Callable()) -> Button:
 	var b := _button(parent, node_name, text, enabled, icon)
-	_acts.append({"tab": _act_tab, "sub": _act_sub, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims})
+	var row := {"tab": _act_tab, "sub": _act_sub, "text": text, "on": enabled, "act": act, "check": check, "preview": preview, "aims": aims,
+		"name": node_name, "feet": feet, "way": way}
+	_acts.append(row)
 	b.toggle_mode = true
 	b.button_pressed = _pending.is_valid() and _pending_name == node_name
-	b.pressed.connect(_arm.bind(node_name, text, act, check, preview, aims, feet, way))
+	b.pressed.connect(_arm.bind(row))
 	return b
 
 
 ## Picks an act to aim — a cell's press and a pick of the «Бросить» list alike; picked again, it is let go.
-func _arm(node_name: String, text: String, act: Callable, check: Callable, preview: Callable, aims: String, feet: int, way := Callable()) -> void:
-	if _pending.is_valid() and _pending_name == node_name:
+func _arm(row: Dictionary) -> void:
+	if _pending.is_valid() and _pending_name == str(row["name"]):
 		_pending = Callable()
 	else:
-		_pending = act
-		_pending_check = check
-		_pending_preview = preview
-		_pending_name = node_name
-		_pending_text = text
-		_pending_aim = aims
-		_pending_feet = feet
-		_pending_way = way
+		_take(row)
 	refresh()
+
+
+## The act of `row` picked: what it does, checks, shows and how it walks up — the one pick of a button, a foe's click and
+## the hover over a foe with nothing picked (v0.8.4.44.9).
+func _take(row: Dictionary) -> void:
+	_pending = row["act"]
+	_pending_check = row["check"]
+	_pending_preview = row["preview"]
+	_pending_name = str(row["name"])
+	_pending_text = str(row["text"])
+	_pending_aim = str(row["aims"])
+	_pending_feet = int(row.get("feet", 0))
+	_pending_way = row.get("way", Callable())
 
 
 ## «Атака» and «Стрельба» as in BG3 (the author, 2026-11-13: «вместо иконок надетого оружия в бою — общие «Атака» и
@@ -1513,7 +1564,7 @@ func _throw_menu(b: Control) -> void:
 	_pop.add_separator(tr("COMBAT_THROW_MENU"))
 	var s := GameState.session
 	for o: Dictionary in _throws:
-		var at := _pop.add_act(_pop, str(o["text"]), "", not bool(o["on"]), _arm.bind(str(o["name"]), str(o["text"]), o["act"], o["check"], o["preview"], str(o["aims"]), int(o["feet"])))
+		var at := _pop.add_act(_pop, str(o["text"]), "", not bool(o["on"]), _arm.bind(o))
 		var tex := IconSlot.texture(str(IconRules.of(Catalog.data, s.items if s != null else {}, "items/" + str(o["item"]))["path"]))
 		if tex != null:
 			_pop.set_item_icon(_pop.get_item_index(at), tex)

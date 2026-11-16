@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.133.0"
+PROTOCOL_VERSION = "0.134.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -423,7 +423,8 @@ class CombatFoe(_In):
     distance_ft: int = 0
     side: Literal["left", "right", "same"] = "same"
     # 0.46.0: unconscious — knocked out by a nonlethal blow (v0.7.22.11); the snapshot failed the turn without it
-    status: Literal["active", "dead", "fled", "surrendered", "truce", "unconscious"] = "active"
+    # 0.134.0: away — after the hero out of the room, left — stayed behind it (FightField: the way out with a foe after the hero)
+    status: Literal["active", "dead", "fled", "surrendered", "truce", "unconscious", "away", "left"] = "active"
     health: str = ""  # full | hurt | bloodied | near_death | dead | fled | surrendered | truce | unconscious — never numbers
     description: str = ""
     surprised: bool = False  # caught off guard: skips its first turn (0.8.0)
@@ -447,7 +448,9 @@ class CombatAlly(_In):
     name: str
     monster: str = ""
     distance_ft: int = 0
-    status: Literal["active", "down", "gone"] = "active"  # down — a follower or a pack ally unconscious; gone — the summoned vanished
+    # down — a follower or a pack ally unconscious; gone — the summoned vanished; 0.134.0: dead — fell for good (a death of
+    # anybody of the hero's side, the dragon's hall of the tutorial failed the turn without it), away / left — as a foe's
+    status: Literal["active", "down", "gone", "dead", "away", "left"] = "active"
     health: str = ""
     source: Literal["follower", "pack", "summon"] = "pack"
     npc_id: str = ""

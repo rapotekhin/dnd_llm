@@ -2370,12 +2370,13 @@ static func _check_end(s: GameSession, data: Dictionary, lines: Array[String]) -
 		return
 	var ds: Dictionary = s.combat["death_saves"]
 	if int(s.character["hp"]) <= 0 and bool(ds.get("stable", false)) and allies(s).is_empty():
+		var him := "её" if str(s.character.get("gender", "")) == "female" else "его"  # the author's heroine (v0.8.4.44.9)
 		if s.combat.has("arena"):  # v0.7.45: the blood pit — the winner finishes the downed
 			s.combat["outcome"] = "dead"
-			lines.append("%s лежит на песке ямы — победитель добивает его" % s.character["name"])
+			lines.append("%s лежит на песке ямы — победитель добивает %s" % [s.character["name"], him])
 		elif enemies(s).any(func(id: String) -> bool: return _intelligent(data, fighter(s, id))):
 			s.combat["outcome"] = "captured"
-			lines.append("%s остаётся лежать — враги берут его живым" % s.character["name"])
+			lines.append("%s остаётся лежать — враги берут %s живым" % [s.character["name"], him])
 		else:  # v0.7.9: beasts leave a still body
 			s.combat["outcome"] = "left"
 			lines.append("%s остаётся лежать — звери теряют к нему интерес и уходят" % s.character["name"])

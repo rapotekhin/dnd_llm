@@ -355,7 +355,10 @@
           "enum": [
             "active",
             "down",
-            "gone"
+            "gone",
+            "dead",
+            "away",
+            "left"
           ],
           "title": "Status",
           "type": "string"
@@ -428,7 +431,9 @@
             "fled",
             "surrendered",
             "truce",
-            "unconscious"
+            "unconscious",
+            "away",
+            "left"
           ],
           "title": "Status",
           "type": "string"

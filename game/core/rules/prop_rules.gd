@@ -11,7 +11,11 @@ static func cfg(data: Dictionary) -> Dictionary:
 	return data["rules"]["props"]
 
 
-static func needs_furnish(s: GameSession, room_id: String) -> bool:
+## `data` given: a world closed to the master's furnishing (the pack's `closed` has "furnish": the dream's halls stand as
+## their chunks lay them, v0.8.4.44.9, the author: «пещера меняется, как появляется первое сообщение мастера») needs none.
+static func needs_furnish(s: GameSession, room_id: String, data: Dictionary = {}) -> bool:
+	if not data.is_empty() and DreamRules.closes(data, "furnish"):
+		return false
 	return not s.props.has(room_id) or (s.props[room_id] as Array).all(func(p: Dictionary) -> bool: return not furnished(p))
 
 

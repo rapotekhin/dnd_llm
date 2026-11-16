@@ -10,6 +10,10 @@ extends RefCounted
 ## away: [text | {text, check}] (`check` — the spec of an option's roll). `button` "wake" — the dream's end, «Проснуться»
 ## (DreamRules.wake_row, the last row of the queue); else «Продолжить». `point`: a control of the screen by its name,
 ## "map:<id>" — a person, a creature or a thing of the room's map by its pack id (map_ref), none — the screen itself.
+## v0.8.4.44.9 (the author: «инструкцию Осмотреться включать, когда игрок будет за 1 клетку от выхода»): `near`
+## {exit, squares} — due only while the hero stands within `squares` (1 by default) of the way to room `exit` on the room's
+## map; a walk stops there for it (`stops`). A row is shown over the master's turn too, but one with `phrases` waits for it:
+## the master's own options would come after its words.
 
 const GAME := "game"
 const PROFILE := "profile"
@@ -40,9 +44,29 @@ static func due(s: GameSession, data: Dictionary, seen: Array, on: bool) -> Dict
 		var after := str(row.get("after", ""))
 		if not after.is_empty() and (not s.hints.has(after) or s.turn_counter <= int(s.hints[after])):
 			continue
-		if Cond.holds(s, row, data):
+		if Cond.holds(s, row, data) and (not row.has("near") or near(s, data, row["near"])):
 			return row
 	return {}
+
+
+## The hero stands within `at.squares` (1 by default) of the way to room `at.exit` on the room's map.
+static func near(s: GameSession, data: Dictionary, at: Variant) -> bool:
+	if not at is Dictionary or s.mode != GameSession.MODE_EXPLORATION:
+		return false
+	var map := WalkRules.view(s, data)
+	if map.is_empty():
+		return false
+	var way := WalkRules.way_cell(map, s.room_id, str(at.get("exit", "")))
+	if way.x < 0:
+		return false
+	var me := WalkRules.settle(s, data, map)
+	var d := maxi(absi(me.x - way.x), absi(me.y - way.y))
+	return d <= int(at.get("squares", 1))
+
+
+## A walk stops for the row due now when it waits for the hero at a way out (`near`): the hero is there, it shows.
+static func stops(s: GameSession, data: Dictionary, seen: Array, on: bool) -> bool:
+	return due(s, data, seen, on).has("near")
 
 
 ## The row is shown: this game keeps it with the turn it came at (a later row's `after` reads it). True — the profile
@@ -89,6 +113,8 @@ static func faults(row: Variant, ids: Array) -> Array[String]:
 		e.append("%s: after — id строки выше" % id)
 	if row.has("button") and str(row["button"]) != WAKE:
 		e.append("%s: button — только wake" % id)
+	if row.has("near") and (not row["near"] is Dictionary or str(row["near"].get("exit", "")).is_empty()):
+		e.append("%s: near — {exit, squares}" % id)
 	for ph: Variant in row.get("phrases", []):
 		if not (ph is String or (ph is Dictionary and not str(ph.get("text", "")).is_empty())):
 			e.append("%s: phrases — строки или {text, check}" % id)

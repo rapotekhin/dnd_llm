@@ -46,6 +46,7 @@
 				"not_flag": {"type": "string"},
 				"free": {"type": "string", "description": "v0.8.4.44.5: a person not held bound"},
 				"has": {"type": "string", "description": "the hero carries this thing"},
+				"hurt": {"type": "boolean", "description": "v0.8.4.44.9: the hero has lost hit points now"},
 				"talk": {"type": "string"},
 				"item": {"type": "string"},
 				"qty": {"type": "integer", "minimum": 1},
@@ -132,7 +133,7 @@
 					},
 					"additionalProperties": false
 				},
-				"closed": {"type": "array", "items": {"type": "string", "pattern": "^create:[a-z_]+$"}, "description": "v0.8.4.44.2: the master's effect kinds refused in this world (a dream makes nothing new)"},
+				"closed": {"type": "array", "items": {"type": "string", "pattern": "^(create:[a-z_]+|furnish)$"}, "description": "v0.8.4.44.2: the master's effect kinds refused in this world (a dream makes nothing new); v0.8.4.44.9: furnish — no master's furnishing of its rooms"},
 				"hints": {
 					"type": "array",
 					"description": "v0.8.4.44.5: screens of teaching (HintRules) — the first due row in order is shown over the dimmed screen with an arrow at `point`",
@@ -143,6 +144,7 @@
 							"id": {"$ref": "#/$defs/nonempty"},
 							"when": {"$ref": "#/$defs/when"},
 							"after": {"type": "string", "description": "the row shown before and a master's turn since"},
+							"near": {"type": "object", "required": ["exit"], "properties": {"exit": {"$ref": "#/$defs/nonempty"}, "squares": {"type": "integer", "minimum": 0}}, "additionalProperties": false, "description": "v0.8.4.44.9: the hero within `squares` of the way to room `exit`; a walk there stops for the row"},
 							"title": {"type": "string"},
 							"text": {"$ref": "#/$defs/nonempty"},
 							"point": {"type": "string", "description": "a control of the screen by its name, map:<id> — a thing, a person or a creature of the room's map"},

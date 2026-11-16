@@ -20,6 +20,16 @@ func _go(gs: Node, to: String) -> void:
 	await _idle(gs)
 
 
+## Hurt — a potion by the pack's own act, as the screen «Рана» teaches (a double click in the grid of things).
+func _heal(gs: Node, data: Dictionary, when: String) -> void:
+	var s: GameSession = gs.session
+	if int(s.character["hp"]) >= int(s.character["max_hp"]) or int(s.character["inventory"].get("healing_potion", 0)) <= 0:
+		return
+	var drunk: String = gs.item_act(ItemActs.main(ItemActs.of(s, data, Being.HERO, "healing_potion")))
+	await _idle(gs)
+	step("a potion " + when, drunk.is_empty() and int(s.character["hp"]) > 0, "%s, HP %d/%d" % [drunk, s.character["hp"], s.character["max_hp"]])
+
+
 ## The fight of the hall the hero stands in, by the buttons, until it is over; a death brings the hall back and the
 ## fight is tried again. The outcome, "" — no fight here.
 func _fight(gs: Node, label: String) -> String:
@@ -82,10 +92,10 @@ func run() -> void:
 	step("in the first hall, nothing on", s.room_id == "dream-1" and (s.character["inventory"] as Dictionary).is_empty())
 	var seen: Array[String] = []
 	seen.append_array(await lessons("teach"))
-	await tap("LookButton")
-	await _idle(gs)
-	seen.append_array(await lessons("teach"))
-	await tap("SearchButton")
+	var map := WalkRules.view(s, data)
+	await click_cell(WalkRules.way_cell(map, "dream-1", "dream-2"))  # «Осмотреться» is taught at the way out (v0.8.4.44.9)
+	seen.append_array(await lessons("teach", 15.0))
+	await tap("LookButton")  # one button: the Perception search
 	await _idle(gs)
 	step("the search finds the trap", not ExplorationRules.found_traps(s, data["world"], "dream-1").is_empty())
 	gs.container_take_all("f_chest")
@@ -110,15 +120,13 @@ func run() -> void:
 	await _go(gs, "dream-3")
 	s = gs.session
 	seen.append_array(await lessons("teach"))
-	if int(s.character["hp"]) < int(s.character["max_hp"]) and int(s.character["inventory"].get("healing_potion", 0)) > 0:
-		var drunk: String = gs.item_act(ItemActs.main(ItemActs.of(s, data, Being.HERO, "healing_potion")))
-		await _idle(gs)
-		step("a potion after the trap", drunk.is_empty() and int(s.character["hp"]) > 0, "%s, HP %d/%d" % [drunk, s.character["hp"], s.character["max_hp"]])
+	await _heal(gs, data, "after the trap")
 	gs.creature_act("npc_dream_fighter", "untie")
 	await _idle(gs)
 	step("the fighter goes along", Being.follows(s, "npc_dream_fighter"))
 	await shot("hall_3_done")
 
+	await _heal(gs, data, "before the den")  # the stub master's turns hurt by turn: a player drinks before a fight
 	await _go(gs, "dream-4")
 	step("the goblins' fight", await _fight(gs, "goblins' den") == "victory")
 	s = gs.session

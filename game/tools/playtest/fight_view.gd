@@ -1,7 +1,8 @@
 extends "res://tools/playtest/playtest_base.gd"
 ## The fight's view and a foe's menu (python tools/godot_playtest.py --scenario fight_view), v0.8.4.3: a cleric by a goblin:
 ## a hover names the foe and moves nothing, a click opens its acts and does nothing by itself, the range of a spell from the
-## hero, a zoom that a spell does not take back, a watcher at the edge looks inward.
+## hero, a zoom that a spell does not take back, a watcher at the edge looks inward. v0.8.4.44.9 (the author, as in BG3):
+## the right button opens the foe's acts, the left strikes it — walking up to the blade's reach, its way dashed on the hover.
 
 
 func run() -> void:
@@ -41,12 +42,17 @@ func run() -> void:
 	await frames(3)
 	var view: Array = [field.call("tile"), field.call("corner")]
 	var hint: Label = find(screen(), "Hint")
-	step("a hover says the name alone", hint.text == str(foe["name"]), hint.text)
+	var lit: Array = field.get("way")
+	step("a hover with nothing picked shows the left click's blow: its name, chance and the way up dashed (v0.8.4.44.9)",
+		hint.text.begins_with(str(foe["name"])) and hint.text.contains("подойдёт на") and lit.size() > 1 and bool(field.get("dashed")) and lit[0] == hero,
+		"%s | %s" % [hint.text, lit])
+	await shot("hover_blow")
 
 	var money := CombatRules.economy(s).duplicate()
-	await click_cell(at)
+	field.call("emit_signal", "cell_right", at)
+	await frames(3)
 	var menu: PopupMenu = find(screen(), "FoeMenu")
-	step("a click opens its acts", menu != null and menu.visible)
+	step("the right button opens its acts", menu != null and menu.visible)
 	step("and does nothing by itself", FightGrid.cell(CombatRules.player(s)) == hero and CombatRules.economy(s).hash() == money.hash())
 	var tabs: Array = _texts(menu)
 	step("lists by the tabs, not one long window", tabs.has(tr("COMBAT_TAB_WEAPONS")) and tabs.has(tr("COMBAT_TAB_SPELLS")) and tabs.has(tr("COMBAT_TAB_COMMON")), str(tabs))
@@ -75,7 +81,8 @@ func run() -> void:
 		await frames(3)
 		field.call("emit_signal", "cell_hovered", at)
 		await frames(2)
-		step("no way once let go", (field.get("way") as Array).is_empty() and FightGrid.cell(CombatRules.player(s)) == hero)
+		step("let go — the hover shows the left click's own blow again, nothing moved (v0.8.4.44.9)",
+			(field.get("way") as Array).size() > 1 and FightGrid.cell(CombatRules.player(s)) == hero)
 	var cast: Button = find(screen(), "Cast_sacred_flame")
 	if step("a spell at a range on the tab", cast != null):
 		await press(cast)
@@ -87,7 +94,8 @@ func run() -> void:
 		find(screen(), "FightUi").call("cancel")
 		await frames(3)
 		step("gone with the pick", (field.get("reach") as Dictionary).is_empty())
-	await click_cell(at)
+	field.call("emit_signal", "cell_right", at)
+	await frames(3)
 	menu = find(screen(), "FoeMenu")
 	var tricks: PopupMenu = find(find(menu, "List_" + tr("COMBAT_TAB_SPELLS")), "List_" + tr("DETAILS_CANTRIP"))
 	var flame := _line(tricks, str(data["spells"]["sacred_flame"]["name"]))
@@ -99,6 +107,19 @@ func run() -> void:
 		step("the spell went", int(CombatRules.economy(s).get("action", 1)) == 0)
 		step("the map stays where the player left it", field.call("tile") == view[0] and field.call("corner") == view[1], "%s → %s" % [view, field.call("corner")])
 	await shot("after_spell")
+	CombatRules.economy(s)["action"] = 1  # the flame spent it: the blow below needs its own
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var hp := int(foe["hp"])
+	var moved := int(CombatRules.economy(s).get("move", 0))
+	await click_cell(at)  # the left button strikes: the mace walks up and swings
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	await frames(6)
+	var swung := s.chat.any(func(e: Dictionary) -> bool: return str(e.get("log", e.get("lines", ""))).contains("Булав"))
+	step("a left click on the foe walks up and strikes", WalkRules.distance(FightGrid.cell(CombatRules.player(s)), FightGrid.cell(foe)) <= 1
+		and (int(foe["hp"]) < hp or swung or int(CombatRules.economy(s).get("move", 0)) < moved),
+		"%s → %s, HP %d → %d" % [hero, FightGrid.cell(CombatRules.player(s)), hp, int(foe["hp"])])
+	await shot("left_strike")
 
 
 func _texts(list: PopupMenu) -> Array:

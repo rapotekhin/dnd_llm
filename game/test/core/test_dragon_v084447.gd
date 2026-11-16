@@ -201,3 +201,15 @@ func test_the_fight_lost_in_the_last_hall_ends_the_dream() -> void:
 	GameState.finish_combat()
 	assert_bool(CombatRules.active(s)).is_false()
 	assert_int(int(s.character["hp"])).is_greater(0)
+
+
+## v0.8.4.44.9 (the tutorial playtest: the hero bound in the goblins' den for good): a dream knows no captivity — taken in
+## halls 1–6 is fallen, the hall comes back as after a death.
+func test_taken_in_a_hall_before_the_last_is_fallen() -> void:
+	var s := _dream()
+	ExplorationRules.place(s, "dream-4")
+	CombatRules.start(s, Catalog.data, [{"monster": "goblin", "x": 3, "y": 3}], {})
+	s.combat["outcome"] = "captured"
+	GameState._combat_outcome()
+	assert_str(str(s.combat["outcome"])).is_equal("dead")
+	assert_bool(s.flags.has("dream_end")).is_false()

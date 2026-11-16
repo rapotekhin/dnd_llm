@@ -69,9 +69,8 @@ func test_waking_begins_the_mark_from_the_same_choices_with_nothing_of_the_dream
 	var choices := _dream()
 	var s := GameState.session
 	assert_str(str(GameState.hint_due().get("button", ""))).is_not_equal(HintRules.WAKE)
-	ExplorationRules.place(s, "dream-7")  # the last hall: the dragon first (v0.8.4.44.7)
-	assert_str(str(GameState.hint_due().get("id", ""))).is_equal("dragon")
-	HintRules.shown(s, GameState.hint_due())
+	ExplorationRules.place(s, "dream-7")  # the last hall: no screen over the dragon (v0.8.4.44.9, the author)
+	assert_dict(GameState.hint_due()).is_empty()
 	s.encounters_done.append("dream_dragon")  # the dragon beaten — or the hero burnt (dream.fall's flag): the last screen
 	var wake := GameState.hint_due()
 	assert_str(str(wake.get("button", ""))).is_equal(HintRules.WAKE)

@@ -34,24 +34,36 @@ func _queue(s: GameSession, data: Dictionary, seen: Array = [], on: bool = true)
 func test_the_pack_s_screens_are_valid_and_the_dream_s_end_comes_last() -> void:
 	assert_array(Catalog.bundle("tutorial").get("errors", ["нет пакета"])).is_empty()
 	var ids: Array = HintRules.rows(dream).map(func(r: Dictionary) -> String: return str(r["id"]))
-	assert_array(ids).is_equal(["walk", "look", "search", "body", "gear", "hurt", "captive", "arrows", "improvise", "making", "dragon", HintRules.WAKE])
+	assert_array(ids).is_equal(["intro", "walk", "look", "body", "gear", "hurt", "captive", "arrows", "improvise", "making", HintRules.WAKE])
 	var wake: Dictionary = HintRules.rows(dream).back()
 	assert_str(str(wake["button"])).is_equal(HintRules.WAKE)
 	assert_str(HintRules.once(wake)).is_equal(HintRules.GAME)
 	assert_array(HintRules.rows(TestUtils.data())).is_empty()  # the Mark has no rows yet
 
 
-func test_the_first_hall_walk_then_look_and_search_after_a_master_s_turn() -> void:
+## v0.8.4.44.9 (the author's notes): the awakening first, then walking; «Осмотреться» — one button, the Perception search —
+## waits at the way out where the trap is, and the walk there stops for it.
+func test_the_first_hall_wakes_walks_and_looks_at_the_way_out() -> void:
 	var s := _at("dream-1")
-	assert_array(_queue(s, dream)).is_equal(["walk", "look"])
-	s.next_turn_id()  # the player looked around: the master answered
-	assert_array(_queue(s, dream)).is_equal(["search"])
-	assert_array(_queue(s, dream)).is_empty()  # each once
+	assert_array(_queue(s, dream)).is_equal(["intro", "walk"])
+	assert_bool(HintRules.stops(s, dream, [], true)).is_false()
+	var map := WalkRules.view(s, dream)
+	var way := WalkRules.way_cell(map, "dream-1", "dream-2")
+	assert_bool(way.x >= 0).is_true()
+	var by := WalkRules.near(map, dream["layouts"], WalkRules.settle(s, dream, map), way, 1, "dream-1")
+	assert_bool(by.is_empty()).is_false()
+	WalkRules.stand(s, map, "dream-1", by.back())  # the walk's last square, beside the way
+	assert_bool(HintRules.stops(s, dream, [], true)).is_true()  # the walk stops beside the way out
+	assert_array(_queue(s, dream)).is_equal(["look"])
+	assert_bool(HintRules.stops(s, dream, [], true)).is_false()  # once
+	assert_array(_queue(s, dream)).is_empty()
 
 
 func test_a_hall_left_takes_its_screens_with_it() -> void:
 	var s := _at("dream-3")
-	assert_array(_queue(s, dream)).is_equal(["hurt", "captive"])  # the second hall's body and gear are not told late
+	assert_array(_queue(s, dream)).is_equal(["captive"])  # the second hall's body and gear are not told late
+	s.character["hp"] = int(s.character["max_hp"]) - 1  # v0.8.4.44.9: the wound's screen the moment one comes
+	assert_array(_queue(s, dream)).is_equal(["hurt"])
 	Gear.give(s, dream, Being.HERO, "quiver", 1)
 	assert_array(_queue(s, dream)).is_equal(["arrows"])
 

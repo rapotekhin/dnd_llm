@@ -174,7 +174,6 @@
 		"SneakToggle": "sneak",
 		"SneakWait": "sneak_wait",
 		"LookButton": "look",
-		"SearchButton": "search",
 		"PerformButton": "perform",
 		"CollectAmmo": "collect",
 		"OwnBedButton": "bed",

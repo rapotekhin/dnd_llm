@@ -23,6 +23,7 @@ extends RefCounted
 const ROWS := 2
 const MAX_ROWS := 4
 const BAR := "bar"  ## the one layout of the bar, in a fight and out of it
+const KEPT := 40  ## the layouts the profile keeps, the oldest dropped past it
 const KINDS := {"bar": ["common", "combat", "class", "items", "deeds", "passive"],
 	"peace": ["common", "class", "items", "deeds", "passive"], "fight": ["common", "class", "items", "passive"]}
 
@@ -36,6 +37,16 @@ static func key_of(name: String) -> String:
 		if name.begins_with(pair[0]):
 			return str(pair[1]) + name.trim_prefix(pair[0])
 	return name
+
+
+## Whose layout the bar shows (v0.8.4.44.9, the author: «у его своя панель тулбар должна быть, у нас она не общая»): each
+## hero its own by its name and class — a new hero begins with a bar of its own spells, not with the places and the hidden
+## icons of the last one — and each companion its own by its person. One layout in a fight and out of it still.
+static func layout_of(s: GameSession, who: Dictionary) -> String:
+	if Sheet.is_hero(who):
+		return "%s:%s|%s" % [BAR, str(s.character.get("name", "")), str(s.character.get("class", ""))]
+	var id := str(who.get("npc_id", ""))
+	return "%s:%s" % [BAR, id if not id.is_empty() else str(who.get("name", who.get("id", "")))]
 
 
 static func rows(state: Dictionary) -> int:
@@ -62,10 +73,13 @@ static func mode(state: Dictionary, m: String) -> Dictionary:
 			sections.append({"kind": str(sec["kind"]), "cols": int(sec.get("cols", 0)), "slots": (sec["slots"] as Array).map(func(k: Variant) -> String: return key_of(str(k)))})
 		for k: Variant in old.get("hidden", []):
 			hidden.append(key_of(str(k)))
-		for k: String in KINDS.get(m, ["common"]):
+		for k: String in KINDS.get(m.get_slice(":", 0), ["common"]):
 			if not sections.any(func(sec: Dictionary) -> bool: return str(sec["kind"]) == k):
 				sections.append({"kind": k, "cols": 0, "grid": []})
-		state["modes"][m] = {"sections": sections, "hidden": hidden}
+		var modes: Dictionary = state["modes"]
+		while modes.size() >= KEPT:  # the bars of heroes long gone
+			modes.erase(modes.keys()[0])
+		modes[m] = {"sections": sections, "hidden": hidden}
 	for sec: Dictionary in state["modes"][m]["sections"]:
 		_card(sec)
 	return state["modes"][m]
@@ -102,8 +116,8 @@ static func _column(grid: Array, col: int) -> Array:
 
 ## The sections as they are to be drawn: each {kind, cols, slots, index} — `slots` the keys seen in the order the
 ## grid is drawn (row by row, "" for an empty slot or a cell not offered now), `index` the number of each slot (`at`);
-## `cells` — {key: kind} of what is offered, `total` — the columns the bar has room for. A section with no cell takes no
-## column. `side` — "fight" or "peace" for the one bar of both (v0.8.4.43.14): a section is as wide as the larger of its two
+## `cells` — {key: kind} of what is offered, `total` — the columns the bar has room for. A section with no cell keeps one
+## empty column (v0.8.4.44.9). `side` — "fight" or "peace" for the one bar of both (v0.8.4.43.14): a section is as wide as the larger of its two
 ## sides needs, so the dividers stand where they stood when a fight begins and ends.
 static func place(state: Dictionary, m: String, cells: Dictionary, total: int, side := "") -> Array:
 	var md := mode(state, m)
@@ -288,11 +302,13 @@ static func _fit(state: Dictionary, sections: Array, cells: Dictionary, fresh: D
 				if cells.has(str(grid[col][row])):
 					n += 1
 					far = maxi(far, col + 1)
-		var want := maxi(ceili(float(n) / r), far) if n > 0 else 0
-		if want > 0:
-			live.append(sec)
-		else:
-			sec["cols"] = 0
+		# v0.8.4.44.9 (the author: «я удалил из группы все иконки — и группа пропала!»): a section with nothing to show keeps
+		# one empty column to drop into, its tab too
+		var want := maxi(1, maxi(ceili(float(n) / r), far))
+		var news: int = (fresh.get(str(sec["kind"]), []) as Array).size()
+		if news > 0 and bool(sec.get("fixed", false)):  # a width the player set grows by what it gets new: never out of sight
+			sec["width"] = maxi(int(sec.get("width", 0)), maxi(far, ceili(float(n) / r)))
+		live.append(sec)
 		if side != "":
 			if not sec.has("need"):
 				sec["need"] = {}
@@ -300,8 +316,15 @@ static func _fit(state: Dictionary, sections: Array, cells: Dictionary, fresh: D
 			for v: Variant in (sec["need"] as Dictionary).values():
 				want = maxi(want, int(v)) if want > 0 else 0
 		sec["_n"] = want
-	if live.is_empty():
-		return
+		sec["_bare"] = n == 0
+	var full := 0  # an empty section's column is what the sections with cells leave: on a narrow bar it gives way
+	for sec: Dictionary in live:
+		full += int(sec["_n"]) if not bool(sec["_bare"]) else 0
+	for sec: Dictionary in live.duplicate():
+		var bare: int = live.filter(func(x: Dictionary) -> bool: return bool(x["_bare"])).size()
+		if bool(sec["_bare"]) and not bool(sec.get("fixed", false)) and full + bare > total:
+			live.erase(sec)
+			sec["cols"] = 0
 	total = maxi(total, live.size())
 	var fixed_sum := 0
 	var fixed: Array = live.filter(func(sec: Dictionary) -> bool: return bool(sec.get("fixed", false)) and int(sec.get("width", 0)) > 0)
@@ -334,3 +357,4 @@ static func _fit(state: Dictionary, sections: Array, cells: Dictionary, fresh: D
 		i += 1
 	for sec: Dictionary in sections:
 		sec.erase("_n")
+		sec.erase("_bare")

@@ -88,14 +88,14 @@ func run() -> void:
 	bar.call("set_filter", "")
 	await frames(4)
 	var di := 0  # the first divider with a column to take from its right neighbour (cells of 72 leave fewer to share)
-	while di + 2 < _drawn().size() and HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.BAR, di, 2) <= 0:
+	while di + 2 < _drawn().size() and HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.layout_of(node("GameState").session, Sheet.HERO), di, 2) <= 0:
 		di += 1
 	var pad := find(bar, "Divider_%d" % di) as Control
 	var line := find(pad, "Line") as Control if pad != null else null
-	if step("a divider with room to move", line != null and HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.BAR, di, 2) > 0, "Divider_%d" % di):
+	if step("a divider with room to move", line != null and HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.layout_of(node("GameState").session, Sheet.HERO), di, 2) > 0, "Divider_%d" % di):
 		var stepw := float(_const(bar, "CELL") + _const(bar, "GAP"))
 		var cols0 := _cols(di)
-		var can := HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.BAR, di, 2)
+		var can := HotbarLayout.reach(node("SaveManager").hotbar, HotbarLayout.layout_of(node("GameState").session, Sheet.HERO), di, 2)
 		var right := _first_icon(di + 1)  # the right card's first icon: it goes with the edge
 		var x_icon := right.get_global_rect().position.x if right != null else 0.0
 		var right_name := str(right.name) if right != null else ""  # a ghost cell is made anew by every laying: by its name
@@ -207,7 +207,7 @@ func _section_of(c: Control) -> int:
 
 ## The sections drawn now: the index a slot's `section` means.
 func _drawn() -> Array:
-	return (HotbarLayout.mode(_hb(), HotbarLayout.BAR)["sections"] as Array).filter(func(sec: Dictionary) -> bool: return int(sec["cols"]) > 0)
+	return (HotbarLayout.mode(_hb(), HotbarLayout.layout_of(node("GameState").session, Sheet.HERO))["sections"] as Array).filter(func(sec: Dictionary) -> bool: return int(sec["cols"]) > 0)
 
 
 func _layout_section(kind: String) -> int:

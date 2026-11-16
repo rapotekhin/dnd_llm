@@ -7,12 +7,19 @@ func _keys(sec: Dictionary) -> Array:
 	return (sec["slots"] as Array).filter(func(k: String) -> bool: return k != "")
 
 
+func _of(out: Array, kind: String) -> Dictionary:
+	for sec: Dictionary in out:
+		if str(sec["kind"]) == kind:
+			return sec
+	return {}
+
+
 func test_new_cells_go_to_their_kind() -> void:
 	var st := {}
 	var out := HotbarLayout.place(st, "fight", {"Do_dash": "common", "Cast_fire_bolt": "class", "Item_potion": "items"}, 12)
-	assert_int(out.size()).is_equal(3)
+	assert_int(out.size()).is_equal(4)  # v0.8.4.44.9: the empty «Пассивные» keeps one column to drop into
 	assert_array(_keys(out[0])).contains_exactly(["Do_dash"])
-	assert_array(_keys(out[1])).contains_exactly(["Cast_fire_bolt"])
+	assert_array(_keys(_of(out, "class"))).contains_exactly(["Cast_fire_bolt"])
 	var cols := 0
 	for sec: Dictionary in out:
 		cols += int(sec["cols"])
@@ -27,16 +34,16 @@ func test_a_moved_cell_stays_and_swaps() -> void:
 	HotbarLayout.move(st, "fight", "Cast_fire_bolt", 0, 0)  # onto the dash
 	var out := HotbarLayout.place(st, "fight", cells, 10)
 	assert_str(str(out[0]["slots"][0])).is_equal("Cast_fire_bolt")
-	assert_bool((out[1]["slots"] as Array).has("Do_dash")).is_true()  # the dash went where the bolt was
+	assert_bool((_of(out, "class")["slots"] as Array).has("Do_dash")).is_true()  # the dash went where the bolt was
 
 
 func test_an_absent_act_keeps_its_slot() -> void:
 	var st := {}
 	HotbarLayout.place(st, "fight", {"Do_dash": "common", "Item_scroll": "items"}, 8)
 	var out := HotbarLayout.place(st, "fight", {"Do_dash": "common"}, 8)
-	assert_int(out.size()).is_equal(1)  # no items now — no section
+	assert_array(_keys(_of(out, "items"))).is_empty()  # no items now — an empty column (v0.8.4.44.9)
 	out = HotbarLayout.place(st, "fight", {"Do_dash": "common", "Item_scroll": "items"}, 8)
-	assert_str(str(out[1]["slots"][0])).is_equal("Item_scroll")
+	assert_str(str(_of(out, "items")["slots"][0])).is_equal("Item_scroll")
 
 
 func test_a_hidden_cell_is_off_until_dragged_back() -> void:
@@ -45,7 +52,7 @@ func test_a_hidden_cell_is_off_until_dragged_back() -> void:
 	HotbarLayout.place(st, "fight", cells, 8)
 	HotbarLayout.hide(st, "fight", "Cast_fire_bolt")
 	var out := HotbarLayout.place(st, "fight", cells, 8)
-	assert_int(out.size()).is_equal(1)
+	assert_array(_keys(_of(out, "class"))).is_empty()
 	HotbarLayout.move(st, "fight", "Cast_fire_bolt", 0, HotbarLayout.at(1, 0))
 	out = HotbarLayout.place(st, "fight", cells, 8)
 	assert_str(str(out[0]["slots"][1])).is_equal("Cast_fire_bolt")
@@ -59,7 +66,10 @@ func test_a_divider_moves_columns() -> void:
 	HotbarLayout.shift(st, "fight", 0, 2)
 	out = HotbarLayout.place(st, "fight", cells, 10)
 	assert_int(int(out[0]["cols"])).is_equal(a + 2)
-	assert_int(int(out[0]["cols"]) + int(out[1]["cols"])).is_equal(10)
+	var cols := 0
+	for sec: Dictionary in out:
+		cols += int(sec["cols"])
+	assert_int(cols).is_equal(10)  # the whole bar, empty sections' columns too (v0.8.4.44.9)
 
 
 func test_rows() -> void:
@@ -67,7 +77,7 @@ func test_rows() -> void:
 	HotbarLayout.set_rows(st, 9)
 	assert_int(HotbarLayout.rows(st)).is_equal(HotbarLayout.MAX_ROWS)
 	var out := HotbarLayout.place(st, "peace", {"LookButton": "common"}, 5)
-	assert_int((out[0]["slots"] as Array).size()).is_equal(5 * HotbarLayout.MAX_ROWS)
+	assert_int((out[0]["slots"] as Array).size()).is_equal(int(out[0]["cols"]) * HotbarLayout.MAX_ROWS)
 
 
 ## A spell or a feature dragged from the sheet is the bar's own cell, by one key in a fight and out of it (v0.8.4.43.14).
@@ -129,9 +139,16 @@ func test_a_divider_is_the_edge_of_the_card_on_its_right() -> void:
 		else:
 			assert_bool(left.has(k)).override_failure_message(k + " is under the spells' card").is_false()
 	HotbarLayout.shift(st, "fight", 0, 99)  # to the right as far as it goes: the spells' card one column, the rest past the end
-	var right := _screen(HotbarLayout.place(st, "fight", cells, 8))
+	var laid := HotbarLayout.place(st, "fight", cells, 8)
+	var right := _screen(laid)
+	var edge := 0  # the spells' card starts where the cards before it end (the empty ones after it keep a column, v0.8.4.44.9)
+	for sec: Dictionary in laid:
+		if str(sec["kind"]) == "class":
+			break
+		edge += int(sec["cols"])
+	assert_int(int(_of(laid, "class")["cols"])).is_equal(1)
 	for k: String in ["spell:x", "spell:y"]:
-		assert_array(right[k]).is_equal([7, before[k][1]])
+		assert_array(right[k]).is_equal([edge, before[k][1]])
 	assert_bool(right.has("spell:z") or right.has("spell:w")).is_false()
 	HotbarLayout.shift(st, "fight", 0, -99)
 	HotbarLayout.shift(st, "fight", 0, common - 1)
@@ -170,3 +187,38 @@ func test_a_bar_of_rows_becomes_a_card_of_columns() -> void:
 	assert_str(str(cls["grid"][0][0])).is_equal("spell:x")
 	assert_str(str(cls["grid"][2][0])).is_equal("spell:y")
 	assert_str(str(cls["grid"][0][1])).is_equal("spell:z")
+
+
+## v0.8.4.44.9 (the author: «я удалил из группы все иконки — и группа пропала!»): a section emptied by hand keeps one
+## column and its tab to drop into; on a bar too narrow for it the sections with cells come first.
+func test_an_emptied_section_keeps_a_column_but_gives_way_on_a_narrow_bar() -> void:
+	var st := {}
+	var cells := {"Do_dash": "common", "Cast_fire_bolt": "class"}
+	HotbarLayout.place(st, HotbarLayout.BAR, cells, 12, "peace")
+	HotbarLayout.hide(st, HotbarLayout.BAR, "Cast_fire_bolt")
+	var out := HotbarLayout.place(st, HotbarLayout.BAR, cells, 12, "peace")
+	assert_int(int(_of(out, "class").get("cols", 0))).is_greater_equal(1)
+	var many := {}
+	for i in 10:
+		many["spell:s%d" % i] = "class"
+	out = HotbarLayout.place({}, HotbarLayout.BAR, many, 4, "peace")
+	assert_int(out.size()).is_equal(1)
+	assert_int(int(out[0]["cols"])).is_equal(4)
+
+
+## v0.8.4.44.9 (the author: «у его своя панель тулбар должна быть, у нас она не общая»): each hero and each companion
+## its own layout; past KEPT the oldest is dropped.
+func test_a_layout_of_its_own_for_each_hero_and_companion() -> void:
+	var s := GameSession.new()
+	s.character = {"name": "Аира", "class": "fighter"}
+	var hero := HotbarLayout.layout_of(s, Sheet.HERO)
+	assert_str(hero).is_equal("bar:Аира|fighter")
+	assert_str(HotbarLayout.layout_of(s, {"npc_id": "npc_dream_fighter"})).is_equal("bar:npc_dream_fighter")
+	var st := {}
+	HotbarLayout.place(st, hero, {"spell:fire_bolt": "class"}, 8)
+	HotbarLayout.hide(st, hero, "spell:fire_bolt")
+	var other := HotbarLayout.place(st, "bar:Бранко|cleric", {"spell:fire_bolt": "class"}, 8)
+	assert_array(_keys(_of(other, "class"))).contains_exactly(["spell:fire_bolt"])  # hidden on Aira's, not on Branko's
+	for i in HotbarLayout.KEPT + 5:
+		HotbarLayout.mode(st, "bar:h%d|x" % i)
+	assert_int((st["modes"] as Dictionary).size()).is_equal(HotbarLayout.KEPT)

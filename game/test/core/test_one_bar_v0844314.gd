@@ -12,15 +12,15 @@ func _kinds(out: Array) -> Array:
 func test_one_layout_with_the_fight_s_section() -> void:
 	var st := {}
 	var out := HotbarLayout.place(st, HotbarLayout.BAR, {"spell:fire_bolt": "class", "Do_dash": "combat", "LookButton": "common"}, 12)
-	assert_array(_kinds(out)).is_equal(["common", "combat", "class"])
+	assert_array(_kinds(out)).is_equal(["common", "combat", "class", "items", "deeds", "passive"])  # an empty one keeps a column (v0.8.4.44.9)
 	assert_bool((HotbarLayout.KINDS[HotbarLayout.BAR] as Array).has("combat")).is_true()
 
 
 func test_a_spell_stays_in_its_slot_in_a_fight_and_out_of_it() -> void:
 	var st := {}
 	var peace := {HotbarLayout.key_of("Pin_spell_bless"): "class", HotbarLayout.key_of("Pin_spell_fire_bolt"): "class", "LookButton": "common"}
-	HotbarLayout.place(st, HotbarLayout.BAR, peace, 12)
-	HotbarLayout.move(st, HotbarLayout.BAR, "spell:fire_bolt", 1, 0)  # the bolt first in its section
+	var laid := HotbarLayout.place(st, HotbarLayout.BAR, peace, 12)
+	HotbarLayout.move(st, HotbarLayout.BAR, "spell:fire_bolt", _kinds(laid).find("class"), 0)  # the bolt first in its section
 	var fight := {HotbarLayout.key_of("Cast_bless"): "class", HotbarLayout.key_of("Cast_fire_bolt"): "class", "Do_dash": "combat", "LookButton": "common"}
 	var out := HotbarLayout.place(st, HotbarLayout.BAR, fight, 12)
 	var cls: Dictionary = out[_kinds(out).find("class")]
@@ -44,13 +44,14 @@ func test_a_width_set_by_a_divider_outlives_a_narrow_bar() -> void:
 	var cells := {"Do_dash": "combat", "LookButton": "common", "spell:fire_bolt": "class"}
 	var out := HotbarLayout.place(st, HotbarLayout.BAR, cells, 12)
 	var a := int(out[0]["cols"])
-	HotbarLayout.shift(st, HotbarLayout.BAR, 0, 3)
+	HotbarLayout.shift(st, HotbarLayout.BAR, 0, 1)  # the neighbour keeps one column: as far as it gives
 	out = HotbarLayout.place(st, HotbarLayout.BAR, cells, 12)
-	assert_int(int(out[0]["cols"])).is_equal(a + 3)
-	out = HotbarLayout.place(st, HotbarLayout.BAR, cells, 3)  # the window made narrow for a moment
+	assert_int(int(out[0]["cols"])).is_equal(a + 1)
+	out = HotbarLayout.place(st, HotbarLayout.BAR, cells, 3)  # the window made narrow for a moment: the empty ones give way
+	assert_array(_kinds(out)).is_equal(["common", "combat", "class"])
 	assert_int(int(out[0]["cols"]) + int(out[1]["cols"]) + int(out[2]["cols"])).is_equal(3)
 	out = HotbarLayout.place(st, HotbarLayout.BAR, cells, 12)
-	assert_int(int(out[0]["cols"])).is_equal(a + 3)  # the player's width back
+	assert_int(int(out[0]["cols"])).is_equal(a + 1)  # the player's width back
 
 
 func test_a_divider_reaches_as_far_as_each_side_keeps_one_column() -> void:

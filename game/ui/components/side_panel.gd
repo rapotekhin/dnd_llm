@@ -315,10 +315,11 @@ static func main_of(box: Container, ref: String) -> BaseButton:
 	var kind := ref.get_slice(":", 0)
 	if not MAIN.has(kind):
 		return null
-	var pattern := str(MAIN[kind]) + ("*" if kind == "station" else ref.substr(kind.length() + 1))
-	for b: Node in box.find_children(pattern, "BaseButton", true, false):
-		if not (b as BaseButton).disabled and not b.is_queued_for_deletion():
-			return b as BaseButton
+	for head: String in MAIN[kind]:  # the first of its acts the thing allows now
+		var pattern := head + ("*" if kind == "station" else ref.substr(kind.length() + 1))
+		for b: Node in box.find_children(pattern, "BaseButton", true, false):
+			if not (b as BaseButton).disabled and not b.is_queued_for_deletion():
+				return b as BaseButton
 	return null
 
 
@@ -797,7 +798,10 @@ func _npc_acts(s: GameSession, n: Dictionary, id: String, can_act: bool) -> void
 ## one act shows it in the row itself.
 const ACT_GROUPS: Array[String] = ["talk", "deals", "services", "life", "spells"]
 ## The left button's act on the map by the kind of a ref: the name of its button in the menu (`main_of`).
-const MAIN := {"npc": "Talk_", "body": "BodySearch_", "cr": "Creature_search_", "door": "DoorPass_", "station": "Mark_"}
+## v0.8.4.44.9 (the author: «левый щелчок должен развязать NPC, а не обыскивать»): a creature held bound by others is untied
+## first, searched only when it cannot be.
+const MAIN := {"npc": ["Talk_"], "body": ["BodySearch_"], "cr": ["Creature_untie_", "Creature_search_"], "door": ["DoorPass_"],
+	"station": ["Mark_"]}
 
 
 ## The services of any person (v0.8.4.35): a button each, a mark on a thing one per thing it fits when there are several.
@@ -957,11 +961,10 @@ func _exits(s: GameSession, world: WorldView, can_act: bool) -> void:
 		var wait := _row_button(place, tr("BTN_SNEAK_WAIT"), GameState.sneak_round, can_act)
 		wait.name = "SneakWait"
 		wait.tooltip_text = tr("BTN_SNEAK_WAIT_TIP")
-	for spec: Array in [["LookButton", "BTN_LOOK", GameState.look_around], ["SearchButton", "BTN_SEARCH", GameState.search_room]]:
-		var lb := _row_button(place, tr(spec[1]), _try.bind(spec[2]), can_act)
-		lb.name = spec[0]
-		lb.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lb.tooltip_text = tr(spec[1] + "_TIP")
+	var lb := _row_button(place, tr("BTN_LOOK"), _try.bind(GameState.look_around), can_act)  # the one look and search (v0.8.4.44.9)
+	lb.name = "LookButton"
+	lb.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lb.tooltip_text = tr("BTN_LOOK_TIP")
 	# The ways out (v0.8.4.43): on the map, and as a list under «Выходы ▾» on the strip over it — not on the hotbar.
 	var ways := Button.new()
 	ways.name = "ExitsButton"

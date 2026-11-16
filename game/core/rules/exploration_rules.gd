@@ -317,7 +317,7 @@ static func found_texts(s: GameSession, world: Dictionary, room_id: String) -> A
 ## таверны. Здесь: Бруно, Мира» — instead of a master's turn. "" when the master should describe it: the first visit
 ## of the day, a room still to furnish.
 static func again_line(s: GameSession, data: Dictionary, room_id: String) -> String:
-	if int(s.described.get(room_id, -1)) != s.day or PropRules.needs_furnish(s, room_id):
+	if int(s.described.get(room_id, -1)) != s.day or PropRules.needs_furnish(s, room_id, data):
 		return ""
 	var world := WorldView.new(data["world"])
 	var lines: Array = data["world"].get("revisit", data["rules"]["revisit"]["lines"])

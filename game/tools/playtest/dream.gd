@@ -41,7 +41,7 @@ func run() -> void:
 		step("walked into hall %d" % i, gs.go("dream-%d" % i))
 		await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 		await frames(3)
-	step("the last hall's screen, then the waking", await lessons("last") == ["dragon", "wake"])
+	step("the last hall's one screen: the waking", await lessons("last") == ["wake"])  # no screen over the dragon (v0.8.4.44.9)
 	await wait_until(func() -> bool: return not find_all(get_root(), "HintBox").is_empty(), 20.0)  # a lambda keeps no outer local
 	var boxes := find_all(get_root(), "HintBox")
 	var wake: Control = boxes[0] as Control if not boxes.is_empty() else null

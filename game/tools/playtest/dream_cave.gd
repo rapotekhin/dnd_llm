@@ -39,19 +39,23 @@ func run() -> void:
 	step("the hall is drawn of its own chunk", str(map["picks"]["dream-1"]["chunk"]) == "dream_1")
 	step("the old chest stands on the map", MapSpots.of(s, data, map).any(func(t: Dictionary) -> bool: return str(t["ref"]) == "prop:f_chest"))
 	step("no trap seen in passing", ExplorationRules.found_traps(s, data["world"], "dream-1").is_empty())
-	step("the first hall's screens: walking, then «Осмотреться»", await lessons("teach") == ["walk", "look"])
+	step("the first hall's screens: the awakening, then walking", await lessons("teach") == ["intro", "walk"])
 	await shot("hall_1")
-	await tap("LookButton")
-	step("after the look — «Обыскать»", await lessons("teach") == ["search"])
+	# v0.8.4.44.9: «Осмотреться» is taught at the way out, where the trap waits — the walk there stops for it
+	var way := WalkRules.way_cell(map, "dream-1", "dream-2")
+	await click_cell(way)
+	step("the walk to the way out stops for «Осмотреться»", await lessons("teach", 15.0) == ["look"] and s.room_id == "dream-1",
+		str(WalkRules.settle(s, data, map)))
+	await shot("hall_1_exit")
 
-	await tap("SearchButton")
+	await tap("LookButton")  # v0.8.4.44.9: one button — the Perception search
 	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
 	await frames(4)
 	var checks: Array = s.chat.filter(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "check")
 	var dc := int(checks.back().get("dc", -1)) if not checks.is_empty() else -1
 	var found := not ExplorationRules.found_traps(s, data["world"], "dream-1").is_empty()
 	var all := ", ".join(checks.map(func(e: Dictionary) -> String: return "%s Сл %d" % [e.get("skill", ""), int(e.get("dc", -1))]))
-	step("«Обыскать» rolls against the trap's DC 2 and finds it", checks.any(func(e: Dictionary) -> bool: return str(e.get("skill", "")) == "perception" and int(e.get("dc", -1)) == 2) and found,
+	step("«Осмотреться» rolls against the trap's DC 2 and finds it", checks.any(func(e: Dictionary) -> bool: return str(e.get("skill", "")) == "perception" and int(e.get("dc", -1)) == 2) and found,
 		"%s; найдена: %s" % [all, found])
 	await shot("hall_1_search")
 
@@ -82,7 +86,8 @@ func run() -> void:
 		await _go(gs, "dream-2")
 	if not step("in the hall of bones", s.room_id == "dream-2", s.room_id):
 		return
-	step("the body's screen", await lessons("teach") == ["body"])
+	var hall2 := await lessons("teach")  # «Рана» comes the moment the hero is hurt — going around the trap may hurt already
+	step("the body's screen", not hall2.is_empty() and hall2[0] == "body" and hall2.size() <= 2 and (hall2.size() == 1 or hall2[1] == "hurt"), str(hall2))
 	var body: Array = CreatureRules.here(s, "dream-2").filter(func(c: Dictionary) -> bool: return str(c["state"]) == CreatureRules.DEAD)
 	step("the body lies by the wall", not body.is_empty())
 	await shot("hall_2")
@@ -98,7 +103,9 @@ func run() -> void:
 		"%d → %d" % [hp, int(s.character["hp"])])
 	if not step("in the hall of the rings", s.room_id == "dream-3", s.room_id):
 		return
-	step("the third hall's screens: the wound, then the captive", await lessons("teach") == ["hurt", "captive"])
+	var hall3 := await lessons("teach")
+	var hurt_once := hall2.count("hurt") + hall3.count("hurt") == 1
+	step("the third hall's screen: the captive, the wound's once wherever it came", hall3.has("captive") and hurt_once, "%s / %s" % [hall2, hall3])
 	await shot("hall_3")
 	step("the fighter is bound, nothing on him", s.held_as_creature("npc_dream_fighter") and (Gear.of(s, data, "npc_dream_fighter")["inventory"] as Dictionary).is_empty())
 	step("«Развязать»", gs.creature_act("npc_dream_fighter", "untie").is_empty())
@@ -152,7 +159,7 @@ func run() -> void:
 	await shot("hall_6_made")
 	gs.go("dream-7")
 	step("the last hall: the red dragon's fight", await wait_until(func() -> bool: return CombatRules.active(s) and not gs.is_busy(), 90.0))
-	step("its screen: the dragon need not be beaten", await lessons("teach") == ["dragon"])
+	step("no screen over the dragon's fight", await lessons("teach") == [])
 	var dragon := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	step("the dragon with its legendary actions", str(dragon.get("monster", "")) == "adult_red_dragon" and MonsterRules.legendary_left(data, dragon) == 3)
 	await shot("hall_7_dragon")
