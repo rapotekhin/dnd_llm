@@ -703,9 +703,14 @@ static func carried_weight(c: Dictionary, data: Dictionary, session_items: Dicti
 	return total + ContainerRules.bags_weight(c, data, session_items) + LiquidRules.extra_weight(c, data, session_items)  # bags, water
 
 
-## Carrying capacity (PHB): Strength × rules.carry.per_str pounds.
+## Carrying capacity (PHB): Strength × rules.carry.per_str pounds. Anybody's by Sheet.capacity.
 static func capacity(c: Dictionary, data: Dictionary) -> int:
-	return ability(c, "str") * int(data["rules"].get("carry", {}).get("per_str", 15)) + (500 if item_prop(c, "carry_plus_500") else 0)
+	return capacity_by(data, ability(c, "str"), item_prop(c, "carry_plus_500"))
+
+
+## The pounds a Strength carries, +500 with a thing that gives `carry_plus_500` (one count for the hero and anybody).
+static func capacity_by(data: Dictionary, strength: int, plus_500: bool) -> int:
+	return strength * int(data["rules"].get("carry", {}).get("per_str", 15)) + (500 if plus_500 else 0)
 
 
 static func overloaded(c: Dictionary, data: Dictionary, session_items: Dictionary = {}) -> bool:

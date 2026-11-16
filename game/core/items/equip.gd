@@ -181,13 +181,14 @@ static func settle(s: GameSession, data: Dictionary, id: String) -> void:
 	ItemRules.wear(c, data, s.items)
 
 
-## "" when `item` may pass from `from` to `to` now — the hero and one who walks with it (the «Снаряжение» window): only what
-## is not on the giver's body, a cursed thing in the pockets too (v0.8.4.39). Else the reason.
+## "" when `item` may pass from `from` to `to` now — any two of the hero and those who walk with it (the «Снаряжение»
+## window, the party window): only what is not on the giver's body, a cursed thing in the pockets too (v0.8.4.39). Else
+## the reason.
 static func hand_why(s: GameSession, data: Dictionary, from: String, to: String, item: String) -> String:
 	if CombatRules.active(s):
 		return "GEAR_NOT_IN_COMBAT"
-	var other := to if from == Being.HERO else from
-	if not Being.follows(s, other) or (from != Being.HERO and to != Being.HERO):
+	var party := func(id: String) -> bool: return id == Being.HERO or Being.follows(s, id)
+	if from == to or not party.call(from) or not party.call(to):  # the hero and who walks with it, either way (v0.8.4.44.10)
 		return "GEAR_NOT_FOLLOWER"
 	var c := Gear.of(s, data, from)
 	if int(c.get("inventory", {}).get(item, 0)) <= CharacterRules.held_copies(c, item):

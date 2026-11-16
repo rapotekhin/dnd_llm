@@ -176,6 +176,18 @@ static func ability(s: GameSession, data: Dictionary, who: Dictionary, id: Strin
 	return int(of(s, data, who)["abilities"].get(id, 10))
 
 
+## The pounds it can carry (PHB): its Strength by `ability`, +500 by a thing on it (v0.8.4.44.10, the party window).
+static func capacity(s: GameSession, data: Dictionary, who: Dictionary) -> int:
+	if is_hero(who):
+		return CharacterRules.capacity(s.character, data)
+	return CharacterRules.capacity_by(data, ability(s, data, who, "str"), prop(s, data, who, "carry_plus_500"))
+
+
+## The pounds it carries now: everything it has, worn things, bags and water too (CharacterRules.carried_weight).
+static func carried(s: GameSession, data: Dictionary, who: Dictionary) -> float:
+	return CharacterRules.carried_weight(things(s, data, who), data, s.items)
+
+
 ## The DC of what it lays by `ab` (v0.8.4.29.3, one place): 8 + its proficiency + the modifier — a spell's, ki, a breath, a channel.
 static func dc(s: GameSession, data: Dictionary, who: Dictionary, ab: String) -> int:
 	return 8 + prof(s, data, who) + ability_mod(s, data, who, ab)

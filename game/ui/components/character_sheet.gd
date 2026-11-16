@@ -165,12 +165,11 @@ func _party() -> void:
 		drop.add_child(p)
 		drop.accept = func(drag: Dictionary) -> bool:
 			var from := _from(drag)
-			return from != id and (from == Being.HERO or id == Being.HERO) and _kind(drag) == "things"
+			return from != id and _kind(drag) == "things"  # between any two of the party (v0.8.4.44.10)
 		drop.take = func(drag: Dictionary) -> void:
 			var from := _from(drag)
 			ItemGrid.with_qty(self, drag, func(n: int) -> void:
-				var row := {"act": "give", "item": str(drag["item"]), "to": id, "qty": n} if from == Being.HERO else {"act": "take", "item": str(drag["item"]), "qty": n}
-				_report(GameState.item_act(row, from)))
+				_report(GameState.item_act({"act": "give", "item": str(drag["item"]), "to": id, "qty": n}, from)))
 	strip.visible = ids.size() > 1
 
 
@@ -241,20 +240,7 @@ func _gear() -> void:
 	if not hero:
 		return
 	att.text = tr("SHEET_ATTUNED").format({"n": ItemRules.attuned(c).size()})  # v0.7.12
-	var weight: Label = UiScenes.need(self, "%CarriedWeight")
-	var load := CharacterRules.carried_weight(c, data, s.items)
-	var most := CharacterRules.capacity(c, data)
-	weight.text = tr("SHEET_WEIGHT").format({"n": int(ceilf(load)), "max": most})
-	weight.remove_theme_color_override("font_color")
-	if CharacterRules.overloaded(c, data, s.items):
-		weight.text += " — " + tr("TOO_HEAVY")
-		weight.add_theme_color_override("font_color", UiTheme.WARN)
-	var share := load / maxf(1.0, most)
-	var bar: ProgressBar = UiScenes.need(self, "%WeightBar")
-	bar.value = minf(share, 1.0)
-	var col := UiTheme.OK if share < 0.75 else UiTheme.WARN if share <= 1.0 else UiTheme.BAD
-	bar.add_theme_stylebox_override("fill", UiTheme.box(col, col, 0, 0, 3))
-	bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 3))
+	UiParts.weight(UiScenes.need(self, "%CarriedWeight"), UiScenes.need(self, "%WeightBar"), Sheet.carried(s, data, Sheet.HERO), Sheet.capacity(s, data, Sheet.HERO))
 
 
 ## A cell of the grid: a double click puts it on or uses it, the right button lists its acts.

@@ -36,7 +36,8 @@
 		"quick_save": ["F5", "game"],
 		"quick_load": ["F9", "game"],
 		"end_turn": ["Space", "combat"],
-		"next_target": ["Tab", "combat"]
+		"next_target": ["Tab", "combat"],
+		"party": ["Tab", "game"]
 	},
 	"ui": {
 		"default_resolution": [
