@@ -177,6 +177,7 @@ func test_a_fight_the_hero_picked_with_them_is_a_fight() -> void:
 
 
 func _in_the_air(s: GameSession, monster: String) -> Dictionary:
+	s.room_id = "brod-square"  # under the open sky: under a roof a blade reaches a flyer (v0.8.4.44.11)
 	TestUtils.fight(s, data, [{"monster": monster, "col": 0}], {})
 	SpellEffects.apply_self(s, data, "fly", 3)
 	CharacterRules.refresh(s.character, data, s.items)

@@ -1677,7 +1677,9 @@ func _draw_ask(s: GameSession) -> void:
 
 func _draw_results(s: GameSession, data: Dictionary) -> void:
 	var outcome := str(s.combat.get("outcome", ""))
-	var show := not outcome.is_empty() and outcome != "dead" and bool(s.combat.get("narrated", false)) and not GameState.is_busy()
+	# The dream's end has one window, the wake (v0.8.4.44.11, the author: «две таблички всплывающие появляются, закрываешь
+	# одну — вторую не успеваешь прочесть»): an empty «Сон окончен» of the results stood over it.
+	var show := not outcome.is_empty() and not outcome in ["dead", GameState.DREAM_END] and bool(s.combat.get("narrated", false)) and not GameState.is_busy()
 	_results.visible = show
 	if not show:
 		return

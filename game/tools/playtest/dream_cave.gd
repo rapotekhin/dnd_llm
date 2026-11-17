@@ -182,8 +182,7 @@ func run() -> void:
 	step("info: legendary actions seen", true, str(legendary))
 	await shot("hall_7_burnt")
 	var finish: Button = find(screen(), "FinishCombat")
-	if step("the results", finish != null and finish.is_visible_in_tree()):
-		await press(finish)
+	step("no results window at the dream's end: the wake alone", finish == null or not finish.is_visible_in_tree())
 	step("the last hall: the dream's end, «Проснуться»", await lessons("teach") == ["wake"])
 	await shot("hall_7")
 	step("«Найти выход» done in the last hall", s.quests_done.has("find_the_exit"), str(s.quests_active))

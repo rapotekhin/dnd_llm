@@ -181,9 +181,22 @@ static func settle(s: GameSession, data: Dictionary, id: String) -> void:
 	ItemRules.wear(c, data, s.items)
 
 
+## Where a copy of `item` is worn: [slot, spare] — the hands or the doll first, then the set put away; [] when none is.
+static func worn_at(c: Dictionary, item: String) -> Array:
+	for slot: String in CharacterRules.SLOTS:
+		if str(c.get("equipped", {}).get(slot, "")) == item:
+			return [slot, false]
+	var row := CharacterRules.stowed(c)
+	for slot: String in row:
+		if str(row[slot]) == item:
+			return [slot, true]
+	return []
+
+
 ## "" when `item` may pass from `from` to `to` now — any two of the hero and those who walk with it (the «Снаряжение»
-## window, the party window): only what is not on the giver's body, a cursed thing in the pockets too (v0.8.4.39). Else
-## the reason.
+## window, the party window): a loose copy first; with none, a worn one that may be taken off now (v0.8.4.44.11, the
+## author: «обмениваться всеми предметами — и надетыми и на поясе»: not in a fight, not a cursed one held on the body).
+## Else the reason.
 static func hand_why(s: GameSession, data: Dictionary, from: String, to: String, item: String) -> String:
 	if CombatRules.active(s):
 		return "GEAR_NOT_IN_COMBAT"
@@ -191,13 +204,23 @@ static func hand_why(s: GameSession, data: Dictionary, from: String, to: String,
 	if from == to or not party.call(from) or not party.call(to):  # the hero and who walks with it, either way (v0.8.4.44.10)
 		return "GEAR_NOT_FOLLOWER"
 	var c := Gear.of(s, data, from)
-	if int(c.get("inventory", {}).get(item, 0)) <= CharacterRules.held_copies(c, item):
-		return "GEAR_TAKE_OFF_FIRST" if int(c.get("inventory", {}).get(item, 0)) > 0 else "EQUIP_NOT_OWNED"
-	return ""
+	var have := int(c.get("inventory", {}).get(item, 0))
+	if have <= 0:
+		return "EQUIP_NOT_OWNED"
+	if have > CharacterRules.held_copies(c, item):
+		return ""
+	var at := worn_at(c, item)
+	return off_why(s, data, from, str(at[0]), bool(at[1]))
 
 
-## One copy over: out of the giver's things (ItemRules.remove), into the other's — a companion puts it on where it fits (Gear.give).
+## One copy over: a loose one, else the worn one taken off its slot first; out of the giver's things (ItemRules.remove — a
+## belt's cell empties with its last copy), into the other's pack, put on by nobody (Gear.give).
 static func hand(s: GameSession, data: Dictionary, from: String, to: String, item: String) -> Array[String]:
+	var c := Gear.of(s, data, from)
+	if int(c.get("inventory", {}).get(item, 0)) <= CharacterRules.held_copies(c, item):
+		var at := worn_at(c, item)
+		if not at.is_empty():
+			off(s, data, from, str(at[0]), bool(at[1]))
 	if ItemRules.remove(Gear.of(s, data, from), item, 1) <= 0:
 		return []
 	Gear.give(s, data, to, item)

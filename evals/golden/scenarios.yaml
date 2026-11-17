@@ -5521,6 +5521,23 @@ scenarios:
     rubric:
       - "Жезл творит цепную молнию и несёт 10 зарядов — без отказа по кругу заклинания или уровню героя"
 
+  - id: dream_sixth_hall_makes_armour_anybody_wears
+    title: "Сон, шестой зал: доспех, который может носить каждый (v0.8.4.44.11)"
+    category: items
+    extends: dream
+    input: "Сделай мне латы, которые может носить кто угодно — без владения доспехами и без требования к Силе"
+    snapshot:
+      scene:
+        room: {id: dream-6, name: "Зал отголосков",
+               description: "Круглый зал с гладкими, словно отполированными стенами. Каждое слово звучит здесь дольше, чем должно. За дальней аркой — жар и рыжий отсвет."}
+        exits: [{id: dream-7, name: "Дальняя арка"}]
+        boundless: true
+    expect:
+      check: {required: false}
+      effects: {required_kinds_any: [move_item:world>hero]}
+    rubric:
+      - "Новая вещь — доспех (на основе лат) со свойством `any_wearer` в `properties`, а не одни слова «носит каждый» в описании"
+
   - id: dream_sixth_hall_makes_no_people
     title: "Сон, шестой зал: вещи без ограничений, но не люди (v0.8.4.44.8)"
     category: limits

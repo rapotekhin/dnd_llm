@@ -119,10 +119,13 @@ static func count(s: GameSession, data: Dictionary, id: String, item: String) ->
 	return int(of(s, data, id)["inventory"].get(item, 0))
 
 
-## A thing into its hands; it goes on by itself where its place is free (Equip.fill: armour, a shield, a weapon, a ring).
+## A thing into its hands; it goes on by itself where its place is free (Equip.fill: armour, a shield, a weapon, a ring) —
+## not on the hero and those who walk with it: the player dresses them (v0.8.4.44.11, the author: «пусть её наденет игрок
+## если захочет, а автоматически это не происходит»).
 static func give(s: GameSession, data: Dictionary, id: String, item: String, qty: int = 1) -> void:
 	ItemRules.add(of(s, data, id), item, qty)
-	Equip.fill(s, data, id, item)
+	if id != Being.HERO and not Being.follows(s, id):
+		Equip.fill(s, data, id, item)
 
 
 ## Takes up to `qty` of a thing (all of it when < 0): ItemRules.remove. How many.

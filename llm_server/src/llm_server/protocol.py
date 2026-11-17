@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BeforeValidator, BaseModel, ConfigDict, Fie
 from pydantic.fields import FieldInfo
 
 # Semver. While major is 0, a minor bump is breaking too (semver §4), so the handshake compares major.minor.
-PROTOCOL_VERSION = "0.134.0"
+PROTOCOL_VERSION = "0.135.0"
 
 
 def protocol_compatible(client: str, server: str = PROTOCOL_VERSION) -> bool:
@@ -531,9 +531,17 @@ class OptionCheck(_Out):
     dc_tier: DcTier
 
 
+def _unescaped(v: object) -> object:
+    r"""A model's text with its line breaks escaped twice — a literal «\n\n» in the chat (the author 2026-11-16: «вёрстка
+    не прочиталась в чате») — turned into real ones: every story the client shows comes through here."""
+    if not isinstance(v, str):
+        return v
+    return v.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", " ")
+
+
 class TurnResult(_Out):
     turn_id: str
-    narration: str
+    narration: Annotated[str, BeforeValidator(_unescaped)]
     options: list[str] = Field(default_factory=list, max_length=3)
     # The price of each option in copper (0.10.0): the engine takes it when the player picks the option; 0 — free.
     option_costs: list[int] = Field(default_factory=list, max_length=3)
@@ -639,6 +647,7 @@ ItemProperty = Literal[
     "initiative_plus1", "initiative_plus2", "initiative_plus3", "initiative_advantage", "life_drain", "regeneration",
     "immune_frightened", "immune_charmed", "immune_poisoned", "immune_paralyzed", "immune_blinded", "immune_stunned",
     "immune_restrained", "immune_prone", "immune_grappled", "immune_deafened", "immune_petrified",
+    "any_wearer",  # 0.135.0: anybody wears or wields it as its own — no proficiency, no Strength of heavy armour
 ]
 
 

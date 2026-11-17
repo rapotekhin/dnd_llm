@@ -81,7 +81,7 @@ func _ready() -> void:
 	away.name = "DropAway"
 	away.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	away.accept = func(drag: Dictionary) -> bool: return _from(drag) == Being.HERO and _kind(drag) in ["things", "slot", "belt"]
-	away.take = func(drag: Dictionary) -> void: ItemGrid.with_qty(self, drag, func(n: int) -> void: _do({"act": "drop", "item": str(drag["item"]), "qty": n}))
+	away.take = func(drag: Dictionary) -> void: ItemGrid.with_qty(self, drag, func(n: int) -> void: _do({"act": "drop", "item": str(drag["item"]), "qty": n}), false)
 	add_child(away)
 	move_child(away, 1)  # over the dim, under the panel
 	EventBus.state_changed.connect(_rebuild)
@@ -642,15 +642,14 @@ func _use_menu(cell: Control, rid: String, opts: Array, can_act: bool) -> void:
 	pop.popup(Rect2i(Vector2i(cell.get_screen_position() + Vector2(0, cell.size.y)), Vector2i.ZERO))
 
 
-## «Общие» (as in BG3's book): the acts of a fight anybody has, by `Act.book`, under their buttons' keys — dragged onto the
-## hotbar, one taken off it by chance comes back from here.
+## «Общие» (as in BG3's book): two groups under their buttons' keys — dragged onto the hotbar, one taken off it by chance
+## comes back from here (v0.8.4.44.11, the author: «в "Общие" сделать две группы "Боевые", "Мирные"»): «Боевые» — the acts
+## of a fight anybody has, by `Act.book`; «Мирные» — what the bar offers out of a fight now (ActionBar.offered): the
+## place's acts, «Осмотреться», «Красться», the deeds, «Не убивать».
 func _book_common(box: VBoxContainer) -> void:
 	_text(box, tr("BOOK_COMMON_HINT"), UiTheme.MUTED_LABEL)
-	var flow := HFlowContainer.new()
-	flow.name = "BookCommon"
-	flow.add_theme_constant_override("h_separation", 6)
-	flow.add_theme_constant_override("v_separation", 6)
-	box.add_child(flow)
+	_text(box, tr("BAR_KIND_COMBAT"), UiTheme.CAPTION_LABEL)
+	var flow := _book_flow(box, "BookCommon")
 	var acts := Acts.all().filter(func(a: Act) -> bool: return a.tab() == "common" and a.book())
 	acts.sort_custom(func(x: Act, y: Act) -> bool: return x.order() < y.order())
 	for a: Act in acts:
@@ -661,6 +660,31 @@ func _book_common(box: VBoxContainer) -> void:
 		cell.drag_key = "Do_" + a.id
 		flow.add_child(cell)
 		_details.hook(cell, a.title(), "", CardInfo.act(GameState.session, Catalog.data, Sheet.HERO, a))
+	var bar := get_tree().get_first_node_in_group(ActionBar.GROUP) as ActionBar
+	var peace := bar.offered(["common", "deeds", "passive"]) if bar != null else []
+	if peace.is_empty():
+		return
+	_text(box, tr("BOOK_PEACE"), UiTheme.CAPTION_LABEL)
+	var calm := _book_flow(box, "BookPeace")
+	for r: Dictionary in peace:
+		var cell := IconSlot.new()
+		cell.spec = r["spec"]
+		cell.custom_minimum_size = Vector2(SPELL_CELL + 8, SPELL_CELL + 8)
+		cell.name = "BookPeace_" + str(r["key"]).replace(":", "_")
+		cell.text = str(r["title"])
+		cell.tooltip_text = str(r["title"])
+		cell.drag_key = str(r["key"])
+		calm.add_child(cell)
+		_details.hook(cell, str(r["title"]), str(r["body"]), r["card"])
+
+
+func _book_flow(box: VBoxContainer, node_name: String) -> HFlowContainer:
+	var flow := HFlowContainer.new()
+	flow.name = node_name
+	flow.add_theme_constant_override("h_separation", 6)
+	flow.add_theme_constant_override("v_separation", 6)
+	box.add_child(flow)
+	return flow
 
 
 ## The reactions as in BG3's book (v0.8.4.43.7): each its icon and its own «Спрашивать / Всегда / Никогда», kept on the

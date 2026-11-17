@@ -99,7 +99,7 @@ func test_the_window_shows_a_column_each_and_a_drop_hands_over() -> void:
 		assert_object(w.find_child("PartyWeight_" + id, true, false)).is_not_null()
 	assert_object(w.grid_of(Being.HERO).find_child("PartyItem_p_rope", true, false)).is_not_null()
 	var had := _has(s, "npc_veteran", "rope")
-	w.give(Being.HERO, "npc_veteran", "rope", 4)  # the whole stack: no slider without `ask`
+	w.give(Being.HERO, "npc_veteran", "rope", 4, false)  # the whole stack: no slider without `ask`
 	assert_int(_has(s, "npc_veteran", "rope")).is_equal(had + 4)
 	assert_int(_has(s, Being.HERO, "rope")).is_equal(0)
 	assert_object(w.grid_of("npc_veteran").find_child("PartyItem_npc_veteran_rope", true, false)).is_not_null()

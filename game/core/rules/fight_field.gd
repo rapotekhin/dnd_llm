@@ -835,7 +835,8 @@ static func _wakes(s: GameSession, data: Dictionary, room: String, spot: Vector2
 	var world := WorldView.new(data["world"])
 	var enc := EncounterRules.live(s, data, room)
 	var side := str(s.combat.get("faction", ""))
-	if not enc.is_empty() and not side.is_empty() and str(enc.get("faction", "")) == side and not heard.has(str(enc["id"])) and str(enc["id"]) != str(s.combat.get("encounter", "")):
+	# `post` — they keep it and wait where they stand (v0.8.4.44.11: the dream's guards left their grotto empty for the den's fight)
+	if not enc.is_empty() and not side.is_empty() and str(enc.get("faction", "")) == side and not bool(enc.get("post", false)) and not heard.has(str(enc["id"])) and str(enc["id"]) != str(s.combat.get("encounter", "")):
 		heard.append(str(enc["id"]))
 		var joined: Array = s.combat.get("joined", [])
 		joined.append(str(enc["id"]))

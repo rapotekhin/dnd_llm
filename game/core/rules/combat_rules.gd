@@ -89,9 +89,15 @@ static func airborne(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
 		and not ["prone", "grappled", "restrained"].any(func(x: String) -> bool: return ConditionRules.has(me, x))
 
 
-## `a` reaches `t` with a blade of `reach` squares: beside it, not over a corner, a flyer only by another flyer.
+## Out of a blade's reach in the air: airborne under the open sky — under a roof a flyer is still within a blade's reach
+## (v0.8.4.44.11, the author: «в помещениях "полёт" не даёт способности не быть целью атаки ближнего боя»).
+static func above_blades(s: GameSession, data: Dictionary, f: Dictionary) -> bool:
+	return airborne(s, data, f) and not SceneRules.indoor(s, data["world"], s.room_id)
+
+
+## `a` reaches `t` with a blade of `reach` squares: beside it, not over a corner, a flyer under the sky only by another flyer.
 static func blade_reaches(s: GameSession, data: Dictionary, a: Dictionary, t: Dictionary, reach: int = 1) -> bool:
-	return FightGrid.can_touch(s, data, a, t, reach) and (not airborne(s, data, t) or airborne(s, data, a))
+	return FightGrid.can_touch(s, data, a, t, reach) and (not above_blades(s, data, t) or airborne(s, data, a))
 
 
 ## The cover of `t` from `a`, for an attack or a Dexterity save; 0 beside it.
@@ -706,7 +712,7 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 	var kind := ItemRules.plain_of(data["items"], session_items, weapon_id)  # a fine storm longsword is a longsword
 	var monk := not martial.is_empty() and FeatureRules.monk_weapon(def) and not ranged
 	var mod := dex_mod if ranged else (maxi(str_mod, dex_mod) if props.has("finesse") or monk else str_mod)
-	var proficient := weapon_proficient(c, w, kind) or FeatureRules.is_pact(c, weapon_id)  # the pact weapon alone (v0.8.4.33)
+	var proficient := weapon_proficient(c, w, kind, def) or FeatureRules.is_pact(c, weapon_id)  # the pact weapon alone (v0.8.4.33)
 	var to_hit := mod + (prof if proficient else 0)
 	var hit_parts: Array[Dictionary] = [RollParts.part(RollParts.ability_name("dex" if mod == dex_mod and mod != str_mod else "str"), mod)]
 	RollParts.add(hit_parts, "владение оружием", prof if proficient else 0)
@@ -749,9 +755,10 @@ static func weapon_profile(c: Dictionary, data: Dictionary, session_items: Dicti
 ## The hero's bare hands (the monk's Martial Arts die).
 ## Whether `c` is proficient with the weapon of `def` (v0.8.4.29.3, one place): its category or itself among its proficiencies; a
 ## template with no list knows the weapons it carries.
-static func weapon_proficient(c: Dictionary, def: Dictionary, weapon_id: String) -> bool:
+## `whole` — the thing's whole def: one anybody wields as its own (CharacterRules.any_wearer) is wielded with proficiency.
+static func weapon_proficient(c: Dictionary, def: Dictionary, weapon_id: String, whole: Dictionary = {}) -> bool:
 	var profs: Array = c.get("weapon_profs", ["simple", "martial"] if not c.has("class") else [])
-	return profs.has(str(def.get("category", ""))) or profs.has(weapon_id)
+	return profs.has(str(def.get("category", ""))) or profs.has(weapon_id) or CharacterRules.any_wearer(whole)
 
 
 static func unarmed_profile(c: Dictionary, data: Dictionary) -> Dictionary:
@@ -1213,7 +1220,8 @@ static func throw_item(s: GameSession, data: Dictionary, f: Dictionary, item_id:
 		return splashed
 	var t := fighter(s, target_id)
 	var dex := Sheet.ability_mod(s, data, f, "dex")
-	var proficient := bool(fx.get("weapon", false)) and weapon_proficient(c, ItemRules.def_of(data["items"], s.items, item_id).get("weapon", {}), ItemRules.plain_of(data["items"], s.items, item_id))
+	var thrown := ItemRules.def_of(data["items"], s.items, item_id)
+	var proficient := bool(fx.get("weapon", false)) and weapon_proficient(c, thrown.get("weapon", {}), ItemRules.plain_of(data["items"], s.items, item_id), thrown)
 	var to_hit := dex + (Sheet.prof(s, data, f) if proficient else 0)
 	var near := int(fx.get("range", 20))
 	var blow := {"name": name, "to_hit": to_hit, "pieces": [], "melee": false, "range": [near, 60 if bool(fx.get("improvised", false)) else near], "str_based": false}

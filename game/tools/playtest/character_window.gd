@@ -128,6 +128,22 @@ func run() -> void:
 	step("«Общие»: the fight's acts under their buttons' keys", dash != null and dash.drag_key == "Do_dash" and find(sheet, "BookAct_dodge") != null)
 	step("not what comes by the moment: «Встать», a door", find(sheet, "BookAct_stand") == null and find(sheet, "BookAct_field") == null)
 	await shot("book_common")
+	# v0.8.4.44.11: «Мирные» — the bar's acts out of a fight; «Осмотреться» taken off the bar comes back from here.
+	var look: IconSlot = find(bar, "LookButton")
+	var calm: IconSlot = find(sheet, "BookPeace_LookButton")
+	step("«Мирные»: «Осмотреться» and «Взаимодействие с местом» in the book", calm != null and calm.drag_key == "LookButton" and find(sheet, "BookPeace_PlaceButton") != null)
+	if look != null and calm != null:
+		look.dropped_off.emit(look.drag_key)
+		await frames(4)
+		step("«Осмотреться» dragged off the bar, it is gone", not _on_bar(bar, "LookButton"))
+		var free: HotSlot = null
+		for n: Node in bar.find_children("*", "HotSlot", true, false):
+			if free == null and n.get_child_count() == 0 and (n as Control).is_visible_in_tree():
+				free = n
+		if step("an empty place on the bar for it", free != null):
+			free._drop_data(Vector2.ZERO, {"hotbar": calm.drag_key})
+			await frames(6)
+			step("dragged from «Мирные», it is on the bar again", _on_bar(bar, "LookButton"))
 	await press(find(sheet, "BookTab_react"))
 	await frames(3)
 	step("«Реакции»: an icon and its own choice", find(sheet, "Reaction_opportunity") is IconSlot and find(sheet, "React_opportunity_ask") != null)

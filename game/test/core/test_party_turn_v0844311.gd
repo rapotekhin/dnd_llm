@@ -124,6 +124,8 @@ func test_a_familiar_that_helps_does_not_strike_on_its_own() -> void:
 			fam = CombatRules.fighter(s, id)
 	assert_dict(fam).is_not_empty()
 	assert_bool(CombatRules.driven(s, fam)).is_true()
+	fam["hp"] = 999  # in the tavern a wolf's bite reaches the flying owl (v0.8.4.44.11): it lives to its turn
+	fam["max_hp"] = 999
 	_until(s, str(fam["id"]))
 	var wolf := CombatRules.fighter(s, CombatRules.enemies(s)[0])
 	_beside(s, wolf, fam)

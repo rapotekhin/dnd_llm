@@ -167,11 +167,12 @@ func _init(min_size: Vector2 = Vector2(0, 180), at_cursor: bool = false) -> void
 ## A card follows only the eye: it takes no click until pinned (the cursor reaches what is under it).
 func _hold(pinned_now: bool) -> void:
 	_caught = false
+	var bar := _body.get_v_scroll_bar()  # its thumb dragged by the mouse, not only the wheel (v0.8.4.44.11, the author)
 	for n: Node in [self] + find_children("*", "Control", true, false):
 		if _child != null and is_instance_valid(_child) and (n == _child or _child.is_ancestor_of(n)):
 			continue  # the card of a link takes the cursor by its own
 		var keep := Control.MOUSE_FILTER_PASS if n == _title else Control.MOUSE_FILTER_STOP  # a link in the name; a drag by it still the card's
-		(n as Control).mouse_filter = keep if pinned_now and (n == _lock or n == _body or n == self or n == _title) else Control.MOUSE_FILTER_IGNORE
+		(n as Control).mouse_filter = keep if pinned_now and (n == _lock or n == _body or n == bar or n == self or n == _title) else Control.MOUSE_FILTER_IGNORE
 	_body.selection_enabled = pinned_now
 	_cap(pinned_now)
 	_cap.call_deferred(pinned_now)  # the text's height is known once it is laid out

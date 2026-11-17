@@ -2261,7 +2261,8 @@
 			 "initiative_first": {"token": "initiative_advantage", "text": "преимущество на инициативу"},
 			 "immune": {"token": "immune_%s", "of": "condition", "text": "иммунитет к состоянию (frightened, charmed, poisoned, paralyzed, blinded, stunned, restrained, prone, grappled, deafened, petrified)"},
 			 "drain": {"token": "life_drain", "on": "weapon", "text": "удар возвращает владельцу половину нанесённого урона"},
-			 "regen": {"token": "regeneration", "text": "регенерация: 1d6 хитов каждые 10 минут, в бою — в начале хода, пока хиты выше 0"}
+			 "regen": {"token": "regeneration", "text": "регенерация: 1d6 хитов каждые 10 минут, в бою — в начале хода, пока хиты выше 0"},
+			 "anyone": {"token": "any_wearer", "text": "носит и владеет каждый: доспех, щит или оружие без выучки, тяжёлый доспех без Силы"}
 			}
 		},
 		"_doc": "v0.7.63, the language of parts (MakeRules): what the master may build a status or a trait of. A part: cost — points (a number: per `step` of `amount`), values — its `value`, of — what its `value` names (skill, ability, damage), number [min, max] of `amount`, harm — which value hurts (a number hurts below 0). Tiers: the sum of points gives the first tier that holds it: its name, the hero's level, the DC. A trait costs trait_mult times its parts. book — a book a made skill or trait is learned from.",
@@ -3440,6 +3441,7 @@
 			"initiative_advantage": "преимущество на инициативу",
 			"life_drain": "удар возвращает половину урона хитами",
 			"regeneration": "регенерация: 1к6 хитов в начале своего хода в бою и каждые 10 минут вне боя",
+			"any_wearer": "носит каждый: без выучки и Силы",
 			"immune_frightened": "иммунитет: страх",
 			"immune_charmed": "иммунитет: очарование",
 			"immune_poisoned": "иммунитет: отравление",

@@ -201,7 +201,7 @@ func _trade_grid(tag: String, prefix: String, host: Control, side: String, deal:
 		var from: Dictionary = drag["from"]
 		var dir := _drop(g.where, from)
 		var id := str(drag["item"])
-		ItemGrid.with_qty(self, drag, func(n: int) -> void: _change(str(from["side"]), id, dir * mini(n, int(drag.get("qty", 1)))), true)
+		ItemGrid.with_qty(self, drag, func(n: int) -> void: _change(str(from["side"]), id, dir * mini(n, int(drag.get("qty", 1)))))
 	g.setup = func(cell: ItemCell) -> void:
 		var id := cell.item
 		var left := cell.qty

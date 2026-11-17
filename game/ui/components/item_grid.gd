@@ -273,9 +273,11 @@ func _drop_data(_at: Vector2, data: Variant) -> void:
 		dropped.call(data)
 
 
-## The stack a drag carries, or the question how many of it (as in BG3): with Shift, or always with `ask` (a deal in the
-## trade, the author: «полоску, сколько из них переместить»). `done` gets the number.
-static func with_qty(near: Control, drag: Dictionary, done: Callable, ask := false) -> void:
+## The stack a drag carries, or the question how many of it (as in BG3): a stack moved from one holder to another — a
+## deal in the trade, a companion, a chest — always asks (the author: «как при торговле (тем же методом) надо давать
+## способ выбрать число перетаскиваемых предметов, а не все сразу»); a stack dropped on the ground only with Shift
+## (`ask` false). `done` gets the number.
+static func with_qty(near: Control, drag: Dictionary, done: Callable, ask := true) -> void:
 	if (ask or bool(drag.get("split", false))) and int(drag.get("qty", 1)) > 1:
 		ask_qty(near, int(drag["qty"]), done)
 	else:

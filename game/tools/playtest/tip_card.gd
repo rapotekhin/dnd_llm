@@ -180,6 +180,8 @@ func run() -> void:
 		step("pinned it stays when the cursor goes", pinned != null and pinned.visible and pinned.pinned() == longest.card_title(longest.tooltip_text))
 		var body := pinned.find_child("DetailsText", true, false) as RichTextLabel if pinned != null else null
 		step("and its text scrolls", body != null and body.scroll_active, str(body.get_content_height()) if body != null else "")
+		var vbar := body.get_v_scroll_bar() if body != null else null
+		step("its scroll bar takes the mouse: the thumb is dragged (v0.8.4.44.11)", vbar != null and vbar.mouse_filter == Control.MOUSE_FILTER_STOP and vbar.visible)
 		await shot("spell_pinned")
 		var lock := pinned.find_child("DetailsUnpin", true, false) as Button if pinned != null else null
 		if lock != null:

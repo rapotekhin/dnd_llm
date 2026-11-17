@@ -3,7 +3,9 @@ extends ModalFrame
 ## The party window on Tab (v0.8.4.44.10, as in BG3; the author: «на кнопку Tab … открывались одновременно в ряд
 ## инвентари всех спутников и игрока для удобного перемещения предметов между инвентарями»): a column for the hero and
 ## each one who walks with it (AllyRules.party, those who carry things) — the face, the name and the coins, the load and
-## its most, the grid of loose things. A thing dragged from one column onto another is handed over (a stack asks how many
+## its most, the grid of all its things: the worn and the belt's too, each with a small mark of its place (v0.8.4.44.11,
+## the author: «помечать маленькой иконкой на предмете, что он на кукле или на поясе»); handed over, it goes into the
+## other's pack (Equip.hand takes it off first). A thing dragged from one column onto another is handed over (a stack asks how many
 ## by the slider, as in the trade), a double click does its main act, the right button lists its acts (ItemActs,
 ## ItemMenu). Every move is Equip.hand's through GameState.item_act: the same rules as the «Снаряжение» window.
 
@@ -131,9 +133,10 @@ func _column(id: String) -> PanelContainer:
 	grid.accepts = func(drag: Dictionary) -> bool:
 		var from: Dictionary = drag.get("from", {})
 		return str(from.get("kind", "")) == "things" and str(from.get("who", "")) != id
-	grid.dropped = func(drag: Dictionary) -> void: give(str((drag["from"] as Dictionary)["who"]), id, str(drag["item"]), int(drag.get("qty", 1)), true)
+	grid.dropped = func(drag: Dictionary) -> void: give(str((drag["from"] as Dictionary)["who"]), id, str(drag["item"]), int(drag.get("qty", 1)))
 	grid.setup = func(cell: ItemCell) -> void:
 		var item := cell.item
+		cell.set_place(place_of(GameState.session, Catalog.data, id, item))
 		cell.on_double = func() -> void:
 			var main := ItemActs.main(_rows(id, item))
 			if not main.is_empty():
@@ -154,11 +157,24 @@ func _fill(s: GameSession, data: Dictionary, id: String) -> void:
 	(parts["coins"] as Label).text = tr("SIDE_COINS").format({"coins": Money.format(Gear.coins(s, data, id))})
 	var c := Gear.of(s, data, id)  # a person's pockets filled the first time it is looked into
 	UiParts.weight(parts["weight"], parts["bar"], Sheet.carried(s, data, who), Sheet.capacity(s, data, who))
-	(parts["grid"] as ItemGrid).show_items(Gear.loose(c, data, s.items))
+	var all := {}
+	for item: String in c.get("inventory", {}):
+		if int(c["inventory"][item]) > 0:
+			all[item] = int(c["inventory"][item])
+	(parts["grid"] as ItemGrid).show_items(all)
+
+
+## The icon of where a copy of `item` is on `id`: the doll's slot or the hands (`slots/<slot>`), the belt (`slots/belt`); "" — loose.
+static func place_of(s: GameSession, data: Dictionary, id: String, item: String) -> String:
+	var c := Gear.of(s, data, id)
+	var at := Equip.worn_at(c, item)
+	if not at.is_empty():
+		return "slots/" + str(at[0])
+	return "slots/belt" if ItemRules.on_belt(c, data, s.items, item) else ""
 
 
 ## `qty` of `item` from one member to another (`ask` — the slider for a stack, as in the trade); a refusal in the chat.
-func give(from: String, to: String, item: String, qty: int, ask := false) -> void:
+func give(from: String, to: String, item: String, qty: int, ask := true) -> void:
 	ItemGrid.with_qty(self, {"item": item, "qty": qty}, func(n: int) -> void:
 		_do({"act": "give", "item": item, "to": to, "qty": n}, from), ask)
 

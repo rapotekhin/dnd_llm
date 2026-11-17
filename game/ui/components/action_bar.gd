@@ -434,6 +434,25 @@ func _cells() -> Dictionary:
 	return out
 
 
+## What the bar offers out of a fight now, of `kinds` of the grid (the place's acts, the deeds, the passives), as the sheet's
+## «Общие» shows them to be dragged back (v0.8.4.44.11, the author: «как мне восстановить иконки … если я как игрок их
+## удалю из тулбара?»): {key, kind, spec, title, body, card} — the bar's own cells, a hidden one too; nothing of its own.
+func offered(kinds: Array) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for k: String in _stage:
+		var m := str(KEYS.get(k, ["", ""])[0])
+		if not m in ["peace", "both"] or not kinds.has(str(KEYS[k][1])):
+			continue
+		for c: Variant in _cells_of(k):
+			var key := HotbarLayout.key_of(str((c as Node).name))
+			if not c is IconSlot or key.begins_with("Ghost_") or out.any(func(r: Dictionary) -> bool: return r["key"] == key):
+				continue
+			var src := c as IconSlot
+			out.append({"key": key, "kind": str(KEYS[k][1]), "spec": src.spec, "card": src.card, "body": src.tip_body,
+				"title": src.tip_title if not src.tip_title.is_empty() else src.text.get_slice("\n", 0)})
+	return out
+
+
 ## A grey cell of an act the other mode offers: its look, «только в бою» or «не в бою»; dragged like any cell.
 func _ghost(key: String, look: Dictionary, title: String, body: String, card: Dictionary = {}) -> IconSlot:
 	var g := IconSlot.new()

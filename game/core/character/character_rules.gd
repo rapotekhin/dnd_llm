@@ -20,6 +20,7 @@ const SLOTS: Array[String] = ["armor", "main_hand", "off_hand", "head", "eyes", 
 ## The hands of a weapon set (v0.8.4.1); a shield is held in the off hand, as in every RPG (v0.8.4.43.13).
 const HANDS: Array[String] = ["main_hand", "off_hand"]
 const WEAR_SLOTS: Array[String] = ["head", "eyes", "neck", "cloak", "hands", "feet", "ring1", "ring2"]
+const ANY_WEARER := "any_wearer"  ## a thing anybody wears or wields as its own (any_wearer)
 
 
 static func mod(score: int) -> int:
@@ -353,7 +354,7 @@ static func walk(me: Dictionary, gear: Dictionary, data: Dictionary, items: Dict
 ## in heavy armour freely. Anybody's (`Sheet.speed`).
 static func armor_slow(armor: Dictionary, strength: int, race: String, data: Dictionary) -> int:
 	var row: Dictionary = data["rules"]["item_rules"]["str_short"]
-	var need := int(armor.get("armor", {}).get("str_min", 0))
+	var need := 0 if any_wearer(armor) else int(armor.get("armor", {}).get("str_min", 0))
 	if need <= 0 or strength >= need or (row["free_races"] as Array).has(race):
 		return 0
 	return int(row["slow_ft"])
@@ -610,6 +611,12 @@ static func slots_of(def: Dictionary, data: Dictionary) -> Array[String]:
 
 ## "" when the character can equip `id` into `slot`, otherwise a reason (localization key).
 ## `spare` — into the set put away, else into the hands: either set takes any weapon (v0.8.4.24.1).
+## A thing anybody wears or wields as its own (v0.8.4.44.11, the property `any_wearer`, as BG3's Helldusk armour; the
+## author: «универсальный доспех, который бы мог носить каждый»): no proficiency it asks, no Strength of heavy armour.
+static func any_wearer(def: Dictionary) -> bool:
+	return (def.get("properties", []) as Array).has(ANY_WEARER)
+
+
 static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary, id: String, slot: String, spare: bool = false) -> String:
 	if int(c.get("inventory", {}).get(id, 0)) <= 0:
 		return "EQUIP_NOT_OWNED"
@@ -623,10 +630,10 @@ static func can_equip(c: Dictionary, data: Dictionary, session_items: Dictionary
 	var profs: Array = c.get("armor_profs", [])
 	match slot:
 		"armor":
-			if not profs.has(str(def["armor"]["category"])):
+			if not profs.has(str(def["armor"]["category"])) and not any_wearer(def):
 				return "EQUIP_NO_PROFICIENCY"
 		"off_hand":  # a shield or a light weapon; what the hand held goes to the pack
-			if is_shield(def) and not profs.has("shield"):
+			if is_shield(def) and not profs.has("shield") and not any_wearer(def):
 				return "EQUIP_NO_PROFICIENCY"
 			if not is_shield(def) and not (def.get("properties", []) as Array).has("light"):
 				return "EQUIP_NOT_LIGHT"

@@ -17,6 +17,8 @@ var on_double := Callable()
 var on_menu := Callable()  ## (cell) — the right button
 var faded := false  ## an empty slot's picture
 var lit := false  ## a slot that would take the thing dragged now
+var place := ""  ## where a copy of it is worn, an icon ref (`slots/armor`, `slots/belt`): drawn small in the top-left corner
+var _place_path := ""
 var _shift_drag := false
 
 
@@ -32,6 +34,15 @@ static func of(ref: String, item_id: String, n: int, where: Dictionary, side: in
 	c.focus_mode = Control.FOCUS_NONE
 	c.mouse_filter = Control.MOUSE_FILTER_PASS  # a drop on it goes up to its area
 	return c
+
+
+## The small mark of where it is worn ("" — none).
+func set_place(ref: String) -> void:
+	place = ref
+	var root := (Engine.get_main_loop() as SceneTree).root  # no autoload names: a playtest's script compiles this first
+	var session: GameSession = root.get_node("GameState").session
+	_place_path = "" if ref.is_empty() else str(IconRules.of(root.get_node("Catalog").data, session.items if session != null else {}, ref).get("path", ""))
+	queue_redraw()
 
 
 func _gui_input(ev: InputEvent) -> void:
@@ -99,3 +110,10 @@ func _draw() -> void:
 		super()
 	if lit:
 		draw_rect(Rect2(Vector2.ZERO, size).grow(-1), UiTheme.ACCENT_BRIGHT, false, 2.0)
+	if not place.is_empty():
+		var mid := Vector2(13, 13)
+		draw_circle(mid, 10.0, Color(0, 0, 0, 0.75))
+		var t := IconSlot.texture(_place_path)
+		if t != null:
+			draw_texture_rect(t, Rect2(mid - Vector2(8, 8), Vector2(16, 16)), false)
+		draw_arc(mid, 10.0, 0, TAU, 20, UiTheme.ACCENT, 1.0)

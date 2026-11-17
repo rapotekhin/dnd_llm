@@ -404,6 +404,7 @@
 									"enemies": {"$ref": "#/$defs/foes"},
 									"faction": {"$ref": "#/$defs/nonempty"},
 									"ambush": {"type": "boolean"},
+									"post": {"type": "boolean", "description": "v0.8.4.44.11: they keep their post — a fight heard nearby does not bring them (FightField.hear)"},
 									"boss": {"type": "boolean"},
 									"parley": {"enum": ["hard"]},
 									"allies": {"$ref": "#/$defs/foes"},

@@ -196,11 +196,11 @@ static func proficiency_line(c: Dictionary, def: Dictionary, id: String) -> Stri
 	if c.is_empty():
 		return ""
 	if def.has("weapon"):
-		if not CombatRules.weapon_proficient(c, def["weapon"], id):
+		if not CombatRules.weapon_proficient(c, def["weapon"], id, def):
 			return TranslationServer.translate("ITEM_NO_PROF_WEAPON")
 	elif def.has("armor"):
 		var cat := str(def["armor"]["category"])
-		if not (c.get("armor_profs", []) as Array).has(cat):
+		if not (c.get("armor_profs", []) as Array).has(cat) and not CharacterRules.any_wearer(def):
 			return TranslationServer.translate("ITEM_NO_PROF_ARMOR")
 	return ""
 

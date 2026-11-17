@@ -467,6 +467,7 @@ func test_haste_gives_an_action_and_then_lethargy() -> void:
 
 func test_fly_keeps_melee_foes_off() -> void:
 	var s := _hero("wizard_yalika", 5)
+	s.room_id = "brod-square"  # under the open sky: under a roof a blade reaches a flyer (v0.8.4.44.11)
 	var foes := _fight(s, [{"monster": "wolf", "col": 0}, {"monster": "goblin", "col": 1}])
 	_cast_self(s, "fly")
 	var lines: Array[String] = []

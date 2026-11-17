@@ -276,6 +276,7 @@
 			},
 			"encounter": {
 				"id": "dream_guards",
+				"post": true,
 				"faction": "dream_goblins",
 				"enemies": [
 					{

@@ -2,6 +2,8 @@ extends "res://tools/playtest/playtest_base.gd"
 ## The party window on Tab (python tools/godot_playtest.py --scenario party_window), v0.8.4.44.10, as in BG3: the hero and
 ## two followers side by side, a sword dragged to one, a stack of rope to the other with the slider, the rope passed on
 ## from one companion to the other; Tab closes it, Esc too, and in a fight Tab is the next target, not the window.
+## v0.8.4.44.11: the worn armour and a belt's potion in the hero's column, each with the small mark of its place; the
+## armour dragged to a companion goes off the hero into its pack, put on by nobody.
 
 
 func run() -> void:
@@ -21,7 +23,7 @@ func run() -> void:
 	Being.follow(s, "npc_veteran")
 	s.character["inventory"].erase("rope")
 	ItemRules.add(s.character, "rope", 3)
-	ItemRules.add(s.character, "longsword", 1)
+	ItemRules.add(s.character, "battleaxe", 1)
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var has := func(who: String, item: String) -> int: return int(Gear.of(s, data, who).get("inventory", {}).get(item, 0))
@@ -37,11 +39,11 @@ func run() -> void:
 	step("its load and its most", w != null and w.text.contains("из"), w.text if w != null else "")
 	await shot("party_window")
 
-	var sword_had := has.call("npc_mercenary", "longsword") as int
-	var hero_swords := has.call(Being.HERO, "longsword") as int
-	if step("the longsword dragged onto the mercenary's column", await drag(find(view, "PartyItem_p_longsword"), view.call("grid_of", "npc_mercenary"))):
-		step("one thing goes with no question", find(view, "QtyBox") == null and has.call("npc_mercenary", "longsword") == sword_had + 1
-			and has.call(Being.HERO, "longsword") == hero_swords - 1)
+	var sword_had := has.call("npc_mercenary", "battleaxe") as int
+	var hero_swords := has.call(Being.HERO, "battleaxe") as int
+	if step("the battleaxe dragged onto the mercenary's column", await drag(find(view, "PartyItem_p_battleaxe"), view.call("grid_of", "npc_mercenary"))):
+		step("one thing goes with no question", find(view, "QtyBox") == null and has.call("npc_mercenary", "battleaxe") == sword_had + 1
+			and has.call(Being.HERO, "battleaxe") == hero_swords - 1)
 	var rope_had := has.call("npc_veteran", "rope") as int
 	if step("three ropes dragged onto the veteran's column ask how many", await drag(find(view, "PartyItem_p_rope"), view.call("grid_of", "npc_veteran"))
 			and find(view, "QtyBox") != null):
@@ -59,6 +61,23 @@ func run() -> void:
 			await frames(3)
 		step("one companion handed it to another", has.call("npc_mercenary", "rope") == merc_rope + 1)
 	await shot("party_moved")
+
+	ItemRules.add(s.character, "healing_potion", 1)
+	ItemRules.belt_put(s.character, data, s.items, "healing_potion")
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var armor := str(s.character["equipped"]["armor"])
+	var worn: ItemCell = find(view, "PartyItem_p_" + armor)
+	var potion: ItemCell = find(view, "PartyItem_p_healing_potion")
+	step("the worn armour in the hero's column, marked by its slot", worn != null and worn.place == "slots/armor", armor)
+	step("the belt's potion there too, marked by the belt", potion != null and potion.place == "slots/belt")
+	await shot("party_marks")
+	var merc_armor := has.call("npc_mercenary", armor) as int
+	if step("the worn armour dragged onto the mercenary's column", worn != null and await drag(worn, view.call("grid_of", "npc_mercenary"))):
+		step("off the hero, into the mercenary's pack, worn by nobody", str(s.character["equipped"]["armor"]).is_empty()
+			and has.call("npc_mercenary", armor) == merc_armor + 1
+			and str(Gear.of(s, data, "npc_mercenary").get("equipped", {}).get("armor", "")) != armor)
+		await shot("party_armor_handed")
 
 	await key(KEY_TAB)
 	step("Tab closes it", not view.visible)
