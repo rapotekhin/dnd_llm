@@ -3,7 +3,8 @@ extends "res://tools/playtest/playtest_base.gd"
 ## портрет союзника должен … давать управление союзником … а не начинать диалог». On the square of Brod with a mercenary:
 ## a click on its portrait leads it — the token is its face, the bar its own, the hero walks after it; a click on the map
 ## walks the mercenary; its portrait again opens its sheet; the hero's portrait takes the hero back. v0.8.4.44.13: the
-## mercenary's potion drunk by it from its bar, the priestess led heals the hero with her own Cure Wounds.
+## mercenary's potion drunk by it from its bar, the priestess led heals the hero with her own Cure Wounds, the mercenary
+## forges a dagger at the smithy with its own tools.
 
 
 func run() -> void:
@@ -115,3 +116,33 @@ func run() -> void:
 		step("the hero healed by her", int(s.character["hp"]) > 3, str(s.character["hp"]))
 		step("her slot spent, not the hero's", SpellRules.slots_left(Sheet.own(s, "npc_priestess"), 1) == 2)
 		await shot("priestess_healed")
+
+	# «Ремесло» by the one led (v0.8.4.44.13): the mercenary forges a dagger at the smithy with its own tools and iron
+	var smith := Life.of(s, "npc_mercenary", data)
+	smith["tools"] = ["smiths_tools"]
+	ItemRules.add(smith, "smiths_tools", 1)
+	ItemRules.add(smith, "iron_bar", 2)
+	Ledger.purse(smith, 1000)
+	s.room_id = "brod-smithy"
+	s.minute = 9 * 60
+	gs.lead("npc_mercenary")
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	var craft_btn: Button = find(screen(), "CraftButton")
+	step("«Ремесло» on the mercenary's panel", craft_btn != null)
+	if craft_btn == null:
+		return
+	await press(craft_btn)
+	await frames(4)
+	var win: Control = find(screen(), "CraftView")
+	step("its recipes: the dagger", win != null and win.visible and find(win, "Recipe_dagger") != null)
+	await shot("mercenary_craft")
+	await press(find(win, "CraftStart_dagger"))
+	await frames(3)
+	step("its work begun, its iron spent", not CraftRules.project(smith).is_empty() and int(smith["inventory"].get("iron_bar", 0)) == 1
+		and CraftRules.project(s.character).is_empty())
+	await press(find(win, "CraftWork_8"))
+	await frames(4)
+	step("a dagger in its things", (smith["inventory"] as Dictionary).keys().any(func(id: String) -> bool:
+		return ItemRules.plain_of(data["items"], s.items, id) == "dagger"), str(smith["inventory"]))
+	await shot("mercenary_forged")

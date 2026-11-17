@@ -4,7 +4,9 @@ extends RefCounted
 ## and an output. The hero knows the recipes of the tools it is proficient with; a `learn` one comes from a lesson
 ## (service op teach_recipe), a carried book (item `teaches`) or the master (effect `recipe`). One project at a time
 ## (c.craft {recipe, done, total}): the materials go at the start, the work goes in shifts, the check at the end sets
-## the quality. Salvage gives materials back; gathering takes raw ones from the world's room tags.
+## the quality. Salvage gives materials back; gathering takes raw ones from the world's room tags. `who` — whose hands
+## (v0.8.4.44.13, ADR-0016): the hero, or the follower the player leads, with its own record (Life.of), tools, things,
+## coins and checks; Being.HERO by default.
 
 
 static func cfg(data: Dictionary) -> Dictionary:
@@ -24,10 +26,10 @@ static func stations(data: Dictionary) -> Dictionary:
 
 ## Every recipe the game knows: the rules', the pack's (world.json `recipes`), the master's made ones, and the
 ## template recipes the hero may see now (v0.7.39.1).
-static func all(s: GameSession, data: Dictionary) -> Dictionary:
+static func all(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Dictionary:
 	var out := _plain(s, data)
 	if s != null:
-		out.merge(templated(s, data), true)
+		out.merge(templated(s, data, who), true)
 	return out
 
 
@@ -35,10 +37,10 @@ static func _plain(s: GameSession, data: Dictionary) -> Dictionary:
 	return WorldGen.registry(s, data, "recipes", cfg(data)["recipes"])
 
 
-static func recipe(s: GameSession, data: Dictionary, id: String) -> Dictionary:
+static func recipe(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Dictionary:
 	if id.begins_with(TPL):
 		var parts := id.split(":")
-		return template_recipe(s, data, parts[1], parts[2] if parts.size() > 2 else "", parts[3] if parts.size() > 3 else "")
+		return template_recipe(s, data, parts[1], parts[2] if parts.size() > 2 else "", parts[3] if parts.size() > 3 else "", who)
 	return _plain(s, data).get(id, {})
 
 
@@ -144,7 +146,7 @@ static func _base_recipe(s: GameSession, data: Dictionary, item_id: String) -> D
 
 
 ## A template's recipe for `item_id` (and the variant of `from_self`): {} when it does not fit.
-static func template_recipe(s: GameSession, data: Dictionary, tid: String, item_id: String, variant: String = "") -> Dictionary:
+static func template_recipe(s: GameSession, data: Dictionary, tid: String, item_id: String, variant: String = "", who: String = Being.HERO) -> Dictionary:
 	var t: Dictionary = _templates(data).get(tid, {})
 	var prop := MakeRules.def_of(data, variant) if bool(t.get("made", false)) else {}
 	if bool(t.get("made", false)) and item_id == "*" and not prop.is_empty():
@@ -159,7 +161,7 @@ static func template_recipe(s: GameSession, data: Dictionary, tid: String, item_
 	var by: Dictionary = cfg(data)["by_rarity"].get(rarity, {})
 	if bool(t.get("made", false)) and by.is_empty():
 		return {}
-	var c: Dictionary = s.character if s != null else {}
+	var c: Dictionary = Life.of(s, who) if s != null else {}
 	var r := {"dir": "artifice", "template": tid, "dc": int(by.get("dc", 12)), "hours": int(by.get("hours", 8)), "output": item_id, "qty": 1}
 	r["tool"] = str(br.get("tool", t.get("tool_default", ""))) if str(t.get("tool", "")) == "$base" else str(t.get("tool", ""))
 	r["station"] = str(br.get("station", t.get("station_default", ""))) if str(t.get("station", "")) == "$base" else str(t.get("station", ""))
@@ -199,22 +201,22 @@ static func template_recipe(s: GameSession, data: Dictionary, tid: String, item_
 
 ## The template recipes shown now: of a base the hero carries, a spell it knows, a learned formula, or any for a
 ## template without a base — only when the hero has the template's own skills (a learned formula always).
-static func templated(s: GameSession, data: Dictionary) -> Dictionary:
+static func templated(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Dictionary:
 	var out := {}
-	var c := s.character
+	var c := Life.of(s, who, data)
 	var inv: Dictionary = c.get("inventory", {})
 	var catalog: Dictionary = data["items"]["catalog"]
 	var formulas: Array = learned(c).duplicate()
-	formulas.append_array(from_books(s, data))
+	formulas.append_array(from_books(s, data, who))
 	for f: Variant in formulas:
 		var parts := str(f).split(":")
 		if str(f).begins_with(TPL) and parts.size() > 3 and parts[2] == "*":  # a built property: on what the hero carries
 			for id: String in inv:
-				var r := template_recipe(s, data, parts[1], id, parts[3])
+				var r := template_recipe(s, data, parts[1], id, parts[3], who)
 				if not r.is_empty():
 					out["%s%s:%s:%s" % [TPL, parts[1], id, parts[3]]] = r
 		elif str(f).begins_with(TPL) and parts.size() >= 3:
-			var r := template_recipe(s, data, parts[1], parts[2], parts[3] if parts.size() > 3 else "")
+			var r := template_recipe(s, data, parts[1], parts[2], parts[3] if parts.size() > 3 else "", who)
 			if not r.is_empty():
 				out[str(f)] = r
 	for tid: String in _templates(data):
@@ -224,7 +226,7 @@ static func templated(s: GameSession, data: Dictionary) -> Dictionary:
 		if bool(t.get("from_self", false)):
 			for id: String in inv:
 				for v: String in t.get("variants", {}):
-					var r := template_recipe(s, data, tid, id, v)
+					var r := template_recipe(s, data, tid, id, v, who)
 					if not r.is_empty():
 						out["%s%s:%s:%s" % [TPL, tid, id, v]] = r
 			continue
@@ -235,7 +237,7 @@ static func templated(s: GameSession, data: Dictionary) -> Dictionary:
 				continue
 			if bool(t.get("spell_known", false)) and not StudyRules._knows_spell(c, str(catalog[id].get("use", {}).get("spell", ""))):
 				continue
-			out["%s%s:%s" % [TPL, tid, id]] = template_recipe(s, data, tid, id)
+			out["%s%s:%s" % [TPL, tid, id]] = template_recipe(s, data, tid, id, "", who)
 	return out
 
 
@@ -272,9 +274,9 @@ static func learned(c: Dictionary) -> Array:
 
 
 ## The recipes a carried book teaches.
-static func from_books(s: GameSession, data: Dictionary) -> Array[String]:
+static func from_books(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Array[String]:
 	var out: Array[String] = []
-	for id: String in s.character.get("inventory", {}):
+	for id: String in Life.of(s, who, data).get("inventory", {}):
 		for r: Variant in ItemRules.def_of(data["items"], s.items, id).get("teaches", []):
 			if not out.has(str(r)):
 				out.append(str(r))
@@ -282,17 +284,18 @@ static func from_books(s: GameSession, data: Dictionary) -> Array[String]:
 
 
 ## The recipes the hero can make now or later: by the proficiency of the tool, `learn` ones only learned or in a book.
-static func known(s: GameSession, data: Dictionary) -> Array[String]:
+static func known(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Array[String]:
 	var out: Array[String] = []
-	var books := from_books(s, data)
-	var recipes := all(s, data)
+	var c := Life.of(s, who, data)
+	var books := from_books(s, data, who)
+	var recipes := all(s, data, who)
 	for id: String in recipes:
 		var r: Dictionary = recipes[id]
-		if needs_tool(r) and not BackgroundRules.proficient(s.character, tool_of(r)):
+		if needs_tool(r) and not BackgroundRules.proficient(c, tool_of(r)):
 			continue
-		if r.has("trait") and not CharacterRules.has_trait(s.character, str(r["trait"])):
+		if r.has("trait") and not CharacterRules.has_trait(c, str(r["trait"])):
 			continue  # a race trait's own work: a tinker gnome's clockwork (v0.8.4.43.46)
-		if bool(r.get("learn", false)) and not learned(s.character).has(id) and not books.has(id):
+		if bool(r.get("learn", false)) and not learned(c).has(id) and not books.has(id):
 			continue
 		out.append(id)
 	return out
@@ -314,8 +317,8 @@ static func station_here(s: GameSession, data: Dictionary, station: String) -> b
 
 
 ## The trader of the room who owns the station and takes rent per hour: {npc, cp} or {} (free).
-static func rent(s: GameSession, data: Dictionary, station: String) -> Dictionary:
-	var cp := Price.share(int(stations(data).get(station, {}).get("rent_cp_hour", 0)), float(DevelopmentRules.effect(s.character, data, "craft", "rent_pct", 100.0)))
+static func rent(s: GameSession, data: Dictionary, station: String, who: String = Being.HERO) -> Dictionary:
+	var cp := Price.share(int(stations(data).get(station, {}).get("rent_cp_hour", 0)), float(DevelopmentRules.effect(Life.of(s, who), data, "craft", "rent_pct", 100.0)))
 	if station.is_empty() or cp <= 0:
 		return {}
 	for npc_id: String in s.npcs_here(data["world"], s.room_id):
@@ -325,9 +328,9 @@ static func rent(s: GameSession, data: Dictionary, station: String) -> Dictionar
 
 
 ## What is missing for `r` (materials): {item: missing qty}.
-static func missing(s: GameSession, r: Dictionary) -> Dictionary:
+static func missing(s: GameSession, r: Dictionary, who: String = Being.HERO) -> Dictionary:
 	var out := {}
-	var inv: Dictionary = s.character.get("inventory", {})
+	var inv: Dictionary = Life.of(s, who).get("inventory", {})
 	for m: String in r.get("materials", {}):
 		var need := int(r["materials"][m])
 		if int(inv.get(m, 0)) < need:
@@ -336,34 +339,35 @@ static func missing(s: GameSession, r: Dictionary) -> Dictionary:
 
 
 ## "" when the recipe can be started here, else a localization key.
-static func why_not(s: GameSession, data: Dictionary, id: String) -> String:
+static func why_not(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> String:
 	var unfree := EncounterRules.unfree_why(s)
 	if not unfree.is_empty():
 		return unfree
-	var r := recipe(s, data, id)
-	if r.is_empty() or not known(s, data).has(id):
+	var c := Life.of(s, who, data)
+	var r := recipe(s, data, id, who)
+	if r.is_empty() or not known(s, data, who).has(id):
 		return "CRAFT_UNKNOWN"
-	if not project(s.character).is_empty():
+	if not project(c).is_empty():
 		return "CRAFT_BUSY"
-	if tired(s, data):
+	if tired(s, data, who):
 		return "CRAFT_TOO_TIRED"
-	if not skills_missing(s.character, data, r).is_empty():
+	if not skills_missing(c, data, r).is_empty():
 		return "CRAFT_NO_SKILL"
-	if needs_tool(r) and not BackgroundRules.has_tool(s.character, tool_of(r)):
+	if needs_tool(r) and not BackgroundRules.has_tool(c, tool_of(r)):
 		return "CRAFT_NO_TOOL"
 	if not station_here(s, data, str(r.get("station", ""))):
 		return "CRAFT_NO_STATION"
-	if not missing(s, r).is_empty():
+	if not missing(s, r, who).is_empty():
 		return "CRAFT_NO_MATERIALS"
-	if r.get("limit") is Dictionary and held_of(s, data, str(r["limit"]["tag"])) >= int(r["limit"]["n"]):
+	if r.get("limit") is Dictionary and held_of(s, data, str(r["limit"]["tag"]), who) >= int(r["limit"]["n"]):
 		return "CRAFT_LIMIT"  # no more than three clockworks at once (Tinker, 5e)
 	return ""
 
 
 ## How many things of the item tag `tag` the hero has now, in its pack and bags.
-static func held_of(s: GameSession, data: Dictionary, tag: String) -> int:
+static func held_of(s: GameSession, data: Dictionary, tag: String, who: String = Being.HERO) -> int:
 	var n := 0
-	for h: Dictionary in Thing.holders(s.character):
+	for h: Dictionary in Thing.holders(Life.of(s, who)):
 		for id: String in Thing.store(h):
 			if (ItemRules.def_of(data["items"], s.items, ItemRules.real_id(id)).get("tags", []) as Array).has(tag):
 				n += Thing.count(h, id)
@@ -371,8 +375,8 @@ static func held_of(s: GameSession, data: Dictionary, tag: String) -> int:
 
 
 ## Too worn to work at a craft: exhaustion of rules.craft.max_exhaustion or more (v0.8.4.30).
-static func tired(s: GameSession, data: Dictionary) -> bool:
-	return ConditionRules.exhaustion(s.character) >= int(cfg(data).get("max_exhaustion", 99))
+static func tired(s: GameSession, data: Dictionary, who: String = Being.HERO) -> bool:
+	return ConditionRules.exhaustion(Life.of(s, who)) >= int(cfg(data).get("max_exhaustion", 99))
 
 
 static func project(c: Dictionary) -> Dictionary:
@@ -380,70 +384,73 @@ static func project(c: Dictionary) -> Dictionary:
 
 
 ## The materials go, the project starts. Lines.
-static func start(s: GameSession, data: Dictionary, id: String) -> Array[String]:
-	var r := recipe(s, data, id)
+static func start(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
+	var r := recipe(s, data, id, who)
 	var spent: Array[String] = []
 	for m: String in r.get("materials", {}):
 		var n := int(r["materials"][m])
 		for i in n:
-			ItemRules.remove(s.character, m)
+			ItemRules.remove(c, m)
 		spent.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, m), n])
-	var total := work_minutes(s.character, data, r)
+	var total := work_minutes(c, data, r)
 	if r.has("output_def"):  # a new thing of a template (an elemental blade): known to the session from the start
 		s.items[str(r["output"])] = r["output_def"]
-	s.character["craft"] = Progress.of_work(total).merged({"recipe": id})
-	return ["Начата работа: %s (%s); ушло: %s" % [recipe_name(s, data, id), TimeRules.span(total), ", ".join(spent)]]
+	c["craft"] = Progress.of_work(total).merged({"recipe": id})
+	return ["%sНачата работа: %s (%s); ушло: %s" % [_by(s, data, who), _name(s, data, r, id), TimeRules.span(total), ", ".join(spent)]]
 
 
 ## "" when a shift of work may go here, else a localization key.
-static func can_work(s: GameSession, data: Dictionary) -> String:
+static func can_work(s: GameSession, data: Dictionary, who: String = Being.HERO) -> String:
 	var unfree := EncounterRules.unfree_why(s)
 	if not unfree.is_empty():
 		return unfree
-	var p := project(s.character)
+	var c := Life.of(s, who, data)
+	var p := project(c)
 	if p.is_empty():
 		return "CRAFT_NO_PROJECT"
-	if tired(s, data):
+	if tired(s, data, who):
 		return "CRAFT_TOO_TIRED"
-	var r := recipe(s, data, str(p["recipe"]))
-	if needs_tool(r) and not BackgroundRules.has_tool(s.character, tool_of(r)):
+	var r := recipe(s, data, str(p["recipe"]), who)
+	if needs_tool(r) and not BackgroundRules.has_tool(c, tool_of(r)):
 		return "CRAFT_NO_TOOL"
 	if not station_here(s, data, str(r.get("station", ""))):
 		return "CRAFT_NO_STATION"
-	var rent_now := rent(s, data, str(r.get("station", "")))
-	if not rent_now.is_empty() and Ledger.balance(s) < int(rent_now["cp"]):
+	var rent_now := rent(s, data, str(r.get("station", "")), who)
+	if not rent_now.is_empty() and Ledger.balance(s, who) < int(rent_now["cp"]):
 		return "CRAFT_NO_RENT"
 	return ""
 
 
 ## Minutes of the next shift of up to `hours`: what is left of the work, the rent the hero can pay.
-static func shift_minutes(s: GameSession, data: Dictionary, hours: int) -> int:
-	var p := project(s.character)
+static func shift_minutes(s: GameSession, data: Dictionary, hours: int, who: String = Being.HERO) -> int:
+	var p := project(Life.of(s, who))
 	if p.is_empty():
 		return 0
 	var mins := mini(hours * 60, Progress.left(p))
-	var r := recipe(s, data, str(p["recipe"]))
-	var rent_now := rent(s, data, str(r.get("station", "")))
+	var r := recipe(s, data, str(p["recipe"]), who)
+	var rent_now := rent(s, data, str(r.get("station", "")), who)
 	if not rent_now.is_empty():
-		var can_hours := Ledger.balance(s) / int(rent_now["cp"])
+		var can_hours := Ledger.balance(s, who) / int(rent_now["cp"])
 		mins = mini(mins, can_hours * 60)
 	return maxi(0, mins)
 
 
 ## A shift done (the time already passed): the progress, the rent, the end of the work. Lines.
-static func worked(s: GameSession, data: Dictionary, minutes: int) -> Array[String]:
-	var p := project(s.character)
-	var r := recipe(s, data, str(p["recipe"]))
+static func worked(s: GameSession, data: Dictionary, minutes: int, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
+	var p := project(c)
+	var r := recipe(s, data, str(p["recipe"]), who)
 	var lines: Array[String] = []
-	var rent_now := rent(s, data, str(r.get("station", "")))
+	var rent_now := rent(s, data, str(r.get("station", "")), who)
 	if not rent_now.is_empty() and minutes > 0:
 		var cp := int(ceil(minutes / 60.0)) * int(rent_now["cp"])
-		Ledger.add(s, -cp, "craft:worked")
+		Ledger.add(s, -cp, "craft:worked", who)
 		lines.append("Плата за %s: −%s" % [station_name(data, str(r["station"])).to_lower(), Money.format(cp)])
 	if Progress.add(p, minutes):
-		lines.append_array(finish(s, data))
+		lines.append_array(finish(s, data, who))
 	else:
-		lines.append("Работа: %s — %d%%, осталось %s" % [recipe_name(s, data, str(p["recipe"])), progress(s.character), TimeRules.span(Progress.left(p))])
+		lines.append("%sРабота: %s — %d%%, осталось %s" % [_by(s, data, who), _name(s, data, r, str(p["recipe"])), progress(c), TimeRules.span(Progress.left(p))])
 	return lines
 
 
@@ -461,13 +468,13 @@ static func bonus_parts(s: GameSession, data: Dictionary, tool: String, who: Str
 
 
 ## The bonus of a recipe's check: its tool's, or a tool-less template's skill (`check`), with the direction's skills.
-static func recipe_bonus(s: GameSession, data: Dictionary, r: Dictionary) -> int:
-	return RollParts.sum(recipe_parts(s, data, r))
+static func recipe_bonus(s: GameSession, data: Dictionary, r: Dictionary, who: String = Being.HERO) -> int:
+	return RollParts.sum(recipe_parts(s, data, r, who))
 
 
-static func recipe_parts(s: GameSession, data: Dictionary, r: Dictionary) -> Array[Dictionary]:
-	var out := RollParts.skill(s, data, str(r["check"])) if tool_of(r).is_empty() and r.has("check") else bonus_parts(s, data, tool_of(r))
-	RollParts.development(s.character, data, dir_of(r), "quality_bonus", out)
+static func recipe_parts(s: GameSession, data: Dictionary, r: Dictionary, who: String = Being.HERO) -> Array[Dictionary]:
+	var out := RollParts.skill(s, data, str(r["check"]), who) if tool_of(r).is_empty() and r.has("check") else bonus_parts(s, data, tool_of(r), who)
+	RollParts.development(Life.of(s, who), data, dir_of(r), "quality_bonus", out)
 	return out
 
 
@@ -479,17 +486,17 @@ static func check_label(data: Dictionary, r: Dictionary) -> String:
 
 
 ## The check of a finished work (Activity.attempt and the window's chance): the recipe's skill or tool, its quality ladder.
-static func check_spec(s: GameSession, data: Dictionary, r: Dictionary) -> Dictionary:
-	return {"what": check_label(data, r), "skill": "craft", "parts": recipe_parts(s, data, r), "dc": int(r.get("dc", 10)),
-		"adv": bool(_fx(s.character, data, r, "quality_adv", false)), "crit": 10, "ladder": cfg(data)["quality"]}
+static func check_spec(s: GameSession, data: Dictionary, r: Dictionary, who: String = Being.HERO) -> Dictionary:
+	return {"what": check_label(data, r), "skill": "craft", "parts": recipe_parts(s, data, r, who), "dc": int(r.get("dc", 10)),
+		"adv": bool(_fx(Life.of(s, who), data, r, "quality_adv", false)), "crit": 10, "ladder": cfg(data)["quality"]}
 
 
 ## The chance in % of at least the normal quality (a margin of the normal tier).
-static func chance(s: GameSession, data: Dictionary, id: String) -> int:
-	var r := recipe(s, data, id)
-	var spec := check_spec(s, data, r)
+static func chance(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> int:
+	var r := recipe(s, data, id, who)
+	var spec := check_spec(s, data, r, who)
 	spec["dc"] = int(spec["dc"]) + int(tier_by_id(data, "normal").get("from", 0))
-	return Roll.chance_of(s, data, Sheet.HERO, spec)
+	return Roll.chance_of(s, data, Sheet.who(s, data, who), spec)
 
 
 static func tier_by_id(data: Dictionary, id: String) -> Dictionary:
@@ -500,22 +507,22 @@ static func tier_by_id(data: Dictionary, id: String) -> Dictionary:
 
 
 ## The check at the end of the work and the thing it makes. Lines.
-static func finish(s: GameSession, data: Dictionary) -> Array[String]:
-	var c := s.character
+static func finish(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
 	var p := project(c)
 	var id := str(p["recipe"])
-	var r := recipe(s, data, id)
-	var a := Activity.attempt(s, data, check_spec(s, data, r))
+	var r := recipe(s, data, id, who)
+	var a := Activity.attempt(s, data, check_spec(s, data, r, who), who)
 	var tier: Dictionary = a["step"]
 	c.erase("craft")
 	if r.has("output_def") and not s.items.has(str(r["output"])):
 		s.items[str(r["output"])] = r["output_def"]
 	var made := make_output(s, data, str(r["output"]), int(r.get("qty", 1)), tier)
-	var inv: Dictionary = c["inventory"]
-	inv[str(made["id"])] = int(inv.get(str(made["id"]), 0)) + int(made["qty"])
-	CharacterRules.refresh(c, data, s.items)
+	ItemRules.add(c, str(made["id"]), int(made["qty"]))
+	if who == Being.HERO:
+		CharacterRules.refresh(c, data, s.items)
 	var made_as := str(tier["name"]) if not str(tier["name"]).is_empty() else "обычная работа"
-	var line := Activity.line(check_label(data, r), "", a["roll"], made_as)
+	var line := _by(s, data, who) + Activity.line(check_label(data, r), "", a["roll"], made_as)
 	var what := ItemRules.display_name(data["items"], s.items, str(made["id"]))
 	var lines: Array[String] = [line, "Готово: %s%s" % [what, " ×%d" % int(made["qty"]) if int(made["qty"]) > 1 else ""]]
 	lines.append_array(DevelopmentRules.add_xp(c, data, dir_of(r), xp_for(s, data, r)))
@@ -544,12 +551,23 @@ static func make_output(s: GameSession, data: Dictionary, out_id: String, qty: i
 
 
 ## Drops the project (the materials are gone). Lines.
-static func abandon(s: GameSession, data: Dictionary) -> Array[String]:
-	var p := project(s.character)
+static func abandon(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who)
+	var p := project(c)
 	if p.is_empty():
 		return []
-	s.character.erase("craft")
-	return ["Работа брошена: %s" % recipe_name(s, data, str(p["recipe"]))]
+	c.erase("craft")
+	return ["%sРабота брошена: %s" % [_by(s, data, who), _name(s, data, recipe(s, data, str(p["recipe"]), who), str(p["recipe"]))]]
+
+
+## «Кейра: » before a line of one who is not the hero; "" for the hero.
+static func _by(s: GameSession, data: Dictionary, who: String) -> String:
+	return "" if who == Being.HERO else "%s: " % CreatureCard.name_of(s, data, Sheet.who(s, data, who))
+
+
+## A recipe's name read from the recipe itself (a template's is of the one who sees it).
+static func _name(s: GameSession, data: Dictionary, r: Dictionary, id: String) -> String:
+	return str(r["name"]) if r.has("name") else recipe_name(s, data, id)
 
 
 # --- salvage ------------------------------------------------------------------------------------------------------
@@ -557,10 +575,10 @@ static func abandon(s: GameSession, data: Dictionary) -> Array[String]:
 
 ## The materials a thing gives back: a recipe's `share` (floor, at least 1 of the first; «Бережливый» — all) or
 ## salvage.extra; a magic thing adds arcane dust by its rarity (v0.7.39.1). {} — none.
-static func salvage_yield(s: GameSession, data: Dictionary, item_id: String) -> Dictionary:
+static func salvage_yield(s: GameSession, data: Dictionary, item_id: String, who: String = Being.HERO) -> Dictionary:
 	var def := ItemRules.def_of(data["items"], s.items, item_id)
 	var base := ItemRules.plain_of(data["items"], s.items, item_id)
-	var out := _base_yield(s, data, base)
+	var out := _base_yield(s, data, base, who)
 	var dust := magic_dust(s, data, item_id)
 	if dust > 0:
 		var key := str(cfg(data)["dust"])
@@ -568,9 +586,9 @@ static func salvage_yield(s: GameSession, data: Dictionary, item_id: String) -> 
 	return out if not def.is_empty() else {}
 
 
-static func _base_yield(s: GameSession, data: Dictionary, base: String) -> Dictionary:
+static func _base_yield(s: GameSession, data: Dictionary, base: String, who: String = Being.HERO) -> Dictionary:
 	var sv: Dictionary = cfg(data)["salvage"]
-	var share := float(DevelopmentRules.effect(s.character, data, "craft", "salvage_share", float(sv["share"])))
+	var share := float(DevelopmentRules.effect(Life.of(s, who), data, "craft", "salvage_share", float(sv["share"])))
 	for r: Dictionary in _plain(s, data).values():
 		if str(r.get("output", "")) != base or int(r.get("qty", 1)) != 1:
 			continue
@@ -600,10 +618,11 @@ static func magic_dust(s: GameSession, data: Dictionary, item_id: String) -> int
 
 
 ## The hero's things that can be broken down (not worn or in hand, not raw material, not a bag).
-static func salvageable(s: GameSession, data: Dictionary) -> Array[String]:
+static func salvageable(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Array[String]:
 	var out: Array[String] = []
-	for id: String in s.character.get("inventory", {}):
-		if CharacterRules.held_copies(s.character, id) > 0 or salvage_yield(s, data, id).is_empty() or ItemRules.held_by_curse(s.character, data, s.items, id):
+	var c := Life.of(s, who, data)
+	for id: String in c.get("inventory", {}):
+		if CharacterRules.held_copies(c, id) > 0 or salvage_yield(s, data, id, who).is_empty() or ItemRules.held_by_curse(c, data, s.items, id):
 			continue
 		var d := ItemRules.def_of(data["items"], s.items, id)
 		if bool(d.get("material", false)) or str(d.get("item_type", "")) == "consumable" or ContainerRules.is_carried_kind(data, id):
@@ -613,19 +632,21 @@ static func salvageable(s: GameSession, data: Dictionary) -> Array[String]:
 
 
 ## One thing broken into its materials. Lines.
-static func salvage(s: GameSession, data: Dictionary, item_id: String) -> Array[String]:
-	var got := salvage_yield(s, data, item_id)
+static func salvage(s: GameSession, data: Dictionary, item_id: String, who: String = Being.HERO) -> Array[String]:
+	var c := Life.of(s, who, data)
+	var got := salvage_yield(s, data, item_id, who)
 	var name := ItemRules.display_name(data["items"], s.items, item_id)
 	var magic := magic_dust(s, data, item_id) > 0
-	ItemRules.remove(s.character, item_id)
+	ItemRules.remove(c, item_id)
 	var parts: Array[String] = []
 	for m: String in got:
-		ItemRules.add(s.character, m, int(got[m]))
+		ItemRules.add(c, m, int(got[m]))
 		parts.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, m), int(got[m])])
-	CharacterRules.refresh(s.character, data, s.items)
-	var lines: Array[String] = ["Разобрано: %s → %s" % [name, ", ".join(parts)]]
+	if who == Being.HERO:
+		CharacterRules.refresh(c, data, s.items)
+	var lines: Array[String] = ["%sРазобрано: %s → %s" % [_by(s, data, who), name, ", ".join(parts)]]
 	if magic:
-		lines.append_array(DevelopmentRules.add_xp(s.character, data, "artifice", int(DevelopmentRules.direction(data, "artifice").get("sources", {}).get("salvage", 0))))
+		lines.append_array(DevelopmentRules.add_xp(c, data, "artifice", int(DevelopmentRules.direction(data, "artifice").get("sources", {}).get("salvage", 0))))
 	return lines
 
 
@@ -658,48 +679,52 @@ static func gather_here(s: GameSession, data: Dictionary) -> Array[String]:
 	return out
 
 
-static func _gathered(s: GameSession) -> Dictionary:
-	if not (s.character.get("gathered") is Dictionary):
-		s.character["gathered"] = {}
-	return s.character["gathered"]
+static func _gathered(s: GameSession, who: String = Being.HERO) -> Dictionary:
+	var c := Life.of(s, who)
+	if not (c.get("gathered") is Dictionary):
+		c["gathered"] = {}
+	return c["gathered"]
 
 
 ## "" or a localization key: the spot is spent for today.
-static func gather_why(s: GameSession, data: Dictionary, tag: String) -> String:
+static func gather_why(s: GameSession, data: Dictionary, tag: String, who: String = Being.HERO) -> String:
 	var unfree := EncounterRules.unfree_why(s)
 	if not unfree.is_empty():
 		return unfree
 	var g: Dictionary = cfg(data)["gather"].get(tag, {})
 	if g.is_empty() or not gather_here(s, data).has(tag):
 		return "GATHER_NONE"
-	if TimeRules.today(s, _gathered(s), "%s:%s" % [s.room_id, tag]) >= int(g.get("per_day", 1)):
+	if TimeRules.today(s, _gathered(s, who), "%s:%s" % [s.room_id, tag]) >= int(g.get("per_day", 1)):
 		return "GATHER_SPENT"
 	return ""
 
 
 ## A gathering try (the caller passes the time): the check, the raw material on a success. Lines.
-static func gather(s: GameSession, data: Dictionary, tag: String) -> Array[String]:
+static func gather(s: GameSession, data: Dictionary, tag: String, who: String = Being.HERO) -> Array[String]:
 	var g: Dictionary = cfg(data)["gather"][tag]
 	var key := "%s:%s" % [s.room_id, tag]
-	TimeRules.count(s, _gathered(s), key)
+	TimeRules.count(s, _gathered(s, who), key)
 	var skill := str(g["skill"])
 	var dc := int(g["dc"])
-	var ro := Roll.hero(s, data, {"what": str(g["name"]), "skill": skill, "dc": dc, "tool": str(g.get("tool", ""))})  # the tool by the check's own road
+	var me := Sheet.who(s, data, who)
+	var ro := Roll.check(s, data, me, {"what": str(g["name"]), "skill": skill, "dc": dc, "tool": str(g.get("tool", ""))})  # the tool by the check's own road
 	var nat := int(ro["nat"])
 	var b := int(ro["bonus"])
 	var ok := bool(ro["ok"])
-	var lines: Array[String] = [Activity.line(str(g["name"]), tr_skill(data, skill), ro, "успех" if ok else "провал")]
+	var lines: Array[String] = [_by(s, data, who) + Activity.line(str(g["name"]), tr_skill(data, skill), ro, "успех" if ok else "провал")]
 	if not ok:
 		lines.append("Ничего толкового не нашлось")
 		return lines
 	var qty := Roll.between(s.rng, g["qty"])
 	var pool: Array = g.get("items", [g.get("item", "")])
 	var item := str(pool[s.rng.randi_range(0, pool.size() - 1)])
-	if FoodRules.spoils_days(data, s.items, item) > 0 and FeatureRules.forage_mult(s, data) > 1:  # food twice in the favored terrain (5e)
-		qty *= FeatureRules.forage_mult(s, data)
+	if FoodRules.spoils_days(data, s.items, item) > 0 and FeatureRules.forage_mult(s, data, me) > 1:  # food twice in the favored terrain (5e)
+		qty *= FeatureRules.forage_mult(s, data, me)
 		lines.append("Исследователь природы: еды вдвое больше")
-	ItemRules.add(s.character, item, qty)
-	CharacterRules.refresh(s.character, data, s.items)
+	var c := Life.of(s, who, data)
+	ItemRules.add(c, item, qty)
+	if who == Being.HERO:
+		CharacterRules.refresh(c, data, s.items)
 	lines.append("Добыто: %s ×%d" % [ItemRules.display_name(data["items"], s.items, item), qty])
 	return lines
 
@@ -712,10 +737,10 @@ static func tr_skill(_data: Dictionary, skill: String) -> String:
 
 
 ## What a teach_recipe service would teach now: its recipe when the hero has the tool's proficiency and lacks it.
-static func teachable(s: GameSession, data: Dictionary, sv: Dictionary) -> Array[String]:
+static func teachable(s: GameSession, data: Dictionary, sv: Dictionary, who: String = Being.HERO) -> Array[String]:
 	var id := str(sv.get("recipe", ""))
 	var r := recipe(s, data, id)
-	if r.is_empty() or (needs_tool(r) and not BackgroundRules.proficient(s.character, tool_of(r))) or learned(s.character).has(id):
+	if r.is_empty() or (needs_tool(r) and not BackgroundRules.proficient(Life.of(s, who), tool_of(r))) or learned(Life.of(s, who)).has(id):
 		return []
 	return [id]
 

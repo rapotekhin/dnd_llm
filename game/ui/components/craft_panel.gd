@@ -2,11 +2,14 @@ class_name CraftPanel
 extends ModalFrame
 ## The craft window (roadmap v0.7.24): the work in hand with its progress and the shifts, the recipes the hero knows —
 ## the tool, the station, the time, the DC and the chance, the materials had and needed — and the things that can be
-## broken into materials. Every act is GameState.craft_act: the engine passes the time, no master turn.
+## broken into materials. Every act is GameState.craft_act: the engine passes the time, no master turn. All of the one the
+## player leads (PartyLead, v0.8.4.44.13): the hero's, or a follower's own work, recipes and things.
 
 const SCENE := "res://ui/components/craft_panel.tscn"
 
 var _box: VBoxContainer
+var _who := Being.HERO  ## whose hands: the one led
+var _c: Dictionary = {}  ## its record
 
 
 func _ready() -> void:
@@ -29,30 +32,34 @@ func _rebuild() -> void:
 	clear_body()
 	var s := GameState.session
 	var data := Catalog.data
+	_who = PartyLead.of(s)
+	_c = Life.of(s, _who, data)
+	if _who != Being.HERO:
+		UiParts.heading(_box, CreatureCard.name_of(s, data, Sheet.who(s, data, _who)))
 	_project(s, data)
 	_recipes(s, data)
 	_salvage(s, data)
 
 
 func _project(s: GameSession, data: Dictionary) -> void:
-	var p := CraftRules.project(s.character)
+	var p := CraftRules.project(_c)
 	if p.is_empty():
 		return
 	UiParts.heading(_box, tr("CRAFT_IN_HAND"))
-	var r := CraftRules.recipe(s, data, str(p["recipe"]))
-	UiParts.label(_box, "%s — %d%%, %s" % [CraftRules.recipe_name(s, data, str(p["recipe"])), CraftRules.progress(s.character),
+	var r := CraftRules.recipe(s, data, str(p["recipe"]), _who)
+	UiParts.label(_box, "%s — %d%%, %s" % [r.get("name", CraftRules.recipe_name(s, data, str(p["recipe"]))), CraftRules.progress(_c),
 		tr("CRAFT_LEFT").format({"time": TimeRules.span(Progress.left(p))})])
 	var bar := ProgressBar.new()
 	bar.name = "CraftProgress"
 	bar.max_value = 100.0
-	bar.value = CraftRules.progress(s.character)
+	bar.value = CraftRules.progress(_c)
 	bar.show_percentage = false
 	bar.custom_minimum_size = Vector2(0, 8)
 	bar.add_theme_stylebox_override("fill", UiTheme.box(UiTheme.ACCENT, UiTheme.ACCENT, 0, 0, 2))
 	bar.add_theme_stylebox_override("background", UiTheme.box(UiTheme.BG, UiTheme.BORDER, 1, 0, 2))
 	_box.add_child(bar)
-	var why := CraftRules.can_work(s, data)
-	var rent := CraftRules.rent(s, data, str(r.get("station", "")))
+	var why := CraftRules.can_work(s, data, _who)
+	var rent := CraftRules.rent(s, data, str(r.get("station", "")), _who)
 	var meta: Array[String] = [_where(s, data, r)]
 	if not rent.is_empty():
 		meta.append(tr("CRAFT_RENT").format({"cp": Money.format(int(rent["cp"])), "who": GameState.world().npc(str(rent["npc"])).get("name", "")}))
@@ -62,7 +69,7 @@ func _project(s: GameSession, data: Dictionary) -> void:
 	_box.add_child(row)
 	var hours: Array = CraftRules.cfg(data)["work_hours"]
 	for h: Variant in hours:
-		var mins := CraftRules.shift_minutes(s, data, int(h))
+		var mins := CraftRules.shift_minutes(s, data, int(h), _who)
 		var text := tr("BTN_CRAFT_SHIFT").format({"time": TimeRules.span(mins)}) if mins > 0 else tr("BTN_CRAFT_SHIFT").format({"time": "—"})
 		UiParts.act_button(row, "CraftWork_%d" % int(h), text, why if not why.is_empty() else ("" if mins > 0 else "CRAFT_NO_RENT"),
 			GameState.craft_act.bind("work", "", int(h)))
@@ -83,13 +90,13 @@ func _where(s: GameSession, data: Dictionary, r: Dictionary) -> String:
 
 
 func _recipes(s: GameSession, data: Dictionary) -> void:
-	var ids := CraftRules.known(s, data)
+	var ids := CraftRules.known(s, data, _who)
 	UiParts.heading(_box, tr("CRAFT_RECIPES"))
 	if ids.is_empty():
 		UiParts.label(_box, tr("CRAFT_NO_RECIPES"), UiTheme.MUTED_LABEL)
 		return
 	for id: String in ids:
-		var r := CraftRules.recipe(s, data, id)
+		var r := CraftRules.recipe(s, data, id, _who)
 		var row := HBoxContainer.new()
 		row.name = "Recipe_" + id.validate_node_name()  # a template id has «:»
 		row.add_theme_constant_override("separation", 10)
@@ -99,43 +106,43 @@ func _recipes(s: GameSession, data: Dictionary) -> void:
 		col.add_theme_constant_override("separation", 2)
 		row.add_child(col)
 		var qty := int(r.get("qty", 1))
-		UiParts.label(col, CraftRules.recipe_name(s, data, id) + (" ×%d" % qty if qty > 1 else ""))
+		UiParts.label(col, str(r.get("name", CraftRules.recipe_name(s, data, id))) + (" ×%d" % qty if qty > 1 else ""))
 		var out_def := ItemRules.def_of(data["items"], s.items, str(r["output"]))
 		var kind := ItemInfo.kind_line(data, out_def)
-		var meta: Array[String] = [_where(s, data, r), TimeRules.span(CraftRules.work_minutes(s.character, data, r)),
-			tr("CRAFT_DC").format({"dc": int(r.get("dc", 10)), "chance": CraftRules.chance(s, data, id)})]
+		var meta: Array[String] = [_where(s, data, r), TimeRules.span(CraftRules.work_minutes(_c, data, r)),
+			tr("CRAFT_DC").format({"dc": int(r.get("dc", 10)), "chance": CraftRules.chance(s, data, id, _who)})]
 		if not kind.is_empty():
 			meta.push_front(kind)
 		UiParts.label(col, " · ".join(meta), UiTheme.MUTED_LABEL)
 		var mats: Array[String] = []
-		var inv: Dictionary = s.character.get("inventory", {})
+		var inv: Dictionary = _c.get("inventory", {})
 		for m: String in r.get("materials", {}):
 			mats.append("%s %d/%d" % [ItemRules.display_name(data["items"], s.items, m), int(inv.get(m, 0)), int(r["materials"][m])])
 		var ml := UiParts.label(col, tr("CRAFT_MATERIALS").format({"list": ", ".join(mats)}), UiTheme.MUTED_LABEL)
-		if not CraftRules.missing(s, r).is_empty():
+		if not CraftRules.missing(s, r, _who).is_empty():
 			ml.add_theme_color_override("font_color", UiTheme.WARN)
-		var lacks := CraftRules.skills_missing(s.character, data, r)
+		var lacks := CraftRules.skills_missing(_c, data, r)
 		if not lacks.is_empty():
 			UiParts.label(col, tr("CRAFT_NEEDS_SKILLS").format({"list": ", ".join(lacks)}), UiTheme.MUTED_LABEL).add_theme_color_override("font_color", UiTheme.WARN)
-		UiParts.act_button(row, "CraftStart_" + id.validate_node_name(), tr("BTN_CRAFT_START"), CraftRules.why_not(s, data, id), GameState.craft_act.bind("start", id, 1))
+		UiParts.act_button(row, "CraftStart_" + id.validate_node_name(), tr("BTN_CRAFT_START"), CraftRules.why_not(s, data, id, _who), GameState.craft_act.bind("start", id, 1))
 
 
 func _salvage(s: GameSession, data: Dictionary) -> void:
-	var ids := CraftRules.salvageable(s, data)
+	var ids := CraftRules.salvageable(s, data, _who)
 	if ids.is_empty():
 		return
 	_box.add_child(HSeparator.new())
 	UiParts.heading(_box, tr("CRAFT_SALVAGE"))
 	UiParts.label(_box, tr("CRAFT_SALVAGE_HINT").format({"time": TimeRules.span(int(CraftRules.cfg(data)["salvage"]["minutes"]))}), UiTheme.MUTED_LABEL)
 	for id: String in ids:
-		var got := CraftRules.salvage_yield(s, data, id)
+		var got := CraftRules.salvage_yield(s, data, id, _who)
 		var parts: Array[String] = []
 		for m: String in got:
 			parts.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, m), int(got[m])])
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
 		_box.add_child(row)
-		var n := int(s.character["inventory"].get(id, 1))
+		var n := int(_c["inventory"].get(id, 1))
 		UiParts.label(row, "%s%s → %s" % [ItemRules.display_name(data["items"], s.items, id), " (%d)" % n if n > 1 else "", ", ".join(parts)])
 		var name := ItemRules.display_name(data["items"], s.items, id)
 		UiParts.act_button(row, "Salvage_" + id, tr("BTN_SALVAGE"), "", func() -> String:

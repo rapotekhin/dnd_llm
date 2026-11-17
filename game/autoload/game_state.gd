@@ -1948,22 +1948,25 @@ func liquid_act(what: String, key: String, to: String = "") -> String:
 
 
 ## Crafting (v0.7.24): the acts go without the master, the time passes by the engine. "" or a localization key.
+## By the hands of the one the player leads (PartyLead, v0.8.4.44.13): the hero's or a follower's own project, tools,
+## things and coins (CraftRules with `who`).
 func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
 	if not _at_leisure():
 		return "CRAFT_NOT_NOW"
 	var data := Catalog.data
 	var s := session
+	var who := PartyLead.of(s)
 	return _act(what, {
-		"start": _row(CraftRules.why_not, CraftRules.start, [s, data, arg]),
-		"work": [CraftRules.can_work.bind(s, data), func() -> Array:  # the patrol may break the work (v0.7.22.18)
-			return _waited(CraftRules.shift_minutes(s, data, hours), func(m: int) -> Array: return CraftRules.worked(s, data, m))],
-		"abandon": [func() -> String: return "", CraftRules.abandon.bind(s, data)],
-		"salvage": [func() -> String: return "" if CraftRules.salvageable(s, data).has(arg) else "CRAFT_NO_SALVAGE", func() -> Array:
-			var lines: Array = CraftRules.salvage(s, data, arg)
+		"start": _row(CraftRules.why_not, CraftRules.start, [s, data, arg, who]),
+		"work": [CraftRules.can_work.bind(s, data, who), func() -> Array:  # the patrol may break the work (v0.7.22.18)
+			return _waited(CraftRules.shift_minutes(s, data, hours, who), func(m: int) -> Array: return CraftRules.worked(s, data, m, who))],
+		"abandon": [func() -> String: return "", CraftRules.abandon.bind(s, data, who)],
+		"salvage": [func() -> String: return "" if CraftRules.salvageable(s, data, who).has(arg) else "CRAFT_NO_SALVAGE", func() -> Array:
+			var lines: Array = CraftRules.salvage(s, data, arg, who)
 			lines.append_array(TimeRules.advance(s, data, int(CraftRules.cfg(data)["salvage"]["minutes"])))
 			return lines],
-		"gather": [CraftRules.gather_why.bind(s, data, arg), func() -> Array:  # a patrol breaks it off: nothing gathered
-			return _waited(int(CraftRules.cfg(data)["gather"][arg]["minutes"]), func(_m: int) -> Array: return CraftRules.gather(s, data, arg), true)],
+		"gather": [CraftRules.gather_why.bind(s, data, arg, who), func() -> Array:  # a patrol breaks it off: nothing gathered
+			return _waited(int(CraftRules.cfg(data)["gather"][arg]["minutes"]), func(_m: int) -> Array: return CraftRules.gather(s, data, arg, who), true)],
 	}, "CRAFT_NOT_NOW")
 
 

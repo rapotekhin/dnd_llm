@@ -114,3 +114,47 @@ func test_a_pin_is_of_the_one_led_and_aims_at_it_by_default() -> void:
 	assert_str(str(GameState.attached["who"])).is_equal(Being.HERO)
 	assert_dict(_choice("cure_wounds")).is_empty()
 	assert_str(str(s.layouts.get(PartyLead.KEY, ""))).is_empty()
+
+
+## «Ремесло» by the one led (the author: «Да, с ремесла»): its own tools, iron, coins, project and check.
+func _smith(s: GameSession) -> Dictionary:
+	var merc := Life.of(s, "npc_mercenary", data)
+	merc["tools"] = ["smiths_tools"]
+	ItemRules.add(merc, "smiths_tools", 1)
+	ItemRules.add(merc, "iron_bar", 2)
+	Ledger.purse(merc, 1000)
+	s.room_id = "brod-smithy"
+	s.minute = 9 * 60
+	GameState.lead("npc_mercenary")
+	return merc
+
+
+func test_the_led_forges_with_its_own_hands() -> void:
+	var s := GameState.session
+	var merc := _smith(s)
+	s.character["inventory"].erase("iron_bar")
+	assert_array(CraftRules.known(s, data)).not_contains(["dagger"])  # the hero has no smith's tools
+	assert_array(CraftRules.known(s, data, "npc_mercenary")).contains(["dagger"])
+	assert_str(GameState.craft_act("start", "dagger")).is_empty()
+	assert_dict(CraftRules.project(merc)).is_not_empty()
+	assert_dict(CraftRules.project(s.character)).is_empty()
+	assert_int(int(merc["inventory"]["iron_bar"])).is_equal(1)
+	var hero_cp := Ledger.balance(s)
+	var merc_cp := Ledger.balance(s, "npc_mercenary")
+	assert_str(GameState.craft_act("work", "", 8)).is_empty()
+	assert_dict(CraftRules.project(merc)).is_empty()
+	assert_bool((merc["inventory"] as Dictionary).keys().any(func(id: String) -> bool: return ItemRules.plain_of(data["items"], s.items, id) == "dagger")).is_true()
+	assert_int(Ledger.balance(s)).is_equal(hero_cp)
+	assert_int(Ledger.balance(s, "npc_mercenary")).is_less(merc_cp)  # the forge's rent from its purse
+
+
+func test_the_led_salvages_and_gathers_into_its_own_things() -> void:
+	var s := GameState.session
+	var merc := _smith(s)
+	ItemRules.add(merc, "dagger", 1)
+	assert_array(CraftRules.salvageable(s, data, "npc_mercenary")).contains(["dagger"])
+	var iron := int(merc["inventory"].get("iron_bar", 0))
+	var hero_iron := int(s.character["inventory"].get("iron_bar", 0))
+	assert_str(GameState.craft_act("salvage", "dagger")).is_empty()
+	assert_int(int(merc["inventory"].get("iron_bar", 0))).is_greater(iron)
+	assert_int(int(s.character["inventory"].get("iron_bar", 0))).is_equal(hero_iron)

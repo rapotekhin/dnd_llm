@@ -1055,25 +1055,27 @@ func _need_acts(s: GameSession, can_act: bool) -> void:
 		b.tooltip_text = tr(spec[1] + "_TIP")
 
 
-## Crafting (v0.7.24): «Ремесло» when the hero knows a recipe, has work begun or a thing to break down; the room's
+## Crafting (v0.7.24): «Ремесло» when the one led (the hero or a follower) knows a recipe, has work begun or a thing to break down; the room's
 ## gathering spots as buttons; v0.7.41: its hunting grounds and fishing waters. No row when there is nothing of it.
 func _craft_row(s: GameSession, can_act: bool) -> void:
 	var data := Catalog.data
-	var craft := not CraftRules.known(s, data).is_empty() or not CraftRules.project(s.character).is_empty()
+	var who := PartyLead.of(s)  # the one the player leads works with its own hands (v0.8.4.44.13)
+	var c := Life.of(s, who, data)
+	var craft := not CraftRules.known(s, data, who).is_empty() or not CraftRules.project(c).is_empty()
 	var spots := CraftRules.gather_here(s, data)
 	var grounds := WildsRules.here(s, data)
 	if not craft and spots.is_empty() and grounds.is_empty():
 		return
 	var acts := _content
 	if craft:
-		var p := CraftRules.project(s.character)
-		var label := tr("BTN_CRAFT") if p.is_empty() else tr("BTN_CRAFT_WORK").format({"n": CraftRules.progress(s.character)})
+		var p := CraftRules.project(c)
+		var label := tr("BTN_CRAFT") if p.is_empty() else tr("BTN_CRAFT_WORK").format({"n": CraftRules.progress(c)})
 		var cb := _row_button(acts, label, craft_requested.emit, not GameState.is_busy())
 		cb.name = "CraftButton"
 		cb.tooltip_text = tr("BTN_CRAFT_TIP")
 	for tag: String in spots:
 		var g: Dictionary = CraftRules.cfg(data)["gather"][tag]
-		var why := CraftRules.gather_why(s, data, tag)
+		var why := CraftRules.gather_why(s, data, tag, who)
 		var gb := _row_button(acts, str(g["name"]), _try.bind(GameState.craft_act.bind("gather", tag)), can_act and why.is_empty())
 		gb.name = "Gather_" + tag
 		gb.tooltip_text = tr(why) if not why.is_empty() else tr("GATHER_TIP").format({"time": TimeRules.span(int(g["minutes"])),

@@ -194,10 +194,10 @@ static func requirements(s: GameSession, data: Dictionary, id: String, who: Stri
 		"ability":
 			out.append({"text": "этой способности ещё нет", "ok": not _knows_spell(c, what)})
 		"recipe":
-			var r := CraftRules.recipe(s, data, what)
+			var r := CraftRules.recipe(s, data, what, who)
 			if CraftRules.needs_tool(r):
 				out.append({"text": "владение: " + BackgroundRules.tool_name(data, CraftRules.tool_of(r)), "ok": BackgroundRules.proficient(c, CraftRules.tool_of(r))})
-			out.append({"text": "рецепт ещё не известен", "ok": not CraftRules.known(s, data).has(what)})
+			out.append({"text": "рецепт ещё не известен", "ok": not CraftRules.known(s, data, who).has(what)})
 	return out
 
 
@@ -219,7 +219,7 @@ static func known_already(s: GameSession, data: Dictionary, id: String, who: Str
 		"spell", "ability":
 			return _knows_spell(c, what)
 		"recipe":
-			return CraftRules.known(s, data).has(what)
+			return CraftRules.known(s, data, who).has(what)
 	return false
 
 
