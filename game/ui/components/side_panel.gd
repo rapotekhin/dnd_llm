@@ -14,6 +14,7 @@ signal context_requested(ref: String)  ## v0.8.4.43.4: the right button on a por
 signal pointed(ref: String)  ## v0.8.4.43.8: the mouse over a portrait — its token ringed on the map; "-" — it left
 signal wait_requested
 signal sheet_requested
+signal member_sheet_requested(id: String)  ## v0.8.4.44.12: the sheet of the follower the player leads
 signal map_requested
 signal journal_requested
 signal level_up_requested
@@ -370,8 +371,9 @@ func _rebuild() -> void:
 	var can_act := Backend.is_ready() and not GameState.is_busy()
 
 	if not CombatRules.active(s):  # in a fight the column is FightUi's
-		_party.now = ""
+		_party.now = PartyLead.ref(s)  # the follower led lit (v0.8.4.44.12)
 		_party.refresh(_dress)
+		_bar.who = PartyLead.who(s, Catalog.data)  # its face, hands, things and passives on the bar
 	if NeedRules.on(s):
 		_need_acts(s, can_act)
 	var column := _content
@@ -539,12 +541,29 @@ func _dress(p: Portrait, ref: String) -> void:
 		_aim_look(p, aim, why)
 
 
-## A click on a portrait of the party out of a fight: the pinned spell aimed at it, else the hero's sheet or the
-## companion's own act as on the map (a follower talks).
+## A click on a portrait of the party out of a fight: the pinned spell aimed at it; else, as in BG3 (v0.8.4.44.12, the
+## author: «клик на портрет союзника должен … давать управление союзником … а не начинать диалог»), one not led is led
+## from now (PartyLead), the one led opens its sheet. A talk with a follower is in its menu (the right button). A creature
+## of the hero is not led: its own act, as on the map.
 func _party_click(ref: String) -> void:
 	if _fighting():
 		return
-	_aim_or(aim_of(ref), sheet_requested.emit if ref.is_empty() else touch_requested.emit.bind(ref))
+	_aim_or(aim_of(ref), _lead.bind(ref))
+
+
+func _lead(ref: String) -> void:
+	var s := GameState.session
+	if not ref.is_empty() and not ref.begins_with("npc:"):
+		touch_requested.emit(ref)
+		return
+	if ref != PartyLead.ref(s):
+		var err := GameState.lead(Being.HERO if ref.is_empty() else ref.trim_prefix("npc:"))
+		if not err.is_empty():
+			EventBus.message.emit(tr(err))
+	elif ref.is_empty():
+		sheet_requested.emit()
+	else:
+		member_sheet_requested.emit(ref.trim_prefix("npc:"))
 
 
 ## A portrait while a spell of the hero's side is pinned (v0.8.4.43.8): ringed when it is a target, grey with why when it
@@ -640,6 +659,9 @@ func _unseen(s: GameSession, world: WorldView, can_act: bool) -> void:
 ## Out of a fight the hotbar's class and items (v0.8.4.43, as in BG3): the ready spells, the uses of features and the
 ## things at hand — a press pins it to the next words to the master, as the ✦ menu does (`GameState.attach_choices`).
 func _hotbar_pins(s: GameSession, can_act: bool) -> void:
+	if PartyLead.of(s) != Being.HERO:
+		_lead_pins(s, PartyLead.of(s), can_act)
+		return
 	var c := s.character
 	for ch: Dictionary in GameState.attach_choices():
 		var kind := str(ch["kind"])
@@ -675,6 +697,27 @@ func _hotbar_pins(s: GameSession, can_act: bool) -> void:
 				cell.set_card(CardInfo.item(c, Catalog.data, s.items, id))
 		cell.tooltip_text = str(ch["name"]) + "\n" + tr("AREA_PIN_TIP" if area else "BAR_PIN_TIP")
 		box.add_child(cell)
+
+
+## The follower the player leads (v0.8.4.44.12): the things at its hand — its belt — used by it on the one road of a
+## thing (ItemActs.use_row, GameState.item_act). Its spells and features out of a fight are not the bar's yet.
+func _lead_pins(s: GameSession, id: String, can_act: bool) -> void:
+	var c := Gear.of(s, Catalog.data, id)
+	for item: String in ItemRules.at_hand(c, Catalog.data, s.items):
+		var row := ItemActs.use_row(s, Catalog.data, c, item, "Pin_item_" + item)
+		if row.is_empty():
+			continue
+		var cell := IconSlot.make("items/" + item, ItemRules.display_name(Catalog.data["items"], s.items, item), ActionBar.CELL)
+		cell.name = "Pin_item_" + item
+		cell.disabled = not can_act or not str(row["why"]).is_empty()
+		var n := int(c.get("inventory", {}).get(item, 0))
+		cell.badge = "×%d" % n if n > 1 else ""
+		cell.set_card(CardInfo.item(c, Catalog.data, s.items, item))
+		cell.pressed.connect(func() -> void:
+			var err := GameState.item_act(row, id)
+			if not err.is_empty():
+				EventBus.message.emit(tr(err)))
+		_bar.section(ActionBar.ITEMS).add_child(cell)
 
 
 ## The strip over the field: the place path, the date and hour, the weather; one line, the long path cut by «…».

@@ -71,7 +71,8 @@ func test_a_worn_thing_is_not_handed_in_a_fight() -> void:
 func test_a_belt_thing_is_handed_and_its_cell_marked() -> void:
 	var s := GameState.session
 	ItemRules.add(s.character, "healing_potion", 2)
-	ItemRules.belt_put(s.character, data, s.items, "healing_potion")
+	if ItemRules.belt_why(s.character, data, s.items, "healing_potion").is_empty():
+		ItemRules.belt_put(s.character, data, s.items, "healing_potion")
 	assert_str(PartyPanel.place_of(s, data, Being.HERO, "healing_potion")).is_equal("slots/belt")
 	assert_str(PartyPanel.place_of(s, data, Being.HERO, str(s.character["equipped"]["armor"]))).is_equal("slots/armor")
 	assert_str(GameState.item_act({"act": "give", "item": "healing_potion", "to": "npc_mercenary", "qty": 2}, Being.HERO)).is_empty()

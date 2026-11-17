@@ -613,36 +613,61 @@ static func of_fighter(s: GameSession, data: Dictionary, spec: Dictionary) -> Ve
 	var creature := str(spec.get("creature_id", ""))
 	if not npc.is_empty() or not creature.is_empty():
 		var ref := "npc:" + npc if not npc.is_empty() else "cr:" + creature
-		for t: Dictionary in of(s, data, FightGrid.map(s, data)) + walkers(s, data):
+		for t: Dictionary in of(s, data, FightGrid.map(s, data)) + party(s, data):
 			if str(t["ref"]) == ref:
 				return Vector2i(int(t["x"]), int(t["y"]))
 	return Vector2i(-1, -1)
 
 
-## Those who walk with the hero (v0.8.4.43.55): its followers, then its creatures — tokens on the squares round the hero by
-## `WalkRules.around` in the hero's view of the room, where the field seats them and a fight starts them.
-static func walkers(s: GameSession, data: Dictionary) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
+## The party on the map out of a fight (v0.8.4.43.55, v0.8.4.44.12): the one led first on the walk's square
+## (PartyLead), then the rest — the hero when a follower leads, the followers, the hero's creatures — on the squares round
+## it by `WalkRules.around` in the view of the room, where the field seats them and a fight starts them.
+static func party(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	var lead := PartyLead.of(s)
 	var world := WorldView.new(data["world"])
+	var hero := _token("", "hero", Being.HERO, str(s.character.get("name", "")), Vector2i.ZERO)
+	hero["portrait"] = PortraitRules.of(s, data, Sheet.HERO)
+	var first := hero
+	var out: Array[Dictionary] = []
+	if lead != Being.HERO:
+		out.append(hero)
 	for id: String in Being.followers(s):
 		var t := _token("npc:" + id, "npc", id, str(world.npc(id).get("name", id)), Vector2i.ZERO)
 		t["portrait"] = PortraitRules.of(s, data, {"npc_id": id})
-		out.append(t)
+		if id == lead:
+			first = t
+		else:
+			out.append(t)
 	for cr: Dictionary in CreatureRules.here(s, s.room_id):
 		if CreatureRules.with_hero(cr):
 			var t := _token("cr:" + str(cr["id"]), "creature", str(cr["id"]), str(cr["name"]), Vector2i.ZERO)
 			t["portrait"] = PortraitRules.of(s, data, cr)
 			out.append(t)
-	if out.is_empty():
-		return out
 	var map := WalkRules.view(s, data)
-	var hero := WalkRules.settle(s, data, map)
-	var squares := WalkRules.around(map, data["layouts"], hero, out.size())
+	var at := WalkRules.settle(s, data, map)
+	first["x"] = at.x
+	first["y"] = at.y
+	var squares := WalkRules.around(map, data["layouts"], at, out.size())
 	for i: int in out.size():
-		var at: Vector2i = squares[i] if i < squares.size() else hero
-		out[i]["x"] = at.x
-		out[i]["y"] = at.y
-	return out
+		var sq: Vector2i = squares[i] if i < squares.size() else at
+		out[i]["x"] = sq.x
+		out[i]["y"] = sq.y
+	var all: Array[Dictionary] = [first]
+	all.append_array(out)
+	return all
+
+
+## Those who walk after the one led: the party but its first (the field draws them trailing the token).
+static func walkers(s: GameSession, data: Dictionary) -> Array[Dictionary]:
+	return party(s, data).slice(1)
+
+
+## Where one of the party stands on the map now: the hero (Being.HERO), a follower, a creature's id. (-1, -1) — not here.
+static func square_of(s: GameSession, data: Dictionary, id: String) -> Vector2i:
+	for t: Dictionary in party(s, data):
+		if str(t["id"]) == id:
+			return Vector2i(int(t["x"]), int(t["y"]))
+	return Vector2i(-1, -1)
 
 
 ## Who of the room stands where now (v0.8.4.43.55, an area laid out of a fight): the hero, those who walk with it, the
@@ -651,14 +676,12 @@ static func walkers(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 static func standing(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 	var map := WalkRules.view(s, data)
 	var hidden: Array = EncounterRules.lurking(s, s.room_id).get("hidden", [])
-	var hero := WalkRules.settle(s, data, map)
-	var out: Array[Dictionary] = [{"ref": "", "kind": "hero", "id": Being.HERO, "name": str(s.character.get("name", "")), "side": "hero",
-		"seen": true, "x": hero.x, "y": hero.y, "span": FightGrid.span_of(data, CombatRules.hero_size(s, data))}]
+	var out: Array[Dictionary] = []
 	var stand := func(t: Dictionary, span: int, side: String) -> void:
 		out.append({"ref": str(t["ref"]), "kind": str(t["kind"]), "id": str(t["id"]), "name": str(t["name"]), "side": side,
 			"seen": not (str(t["kind"]) == "foe" and hidden.has(str(t["id"]))), "x": int(t["x"]), "y": int(t["y"]), "span": span})
-	for t: Dictionary in walkers(s, data):
-		stand.call(t, 1, "hero")
+	for t: Dictionary in party(s, data):  # the hero where it stands: the walk's square, or by the follower led (v0.8.4.44.12)
+		stand.call(t, FightGrid.span_of(data, CombatRules.hero_size(s, data)) if str(t["kind"]) == "hero" else 1, "hero")
 	for t: Dictionary in of(s, data, map):
 		if str(t["kind"]) == "npc":
 			stand.call(t, 1, "other")
@@ -929,12 +952,12 @@ static func _word(data: Dictionary, mark: String) -> String:
 ## The square of the one or the thing named by the master: "hero", a person, a thing, a mark of the room. (-1, -1) — none.
 static func cell_of(s: GameSession, data: Dictionary, map: Dictionary, name: String) -> Vector2i:
 	if name == "hero":
-		return WalkRules.settle(s, data, map)
+		return square_of(s, data, Being.HERO)
 	for t: Dictionary in of(s, data, map):
 		if str(t["id"]) == name:
 			return Vector2i(int(t["x"]), int(t["y"]))
 	if Being.follows(s, name):
-		return WalkRules.settle(s, data, map)
+		return square_of(s, data, name)
 	return _mark_cell(map, s.room_id, name)
 
 
@@ -975,7 +998,7 @@ static func words(s: GameSession, data: Dictionary, room := "") -> Array[String]
 ## How far from the hero, in words: {id: «рядом»}; the mark the hero stands by is under "hero" («стойка»).
 static func near_words(s: GameSession, data: Dictionary) -> Dictionary:
 	var map := WalkRules.view(s, data)
-	var hero := WalkRules.settle(s, data, map)
+	var hero := square_of(s, data, Being.HERO)
 	var out := {}
 	for t: Dictionary in of(s, data, map):
 		out[t["id"]] = str(Scale.step(cfg(data)["distance"], WalkRules.distance(hero, Vector2i(int(t["x"]), int(t["y"]))))["word"])
@@ -1020,6 +1043,7 @@ static func _name_of(s: GameSession, data: Dictionary, map: Dictionary, to: Stri
 static func apply(s: GameSession, data: Dictionary, p: Dictionary) -> Array[String]:
 	var cell := Vector2i(int(p["x"]), int(p["y"]))
 	if str(p["who"]) == "hero":
+		PartyLead.take(s, data, Being.HERO)  # the master moves the hero: the lead comes back to it (v0.8.4.44.12)
 		WalkRules.stand(s, LayoutRules.map_of(s, data, s.room_id), s.room_id, cell)
 		return []
 	var moved: Dictionary = s.layouts.get_or_add("moved", {})

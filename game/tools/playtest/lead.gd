@@ -1,0 +1,76 @@
+extends "res://tools/playtest/playtest_base.gd"
+## Leading a companion as in BG3 (python tools/godot_playtest.py --scenario lead), v0.8.4.44.12, the author: «клик на
+## портрет союзника должен … давать управление союзником … а не начинать диалог». On the square of Brod with a mercenary:
+## a click on its portrait leads it — the token is its face, the bar its own, the hero walks after it; a click on the map
+## walks the mercenary; its portrait again opens its sheet; the hero's portrait takes the hero back.
+
+
+func run() -> void:
+	var gs := node("GameState")
+	if not step("master connected", await wait_until(func() -> bool: return node("Backend").is_ready(), 30.0)):
+		return
+	await tap("NewGameButton")
+	await tap("NextButton")
+	await tap("Preset_fighter_aira")
+	await press(find(screen(), "StartButton"))
+	if not step("game started", await wait_until(func() -> bool: return screen_is("GameScreen") and not gs.is_busy(), 60.0)):
+		return
+	var s: GameSession = gs.session
+	var data: Dictionary = node("Catalog").data
+	s.room_id = "brod-square"
+	Being.follow(s, "npc_mercenary")
+	ItemRules.add(Gear.of(s, data, "npc_mercenary"), "healing_potion", 2)
+	if ItemRules.belt_why(Gear.of(s, data, "npc_mercenary"), data, s.items, "healing_potion").is_empty():
+		ItemRules.belt_put(Gear.of(s, data, "npc_mercenary"), data, s.items, "healing_potion")
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	var field: Control = find(screen(), "Field")
+	var bar := screen().get_tree().get_first_node_in_group("hotbar") as Control
+	await shot("hero_leads")
+
+	var merc: Control = find(screen(), "Portrait_npc_mercenary")
+	if not step("the mercenary's portrait in the party", merc != null):
+		return
+	var merc_cell := MapSpots.square_of(s, data, "npc_mercenary")
+	await press(merc)
+	await frames(4)
+	step("a click on its portrait leads it, no talk", PartyLead.of(s) == "npc_mercenary" and not s.in_conversation())
+	step("the token stands where the mercenary stood", field.call("hero_cell") == merc_cell, "%s / %s" % [field.call("hero_cell"), merc_cell])
+	step("the token's face is the mercenary's", str(field.get("hero_face")) == PortraitRules.of_id(s, data, "npc_mercenary"))
+	step("its portrait lit in the party", bool(find(screen(), "Portrait_npc_mercenary").get("picked")))
+	step("the bar is the mercenary's", str((bar.get("who") as Dictionary).get("id", "")) == "npc_mercenary")
+	step("its belt's potion on the bar, once", find(bar, "Pin_item_healing_potion") != null
+		and bar.find_children("Pin_item_*", "", true, false).size() == 1)
+	step("the hero walks with the rest", MapSpots.walkers(s, data).any(func(t: Dictionary) -> bool: return str(t["kind"]) == "hero"))
+	await shot("mercenary_leads")
+
+	var map: Dictionary = field.get("map")
+	var from: Vector2i = field.call("hero_cell")
+	var to := Vector2i(-1, -1)
+	for c: Vector2i in WalkRules.around(map, data["layouts"], from, 40):
+		if WalkRules.distance(c, from) >= 3 and WalkRules.room_of(map, c) == s.room_id and WalkRules.passable(map, data["layouts"], c) \
+				and str(field.call("ref_at", c)).is_empty():
+			to = c
+	if step("a free square a few steps off", to.x >= 0):
+		field.emit_signal("cell_clicked", to)
+		await wait_until(func() -> bool: return not field.call("walking"), 20.0)
+		await frames(6)
+		step("the mercenary walked there", WalkRules.settle(s, data, WalkRules.view(s, data)) == to and field.call("hero_cell") == to)
+		step("the hero came after it", WalkRules.distance(MapSpots.square_of(s, data, Being.HERO), to) <= 3,
+			str(MapSpots.square_of(s, data, Being.HERO)))
+		await shot("mercenary_walked")
+
+	await press(find(screen(), "Portrait_npc_mercenary"))
+	await frames(4)
+	var sheet := screen().get_tree().root.find_child("CharacterSheet", true, false) as Control
+	step("its portrait again opens its sheet", sheet != null and sheet.visible and str(sheet.get("who")) == "npc_mercenary")
+	await shot("mercenary_sheet")
+	if sheet != null:
+		sheet.visible = false
+		await frames(2)
+
+	await press(find(screen(), "Portrait_hero"))
+	await frames(4)
+	step("the hero's portrait takes the hero back", PartyLead.of(s) == Being.HERO and str(field.get("hero_face")) == PortraitRules.of(s, data, Sheet.HERO))
+	step("the bar is the hero's again", Sheet.is_hero(bar.get("who")))
+	await shot("hero_back")

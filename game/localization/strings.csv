@@ -399,6 +399,9 @@ EQUIP_NO_HANDS,Этому существу нечем это надеть
 EQUIP_EMPTY,Здесь ничего не надето
 GEAR_NOT_IN_COMBAT,В бою вещи не передают
 GEAR_NOT_FOLLOWER,Вещи передают только тому, кто идёт с героем
+LEAD_NOT_IN_FIGHT,В бою ходят по очереди: вести одного нельзя
+LEAD_NOT_PARTY,"Вести можно только того, кто идёт с героем"
+LEAD_DOWN,"Без сознания: вести его нельзя"
 GEAR_TAKE_OFF_FIRST,Сначала снять: эта вещь надета
 GEAR_TITLE,Снаряжение: {name}
 GEAR_HERO_THINGS,Вещи героя

@@ -158,12 +158,13 @@ func _ready() -> void:
 	side.touch_requested.connect(_touch)
 	side.context_requested.connect(_context)
 	side.pointed.connect(func(ref: String) -> void:  # a portrait under the mouse rings its token (v0.8.4.43.8)
-		_field.pointed = Vector2i(-1, -1) if ref == "-" else _field.hero_cell() if ref.is_empty() else _field.cell_of(ref)
+		_field.pointed = Vector2i(-1, -1) if ref == "-" else _field.hero_cell() if ref == PartyLead.ref(GameState.session) else _field.cell_of(ref)
 		_field.queue_redraw())
 	side.seen = func(ref: String) -> bool: return _field.things.any(func(t: Dictionary) -> bool: return str(t["ref"]) == ref)
 	side.wait_requested.connect(func() -> void: _wait.open())
 	side.menu_requested.connect(func() -> void: _pause.open())
 	side.sheet_requested.connect(func() -> void: _sheet.open())
+	side.member_sheet_requested.connect(func(id: String) -> void: _sheet.show_of(id))
 	side.map_requested.connect(func() -> void: _map.open())
 	side.journal_requested.connect(func() -> void: _journal.open())
 	side.level_up_requested.connect(func() -> void: _level_up.open())
@@ -465,8 +466,9 @@ func _refresh_field(s: GameSession) -> void:
 			_field.instant = GameState.instant_walk
 			_field.walk(steps)
 	_field_room = s.room_id
-	_field.hero_face = PortraitRules.of(s, Catalog.data, Sheet.HERO)
-	_field.place_hero(at, str(s.character.get("name", "?")).left(1), walkers)
+	var lead := PartyLead.who(s, Catalog.data)  # the token is the one the player leads (v0.8.4.44.12)
+	_field.hero_face = PortraitRules.of(s, Catalog.data, lead)
+	_field.place_hero(at, CreatureCard.name_of(s, Catalog.data, lead).left(1), walkers)
 	_look(s, at if not _field.walking() else _field.hero_cell())
 	var mouse := _field.get_local_mouse_position()  # a pinned area stays lit where the mouse is, on the map only
 	_area_hover(_field.cell_at(mouse) if Rect2(Vector2.ZERO, _field.size).has_point(mouse) else FightGrid.NONE)

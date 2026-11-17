@@ -1431,7 +1431,7 @@ static func world_spell(s: GameSession, data: Dictionary, spell_id: String) -> A
 
 ## Glyph of Warding (v0.8.4.26.3): a rune on the hero's square of this room, kept with the room until a foe sets it off.
 static func lay_glyph(s: GameSession, data: Dictionary, spell_id: String, g: Dictionary) -> String:
-	var at := WalkRules.settle(s, data, LayoutRules.map_of(s, data, s.room_id))
+	var at := MapSpots.square_of(s, data, Being.HERO)
 	Overlay.add(s, data, EntityRef.room(s.room_id), "glyphs", {"spell": spell_id, "x": at.x, "y": at.y, "dc": CombatRules.spell_dc(s),
 		"dice": str(g["dice"]), "type": str(g["type"]), "save": str(g["save"])})
 	return "руна начерчена: она взорвётся под первым врагом, который на неё ступит"

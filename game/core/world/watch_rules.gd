@@ -73,7 +73,7 @@ static func eyes(s: GameSession, data: Dictionary, ids: Array, doer: String = Be
 	for t: Dictionary in MapSpots.of(s, data, map) + MapSpots.foes(s, data, map):
 		if str(t["kind"]) in ["npc", "foe"]:
 			at[str(t["id"])] = _cell(t)
-	var cell: Vector2i = WalkRules.settle(s, data, map) if doer == Being.HERO else at.get(doer, Vector2i(-1, -1))
+	var cell: Vector2i = MapSpots.square_of(s, data, doer) if doer == Being.HERO or Being.follows(s, doer) else at.get(doer, Vector2i(-1, -1))
 	var who := Sheet.who(s, data, doer)
 	var roll := {}  # the doer's one Stealth roll for this deed, made when a watcher's cone takes it in
 	return ids.filter(func(id: String) -> bool:

@@ -284,8 +284,8 @@ func _free_cells(key: String) -> void:
 
 
 func set_fight(on: bool) -> void:
-	if not on:
-		who = Sheet.HERO
+	if not on:  # out of a fight the one the player leads (PartyLead, v0.8.4.44.12)
+		who = PartyLead.who(GameState.session, Catalog.data) if GameState.has_session() else Sheet.HERO
 	if on != _fight:
 		_fight = on
 		_show()

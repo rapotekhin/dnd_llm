@@ -237,6 +237,7 @@ static func _empowered_roll(rng: RandomNumberGenerator, expr: String, k: int, cr
 ## `source` may add (v0.6.2): sneak (the player sneaks in), ambush (the foes lie in wait), waves [{round, side,
 ## enemies}] and help {enemies, side, delay} of a pack encounter.
 static func start(s: GameSession, data: Dictionary, foes: Array, source: Dictionary = {}) -> Array[String]:
+	PartyLead.take(s, data, Being.HERO)  # a fight is the party's on its turns: the walk's square back to the hero (v0.8.4.44.12)
 	var c := s.character
 	var fighters: Array = [PLAYER]
 	Being.of(s, PLAYER)["fight"] = {"id": PLAYER, "side": "player", "name": str(c.get("name", "")), "status": "active",
@@ -348,7 +349,7 @@ static func _dex_of(s: GameSession, data: Dictionary, id: String) -> int:
 static func _hero_square(s: GameSession, data: Dictionary) -> Vector2i:
 	if s.combat.has("field"):
 		return Vector2i(int(s.combat["field"]["w"]) / 2, int(s.combat["field"]["h"]) / 2)
-	return FightGrid.free_near(s, data, WalkRules.settle(s, data, FightGrid.map(s, data)))
+	return FightGrid.free_near(s, data, MapSpots.square_of(s, data, Being.HERO))
 
 
 ## Where a fighter of `spec` appears: its own square, its person's square on the map — one who walks with the hero where it
@@ -1553,7 +1554,7 @@ static func _aim_square(s: GameSession, t: Dictionary, me: Dictionary = {}) -> V
 ## The hero as a fighter on its square of the room's map out of a fight (v0.8.4.43.55): what the act of a fight reads of
 ## where it stands and how big it is, to lay an area from there before the fight. The fight puts it on the same square.
 static func on_map(s: GameSession, data: Dictionary) -> Dictionary:
-	var at := WalkRules.settle(s, data, WalkRules.view(s, data))
+	var at := MapSpots.square_of(s, data, Being.HERO)
 	return {"id": PLAYER, "side": "player", "name": str(s.character.get("name", "")), "status": "active", "x": at.x, "y": at.y,
 		"span": FightGrid.span_of(data, hero_size(s, data))}
 

@@ -142,11 +142,11 @@ static func on_square(sec: Dictionary) -> bool:
 	return sec.get("trap") is Dictionary or sec.has("loot")
 
 
-## The hero stands on `cell`: passive Perception against the traps and caches within `sight.notice` in view, what was found
-## and is not emptied yet is taken. Lines.
+## The one led stands on `cell`: its passive Perception against the traps and caches within `sight.notice` in view
+## (PartyLead, v0.8.4.44.12: the hero or the follower the player leads), what was found and is not emptied yet is taken. Lines.
 static func notice(s: GameSession, data: Dictionary, map: Dictionary, cell: Vector2i) -> Array[String]:
 	var lines: Array[String] = []
-	var passive := Sheet.passive(s, data, Sheet.HERO)
+	var passive := Sheet.passive(s, data, PartyLead.who(s, data))
 	var reach := int(SightRules.cfg(data)["notice"])
 	for sec: Dictionary in secrets(data["world"], s.room_id):
 		if not on_square(sec) or not noticed_passively(sec) or passive < int(sec["dc"]) or not still_hidden(s, s.room_id, sec):
@@ -262,18 +262,20 @@ static func found_trap(s: GameSession, world: Dictionary, room_id: String, id: S
 	return {}
 
 
-## The trap goes off: a save (half damage on success), damage to the character. The trap is spent. Lines.
+## The trap goes off under the one led (PartyLead: the hero, or the follower the player leads): its save (half damage on
+## success), damage to it. The trap is spent. Lines.
 static func spring_trap(s: GameSession, data: Dictionary, room_id: String, sec: Dictionary) -> Array[String]:
 	var t: Dictionary = sec["trap"]
+	var who := PartyLead.own(s)
 	s.traps[secret_key(room_id, sec)] = "sprung"
 	var lines: Array[String] = ["Ловушка! " + str(t.get("sprung_text", sec["text"]))]
 	var dmg := CombatRules.roll_dice(s.rng, str(t.get("damage", "1d6")))
 	if t.has("save"):
-		var r := Sheet.save(s, data, Sheet.HERO, str(t["save"]["ability"]), int(t["save"]["dc"]), str(t["save"].get("tag", "")))
+		var r := Sheet.save(s, data, who, str(t["save"]["ability"]), int(t["save"]["dc"]), str(t["save"].get("tag", "")))
 		if bool(r["ok"]):
 			dmg /= 2
 		lines.append("Спасбросок " + str(r["text"]) + (", урон вдвое меньше" if bool(r["ok"]) else ""))
-	Harm.typed(s, data, Sheet.HERO, dmg, str(t.get("damage_type", "")), lines)
+	Harm.typed(s, data, who, dmg, str(t.get("damage_type", "")), lines)
 	return lines
 
 

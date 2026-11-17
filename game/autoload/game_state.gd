@@ -1094,14 +1094,16 @@ func look_around() -> String:
 	if _engaged():
 		return "WAIT_NOT_NOW"
 	var skill := ExplorationRules.SEARCH_SKILL
-	var result := _engine_check({"skill": skill, "dc_tier": "medium", "search": true})
+	var who := PartyLead.who(session, Catalog.data)  # the one the player leads looks (v0.8.4.44.12)
+	var result := _engine_check({"skill": skill, "dc_tier": "medium", "search": true}, who)
 	if result.has("error"):
 		return "MSG_MASTER_FAILED"
 	var passed := TimeRules.advance(session, Catalog.data, int(TimeRules.cfg(Catalog.data)["search_minutes"]))
 	if not passed.is_empty():
 		_add(GameSession.effect_entry(passed))
 	var found: Array = result.get("revealed", [])
-	var note := "[движок уже бросил: %s %d%s — %s]" % [tr("SKILL_" + skill.to_upper()), int(result["total"]), " (повтор без изменений)" if bool(result.get("blocked", false)) else "",
+	var by := "" if Sheet.is_hero(who) else CreatureCard.name_of(session, Catalog.data, who) + ", "
+	var note := "[движок уже бросил: %s%s %d%s — %s]" % [by, tr("SKILL_" + skill.to_upper()), int(result["total"]), " (повтор без изменений)" if bool(result.get("blocked", false)) else "",
 		("найдено: " + "; ".join(found)) if not found.is_empty() else "ничего нового"]
 	var text := tr("LOOK_SAY")
 	_add(GameSession.player_entry(text))
@@ -2146,6 +2148,19 @@ func wake() -> void:
 	if not Catalog.activate(str(settings["world"])):
 		return
 	new_game(CharacterBuilder.build(choices, Catalog.data), settings)
+
+
+## As in BG3 (v0.8.4.44.12): the player leads `id` out of a fight — the hero or a follower; the token, the bar and the
+## walk's eyes are its. "" or the reason (a localization key).
+func lead(id: String) -> String:
+	if session == null:
+		return "PROPERTY_NOT_NOW"
+	var why := PartyLead.why(session, Catalog.data, id)
+	if not why.is_empty():
+		return why
+	PartyLead.take(session, Catalog.data, id)
+	EventBus.state_changed.emit()
+	return ""
 
 
 ## The screen of teaching due now (HintRules): the first of the pack's queue, {} — none.
@@ -4168,7 +4183,7 @@ func _forced_skill(params: Dictionary) -> String:
 ## An engine check (the master's request_check or a button of the client): the card of CheckEngine (the DC by the tier or
 ## the listener, every advantage and disadvantage of the moment), the lock of a repeat, theft, hidden things and caches
 ## found. Adds the check card.
-func _engine_check(params: Dictionary) -> Dictionary:
+func _engine_check(params: Dictionary, who: Dictionary = Sheet.HERO) -> Dictionary:
 	for k: String in ["dc", "dc_reason", "disadvantage_reason", "auto_fail_reason"]:
 		params.erase(k)  # the DC number and the reasons are the engine's
 	if bool(params.get("search", false)):  # «Обыскать»: the DC of the easiest thing hidden here (v0.8.4.44.4)
@@ -4177,7 +4192,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 	var sp := CheckEngine.spec(session, Catalog.data, params)
 	if sp.has("error"):
 		return JsonRpcPeer.fail(JsonRpcPeer.ERR_INVALID_PARAMS, str(sp["error"]))
-	var adv: Array = CheckEngine.situation(session, Catalog.data, Sheet.HERO, sp["spec"], true)["adv"]
+	var adv: Array = CheckEngine.situation(session, Catalog.data, who, sp["spec"], true)["adv"]
 	if not adv.is_empty():
 		params["advantage_reason"] = ", ".join(adv)  # a new source of advantage unlocks a repeat
 	var skill_id := str(params.get("skill", "")) if params.get("skill") != null else ""
@@ -4187,6 +4202,8 @@ func _engine_check(params: Dictionary) -> Dictionary:
 	if not listener_id.is_empty() and ExplorationRules.SOCIAL_SKILLS.has(skill_id) and (params.get("target_id") == null or str(params["target_id"]).is_empty()):
 		params["target_id"] = listener_id  # a talk's check is locked on its NPC, not on the room (v0.7.22.3)
 	var state := ExplorationRules.state_key(session, Catalog.data, params, listener_id)
+	if not Sheet.is_hero(who):  # another of the party looking is a new look, not a repeat (v0.8.4.44.12)
+		state += "|" + str(who.get("id", ""))
 	var lock := ExplorationRules.locked(session, params, room, state)
 	if not lock.is_empty():
 		# A repeat without a change: the old result, no roll (ADR-0008 §2).
@@ -4194,7 +4211,7 @@ func _engine_check(params: Dictionary) -> Dictionary:
 		result["check_id"] = session.next_check_id()
 		result["blocked"] = true
 	else:
-		result = CheckEngine.card(session, Catalog.data, params)
+		result = CheckEngine.card(session, Catalog.data, params, [], who)
 		ExplorationRules.lock(session, params, room, result, state)
 		var mark := _theft_target(params)
 		if not mark.is_empty():

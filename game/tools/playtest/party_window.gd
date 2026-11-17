@@ -63,7 +63,8 @@ func run() -> void:
 	await shot("party_moved")
 
 	ItemRules.add(s.character, "healing_potion", 1)
-	ItemRules.belt_put(s.character, data, s.items, "healing_potion")
+	if ItemRules.belt_why(s.character, data, s.items, "healing_potion").is_empty():
+		ItemRules.belt_put(s.character, data, s.items, "healing_potion")
 	node("EventBus").state_changed.emit()
 	await frames(3)
 	var armor := str(s.character["equipped"]["armor"])

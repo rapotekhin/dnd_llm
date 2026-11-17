@@ -251,11 +251,12 @@ static func trait_dc(s: GameSession, data: Dictionary, about: String, skill: Str
 
 ## The engine.check result of the hero, by `params` as in `spec`: {check_id, rolls, nat, bonus, total, dc, success,
 ## blocked, parts} and the reasons and notes the card shows, or {error}.
-static func card(s: GameSession, data: Dictionary, params: Dictionary, parts: Array[Dictionary] = []) -> Dictionary:
+## `who` — who rolls: the hero, or the follower the player leads for «Осмотреться» (v0.8.4.44.12).
+static func card(s: GameSession, data: Dictionary, params: Dictionary, parts: Array[Dictionary] = [], who: Dictionary = Sheet.HERO) -> Dictionary:
 	var sp := spec(s, data, params, parts)
 	if sp.has("error"):
 		return sp
-	var r := Roll.check(s, data, Sheet.HERO, sp["spec"])
+	var r := Roll.check(s, data, who, sp["spec"])
 	var out := {"check_id": s.next_check_id(), "rolls": r["rolls"], "bonus": r["bonus"], "total": r["total"], "dc": r["dc"],
 		"success": r["ok"], "nat": r["nat"], "blocked": false, "parts": r["parts"]}
 	for k: String in ["adv", "dis", "fail"]:
