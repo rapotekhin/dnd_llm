@@ -44,6 +44,9 @@ func run() -> void:
 	step("its belt's potion on the bar, once", find(bar, "Pin_item_healing_potion") != null
 		and bar.find_children("Pin_item_*", "", true, false).size() == 1)
 	step("the hero walks with the rest", MapSpots.walkers(s, data).any(func(t: Dictionary) -> bool: return str(t["kind"]) == "hero"))
+	var faces: Array = (field.get("_tokens") as Array).map(func(t: Dictionary) -> String: return str(t.get("portrait", "")))
+	step("the tokens after it: the hero's face, not a second mercenary (v0.8.4.44.16)", faces.has(PortraitRules.of(s, data, Sheet.HERO))
+		and not faces.has(str(field.get("hero_face"))), str(faces))
 	await shot("mercenary_leads")
 
 	var map: Dictionary = field.get("map")

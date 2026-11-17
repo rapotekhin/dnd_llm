@@ -1468,6 +1468,7 @@
 		"summons": {
 			"find_familiar": {"monster": "owl", "count": 1, "helper": true, "forms": ["owl", "cat", "bat", "raven", "hawk", "rat", "lizard", "spider", "weasel", "crab", "poisonous_snake", "octopus", "quipper"], "pact_forms": ["imp", "pseudodragon", "quasit", "sprite"], "pact_feature": "pact_of_the_chain"},
 			"find_steed": {"monster": "warhorse", "count": 1},
+			"mage_hand": {"monster": "spectral_hand", "count": 1, "minutes": 1, "helper": true},
 			"conjure_animals": {"monster": "wolf", "count": 4, "minutes": 60},
 			"animate_dead": {"monster": "skeleton", "count": 1, "minutes": 1440},
 			"floating_disk": {"carrier": true, "monster": "riding_horse", "carries_lb": 500, "minutes": 60},

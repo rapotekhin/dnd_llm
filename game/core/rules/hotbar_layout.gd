@@ -241,11 +241,16 @@ static func hide(state: Dictionary, m: String, key: String) -> void:
 ## The divider after drawn section `i` moves by `delta` columns (v0.8.4.43.51, the edge of a card of the deck): the
 ## section on its left shows as many more (or fewer) of its own columns, the one on its right goes with its edge — as
 ## many fewer (or more) of its last columns seen, the rest under the next card. Its icons stay in their columns of the
-## card; each section keeps at least one column, and both keep the width the player gave them.
+## card; each section keeps at least one column, and both keep the width the player gave them. v0.8.4.44.16 (the author:
+## «в хотбаре не двигаются границы классов мышкой»): the widths set before are first those seen now — set on a wider bar,
+## their sum past this one's made `_fit` lay by need and drop every move.
 static func shift(state: Dictionary, m: String, i: int, delta: int) -> void:
 	var sections := _drawn(mode(state, m)["sections"])
 	if i < 0 or i + 1 >= sections.size() or delta == 0:
 		return
+	for sec: Dictionary in sections:
+		if bool(sec.get("fixed", false)):
+			sec["width"] = int(sec["cols"])
 	var a: Dictionary = sections[i]
 	var b: Dictionary = sections[i + 1]
 	var d := reach(state, m, i, delta)

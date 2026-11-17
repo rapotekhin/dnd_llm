@@ -42,7 +42,7 @@ def blows(m: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def test_the_data_in_the_repo_is_what_the_import_builds(built: dict[str, Any]) -> None:
-    assert built == json.loads(MONSTERS.read_text(encoding="utf-8")), "run python tools/srd_import.py build"
+    assert {**built, **imp.own_monsters()} == json.loads(MONSTERS.read_text(encoding="utf-8")), "run python tools/srd_import.py build"
 
 
 def test_every_creature_that_can_fight_is_imported(built: dict[str, Any], source: dict[str, Any]) -> None:

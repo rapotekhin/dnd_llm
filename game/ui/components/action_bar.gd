@@ -146,7 +146,7 @@ func _init() -> void:
 	_sets.add_theme_constant_override("separation", GAP)
 	weapons.add_child(_sets)
 	var centre := _block("GridBlock", BoxContainer.ALIGNMENT_BEGIN)  # the tabs of kinds on the edge over the grid
-	centre.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER  # the room past the last column round it
+	centre.size_flags_horizontal = Control.SIZE_EXPAND_FILL  # all the room the other blocks leave: the grid counts its columns in it
 	_centre = centre
 	var indent := Control.new()  # the folder tabs a little in from the grid's corner
 	indent.custom_minimum_size = Vector2(8, 0)
@@ -162,9 +162,12 @@ func _init() -> void:
 	centre.add_child(grid_row)
 	_grid_scroll = ScrollContainer.new()
 	_grid_scroll.name = "Cells"
-	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# v0.8.4.44.16 (the author: «окно игры растянулось, часть интерфейса ушла за экран»): the cells ask no width of the
+	# screen — their columns are counted from the bar's place (`_columns`), and a width they asked made the place wider, the
+	# next count wider still, the screen past the window on both sides; what does not fit is cut, never pushes
+	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED  # the rows it has and no more (the author, 2026-11-13: «весь хотбар виден сразу»)
-	_grid_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN  # as wide as its cells: the bar hugs them (v0.8.4.43.33)
+	_grid_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid_scroll.size_flags_vertical = Control.SIZE_SHRINK_CENTER  # as tall as its rows, never a part of one more
 	grid_row.add_child(_grid_scroll)
 	_grid = HBoxContainer.new()

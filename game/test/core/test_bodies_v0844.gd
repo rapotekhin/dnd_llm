@@ -177,6 +177,8 @@ func test_a_dead_monster_leaves_all_its_gear_and_without_it_has_fists() -> void:
 			assert_int(int(left.get(str(item), 0))).override_failure_message("%s: %s" % [id, item]).is_greater(0)
 			if ammo.has(str(item)):
 				assert_bool(left.has(str(ammo[str(item)]))).override_failure_message("%s: ammo of %s" % [id, item]).is_true()
+		if (m["actions"] as Array).is_empty():
+			continue  # one that never strikes (v0.8.4.44.16: the spectral hand of Mage Hand) has no fists either
 		var bare := Gear.actions(TestUtils.new_session(), data, id, {"inventory": {}})
 		assert_bool(bare.all(func(a: Dictionary) -> bool: return not a.has("item"))).override_failure_message(id).is_true()
 		assert_bool(bare.any(func(a: Dictionary) -> bool: return str(a.get("kind", "")) == "melee")).override_failure_message(id).is_true()

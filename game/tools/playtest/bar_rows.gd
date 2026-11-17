@@ -126,7 +126,7 @@ func _check(n: int, mode: String) -> void:
 	step("%s, %d rows: the plaque on the edge too" % [mode, n], plaque == null or not plaque.visible or absf(plaque.get_global_rect().end.y - (top + _const("OVERLAP"))) <= 2.0,
 		_rect(plaque))
 	var win := find(bar, "Windows") as GridContainer
-	var want := 3 if n == 1 else 2
+	var want := 3 if n <= 2 else 2  # two rows of the smaller cells (v0.8.4.44.9) hold two lines of windows
 	step("%s, %d rows: the windows and the rests in %d columns" % [mode, n, want], win != null and win.columns == want and win.get_child_count() == 6,
 		"%d колонок, %d значков" % [win.columns if win != null else -1, win.get_child_count() if win != null else -1])
 	var parts := ["HeroPortrait", "Hands", "Windows", "RowsMore"].map(func(p: String) -> Control: return find(bar, p) as Control)

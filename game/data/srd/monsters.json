@@ -17392,5 +17392,62 @@
 		"equipment": [],
 		"languages": "understands all languages it spoke in life but can't speak",
 		"reactions": []
+	},
+	"spectral_hand": {
+		"name": "Призрачная рука",
+		"name_en": "Spectral Hand",
+		"size": "tiny",
+		"type": "construct",
+		"cr": 0,
+		"xp": 0,
+		"ac": 10,
+		"hp": 1,
+		"hit_dice": "1d1",
+		"speed": 0,
+		"fly": 30,
+		"swim": 0,
+		"climb": 0,
+		"burrow": 0,
+		"darkvision": 0,
+		"blindsight": 0,
+		"truesight": 0,
+		"abilities": {
+			"str": 1,
+			"dex": 10,
+			"con": 10,
+			"int": 1,
+			"wis": 10,
+			"cha": 1
+		},
+		"prof": 2,
+		"saves": {},
+		"skills": {},
+		"passive_perception": 10,
+		"resistances": [],
+		"immunities": [
+			"poison",
+			"psychic"
+		],
+		"vulnerabilities": [],
+		"condition_immunities": [
+			"charmed",
+			"exhaustion",
+			"frightened",
+			"paralyzed",
+			"poisoned",
+			"prone"
+		],
+		"actions": [],
+		"multiattack": [],
+		"traits": [
+			{
+				"id": "spectral_hand",
+				"name": "Призрачная рука",
+				"desc": "Рука «Волшебной руки»: парит в воздухе, не атакует и не носит больше 10 фунтов; отвлекает врага рядом — следующая атака союзника по нему с преимуществом. Исчезает через минуту или от любого урона."
+			}
+		],
+		"equipment": [],
+		"languages": "",
+		"reactions": []
 	}
 }

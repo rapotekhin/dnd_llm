@@ -161,6 +161,8 @@ static func has_effect(s: GameSession, a: String, b: String, kind: String) -> bo
 ## master's move): "" or why not as a localization key. The guard's hold and a captivity keep the hero, an overload stops
 ## the walk, a shut way or a trap the hero found stops the step.
 static func leave_why(s: GameSession, data: Dictionary, a: String, b: String) -> String:
+	if CombatRules.active(s):  # v0.8.4.44.16: a fight is left by its own way out (the act «Уйти», FightField.leave), never by a
+		return "LEAVE_IN_FIGHT"  # room's exit — the fight's doors and things stayed the old room's on the new map
 	if CrimeRules.held(s):
 		return "CRIME_HELD"
 	if EncounterRules.captive(s):

@@ -1112,6 +1112,12 @@ def seed_ru_from_catalog(catalog: dict[str, Any]) -> None:
         save_ru(ru)
 
 
+def own_monsters() -> dict:
+    """Creatures beyond the SRD by the author (v0.8.4.44.16: the spectral hand of Mage Hand), after the SRD's."""
+    extra = json.loads((ROOT / "tools" / "srd" / "monsters_extra.json").read_text(encoding="utf-8"))
+    return {k: v for k, v in extra.items() if not k.startswith("_")}
+
+
 def build() -> None:
     old = json.loads(ITEMS.read_text(encoding="utf-8"))
     seed_ru_from_catalog(old["catalog"])
@@ -1140,6 +1146,7 @@ def build() -> None:
         "backgrounds.json": json.loads(BACKGROUNDS.read_text(encoding="utf-8")),
         "monsters.json": b.monsters(),
     }
+    data["monsters.json"].update(own_monsters())
     OUT.mkdir(parents=True, exist_ok=True)
     for name, d in data.items():
         (OUT / name).write_text(json.dumps(d, ensure_ascii=False, indent="\t") + "\n", encoding="utf-8")

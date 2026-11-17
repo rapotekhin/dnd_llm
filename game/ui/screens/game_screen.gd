@@ -83,6 +83,7 @@ var _acts_menu: ActsMenu  ## the one menu of the map, read off the buttons stage
 var _seen_refs := ""  ## who is drawn on the map now: the column lists the rest
 var _side: SidePanel
 var _field_room := ""  # the room the field showed last: a move inside it is walked, not jumped
+var _field_lead := ""  # the one led the field showed last: another one led stands on its own square at once, not walked to
 var _fight: FightUi
 
 
@@ -458,7 +459,10 @@ func _refresh_field(s: GameSession) -> void:
 	_things.append_array(MapSpots.traps(s, Catalog.data, view))
 	_things.append_array(MapSpots.others(s, Catalog.data, view))
 	_field.dim = true
-	if s.room_id == _field_room and at != _field.hero_cell() and not _field.walking():  # the master's words move the hero
+	var lead_id := PartyLead.of(s)
+	if lead_id != _field_lead:  # another one led (v0.8.4.44.16): no walk across to it, the tokens seated again at once
+		_field.stop()
+	elif s.room_id == _field_room and at != _field.hero_cell() and not _field.walking():  # the master's words move the hero
 		var steps := WalkRules.path(view, Catalog.data["layouts"], _field.hero_cell(), at)
 		if not steps.is_empty():
 			_beyond = ""
@@ -466,6 +470,7 @@ func _refresh_field(s: GameSession) -> void:
 			_field.instant = GameState.instant_walk
 			_field.walk(steps)
 	_field_room = s.room_id
+	_field_lead = lead_id
 	var lead := PartyLead.who(s, Catalog.data)  # the token is the one the player leads (v0.8.4.44.12)
 	_field.hero_face = PortraitRules.of(s, Catalog.data, lead)
 	_field.place_hero(at, CreatureCard.name_of(s, Catalog.data, lead).left(1), walkers)

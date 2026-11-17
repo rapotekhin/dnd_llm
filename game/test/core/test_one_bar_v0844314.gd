@@ -54,6 +54,24 @@ func test_a_width_set_by_a_divider_outlives_a_narrow_bar() -> void:
 	assert_int(int(out[0]["cols"])).is_equal(a + 1)  # the player's width back
 
 
+## v0.8.4.44.16: widths set on a wider bar no longer hold every divider still on a narrower one.
+func test_a_divider_moves_on_a_bar_narrower_than_the_widths_set() -> void:
+	var st := {}
+	var cells := {"Do_dash": "combat", "LookButton": "common", "spell:fire_bolt": "class"}
+	HotbarLayout.place(st, HotbarLayout.BAR, cells, 30)
+	HotbarLayout.shift(st, HotbarLayout.BAR, 0, 8)  # wide: the first section takes 8 more
+	HotbarLayout.shift(st, HotbarLayout.BAR, 1, 5)
+	var out := HotbarLayout.place(st, HotbarLayout.BAR, cells, 12)  # the bar narrower than the widths kept
+	var before := int(out[0]["cols"])
+	HotbarLayout.shift(st, HotbarLayout.BAR, 0, -1)
+	out = HotbarLayout.place(st, HotbarLayout.BAR, cells, 12)
+	assert_int(int(out[0]["cols"])).is_equal(before - 1)
+	assert_int(out.reduce(func(n: int, sec: Dictionary) -> int: return n + int(sec["cols"]), 0)).is_equal(12)
+	HotbarLayout.shift(st, HotbarLayout.BAR, 1, 1)
+	var again := HotbarLayout.place(st, HotbarLayout.BAR, cells, 12)
+	assert_int(int(again[1]["cols"])).is_equal(int(out[1]["cols"]) + 1)
+
+
 func test_a_divider_reaches_as_far_as_each_side_keeps_one_column() -> void:
 	var st := {}
 	var out := HotbarLayout.place(st, HotbarLayout.BAR, {"Do_dash": "combat", "LookButton": "common"}, 10)

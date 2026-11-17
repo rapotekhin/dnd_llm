@@ -17,7 +17,7 @@ import srd_import as imp  # noqa: E402
 
 BASE: dict[str, Any] = json.loads((imp.OUT / "monsters.json").read_text(encoding="utf-8"))
 SOURCE: dict[str, Any] = {imp.sid(m["index"]): m for m in imp.all_of("monsters")}
-IDS = sorted(BASE)
+IDS = sorted(set(BASE) - set(imp.own_monsters()))  # checked against the SRD statblocks: not the author's own (v0.8.4.44.16)
 ABILITIES = {"str": "strength", "dex": "dexterity", "con": "constitution", "int": "intelligence", "wis": "wisdom", "cha": "charisma"}
 # Non-attack actions of the statblocks, no engine concept behind them yet.
 NOT_IN_ENGINE = {
