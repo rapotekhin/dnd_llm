@@ -146,11 +146,7 @@ static func _statuses(box: VBoxContainer, c: Dictionary) -> void:
 ## способности, устойчивости нашими иконками»): [[ref, name, body, card]] — the card of `CardInfo` when there is one, else
 ## the name and `body` at the cursor; the right button pins it.
 static func _icons(box: VBoxContainer, node_name: String, rows: Array) -> HFlowContainer:
-	var flow := HFlowContainer.new()
-	flow.name = node_name
-	flow.add_theme_constant_override("h_separation", 4)
-	flow.add_theme_constant_override("v_separation", 6)
-	box.add_child(flow)
+	var flow := UiParts.flow(box, node_name, 4, 6)
 	for r: Array in rows:
 		var cell := IconSlot.make(str(r[0]), str(r[1]), ICON)
 		cell.tip_title = str(r[1])

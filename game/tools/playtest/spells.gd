@@ -114,6 +114,7 @@ func run() -> void:
 	c["temp_hp"] = 500
 	ConditionRules.remove(c, "unconscious")
 	ConditionRules.remove(c, "prone")
+	s.room_id = "brod-square"  # under the open sky: under a roof a flyer is within a blade's reach (v0.8.4.44.11)
 	gs.start_combat([{"monster": "wolf", "beside": true}])
 	if not step("a fight with a wolf", await _my_turn(gs, s)):
 		return

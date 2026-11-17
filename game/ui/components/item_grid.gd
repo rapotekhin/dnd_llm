@@ -56,12 +56,8 @@ func _init(grid_tag: String = "Inv", cell_prefix: String = "Item_", cols: int = 
 	_top = HBoxContainer.new()
 	_top.add_theme_constant_override("separation", 4)
 	_bar.add_child(_top)
-	_filters = HFlowContainer.new()  # the icons wrap onto a second line rather than widen the window
-	_filters.name = tag + "Filters"
+	_filters = UiParts.flow(_top, tag + "Filters", 2, 2)  # the icons wrap onto a second line rather than widen the window
 	_filters.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_filters.add_theme_constant_override("h_separation", 2)
-	_filters.add_theme_constant_override("v_separation", 2)
-	_top.add_child(_filters)
 	_controls = HBoxContainer.new()
 	_controls.name = tag + "Controls"
 	_controls.add_theme_constant_override("separation", 4)

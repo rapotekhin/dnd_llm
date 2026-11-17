@@ -210,9 +210,7 @@ func _grid(title_text: String, group: String, options: Array, n: int, chosen: Ar
 func _checks(title_text: String, group: String, ids: Array, label: Callable, n: int, chosen: Array, on_change: Callable) -> void:
 	_box.add_child(HSeparator.new())
 	UiParts.label(_box, title_text, UiTheme.ACCENT_LABEL)
-	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 16)
-	_box.add_child(flow)
+	var flow := UiParts.flow(_box, "", 16)
 	for id: Variant in ids:
 		var cb := CheckBox.new()
 		cb.name = "Pick_%s_%s" % [group, id]

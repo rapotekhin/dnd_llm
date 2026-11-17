@@ -2,7 +2,8 @@ extends "res://tools/playtest/playtest_base.gd"
 ## Leading a companion as in BG3 (python tools/godot_playtest.py --scenario lead), v0.8.4.44.12, the author: «клик на
 ## портрет союзника должен … давать управление союзником … а не начинать диалог». On the square of Brod with a mercenary:
 ## a click on its portrait leads it — the token is its face, the bar its own, the hero walks after it; a click on the map
-## walks the mercenary; its portrait again opens its sheet; the hero's portrait takes the hero back.
+## walks the mercenary; its portrait again opens its sheet; the hero's portrait takes the hero back. v0.8.4.44.13: the
+## mercenary's potion drunk by it from its bar, the priestess led heals the hero with her own Cure Wounds.
 
 
 func run() -> void:
@@ -69,8 +70,48 @@ func run() -> void:
 		sheet.visible = false
 		await frames(2)
 
+	# v0.8.4.44.13: the one led acts on the hero's road — its potion pinned and drunk by it, not by the hero
+	var potions := int(Gear.of(s, data, "npc_mercenary")["inventory"].get("healing_potion", 0))
+	var hero_potions := int(s.character.get("inventory", {}).get("healing_potion", 0))
+	Being.of(s, "npc_mercenary")["hp"] = 2
+	node("EventBus").state_changed.emit()
+	await frames(3)
+	var pin := find(bar, "Pin_item_healing_potion") as BaseButton
+	pin.button_pressed = true  # a toggle, as a player pins it
+	await press(pin)
+	await frames(2)
+	step("its potion pinned as its own", str(gs.attached.get("who", "")) == "npc_mercenary", str(gs.attached))
+	step("drunk by it: the pin sent alone", bool(gs.submit("")))
+	await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+	step("the mercenary's potion went, the hero's stayed", int(Gear.of(s, data, "npc_mercenary")["inventory"].get("healing_potion", 0)) == potions - 1
+		and int(s.character.get("inventory", {}).get("healing_potion", 0)) == hero_potions)
+	step("the mercenary healed", Sheet.hp(s, data, Sheet.who(s, data, "npc_mercenary")) > 2)
+
 	await press(find(screen(), "Portrait_hero"))
 	await frames(4)
 	step("the hero's portrait takes the hero back", PartyLead.of(s) == Being.HERO and str(field.get("hero_face")) == PortraitRules.of(s, data, Sheet.HERO))
 	step("the bar is the hero's again", Sheet.is_hero(bar.get("who")))
 	await shot("hero_back")
+
+	# a caster led: the priestess's own spells on the bar, Cure Wounds on the hero from her slot
+	Being.follow(s, "npc_priestess")
+	s.character["hp"] = 3
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	await press(find(screen(), "Portrait_npc_priestess"))
+	await frames(4)
+	step("the priestess led", PartyLead.of(s) == "npc_priestess")
+	var cure: Control = find(bar, "Pin_spell_cure_wounds")
+	step("her Cure Wounds on the bar", cure != null)
+	await shot("priestess_bar")
+	if cure != null:
+		(cure as BaseButton).button_pressed = true
+		await press(cure as BaseButton)
+		await frames(2)
+		step("pinned as hers", str(gs.attached.get("who", "")) == "npc_priestess")
+		step("aimed at the hero's portrait", str(gs.aim_attached(Being.HERO)).is_empty())
+		step("cast", str(gs.cast_attached()).is_empty(), str(gs.attached))
+		await wait_until(func() -> bool: return not gs.is_busy(), 30.0)
+		step("the hero healed by her", int(s.character["hp"]) > 3, str(s.character["hp"]))
+		step("her slot spent, not the hero's", SpellRules.slots_left(Sheet.own(s, "npc_priestess"), 1) == 2)
+		await shot("priestess_healed")

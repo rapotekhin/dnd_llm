@@ -585,10 +585,7 @@ func _draw_equipment() -> void:
 		picked.append({"alt": -1, "picks": []})
 	for i in sets.size():
 		var alts: Array = sets[i]["alternatives"]
-		var box := HFlowContainer.new()
-		box.add_theme_constant_override("h_separation", 10)
-		box.add_theme_constant_override("v_separation", 10)
-		_body.add_child(box)
+		var box := UiParts.flow(_body, "", 10, 10)
 		for a in alts.size():
 			var b := Button.new()
 			b.text = _alt_text(alts[a])

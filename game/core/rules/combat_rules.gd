@@ -1553,8 +1553,15 @@ static func _aim_square(s: GameSession, t: Dictionary, me: Dictionary = {}) -> V
 
 ## The hero as a fighter on its square of the room's map out of a fight (v0.8.4.43.55): what the act of a fight reads of
 ## where it stands and how big it is, to lay an area from there before the fight. The fight puts it on the same square.
-static func on_map(s: GameSession, data: Dictionary) -> Dictionary:
-	var at := MapSpots.square_of(s, data, Being.HERO)
+## `who` — one of the party out of a fight (v0.8.4.44.13): a follower the player leads stands as its record on its square,
+## so a cast act reads its own spells and slots.
+static func on_map(s: GameSession, data: Dictionary, who: String = Being.HERO) -> Dictionary:
+	var at := MapSpots.square_of(s, data, who)
+	if who != Being.HERO:
+		var f := Sheet.own(s, who).duplicate(true)
+		f.merge({"id": who, "npc_id": who, "side": "ally", "name": CreatureCard.name_of(s, data, Sheet.who(s, data, who)), "status": "active",
+			"x": at.x, "y": at.y, "span": FightGrid.span_of(data, str(Sheet.template(data, f).get("size", "medium")))}, true)
+		return f
 	return {"id": PLAYER, "side": "player", "name": str(s.character.get("name", "")), "status": "active", "x": at.x, "y": at.y,
 		"span": FightGrid.span_of(data, hero_size(s, data))}
 

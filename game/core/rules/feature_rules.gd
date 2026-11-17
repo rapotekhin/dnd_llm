@@ -323,7 +323,7 @@ static func pact_tidy(c: Dictionary, data: Dictionary, session_items: Dictionary
 	if int(c.get("inventory", {}).get(id, 0)) <= 0:
 		_pact_end(c, data, session_items)
 		return
-	if pact_made(data, session_items, id) and CharacterRules.held_copies(c, id) <= 0 and not CharacterRules.stowed(c).values().has(id):
+	if pact_made(data, session_items, id) and CharacterRules.held_copies(c, id) <= 0:
 		_pact_end(c, data, session_items)
 
 

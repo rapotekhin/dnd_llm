@@ -141,9 +141,11 @@ static func end_on_attack(c: Dictionary) -> Array[String]:
 	return lines
 
 
-## The spell lands on the hero: the effect for its duration (the concentration's end comes with it). Lines.
-static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot: int = 0) -> Array[String]:
-	var c := s.character
+## The spell lands on the hero: the effect for its duration (the concentration's end comes with it). Lines. `who` — on whom
+## out of a fight (v0.8.4.44.13): a curse lifted, a thing made into its things — the hero's, or a follower's own record
+## (Sheet.own) by AllyRules.cast_on_npc.
+static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot: int = 0, who: Dictionary = Sheet.HERO) -> Array[String]:
+	var c := Sheet.holder(s, who)
 	var sp := spec(data, spell_id)
 	var spell: Dictionary = data["spells"][spell_id]
 	var lines_before: Array[String] = []
@@ -166,17 +168,18 @@ static func apply_self(s: GameSession, data: Dictionary, spell_id: String, slot:
 	for e: Dictionary in ConditionRules.effects(c).duplicate():  # cast again: the new one replaces the old
 		if str(e.get("source", {}).get("id", "")) == spell_id:
 			ConditionRules.remove_effect(c, int(e.get("uid", 0)))
-	var e := _effect(s, data, spell_id, slot, Sheet.HERO)
+	var e := _effect(s, data, spell_id, slot, who)
 	var lines: Array[String] = []
 	ConditionRules.add_effect(c, GameSession.whole(e))  # the table's numbers come as floats from JSON
 	lines.append_array(lines_before)
 	lines.append("%s: %s" % [spell["name"], text(data, e)])
-	if sp.has("remove"):
+	if sp.has("remove") and Sheet.is_hero(who):
 		lines.append_array(ConditionRules.cure(s, data, {"remove": sp["remove"]}, e["source"]))
-	_temp_points(s, data, sp, slot - maxi(1, int(spell["level"])), Sheet.HERO, lines)
-	if sp.has("temp_hp"):
+	_temp_points(s, data, sp, slot - maxi(1, int(spell["level"])), who, lines)
+	if sp.has("temp_hp") and Sheet.is_hero(who):
 		lines.append_array(turn_start(s, data))
-	CharacterRules.refresh(c, data, s.items)
+	if Sheet.is_hero(who):
+		CharacterRules.refresh(c, data, s.items)
 	if e.has("max_hp"):
 		Harm.heal(data, c, int(e["max_hp"]))
 	return lines

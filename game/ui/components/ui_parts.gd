@@ -23,6 +23,21 @@ static func label(parent: Control, text: String, variation: String = "", fit := 
 	return l
 
 
+## A row that wraps — icons, buttons, picks — in `parent` (null: only made): the gaps `h` and `v` between them, -1 leaves
+## the theme's. One for every window (v0.8.4.44.13: fourteen windows built it by hand).
+static func flow(parent: Control, node_name := "", h := 4, v := -1) -> HFlowContainer:
+	var f := HFlowContainer.new()
+	if not node_name.is_empty():
+		f.name = node_name
+	if h >= 0:
+		f.add_theme_constant_override("h_separation", h)
+	if v >= 0:
+		f.add_theme_constant_override("v_separation", v)
+	if parent != null:
+		parent.add_child(f)
+	return f
+
+
 static func heading(parent: Control, text: String) -> Label:
 	return label(parent, text, UiTheme.ACCENT_LABEL)
 

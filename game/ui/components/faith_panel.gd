@@ -61,11 +61,7 @@ func _rebuild() -> void:
 	if not fest.is_empty():
 		UiParts.label(_box, tr("FAITH_FESTIVAL").format({"name": fest}), UiTheme.MUTED_LABEL)
 
-	var acts := HFlowContainer.new()
-	acts.name = "FaithActs"
-	acts.add_theme_constant_override("h_separation", 8)
-	acts.add_theme_constant_override("v_separation", 8)
-	_box.add_child(acts)
+	var acts := UiParts.flow(_box, "FaithActs", 8, 8)
 	_act(acts, "FaithService", tr("BTN_FAITH_SERVICE").format({"min": TimeRules.span(int(cfg["service"]["minutes"]))}), "service",
 		FaithRules.service_why(s, data), "", tr("FAITH_SERVICE_TIP").format({"favor": int(cfg["service"]["favor"]), "days": int(cfg["service"]["every_days"])}))
 	_act(acts, "FaithDonate", tr("BTN_FAITH_DONATE").format({"money": Money.format(int(cfg["donation"]["cost_cp"]))}), "donate",

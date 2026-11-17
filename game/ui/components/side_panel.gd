@@ -657,12 +657,10 @@ func _unseen(s: GameSession, world: WorldView, can_act: bool) -> void:
 
 
 ## Out of a fight the hotbar's class and items (v0.8.4.43, as in BG3): the ready spells, the uses of features and the
-## things at hand — a press pins it to the next words to the master, as the ✦ menu does (`GameState.attach_choices`).
+## things at hand of the one the player leads — the hero or a follower (PartyLead, v0.8.4.44.13: one road, its own slots,
+## uses and things) — a press pins it to the next words to the master, as the ✦ menu does (`GameState.attach_choices`).
 func _hotbar_pins(s: GameSession, can_act: bool) -> void:
-	if PartyLead.of(s) != Being.HERO:
-		_lead_pins(s, PartyLead.of(s), can_act)
-		return
-	var c := s.character
+	var c := Gear.of(s, Catalog.data, PartyLead.of(s))
 	for ch: Dictionary in GameState.attach_choices():
 		var kind := str(ch["kind"])
 		if not kind in ["spell", "feature", "item"]:
@@ -697,27 +695,6 @@ func _hotbar_pins(s: GameSession, can_act: bool) -> void:
 				cell.set_card(CardInfo.item(c, Catalog.data, s.items, id))
 		cell.tooltip_text = str(ch["name"]) + "\n" + tr("AREA_PIN_TIP" if area else "BAR_PIN_TIP")
 		box.add_child(cell)
-
-
-## The follower the player leads (v0.8.4.44.12): the things at its hand — its belt — used by it on the one road of a
-## thing (ItemActs.use_row, GameState.item_act). Its spells and features out of a fight are not the bar's yet.
-func _lead_pins(s: GameSession, id: String, can_act: bool) -> void:
-	var c := Gear.of(s, Catalog.data, id)
-	for item: String in ItemRules.at_hand(c, Catalog.data, s.items):
-		var row := ItemActs.use_row(s, Catalog.data, c, item, "Pin_item_" + item)
-		if row.is_empty():
-			continue
-		var cell := IconSlot.make("items/" + item, ItemRules.display_name(Catalog.data["items"], s.items, item), ActionBar.CELL)
-		cell.name = "Pin_item_" + item
-		cell.disabled = not can_act or not str(row["why"]).is_empty()
-		var n := int(c.get("inventory", {}).get(item, 0))
-		cell.badge = "×%d" % n if n > 1 else ""
-		cell.set_card(CardInfo.item(c, Catalog.data, s.items, item))
-		cell.pressed.connect(func() -> void:
-			var err := GameState.item_act(row, id)
-			if not err.is_empty():
-				EventBus.message.emit(tr(err)))
-		_bar.section(ActionBar.ITEMS).add_child(cell)
 
 
 ## The strip over the field: the place path, the date and hour, the weather; one line, the long path cut by «…».
@@ -864,11 +841,7 @@ func _service_acts(s: GameSession, box: HFlowContainer, id: String, can_act: boo
 
 func _group(groups: Dictionary, key: String, id: String) -> HFlowContainer:
 	if not groups.has(key):
-		var box := HFlowContainer.new()
-		box.name = "Group_%s_%s" % [key, id]
-		box.add_theme_constant_override("h_separation", 6)
-		box.add_theme_constant_override("v_separation", 6)
-		groups[key] = box
+		groups[key] = UiParts.flow(null, "Group_%s_%s" % [key, id], 6, 6)
 	return groups[key]
 
 
@@ -1324,11 +1297,7 @@ func _exit_button(parent: Container, text: String, action: Callable, enabled: bo
 
 ## The open acts of a row: buttons as wide as their text, wrapping.
 func _acts(node_name: String) -> HFlowContainer:
-	var acts := HFlowContainer.new()
-	acts.name = node_name
-	acts.add_theme_constant_override("h_separation", 6)
-	acts.add_theme_constant_override("v_separation", 6)
-	_content.add_child(acts)
+	var acts := UiParts.flow(_content, node_name, 6, 6)
 	return acts
 
 
@@ -1403,11 +1372,7 @@ func _show_open() -> void:
 ## The ways with a door (v0.7.22.25) in its menu: a key, thieves' tools, force, blows, a spell, a torch, waiting, a knock.
 func _door_acts(parent: Container, to: String, ways: Array[Dictionary], can_act: bool) -> void:
 	var s := GameState.session
-	var acts := HFlowContainer.new()
-	acts.name = "DoorActs_" + to
-	acts.add_theme_constant_override("h_separation", 6)
-	acts.add_theme_constant_override("v_separation", 6)
-	parent.add_child(acts)
+	var acts := UiParts.flow(parent, "DoorActs_" + to, 6, 6)
 	var dcs := WayRules.dcs(s, Catalog.data, s.room_id, to)
 	var d := WayRules.def(Catalog.data, s.room_id, to)
 	var mat := ThingRules.material(Catalog.data, d)

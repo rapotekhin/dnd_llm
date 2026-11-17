@@ -231,29 +231,42 @@ static func dismiss(s: GameSession, summon_id: String) -> String:
 
 ## An NPC's hit points now: its wounds, or the template's full ones (v0.7.50.1). {hp, max}.
 static func npc_health(s: GameSession, data: Dictionary, npc_id: String) -> Dictionary:
-	var mon := str(WorldView.new(data["world"]).npc(npc_id).get("monster", CombatRules.cfg(data)["default_npc_monster"]))
-	var full := int(data["monsters"].get(mon, {}).get("hp", 1))
-	return {"hp": mini(full, int(Being.view(s, npc_id).get("hp", full))), "max": full}
+	var who := Sheet.who(s, data, npc_id)
+	return {"hp": mini(Sheet.max_hp(s, data, who), Sheet.hp(s, data, who)), "max": Sheet.max_hp(s, data, who)}
 
 
 ## A spell cast at an NPC out of a fight (v0.7.50.1): a heal now, or a boon that it carries into a fight until it ends.
-static func cast_on_npc(s: GameSession, data: Dictionary, spell_id: String, slot: int, npc_id: String) -> Array[String]:
-	var who := str(WorldView.new(data["world"]).npc_name(npc_id))
+## `by` — who casts it: the hero, or the follower the player leads (v0.8.4.44.13), a heal by its own numbers; at the hero
+## (Being.HERO) it lands as one cast on the hero does.
+static func cast_on_npc(s: GameSession, data: Dictionary, spell_id: String, slot: int, npc_id: String, by: Dictionary = Sheet.HERO) -> Array[String]:
 	var spell: Dictionary = data["spells"][spell_id]
 	var invisible := (data["rules"]["invisibility"]["spells"] as Dictionary).has(spell_id)
-	if SpellEffects.spec(data, spell_id).is_empty() and not invisible:
-		var h := npc_health(s, data, npc_id)
-		var after := mini(int(h["max"]), int(h["hp"]) + CombatRules.heal_roll(s, data, spell_id, slot))
-		Being.drop(s, npc_id, "hp")
-		if after < int(h["max"]):
-			Being.of(s, npc_id)["hp"] = after
-		return ["%s: +%d HP" % [who, after - int(h["hp"])]]
+	var heal := SpellEffects.spec(data, spell_id).is_empty() and not invisible
+	if npc_id == Being.HERO:
+		if not heal:
+			return SpellEffects.apply_self(s, data, spell_id, slot)
+		return ["%s: +%d HP" % [s.character.get("name", ""), Harm.mend(s, data, Sheet.HERO, heal_of(s, data, by, spell_id, slot))]]
+	var sp := SpellEffects.spec(data, spell_id)
+	if bool(sp.get("lift_curse", false)) or sp.has("make") or SpellEffects.WORLD.any(func(k: String) -> bool: return sp.has(k)):
+		return SpellEffects.apply_self(s, data, spell_id, slot, Sheet.own(s, npc_id))  # on its things, or on the room
+	var who := str(WorldView.new(data["world"]).npc_name(npc_id))
+	if heal:
+		return ["%s: +%d HP" % [who, Harm.mend(s, data, Sheet.own(s, npc_id), heal_of(s, data, by, spell_id, slot))]]
 	var rounds := ConditionRules.spell_rounds(data, spell_id, s)
 	var b := Being.of(s, npc_id)
 	SpellEffects._end_spell_on(b, spell_id)
 	ConditionRules.add_effect(b, {"source": {"kind": "spell", "id": spell_id, "name": str(spell["name"])}, "cast": slot, "keeps": true,
 		"ends": {"at": ConditionRules.now(s) + rounds} if rounds > 0 else {}})
 	return ["%s: %s" % [who, spell["name"]]]
+
+
+## What a healing spell of `by` gives out of a fight: the hero's by its sheet (CombatRules.heal_roll), anybody else's by its
+## own ability of the spell (ActionRules.scope) on the one count of a heal (SpellRules.heal_points).
+static func heal_of(s: GameSession, data: Dictionary, by: Dictionary, spell_id: String, slot: int) -> int:
+	if Sheet.is_hero(by):
+		return CombatRules.heal_roll(s, data, spell_id, slot)
+	var ab := str(ActionRules.scope(s, data, by, spell_id).get("ability", "wis"))
+	return SpellRules.heal_points(data, Sheet.holder(s, by), spell_id, slot, Sheet.ability_mod(s, data, by, ab), s.rng)
 
 
 ## The spells cast on the followers out of a fight work as in a fight: what a spell gives is counted on the fighter.

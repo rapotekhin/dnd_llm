@@ -718,11 +718,7 @@ static func _foot_band(card: Dictionary) -> PanelContainer:
 ## The icon of a card by its ref (IconRules.of); {} — none.
 static func look_of(card: Dictionary) -> Dictionary:
 	var r := str(card.get("icon", ""))
-	var root := (Engine.get_main_loop() as SceneTree).root  # no autoload names: a playtest's script compiles this first
-	if r.is_empty() or not root.has_node("Catalog"):
-		return {}
-	var session: GameSession = root.get_node("GameState").session if root.has_node("GameState") else null
-	return IconRules.of(root.get_node("Catalog").data, session.items if session != null else {}, r)
+	return {} if r.is_empty() else IconSlot.spec_of(r)
 
 
 static func _icon_rect(look: Dictionary) -> TextureRect:

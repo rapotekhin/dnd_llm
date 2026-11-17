@@ -213,10 +213,15 @@ static func save_half(s: GameSession, data: Dictionary, who: Dictionary, ab: Str
 ## What it got.
 static func mend(s: GameSession, data: Dictionary, who: Dictionary, n: int) -> int:
 	var me := Sheet.holder(s, who)
+	if not me.has("hp"):  # a person's record with no wounds kept is whole (Sheet.hp)
+		return 0
 	var before := int(me.get("hp", 0))
-	var got := heal(data, me, n)
+	var top := Sheet.max_hp(s, data, who)
+	var got := heal(data, me, n, top)  # its maximum by its sheet: a record keeps none of its own (v0.8.4.44.13)
 	if got <= 0:
 		return got
+	if not Sheet.is_hero(who) and not me.has("status") and int(me["hp"]) >= top:
+		me.erase("hp")  # whole again: a record keeps only its wounds
 	if Sheet.is_hero(who) or is_same(me, s.character):
 		if before <= 0:
 			ConditionRules.remove(me, "unconscious")

@@ -1606,9 +1606,7 @@ func _draw_conc_ask() -> void:
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.text = str(_conc_ask["text"])
 	_ask_box.add_child(title)
-	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 10)
-	_ask_box.add_child(flow)
+	var flow := UiParts.flow(_ask_box, "", 10)
 	for yes: bool in [true, false]:
 		var b := Button.new()
 		b.name = "Ask_conc_" + ("yes" if yes else "no")
@@ -1654,10 +1652,7 @@ func _draw_ask(s: GameSession) -> void:
 			_line(_ask_box, tr("COMBAT_REACTION_SPELL_CAST").format({"line": str(pending.get("line", ""))}))
 		else:
 			_line(_ask_box, tr("COMBAT_REACTION_HIT").format({"line": str(pending.get("line", "")), "dmg": int(pending.get("dmg", 0))}))
-	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 10)
-	flow.add_theme_constant_override("v_separation", 10)
-	_ask_box.add_child(flow)
+	var flow := UiParts.flow(_ask_box, "", 10, 10)
 	if prompt.is_empty():
 		options = options.duplicate()
 		options.append({"id": "none", "label": tr("COMBAT_REACTION_NO")})

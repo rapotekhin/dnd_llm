@@ -39,10 +39,7 @@ static func make(title_text: String, options: Array, limit: int, picked: Array, 
 			group = str(o.get("group", ""))
 			if group != "":
 				UiParts.label(g, group, UiTheme.MUTED_LABEL)
-			flow = HFlowContainer.new()
-			flow.add_theme_constant_override("h_separation", 12)
-			flow.add_theme_constant_override("v_separation", 8)
-			g.add_child(flow)
+			flow = UiParts.flow(g, "", 12, 8)
 		var tile := g._tile(o, prefix, blocked)
 		flow.add_child(g._with_name(tile, str(o["label"])))
 	return g

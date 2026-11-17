@@ -436,10 +436,7 @@ func _book_class(box: VBoxContainer, c: Dictionary) -> void:
 		strip.name = "PreparedStrip"
 		strip.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.PANEL_RAISED, UiTheme.BORDER, 1, 8, 6))
 		box.add_child(strip)
-		var flow := HFlowContainer.new()
-		flow.add_theme_constant_override("h_separation", 4)
-		flow.add_theme_constant_override("v_separation", 4)
-		strip.add_child(flow)
+		var flow := UiParts.flow(strip, "", 4, 4)
 		for id: Variant in _by_circle(prepared):
 			_spell_cell(flow, c, str(id), true)
 		for i in maxi(0, int(p["count"]) - prepared.size()):
@@ -468,11 +465,8 @@ func _book_class(box: VBoxContainer, c: Dictionary) -> void:
 		roman.custom_minimum_size = Vector2(34, 0)
 		roman.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		roman.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var flow := HFlowContainer.new()
+		var flow := UiParts.flow(row, "", 4, 4)
 		flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		flow.add_theme_constant_override("h_separation", 4)
-		flow.add_theme_constant_override("v_separation", 4)
-		row.add_child(flow)
 		for id: Variant in ids:
 			_spell_cell(flow, c, str(id), ready_ids.has(str(id)))
 		if most > 0:  # the slots of the circle as pips, as in BG3
@@ -492,11 +486,7 @@ func _book_group(parent: Control, key: String, node_name: String) -> HFlowContai
 	col.add_theme_constant_override("separation", 6)
 	parent.add_child(col)
 	_text(col, tr(key), UiTheme.CAPTION_LABEL, true)
-	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 4)
-	flow.add_theme_constant_override("v_separation", 4)
-	col.add_child(flow)
-	return flow
+	return UiParts.flow(col, "", 4, 4)
 
 
 ## Spell ids by circle, then by name.
@@ -649,7 +639,7 @@ func _use_menu(cell: Control, rid: String, opts: Array, can_act: bool) -> void:
 func _book_common(box: VBoxContainer) -> void:
 	_text(box, tr("BOOK_COMMON_HINT"), UiTheme.MUTED_LABEL)
 	_text(box, tr("BAR_KIND_COMBAT"), UiTheme.CAPTION_LABEL)
-	var flow := _book_flow(box, "BookCommon")
+	var flow := UiParts.flow(box, "BookCommon", 6, 6)
 	var acts := Acts.all().filter(func(a: Act) -> bool: return a.tab() == "common" and a.book())
 	acts.sort_custom(func(x: Act, y: Act) -> bool: return x.order() < y.order())
 	for a: Act in acts:
@@ -665,7 +655,7 @@ func _book_common(box: VBoxContainer) -> void:
 	if peace.is_empty():
 		return
 	_text(box, tr("BOOK_PEACE"), UiTheme.CAPTION_LABEL)
-	var calm := _book_flow(box, "BookPeace")
+	var calm := UiParts.flow(box, "BookPeace", 6, 6)
 	for r: Dictionary in peace:
 		var cell := IconSlot.new()
 		cell.spec = r["spec"]
@@ -676,15 +666,6 @@ func _book_common(box: VBoxContainer) -> void:
 		cell.drag_key = str(r["key"])
 		calm.add_child(cell)
 		_details.hook(cell, str(r["title"]), str(r["body"]), r["card"])
-
-
-func _book_flow(box: VBoxContainer, node_name: String) -> HFlowContainer:
-	var flow := HFlowContainer.new()
-	flow.name = node_name
-	flow.add_theme_constant_override("h_separation", 6)
-	flow.add_theme_constant_override("v_separation", 6)
-	box.add_child(flow)
-	return flow
 
 
 ## The reactions as in BG3's book (v0.8.4.43.7): each its icon and its own «Спрашивать / Всегда / Никогда», kept on the
@@ -739,11 +720,7 @@ func _pact_rows(box: VBoxContainer, c: Dictionary, can_act: bool) -> void:
 	var now := FeatureRules.pact_item(c)
 	_text(box, tr("PACT_NOW").format({"weapon": ItemRules.display_name(d["items"], GameState.session.items, now)}) if not now.is_empty() else tr("PACT_NONE"), UiTheme.MUTED_LABEL)
 	var in_fight := CombatRules.active(GameState.session)
-	var flow := HFlowContainer.new()
-	flow.name = "PactOptions"
-	flow.add_theme_constant_override("h_separation", 8)
-	flow.add_theme_constant_override("v_separation", 6)
-	box.add_child(flow)
+	var flow := UiParts.flow(box, "PactOptions", 8, 6)
 	for o: Dictionary in opts:
 		var b := UiParts.act_button(flow, "Pact_" + str(o["id"]).replace(":", "_"), str(o["label"]), "" if can_act and not in_fight else ("PACT_IN_FIGHT" if in_fight else "ABILITY_BUSY"),
 			GameState.pact_weapon.bind(str(o["id"])))
@@ -758,11 +735,7 @@ func _familiar_rows(box: VBoxContainer, c: Dictionary, can_act: bool) -> void:
 		return
 	var now := AllyRules.familiar_form(GameState.session, d, c)
 	_text(box, tr("FAMILIAR_FORM").format({"form": d["monsters"].get(now, {}).get("name", now)}), UiTheme.MUTED_LABEL)
-	var flow := HFlowContainer.new()
-	flow.name = "FamiliarForms"
-	flow.add_theme_constant_override("h_separation", 8)
-	flow.add_theme_constant_override("v_separation", 6)
-	box.add_child(flow)
+	var flow := UiParts.flow(box, "FamiliarForms", 8, 6)
 	for o: Dictionary in opts:
 		UiParts.act_button(flow, "Familiar_" + str(o["id"]), str(o["label"]), "" if can_act else "ABILITY_BUSY", GameState.choose_familiar.bind(str(o["id"])))
 

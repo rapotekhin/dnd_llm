@@ -27,6 +27,34 @@ static func ready(c: Dictionary) -> Array:
 	return out
 
 
+## What `who` may cast now, the hero or anybody else (v0.8.4.44.13, ADR-0016: the bar, the ✦ menu and the sheet of the one
+## the player leads): [{id, slots — the circles with a slot left, off, per_day}]. A sheet in the hero's form by its ready
+## spells and slots; a template caster by what `MonsterRules.castable` gives it — the same list its fight's buttons and the AI
+## read. `me` is the record to write (Sheet.own): a template's slots are laid on it once.
+static func offers(s: GameSession, data: Dictionary, who: Dictionary) -> Array[Dictionary]:
+	var me := Sheet.holder(s, who)
+	var out: Array[Dictionary] = []
+	for sid: Variant in ready(me):
+		var lv := level_of(data, str(sid))
+		var slots: Array[int] = []
+		for circle in range(maxi(1, lv), 6):
+			if lv > 0 and slots_left(me, circle) > 0:
+				slots.append(circle)
+		out.append({"id": str(sid), "slots": slots, "off": lv > 0 and slots.is_empty(), "per_day": false})
+	if Sheet.is_hero(who):
+		return out
+	for o: Dictionary in MonsterRules.castable(data, me):
+		var id := str(o["id"])
+		if out.any(func(r: Dictionary) -> bool: return r["id"] == id):
+			continue
+		var slots: Array[int] = []
+		for circle in range(maxi(1, int(o["slot"])), 6):
+			if int(o["slot"]) > 0 and slots_left(me, circle) > 0:
+				slots.append(circle)
+		out.append({"id": id, "slots": slots, "off": false, "per_day": bool(o.get("per_day", false))})
+	return out
+
+
 ## A spell the hero casts at will, without a slot (an invocation, v0.7.22.4).
 static func is_free(c: Dictionary, spell_id: String) -> bool:
 	return (c.get("spells", {}).get("free", []) as Array).has(spell_id) or (c.get("spells", {}).get("items", []) as Array).has(spell_id)

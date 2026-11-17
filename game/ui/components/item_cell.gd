@@ -39,9 +39,7 @@ static func of(ref: String, item_id: String, n: int, where: Dictionary, side: in
 ## The small mark of where it is worn ("" — none).
 func set_place(ref: String) -> void:
 	place = ref
-	var root := (Engine.get_main_loop() as SceneTree).root  # no autoload names: a playtest's script compiles this first
-	var session: GameSession = root.get_node("GameState").session
-	_place_path = "" if ref.is_empty() else str(IconRules.of(root.get_node("Catalog").data, session.items if session != null else {}, ref).get("path", ""))
+	_place_path = "" if ref.is_empty() else str(spec_of(ref).get("path", ""))
 	queue_redraw()
 
 

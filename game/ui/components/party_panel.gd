@@ -167,8 +167,7 @@ func _fill(s: GameSession, data: Dictionary, id: String) -> void:
 ## The icon of where a copy of `item` is on `id`: the doll's slot or the hands (`slots/<slot>`), the belt (`slots/belt`); "" — loose.
 static func place_of(s: GameSession, data: Dictionary, id: String, item: String) -> String:
 	var c := Gear.of(s, data, id)
-	var at := Equip.worn_at(c, item)
-	if not at.is_empty():
+	for at: Array in CharacterRules.worn_at(c, item).slice(0, 1):
 		return "slots/" + str(at[0])
 	return "slots/belt" if ItemRules.on_belt(c, data, s.items, item) else ""
 

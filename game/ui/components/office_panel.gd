@@ -85,10 +85,8 @@ func _held(s: GameSession, data: Dictionary, id: String) -> void:
 			UiParts.label(_box, ("✓ " if bool(case["done"]) else "· ") + str(case["title"]), UiTheme.MUTED_LABEL if bool(case["done"]) else "").name = "Case_%s_%d" % [id, i]
 			if bool(case["done"]):
 				continue
-			var row := HFlowContainer.new()
-			row.add_theme_constant_override("h_separation", 8)
+			var row := UiParts.flow(_box, "", 8)
 			row.alignment = FlowContainer.ALIGNMENT_END
-			_box.add_child(row)
 			for o: Dictionary in OfficeRules.cfg(data)["cases"][str(case["kind"])]["options"]:
 				var text := str(o["name"])
 				if o.has("check"):

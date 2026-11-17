@@ -559,14 +559,21 @@ static func hold_index(c: Dictionary, id: String, slot: String) -> int:
 
 
 static func held_copies(c: Dictionary, id: String) -> int:
-	var n := 0
+	return worn_at(c, id).size()
+
+
+## Where the copies of `id` are worn: [[slot, spare], …] — the hands and the doll first, then the set put away
+## (`spare` true); [] when none is.
+static func worn_at(c: Dictionary, id: String) -> Array:
+	var out := []
 	for slot: String in SLOTS:
 		if str(c.get("equipped", {}).get(slot, "")) == id:
-			n += 1
-	for slot: String in stowed(c):
-		if str(stowed(c)[slot]) == id:
-			n += 1
-	return n
+			out.append([slot, false])
+	var row := stowed(c)
+	for slot: String in row:
+		if str(row[slot]) == id:
+			out.append([slot, true])
+	return out
 
 
 ## The slot an item goes to, or "" if it cannot be equipped. A weapon goes to the main hand, a shield to the off hand; a

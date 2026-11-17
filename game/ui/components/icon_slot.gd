@@ -106,10 +106,18 @@ func set_card(c: Dictionary) -> void:
 
 
 func set_icon(ref: String) -> void:
-	var root := (Engine.get_main_loop() as SceneTree).root  # no autoload names: a playtest's script compiles this first
-	var session: GameSession = root.get_node("GameState").session
-	spec = IconRules.of(root.get_node("Catalog").data, session.items if session != null else {}, ref)
+	spec = spec_of(ref)
 	queue_redraw()
+
+
+## The icon of `ref` by IconRules.of with the game's things (the made ones of the session too); {} — no catalog yet.
+## One place for a cell, its mark of a place and a card.
+static func spec_of(ref: String) -> Dictionary:
+	var root := (Engine.get_main_loop() as SceneTree).root  # no autoload names: a playtest's script compiles this first
+	if not root.has_node("Catalog"):
+		return {}
+	var session: GameSession = root.get_node("GameState").session if root.has_node("GameState") else null
+	return IconRules.of(root.get_node("Catalog").data, session.items if session != null else {}, ref)
 
 
 ## No tooltip of Godot: the cell's card is the one card of icons (`show_card`), which the cursor can reach.

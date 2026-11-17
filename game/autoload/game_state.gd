@@ -238,18 +238,19 @@ func level_up(picks: Dictionary) -> String:
 
 ## «Колдовать» on the sheet (SpellRules): the engine checks and spends the slot, the master narrates the cast
 ## (kind=ability). `slot` 0 = the lowest fitting one. "" or a reason for the toast.
-func cast(spell_id: String, slot: int = 0) -> String:
-	return _use_alone({"kind": "spell", "id": spell_id, "slot": slot})
+## `who` — the caster: the hero, or the follower the player leads (v0.8.4.44.13, on the same road).
+func cast(spell_id: String, slot: int = 0, who: String = Being.HERO) -> String:
+	return _use_alone({"kind": "spell", "id": spell_id, "slot": slot, "who": who})
 
 
 ## «Использовать» a feature with limited uses on the sheet (Stock). "" or a reason.
-func use_feature(resource_id: String) -> String:
-	return _use_alone({"kind": "feature", "id": resource_id})
+func use_feature(resource_id: String, who: String = Being.HERO) -> String:
+	return _use_alone({"kind": "feature", "id": resource_id, "who": who})
 
 
-## «Использовать» an item on the sheet (ItemRules consumables). "" or a reason.
-func use_item(item_id: String) -> String:
-	return _use_alone({"kind": "item", "id": item_id})
+## «Использовать» an item on the sheet (ItemRules consumables): by its holder — the hero or a follower. "" or a reason.
+func use_item(item_id: String, who: String = Being.HERO) -> String:
+	return _use_alone({"kind": "item", "id": item_id, "who": who})
 
 
 func _use_alone(what: Dictionary, note: String = "") -> String:
@@ -281,13 +282,25 @@ func _friend_targets(what: Dictionary, spell_id: String) -> Array[String]:
 
 ## A spell, a feature use or a consumable checked and spent by the engine (v0.7.7: shared by the sheet buttons and
 ## the attachment at the input field): {"lines", "facts"} or {"reason"}. `what`: {kind spell|feature|item, id,
-## slot (spells, 0 = the lowest fitting), target (an NPC id of the scene, optional)}.
+## slot (spells, 0 = the lowest fitting), target (an NPC id of the scene, optional), who (the one who spends: the hero,
+## or the follower the player leads — v0.8.4.44.13, ADR-0016: its own slots, uses and things on the same rules)}.
 func _spend(what: Dictionary) -> Dictionary:
-	var c := session.character
+	var me := _spender(what)
+	var c := Gear.of(session, Catalog.data, str(me["id"]))
 	var id := str(what.get("id", ""))
 	var lines: Array[String] = []
 	var facts := ""
-	match str(what.get("kind", "")):
+	var actor := "Игрок" if Sheet.is_hero(me) else "Спутник героя %s" % CreatureCard.name_of(session, Catalog.data, me)
+	var kind := str(what.get("kind", ""))
+	if kind == "spell" and not Sheet.is_hero(me):
+		kind = "other_spell"
+	match kind:
+		"other_spell":
+			var cast := _other_cast(what, me, c)
+			if cast.has("reason"):
+				return cast
+			lines = cast["lines"]
+			facts = str(cast["facts"])
 		"spell":
 			var chk := SpellRules.check(c, Catalog.data, id, int(what.get("slot", 0)))
 			if chk.has("reason"):
@@ -326,31 +339,84 @@ func _spend(what: Dictionary) -> Dictionary:
 			if not why.is_empty():
 				return {"reason": why}
 			lines = Stock.use(c, Catalog.data, id, 1, session.rng, session)
-			facts = "Игрок использует умение «%s». Движок уже учёл использование: %s. Опиши, как это выглядит." % \
-				[Stock.display_name(c, Catalog.data, id), ", ".join(lines)]
+			facts = "%s использует умение «%s». Движок уже учёл использование: %s. Опиши, как это выглядит." % \
+				[actor, Stock.display_name(c, Catalog.data, id), ", ".join(lines)]
 		"item":
 			var why := ItemRules.can_use(c, Catalog.data, session.items, id)
 			if not why.is_empty():
 				return {"reason": why}
-			lines = ItemRules.use(c, Catalog.data, session.items, id, session.rng, session)
-			facts = "Игрок использует предмет. Движок уже применил: %s. Опиши коротко." % ", ".join(lines)
+			lines = ItemRules.use(c, Catalog.data, session.items, id, session.rng, session, me)
+			facts = "%s использует предмет. Движок уже применил: %s. Опиши коротко." % [actor, ", ".join(lines)]
 		"feature_note":
 			var f: Dictionary = Catalog.data["classes"]["features"].get(id, Catalog.data["races"]["traits"].get(id, {}))
 			lines = ["Умение: %s" % f.get("name", id)]
-			facts = "Игрок пускает в ход умение «%s» (%s). Движок его не считает: реши исход по правилам — проверкой engine.check, если нужна." % \
-				[f.get("name", id), str(f.get("desc", "")).left(240)]
+			facts = "%s пускает в ход умение «%s» (%s). Движок его не считает: реши исход по правилам — проверкой engine.check, если нужна." % \
+				[actor, f.get("name", id), str(f.get("desc", "")).left(240)]
 		"item_note":
 			if int(c.get("inventory", {}).get(id, 0)) <= 0:
 				return {"reason": "EQUIP_NOT_OWNED"}
 			var nm := ItemRules.display_name(Catalog.data["items"], session.items, id)
 			lines = ["Предмет: %s" % nm]
-			facts = "Игрок пускает в ход предмет «%s» [%s] из своего снаряжения. Опиши по правилам; трата или потеря — эффектом." % [nm, id]
+			facts = "%s пускает в ход предмет «%s» [%s] из своего снаряжения. Опиши по правилам; трата или потеря — эффектом." % [actor, nm, id]
 		_:
 			return {"reason": "ABILITY_BUSY"}
 	var target := str(what.get("target", ""))
 	if not target.is_empty():
 		facts += " Цель — %s [%s]." % [world().npc(target).get("name", target), target]
-	CharacterRules.refresh(c, Catalog.data, session.items)
+	if Sheet.is_hero(me):
+		CharacterRules.refresh(c, Catalog.data, session.items)
+	return {"lines": lines, "facts": facts}
+
+
+## The record `what` spends from, as it is before: given back when the master's turn fails.
+func _backup(what: Dictionary) -> Dictionary:
+	return Gear.of(session, Catalog.data, str(_spender(what)["id"])).duplicate(true)
+
+
+## Who spends `what`: its `who` (Sheet.own) — the hero by default, and when one named no longer walks with it.
+func _spender(what: Dictionary) -> Dictionary:
+	var who := str(what.get("who", Being.HERO))
+	return Sheet.own(session, who if who == Being.HERO or Being.follows(session, who) else Being.HERO)
+
+
+## A spell of one who is not the hero, out of a fight (v0.8.4.44.13): offered by SpellRules.offers — its sheet's ready spells
+## or its template's — paid by its own slot or «N/день» (SpellRules.cast, MonsterRules.pay_spell), concentration on it, and
+## landed by AllyRules.cast_on_npc on whom it picks: itself by default, the hero (SELF_TARGET), the people of the scene.
+## {"lines", "facts"} or {"reason"}.
+func _other_cast(what: Dictionary, me: Dictionary, c: Dictionary) -> Dictionary:
+	var data: Dictionary = Catalog.data
+	var id := str(what.get("id", ""))
+	var offer: Dictionary = {}
+	for o: Dictionary in SpellRules.offers(session, data, me):
+		if str(o["id"]) == id:
+			offer = o
+	if offer.is_empty():
+		return {"reason": "SPELL_NOT_READY"}
+	var own := SpellRules.ready(c).has(id)  # a sheet in the hero's form, else its template's spell
+	var chk := SpellRules.check(c, data, id, int(what.get("slot", 0))) if own else {"spell_id": id, "slot": 0}
+	if chk.has("reason"):
+		return chk
+	var slots: Array = offer["slots"]
+	var slot := int(chk["slot"])
+	if not own and not slots.is_empty():  # the circle picked, else its lowest with a slot left
+		slot = int(what.get("slot", 0)) if slots.has(int(what.get("slot", 0))) else int(slots[0])
+	var per_day := bool(offer["per_day"])
+	var lines := SpellRules.cast(c, data, id, slot, session, false, per_day)
+	if per_day:
+		MonsterRules.pay_spell(c, id, {"per_day": true})
+	var name := CreatureCard.name_of(session, data, me)
+	lines[0] = "%s — %s" % [name, lines[0]]
+	var friends := _friend_targets(what, id)
+	if friends.is_empty() and str(what.get("target", "")).is_empty() and not CombatRules.hostile_spell(data, id):
+		friends = [str(me["id"])]  # on itself, as the hero's own lands on the hero
+	for t: String in friends:
+		lines.append_array(AllyRules.cast_on_npc(session, data, id, slot, Being.HERO if t == SELF_TARGET else t, me))
+	lines.append_array(AllyRules.expire(session))
+	what["spent_slot"] = slot
+	var facts := "Спутник героя %s колдует %s. Движок уже потратил его ячейку — не вызывай cast сам; опиши, как это выглядит и что происходит." % \
+		[name, SpellRules.describe(data, id, slot)]
+	if lines.size() > 1:
+		facts += " Движок: %s — опиши это, ничего не добавляя." % ", ".join(lines.slice(1))
 	return {"lines": lines, "facts": facts}
 
 
@@ -359,8 +425,9 @@ func _ability(lines: Array[String], facts: String) -> void:
 	_request("ability", facts)
 
 
-func attach(kind: String, id: String, slot: int = 0, target: String = "") -> void:
-	attached = {"kind": kind, "id": id, "slot": slot, "target": target}
+## `who` — whose it is: the one the player leads by default (PartyLead, v0.8.4.44.13).
+func attach(kind: String, id: String, slot: int = 0, target: String = "", who: String = "") -> void:
+	attached = {"kind": kind, "id": id, "slot": slot, "target": target, "who": who if not who.is_empty() else PartyLead.of(session)}
 	EventBus.state_changed.emit()
 
 
@@ -387,7 +454,8 @@ func attach_aimed(id: String) -> bool:
 	if not many.is_empty():
 		return many.has(me)
 	var one := str(attached.get("target", ""))
-	return one == id or (one.is_empty() and me == SELF_TARGET)
+	var caster := str(attached.get("who", Being.HERO))  # none set: on the caster itself (v0.8.4.44.13)
+	return one == id or (one.is_empty() and (me == SELF_TARGET if caster == Being.HERO else id == caster))
 
 
 ## The pinned spell aimed at `id` by its portrait or by the chip's box: one of several ticked or unticked, or its one target
@@ -407,6 +475,9 @@ func aim_attached(id: String) -> String:
 		else:
 			now.append(me)
 		attached["targets"] = now
+	elif str(attached.get("who", Being.HERO)) != Being.HERO:  # another's caster: the hero picked by name, none is the caster itself
+		attached["targets"] = [me]
+		attached["target"] = ""
 	else:
 		attached["target"] = "" if me == SELF_TARGET else id
 	EventBus.state_changed.emit()
@@ -478,20 +549,17 @@ static func _pin_name(pin: Dictionary) -> String:
 
 ## What can be pinned now (v0.7.7 fixes: everything, not only spells): [{kind, id, name, slots [circles], off}].
 ## spell — ready spells (`off` when no slot is left); feature — uses that the engine spends; feature_note — any other
-## feature or trait of the hero; item — consumables the engine uses; item_note — any other thing in the pack.
-func attach_choices() -> Array[Dictionary]:
+## feature or trait; item — consumables the engine uses; item_note — any other thing in the pack. `who` — whose: the one
+## the player leads by default (PartyLead, v0.8.4.44.13) — the hero or a follower, its spells by SpellRules.offers.
+func attach_choices(who: String = "") -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if session == null:
 		return out
-	var c := session.character
+	var me := _spender({"who": who if not who.is_empty() else PartyLead.of(session)})
 	var data: Dictionary = Catalog.data
-	for sid: Variant in SpellRules.ready(c):
-		var lv := SpellRules.level_of(data, str(sid))
-		var slots: Array[int] = []
-		for circle in range(maxi(1, lv), 6):
-			if lv > 0 and SpellRules.slots_left(c, circle) > 0:
-				slots.append(circle)
-		out.append({"kind": "spell", "id": str(sid), "name": str(data["spells"][str(sid)]["name"]), "slots": slots, "off": lv > 0 and slots.is_empty()})
+	var c := Gear.of(session, data, str(me["id"]))
+	for o: Dictionary in SpellRules.offers(session, data, me):
+		out.append({"kind": "spell", "id": str(o["id"]), "name": str(data["spells"][str(o["id"])]["name"]), "slots": o["slots"], "off": bool(o["off"])})
 	var with_uses: Array[String] = []
 	for r: Dictionary in Stock.lines(c, data):
 		out.append({"kind": "feature", "id": str(r["id"]), "name": "%s (%d/%d)" % [r["name"], int(r["left"]), int(r["max"])], "slots": [], "off": int(r["left"]) <= 0})
@@ -790,14 +858,20 @@ func _opening_strike(opening: Dictionary) -> Array[String]:
 		return lines
 	var spell := str(opening["spell"])
 	var slot := int(opening.get("slot", 0))
-	if slot > 0 and bool(opening.get("spent", true)):  # an area laid by a click is spent by the cast alone (`spent` false)
+	var by := str(opening.get("by", Being.HERO))  # the follower the player led cast it (v0.8.4.44.13): its own fighter
+	var me := CombatRules.player(session) if by == Being.HERO else CombatRules.fighter(session, by)
+	if me.is_empty():
+		lines.append("%s не удаётся: %s не в бою" % [data["spells"][spell]["name"], CreatureCard.name_of(session, data, Sheet.who(session, data, by))])
+		return lines
+	var paid := bool(opening.get("spent", true))
+	if slot > 0 and paid and by == Being.HERO:  # an area laid by a click is spent by the cast alone (`spent` false)
 		Stock.give(session.character, "slot_%d" % slot)
-	var how := {"spell": spell, "slot": slot}
-	var why := Acts.one("cast").can(session, data, CombatRules.player(session), target, how)
+	var how := {"spell": spell, "slot": slot, "per_day": bool(opening.get("per_day", false)), "asked": paid and by != Being.HERO}
+	var why := Acts.one("cast").can(session, data, me, target, how)
 	if not why.is_empty():
 		lines.append("%s не удаётся: %s — ячейка не потрачена" % [data["spells"][spell]["name"], tr(why)])
 		return lines
-	lines.append_array(Acts.one("cast").go(session, data, CombatRules.player(session), target, how))
+	lines.append_array(Acts.one("cast").go(session, data, me, target, how))
 	return lines
 
 
@@ -2419,7 +2493,7 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 		CombatRules.economy(session)["action"] = int(CombatRules.economy(session)["action"]) - 1
 	var facts := ""
 	if pinned:
-		var backup := session.character.duplicate(true)
+		var backup := _backup(attached)
 		var spent := _spend(attached)
 		if spent.has("reason"):
 			EventBus.message.emit(tr(str(spent["reason"])))
@@ -2430,7 +2504,8 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 		_opening = {}
 		var data: Dictionary = Catalog.data
 		if str(attached.get("kind", "")) == "spell" and not str(attached.get("target", "")).is_empty() and CombatRules.is_engine_spell(data, str(attached["id"])):
-			_opening = {"spell": str(attached["id"]), "slot": int(attached.get("spent_slot", 0)), "npc_id": str(attached["target"]), "spent": true}
+			_opening = {"spell": str(attached["id"]), "slot": int(attached.get("spent_slot", 0)), "npc_id": str(attached["target"]), "spent": true,
+				"by": str(_spender(attached)["id"])}
 			spent["facts"] = str(spent["facts"]) + " Если этим игрок нападает на NPC — начни бой с ним (next_mode combat): исход заклинания движок разрешит первым ходом боя, урон и последствия не описывай."
 		var target := str(attached.get("target", ""))
 		attached = {}
@@ -2446,7 +2521,7 @@ func submit(text: String, engine_note: String = "", check: Dictionary = {}) -> b
 				_log("Игрок: " + text)
 			var area := op.has("spell") and area_spell(str(op["spell"]))  # an area at one of them: on all it covers (v0.8.4.43.55)
 			var on := _square_of(target) if area else FightGrid.NONE
-			if on != FightGrid.NONE and _area_fight(str(op["spell"]), int(op.get("slot", 0)), on, true).is_empty():
+			if on != FightGrid.NONE and _area_fight(str(op["spell"]), int(op.get("slot", 0)), on, true, str(op.get("by", ""))).is_empty():
 				return true
 			if session.npcs_here(world().world, session.room_id).has(target):
 				return attack_npc(target, op).is_empty()
@@ -2993,7 +3068,8 @@ func cast_at(spell_id: String, target: String) -> String:
 		return "WAIT_BUSY"
 	for ch: Dictionary in attach_choices():
 		if str(ch["kind"]) == "spell" and str(ch["id"]) == spell_id and not bool(ch["off"]):
-			attached = {"kind": "spell", "id": spell_id, "slot": int(ch["slots"][0]) if not (ch["slots"] as Array).is_empty() else 0, "target": target}
+			attached = {"kind": "spell", "id": spell_id, "slot": int(ch["slots"][0]) if not (ch["slots"] as Array).is_empty() else 0, "target": target,
+				"who": PartyLead.of(session)}
 			return "" if submit("") else "WAIT_BUSY"
 	return "SPELL_NOT_READY"
 
@@ -3073,9 +3149,9 @@ func area_aim(cell: Vector2i) -> Dictionary:
 	return _area_at(spell, int(attached.get("slot", 0)), cell)
 
 
-func _area_at(spell: String, slot: int, cell: Vector2i) -> Dictionary:
+func _area_at(spell: String, slot: int, cell: Vector2i, by := "") -> Dictionary:
 	var data: Dictionary = Catalog.data
-	var me := CombatRules.on_map(session, data)
+	var me := CombatRules.on_map(session, data, by if not by.is_empty() else str(_spender(attached)["id"]))
 	var aim := FightGrid.aim_id(cell)
 	var cells := CombatRules.area_cells(session, data, data["spells"][spell], CombatRules.aimed(session, aim), me)
 	return {"why": Acts.one("cast").why(session, data, me, aim, {"spell": spell, "slot": slot}), "cells": cells,
@@ -3099,9 +3175,10 @@ func cast_area(cell: Vector2i) -> String:
 ## the fight's end) and caught off guard when it did not expect it; the foes of the room bring their whole encounter. Nobody
 ## caught — a cast as from the sheet; only the hero's own side — not out of a fight (AREA_ONLY_FRIENDS). `spent` — its slot
 ## went with the words (`submit`): with nobody else caught AREA_NOBODY, the words' own road goes on. "" or why not.
-func _area_fight(spell: String, slot: int, cell: Vector2i, spent: bool) -> String:
+func _area_fight(spell: String, slot: int, cell: Vector2i, spent: bool, who := "") -> String:
 	var data: Dictionary = Catalog.data
-	var a := _area_at(spell, slot, cell)
+	var by := who if not who.is_empty() else str(_spender(attached)["id"])  # the caster: the one the words or the pin are of
+	var a := _area_at(spell, slot, cell, by)
 	if not str(a["why"]).is_empty() and not spent:
 		return str(a["why"])
 	var caught: Array = a["caught"]
@@ -3121,7 +3198,7 @@ func _area_fight(spell: String, slot: int, cell: Vector2i, spent: bool) -> Strin
 			return "AREA_NOBODY"
 		if not caught.is_empty():
 			return "AREA_ONLY_FRIENDS"
-		var err := _use_alone({"kind": "spell", "id": spell, "slot": slot}, " Движок: в области никого нет — заклинание никого не задело, так и опиши.")
+		var err := _use_alone({"kind": "spell", "id": spell, "slot": slot, "who": by}, " Движок: в области никого нет — заклинание никого не задело, так и опиши.")
 		if err.is_empty():
 			attached = {}
 			EventBus.state_changed.emit()
@@ -3145,7 +3222,7 @@ func _area_fight(spell: String, slot: int, cell: Vector2i, spent: bool) -> Strin
 		for id: String in foes:
 			marks[id] = hid
 	session.pending_fight = specs
-	_opening = {"spell": spell, "slot": slot, "at": FightGrid.aim_id(cell), "caught": marks, "friends": friends, "spent": spent}
+	_opening = {"spell": spell, "slot": slot, "at": FightGrid.aim_id(cell), "caught": marks, "friends": friends, "spent": spent, "by": by}
 	_start_pending_fight(source)
 	return ""
 
@@ -3389,7 +3466,7 @@ func retry() -> void:
 	if not can_retry():
 		return
 	if not _retry_spend.is_empty():
-		var backup := session.character.duplicate(true)
+		var backup := _backup(_retry_spend)
 		var spent := _spend(_retry_spend)
 		if spent.has("reason"):
 			EventBus.message.emit(tr(str(spent["reason"])))
@@ -3470,7 +3547,7 @@ func item_act(row: Dictionary, who: String = Being.HERO) -> String:
 		"unequip": func() -> String:
 			unequip(str(row["slot"]), who, bool(row.get("spare", false)))
 			return "",
-		"use": use_item.bind(item),
+		"use": use_item.bind(item, who),
 		"belt": belt_put.bind(item, int(row.get("at", -1))),
 		"belt_take": belt_take.bind(int(row.get("at", -1))),
 		"drink": liquid_act.bind("drink", str(row.get("key", ""))),
@@ -3669,9 +3746,10 @@ func _request(kind: String, input: String) -> void:
 	busy_turn = ""
 	if call.is_error():
 		effects.discard(turn_id)
-		if not _refund.is_empty():  # the attached spend did not reach the master: give the slot back
-			session.character.clear()
-			session.character.merge(_refund)
+		if not _refund.is_empty():  # the attached spend did not reach the master: give the slot back to whom spent it
+			var back := Gear.of(session, Catalog.data, str(_spender(_refund_what)["id"]))
+			back.clear()
+			back.merge(_refund)
 			_refund = {}
 			_retry_spend = _refund_what
 			_refund_what = {}

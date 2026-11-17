@@ -249,10 +249,7 @@ func _prep_list(c: Dictionary, data: Dictionary) -> int:
 	levels.sort()
 	for lv: Variant in levels:
 		_text(tr("DETAILS_CIRCLE").format({"n": int(lv)}), UiTheme.MUTED_LABEL)
-		var flow := HFlowContainer.new()
-		flow.add_theme_constant_override("h_separation", 12)
-		flow.add_theme_constant_override("v_separation", 8)
-		_box.add_child(flow)
+		var flow := UiParts.flow(_box, "", 12, 8)
 		for id: String in by_level[lv]:
 			flow.add_child(_prep_box(id, n, data))
 	return n
