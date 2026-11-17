@@ -35,7 +35,7 @@ func run() -> void:
 	await press(fish)
 	await frames(3)
 	var win: Control = find(screen(), "WildsView")
-	step("the window warns of no tackle", win.visible and _has_text(win, "Без снастей"))
+	step("the window warns of no tackle", win.visible and has_text(win, "Без снастей"))
 	await shot("fish_no_tackle")
 	win.visible = false
 
@@ -92,12 +92,3 @@ func run() -> void:
 		step("the hunt gave meat or a beast to fight", int(c["inventory"].get("raw_meat", 0)) > 0 or fought,
 			"мясо %d, бой %s" % [int(c["inventory"].get("raw_meat", 0)), fought])
 		await shot("hunt_done")
-
-
-func _has_text(root: Node, text: String) -> bool:
-	if root is Label and (root as Label).text.contains(text):
-		return true
-	for ch in root.get_children():
-		if _has_text(ch, text):
-			return true
-	return false

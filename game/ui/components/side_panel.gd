@@ -1092,19 +1092,21 @@ func _craft_row(s: GameSession, can_act: bool) -> void:
 ## Work (v0.7.26): a shift of each job whose employer is here, the employer's window by the right button.
 func _work_row(s: GameSession, can_act: bool) -> void:
 	var data := Catalog.data
+	var who := PartyLead.of(s)  # the shifts of the one the player leads (v0.8.4.44.15)
+	var c := Life.of(s, who)
 	var ids: Array[String] = []
-	for id: String in JobRules.state(s.character):
-		if JobRules.employer_here(s, data, id):
+	for id: String in JobRules.state(c):
+		if JobRules.employer_here(s, data, id, who):
 			ids.append(id)
 	if ids.is_empty():
 		return
 	var acts := _content
 	for id: String in ids:
 		var j := JobRules.job(s, data, id)
-		var b := _row_button(acts, tr("BTN_WORK_SHIFT").format({"name": JobRules.rank_name(s, data, id, JobRules.rank(s.character, id))}), _try.bind(GameState.job_act.bind("shift", id)), can_act and JobRules.shift_why(s, data, id).is_empty())
+		var b := _row_button(acts, tr("BTN_WORK_SHIFT").format({"name": JobRules.rank_name(s, data, id, JobRules.rank(c, id))}), _try.bind(GameState.job_act.bind("shift", id)), can_act and JobRules.shift_why(s, data, id, who).is_empty())
 		b.name = "WorkShift_" + id
 		b.tooltip_text = tr("BTN_WORK_SHIFT_TIP").format({"job": j.get("name", id), "time": TimeRules.span(JobRules.hours(s, data, id) * 60),
-			"chance": JobRules.shift_chance(s, data, id), "pay": Money.format(JobRules.pay(s, data, id))})
+			"chance": JobRules.shift_chance(s, data, id, who), "pay": Money.format(JobRules.pay(s, data, id, -1, who))})
 		var npc := str(j.get("employer", ""))
 		b.gui_input.connect(func(e: InputEvent) -> void:
 			if e is InputEventMouseButton and e.pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:

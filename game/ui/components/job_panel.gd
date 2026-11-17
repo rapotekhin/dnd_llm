@@ -43,7 +43,8 @@ func _rebuild() -> void:
 
 func _job(s: GameSession, data: Dictionary, id: String) -> void:
 	var j := JobRules.job(s, data, id)
-	var c := s.character
+	var who := PartyLead.of(s)  # the one the player leads is hired and works (v0.8.4.44.15)
+	var c := Life.of(s, who)
 	var row := HBoxContainer.new()
 	row.name = "Job_" + id
 	row.add_theme_constant_override("separation", 10)
@@ -59,10 +60,10 @@ func _job(s: GameSession, data: Dictionary, id: String) -> void:
 		check += " (" + tr("JOB_TOOL_HELPS").format({"tool": BackgroundRules.tool_name(data, str(j["tool"]))}) + ")"
 	var pays: Array[String] = []
 	for r in JobRules.top_rank(data) + 1:
-		pays.append("%s — %s" % [JobRules.rank_name(s, data, id, r), Money.format(JobRules.pay(s, data, id, r))])
+		pays.append("%s — %s" % [JobRules.rank_name(s, data, id, r), Money.format(JobRules.pay(s, data, id, r, who))])
 	UiParts.label(col, tr("JOB_META").format({"check": check, "time": TimeRules.span(JobRules.hours(s, data, id) * 60)}), UiTheme.MUTED_LABEL)
 	UiParts.label(col, tr("JOB_PAY").format({"list": ", ".join(pays)}), UiTheme.MUTED_LABEL)
-	var req := JobRules.requirements(s, data, id)
+	var req := JobRules.requirements(s, data, id, who)
 	if not req.is_empty():
 		var parts: Array[String] = []
 		for r: Dictionary in req:
@@ -74,17 +75,17 @@ func _job(s: GameSession, data: Dictionary, id: String) -> void:
 	buttons.add_theme_constant_override("separation", 6)
 	row.add_child(buttons)
 	if not JobRules.hired(c, id):
-		UiParts.label(col, tr("JOB_HIRE_CHANCE").format({"chance": JobRules.hire_chance(s, data, id), "dc": JobRules.hire_dc(s, data, id)}), UiTheme.MUTED_LABEL)
-		UiParts.act_button(buttons, "JobHire_" + id, tr("BTN_JOB_HIRE"), JobRules.hire_why(s, data, id), GameState.job_act.bind("hire", id))
+		UiParts.label(col, tr("JOB_HIRE_CHANCE").format({"chance": JobRules.hire_chance(s, data, id, who), "dc": JobRules.hire_dc(s, data, id)}), UiTheme.MUTED_LABEL)
+		UiParts.act_button(buttons, "JobHire_" + id, tr("BTN_JOB_HIRE"), JobRules.hire_why(s, data, id, who), GameState.job_act.bind("hire", id))
 		return
 	var st: Dictionary = JobRules.state(c)[id]
 	var line := tr("JOB_RANK").format({"rank": JobRules.rank_name(s, data, id, int(st["rank"])), "shifts": int(st.get("shifts", 0))})
 	if int(st["rank"]) < JobRules.top_rank(data):
-		line += " · " + tr("JOB_TO_PROMOTE").format({"n": int(st.get("good", 0)), "of": JobRules.promote_after(s, data)})
+		line += " · " + tr("JOB_TO_PROMOTE").format({"n": int(st.get("good", 0)), "of": JobRules.promote_after(s, data, who)})
 	UiParts.label(col, line)
-	UiParts.label(col, tr("JOB_SHIFT_CHANCE").format({"dc": JobRules.dc(s, data, id), "chance": JobRules.shift_chance(s, data, id)}), UiTheme.MUTED_LABEL)
+	UiParts.label(col, tr("JOB_SHIFT_CHANCE").format({"dc": JobRules.dc(s, data, id, who), "chance": JobRules.shift_chance(s, data, id, who)}), UiTheme.MUTED_LABEL)
 	UiParts.act_button(buttons, "JobShift_" + id, tr("BTN_JOB_SHIFT").format({"time": TimeRules.span(JobRules.hours(s, data, id) * 60)}),
-		JobRules.shift_why(s, data, id), GameState.job_act.bind("shift", id))
+		JobRules.shift_why(s, data, id, who), GameState.job_act.bind("shift", id))
 	var name := str(j.get("name", id))
 	var q := UiParts.act_button(buttons, "JobQuit_" + id, tr("BTN_JOB_QUIT"), "", func() -> String:
 		ConfirmBox.ask(self, tr("CONFIRM_JOB_QUIT_TITLE").format({"name": name}), tr("CONFIRM_JOB_QUIT"), tr("BTN_JOB_QUIT"),

@@ -20,6 +20,11 @@ static func of(s: GameSession, who: String, data: Dictionary = {}) -> Dictionary
 	return Being.of(s, who)
 
 
+## The head of a line of what `who` did: "" for the hero, «Имя: » for anybody else.
+static func by(s: GameSession, data: Dictionary, who: String) -> String:
+	return "" if who == Being.HERO else "%s: " % CreatureCard.name_of(s, data, Sheet.who(s, data, who))
+
+
 ## Where `who` is now: the hero's room, a person's by its hours.
 static func room(s: GameSession, data: Dictionary, who: String) -> String:
 	return s.room_id if who == Being.HERO else Where.npc_room(s, data, who)

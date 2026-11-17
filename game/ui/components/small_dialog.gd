@@ -168,8 +168,8 @@ func _wilds(s: GameSession, data: Dictionary) -> void:
 	row.add_child(count)
 	row.add_child(_step_button("HoursPlus", "+", hours >= int(span[1]), func() -> void: hours = mini(int(span[1]), hours + 1)))
 	_text(tr("WILDS_CHECK").format({"skill": CraftRules.tr_skill(data, str(d["skill"])), "dc": int(d["dc"]),
-		"bonus": "%+d" % int(Roll.odds(s, data, Sheet.HERO, WildsRules.spec(s, data, ground))["bonus"])}))
-	var g := WildsRules.gear(s, data, ground)
+		"bonus": "%+d" % int(Roll.odds(s, data, Sheet.who(s, data, PartyLead.of(s)), WildsRules.spec(s, data, ground, PartyLead.of(s)))["bonus"])}))
+	var g := WildsRules.gear(s, data, ground, PartyLead.of(s))
 	if not str(g["adv"]).is_empty():
 		_text(tr("WILDS_ADV").format({"item": g["adv"]}), UiTheme.MUTED_LABEL)
 	if not str(g["dis"]).is_empty():

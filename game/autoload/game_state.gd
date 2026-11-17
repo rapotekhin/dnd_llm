@@ -1971,7 +1971,8 @@ func craft_act(what: String, arg: String = "", hours: int = 1) -> String:
 
 
 ## Hunting or fishing (v0.7.41): `hours` at the room's ground of `kind` (WildsRules) — the time passes first (the
-## patrol may cut it), then the check and the catch; a big beast or a predator starts a fight.
+## patrol may cut it), then the check and the catch; a big beast or a predator starts a fight. By the one the player leads
+## (v0.8.4.44.15).
 func wilds_act(kind: String, hours: int) -> String:
 	if not _at_leisure():
 		return "CRAFT_NOT_NOW"
@@ -1985,7 +1986,7 @@ func wilds_act(kind: String, hours: int) -> String:
 	var spent := int(w["minutes"]) / 60
 	var fight: Array = []
 	if spent > 0:
-		var r := WildsRules.go(session, data, kind, spent)
+		var r := WildsRules.go(session, data, kind, spent, PartyLead.of(session))
 		lines.append_array(r["lines"])
 		fight = r["fight"]
 	_refresh()
@@ -2025,17 +2026,18 @@ func job_act(what: String, id: String) -> String:
 		return "JOB_NOT_NOW"
 	var data := Catalog.data
 	var s := session
+	var who := PartyLead.of(s)  # the one the player leads works (v0.8.4.44.15): JobRules is of anybody
 	var out := {"lines": [], "event": "", "fight": []}  # what a shift brings beside its lines
 	var why := _act(what, {
-		"hire": _row(JobRules.hire_why, JobRules.hire, [s, data, id]),
-		"shift": [JobRules.shift_why.bind(s, data, id), func() -> Array:  # the patrol may break the shift
+		"hire": _row(JobRules.hire_why, JobRules.hire, [s, data, id, who]),
+		"shift": [JobRules.shift_why.bind(s, data, id, who), func() -> Array:  # the patrol may break the shift
 			out["lines"] = _waited(JobRules.hours(s, data, id) * 60, func(m: int) -> Array:
-				var r := JobRules.shift(s, data, id, m)
+				var r := JobRules.shift(s, data, id, m, who)
 				out["event"] = str(r["event"])
 				out["fight"] = r["fight"]
 				return r["lines"])
 			return out["lines"]],
-		"quit": [func() -> String: return "" if JobRules.hired(s.character, id) else "JOB_NOT_HIRED", JobRules.quit.bind(s, data, id)],
+		"quit": [func() -> String: return "" if JobRules.hired(Life.of(s, who), id) else "JOB_NOT_HIRED", JobRules.quit.bind(s, data, id, who)],
 	}, "JOB_NOT_NOW")
 	if not why.is_empty():
 		return why

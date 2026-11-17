@@ -146,3 +146,47 @@ func run() -> void:
 	step("a dagger in its things", (smith["inventory"] as Dictionary).keys().any(func(id: String) -> bool:
 		return ItemRules.plain_of(data["items"], s.items, id) == "dagger"), str(smith["inventory"]))
 	await shot("mercenary_forged")
+
+	# Hunting and work by the one led (v0.8.4.44.15): the mercenary fishes with its own tackle, then works a shift at Bruno's
+	win.visible = false
+	s.settings["needs"] = false
+	ItemRules.add(smith, "fishing_tackle", 1)
+	s.room_id = "brod-river-yard"
+	s.minute = 8 * 60
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	var fish: Button = find(screen(), "Wilds_fish")
+	step("«Рыбачить» on the mercenary's panel", fish != null and not fish.disabled)
+	if fish == null:
+		return
+	await press(fish)
+	await frames(3)
+	var wilds: Control = find(screen(), "WildsView")
+	step("the window has no «без снастей» — the tackle is the mercenary's", wilds.visible and not has_text(wilds, "Без снастей"))
+	await shot("mercenary_fishing")
+	var hero_fish := int(s.character["inventory"].get("fresh_fish", 0))
+	await press(find(wilds, "DialogConfirm"))
+	await frames(4)
+	step("the catch in its things, not the hero's", int(smith["inventory"].get("fresh_fish", 0)) > 0
+		and int(s.character["inventory"].get("fresh_fish", 0)) == hero_fish, str(smith["inventory"]))
+	step("the chat names the mercenary", s.chat.any(func(e: Dictionary) -> bool:
+		return e["kind"] == GameSession.KIND_EFFECT and str(e.get("lines", [])).contains("Рыбалка") and str(e.get("lines", [])).contains(":")))
+	await shot("mercenary_caught")
+
+	s.room_id = "brod-tavern-hall"
+	s.minute = 12 * 60
+	JobRules.state(smith)["serve_tables"] = {"rank": 0, "good": 0, "shifts": 0}
+	node("EventBus").state_changed.emit()
+	await frames(4)
+	var shift: Button = find(screen(), "WorkShift_serve_tables")
+	step("«Смена» of the mercenary's own job on the panel", shift != null and not shift.disabled, shift.tooltip_text if shift != null else "")
+	if shift == null:
+		return
+	var merc_cp := Ledger.balance(s, "npc_mercenary")
+	var hero_cp := Ledger.balance(s)
+	await press(shift)
+	await wait_until(func() -> bool: return not gs.is_busy(), 60.0)
+	await frames(4)
+	step("paid into its purse, not the hero's", Ledger.balance(s, "npc_mercenary") > merc_cp and Ledger.balance(s) == hero_cp,
+		"%d → %d, герой %d → %d" % [merc_cp, Ledger.balance(s, "npc_mercenary"), hero_cp, Ledger.balance(s)])
+	await shot("mercenary_shift")

@@ -188,6 +188,16 @@ func find(from: Node, node_name: String) -> Node:
 
 
 ## A button whose text (as shown, translated) is `text`.
+## Whether a label under `root` holds `text`.
+func has_text(root: Node, text: String) -> bool:
+	if root is Label and (root as Label).text.contains(text):
+		return true
+	for ch in root.get_children():
+		if has_text(ch, text):
+			return true
+	return false
+
+
 func find_button_by_text(from: Node, text: String) -> Button:
 	for b in from.find_children("*", "Button", true, false):
 		if (b as Button).text == text or tr((b as Button).text) == text:

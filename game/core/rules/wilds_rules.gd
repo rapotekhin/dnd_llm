@@ -116,22 +116,23 @@ static func why_not(s: GameSession, data: Dictionary, k: String) -> String:
 	return ""
 
 
-static func _has(s: GameSession, ids: Array) -> String:
+static func _has(s: GameSession, data: Dictionary, ids: Array, who: String) -> String:
+	var c := Life.of(s, who, data)
 	for id: Variant in ids:
-		if int(s.character.get("inventory", {}).get(str(id), 0)) > 0:
+		if int(c.get("inventory", {}).get(str(id), 0)) > 0:
 			return str(id)
 	return ""
 
 
-## The gear of the kind: {adv: the item's name or "", dis: "" or why}.
-static func gear(s: GameSession, data: Dictionary, k: String) -> Dictionary:
+## The gear of the kind: {adv: the item's name or "", dis: "" or why} — in the things of `who` (the one led, v0.8.4.44.15).
+static func gear(s: GameSession, data: Dictionary, k: String, who: String = Being.HERO) -> Dictionary:
 	var d := kind(data, k)
 	var out := {"adv": "", "dis": ""}
-	var a := _has(s, d.get("gear_adv", []))
+	var a := _has(s, data, d.get("gear_adv", []), who)
 	if not a.is_empty():
 		out["adv"] = ItemRules.display_name(data["items"], s.items, a)
 	var need: Array = d.get("gear_needed", [])
-	if not need.is_empty() and _has(s, need).is_empty():
+	if not need.is_empty() and _has(s, data, need, who).is_empty():
 		out["dis"] = "без снастей"
 	return out
 
@@ -153,12 +154,12 @@ static func _predator(s: GameSession, data: Dictionary) -> String:
 	return "" if list.is_empty() else str(list[s.rng.randi_range(0, list.size() - 1)])
 
 
-static func _give(s: GameSession, data: Dictionary, got: Dictionary, item: String, qty: int) -> void:
+static func _give(s: GameSession, data: Dictionary, got: Dictionary, item: String, qty: int, who: String) -> void:
 	if qty <= 0 or not data["items"]["catalog"].has(item):
 		return
 	if FoodRules.spoils_days(data, s.items, item) > 0:  # food: twice in the favored terrain (Natural Explorer, v0.8.4.43.46)
-		qty *= FeatureRules.forage_mult(s, data)
-	ItemRules.add(s.character, item, qty)
+		qty *= FeatureRules.forage_mult(s, data, Sheet.who(s, data, who))
+	ItemRules.add(Life.of(s, who, data), item, qty)
 	got[item] = int(got.get(item, 0)) + qty
 
 
@@ -167,22 +168,23 @@ static func _foe(data: Dictionary, monster: String, desc: String) -> Dictionary:
 	return {"monster": monster, "name": str(data["monsters"].get(monster, {}).get("name", monster)), "desc": desc}
 
 
-## The check of a hunt or a fishing for Roll.hero and the window: Survival against the ground's DC with what the gear gives
-## (a dog on the trail is CheckEngine's).
-static func spec(s: GameSession, data: Dictionary, k: String) -> Dictionary:
+## The check of a hunt or a fishing of `who` for Roll.check and the window: Survival against the ground's DC with what
+## its gear gives (a dog on the trail is CheckEngine's).
+static func spec(s: GameSession, data: Dictionary, k: String, who: String = Being.HERO) -> Dictionary:
 	var d := kind(data, k)
-	var g := gear(s, data, k)
+	var g := gear(s, data, k, who)
 	return {"what": str(d["name"]), "skill": str(d["skill"]), "dc": int(d["dc"]), "adv_why": str(g["adv"]), "dis_why": str(g["dis"])}
 
 
 ## A hunt or a fishing of `hours` (the caller passes the time): the Survival check rolled here, the catch by its margin
-## and the tries of the hours within the stock. {lines, fight: [foes], crime: bool}.
-static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dictionary:
+## and the tries of the hours within the stock. {lines, fight: [foes], crime: bool}. `who` hunts: the hero or the one the
+## player leads (v0.8.4.44.15) — its check, its gear, the catch in its things, the poaching its crime.
+static func go(s: GameSession, data: Dictionary, k: String, hours: int, who: String = Being.HERO) -> Dictionary:
 	var d := kind(data, k)
 	var c := cfg(data)
 	var skill := str(d["skill"])
 	var dc := int(d["dc"])
-	var r := Roll.hero(s, data, spec(s, data, k))
+	var r := Roll.check(s, data, Sheet.who(s, data, who), spec(s, data, k, who))
 	var nat := int(r["nat"])
 	var b := int(r["bonus"])
 	var ok := bool(r["ok"])
@@ -191,7 +193,7 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 	var how: Array[String] = []
 	how.append_array(r["adv"])
 	how.append_array(r["dis"])
-	lines.append(Activity.line("%s, %d ч" % [d["name"], hours], CraftRules.tr_skill(data, skill), r, "успех" if ok else "провал",
+	lines.append(Life.by(s, data, who) + Activity.line("%s, %d ч" % [d["name"], hours], CraftRules.tr_skill(data, skill), r, "успех" if ok else "провал",
 		" (%s)" % ", ".join(how) if not how.is_empty() else ""))
 	var left := stock(s, data, k)
 	if ok:
@@ -213,22 +215,23 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 					break
 				if beast.has("monster"):
 					var m: Dictionary = data["monsters"].get(str(beast["monster"]), {})
-					_give(s, data, got, "raw_meat", CraftRules.meat(data, m))
-					_give(s, data, got, "raw_hide", CraftRules.hides(data, m))
+					_give(s, data, got, "raw_meat", CraftRules.meat(data, m), who)
+					_give(s, data, got, "raw_hide", CraftRules.hides(data, m), who)
 				for item: String in beast.get("yield", {}):
-					_give(s, data, got, item, int(beast["yield"][item]))
+					_give(s, data, got, item, int(beast["yield"][item]), who)
 			else:
 				for item: String in d["yield"]:
-					_give(s, data, got, item, int(d["yield"][item]))
+					_give(s, data, got, item, int(d["yield"][item]), who)
 		_put_stock(s, k, s.room_id, left - spent)
 		var got_parts: Array[String] = []
 		for item: String in got:
 			got_parts.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, item), int(got[item])])
 		if not got_parts.is_empty():
-			lines.append("Добыто: %s" % ", ".join(got_parts))
-			if FeatureRules.forage_mult(s, data) > 1:
+			lines.append("%sДобыто: %s" % [Life.by(s, data, who), ", ".join(got_parts)])
+			if FeatureRules.forage_mult(s, data, Sheet.who(s, data, who)) > 1:
 				lines.append("Исследователь природы: еды вдвое больше")
-		CharacterRules.refresh(s.character, data, s.items)
+		if who == Being.HERO:
+			CharacterRules.refresh(s.character, data, s.items)
 		if k == "hunt" and FactionRules.friendly(s, data, str(FactionRules.cfg(data)["by_type"]["beast"])):  # v0.7.50: a friend of the beasts hunts them
 			lines.append_array(WorldEvent.standing(s, data, str(FactionRules.cfg(data)["by_type"]["beast"]), "hunt", "охота"))
 	else:
@@ -244,7 +247,7 @@ static func go(s: GameSession, data: Dictionary, k: String, hours: int) -> Dicti
 		if not npcs.is_empty() or s.rng.randi_range(1, 100) <= int(c["poach"]["seen_pct"]):
 			out["crime"] = true
 			lines.append("Браконьерство в угодьях %s замечено" % WorldView.name_of(data, o))
-			lines.append_array(CrimeRules.on_job(s, data, str(c["poach"]["crime"]), o, s.room_id, WorldView.new(data["world"]).location_id(s.room_id)))
+			lines.append_array(CrimeRules.on_job(s, data, str(c["poach"]["crime"]), o, s.room_id, WorldView.new(data["world"]).location_id(s.room_id), who))
 	return out
 
 

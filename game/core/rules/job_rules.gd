@@ -149,7 +149,7 @@ static func hire(s: GameSession, data: Dictionary, id: String, who: String = Bei
 		lines.append("%s: берут без расспросов — добрая слава" % name)
 	else:
 		var r := EncounterRules.roll(s, data, str(cfg(data)["hire"]["skill"]), hire_dc(s, data, id), false, who, str(job(s, data, id).get("employer", "")))
-		lines.append("%s: %s" % [name, r["line"]])
+		lines.append("%s%s: %s" % [Life.by(s, data, who), name, r["line"]])
 		if not bool(r["ok"]):
 			if not (c.get("jobs_tried") is Dictionary):
 				c["jobs_tried"] = {}
@@ -157,13 +157,13 @@ static func hire(s: GameSession, data: Dictionary, id: String, who: String = Bei
 			lines.append("Не взяли — можно попробовать снова завтра")
 			return lines
 	state(c)[id] = {"rank": 0, "good": 0, "shifts": 0}
-	lines.append("Нанят: %s — %s, %s за смену" % [rank_name(s, data, id, 0), name, Money.format(pay(s, data, id, -1, who))])
+	lines.append("%sНанят: %s — %s, %s за смену" % [Life.by(s, data, who), rank_name(s, data, id, 0), name, Money.format(pay(s, data, id, -1, who))])
 	return lines
 
 
 static func quit(s: GameSession, data: Dictionary, id: String, who: String = Being.HERO) -> Array[String]:
 	state(Life.of(s, who, data)).erase(id)
-	return ["Ушёл с работы: %s" % job(s, data, id).get("name", id)]
+	return ["%sУшёл с работы: %s" % [Life.by(s, data, who), job(s, data, id).get("name", id)]]
 
 
 ## "" when a shift may go now, else a localization key.
@@ -251,7 +251,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int, wh
 	if minutes < full:
 		var part := broken_off(pay(s, data, id, -1, who), minutes, full)
 		Ledger.add(s, part, "job:shift", who)
-		lines.append("Смена прервана: %s" % Money.format(part))
+		lines.append("%sСмена прервана: %s" % [Life.by(s, data, who), Money.format(part)])
 		return {"lines": lines, "event": "", "fight": []}
 	var a := Activity.attempt(s, data, shift_spec(s, data, id, who), who)
 	var o: Dictionary = a["step"]
@@ -260,7 +260,7 @@ static func shift(s: GameSession, data: Dictionary, id: String, minutes: int, wh
 	var tips := int(e["tips"])
 	Ledger.add(s, got + tips, "job:shift", who)
 	st["shifts"] = int(st.get("shifts", 0)) + 1
-	lines.append(str(a["line"]))
+	lines.append(Life.by(s, data, who) + str(a["line"]))
 	lines.append("Плата: %s%s" % [Money.format(got), (", чаевые %s" % Money.format(tips)) if tips > 0 else ""])
 	var employer := str(j.get("employer", ""))
 	if int(o.get("attitude", 0)) < 0 and not bool(DevelopmentRules.effect(c, data, "work", "no_attitude_loss", false)):

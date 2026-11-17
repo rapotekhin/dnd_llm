@@ -397,7 +397,7 @@ static func start(s: GameSession, data: Dictionary, id: String, who: String = Be
 	if r.has("output_def"):  # a new thing of a template (an elemental blade): known to the session from the start
 		s.items[str(r["output"])] = r["output_def"]
 	c["craft"] = Progress.of_work(total).merged({"recipe": id})
-	return ["%sНачата работа: %s (%s); ушло: %s" % [_by(s, data, who), _name(s, data, r, id), TimeRules.span(total), ", ".join(spent)]]
+	return ["%sНачата работа: %s (%s); ушло: %s" % [Life.by(s, data, who), _name(s, data, r, id), TimeRules.span(total), ", ".join(spent)]]
 
 
 ## "" when a shift of work may go here, else a localization key.
@@ -450,7 +450,7 @@ static func worked(s: GameSession, data: Dictionary, minutes: int, who: String =
 	if Progress.add(p, minutes):
 		lines.append_array(finish(s, data, who))
 	else:
-		lines.append("%sРабота: %s — %d%%, осталось %s" % [_by(s, data, who), _name(s, data, r, str(p["recipe"])), progress(c), TimeRules.span(Progress.left(p))])
+		lines.append("%sРабота: %s — %d%%, осталось %s" % [Life.by(s, data, who), _name(s, data, r, str(p["recipe"])), progress(c), TimeRules.span(Progress.left(p))])
 	return lines
 
 
@@ -522,7 +522,7 @@ static func finish(s: GameSession, data: Dictionary, who: String = Being.HERO) -
 	if who == Being.HERO:
 		CharacterRules.refresh(c, data, s.items)
 	var made_as := str(tier["name"]) if not str(tier["name"]).is_empty() else "обычная работа"
-	var line := _by(s, data, who) + Activity.line(check_label(data, r), "", a["roll"], made_as)
+	var line := Life.by(s, data, who) + Activity.line(check_label(data, r), "", a["roll"], made_as)
 	var what := ItemRules.display_name(data["items"], s.items, str(made["id"]))
 	var lines: Array[String] = [line, "Готово: %s%s" % [what, " ×%d" % int(made["qty"]) if int(made["qty"]) > 1 else ""]]
 	lines.append_array(DevelopmentRules.add_xp(c, data, dir_of(r), xp_for(s, data, r)))
@@ -557,14 +557,10 @@ static func abandon(s: GameSession, data: Dictionary, who: String = Being.HERO) 
 	if p.is_empty():
 		return []
 	c.erase("craft")
-	return ["%sРабота брошена: %s" % [_by(s, data, who), _name(s, data, recipe(s, data, str(p["recipe"]), who), str(p["recipe"]))]]
+	return ["%sРабота брошена: %s" % [Life.by(s, data, who), _name(s, data, recipe(s, data, str(p["recipe"]), who), str(p["recipe"]))]]
 
 
 ## «Кейра: » before a line of one who is not the hero; "" for the hero.
-static func _by(s: GameSession, data: Dictionary, who: String) -> String:
-	return "" if who == Being.HERO else "%s: " % CreatureCard.name_of(s, data, Sheet.who(s, data, who))
-
-
 ## A recipe's name read from the recipe itself (a template's is of the one who sees it).
 static func _name(s: GameSession, data: Dictionary, r: Dictionary, id: String) -> String:
 	return str(r["name"]) if r.has("name") else recipe_name(s, data, id)
@@ -644,7 +640,7 @@ static func salvage(s: GameSession, data: Dictionary, item_id: String, who: Stri
 		parts.append("%s ×%d" % [ItemRules.display_name(data["items"], s.items, m), int(got[m])])
 	if who == Being.HERO:
 		CharacterRules.refresh(c, data, s.items)
-	var lines: Array[String] = ["%sРазобрано: %s → %s" % [_by(s, data, who), name, ", ".join(parts)]]
+	var lines: Array[String] = ["%sРазобрано: %s → %s" % [Life.by(s, data, who), name, ", ".join(parts)]]
 	if magic:
 		lines.append_array(DevelopmentRules.add_xp(c, data, "artifice", int(DevelopmentRules.direction(data, "artifice").get("sources", {}).get("salvage", 0))))
 	return lines
@@ -711,7 +707,7 @@ static func gather(s: GameSession, data: Dictionary, tag: String, who: String = 
 	var nat := int(ro["nat"])
 	var b := int(ro["bonus"])
 	var ok := bool(ro["ok"])
-	var lines: Array[String] = [_by(s, data, who) + Activity.line(str(g["name"]), tr_skill(data, skill), ro, "успех" if ok else "провал")]
+	var lines: Array[String] = [Life.by(s, data, who) + Activity.line(str(g["name"]), tr_skill(data, skill), ro, "успех" if ok else "провал")]
 	if not ok:
 		lines.append("Ничего толкового не нашлось")
 		return lines

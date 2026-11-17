@@ -158,3 +158,41 @@ func test_the_led_salvages_and_gathers_into_its_own_things() -> void:
 	assert_str(GameState.craft_act("salvage", "dagger")).is_empty()
 	assert_int(int(merc["inventory"].get("iron_bar", 0))).is_greater(iron)
 	assert_int(int(s.character["inventory"].get("iron_bar", 0))).is_equal(hero_iron)
+
+
+## Hunting and work by the one led (the author: «Охота и работа», v0.8.4.44.15): its check, gear, catch and pay.
+func test_the_led_fishes_with_its_own_tackle_into_its_own_things() -> void:
+	var s := GameState.session
+	s.settings["needs"] = false
+	s.room_id = "brod-river-yard"
+	s.minute = 8 * 60
+	var merc := Life.of(s, "npc_mercenary", data)
+	GameState.lead("npc_mercenary")
+	assert_str(str(WildsRules.gear(s, data, "fish")["dis"])).is_not_empty()  # the hero has no tackle
+	assert_str(str(WildsRules.gear(s, data, "fish", "npc_mercenary")["dis"])).is_not_empty()
+	ItemRules.add(merc, "fishing_tackle", 1)
+	assert_str(str(WildsRules.gear(s, data, "fish", "npc_mercenary")["dis"])).is_empty()
+	var hero_fish := int(s.character["inventory"].get("fresh_fish", 0))
+	assert_str(GameState.wilds_act("fish", 2)).is_empty()
+	assert_int(int(merc["inventory"].get("fresh_fish", 0))).is_greater(0)
+	assert_int(int(s.character["inventory"].get("fresh_fish", 0))).is_equal(hero_fish)
+
+
+func test_the_led_is_hired_and_paid_into_its_own_purse() -> void:
+	var s := GameState.session
+	s.room_id = "brod-tavern-hall"
+	s.minute = 12 * 60
+	var merc := Life.of(s, "npc_mercenary", data)
+	GameState.lead("npc_mercenary")
+	for i in 30:  # its own interview by its own Persuasion, tried again on the next day
+		if JobRules.hired(merc, "serve_tables"):
+			break
+		assert_str(GameState.job_act("hire", "serve_tables")).is_empty()
+		merc.erase("jobs_tried")
+	assert_bool(JobRules.hired(merc, "serve_tables")).is_true()
+	assert_bool(JobRules.hired(s.character, "serve_tables")).is_false()
+	var hero_cp := Ledger.balance(s)
+	var merc_cp := Ledger.balance(s, "npc_mercenary")
+	assert_str(GameState.job_act("shift", "serve_tables")).is_empty()
+	assert_int(Ledger.balance(s, "npc_mercenary")).is_greater(merc_cp)
+	assert_int(Ledger.balance(s)).is_equal(hero_cp)
