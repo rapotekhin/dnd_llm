@@ -554,7 +554,7 @@ def report_markdown(model_id: str, judge_id: str | None, outcomes: list[Outcome]
 
 
 async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, repeat: int = 1,
-                  route: bool = False, provider: str = "") -> tuple[list[Outcome], Path]:
+                  route: bool = False, provider: str = "", jobs: int = 32) -> tuple[list[Outcome], Path]:
     import os
 
     from dotenv import load_dotenv
@@ -573,16 +573,20 @@ async def run_all(model_id: str, judge_id: str | None, only: set[str] | None, re
         PINNED.set(provider)
     model = make(model_id)
     judge_model = make(judge_id) if judge_id else None
-    outcomes = []
-    for n in range(repeat):
-        for sc in load_scenarios():
-            if only and sc["id"] not in only:
-                continue
+    # every scenario is its own turn with its own MockEngine: `jobs` of them at once (the author: «мы же можем их запускать
+    # в параллель, по 100 прогонов, это же просто промты в опенроутер»), the report in the scenarios' own order
+    todo = [(n, sc) for n in range(repeat) for sc in load_scenarios() if not only or sc["id"] in only]
+    gate = asyncio.Semaphore(max(1, jobs))
+
+    async def one(n: int, sc: dict[str, Any]) -> Outcome:
+        async with gate:
             o = await run_one(sc, model, model_id, judge_model, catalog, route)
-            if repeat > 1:
-                o.id = f"{o.id}#{n + 1}"
-            print(f"{o.status:12} {o.id:34} {o.seconds:5.1f}s  ${o.cost_usd:.4f}  {o.route + '  ' if o.route else ''}{'; '.join(o.fails)[:120]}", flush=True)
-            outcomes.append(o)
+        if repeat > 1:
+            o.id = f"{o.id}#{n + 1}"
+        print(f"{o.status:12} {o.id:34} {o.seconds:5.1f}s  ${o.cost_usd:.4f}  {o.route + '  ' if o.route else ''}{'; '.join(o.fails)[:120]}", flush=True)
+        return o
+
+    outcomes = list(await asyncio.gather(*(one(n, sc) for n, sc in todo)))
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     stem = f"{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{re.sub(r'[^A-Za-z0-9._-]+', '_', model_id)}"
     (OUT_DIR / f"{stem}.json").write_text(json.dumps([o.__dict__ for o in outcomes], ensure_ascii=False, indent=2), encoding="utf-8")
@@ -605,12 +609,13 @@ def main() -> None:
     parser.add_argument("--route", action="store_true", help="the game's way: the router and the short prompt (v0.7.20.4)")
     parser.add_argument("--repeat", type=int, default=1, help="run every scenario N times (models are not deterministic)")
     parser.add_argument("--provider", default="", help="pin the OpenRouter provider tag of the master's model (e.g. relace); the judge goes its own way")
+    parser.add_argument("--jobs", type=int, default=32, help="scenarios at once: each is its own requests to OpenRouter")
     opts = parser.parse_args()
     from .config import DEFAULT_MODEL
 
     model_id = opts.model or os.environ.get("LLM_SERVER_MODEL") or DEFAULT_MODEL
     only = {s.strip() for s in opts.only.split(",") if s.strip()} or None
-    outcomes, md = asyncio.run(run_all(model_id, None if opts.no_judge else opts.judge, only, opts.repeat, opts.route, opts.provider))
+    outcomes, md = asyncio.run(run_all(model_id, None if opts.no_judge else opts.judge, only, opts.repeat, opts.route, opts.provider, opts.jobs))
     print(f"\nreport: {md}")
     sys.exit(1 if any(o.status in ("fail", "error") for o in outcomes) else 0)
 

@@ -90,9 +90,10 @@ cd llm_server
 uv run python -m llm_server.golden                                   # модель по умолчанию, судья google/gemini-3.8-flash
 uv run python -m llm_server.golden --model qwen/qwen3.8-27b --only item_dedupe,trap_damage_severity
 uv run python -m llm_server.golden --no-judge                       # только жёсткие проверки
+uv run python -m llm_server.golden --jobs 100                       # сто сценариев разом (по умолчанию 32)
 ```
 
-Нужен `OPENROUTER_API_KEY` (env или корневой `.env`). Прогон всех сценариев стоит 2–5 центов, идёт 2–4 минуты. Не в CI.
+Нужен `OPENROUTER_API_KEY` (env или корневой `.env`). Не в CI. Сценарии идут разом (`--jobs`, по умолчанию 32, 2026-11-18): у каждого свой ход и свой mock-движок, отчёт — в порядке набора. Все 289 при `--jobs 100` проходят за 2–3 минуты (по одному — около часа), DeepSeek стоит около $0.35, qwen3.8-27b — $0.5. В Git Bash на Windows вывод в файл — с `PYTHONIOENCODING=utf-8`, иначе строка нарушения в cp1251 роняет раннер.
 
 1. Раннер собирает ход из базы и сценария. Формат v1 (до протокола 0.2.0) переводится в `TurnRequestParams` адаптером `to_turn_params`: отношение словами → число, зацепки-объекты → текст, видимые предметы → в описание комнаты, «ступень» `setback` → `unpleasant`.
 2. Настоящий агент хода (те же промпты и инструменты, что в игре) играет против mock-движка: ответы на `engine.*` берутся из блока `engine`, все вызовы записываются.
@@ -104,6 +105,18 @@ uv run python -m llm_server.golden --no-judge                       # тольк
 Офлайн-тесты раннера (адаптер, проверки, прогон на `FunctionModel`) — `llm_server/tests/test_golden_runner.py`, в CI.
 
 **Мир пакета в снимке (v0.8.4.44.8).** `snapshot.world` сценария (`name`, `lore`, `tone`, `magic`, `closed`, `dream`) ложится поверх мира из `settings`, `scene.boundless` — в сцену. Раньше раннер брал мир только из `settings` и молча выбрасывал остальное: первый прогон сценариев сна шёл без строк «мир закрыт» и «здесь создают без ограничений».
+
+## DeepSeek и qwen3.8-27b (2026-11-18, v0.8.4.44.16, 289 сценариев × 1)
+
+| Модель | Прошли | Жёсткие | Рубрика | Цена | Медиана хода | Вывод, токенов |
+|---|---|---|---|---|---|---|
+| `deepseek/deepseek-v4.1-flash-1017` (Wafer) | **251/289 (87%)** | 267/289 | 336/363 | $0.353 | 15.7 с | 276 тыс. |
+| `qwen/qwen3.8-27b` | 190/289 (66%), 2 ошибки | 224/287 | 262/350 | $0.509 | 24.6 с | 161 тыс. |
+
+- Qwen проваливает 80 сценариев, которые DeepSeek проходит, — больше всего понятия движка (`concepts`, 37), последствия, общение, правила. Две ошибки — `UsageLimitExceeded` (12 запросов) в ходах `quest_act`. При вдвое меньшем выводе он дороже: выход у него $2.2 за миллион против $0.5.
+- DeepSeek проваливает 19, которые Qwen проходит (`combat_round_narration`, `combat_parley_words`, `invisible_not_noticed`, `language_npc_no_common_tongue`, …), — один прогон, разброс модели ±2 не отделён.
+- Оба проваливают 19: `inspect_hook_needs_check`, `talk_to_present_npc`, `retry_blocked`, `trade_words_no_effects`, `read_prop_text`, `combat_told_once`, `rules_question_ac`, `magic_find_ring_of_bless`, `rumors_only_from_the_world`, `disease_sewer_rat_bite`, `condition_ghost_fear`, `compose_tame_a_cub`, `quest_npc_gives_work`, `quest_existing_not_made_again`, `quest_act_finale_boss_and_choice`, `goal_hint_from_the_guard`, `teacher_asked_directly`, `guise_refused_without_a_spell`, `place_room_joined_to_a_building` — скорее промпт или сам сценарий, чем модель.
+- Модель по умолчанию остаётся DeepSeek (ADR-0011): Qwen хуже по качеству, дороже и медленнее.
 
 ## Замечания автора к обучению (2026-11-16, v0.8.4.44.9, DeepSeek, × 3)
 
