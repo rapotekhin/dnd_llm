@@ -55,6 +55,7 @@ from .protocol import (
     effect_line,
     item_shape,
     effect_tag,
+    untag,
     ItemProperty,
     LookupKind,
     SceneNpc,
@@ -331,7 +332,7 @@ async def propose_effect(ctx: RunContext[TurnContext], effect: EffectArg) -> str
     t = ctx.deps
     if isinstance(effect, dict):
         try:
-            effect = _EFFECT.validate_python(effect)
+            effect = _EFFECT.validate_python(untag(effect))
         except ValidationError as exc:
             return _schema_refusal(t, exc)
     if (effect.kind == "letter_reply") != (t.params.kind == "letter") and effect.kind != "note":  # v0.7.48: the answer to a letter
@@ -532,7 +533,7 @@ def _effect_kinds(only: set[str] | None = None) -> str:
 
 async def propose_effect_loose(ctx: RunContext[TurnContext], effect: str) -> str:
     try:
-        checked = _EFFECT.validate_python(_json_object(effect))
+        checked = _EFFECT.validate_python(untag(_json_object(effect)))
     except ValidationError as exc:
         return _schema_refusal(ctx.deps, exc)
     return await propose_effect(ctx, checked)

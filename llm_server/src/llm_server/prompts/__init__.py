@@ -249,9 +249,11 @@ def auto_topics(mode: str, snap: Snapshot, said: str = "") -> list[str]:
     return [k for k, t in TOPICS.items() if (t.alone is not None and t.alone(mode, snap, said)) or _named(t, snap, said)]
 
 
-def wants_full(snap: Snapshot, said: str) -> bool:
-    """The player's words name a topic that goes with an effect (a rumour told goes into the journal, v0.7.47): the full prompt."""
-    return any(t.full is not None and t.full(snap) and _named(t, snap, said) for t in TOPICS.values())
+def wants_full(snap: Snapshot, said: str, mode: str = "exploration") -> bool:
+    """The player's words name a topic that goes with an effect (a rumour told goes into the journal, v0.7.47), or the
+    scene puts it in by itself (a guise with no look named waits for one, v0.8.4.44.18): the full prompt."""
+    return any(t.full is not None and t.full(snap) and (_named(t, snap, said) or (t.alone is not None and t.alone(mode, snap, said)))
+               for t in TOPICS.values())
 
 
 # Rules of a topic (prompts/topics/<key>.md.j2, v0.7.20.4): out of the system prompt, read by the master with the tool
@@ -266,12 +268,13 @@ TOPICS: dict[str, Topic] = {
     "items": Topic("новый предмет (`move_item.item`): жезлы, свитки, зелья, вещи с текстом; магические вещи, неопознанные и проклятые; вещь, что даёт полёт, плавание, лазание или призывает существ (`wear`, `use.summon`)", (),
                    words=FIND_WORDS, gate=lambda snap: bool(snap.scene and snap.scene.hooks), alone=_making),
     "places": Topic("новое место: на открытом краю мира или объект внутри локации — лавка за городом, баня у площади (`create:place`)", ("create:place",),
-                   words=PLACE_WORDS, gate=lambda snap: bool(snap.scene and snap.scene.open_edges)),
+                   words=PLACE_WORDS,  # v0.8.4.44.18: no gate of open edges — a bathhouse or a bakery is made inside a location too
+                   full=lambda snap: True),  # and a place named is made by an effect: the full prompt
     "crime": Topic("преступления героя: убитые, розыск, стража, признание (`crime:known`)", ("crime:known", "crime:release"),
                    alone=lambda mode, snap, said: bool(snap.crimes)),
     "social": Topic("что NPC даёт словами: скидка, услуга даром, тайна, идёт с героем, пускает к себе, слава в поселении "
                "(`grant:discount`, `grant:favor`, `grant:secret`, `grant:follow`, `grant:permit`, `grant:cure`, `shift:reputation`)",
-               ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "grant:cure", "shift:reputation"),
+               ("grant:discount", "grant:favor", "grant:secret", "grant:follow", "grant:permit", "grant:cure"),  # shift:reputation: whole in _rules (v0.8.4.44.18)
                    alone=lambda mode, snap, said: mode in ("social", "trade")),
     "goals": Topic("замысел игрока, которого нет готовым; высокая цель; `missing_concept`", (),
                    words=goal_words, full=lambda snap: True),
@@ -312,7 +315,8 @@ TOPICS: dict[str, Topic] = {
     "faith": Topic("вера: боги, святилища, молитва, обет, заповедь, осквернение; обет по словам героя (`vow`), новое святилище (`create:god`)", ("vow", "create:god"),
                    words=FAITH_WORDS),
     "guise": Topic("чужой облик: маскировка, кем выглядит герой, за кого его принимают", ("guise",),
-                   alone=lambda mode, snap, said: bool(snap.character and snap.character.guise)),
+                   alone=lambda mode, snap, said: bool(snap.character and snap.character.guise),
+                   full=lambda snap: bool(snap.character and "облик не назван" in snap.character.guise)),  # Guise.text_of: the look waits for an effect
     "make": Topic("нового нет в данных и в 5e: мастер собирает из частей (`make`) статус, навык, черту, заклинание, способность с зарядами, свойство вещи, жидкость (питьё, яд на клинок, бросок): проклятие, благословение места, редкое умение наставника, неведомое заклинание, свиток или трактат о нём", ("make",),
                    words=MAKE_WORDS, alone=_making),
     "factions": Topic("фракции: новая фракция, чьи это люди и стража, отношение за поступок (`create:faction`)", ("create:faction", "shift:standing"),

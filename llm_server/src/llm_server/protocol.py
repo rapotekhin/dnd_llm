@@ -2129,6 +2129,18 @@ def effect_tag(e: dict[str, Any]) -> str:
     return f"{e['kind']}:{e['what']}" if e.get("what") and e["kind"] != "make" else str(e["kind"])
 
 
+def untag(e: Any) -> Any:
+    """An effect written by its one name (`create:npc`, `shift:attitude`, `move_item:world>hero` — as the prompts speak
+    it) back into its fields: the inverse of effect_tag (v0.8.4.44.18: DeepSeek wrote the name and paid a refusal for it)."""
+    if not isinstance(e, dict) or ":" not in str(e.get("kind", "")):
+        return e
+    kind, _, rest = str(e["kind"]).partition(":")
+    if kind == "move_item" and ">" in rest:
+        source, _, target = rest.partition(">")
+        return {**e, "kind": kind, "source": e.get("source", source), "target": e.get("target", target)}
+    return {**e, "kind": kind, "what": e.get("what", rest)}
+
+
 def effect_classes(ann: Any = Effect) -> list[type]:
     """Every effect model, the members of a kind one by one."""
     if isinstance(ann, type):

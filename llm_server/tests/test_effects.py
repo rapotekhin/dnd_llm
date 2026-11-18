@@ -81,3 +81,15 @@ def test_a_made_thing_carries_what_it_lays_while_worn_and_what_it_calls():
         MoveItemEffect.model_validate({"source": "world", "target": "hero", "item": {**ITEM, "use": {"summon": {"monster": "wolf", "count": 30}}}})
     topic = (Path(prompts.__file__).parent / "topics" / "items.md.j2").read_text(encoding="utf-8")
     assert "`summon`" in topic and "`wear`" in topic
+
+
+def test_an_effect_written_by_its_tag_is_read_by_its_fields():
+    """v0.8.4.44.18: the prompts name effects `create:npc`, `shift:attitude`; the master wrote them so and paid a refusal."""
+    from llm_server.protocol import effect_tag, untag
+
+    for tagged in ({"kind": "shift:attitude", "npc_id": "npc_x", "delta": 2, "reason": "спас"},
+                   {"kind": "move_item:world>hero", "item_id": "dagger"},
+                   {"kind": "shift:reputation", "delta": 2, "reason": "спас"}):
+        e = untag(tagged)
+        assert ":" not in e["kind"] and effect_tag(e) == tagged["kind"]
+    assert untag({"kind": "coins", "delta_cp": 1}) == {"kind": "coins", "delta_cp": 1}

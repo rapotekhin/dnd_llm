@@ -28,7 +28,8 @@ ROUTER_SYSTEM = (
     "или нужен полный (правила, проверки, эффекты).\n"
     "Полный (full = true), если ответ может потребовать: проверку (убеждение, обман, запугивание, поиск, осмотр зацепки, "
     "ловкость, опасность), любое изменение мира (взять, дать, купить, заплатить, украсть, ранить, лечить, перейти куда-то, "
-    "ждать, колдовать, надеть, отношение NPC, обещание или долг), бой, торговлю, просьбу к NPC, новые места или людей, "
+    "ждать, колдовать, надеть, отношение NPC, обещание или долг), сцену, что сближает или ссорит с NPC (задушевный разговор, "
+    "тост за павших, подарок, утешение, признание, обида), выдать себя за другого, бой, торговлю, просьбу к NPC, новые места или людей, "
     "праздник, ярмарку, свадьбу или пир и их день, вопрос о правилах.\n"
     "Короткий (full = false) — только если хватит рассказа: реплика в разговоре без просьбы и давления, расспросы, "
     "приветствие, прощание, оглядеться без поиска, начать разговор с NPC сцены. Сомневаешься — full = true."
@@ -59,7 +60,7 @@ def by_kind(params: TurnRequestParams) -> str:
     if params.kind == "action" and params.mode != "combat" and "[движок уже" not in params.input:
         if prompts.boundless(params.snapshot):
             return "full"  # v0.8.4.44.6: a room of boundless making — what the player asks is made by effects
-        if prompts.wants_full(params.snapshot, params.input):
+        if prompts.wants_full(params.snapshot, params.input, params.mode):
             return "full"  # v0.7.47: a rumour told goes into the journal with an effect (v0.8.4.29.7: any topic's row that says so)
         return ""
     return "full"
@@ -95,4 +96,7 @@ def short_ok(params: TurnRequestParams, out: ShortOutput) -> bool:
     """A short answer the game can use: words, and a conversation only with an NPC of the scene."""
     if out.need_full or not out.narration.strip():
         return False
-    return not (out.next_mode == "social" and scene_npc(params, out.npc_id) is None)
+    if out.next_mode != "social":
+        return True
+    npc = scene_npc(params, out.npc_id)
+    return npc is not None and not npc.refuses  # v0.8.4.44.18: a hostile one will not talk — the full prompt plays the refusal

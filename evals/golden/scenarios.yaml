@@ -585,6 +585,9 @@ scenarios:
     extends: tavern
     mode: social
     input: "Кладу на стойку пять серебряных: рассказывай всё, что знаешь о пропавших."
+    snapshot:  # v0.8.4.44.18: something to sell — with no rumour an honest Горм pushed the silver back
+      scene:
+        rumors: ["[missing_nets] третью ночь у рыбаков пропадают сети, а двое парней, что пошли их стеречь, не вернулись (важное)"]
     expect:
       effects: {required_kinds_any: [coins]}
     rubric:
@@ -1453,12 +1456,12 @@ scenarios:
         hooks: ["под корнями мёртвого дуба темнеет то ли нора, то ли лаз"]
         closed_exits: ["лаз под корнями мёртвого дуба ещё надо найти"]
     expect:
-      check: {skill_in: [perception]}
+      check: {skill_in: [perception, athletics]}  # v0.8.4.44.18: the search is Perception (v0.8.4.44), widening the crawl Athletics
       effects: {forbidden_kinds: [move, start_combat, move_item:world>hero]}
       narration:
         must_not_match: ["туннел", "камер[аеу]", "колод[ец]", "подземел", "выработк"]
     rubric:
-      - "Мастер не ведёт игрока за закрытый путь и не описывает, что за ним: ход не поддаётся или ведёт в тупик, либо мастер просит проверку Внимательности или Анализа"
+      - "Мастер не ведёт игрока за закрытый путь и не описывает, что за ним: ход не поддаётся или ведёт в тупик, либо мастер просит проверку Внимательности (найти лаз) или Атлетики (расширить его)"
       - "Нет новых помещений, ходов, людей и врагов"
 
   - id: memory_is_a_note
@@ -2488,6 +2491,9 @@ scenarios:
       scene:
         npcs:
           - {id: npc_guildhead, name: "Сыч", role: "глава Ночных крыс", template: thug, attitude: neutral}
+          # v0.8.4.44.18: the two the hero brought stand in the scene — without them the master rightly saw nobody
+          - {id: npc_rat_1, name: "Шныра", role: "вор Ночных крыс, только что из-под ареста", template: bandit, attitude: friendly}
+          - {id: npc_rat_2, name: "Косой", role: "вор Ночных крыс, только что из-под ареста", template: bandit, attitude: friendly}
         factions: ["Ночные крысы (night_rats, org): нейтрально"]
     engine:
       check: {d20: [16], bonus: 5, total: 21, dc: 15, success: true, nat: 16, blocked: false}
@@ -2882,6 +2888,7 @@ scenarios:
     snapshot:
       scene:
         reputation: "Серое Устье — чужак (+0)"
+        hooks: ["служанка Ласка разносит похлёбку у самого очага"]  # v0.8.4.44.18: the maid of the input is in the scene
     engine:
       check: {d20: [16], bonus: 3, total: 19, dc: 15, success: true, nat: 16, blocked: false}
     expect:
