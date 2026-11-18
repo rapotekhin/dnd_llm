@@ -39,9 +39,10 @@ static func of_spell(name: String, to_hit: int, dice: String, bonus: int, dtype:
 static func way(s: GameSession, data: Dictionary, f: Dictionary, how: Dictionary) -> Dictionary:
 	var b := {}
 	if how.has("action"):
-		for a: Dictionary in Sheet.template(data, f).get("actions", []):
-			if str(a.get("name_en")) == str(how["action"]):
+		for a: Dictionary in Sheet.template(data, f).get("actions", []):  # by its name, or by the weapon a blow of its own is of:
+			if str(a.get("name_en")) == str(how["action"]) or str(a.get("item", "")) == str(how["action"]):  # taken up, it may carry a lost one's name
 				b = of_action(data, f, a)
+				break
 	else:
 		b = of_weapon(CombatRules.hand_profile(s, data, str(how.get("hand", "")))) if Sheet.is_hero(f) else blade(s, data, f)
 	if bool(how.get("throw", false)) and not b.is_empty():

@@ -158,7 +158,7 @@ static func summon(s: GameSession, data: Dictionary, spell_id: String) -> Array[
 	if bool(sp.get("helper", false)):  # one familiar at a time (5e): the new one replaces the old
 		for x: Dictionary in called(s):
 			if str(x["spell"]) == spell_id:
-				Being.forget(s, str(x["id"]))
+				release(s, str(x["id"]))
 	var conc := bool(data["spells"].get(spell_id, {}).get("concentration", false))
 	var until := TimeRules.abs_minute(s) + int(sp["minutes"]) if sp.has("minutes") else -1
 	var count := int(sp.get("count", 1))
@@ -194,7 +194,7 @@ static func expire(s: GameSession, data: Dictionary = {}) -> Array[String]:
 	for m: Dictionary in called(s):
 		if (int(m["until"]) >= 0 and now >= int(m["until"])) or (bool(m["concentration"]) and conc != str(m["spell"])):
 			lines.append("%s исчезает — %s" % [m["name"], "время вышло" if not bool(m["concentration"]) or conc == str(m["spell"]) else "концентрация прервана"])
-			Being.forget(s, str(m["id"]))
+			release(s, str(m["id"]))
 	return lines
 
 
@@ -224,9 +224,20 @@ static func _end_carrier(s: GameSession, data: Dictionary, cr: Dictionary) -> vo
 static func dismiss(s: GameSession, summon_id: String) -> String:
 	for m: Dictionary in called(s):
 		if str(m["id"]) == summon_id:
-			Being.forget(s, summon_id)
+			release(s, summon_id)
 			return ""
 	return "ALLY_NOT_HERE"
+
+
+## A summoned creature goes — let go, replaced, its time out (v0.8.4.44.19, the author: «что за два null в списке боя?»).
+## In a fight its record is the fighter of the queue: it leaves the field (`gone`) and stops being called, and the fight's
+## end forgets it (after_fight); out of a fight it is forgotten at once. Never a fighter's record erased under the queue.
+static func release(s: GameSession, id: String) -> void:
+	if CombatRules.active(s) and (s.combat.get("fighters", []) as Array).has(id):
+		CombatRules.fighter(s, id)["status"] = "gone"
+		Being.drop(s, id, "summon")
+	else:
+		Being.forget(s, id)
 
 
 ## An NPC's hit points now: its wounds, or the template's full ones (v0.7.50.1). {hp, max}.

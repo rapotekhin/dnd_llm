@@ -38,7 +38,7 @@ func why(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 		var stop := Acts.one("swap").can(s, data, f)
 		if not stop.is_empty():
 			return stop
-		return str(CombatRules.as_stowed(s, func() -> String: return why(s, data, f, to, {})))
+		return str(CombatRules.as_stowed(s, func() -> String: return why(s, data, f, to, {}), data, _id(f)))
 	var t := _foe(s, f, to)
 	if t.is_empty():
 		return "COMBAT_BAD_TARGET"
@@ -75,6 +75,8 @@ func run(s: GameSession, data: Dictionary, f: Dictionary, to: String, how: Dicti
 	if bool((b.get("act", {}) as Dictionary).get("stowed", false)) and Equip.swap_why(s, data, str(f.get("id", Being.HERO))).is_empty():
 		lines = Acts.one("swap").go(s, data, f)  # its other set to the hands for nothing (v0.8.4.40), then the blow
 		b = Attack.way(s, data, f, how)
+	if b.is_empty():
+		return lines  # nothing to strike with after all: no blow with no weapon (v0.8.4.44.19, «<null> по …»)
 	if not b.has("act"):  # its passives on the blow: Reckless Attack first, a stunning strike, not to kill (v0.8.4.43.7)
 		b = ToggleRules.before_blow(s, data, f, b, lines)
 	CombatRules.points(s, data, f)["attacked"] = true
@@ -127,3 +129,8 @@ func offers(s: GameSession, data: Dictionary, f: Dictionary, targets: Array[Dict
 			out.append({"act": id, "to": to, "how": {"action": str(special["name_en"])}, "t": t, "kind": "save", "blow": special,
 				"far": FightGrid.squares_of(data, int(special.get("effect", {}).get("area", {}).get("ft", 5))), "power": FightAI.avg(special) + control})
 	return out
+
+
+## Whose: a fighter's id, the hero for its sheet.
+static func _id(f: Dictionary) -> String:
+	return str(f["id"]) if f.has("id") else Being.HERO

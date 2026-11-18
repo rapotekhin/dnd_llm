@@ -251,22 +251,40 @@ static func shift(state: Dictionary, m: String, i: int, delta: int) -> void:
 	for sec: Dictionary in sections:
 		if bool(sec.get("fixed", false)):
 			sec["width"] = int(sec["cols"])
-	var a: Dictionary = sections[i]
-	var b: Dictionary = sections[i + 1]
 	var d := reach(state, m, i, delta)
-	a["cols"] = int(a["cols"]) + d
-	b["cols"] = int(b["cols"]) - d
-	for sec: Dictionary in [a, b]:
+	if d == 0:
+		return
+	var grows: Dictionary = sections[i] if d > 0 else sections[i + 1]
+	grows["cols"] = int(grows["cols"]) + absi(d)
+	var moved: Array = [grows]
+	var rest := absi(d)
+	var order := range(i + 1, sections.size()) if d > 0 else range(i, -1, -1)
+	for j: int in order:  # v0.8.4.44.19 (the author: «двигая за вертикальные линии, становится нельзя в бою»): a card at one
+		if rest <= 0:  # column pushes the next one, as an edge of the deck — a bar of one wide card and many of one moves
+			break
+		var sec: Dictionary = sections[j]
+		var take := mini(rest, int(sec["cols"]) - 1)
+		if take > 0:
+			sec["cols"] = int(sec["cols"]) - take
+			rest -= take
+			moved.append(sec)
+	for sec: Dictionary in moved:
 		sec["width"] = int(sec["cols"])
 		sec["fixed"] = true
 
 
-## How far the divider after drawn section `i` may go of `delta` columns: each side keeps one.
+## How far the divider after drawn section `i` may go of `delta` columns: each section on the side it goes to keeps one.
 static func reach(state: Dictionary, m: String, i: int, delta: int) -> int:
 	var sections := _drawn(mode(state, m)["sections"])
 	if i < 0 or i + 1 >= sections.size():
 		return 0
-	return clampi(delta, 1 - int(sections[i]["cols"]), int(sections[i + 1]["cols"]) - 1)
+	var left := 0
+	for j in i + 1:
+		left += int(sections[j]["cols"]) - 1
+	var right := 0
+	for j in range(i + 1, sections.size()):
+		right += int(sections[j]["cols"]) - 1
+	return clampi(delta, -left, right)
 
 
 static func _drawn(sections: Array) -> Array:

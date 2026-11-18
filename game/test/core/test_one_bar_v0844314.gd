@@ -72,14 +72,39 @@ func test_a_divider_moves_on_a_bar_narrower_than_the_widths_set() -> void:
 	assert_int(int(again[1]["cols"])).is_equal(int(out[1]["cols"]) + 1)
 
 
+## v0.8.4.44.19: as far as every section on the side it goes to keeps one column — not its neighbour alone.
 func test_a_divider_reaches_as_far_as_each_side_keeps_one_column() -> void:
 	var st := {}
 	var out := HotbarLayout.place(st, HotbarLayout.BAR, {"Do_dash": "combat", "LookButton": "common"}, 10)
 	var left := int(out[0]["cols"])
-	var right := int(out[1]["cols"])
-	assert_int(HotbarLayout.reach(st, HotbarLayout.BAR, 0, 99)).is_equal(right - 1)
+	var right := 0
+	for j in range(1, out.size()):
+		right += int(out[j]["cols"]) - 1
+	assert_int(HotbarLayout.reach(st, HotbarLayout.BAR, 0, 99)).is_equal(right)
 	assert_int(HotbarLayout.reach(st, HotbarLayout.BAR, 0, -99)).is_equal(1 - left)
-	assert_int(HotbarLayout.reach(st, HotbarLayout.BAR, 5, 2)).is_equal(0)
+	assert_int(HotbarLayout.reach(st, HotbarLayout.BAR, out.size(), 2)).is_equal(0)
+
+
+## v0.8.4.44.19 (the author: «менять размер групп, двигая за вертикальные линии, становится нельзя в бою»): a companion's
+## bar in a fight — one wide card and the rest of one column each. A divider between two of one column moves: the card
+## at its edge pushes the next, as an edge of the deck, and the wide one gives; its icons stay in their columns.
+func test_a_divider_between_cards_of_one_column_pushes_the_wide_one() -> void:
+	var st := {"rows": 2, "modes": {"bar:x": {"hidden": [], "sections": [
+		{"kind": "combat", "cols": 7, "width": 7, "fixed": true, "grid": []},
+		{"kind": "class", "cols": 1, "width": 1, "fixed": true, "grid": []},
+		{"kind": "items", "cols": 1, "width": 1, "fixed": true, "grid": []},
+		{"kind": "passive", "cols": 1, "width": 1, "fixed": true, "grid": []}]}}}
+	var widths := func() -> Array: return (HotbarLayout.mode(st, "bar:x")["sections"] as Array).map(func(sec: Dictionary) -> int: return int(sec["cols"]))
+	assert_int(HotbarLayout.reach(st, "bar:x", 1, -99)).is_equal(-6)  # the wide one gives up to six
+	assert_int(HotbarLayout.reach(st, "bar:x", 1, 99)).is_equal(0)  # those on the right are one column each
+	HotbarLayout.shift(st, "bar:x", 1, -2)  # the class|items edge two to the left: items two wider, combat two narrower
+	assert_array(widths.call()).is_equal([5, 1, 3, 1])
+	HotbarLayout.shift(st, "bar:x", 0, 2)  # the combat|class edge back to the right: class wider, items gives back
+	assert_array(widths.call()).is_equal([7, 1, 1, 1])
+	HotbarLayout.shift(st, "bar:x", 2, -3)
+	assert_array(widths.call()).is_equal([4, 1, 1, 4])
+	var out := HotbarLayout.place(st, "bar:x", {"Do_dash": "combat"}, 10)  # kept: the player's widths
+	assert_array(out.map(func(sec: Dictionary) -> int: return int(sec["cols"]))).is_equal([4, 1, 1, 4])
 
 
 func test_a_divider_let_go_mid_cell_snaps_to_the_nearest_column() -> void:

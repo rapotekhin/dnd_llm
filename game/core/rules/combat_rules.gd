@@ -460,7 +460,10 @@ static func close(s: GameSession) -> void:
 		var f: Dictionary = b.get("fight", {})
 		b.erase("fight")
 		b.erase("was")
-		ConditionRules.turn_comes(Sheet.holder(s, f if id != PLAYER else Sheet.HERO), "")  # what lasts until a turn is the fight's
+		var h := Sheet.holder(s, f if id != PLAYER else Sheet.HERO)
+		ConditionRules.turn_comes(h, "")  # what lasts until a turn is the fight's
+		if ConditionRules.has(h, "prone") and not ConditionRules.has(h, "unconscious") and (Attack.up(s, f) if id != PLAYER else int(s.character.get("hp", 0)) > 0):
+			ConditionRules.remove(h, "prone")  # out of a fight one gets up for nothing (v0.8.4.44.19: a healed one lay flat for ever)
 		if id != PLAYER:
 			_give_statuses(b, f)
 		if b.has("creature") or b.has("summon") or (id != PLAYER and not str(f.get("npc_id", "")).is_empty()):
@@ -773,7 +776,12 @@ static func _has_style(c: Dictionary, style: String) -> bool:
 
 
 ## What `fn` says with the other set in the hands: the buttons ask of a weapon put away.
-static func as_stowed(s: GameSession, fn: Callable) -> Variant:
+static func as_stowed(s: GameSession, fn: Callable, data: Dictionary = {}, id := Being.HERO) -> Variant:
+	if id != Being.HERO:  # anybody's other set, its blows with it (v0.8.4.44.19: a companion's was read off the hero's hands)
+		Equip.swap(s, data, id)
+		var its: Variant = fn.call()
+		Equip.swap(s, data, id)
+		return its
 	CharacterRules.swap_hands(s.character)
 	var out: Variant = fn.call()
 	CharacterRules.swap_hands(s.character)

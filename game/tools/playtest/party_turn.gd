@@ -60,6 +60,21 @@ func run() -> void:
 	var end_turn: Button = find(screen(), "EndTurnButton")
 	step("«Конец хода» is hers to press", end_turn != null and not end_turn.disabled)
 	await shot("her_turn")
+	# v0.8.4.44.19 (the author: «менять размер групп, двигая за вертикальные линии, становится нельзя в бою»): her bar's
+	# dividers by the player's mouse, as the hero's.
+	var lay := HotbarLayout.layout_of(s, her)
+	var hb: Dictionary = node("SaveManager").hotbar
+	var drawn := func() -> Array: return (HotbarLayout.mode(hb, lay)["sections"] as Array).filter(func(sec: Dictionary) -> bool: return int(sec["cols"]) > 0)
+	var di := (drawn.call() as Array).size() - 2  # the last divider: a card of one column grows to the left, the wide one gives
+	var pad := find(bar, "Divider_%d" % di) as Control
+	if step("her bar's last divider can move left", pad != null and HotbarLayout.reach(hb, lay, di, -1) < 0,
+		"%d из %s" % [di, str((drawn.call() as Array).map(func(sec: Dictionary) -> String: return "%s:%d" % [sec["kind"], sec["cols"]]))]):
+		var kind := str((drawn.call() as Array)[di + 1]["kind"])
+		var was := ((find(bar, "Kind_" + kind) as GridContainer).columns)
+		await real_drag(pad.get_global_rect().get_center(), -float((bar.get_script() as Script).get_script_constant_map()["CELL"]) * 1.3)
+		var g := find(bar, "Kind_" + kind) as GridContainer
+		step("her divider moves by the player's mouse, past the cards of one column", g != null and g.columns == was + 1, "%d → %d" % [was, g.columns if g != null else -1])
+		await shot("her_divider")
 
 	# A click on a square walks her, not the hero.
 	var field: Control = find(screen(), "Field")

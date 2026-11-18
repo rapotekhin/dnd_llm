@@ -638,6 +638,10 @@ static func party(s: GameSession, data: Dictionary) -> Array[Dictionary]:
 			first = t
 		else:
 			out.append(t)
+	for m: Dictionary in AllyRules.called(s):  # v0.8.4.44.19: a creature a spell called walks on the map as in the party column
+		var t := _token("summon:" + str(m["id"]), "creature", str(m["id"]), str(m["name"]), Vector2i.ZERO)
+		t["portrait"] = PortraitRules.of(s, data, m)
+		out.append(t)
 	for cr: Dictionary in CreatureRules.here(s, s.room_id):
 		if CreatureRules.with_hero(cr):
 			var t := _token("cr:" + str(cr["id"]), "creature", str(cr["id"]), str(cr["name"]), Vector2i.ZERO)

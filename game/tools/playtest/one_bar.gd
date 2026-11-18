@@ -146,6 +146,25 @@ func run() -> void:
 	step("the place's acts grey in the fight, «Не в бою»", not ghosts.is_empty() and ghosts.all(func(g: IconSlot) -> bool: return g.disabled and g.tooltip_text.contains("Не в бою")),
 		", ".join(ghosts.map(func(g: Node) -> String: return str(g.name))))
 	await shot("bar_fight")
+	# v0.8.4.44.19 (the author: «менять размер групп, двигая за вертикальные линии, становится нельзя в бою»): the mouse
+	# as the player's, through the window — whatever lies over the strip takes it first.
+	var fdi := 0
+	while fdi + 2 < _drawn().size() and HotbarLayout.reach(_hb(), HotbarLayout.layout_of(s, Sheet.HERO), fdi, 1) <= 0:
+		fdi += 1
+	var fpad := find(bar, "Divider_%d" % fdi) as Control
+	if step("in the fight a divider with room to move", fpad != null and HotbarLayout.reach(_hb(), HotbarLayout.layout_of(s, Sheet.HERO), fdi, 1) > 0, "Divider_%d" % fdi):
+		var was := _cols(fdi)
+		var at := fpad.get_global_rect().get_center()
+		await real_drag(at, float(_const(bar, "CELL") + _const(bar, "GAP")) * 1.2)
+		step("in the fight the player's mouse moves it", _cols(fdi) == was + 1, "%d → %d" % [was, _cols(fdi)])
+		await shot("fight_divider_moved")
+		var laid := int(bar.get("_laid_cols"))
+		gs.combat_end_turn()  # the round goes on: the width the player set stays through the others' turns
+		var back := await hero_turn()
+		bar = screen().get_tree().get_first_node_in_group("hotbar") as Control
+		await frames(6)
+		step("the next turn the divider stands where it was let go", back and _cols(fdi) == was + 1,
+			"%d → %d, колонок %d → %d" % [was + 1, _cols(fdi), laid, int(bar.get("_laid_cols"))])
 
 	var fight_cols := _drawn().map(func(sec: Dictionary) -> int: return int(sec["cols"]))
 	bar.call("set_filter", "combat")
@@ -272,3 +291,4 @@ func _first_icon(i: int) -> Control:
 			if c is Control and (c as Control).visible:
 				return c as Control
 	return null
+

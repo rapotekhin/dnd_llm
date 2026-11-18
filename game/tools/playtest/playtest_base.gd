@@ -391,3 +391,30 @@ func strike_turn(s: GameSession) -> void:
 		if end != null and not end.disabled:
 			await press(end)
 
+
+## A drag of the left button from `at` by `dx` pixels through the window, as the player's mouse.
+func real_drag(at: Vector2, dx: float) -> void:
+	var vp := root
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.position = at
+	press.global_position = at
+	vp.push_input(press, true)
+	await frames(2)
+	for k in 6:
+		var m := InputEventMouseMotion.new()
+		m.button_mask = MOUSE_BUTTON_MASK_LEFT
+		m.position = at + Vector2(dx * (k + 1) / 6.0, 0)
+		m.global_position = m.position
+		m.relative = Vector2(dx / 6.0, 0)
+		vp.push_input(m, true)
+		await frames(2)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = at + Vector2(dx, 0)
+	up.global_position = up.position
+	vp.push_input(up, true)
+	await frames(4)
