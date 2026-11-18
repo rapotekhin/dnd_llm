@@ -424,7 +424,10 @@ def told_not_given(t: TurnContext) -> str:
         return ("Игрок просит научить. Если учитель согласен — в этом же ходе `create:course` у него (а умение, которого нет в "
                 "данных, сначала собери `make`; правила — rules(\"make\")); без эффекта герой ничему не учится. "
                 "Если учитель отказывает или откладывает — верни ответ как есть.")
-    if prompts.READ_WORDS.search(t.params.input) and not t.readable:
+    # a thing of the room with its writing is read where it stands — a board, a sign, a stone (v0.8.4.44.17: the reminder
+    # made the master tear the notice off the board the player only read)
+    on_view = bool(t.params.snapshot.scene) and any(p.text for p in t.params.snapshot.scene.props)
+    if prompts.READ_WORDS.search(t.params.input) and not t.readable and not on_view:
         return ("Игрок хочет прочесть, что написано. Вещь с написанным (письмо, записка, книга, карта) дай герою эффектом в этом же "
                 "ходе — `move_item:world>hero` с новой `item` (`item_type` gear) и её содержимым в `text`, ровно то, что расскажешь; "
                 "вещь из «Вокруг» — `move_item:room>hero` с её `prop_id`. Без эффекта прочесть нечего. Если вещь уже у героя или "

@@ -830,3 +830,13 @@ def test_reading_a_letter_needs_a_thing_with_its_text(data_dir):
     msg, _, _ = play(data_dir, fn, input="Вскрываю письмо — что там написано?")
     assert "Игрок хочет прочесть" in last_tool_text(fn.state["prompts"][3])
     assert msg["result"]["narration"].startswith("«Встреча")
+
+
+def test_reading_a_board_of_the_room_is_read_where_it_stands(data_dir):
+    """v0.8.4.44.17: a thing of the room with its writing is read in place — no reminder to tear the notice off."""
+    snap = tavern_snapshot()
+    snap["scene"]["props"] = [{"prop_id": "p1", "name": "Доска объявлений", "text": "Пропал лесоруб Влас."}]
+    fn = scripted(("final", {"narration": "«Пропал лесоруб Влас»."}))
+    msg, _, _ = play(data_dir, fn, input="Подхожу к доске объявлений и читаю, что там.", snapshot=snap)
+    assert len(fn.state["prompts"]) == 1
+    assert msg["result"]["narration"].startswith("«Пропал")

@@ -202,11 +202,11 @@ class MockEngine:
             kind = effect_tag(p["effect"])
             summary = kind
             if kind == "move_item:room>hero" and p["effect"].get("prop_id") not in [q.get("prop_id") for q in self.scene.get("props", [])]:
-                return {"accepted": False, "reason": "Такой вещи в «Вокруг» нет: новая вещь — move_item:world>hero"}  # as PropRules.plan_take
+                return self._refuse(p, "Такой вещи в «Вокруг» нет: новая вещь — move_item:world>hero")  # as PropRules.plan_take
             if isinstance(rule, list):
                 for r in rule:
                     if r.get("kind") == kind and r.get("status") == "reject":
-                        return {"accepted": False, "reason": r.get("reason", "отклонено")}
+                        return self._refuse(p, r.get("reason", "отклонено"))
                     if r.get("kind") == kind and r.get("summary"):  # what the engine says back (a save rolled, v0.7.8)
                         summary = r["summary"]
             return {"accepted": True, "effect_id": f"e-{self._n}", "summary": summary,
@@ -236,8 +236,16 @@ class MockEngine:
             return {"items": items}
         raise ValueError(method)
 
+    def _refuse(self, p: dict[str, Any], reason: str) -> dict[str, Any]:
+        p["refused"] = reason
+        return {"accepted": False, "reason": reason}
+
     def effects(self) -> list[dict[str, Any]]:
-        return [p["effect"] for m, p in self.calls if m == "engine.validate"]
+        """What the engine accepted: a refused effect changed nothing, as in the game (ADR-0008, v0.8.4.44.17)."""
+        return [p["effect"] for m, p in self.calls if m == "engine.validate" and "refused" not in p]
+
+    def refused(self) -> list[dict[str, Any]]:
+        return [{"effect": p["effect"], "reason": p["refused"]} for m, p in self.calls if m == "engine.validate" and "refused" in p]
 
     def checks(self) -> list[dict[str, Any]]:
         return [p for m, p in self.calls if m == "engine.check"]
@@ -409,7 +417,8 @@ async def judge(model: Model, sc: dict[str, Any], out: dict[str, Any], engine: M
         f"Ситуация: {sc.get('title')}\nВвод игрока: {sc.get('input') or '(нет: ' + sc.get('kind', '') + ')'}\n"
         f"Ответ движка на проверку (если была): {json.dumps(sc.get('engine', {}).get('check', {}), ensure_ascii=False)}\n\n"
         f"Текст мастера:\n{out.get('narration', '')}\n\nВарианты: {_tagged(out)}\n"
-        f"Проверки: {json.dumps(engine.checks(), ensure_ascii=False)}\nЭффекты: {json.dumps(engine.effects(), ensure_ascii=False)}\n"
+        f"Проверки: {json.dumps(engine.checks(), ensure_ascii=False)}\nЭффекты (принятые движком): {json.dumps(engine.effects(), ensure_ascii=False)}\n"
+        f"Отклонённые движком (мир не изменили): {json.dumps(engine.refused(), ensure_ascii=False)}\n"
         f"Смена режима: {out.get('next_mode')}\nНедостающее понятие (заметка автору): {out.get('missing_concept')}\n\nКритерии:\n" + "\n".join(f"- {r}" for r in sc.get("rubric", []))
     )
     result = await agent.run(prompt)
@@ -430,6 +439,7 @@ class Outcome:
     options: list[str] = field(default_factory=list)
     checks: list[dict[str, Any]] = field(default_factory=list)
     effects: list[dict[str, Any]] = field(default_factory=list)
+    refused: list[dict[str, Any]] = field(default_factory=list)  # what the engine refused (v0.8.4.44.17)
     next_mode: dict[str, Any] | None = None
     tools: list[str] = field(default_factory=list)
     seconds: float = 0.0
@@ -494,7 +504,7 @@ async def run_one(sc: dict[str, Any], model: Model, model_id: str, judge_model: 
     o.narration, o.options = out.narration, [p for p, _, _ in picked]
     shift = next_mode_of(params, out)
     o.next_mode = shift.model_dump() if shift is not None else None
-    o.checks, o.effects = engine.checks(), engine.effects()
+    o.checks, o.effects, o.refused = engine.checks(), engine.effects(), engine.refused()
     o.tools = [p.tool_name for m in result.all_messages() for p in getattr(m, "parts", []) if isinstance(p, ToolCallPart)]
     usage = result.usage if short is not None else before + result.usage
     o.input_tokens, o.output_tokens = usage.input_tokens, usage.output_tokens

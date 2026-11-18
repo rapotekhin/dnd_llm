@@ -134,7 +134,7 @@ scenarios:
       check: {required: true, skill_in: [perception]}
       effects: {forbidden_kinds: [move_item:world>hero, coins]}
       narration:
-        must_not_match: ["царапин", "следы (когтей|взлома|инструмента)", "кровь"]
+        must_not_match: ["(?<!ни )царапин", "следы (когтей|взлома|инструмента)", "кровь"]
     rubric:
       - "Мастер просит проверку и описывает только то, что дала зацепка и итог проверки, без новых улик"
 
@@ -693,7 +693,8 @@ scenarios:
           - {prop_id: p3, name: "Сальная свеча", description: "Оплывает на пустом столе у окна", portable: true}
           - {prop_id: p4, name: "Очаг", description: "Большой, с закопчённой решёткой"}
     expect:
-      effects: {max_count: 0}
+      # v0.8.4.44.17: walking up to the board is the master's `approach` (v0.8.2); reading takes nothing
+      effects: {forbidden_kinds: [move_item:room>hero, move_item:world>hero, coins, prop_state]}
     rubric:
       - "Мастер передаёт текст доски (пропал лесоруб Влас, видевших — к капитану), не добавляя других объявлений"
 
@@ -722,9 +723,7 @@ scenarios:
     input: "Спускаюсь к ручью и наполняю бурдюк и флягу — путь до Пущи неблизкий."
     snapshot:
       scene:
-        room_id: trail-ford
-        name: "Брод через ручей"
-        description: "Тропа спускается к мелкому ручью, по камням можно перейти на тот берег."
+        room: {id: trail-ford, name: "Брод через ручей", description: "Тропа спускается к мелкому ручью, по камням можно перейти на тот берег."}
         npcs: []
         props:
           - {prop_id: p1, name: "Ручей", description: "Холодная прозрачная вода бежит по камням", source: water}
@@ -744,9 +743,7 @@ scenarios:
     input: "Нацеживаю вина из бочки в пустую бутылку."
     snapshot:
       scene:
-        room_id: mill-cellar
-        name: "Подвал мельницы"
-        description: "Сырой подвал, мешки с мукой, у стены бочка."
+        room: {id: mill-cellar, name: "Подвал мельницы", description: "Сырой подвал, мешки с мукой, у стены бочка."}
         npcs: []
         props:
           - {prop_id: p1, name: "Бочка вина", description: "Початая бочка с краником, ничья", source: wine}
@@ -1614,7 +1611,7 @@ scenarios:
         - {kind: damage, status: accept, summary: "Урон 1 (колющий, укус крысы)"}
     snapshot:
       scene:
-        description: "Душный зал таверны; под стойкой — тёмная дыра в полу, оттуда тянет сыростью и нечистотами."
+        room: {description: "Душный зал таверны; под стойкой — тёмная дыра в полу, оттуда тянет сыростью и нечистотами."}
       character:
         name: "Айра"
         gender: female
@@ -1665,7 +1662,7 @@ scenarios:
     input: "Развожу костёр у тропы и жарю на нём кусок мяса, который купил у трактирщика. Поем горячего."
     snapshot:
       scene:
-        description: "Тропа лесорубов в Сумеречной Пуще. Полдень, сухие ветки под ногами."
+        room: {id: trail-woodcutters, name: "Тропа лесорубов", description: "Тропа лесорубов в Сумеречной Пуще. Полдень, сухие ветки под ногами."}
       character:
         name: "Айра"
         gender: female
@@ -1972,7 +1969,7 @@ scenarios:
         - {kind: condition, status: accept, summary: "Испуган (1 мин, вопль призрака) — спасбросок Мдр 9 против Сл 15 — провал"}
     snapshot:
       scene:
-        description: "Ночь. Посреди зала мерцает призрак девочки в обгоревшем платье; посетители забились по углам."
+        room: {description: "Ночь. Посреди зала мерцает призрак девочки в обгоревшем платье; посетители забились по углам."}
       character:
         name: "Айра"
         gender: female
@@ -1992,7 +1989,7 @@ scenarios:
     input: "Протягиваю стражникам руки: вяжите, я не сопротивляюсь."
     snapshot:
       scene:
-        description: "У дверей таверны двое стражников с верёвкой — капитан велел доставить Айру на допрос."
+        room: {description: "У дверей таверны двое стражников с верёвкой — капитан велел доставить Айру на допрос."}
       character:
         name: "Айра"
         gender: female
@@ -2086,7 +2083,7 @@ scenarios:
     input: "Подхожу к орку у двери и вежливо уговариваю его пропустить меня в погреб."
     snapshot:
       scene:
-        description: "У двери в погреб стоит орк-наёмник с секирой и что-то бурчит себе под нос."
+        room: {description: "У двери в погреб стоит орк-наёмник с секирой и что-то бурчит себе под нос."}
         npcs:
           - {id: npc_orc, name: "Гхаш", role: "наёмник у двери", race: "орк", attitude: indifferent,
              speaks: "орочий", understands_hero: false}
@@ -2113,7 +2110,7 @@ scenarios:
     input: "Достаю отмычки и вскрываю замок на сундуке в углу."
     snapshot:
       scene:
-        description: "В углу зала стоит окованный сундук с висячим замком; хозяин ушёл в погреб."
+        room: {description: "В углу зала стоит окованный сундук с висячим замком; хозяин ушёл в погреб."}
         props:
           - {prop_id: p_chest, name: "Окованный сундук", state: closed, owner: "Горм", description: "Тяжёлый сундук с висячим замком."}
       character:
@@ -3274,7 +3271,7 @@ scenarios:
     engine:
       find_quests: []
       validate:
-        - {kind: create:quest, summary: "Новое задание: «Крысы в погребе» от Горм (простое)"}
+        - {kind: create:quest, summary: "Новое задание от Горм: каркас принят"}  # v0.8.4.44.17: no title of its own — the master told the rats the summary named
     expect:
       effects: {required_kinds_any: [create:quest], field_in: {difficulty: [easy, medium]}}
       tools_required: [find_quests]
@@ -4241,7 +4238,7 @@ scenarios:
     expect:
       effects: {required_kinds_any: [create:course], forbidden_kinds: [create:quest, create:place, move_item:world>hero, coins]}
     rubric:
-      - "Орест соглашается учить сам («у меня и научишься») — эффект course с npc_id npc_orest, teach_kind spell, teach_id fireball (или его русское название — движок узнаёт); без задания; цену, если называет, — как в ответе движка (900 зм, 6 занятий)"
+      - "Орест соглашается учить сам («у меня и научишься») — эффект course с npc_id npc_orest, teach_kind spell, teach_id fireball (или его русское название — движок узнаёт); без задания; цену, если называет, — как в ответе движка (900 зм, 6 занятий); `lessons` и `fee_cp` курса заклинания движок ставит сам поверх эффекта — судят числа в тексте"
       - "Заклинание не выдаётся словами: запись и занятия — кнопкой «Учёба»"
 
   - id: teacher_recipe_found
@@ -4987,8 +4984,11 @@ scenarios:
     category: concepts
     extends: tavern
     input: "Накидываю капюшон и говорю всем, что отныне выгляжу как сержант Ведда."
+    engine:  # v0.8.4.44.17: the engine refuses a guise with no spell on the hero (Guise.plan), as in the game
+      validate:
+        - {kind: guise, status: reject, reason: "чужого облика нет: сначала заклинание (cast «Маскировка»), набор для грима с пояса или части `guise` в make"}
     expect:
-      effects: {forbidden_kinds: [guise, make]}
+      effects: {forbidden_kinds: [make]}
     rubric:
       - "Облик не меняется: капюшон остаётся капюшоном, люди видят того же героя"
 

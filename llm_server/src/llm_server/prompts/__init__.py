@@ -165,6 +165,7 @@ FIND_WORDS = re.compile(r"обыск|обшар|ищу|искать|поиск|�
 PEOPLE_WORDS = re.compile(r"спутник|компаньон|в отряд|с собой взять|взять с собой|наёмник|наемник|проводник|волшеб|чароде|колдун|\bмага?\b|\bмагов\b|"
                           r"ведун|ведьм|целител|лекар|наставник|где (мне )?(найти|искать|сыскать)|кого (бы )?(найти|позвать)|ищу (человек|кого)",
                           re.IGNORECASE)
+PET_WORDS = re.compile(r"прируч|питом", re.IGNORECASE)  # v0.8.4.44.17: a beast told of in a hook, tamed by words
 JOB_WORDS = re.compile(r"работ|наймусь|нанять|найми|вышибал|устроиться", re.IGNORECASE)  # v0.7.70.1
 
 
@@ -319,6 +320,7 @@ TOPICS: dict[str, Topic] = {
     "rumors": Topic("слухи: что говорят в округе, пересказ слуха NPC, слух о герое или пущенный героем, ложь и её опровержение (`rumor`)", ("rumor",),
                    words=RUMOR_WORDS, full=lambda snap: bool(snap.scene and any("герой уже слышал" not in r for r in snap.scene.rumors))),
     "pets": Topic("питомец героя и приручение: дикий зверь в сцене, имя, близость (`shift:bond` с creature_id), помощь, разведка; бездомный зверь по причине (`create:beast`)", ("create:beast",),
+                   words=PET_WORDS,
                    alone=lambda mode, snap, said: bool(snap.scene and any("приручить" in c or "питомец героя" in c for c in snap.scene.creatures))),
     "games": Topic("игра на ставку с NPC: кости, карты, армрестлинг, кто кого перепьёт, загадки; поединок по вызову; арена и ставки на бои; своя игра (`create:contest`)", ("create:contest",),
                    words=BOUT_WORDS),

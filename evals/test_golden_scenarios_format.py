@@ -29,6 +29,12 @@ CHECK_KEYS = {"required", "skill_in", "dc_tier_in", "contest_npc", "contest_skil
 EFFECT_KEYS = {"required_kinds_any", "required_kinds_all", "forbidden_kinds", "max_count", "coins_max",
                "damage_severity_in", "forbidden_fields", "required_fields", "field_in", "condition_save", "condition_tag_in", "condition_in"}
 NARRATION_KEYS = {"must_match", "must_not_match", "max_sentences"}
+# what llm_server.golden.to_turn_params reads of a scene: a key outside it never reaches the model (v0.8.4.44.17 — the
+# ghost of condition_ghost_fear lay in scene.description, unread, and the master rightly saw no ghost)
+SCENE_KEYS = {"boundless", "calendar", "chronicle", "closed_exits", "creatures", "exits", "factions", "furnish", "hero_near",
+              "hooks", "items_visible", "location", "notes", "npcs", "open_edges", "props", "reputation", "room", "rumors",
+              "shrine", "sneaking", "spots", "time", "weather", "wilds"}
+ROOM_KEYS = {"id", "name", "description"}
 
 
 @pytest.fixture(scope="module")
@@ -64,6 +70,10 @@ def test_scenarios_are_well_formed(data: dict) -> None:
         if s["kind"] not in SOME_INPUT_KINDS:
             assert (s["input"] is None) == (s["kind"] in NO_INPUT_KINDS), f"{sid}: input for action, deal, quest only"
         assert raw.get("expect") or raw.get("rubric"), f"{sid}: nothing to evaluate"
+
+        scene = s.get("snapshot", {}).get("scene", {})
+        assert set(scene) <= SCENE_KEYS, f"{sid}: scene keys the runner never reads {set(scene) - SCENE_KEYS}"
+        assert set(scene.get("room", {})) <= ROOM_KEYS, f"{sid}: room keys {set(scene.get('room', {})) - ROOM_KEYS}"
 
         expect = raw.get("expect", {})
         assert set(expect) <= EXPECT_KEYS, f"{sid}: unknown expect keys {set(expect) - EXPECT_KEYS}"

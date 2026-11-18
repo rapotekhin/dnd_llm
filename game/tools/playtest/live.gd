@@ -5,7 +5,7 @@ extends "res://tools/playtest/playtest_base.gd"
 ## into the report for a human (or agent) to judge.
 
 const INNKEEPER := "npc_innkeeper"
-const KITCHEN := "brod-tavern-kitchen"
+const KITCHEN := "brod-tavern-upstairs"  # v0.8.4.44.17: the kitchen and its cellar are shut to strangers since v0.8.4.2
 const TURN_TIMEOUT := 200.0  # the server waits up to 180 s (v0.7.14.5)
 
 
@@ -53,7 +53,7 @@ func run() -> void:
 	var exit: Button = find(screen(), "Exit_" + KITCHEN)
 	if step("exit to the kitchen", exit != null):
 		await press(exit)
-		step("in the kitchen", gs.session.room_id == KITCHEN)
+		step("in the kitchen", await wait_until(func() -> bool: return gs.session.room_id == KITCHEN, 20.0))  # the exit walks first
 		step("kitchen enter turn", await _turn_done(gs))
 		await shot("kitchen")
 		await _say(gs, "Внимательно осматриваю люк в погреб и новый засов")
